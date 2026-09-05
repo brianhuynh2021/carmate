@@ -1,0 +1,138 @@
+import express from 'express';
+import cors from 'cors';
+import http from 'http';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { initDB } from './db/sqliteStore.js';
+import apiRouter from './routes/api.js';
+import { securityHeadersMiddleware, sanitizeInput, globalApiLimiter } from './middleware/security.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const webDir = path.resolve(__dirname, '../../web');
+const webDistDir = path.resolve(webDir, 'dist');
+
+const app = express();
+const server = http.createServer(app);
+const PORT = Number(process.env.PORT) || 5173; // Khởi động duy nhất 1 cổng 5173
+
+// 1. Cấu hình An Ninh & Middleware
+app.use(securityHeadersMiddleware);
+
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-carmate-test']
+}));
+
+// Giới hạn gói tin 1MB chống tấn công DDoS làm tràn RAM
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(sanitizeInput);
+
+// 2. Request Logger gọn gàng (chỉ log /api để không spam static assets)
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api')) {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      const statusColor = res.statusCode >= 400 ? '\x1b[31m' : res.statusCode >= 300 ? '\x1b[33m' : '\x1b[32m';
+      console.log(`[API] ${req.method} ${req.originalUrl} -> ${statusColor}${res.statusCode}\x1b[0m (${duration}ms)`);
+    });
+  }
+  next();
+});
+
+// 3. Mount API Router tại tiền tố /api kèm Rate Limiter
+app.use('/api', globalApiLimiter, apiRouter);
+
+// Endpoint 404 riêng cho /api/* nếu không khớp route nào
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: `Endpoint '${req.method} ${req.originalUrl}' không tồn tại`
+  });
+});
+
+// 4. Mount Frontend (Vite Dev Middleware trong dev hoặc Static Dist trong production)
+const isProduction = process.env.NODE_ENV === 'production';
+let viteDevServer = null;
+
+if (!isProduction) {
+  try {
+    const { createServer: createViteServer } = await import('vite');
+    viteDevServer = await createViteServer({
+      root: webDir,
+      server: {
+        middlewareMode: true,
+        server: server
+      },
+      appType: 'spa'
+    });
+    app.use(viteDevServer.middlewares);
+  } catch (err) {
+    console.warn('[Server] Lưu ý: Không thể khởi động Vite middleware, kiểm tra thư mục static:', err.message);
+  }
+}
+
+// Fallback static files (Production hoặc khi đã build)
+if (fs.existsSync(webDistDir)) {
+  app.use(express.static(webDistDir));
+  app.use((req, res, next) => {
+    if (req.originalUrl.startsWith('/api')) return next();
+    res.sendFile(path.resolve(webDistDir, 'index.html'));
+  });
+}
+
+// 5. Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('[API ERROR]', err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({
+    success: false,
+    error: 'Lỗi máy chủ nội bộ',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// 6. Khởi động Server sau khi nạp Database
+async function startServer() {
+  try {
+    await initDB();
+    server.listen(PORT, () => {
+      console.log(`\n\x1b[1m\x1b[36m╔══════════════════════════════════════════════════════════╗\x1b[0m`);
+      console.log(`\x1b[1m\x1b[36m║             🚗 CarMate.vn Unified Server                 ║\x1b[0m`);
+      console.log(`\x1b[1m\x1b[36m║      Khởi động DUY NHẤT 1 CỔNG: http://localhost:${PORT}    ║\x1b[0m`);
+      console.log(`\x1b[1m\x1b[36m╚══════════════════════════════════════════════════════════╝\x1b[0m`);
+      console.log(`\n💻 Web App:      \x1b[32mhttp://localhost:${PORT}\x1b[0m`);
+      console.log(`📡 API Engine:   \x1b[34mhttp://localhost:${PORT}/api\x1b[0m`);
+      console.log(`🩺 API Health:   \x1b[33mhttp://localhost:${PORT}/api/health\x1b[0m\n`);
+    });
+
+    const shutdown = () => {
+      console.log('\n[CarMate] Đang tắt máy chủ an toàn...');
+      server.close(() => {
+        console.log('[CarMate] Máy chủ đã dừng.');
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+  } catch (err) {
+    console.error('Không thể khởi động Server:', err);
+    process.exit(1);
+  }
+}
+
+// 7. Vành đai an toàn chống sập (Process Crash Boundary)
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CarMate Safety] Bắt được Unhandled Promise Rejection (Đã cách ly, không sập server):', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[CarMate Safety] Bắt được Uncaught Exception (Đã cách ly, ghi nhận log):', err.message);
+});
+
+startServer();

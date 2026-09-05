@@ -1,0 +1,23 @@
+{
+  "name": "carmate-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node apps/api/src/index.js",
+    "start": "node apps/api/src/index.js",
+    "dev:all": "node apps/api/src/index.js",
+    "build": "npm run build --workspace=@carmate/web",
+    "preview": "npm run preview --workspace=@carmate/web"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.2"
+  }
+}

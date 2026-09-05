@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512" fill="none">
+  <defs>
+    <linearGradient id="cmNavyBg512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#0e1e36" />
+      <stop offset="100%" stopColor="#07111e" />
+    </linearGradient>
+    <linearGradient id="cmCyan512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#22d3ee" />
+      <stop offset="50%" stopColor="#06b6d4" />
+      <stop offset="100%" stopColor="#0284c7" />
+    </linearGradient>
+    <linearGradient id="cmAmber512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#fde047" />
+      <stop offset="50%" stopColor="#f59e0b" />
+      <stop offset="100%" stopColor="#ea580c" />
+    </linearGradient>
+    <filter id="glow512" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2.5" floodColor="#06b6d4" floodOpacity="0.45" />
+    </filter>
+    <filter id="glowAmb512" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2.5" floodColor="#f59e0b" floodOpacity="0.45" />
+    </filter>
+  </defs>
+
+  <rect width="100" height="100" rx="26" fill="url(#cmNavyBg512)" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" />
+
+  <path
+    d="M 48 30 C 30 30, 20 40, 20 52 C 20 65, 32 75, 48 75 C 58 75, 64 68, 64 60"
+    stroke="url(#cmCyan512)"
+    stroke-width="8"
+    stroke-linecap="round"
+    fill="none"
+    filter="url(#glow512)"
+  />
+
+  <path
+    d="M 52 70 C 70 70, 80 60, 80 48 C 80 35, 68 25, 52 25 C 42 25, 36 32, 36 40"
+    stroke="url(#cmAmber512)"
+    stroke-width="8"
+    stroke-linecap="round"
+    fill="none"
+    filter="url(#glowAmb512)"
+  />
+</svg>

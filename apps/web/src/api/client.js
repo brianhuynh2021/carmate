@@ -1,0 +1,227 @@
+/**
+ * CarMate API Client
+ * Kết nối đồng bộ dữ liệu giữa Web Client và Backend Express Engine (Port 4000).
+ */
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+async function request(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const adminToken = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('carmate_admin_token') : null;
+  const authToken = typeof localStorage !== 'undefined' ? localStorage.getItem('carmate_auth_token') : null;
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(adminToken ? { 'x-admin-key': adminToken } : {}),
+      ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+      ...options.headers
+    },
+    ...options
+  };
+
+  try {
+    const response = await fetch(url, config);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+    return data;
+  } catch (error) {
+    console.warn(`[API Client] Yêu cầu tới ${endpoint} thất bại:`, error.message);
+    throw error;
+  }
+}
+
+export const api = {
+  // Health & Stats
+  async getHealth() {
+    return request('/health');
+  },
+
+  async getStats() {
+    return request('/stats');
+  },
+
+  async getBenchmarks(routeId) {
+    return request(`/benchmarks${routeId ? `?routeId=${encodeURIComponent(routeId)}` : ''}`);
+  },
+
+  async getTrustProfile(memberId) {
+    return request(`/trust${memberId ? `/${memberId}` : ''}`);
+  },
+
+  // Trips
+  async getTrips(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== 'all' && val !== '') {
+        query.append(key, val);
+      }
+    });
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/trips${queryString}`);
+  },
+
+  async createTrip(tripData) {
+    return request('/trips', {
+      method: 'POST',
+      body: JSON.stringify(tripData)
+    });
+  },
+
+  async updateTrip(id, updates) {
+    return request(`/trips/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  },
+
+  async deleteTrip(id) {
+    return request(`/trips/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // Matches Radar
+  async getMatches(params = {}) {
+    const query = new URLSearchParams();
+    if (params.routeCategory && params.routeCategory !== 'all') query.append('routeCategory', params.routeCategory);
+    if (params.direction && params.direction !== 'all') query.append('direction', params.direction);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/matches${queryString}`);
+  },
+
+  // Bookings / Zalo Connections
+  async getBookings() {
+    return request('/bookings');
+  },
+
+  async createBooking(bookingData) {
+    return request('/bookings', {
+      method: 'POST',
+      body: JSON.stringify(bookingData)
+    });
+  },
+
+  async reportDelay(id, minutes, reason) {
+    return request(`/bookings/${id}/delay`, {
+      method: 'POST',
+      body: JSON.stringify({ minutes, reason })
+    });
+  },
+
+  async cancelBooking(id, reason) {
+    return request(`/bookings/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  },
+
+  async completeBooking(id, feedback = {}) {
+    return request(`/bookings/${id}/complete`, {
+      method: 'POST',
+      body: JSON.stringify(feedback)
+    });
+  },
+
+  async submitReview(id, reviewData = {}) {
+    return request(`/bookings/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify(reviewData)
+    });
+  },
+
+  // Auth & Identity (0đ chi phí / Zalo & OTP)
+  async requestOtp(phone) {
+    return request('/auth/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone })
+    });
+  },
+
+  async verifyOtp(payload) {
+    const res = await request('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (res?.token && typeof localStorage !== 'undefined') {
+      localStorage.setItem('carmate_auth_token', res.token);
+    }
+    return res;
+  },
+
+  async zaloLogin(payload) {
+    const res = await request('/auth/zalo-login', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (res?.token && typeof localStorage !== 'undefined') {
+      localStorage.setItem('carmate_auth_token', res.token);
+    }
+    return res;
+  },
+
+  async getMe() {
+    return request('/auth/me');
+  },
+
+  logout() {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('carmate_auth_token');
+    }
+  },
+
+  // --- Admin Engine Calls ---
+  async adminAuth(passcode, mfaCode) {
+    return request('/admin/auth', {
+      method: 'POST',
+      body: JSON.stringify({ passcode, mfaCode })
+    });
+  },
+
+  async getAdminMetrics() {
+    return request('/admin/metrics');
+  },
+
+  async getAdminTrips() {
+    return request('/admin/trips');
+  },
+
+  async toggleHideTrip(id, isHidden) {
+    return request(`/admin/trips/${id}/toggle-hide`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isHidden })
+    });
+  },
+
+  async deleteAdminTrip(id) {
+    return request(`/admin/trips/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async getAdminUsers() {
+    return request('/admin/users');
+  },
+
+  async updateUserStatus(id, updates) {
+    return request(`/admin/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+  },
+
+  async getAdminReports() {
+    return request('/admin/reports');
+  },
+
+  // Agentic AI Concierge & Dispatcher (Stanford Inner Loop)
+  async agentChat(message, history = []) {
+    return request('/agent/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history })
+    });
+  }
+};
+
+export default api;

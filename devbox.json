@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.7/.schema/devbox.schema.json",
+  "packages": [
+    "nodejs@20"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo '🚀 Chào mừng đến với môi trường phát triển CarMate.vn!'",
+      "echo '💡 Gõ [devbox run dev] hoặc [npm run dev] để dựng cả Web (5173) & API (4000) cùng lúc.'"
+    ],
+    "scripts": {
+      "dev": "node scripts/dev.js",
+      "start": "node scripts/dev.js",
+      "build": "npm run build --workspace=@carmate/web",
+      "preview": "npm run preview --workspace=@carmate/web"
+    }
+  }
+}

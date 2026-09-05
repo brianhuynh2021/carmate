@@ -1,0 +1,20 @@
+services:
+  carmate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carmate-production
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=production
+      - PORT=5173
+      - JWT_SECRET=carmate_prod_jwt_super_secret_key_change_me_2026
+      - CARMATE_ADMIN_PASSCODE=123456
+    volumes:
+      - carmate-data:/app/apps/api/data
+
+volumes:
+  carmate-data:
+    driver: local
