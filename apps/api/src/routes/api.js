@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { listTrips, getTrip, createTrip, updateStatus, updateTripHandler, deleteTripHandler, republishTripHandler } from '../controllers/tripController.js';
 import { getMatches } from '../controllers/matchController.js';
-import { listBookings, createBooking, reportDelay, cancelBooking, completeBooking, submitReview } from '../controllers/bookingController.js';
+import { listBookings, createBooking, reportDelay, cancelBooking, completeBooking, submitReview, getBookingPublicSummary, driverConfirmBooking } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile } from '../controllers/miscController.js';
 import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe } from '../controllers/authController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
@@ -23,6 +23,11 @@ const router = Router();
 
 import { suggestLocationsHandler } from '../controllers/locationController.js';
 import { agentChatHandler } from '../controllers/agentController.js';
+import { recordEvent, getSummary as getAnalyticsSummaryHandler } from '../controllers/analyticsController.js';
+
+// --- Analytics & Funnel Tracking (Zero-Cost & PostHog Bridge) ---
+router.post('/analytics/event', optionalAuth, recordEvent);
+router.get('/admin/analytics/summary', optionalAuth, getAnalyticsSummaryHandler);
 
 // --- Agentic AI Concierge & Dispatcher (Stanford Inner Loop & Tools) ---
 router.post('/agent/chat', optionalAuth, agentChatHandler);
@@ -57,6 +62,8 @@ router.get('/matches', optionalAuth, getMatches);
 // --- Bookings / Zalo Connections (Aliases for /escrows) ---
 router.get('/bookings', optionalAuth, listBookings);
 router.post('/bookings', optionalAuth, createBooking);
+router.get('/bookings/:id/public-summary', getBookingPublicSummary);
+router.post('/bookings/:id/driver-confirm', driverConfirmBooking);
 router.post('/bookings/:id/delay', optionalAuth, requireBookingParty, reportDelay);
 router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
@@ -64,6 +71,8 @@ router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitRev
 
 router.get('/escrows', optionalAuth, listBookings);
 router.post('/escrows', optionalAuth, createBooking);
+router.get('/escrows/:id/public-summary', getBookingPublicSummary);
+router.post('/escrows/:id/driver-confirm', driverConfirmBooking);
 router.post('/escrows/:id/delay', optionalAuth, requireBookingParty, reportDelay);
 router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);

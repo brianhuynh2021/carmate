@@ -26,7 +26,7 @@ export default {
     verifiedTitle: 'ID & driving licence verified',
     zeroFee: '0% platform fee',
     zaloOneTap: 'One-tap Zalo',
-    hold30: '30-min hold',
+    hold30: '15-min hold',
     allInclusive: 'Fuel & tolls included',
     noSmoking: 'No smoking',
     familyCar: 'Family car (White plate)',
@@ -209,11 +209,11 @@ export default {
     count: '{n} active',
     escrowNote: 'Commitment held',
     codeLabel: 'Connection code',
-    zeroDeposit: 'Direct connection · 30-min hold',
+    zeroDeposit: 'Direct connection · 15-min hold',
     fullDeal: '100% commitment',
     deposit50: '50k commitment · Cancel 8h before',
-    zaloLockTitle: 'Confirm on Zalo within 30 minutes',
-    zaloLockDesc: 'Tap "Message on Zalo" to agree on the pickup point. The seat is released after 30 minutes.',
+    zaloLockTitle: 'Confirm on Zalo within 15 minutes',
+    zaloLockDesc: 'Tap "Message on Zalo" to agree on the pickup point. The seat is released after 15 minutes.',
     route: 'Route',
     timeSlot: 'Time slot',
     companions: '{n} people',
@@ -282,12 +282,12 @@ export default {
   escrow: {
     titleDriver: 'Join trip & message on Zalo',
     titlePassenger: 'Offer a ride & message on Zalo',
-    subtitle: 'Two-way connection · One-tap Zalo · 30-min hold',
+    subtitle: 'Two-way connection · One-tap Zalo · 15-min hold',
     companions: 'Number of riders',
     commitment: 'Commitment method',
     zeroTitle: 'Direct connection',
     zeroTag: 'Recommended',
-    zeroDesc: 'No middleman fee. Message on Zalo within 30 minutes to confirm the pickup. Pay on board.',
+    zeroDesc: 'No middleman fee. Message on Zalo within 15 minutes to confirm the pickup. Pay on board.',
     depositTitle: '50k per person',
     depositDesc: 'Refunded if cancelled 8h before.',
     fullTitle: '100% commitment',
@@ -360,7 +360,7 @@ export default {
     s1: [
       ['0% commission', 'CarMate takes no commission or discount on the cost contribution of any trip. All fuel and toll sharing belongs to the driver.'],
       ['Direct connection', 'Driver and passenger communicate via Zalo or phone. Payment is made directly in cash or bank transfer, with no intermediary gateway.'],
-      ['Quick confirmation', 'After tapping Join, both sides get in touch within 30 minutes to agree on pickup and drop-off.']
+      ['Quick confirmation', 'After tapping Join, both sides get in touch within 15 minutes to agree on pickup and drop-off.']
     ],
     s2Title: '2. Platform role: connection only',
     s2: [

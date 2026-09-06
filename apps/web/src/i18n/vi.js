@@ -26,7 +26,7 @@ export default {
     verifiedTitle: 'Đã xác minh CCCD & GPLX',
     zeroFee: '0% phí sàn',
     zaloOneTap: 'Zalo 1 chạm',
-    hold30: 'Giữ chỗ 30 phút',
+    hold30: 'Giữ chỗ 15 phút',
     allInclusive: 'Trọn gói xăng & cầu đường',
     noSmoking: 'Không hút thuốc',
     familyCar: 'Xe gia đình (Biển trắng)',
@@ -209,11 +209,11 @@ export default {
     count: '{n} chuyến đang chờ khởi hành',
     escrowNote: 'Cam kết đang được giữ',
     codeLabel: 'Mã kết nối',
-    zeroDeposit: 'Kết nối trực tiếp · Giữ chỗ 30 phút',
+    zeroDeposit: 'Kết nối trực tiếp · Giữ chỗ 15 phút',
     fullDeal: 'Cam kết 100%',
     deposit50: 'Cam kết 50k · Huỷ trước 8h',
-    zaloLockTitle: 'Xác nhận Zalo trong 30 phút',
-    zaloLockDesc: 'Bấm "Nhắn Zalo" để hẹn điểm đón với đối phương. Quá 30 phút chỗ sẽ tự nhả.',
+    zaloLockTitle: 'Xác nhận Zalo trong 15 phút',
+    zaloLockDesc: 'Bấm "Nhắn Zalo" để hẹn điểm đón với đối phương. Quá 15 phút chỗ sẽ tự nhả.',
     route: 'Lộ trình',
     timeSlot: 'Khung giờ',
     companions: '{n} người',
@@ -282,12 +282,12 @@ export default {
   escrow: {
     titleDriver: 'Ghép chuyến & nhắn Zalo',
     titlePassenger: 'Nhận đón & nhắn Zalo',
-    subtitle: 'Kết nối 2 chiều · Zalo 1 chạm · Giữ chỗ 30 phút',
+    subtitle: 'Kết nối 2 chiều · Zalo 1 chạm · Giữ chỗ 15 phút',
     companions: 'Số người cùng đi',
     commitment: 'Phương thức cam kết',
     zeroTitle: 'Kết nối trực tiếp',
     zeroTag: 'Khuyên dùng',
-    zeroDesc: 'Không phí trung gian. Nhắn Zalo trong 30 phút để chốt điểm đón. Thanh toán khi lên xe.',
+    zeroDesc: 'Không phí trung gian. Nhắn Zalo trong 15 phút để chốt điểm đón. Thanh toán khi lên xe.',
     depositTitle: 'Cam kết 50k/người',
     depositDesc: 'Huỷ trước 8 giờ hoàn cọc.',
     fullTitle: 'Cam kết 100%',
@@ -360,7 +360,7 @@ export default {
     s1: [
       ['0% phí chiết khấu', 'CarMate không thu hoa hồng hay chiết khấu trên khoản đóng góp chi phí chuyến đi. Toàn bộ tiền chia sẻ xăng và vé cầu đường thuộc về chủ xe.'],
       ['Kết nối trực tiếp', 'Chủ xe và người đi cùng trao đổi qua Zalo hoặc điện thoại. Chi phí thanh toán trực tiếp bằng tiền mặt hoặc chuyển khoản, không qua cổng trung gian.'],
-      ['Xác nhận nhanh', 'Sau khi bấm ghép chuyến, hai bên liên hệ trong 30 phút để chốt điểm đón trả.']
+      ['Xác nhận nhanh', 'Sau khi bấm ghép chuyến, hai bên liên hệ trong 15 phút để chốt điểm đón trả.']
     ],
     s2Title: '2. Vai trò nền tảng: chỉ kết nối',
     s2: [

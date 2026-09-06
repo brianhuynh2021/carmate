@@ -32,6 +32,8 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
   const [unmaskedPhone, setUnmaskedPhone] = useState(item?.phoneReal || '');
   const [copiedDraft, setCopiedDraft] = useState(false);
 
+  const [bookingCode] = useState(() => `CX-${Math.floor(1000 + Math.random() * 9000)}`);
+
   // Autocomplete Dropdown State
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -66,7 +68,10 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
   const activePhone = unmaskedPhone || item.phoneReal || '';
   const phoneClean = cleanPhoneNumber(activePhone);
 
-  // Soạn sẵn tin nhắn Zalo chuẩn văn hóa Việt Nam & linh hoạt theo điểm đón, số ghế, xe gia đình
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://carmate.vn';
+  const confirmUrl = `${origin}/#confirm-${bookingCode}`;
+
+  // Soạn sẵn tin nhắn Zalo chuẩn văn hóa Việt Nam kèm Magic Link 1 chạm cho Bác tài
   const zaloMessage = generateSmartZaloDraft({
     driverName: item.publicName || 'anh/chị',
     from: item.from,
@@ -77,7 +82,9 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
     price: Math.round(pricing.total / (seats || 1)),
     pickupPoint: pickupPoint.trim(),
     isParcel: false,
-    hasRelatives: Boolean(item.hasRelatives)
+    hasRelatives: Boolean(item.hasRelatives),
+    bookingCode,
+    confirmUrl
   });
 
   const handleCopyDraft = async () => {
@@ -95,8 +102,6 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
     setSubmitting(true);
 
     try {
-      const bookingCode = `CX-${Math.floor(1000 + Math.random() * 9000)}`;
-
       // Gọi API tạo booking để ghi nhận giao dịch và nhận SĐT thật từ DB
       let realPhone = item.phoneReal || '';
       try {
@@ -150,6 +155,23 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
       // Mở liên kết Zalo trực tiếp với số điện thoại thật
       const targetPhoneForZalo = realPhone || item.phoneReal || '0984883750';
       const zaloUrl = getZaloChatUrl(targetPhoneForZalo, zaloMessage);
+
+      // Lưu trạng thái Zalo Re-entry vào localStorage để khi khách quay lại web hiển thị Apple Action Sheet
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('carmate_pending_zalo_booking', JSON.stringify({
+          escrowId: bookingCode,
+          tripId: item.id,
+          driverName: item.publicName || 'Bác tài',
+          driverPhone: targetPhoneForZalo,
+          from: item.from,
+          to: item.to,
+          seats,
+          totalDeal: pricing.total,
+          timeSlot,
+          timestamp: Date.now()
+        }));
+      }
+
       window.open(zaloUrl, '_blank', 'noopener,noreferrer');
     } finally {
       setSubmitting(false);
@@ -188,7 +210,7 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
       icon={ZaloIcon}
       iconTone="brand"
       title={isDriverItem ? 'Ghép chuyến & Nhắn Zalo' : 'Nhận đón & Nhắn Zalo'}
-      subtitle="0% phí sàn · Không thu cọc · Kết nối trực tiếp qua Zalo"
+      subtitle="0% phí sàn · Không thu cọc · Kết nối Zalo · Giữ chỗ 15 phút"
       footer={footer}
     >
       <div className="space-y-4">

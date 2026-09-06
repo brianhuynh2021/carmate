@@ -13,7 +13,7 @@ export const CARMATE_POLICIES = {
 
   connectionMechanism: {
     title: 'Cơ Chế Kết Nối & Trách Nhiệm Đôi Bên',
-    quickConfirmation: 'Xác Nhận Qua Zalo/SĐT: Sau khi bấm ghép chuyến, hai bên liên hệ trong vòng 30 phút để chốt chi tiết chuyến đi.',
+    quickConfirmation: 'Xác Nhận Qua Zalo/SĐT: Sau khi bấm ghép chuyến, hai bên liên hệ trong vòng 15 phút để chốt chi tiết chuyến đi.',
     cancellationEtiquette: 'Văn Hóa Báo Trước: Nếu phát sinh lịch đột xuất, vui lòng thông báo cho đối phương trước ít nhất 2 - 4 tiếng.',
     optionalGuarantee: 'Bảo Chứng Tùy Chọn: Hai bên có thể tự nguyện chọn cơ chế cam kết hiển thị trên hệ thống để tăng mức độ an tâm.'
   },

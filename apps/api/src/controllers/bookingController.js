@@ -1,4 +1,4 @@
-import { getDB, getBookings, getTripById, addBooking, updateBookingStatus, removeBooking } from '../db/sqliteStore.js';
+import { getDB, getBookings, getBookingById, getTripById, addBooking, updateBookingStatus, removeBooking } from '../db/sqliteStore.js';
 import { cleanPhoneNumber } from '@carmate/shared';
 
 /**
@@ -244,4 +244,78 @@ export async function submitReview(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
+
+/**
+ * GET /api/bookings/:id/public-summary - Tóm tắt thông tin công khai không nhạy cảm
+ * Dùng cho Bác tài mở Magic Link từ Zalo (Không cần đăng nhập, bảo vệ PII)
+ */
+export function getBookingPublicSummary(req, res) {
+  try {
+    const { id } = req.params;
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy thông tin đặt chuyến hoặc liên kết đã hết hạn'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        escrowId: booking.escrowId || booking.id,
+        tripId: booking.tripId,
+        status: booking.status || 'zalo_active',
+        driverConfirmed: !!booking.driverConfirmed,
+        driverConfirmedAt: booking.driverConfirmedAt || null,
+        driverNote: booking.driverNote || '',
+        from: booking.from,
+        to: booking.to,
+        pickupPoint: booking.pickupPoint || '',
+        timeSlot: booking.timeSlot,
+        date: booking.date,
+        seats: booking.seats || 1,
+        totalDeal: booking.totalDeal || booking.price || 0,
+        passengerName: booking.passengerName || booking.contactName || 'Khách CarMate',
+        driverName: booking.driverName || 'Bác tài',
+        createdAt: booking.createdAt
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/bookings/:id/driver-confirm - Bác tài xác nhận đón 1 chạm từ Magic link Zalo (Không cần đăng nhập)
+ */
+export async function driverConfirmBooking(req, res) {
+  try {
+    const { id } = req.params;
+    const { driverNote = '' } = req.body || {};
+
+    const existing = getBookingById(id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy thông tin chuyến đi để xác nhận'
+      });
+    }
+
+    const updated = await updateBookingStatus(id, 'driver_confirmed', {
+      driverConfirmed: true,
+      driverConfirmedAt: new Date().toISOString(),
+      driverNote: driverNote || 'Bác tài đã bấm nhận đón qua Magic Link Zalo'
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Bác tài đã xác nhận đón thành công! Hệ thống đã ghi nhận lịch hẹn.',
+      data: updated
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
 

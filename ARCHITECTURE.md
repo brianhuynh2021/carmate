@@ -85,8 +85,8 @@ mindmap
 
 ### 2.4. Khởi nghiệp tinh gọn, không rủi ro pháp lý
 - **Dự án cộng đồng văn minh phi thương mại:** Kết nối những người cùng đường chia sẻ chi phí nhiên liệu. Hoàn toàn hợp pháp theo Nghị định 52/2013 & 85/2021 về TMĐT, không rủi ro pháp lý.
-- **Sáng kiến Giữ Chỗ 0đ Của CarMate (Không cầm tiền trung gian):** Tuyệt đối không bắt khách nạp tiền hay chuyển cọc vào tài khoản cá nhân của Founder (tránh tâm lý e ngại lừa đảo). Khách giữ chỗ 0đ, cam kết bằng danh tính thật qua Zalo trong 30 phút, thanh toán tiền mặt/chuyển khoản trực tiếp cho chủ xe khi bước lên xe.
-- **Tự nhiên hoá KYC qua Zalo:** Không tốn tiền mua dịch vụ eKYC đắt đỏ. Dùng đường link `https://zalo.me/[sdt]` (0đ thủ tục, 0đ chi phí), tận dụng hồ sơ Zalo thật của người dùng để tự động loại trừ tài khoản ảo, lừa đảo.
+- **Sáng kiến Giữ Chỗ 0đ Của CarMate (Không cầm tiền trung gian):** Tuyệt đối không bắt khách nạp tiền hay chuyển cọc vào tài khoản cá nhân của Founder (tránh tâm lý e ngại lừa đảo). Khách giữ chỗ 0đ, cam kết bằng danh tính thật qua Zalo trong 15 phút, thanh toán tiền mặt/chuyển khoản trực tiếp cho chủ xe khi bước lên xe.
+- **Tự nhiên hoá KYC qua Zalo & Magic Link 1-Chạm:** Không tốn tiền mua dịch vụ eKYC đắt đỏ. Dùng đường link `https://zalo.me/[sdt]` (0đ thủ tục, 0đ chi phí), tận dụng hồ sơ Zalo thật của người dùng kết hợp Magic Link (`/#confirm-[code]`) và Apple Re-entry Card khép kín luồng trạng thái hai chiều.
 
 ---
 
@@ -108,8 +108,8 @@ sequenceDiagram
     Driver->>Driver: Chia sẻ vé lên nhóm Zalo / Facebook tìm bạn đồng hành
     
     Passenger->>Platform: Tìm tuyến đường hoặc bấm vào link vé
-    Passenger->>Platform: Bấm "Giữ Chỗ 0đ" (Chốt Zalo 30 phút)
-    Platform-->>Passenger: Mở Số Điện Thoại Thật & Nút "Nhắn Zalo Chủ Xe"
+    Passenger->>Platform: Bấm "Giữ Chỗ 0đ" (Chốt Zalo 15 phút)
+    Platform-->>Passenger: Mở Số Điện Thoại Thật & Nút "Nhắn Zalo Chủ Xe" (Kèm Magic Link xác nhận 1 chạm)
     Platform-->>Driver: Báo có khách giữ chỗ & thông tin liên hệ
     
     Passenger->>Zalo: Nhắn Zalo chốt điểm đón & gửi vị trí chi tiết
@@ -196,13 +196,14 @@ sequenceDiagram
 
     Passenger->>Platform: Tìm chuyến hoặc bấm link vé đồng hương
     Passenger->>Platform: Bấm "Đặt Chỗ" (Kết nối trực tiếp, không phí sàn)
-    Platform-->>Passenger: Bật đếm ngược 30 phút + Nút "Nhắn Zalo Bác Tài"
+    Platform-->>Passenger: Bật đếm ngược 15 phút + Nút "Nhắn Zalo Bác Tài"
     
     Passenger->>Zalo: Bấm nút -> Nhảy thẳng khung chat Zalo với Bác Tài
-    Note over Passenger,Zalo: Gửi tin nhắn soạn sẵn: "Chào anh, em vừa giữ 1 chỗ trên CarMate..."
-    Driver->>Zalo: Thấy Zalo thật (Avatar, Quê quán) -> Chốt điểm đón & giờ hẹn
+    Note over Passenger,Zalo: Tin nhắn soạn sẵn kèm Magic Link 1-chạm: "👉 Bác tài xác nhận 1 chạm: carmate.vn/#confirm-CX..."
+    Driver->>Platform: Bác tài bấm link -> Xác nhận đón 1 chạm tức thì (Không cần đăng nhập)
+    Passenger->>Platform: Khách quay lại Web -> Apple Re-entry Card tự động hỏi trạng thái phản hồi
     
-    alt Không nhắn Zalo trong 30 phút
+    alt Không nhắn Zalo trong 15 phút
         Platform->>Platform: Tự động huỷ giữ chỗ, nhường ghế cho khách khác
     else Đã chốt Zalo thành công
         Note over Driver,Passenger: Chuyến đi diễn ra vui vẻ, ấm áp đồng hương
@@ -218,7 +219,7 @@ sequenceDiagram
 
 | Giai Đoạn | Trọng Tâm & Quy Mô | Cơ Chế Giữ Chỗ & Thanh Toán | Mô Hình Doanh Thu (Monetization) | Hạ Tầng Pháp Lý & Kỹ Thuật |
 | :--- | :--- | :--- | :--- | :--- |
-| **Pha 1: Khởi Động Lean (0 - 6 tháng)** | • 1-2 hành lang (QL13, QL51)<br>• 100 - 500 thành viên đầu tiên<br>• Tập trung vào độ sướng & tiện đường đi chung | • **Kết nối trực tiếp**<br>• Chốt Zalo trong 30 phút<br>• Thanh toán tiền mặt/chuyển khoản khi lên xe | • **0% Chiết khấu cước xe** (Xây dựng cộng đồng tiện chuyến)<br>• Tối đa hoá tính lan toả (Viral Loop) | • Solo founder (chưa cần GPKD)<br>• Zero-cost stack: Cloudflare Pages, Node.js + PWA |
+| **Pha 1: Khởi Động Lean (0 - 6 tháng)** | • 1-2 hành lang (QL13, QL51)<br>• 100 - 500 thành viên đầu tiên<br>• Tập trung vào độ sướng & tiện đường đi chung | • **Kết nối trực tiếp**<br>• Chốt Zalo trong 15 phút<br>• Thanh toán tiền mặt/chuyển khoản khi lên xe | • **0% Chiết khấu cước xe** (Xây dựng cộng đồng tiện chuyến)<br>• Tối đa hoá tính lan toả (Viral Loop) | • Solo founder (chưa cần GPKD)<br>• Zero-cost stack: Cloudflare Pages, Node.js + PWA |
 | **Pha 2: Mật Độ Hành Lang (6 - 18 tháng)** | • Phủ kín các trục chính: QL1A, Cao tốc Trung Lương, QL20 Đà Lạt<br>• 5.000+ chuyến/tháng | • 0% phí sàn · Kết nối trực tiếp qua Zalo / Số điện thoại thật | • **Mô hình Chợ Tốt / Freemium:**<br>  - Phí "Đẩy bài hỏa tốc" (5k - 10k/lần)<br>  - Gói Bác tài Uy tín (49k/tháng)<br>• KHÔNG cắt phế % cuốc xe | • Đăng ký Hộ kinh doanh cá thể<br>• Postgres + Redis Redlock<br>• Zalo Mini App chính thức |
 | **Pha 3: Dịch Vụ Giá Trị Gia Tăng (18 - 36 tháng)** | • Mở rộng toàn quốc (Bắc - Trung - Nam)<br>• Bổ sung tuyến liên tỉnh cố định | • Ví điện tử liên kết (MoMo, ZaloPay) + Trực tiếp | • **Bảo hiểm vi mô (Micro-insurance):** 5.000đ/vé (hoa hồng 30%)<br>• Bán chéo Voucher cây xăng (Petrolimex), gara, trạm dừng chân | • Thành lập Công ty TNHH / Cổ phần<br>• Matching Engine bằng Golang đa luồng |
 | **Pha 4: Mở Rộng Khu Vực & Toàn Cầu (3+ năm)** | • Đông Nam Á (Thái Lan, Indo, Philippines)<br>• Châu Âu & Quốc tế | • Thẻ Quốc tế (Stripe, Apple Pay), E-Wallets địa phương | • Phí dịch vụ nền tảng (Booking fee 10-12% từ hành khách theo chuẩn chia sẻ xe quốc tế) | • Global Multi-region Cloud (AWS/GCP)<br>• Đa ngôn ngữ, Đa tiền tệ, Đa cổng chat (LINE, WhatsApp) |
@@ -258,8 +259,20 @@ graph TD
 
 ---
 
-## 8. Kết Luận Kiến Trúc
+## 8. Tiêu Chuẩn Bảo Mật & An Toàn Xác Thực Danh Tính (Security & Token Cryptography)
+
+Để phòng chống hoàn toàn các lỗ hổng chiếm quyền tài khoản (Account Takeover), CarMate triển khai chuẩn bảo mật nghiêm ngặt:
+1. **Google Identity Verification:** Backend bắt buộc kiểm tra chữ ký `idToken` thông qua Google Tokeninfo Endpoint (`oauth2.googleapis.com/tokeninfo`). Tuyệt đối không chấp nhận email thô từ client request body.
+2. **Zalo Identity Verification:** Backend bắt buộc xác thực `accessToken` thông qua Zalo Open Graph API (`graph.zalo.me/v2.0/me`). Mọi yêu cầu không có token hợp lệ đều bị chặn với HTTP 401.
+3. **Phone OTP Verification:** Đăng nhập trực tiếp bằng số điện thoại bắt buộc trải qua luồng xác thực mã OTP 6 chữ số (TTL 5 phút, giới hạn tần suất 5 lần/ngày), triệt tiêu hoàn toàn nguy cơ mạo danh số điện thoại người khác.
+4. **Request Tracing & Observability:** Header `x-request-id` được tự động sinh (hoặc bảo toàn từ client) và ghi vết trong toàn bộ structured log, giúp việc phát hiện và điều tra sự cố (incident investigation) diễn ra tức thì.
+5. **Database Indexing:** Bảng `users` và `trips` được lập chỉ mục `idx_users_email`, `idx_users_phone`, `idx_trips_phone` đảm bảo tốc độ truy vấn $O(1)$, không xảy ra hiện tượng Full Table Scan khi lượng người dùng tăng trưởng vượt bậc.
+
+---
+
+## 9. Kết Luận Kiến Trúc
 Kiến trúc CarMate là sự dung hòa tối ưu giữa **tầm nhìn toàn cầu dài hạn** và **sự thực dụng tối đa cho giai đoạn số 0**:
 1. **0 đồng rủi ro pháp lý & tài chính** cho Solo Founder khi vận hành miễn phí 100%.
 2. **0 rào cản tham gia** cho người dùng (0đ cọc, không cần nạp tiền, Zalo 1 chạm).
 3. **Mã nguồn Monorepo sạch sẽ, module hoá**, sẵn sàng mở rộng quy mô mà không cần đập đi xây lại.
+

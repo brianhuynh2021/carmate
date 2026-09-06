@@ -155,7 +155,7 @@ async function runTests() {
     const passengerAuthRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0933888999', name: 'Hành khách Test E2E' })
+      body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0933888999', phone: '0933888999', name: 'Hành khách Test E2E' })
     });
     const passengerAuth = await passengerAuthRes.json();
     const passengerHeaders = {
@@ -166,7 +166,7 @@ async function runTests() {
     const driverAuthRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0988112233', name: 'Chủ xe Test E2E #999' })
+      body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0988112233', phone: '0988112233', name: 'Chủ xe Test E2E #999' })
     });
     const driverAuth = await driverAuthRes.json();
     const driverHeaders = {
@@ -285,7 +285,7 @@ async function runTests() {
     const cancelUserAuth = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0909111222', name: 'Người huỷ chuyến Test' })
+      body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0909111222', phone: '0909111222', name: 'Người huỷ chuyến Test' })
     });
     const cancelUserToken = (await cancelUserAuth.json()).token;
     const cancelHeaders = {
@@ -460,7 +460,7 @@ async function runTests() {
     const loginARes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0984883750', name: 'Tài xế Nguyễn Văn A' })
+      body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0984883750', phone: '0984883750', name: 'Tài xế Nguyễn Văn A' })
     });
     const loginAData = await loginARes.json();
     assert(loginARes.status === 200 && typeof loginAData.token === 'string', 'Đăng nhập User A nhận JWT Token hợp lệ');
@@ -478,7 +478,7 @@ async function runTests() {
     const loginBRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0913889922', name: 'Tài xế Trần Văn B' })
+      body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0913889922', phone: '0913889922', name: 'Tài xế Trần Văn B' })
     });
     const loginBData = await loginBRes.json();
     assert(loginBRes.status === 200 && typeof loginBData.token === 'string', 'Đăng nhập User B nhận JWT Token riêng biệt');
@@ -1071,8 +1071,230 @@ async function runTests() {
       }).catch(() => {});
     }
     assert(true, 'Vệ sinh môi trường: Tự động dọn sạch bản ghi test sau khi kiểm thử');
+
+    // 21. KIỂM THỬ GIẢI PHÁP KHẮC PHỤC GÃY LUỒNG ZALO (MAGIC LINK & DRIVER QUICK CONFIRM)
+    console.log('\n--- 21. Kiểm thử Giải Pháp Khắc Phục Gãy Luồng Zalo (Magic Link & Driver Quick Confirm) ---');
+    const { generateSmartZaloDraft: generateDraftWithLink } = await import('../apps/web/src/utils/nlpTripParser.js');
+    const testCode = `CX-TEST-${Date.now()}`;
+    const magicDraft = generateDraftWithLink({
+      driverName: 'Mr. Huỳnh Nguyễn',
+      from: 'Bù Đốp',
+      to: 'Sài Gòn',
+      timeSlot: '17:00 - 18:00',
+      date: 'Hôm nay',
+      seats: 1,
+      price: 120000,
+      pickupPoint: 'Ngã 4 Bình Phước',
+      bookingCode: testCode
+    });
+
+    assert(magicDraft.includes(`#confirm-${testCode}`), 'Magic Link 1-Chạm: Tin nhắn Zalo tự động gắn kèm link xác nhận cho Bác tài');
+
+    // Tạo booking test trong SQLite
+    const createTestBookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        escrowId: testCode,
+        from: 'Bù Đốp',
+        to: 'Sài Gòn',
+        pickupPoint: 'Ngã 4 Bình Phước',
+        seats: 1,
+        totalDeal: 120000,
+        timeSlot: '17:00 - 18:00',
+        contactPhone: '0984883750',
+        contactName: 'Anh Huỳnh Nguyễn'
+      })
+    });
+    const createTestBookingData = await createTestBookingRes.json();
+    assert(createTestBookingRes.status === 201 && createTestBookingData.success === true, 'Tạo booking phục vụ kiểm thử Magic Link thành công');
+
+    // Bác tài mở Magic Link: Gọi GET /api/bookings/:id/public-summary không cần đăng nhập
+    const summaryRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`);
+    const summaryData = await summaryRes.json();
+    assert(summaryRes.status === 200 && summaryData.success === true, 'Public Summary: Bác tài truy cập tóm tắt chuyến không cần đăng nhập (HTTP 200)');
+    assert(summaryData.data.from === 'Bù Đốp' && summaryData.data.to === 'Sài Gòn', 'Public Summary: Lộ trình hiển thị chuẩn xác');
+    assert(summaryData.data.totalDeal === 120000, 'Public Summary: Mức phụ xăng hiển thị đúng');
+    assert(!summaryData.data.phoneReal && !summaryData.data.contactPhone, 'PII Protection: Public Summary tuyệt đối không để lộ số điện thoại thô');
+    assert(summaryData.data.driverConfirmed === false, 'Khởi tạo: Bác tài chưa xác nhận đón');
+
+    // Bác tài bấm 1 chạm "Đồng ý đón": Gọi POST /api/bookings/:id/driver-confirm
+    const confirmRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/driver-confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driverNote: 'Đón đúng giờ ở cây xăng nhé bạn'
+      })
+    });
+    const confirmData = await confirmRes.json();
+    assert(confirmRes.status === 200 && confirmData.success === true, 'Driver 1-Tap: Bác tài xác nhận đón 1 chạm thành công (HTTP 200)');
+    assert(confirmData.data.status === 'driver_confirmed', 'Driver 1-Tap: Trạng thái booking chuyển sang driver_confirmed');
+    assert(confirmData.data.driverConfirmed === true, 'Driver 1-Tap: Cờ driverConfirmed được bật true');
+
+    // Kiểm tra lại qua public-summary
+    const summaryAfterConfirm = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`).then(r => r.json());
+    assert(summaryAfterConfirm.data.driverConfirmed === true, 'Đồng bộ: Hành khách và Bác tài đều thấy trạng thái đã xác nhận đón');
+
+    // Dọn dẹp booking test
+    await fetch(`${BASE_URL}/api/bookings/${testCode}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({ reason: 'Dọn dẹp test' })
+    }).catch(() => {});
   } catch (err) {
     assert(false, 'Kịch bản Pentest & TTL', err.message);
+  }
+
+  // 22. Pentest Chống Chiếm Đoạt Tài Khoản (Account Takeover Protection) & Hiệu Năng Index Email
+  console.log('\n--- 22. Pentest Chống Chiếm Đoạt Tài Khoản (Zalo/Google) & Hiệu Năng Index Email ---');
+  try {
+    // 22.1 Pentest Zalo Login: Kẻ tấn công gửi số điện thoại của nạn nhân mà KHÔNG CÓ TOKEN
+    const attackZaloNoTokenRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '0988112233' })
+    });
+    assert(attackZaloNoTokenRes.status === 401, 'Pentest Zalo 1: Chặn đứng mạo danh số điện thoại khi không có token (Bắt buộc HTTP 401)');
+
+    // 22.2 Pentest Zalo Login: Kẻ tấn công gửi token giả mạo
+    const attackZaloFakeTokenRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: 'fake_forged_zalo_token_xyz', phone: '0988112233' })
+    });
+    assert(attackZaloFakeTokenRes.status === 401, 'Pentest Zalo 2: Chặn token giả mạo từ chối cấp quyền (Bắt buộc HTTP 401)');
+
+    // 22.3 Pentest Google Login: Kẻ tấn công gửi email nạn nhân mà KHÔNG CÓ ID TOKEN
+    const attackGgNoTokenRes = await fetch(`${BASE_URL}/api/auth/google-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'victim@gmail.com', googleId: '123456789' })
+    });
+    assert(attackGgNoTokenRes.status === 401, 'Pentest Google 1: Chặn đứng mạo danh email Google khi không có idToken (Bắt buộc HTTP 401)');
+
+    // 22.4 Pentest Google Login: Kẻ tấn công gửi idToken giả
+    const attackGgFakeTokenRes = await fetch(`${BASE_URL}/api/auth/google-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: 'fake_google_id_token_xyz', email: 'victim@gmail.com' })
+    });
+    assert(attackGgFakeTokenRes.status === 401, 'Pentest Google 2: Chặn token Google không hợp lệ (Bắt buộc HTTP 401)');
+
+    // 22.5 Đăng nhập Google chính chủ thành công với Token hợp lệ
+    const validGgRes = await fetch(`${BASE_URL}/api/auth/google-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idToken: 'TEST_GOOGLE_TOKEN_huynhnguyen.dev@gmail.com:gg_sub_998877',
+        name: 'Huỳnh Nguyễn Google User'
+      })
+    });
+    const validGgData = await validGgRes.json();
+    assert(validGgRes.status === 200 && validGgData.success === true, 'Google Login: Đăng nhập chính chủ thành công (HTTP 200)');
+    assert(typeof validGgData.token === 'string', 'Google Login: Cấp mã JWT Token bảo mật');
+    assert(validGgData.user.email === 'huynhnguyen.dev@gmail.com', 'Google Login: Email người dùng được trích xuất an toàn từ token');
+
+    // 22.6 Kiểm tra Request ID Correlation Header (Observability & Easy to Debug)
+    const traceRes = await fetch(`${BASE_URL}/api/health`, {
+      headers: { 'x-request-id': 'test-trace-uuid-123456' }
+    });
+    assert(traceRes.headers.get('x-request-id') === 'test-trace-uuid-123456', 'Observability: Header x-request-id được phản hồi và bảo toàn xuyên suốt');
+
+    // 22.7 Kiểm tra An Toàn Luồng OTP Phone
+    const otpReqRes = await fetch(`${BASE_URL}/api/auth/request-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '0977223344' })
+    });
+    const otpReqData = await otpReqRes.json();
+    assert(otpReqRes.status === 200 && otpReqData.success === true, 'OTP Flow: Gửi mã OTP SMS thành công');
+
+    // Gửi sai OTP -> phải 400
+    const wrongOtpRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '0977223344', otp: '000000' })
+    });
+    assert(wrongOtpRes.status === 400, 'OTP Flow: Mã OTP sai bị từ chối chính xác (HTTP 400)');
+
+    // Gửi đúng OTP
+    const correctOtp = otpReqData.devOtp || '123456';
+    const validOtpRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '0977223344', otp: correctOtp, name: 'Người Dùng OTP Test' })
+    });
+    const validOtpData = await validOtpRes.json();
+    assert(validOtpRes.status === 200 && validOtpData.success === true, 'OTP Flow: Xác thực OTP thành công và cấp JWT');
+    assert(validOtpData.user.phone === '0977223344', 'OTP Flow: Số điện thoại được kích hoạt chính xác');
+  } catch (err) {
+    assert(false, '22. Pentest Chống Chiếm Đoạt Tài Khoản & Index Email', err.message);
+  }
+
+  console.log('\n--- 23. Kiểm thử Analytics & Phễu Chuyển Đổi (Zero-Cost Funnel Store) ---');
+  try {
+    // 1. Ghi nhận sự kiện hợp lệ
+    const evtRes = await fetch(`${BASE_URL}/api/analytics/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventName: 'search_route',
+        properties: { route: 'Sài Gòn - Bù Đốp', from: 'Sài Gòn', to: 'Bù Đốp' },
+        userId: 'user_test_analytics'
+      })
+    });
+    const evtData = await evtRes.json();
+    assert(evtRes.status === 201 && evtData.success === true, 'Analytics 1: Ghi nhận sự kiện thành công (HTTP 201)');
+
+    // 2. Chặn eventName rỗng
+    const emptyEvtRes = await fetch(`${BASE_URL}/api/analytics/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventName: '' })
+    });
+    assert(emptyEvtRes.status === 400, 'Analytics 2: Chặn eventName rỗng (HTTP 400)');
+
+    // 3. Ghi nhận các bước khác trong phễu
+    await fetch(`${BASE_URL}/api/analytics/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventName: 'view_trip',
+        properties: { tripId: 'DRV-TEST', route: 'Sài Gòn - Bù Đốp' }
+      })
+    });
+    await fetch(`${BASE_URL}/api/analytics/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventName: 'initiate_booking',
+        properties: { tripId: 'DRV-TEST', seats: 2 }
+      })
+    });
+    await fetch(`${BASE_URL}/api/analytics/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventName: 'open_zalo',
+        properties: { tripId: 'DRV-TEST', role: 'passenger' }
+      })
+    });
+
+    // 4. Lấy thống kê phễu chuyển đổi
+    const summaryRes = await fetch(`${BASE_URL}/api/admin/analytics/summary`);
+    const summaryData = await summaryRes.json();
+    assert(summaryRes.status === 200 && summaryData.success === true, 'Analytics 3: Tải tổng quan phễu chuyển đổi thành công (HTTP 200)');
+    assert(summaryData.data.totalEvents >= 4, 'Analytics 4: Đếm đúng tổng số sự kiện trong SQLite');
+    assert(typeof summaryData.data.funnel === 'object', 'Analytics 5: Báo cáo đầy đủ các chỉ số phễu');
+    assert(summaryData.data.funnel.search_route >= 1, 'Analytics 6: Đếm chính xác sự kiện search_route');
+    assert(summaryData.data.funnel.initiate_booking >= 1, 'Analytics 7: Đếm chính xác sự kiện initiate_booking');
+    assert(Array.isArray(summaryData.data.topRoutes), 'Analytics 8: Tổng hợp danh sách Top tuyến xe được tìm kiếm');
+    assert(Array.isArray(summaryData.data.recentEvents), 'Analytics 9: Lưu trữ danh sách sự kiện gần nhất');
+  } catch (err) {
+    assert(false, '23. Kiểm thử Analytics & Phễu Chuyển Đổi', err.message);
   }
   const passed = results.filter(r => r.pass).length;
   const failed = results.filter(r => !r.pass).length;

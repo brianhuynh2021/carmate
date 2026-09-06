@@ -1,5 +1,6 @@
 import React from 'react';
 import { RotateCcw, AlertTriangle } from 'lucide-react';
+import { captureException } from '../../utils/sentry.js';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -13,6 +14,7 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('[CarMate ErrorBoundary] Uncaught component error:', error, errorInfo);
+    captureException(error, errorInfo);
   }
 
   handleReload = () => {

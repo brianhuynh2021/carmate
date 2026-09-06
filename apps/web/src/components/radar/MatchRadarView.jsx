@@ -104,36 +104,36 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
           </div>
         </div>
 
-        {/* Nút chuyển ngữ cảnh chỉ hiện khi duyệt thủ công */}
-        {radarMode === 'manual' && (
-          <div className="pt-3 border-t border-black/[0.06] flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-xs text-[#86868b] font-medium">Bạn đang tìm kiếm với tư cách:</span>
-            <div className="inline-flex gap-1.5 p-1 rounded-full bg-[#e8e8ed]/90 border border-black/[0.04]">
-              <button
-                type="button"
-                onClick={() => setUserRole('passenger')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all ${
-                  userRole === 'passenger'
-                    ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
-                }`}
-              >
-                Tôi là Khách (tìm Chủ xe)
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserRole('driver')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all ${
-                  userRole === 'driver'
-                    ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
-                }`}
-              >
-                Tôi là Chủ xe (tìm Khách ghép)
-              </button>
-            </div>
+        {/* Nút chuyển ngữ cảnh: Luôn hiển thị để định vị rõ vai trò người xem */}
+        <div className="pt-3 border-t border-black/[0.06] flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-xs text-[#86868b] font-medium">Bạn đang tìm kiếm với tư cách:</span>
+          <div className="inline-flex gap-1.5 p-1 rounded-full bg-[#e8e8ed]/90 border border-black/[0.04]">
+            <button
+              type="button"
+              onClick={() => setUserRole('passenger')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                userRole === 'passenger'
+                  ? 'bg-white text-[#0071e3] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Tôi là Khách (tìm Bác tài)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserRole('driver')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                userRole === 'driver'
+                  ? 'bg-white text-[#0071e3] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+              }`}
+            >
+              <Car className="w-3.5 h-3.5" />
+              <span>Tôi là Chủ xe (tìm Khách ghép)</span>
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── CHẾ ĐỘ 1: RADAR KHỚP TỰ ĐỘNG (SMART PAIR MATCHING) ── */}
@@ -141,12 +141,14 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-base font-bold text-[#1d1d1f] flex items-center gap-2">
-              <span>Các Cặp Ghép Tối Ưu Nhất</span>
+              <span>{userRole === 'passenger' ? 'Các Chuyến Xe Bác Tài Phù Hợp Nhất' : 'Các Hành Khách Cần Đi Cùng Tuyến'}</span>
               <span className="px-2 py-0.5 rounded-full text-xs bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 font-bold tabular">
                 {validMatches.length}
               </span>
             </h3>
-            <span className="text-xs text-[#86868b]">Khớp lệnh tiện tuyến & cùng giờ</span>
+            <span className="text-xs text-[#86868b]">
+              {userRole === 'passenger' ? 'Ghép chuyến tiết kiệm chi phí' : 'Lấp đầy ghế trống tiện đường'}
+            </span>
           </div>
 
           {loading ? (
@@ -205,98 +207,134 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                       </div>
                     </div>
 
-                    {/* Khung 2 Bên: Chủ Xe <-> Hành Khách */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Cột Chủ Xe */}
-                      <div className="p-4 rounded-2xl bg-[#0071e3]/[0.03] border border-[#0071e3]/15 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#0071e3] uppercase tracking-wider flex items-center gap-1.5">
-                            <Car className="w-3.5 h-3.5" />
-                            <span>Chủ Xe Gia Đình</span>
-                          </span>
-                          <span className="text-xs font-semibold text-[#515154] tabular">
-                            {driver.availableSeats} chỗ trống
+                    {/* NỘI DUNG THẺ THEO VAI TRÒ NGƯỜI XEM (FIRST-PERSON VIEW) */}
+                    {userRole === 'passenger' ? (
+                      /* KHI BẠN LÀ HÀNH KHÁCH -> HIỂN THỊ NỔI BẬT CHUYẾN CỦA BÁC TÀI */
+                      <div className="space-y-3">
+                        <div className="p-4 sm:p-5 rounded-2xl bg-[#0071e3]/[0.03] border border-[#0071e3]/15 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#0071e3] uppercase tracking-wider flex items-center gap-1.5">
+                              <Car className="w-4 h-4" />
+                              <span>Chủ Xe Gia Đình</span>
+                            </span>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 tabular">
+                              {driver.availableSeats} chỗ trống
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                              <p className="font-extrabold text-[#1d1d1f] text-base">
+                                {driver.publicName}
+                              </p>
+                              <p className="text-xs text-[#515154] font-medium pt-0.5">
+                                {driver.from} ➔ {driver.to}
+                              </p>
+                            </div>
+
+                            {onViewTrustProfile && (
+                              <button
+                                type="button"
+                                onClick={() => onViewTrustProfile(driver)}
+                                className="text-xs font-semibold text-[#0071e3] hover:underline cursor-pointer flex items-center gap-1"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>Xem tín nhiệm</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-[#0071e3]/10 text-xs">
+                            <span className="text-[#86868b] tabular">
+                              Khung giờ: <strong className="text-slate-800 font-semibold">{driver.timeSlot || driver.timeSlotLabel || 'Thoả thuận'}</strong>
+                            </span>
+                            <span className="font-extrabold text-[#0071e3] text-sm tabular">
+                              ~{formatVND(driver.basePricePerSeat)}/ghế
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Gợi ý ngữ cảnh đồng hành tinh tế */}
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-black/[0.04] text-[11.5px] text-[#86868b] flex items-center justify-between flex-wrap gap-1">
+                          <span>Nhu cầu của bạn: <strong>{passenger.from} ➔ {passenger.to}</strong> ({passenger.seatsNeeded || 1} ghế)</span>
+                          <span className="text-[#107c41] font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Cùng giờ xuất phát</span>
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <p className="font-bold text-[#1d1d1f] text-sm">
-                            {driver.publicName}
-                          </p>
-                          {onViewTrustProfile && (
-                            <button
-                              type="button"
-                              onClick={() => onViewTrustProfile(driver)}
-                              className="text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer"
-                            >
-                              Xem tín nhiệm
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-xs text-[#515154]">
-                          {driver.from} ➔ {driver.to}
-                        </p>
-                        <div className="flex items-center justify-between pt-1 text-xs">
-                          <span className="text-[#86868b] tabular">
-                            Khung giờ: {driver.timeSlot || driver.timeSlotLabel || 'Thoả thuận'}
-                          </span>
-                          <span className="font-extrabold text-[#0071e3] tabular">
-                            ~{formatVND(driver.basePricePerSeat)}/ghế
-                          </span>
+
+                        {/* DUY NHẤT 1 NÚT HÀNH ĐỘNG RÕ RÀNG */}
+                        <div className="pt-2 flex items-center justify-end">
+                          <button
+                            type="button"
+                            onClick={() => onBook(driver)}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0071e3] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                          >
+                            <span>Ghép Chuyến Với Bác Tài (1 chạm)</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
+                    ) : (
+                      /* KHI BẠN LÀ CHỦ XE -> HIỂN THỊ NỔI BẬT HÀNH KHÁCH CẦN ĐI */
+                      <div className="space-y-3">
+                        <div className="p-4 sm:p-5 rounded-2xl bg-[#ff9500]/[0.04] border border-[#ff9500]/20 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#b25e00] uppercase tracking-wider flex items-center gap-1.5">
+                              <Users className="w-4 h-4" />
+                              <span>Hành Khách Tiện Đường</span>
+                            </span>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 tabular">
+                              Cần {passenger.seatsNeeded || 1} ghế
+                            </span>
+                          </div>
 
-                      {/* Cột Hành Khách */}
-                      <div className="p-4 rounded-2xl bg-[#ff9500]/[0.04] border border-[#ff9500]/20 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#b25e00] uppercase tracking-wider flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5" />
-                            <span>Hành Khách Tiện Đường</span>
-                          </span>
-                          <span className="text-xs font-semibold text-[#515154] tabular">
-                            Cần {passenger.seatsNeeded || 1} ghế
+                          <div>
+                            <p className="font-extrabold text-[#1d1d1f] text-base">
+                              {passenger.publicName}
+                            </p>
+                            <p className="text-xs text-[#515154] font-medium pt-0.5">
+                              {passenger.from} ➔ {passenger.to}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-[#ff9500]/15 text-xs">
+                            <span className="text-[#86868b] tabular">
+                              Giờ đón: <strong className="text-slate-800 font-semibold">{passenger.timeSlot || passenger.timeSlotLabel || 'Thoả thuận'}</strong>
+                            </span>
+                            <span className="text-xs text-[#515154] font-medium italic">
+                              "{passenger.notes?.slice(0, 45) || 'Cần xe tiện chuyến đi cùng tuyến'}"
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Gợi ý ngữ cảnh đồng hành */}
+                        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-black/[0.04] text-[11.5px] text-[#86868b] flex items-center justify-between flex-wrap gap-1">
+                          <span>Chuyến xe của bạn: <strong>{driver.publicName}</strong> ({driver.availableSeats} chỗ trống)</span>
+                          <span className="text-[#107c41] font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Thuận đường đón trả</span>
                           </span>
                         </div>
-                        <p className="font-bold text-[#1d1d1f] text-sm">
-                          {passenger.publicName}
-                        </p>
-                        <p className="text-xs text-[#515154]">
-                          {passenger.from} ➔ {passenger.to}
-                        </p>
-                        <div className="flex items-center justify-between pt-1 text-xs">
-                          <span className="text-[#86868b] tabular">
-                            Khung giờ: {passenger.timeSlot || passenger.timeSlotLabel || 'Thoả thuận'}
-                          </span>
-                          <span className="font-semibold text-[#515154] tabular">
-                            {passenger.notes?.slice(0, 32) || 'Cần xe tiện chuyến'}
-                          </span>
+
+                        {/* DUY NHẤT 1 NÚT HÀNH ĐỘNG RÕ RÀNG CHO BÁC TÀI */}
+                        <div className="pt-2 flex items-center justify-end">
+                          <a
+                            href={getZaloChatUrl(
+                              passenger.phoneReal,
+                              `Chào bạn ${passenger.publicName}, mình là tài xế CarMate có chuyến tiện đường qua ${passenger.from} đi ${passenger.to} lúc ${passenger.timeSlot || 'sáng mai'}. Mình còn ghế trống, bạn có muốn đi cùng xe không?`
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                          >
+                            <ZaloIcon className="w-4 h-4" />
+                            <span>Nhận Đón Khách Này (Nhắn Zalo)</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </a>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Nút Thao Tác Chốt Kèo Văn Minh */}
-                    <div className="pt-2 flex items-center justify-end gap-3">
-                      <a
-                        href={getZaloChatUrl(
-                          driver.phoneReal,
-                          `Chào anh ${driver.publicName}, hệ thống CarMate vừa gợi ý kết nối chuyến xe tiện đường của anh và bạn ${passenger.publicName} trên tuyến ${match.routeCategory}. Mình trao đổi nhé!`
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#0068ff]/10 text-[#0068ff] hover:bg-[#0068ff]/20 transition-colors cursor-pointer"
-                      >
-                        <ZaloIcon className="w-4 h-4" />
-                        <span>Nhắn Zalo Chủ Xe</span>
-                      </a>
-
-                      <button
-                        type="button"
-                        onClick={() => onBook(driver)}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#0071e3] text-white hover:bg-[#0077ed] shadow-xs active:scale-[0.98] transition-all cursor-pointer"
-                      >
-                        <span>Ghép Chuyến Ngay</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    )}
                   </article>
                 );
               })}

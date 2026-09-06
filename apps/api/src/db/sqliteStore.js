@@ -78,6 +78,7 @@ export async function initDB() {
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       phone TEXT UNIQUE,
+      email TEXT,
       name TEXT,
       role TEXT DEFAULT 'driver',
       avatar TEXT,
@@ -91,6 +92,17 @@ export async function initDB() {
     );
     CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
   `);
+
+  // Migration an toàn cho database hiện hữu nếu chưa có cột email
+  try {
+    const userColumns = db.pragma('table_info(users)').map(col => col.name);
+    if (!userColumns.includes('email')) {
+      db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+    }
+    db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
+  } catch (migErr) {
+    // Bỏ qua nếu đã tồn tại hoặc đang chạy trong transaction
+  }
 
   // 3. Tạo bảng Ghép & Đặt Chuyến (bookings)
   db.exec(`
@@ -129,7 +141,20 @@ export async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_ai_traj_unmet ON ai_trajectories(unmetDemand);
   `);
 
-  // 6. Tự động chuyển đổi dữ liệu từ file JSON cũ sang SQLite (Migration)
+  // 6. Bảng Phân Tích Hành Vi & Funnel (analytics_events)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id TEXT PRIMARY KEY,
+      event_name TEXT NOT NULL,
+      properties TEXT,
+      user_id TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_analytics_event_name ON analytics_events(event_name);
+    CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
+  `);
+
+  // 7. Tự động chuyển đổi dữ liệu từ file JSON cũ sang SQLite (Migration)
   const tripCount = db.prepare('SELECT COUNT(*) as count FROM trips').get().count;
   if (tripCount === 0) {
     console.log('[SQLite DB] Bắt đầu di chuyển dữ liệu từ file JSON sang SQLite...');
@@ -656,6 +681,17 @@ export async function addBooking(bookingData) {
   return full;
 }
 
+export function getBookingById(id) {
+  const database = getRawDB();
+  const row = database.prepare('SELECT payload FROM bookings WHERE escrowId = ?').get(id);
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
 export async function updateBookingStatus(id, status, extra = {}) {
   const database = getRawDB();
   const row = database.prepare('SELECT payload FROM bookings WHERE escrowId = ?').get(id);
@@ -715,7 +751,9 @@ export function getUserByEmail(email) {
   const database = getRawDB();
   if (!email) return null;
   const cleanEmail = email.trim().toLowerCase();
-  const row = database.prepare('SELECT payload FROM users WHERE payload LIKE ?').get(`%"email":"${cleanEmail}"%`);
+  // Ưu tiên truy vấn qua Index cột email O(1), fallback quét payload nếu là dữ liệu cũ
+  const row = database.prepare('SELECT payload FROM users WHERE email = ?').get(cleanEmail) ||
+              database.prepare('SELECT payload FROM users WHERE payload LIKE ?').get(`%"email":"${cleanEmail}"%`);
   if (!row) return null;
 
   try {
@@ -728,6 +766,7 @@ export function getUserByEmail(email) {
 export async function saveUser(user) {
   const database = getRawDB();
   const clean = cleanPhoneNumber(user.phone);
+  const cleanEmail = user.email ? user.email.trim().toLowerCase() : null;
   const id = user.id || (clean ? 'USR-' + clean : 'USR-' + Date.now());
   const now = new Date().toISOString();
 
@@ -735,20 +774,22 @@ export async function saveUser(user) {
     ...user,
     id,
     phone: clean,
+    email: cleanEmail,
     updatedAt: now,
     createdAt: user.createdAt || now
   };
 
   database.prepare(`
     INSERT OR REPLACE INTO users (
-      id, phone, name, role, avatar, trustScore, isCccdVerified, isGplxVerified, isBanned, createdAt, updatedAt, payload
+      id, phone, email, name, role, avatar, trustScore, isCccdVerified, isGplxVerified, isBanned, createdAt, updatedAt, payload
     ) VALUES (
-      @id, @phone, @name, @role, @avatar, @trustScore, @isCccdVerified, @isGplxVerified, @isBanned, @createdAt, @updatedAt, @payload
+      @id, @phone, @email, @name, @role, @avatar, @trustScore, @isCccdVerified, @isGplxVerified, @isBanned, @createdAt, @updatedAt, @payload
     )
   `).run({
     id,
     phone: clean,
-    name: full.name || 'Thành viên ' + clean.slice(-4),
+    email: cleanEmail,
+    name: full.name || 'Thành viên ' + (clean ? clean.slice(-4) : 'mới'),
     role: full.role || 'driver',
     avatar: full.avatar || '',
     trustScore: Number(full.trustScore || 98),
@@ -983,6 +1024,74 @@ export function getAiIntelligenceStats() {
     },
     unmetDemandRoutes: unmetRoutes,
     recentTrajectories
+  };
+}
+
+export function saveAnalyticsEvent({ id, eventName, properties, userId, createdAt }) {
+  const database = getRawDB();
+  const stmt = database.prepare(`
+    INSERT INTO analytics_events (id, event_name, properties, user_id, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    id || `evt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    eventName,
+    typeof properties === 'object' ? JSON.stringify(properties) : (properties || '{}'),
+    userId || null,
+    createdAt || Date.now()
+  );
+}
+
+export function getAnalyticsSummary() {
+  const database = getRawDB();
+  const total = database.prepare('SELECT COUNT(*) as count FROM analytics_events').get().count;
+  
+  // Funnel events count
+  const funnelEvents = ['page_view', 'search_route', 'view_trip', 'initiate_booking', 'open_zalo', 'driver_confirm'];
+  const funnelCounts = {};
+  for (const evt of funnelEvents) {
+    const row = database.prepare('SELECT COUNT(*) as count FROM analytics_events WHERE event_name = ?').get(evt);
+    funnelCounts[evt] = row?.count || 0;
+  }
+
+  // Top searched routes from properties
+  const allSearchEvents = database.prepare(`
+    SELECT properties FROM analytics_events 
+    WHERE event_name = 'search_route' 
+    ORDER BY created_at DESC LIMIT 500
+  `).all();
+
+  const routeCounts = {};
+  for (const row of allSearchEvents) {
+    try {
+      const p = JSON.parse(row.properties || '{}');
+      const r = p.route || p.selectedRoute || (p.from && p.to ? `${p.from} - ${p.to}` : null);
+      if (r) {
+        routeCounts[r] = (routeCounts[r] || 0) + 1;
+      }
+    } catch {
+      // ignore json parse error
+    }
+  }
+
+  const topRoutes = Object.entries(routeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([route, count]) => ({ route, count }));
+
+  // Recent 20 events
+  const recentEvents = database.prepare(`
+    SELECT * FROM analytics_events ORDER BY created_at DESC LIMIT 20
+  `).all().map(r => ({
+    ...r,
+    properties: r.properties ? JSON.parse(r.properties) : {}
+  }));
+
+  return {
+    totalEvents: total,
+    funnel: funnelCounts,
+    topRoutes,
+    recentEvents
   };
 }
 

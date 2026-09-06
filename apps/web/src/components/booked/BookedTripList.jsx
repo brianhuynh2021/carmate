@@ -13,8 +13,8 @@ import { RouteTimeline } from '../market/TripCard.jsx';
 import { ZaloIcon, WhatsAppIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 
 /**
- * Đồng hồ đếm ngược 30 phút theo chuẩn ARCHITECTURE.md:
- * "Hành khách giữ chỗ 0đ, cam kết bằng danh tính thật qua Zalo trong 30 phút"
+ * Đồng hồ đếm ngược 15 phút theo chuẩn ARCHITECTURE.md:
+ * "Hành khách giữ chỗ 0đ, cam kết bằng danh tính thật qua Zalo trong 15 phút"
  */
 function Countdown30Min({ createdAt }) {
   const [timeLeft, setTimeLeft] = useState(() => {
@@ -23,7 +23,7 @@ function Countdown30Min({ createdAt }) {
     else if (typeof createdAt === 'string' && createdAt.includes('06:20')) {
       start = Date.now() - 6 * 60 * 1000;
     }
-    const expiry = start + 30 * 60 * 1000;
+    const expiry = start + 15 * 60 * 1000;
     return Math.max(0, Math.floor((expiry - Date.now()) / 1000));
   });
 

@@ -138,6 +138,17 @@ export const api = {
     });
   },
 
+  async getBookingPublicSummary(id) {
+    return request(`/bookings/${id}/public-summary`);
+  },
+
+  async driverConfirmBooking(id, payload = {}) {
+    return request(`/bookings/${id}/driver-confirm`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
   // Auth & Identity (0đ chi phí / Zalo & OTP)
   async requestOtp(phone) {
     return request('/auth/request-otp', {

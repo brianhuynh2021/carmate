@@ -217,14 +217,18 @@ export function generateSmartZaloDraft({
   price = 0,
   pickupPoint = '',
   isParcel = false,
-  hasRelatives = false
+  hasRelatives = false,
+  bookingCode = '',
+  confirmUrl = ''
 }) {
   const pickupText = pickupPoint ? `\n• Điểm hẹn đón: ${pickupPoint}` : '';
   const priceText = price ? `\n• Chi phí phụ xăng dự kiến: ${new Intl.NumberFormat('vi-VN').format(price)}đ/ghế` : '';
+  const confirmLink = confirmUrl || (bookingCode ? `https://carmate.vn/#confirm-${bookingCode}` : '');
+  const confirmText = confirmLink ? `\n👉 Bác tài xác nhận 1 chạm: ${confirmLink}` : '';
 
   if (isParcel) {
     return `Chào ${driverName}, em thấy xe mình chạy tuyến ${from} ➔ ${to} lúc ${timeSlot} (${date}).
-Em có 1 kiện đồ nhỏ muốn gửi kèm theo xe. Anh cho em gửi vị trí đón nhận bưu phẩm qua Zalo này nhé! Cảm ơn anh.`;
+Em có 1 kiện đồ nhỏ muốn gửi kèm theo xe. Anh cho em gửi vị trí đón nhận bưu phẩm qua Zalo này nhé! Cảm ơn anh.${confirmText}`;
   }
 
   const relativeNote = hasRelatives ? ' (em biết xe có người nhà, em đi 1 mình gọn gàng)' : '';
@@ -234,5 +238,5 @@ Em có 1 kiện đồ nhỏ muốn gửi kèm theo xe. Anh cho em gửi vị tr�
 • Khung giờ: ${timeSlot} (${date})
 • Số người đăng ký: ${seats} người${relativeNote}${pickupText}${priceText}
 • Cam kết: Em cam kết có mặt đúng giờ hẹn, không hủy gấp.
-Anh cho em xin điểm hẹn đón thuận tiện nhất của anh nhé!`;
+Anh cho em xin điểm hẹn đón thuận tiện nhất của anh nhé!${confirmText}`;
 }

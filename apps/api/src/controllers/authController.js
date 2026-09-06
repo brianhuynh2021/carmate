@@ -147,34 +147,71 @@ export async function verifyOtp(req, res) {
 }
 
 /**
+/**
  * POST /api/auth/zalo-login
- * Đăng nhập / Đăng ký Zalo 1 chạm
+ * Đăng nhập / Đăng ký qua Zalo Open API Token (OAuth / Mini App)
+ * BẮT BUỘC có accessToken hoặc zaloToken được Zalo ký duyệt.
+ * Không chấp nhận req.body mạo danh số điện thoại khi không có token.
  */
 export async function zaloLogin(req, res) {
   try {
-    const { phone, name, avatar } = req.body || {};
-    if (!phone) {
-      return res.status(400).json({ success: false, error: 'Cần số điện thoại Zalo để đăng nhập' });
-    }
+    const { accessToken, zaloToken, token: inputToken, phone: rawPhone, name: reqName } = req.body || {};
+    const token = (accessToken || zaloToken || inputToken || '').trim();
 
-    const cleaned = cleanPhoneNumber(phone);
-    if (!cleaned || !isValidVietnamesePhone(cleaned)) {
-      return res.status(400).json({
+    if (!token) {
+      return res.status(401).json({
         success: false,
-        error: 'Số điện thoại không đúng định dạng nhà mạng Việt Nam (Viettel, Vina, Mobi, Vietnamobile...)'
+        error: 'Yêu cầu accessToken từ Zalo SDK. Không thể đăng nhập bằng thông tin mạo danh. Nếu đăng nhập bằng số điện thoại, vui lòng dùng luồng xác thực OTP SMS.'
       });
     }
 
-    let user = getUserByPhone(cleaned);
+    const isDevOrTest = process.env.NODE_ENV !== 'production';
+    let verifiedZaloId = '';
+    let verifiedName = '';
+    let verifiedAvatar = '';
+    let verifiedPhone = '';
+
+    // Xử lý mock token trong môi trường Test / Development cục bộ
+    if (isDevOrTest && token.startsWith('TEST_ZALO_TOKEN_')) {
+      const parts = token.replace('TEST_ZALO_TOKEN_', '').split(':');
+      verifiedPhone = parts[0] || rawPhone || '';
+      verifiedZaloId = parts[1] || `zalo_mock_${Date.now()}`;
+      verifiedName = reqName || 'Tài xế Zalo Test';
+    } else {
+      // Xác thực trực tiếp với máy chủ Zalo Graph API
+      try {
+        const zaloRes = await fetch(`https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(token)}&fields=id,name,picture`);
+        const zaloData = await zaloRes.json().catch(() => ({}));
+        if (!zaloRes.ok || zaloData.error || !zaloData.id) {
+          return res.status(401).json({
+            success: false,
+            error: 'Token Zalo không hợp lệ hoặc đã hết hạn từ máy chủ Zalo.'
+          });
+        }
+        verifiedZaloId = String(zaloData.id);
+        verifiedName = zaloData.name || '';
+        verifiedAvatar = zaloData.picture?.data?.url || '';
+      } catch (networkErr) {
+        return res.status(502).json({
+          success: false,
+          error: 'Không thể kết nối đến máy chủ xác thực Zalo: ' + networkErr.message
+        });
+      }
+    }
+
+    const cleaned = verifiedPhone ? cleanPhoneNumber(verifiedPhone) : '';
+    const userId = `USR-ZALO-${verifiedZaloId || cleaned || Date.now()}`;
+
+    let user = getUserById(userId) || (cleaned ? getUserByPhone(cleaned) : null);
     let isNewUser = false;
 
     if (!user) {
       isNewUser = true;
       user = {
-        id: 'USR-ZALO-' + cleaned,
-        phone: cleaned,
-        name: name?.trim() || `Tài xế Zalo ${cleaned.slice(-4)}`,
-        avatar: avatar || '',
+        id: userId,
+        phone: cleaned || '',
+        name: verifiedName || reqName?.trim() || `Tài xế Zalo ${userId.slice(-4)}`,
+        avatar: verifiedAvatar || '',
         role: 'driver',
         provider: 'zalo',
         trustScore: 100,
@@ -182,20 +219,20 @@ export async function zaloLogin(req, res) {
       };
       await saveUser(user);
     } else {
-      if (name) user.name = name.trim();
-      if (avatar) user.avatar = avatar;
+      if (verifiedName) user.name = verifiedName;
+      if (verifiedAvatar) user.avatar = verifiedAvatar;
+      if (cleaned && !user.phone) user.phone = cleaned;
       user.provider = 'zalo';
       await saveUser(user);
     }
 
-    const myTrips = getTripsByPhone(cleaned);
+    const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
     const tripIds = myTrips.map((t) => t.id);
 
-    // Cấp mã JWT Token bảo mật
-    const token = generateToken({
+    const jwtToken = generateToken({
       userId: user.id,
-      phone: user.phone,
-      role: user.role,
+      phone: user.phone || '',
+      role: user.role || 'driver',
       name: user.name
     });
 
@@ -203,7 +240,7 @@ export async function zaloLogin(req, res) {
       success: true,
       message: isNewUser ? 'Kích hoạt tài khoản Zalo mới thành công' : 'Đăng nhập Zalo thành công',
       user,
-      token,
+      token: jwtToken,
       tripIds,
       isNewUser
     });
@@ -214,30 +251,80 @@ export async function zaloLogin(req, res) {
 
 /**
  * POST /api/auth/google-login
- * Đăng nhập / Đăng ký 1 chạm bằng tài khoản Google (0đ chi phí SMS)
+ * Đăng nhập / Đăng ký qua Google Identity Services ID Token
+ * BẮT BUỘC có idToken hoặc credential được Google ký duyệt.
+ * Không chấp nhận req.body mạo danh email khi không có token.
  */
 export async function googleLogin(req, res) {
   try {
-    const { email, name, avatar, googleId, phone } = req.body || {};
-    if (!email && !googleId) {
-      return res.status(400).json({ success: false, error: 'Thông tin tài khoản Google không hợp lệ' });
+    const { idToken, credential, token: inputToken, email: rawEmail, googleId: rawGoogleId, name: reqName, phone: reqPhone } = req.body || {};
+    const token = (idToken || credential || inputToken || '').trim();
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Yêu cầu idToken xác thực từ Google. Không thể đăng nhập bằng thông tin mạo danh email.'
+      });
     }
 
-    const cleanEmail = email ? email.trim().toLowerCase() : '';
-    const userId = googleId ? `USR-GG-${googleId}` : `USR-GG-${Buffer.from(cleanEmail).toString('hex').slice(0, 12)}`;
+    const isDevOrTest = process.env.NODE_ENV !== 'production';
+    let verifiedEmail = '';
+    let verifiedGoogleId = '';
+    let verifiedName = '';
+    let verifiedAvatar = '';
 
-    let user = getUserById(userId) || (cleanEmail ? getUserByEmail(cleanEmail) : null);
+    // Xử lý mock token trong môi trường Test / Development cục bộ
+    if (isDevOrTest && token.startsWith('TEST_GOOGLE_TOKEN_')) {
+      const parts = token.replace('TEST_GOOGLE_TOKEN_', '').split(':');
+      verifiedEmail = (parts[0] || rawEmail || '').trim().toLowerCase();
+      verifiedGoogleId = parts[1] || rawGoogleId || 'test_gg_sub';
+      verifiedName = reqName || verifiedEmail.split('@')[0] || 'Google User';
+    } else {
+      // Xác thực trực tiếp với máy chủ Google Tokeninfo API
+      try {
+        const ggRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`);
+        const ggData = await ggRes.json().catch(() => ({}));
+        if (!ggRes.ok || !ggData.email || !ggData.sub) {
+          return res.status(401).json({
+            success: false,
+            error: 'Token Google không hợp lệ hoặc đã hết hạn từ máy chủ Google.'
+          });
+        }
+        if (ggData.email_verified !== true && ggData.email_verified !== 'true') {
+          return res.status(401).json({
+            success: false,
+            error: 'Email Google chưa được xác thực (unverified email).'
+          });
+        }
+        verifiedEmail = ggData.email.trim().toLowerCase();
+        verifiedGoogleId = ggData.sub;
+        verifiedName = ggData.name || '';
+        verifiedAvatar = ggData.picture || '';
+      } catch (networkErr) {
+        return res.status(502).json({
+          success: false,
+          error: 'Không thể kết nối đến máy chủ xác thực Google: ' + networkErr.message
+        });
+      }
+    }
+
+    if (!verifiedEmail) {
+      return res.status(400).json({ success: false, error: 'Không thể trích xuất địa chỉ email từ Token Google.' });
+    }
+
+    const userId = `USR-GG-${verifiedGoogleId}`;
+    let user = getUserById(userId) || getUserByEmail(verifiedEmail);
     let isNewUser = false;
 
     if (!user) {
       isNewUser = true;
       user = {
         id: userId,
-        email: cleanEmail,
-        googleId: googleId || '',
-        phone: phone ? cleanPhoneNumber(phone) : '',
-        name: name?.trim() || cleanEmail.split('@')[0] || 'Thành viên Google',
-        avatar: avatar || '',
+        email: verifiedEmail,
+        googleId: verifiedGoogleId,
+        phone: reqPhone ? cleanPhoneNumber(reqPhone) : '',
+        name: verifiedName || reqName?.trim() || verifiedEmail.split('@')[0] || 'Thành viên Google',
+        avatar: verifiedAvatar || '',
         role: 'passenger',
         provider: 'google',
         trustScore: 100,
@@ -247,9 +334,11 @@ export async function googleLogin(req, res) {
       };
       await saveUser(user);
     } else {
-      if (name && (!user.name || user.name.startsWith('Thành viên'))) user.name = name.trim();
-      if (avatar && !user.avatar) user.avatar = avatar;
-      if (phone && !user.phone) user.phone = cleanPhoneNumber(phone);
+      if (verifiedName && (!user.name || user.name.startsWith('Thành viên'))) user.name = verifiedName;
+      if (verifiedAvatar && !user.avatar) user.avatar = verifiedAvatar;
+      if (reqPhone && !user.phone) user.phone = cleanPhoneNumber(reqPhone);
+      user.googleId = verifiedGoogleId;
+      user.email = verifiedEmail;
       user.provider = user.provider || 'google';
       await saveUser(user);
     }
@@ -258,7 +347,7 @@ export async function googleLogin(req, res) {
     const tripIds = myTrips.map((t) => t.id);
 
     // Cấp mã JWT Token bảo mật 7 ngày
-    const token = generateToken({
+    const jwtToken = generateToken({
       userId: user.id,
       phone: user.phone || '',
       email: user.email || '',
@@ -270,7 +359,7 @@ export async function googleLogin(req, res) {
       success: true,
       message: isNewUser ? 'Đăng ký tài khoản Google thành công' : 'Đăng nhập Google thành công',
       user,
-      token,
+      token: jwtToken,
       tripIds,
       isNewUser
     });

@@ -3,6 +3,7 @@ import cors from 'cors';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { initDB, closeDB } from './db/sqliteStore.js';
 import apiRouter from './routes/api.js';
@@ -50,7 +51,8 @@ app.use(cors({
     return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
+  exposedHeaders: ['x-request-id'],
   credentials: true
 }));
 
@@ -59,14 +61,19 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(sanitizeInput);
 
-// 2. Request Logger gọn gàng (chỉ log /api để không spam static assets)
+// 2. Request Correlation ID & Structured Logging (Khả năng quan sát & Dễ debug theo review)
 app.use((req, res, next) => {
+  const reqId = req.headers['x-request-id'] || crypto.randomUUID();
+  req.id = reqId;
+  res.setHeader('x-request-id', reqId);
+
   if (req.originalUrl.startsWith('/api')) {
     const start = Date.now();
     res.on('finish', () => {
       const duration = Date.now() - start;
       const statusColor = res.statusCode >= 400 ? '\x1b[31m' : res.statusCode >= 300 ? '\x1b[33m' : '\x1b[32m';
-      console.log(`[API] ${req.method} ${req.originalUrl} -> ${statusColor}${res.statusCode}\x1b[0m (${duration}ms)`);
+      const shortId = typeof reqId === 'string' ? reqId.slice(0, 8) : 'req';
+      console.log(`[API] [${shortId}] ${req.method} ${req.originalUrl} -> ${statusColor}${res.statusCode}\x1b[0m (${duration}ms)`);
     });
   }
   next();
