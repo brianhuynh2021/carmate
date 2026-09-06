@@ -53,18 +53,18 @@ export default function Footer({ onNavigate, onOpenTerms }) {
           <div className="flex items-center gap-2 flex-wrap">
             <a
               href={`tel:${SITE_INFO.phoneRaw || '0984883750'}`}
-              className="h-8 px-3.5 rounded-full border border-black/[0.08] bg-white hover:bg-[#ebebee] text-[#1d1d1f] text-xs font-mono font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-mono font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
-              <Phone className="w-3 h-3 text-[#107c41]" />
+              <Phone className="w-3.5 h-3.5 text-[#107c41]" />
               <span>{SITE_INFO.hotline}</span>
-              <span className="text-[10px] text-[#86868b] font-sans hidden sm:inline">({SITE_INFO.contactPerson})</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-sans font-medium">({SITE_INFO.contactPerson})</span>
             </a>
 
             <a
               href={SITE_INFO.zaloOA}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-8 px-3.5 rounded-full border border-black/[0.08] bg-white hover:bg-[#ebebee] text-[#1d1d1f] text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <ZaloIcon className="w-3.5 h-3.5 text-[#0068ff]" />
               <span>Zalo Trực Tiếp</span>
@@ -74,7 +74,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               href={SITE_INFO.facebook}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-8 px-3.5 rounded-full border border-black/[0.08] bg-white hover:bg-[#ebebee] text-[#1d1d1f] text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <FacebookIcon className="w-3.5 h-3.5 text-[#1877F2]" />
               <span>Fanpage Facebook</span>
