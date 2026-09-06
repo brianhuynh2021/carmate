@@ -8,7 +8,8 @@ import {
   MapPin, 
   Navigation, 
   Clock, 
-  ArrowRight
+  ArrowRight,
+  Package
 } from 'lucide-react';
 import { formatVND, getTimeSlotLabel, isGoogleMapsUrl, ROUTE_BENCHMARKS, decodeHtmlEntities } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -234,10 +235,21 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
   const { fromInfo, toInfo } = getCorridorDisplay(item, fromParsed, toParsed);
   const palette = getPaletteForItem(item);
 
+  // Danh sách tiện ích phục vụ Progressive Disclosure khi hover / chạm
+  const perksList = Array.from(new Set(Array.isArray(item.perks) ? item.perks.filter(Boolean) : [])).filter(p => {
+    if (typeof p !== 'string') return false;
+    const lower = p.toLowerCase();
+    return !lower.includes('biển vàng') && !lower.includes('biển trắng') && !lower.includes('tiện chuyến') && !lower.includes('gia đình');
+  });
+  const defaultPerks = isDriver 
+    ? (item.acceptsParcel ? ['Máy lạnh', 'Không khói thuốc', 'Nhận gửi đồ'] : ['Máy lạnh', 'Không khói thuốc', 'Cốp rộng'])
+    : ['Đúng giờ', 'Không hút thuốc'];
+  const displayPerks = perksList.length > 0 ? perksList.slice(0, 3) : defaultPerks;
+
   return (
     <article
       id={`trip-${item.id}`}
-      className="flex flex-col relative overflow-hidden rounded-3xl bg-white dark:bg-[#151c28] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_48px_rgba(0,113,227,0.16)] hover:-translate-y-1.5 transition-all duration-300 group"
+      className="flex flex-col relative overflow-hidden rounded-3xl bg-white dark:bg-[#151c28] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_24px_54px_rgba(0,113,227,0.16)] hover:-translate-y-2 active:scale-[0.985] transition-all duration-300 ease-out group select-none"
     >
       {/* ── 1. VISUAL ROUTE POSTER (FLY.IO ARTWORK + APPLE BOARDING PASS) ── */}
       <div 
@@ -245,22 +257,22 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         tabIndex={0}
         onClick={() => onViewRoute?.(item)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item); }}
-        className={`relative overflow-hidden p-5 text-white select-none cursor-pointer transition-all duration-300 ${palette.bgGradient}`}
+        className={`relative overflow-hidden p-5 text-white cursor-pointer transition-all duration-300 ${palette.bgGradient}`}
       >
         {/* Glow hiệu ứng nền nghệ thuật đa tầng */}
-        <div className={`absolute -right-8 -bottom-8 w-40 h-40 rounded-full ${palette.glowColor} blur-2xl pointer-events-none`} />
+        <div className={`absolute -right-8 -bottom-8 w-40 h-40 rounded-full ${palette.glowColor} blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500`} />
         <div className="absolute -left-8 -top-8 w-40 h-40 rounded-full bg-black/25 blur-xl pointer-events-none" />
 
         {/* Top Header: Badge phân loại xe & Số ghế trống */}
         <div className="relative z-10 flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider backdrop-blur-md bg-white/15 border border-white/20 text-white shadow-2xs">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider backdrop-blur-md bg-white/15 border border-white/20 text-white shadow-2xs group-hover:bg-white/20 transition-colors">
             <Car className="w-3 h-3 text-white" strokeWidth={2.5} />
             <span>{isConvenient ? 'Xe tiện chuyến' : 'Xe gia đình'}</span>
             {distanceKm && <span className="text-white/80 font-mono">· ~{distanceKm}km</span>}
           </span>
 
           {/* Huy hiệu ghế sống động */}
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide backdrop-blur-md bg-emerald-500/95 text-white border border-emerald-300/40 shadow-sm">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide backdrop-blur-md bg-emerald-500/95 text-white border border-emerald-300/40 shadow-sm group-hover:bg-emerald-500 transition-colors">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
             {isDriver ? (
               <span>Còn <span className="font-mono">{item.availableSeats}</span> chỗ</span>
@@ -285,17 +297,17 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
             </p>
           </div>
 
-          {/* Icon tuyến đường cao tốc & giờ xuất phát ở giữa */}
+          {/* Icon tuyến đường cao tốc & Micro-animation xe lăn bánh khi lướt qua */}
           <div className="flex flex-col items-center justify-center shrink-0 px-2.5">
             <div className="flex items-center gap-1 text-white/90">
               <span className="w-2 h-2 rounded-full bg-white/90 ring-2 ring-white/30" />
-              <div className="w-11 sm:w-15 border-t-2 border-dashed border-white/40 relative flex items-center justify-center">
-                <Car className="w-3.5 h-3.5 text-white absolute -top-2" />
+              <div className="w-11 sm:w-15 border-t-2 border-dashed border-white/40 group-hover:border-white/70 relative flex items-center justify-center transition-colors">
+                <Car className="w-3.5 h-3.5 text-white absolute -top-2 transition-transform duration-300 ease-out group-hover:translate-x-2.5" />
               </div>
-              <ArrowRight className="w-3.5 h-3.5 text-white" />
+              <ArrowRight className="w-3.5 h-3.5 text-white group-hover:translate-x-1 transition-transform duration-200" />
             </div>
             {/* Tag giờ xuất phát chuẩn kính mờ */}
-            <span className="mt-1.5 px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white tracking-wide">
+            <span className="mt-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white tracking-wide group-hover:bg-white/25 transition-colors">
               {getTimeSlotLabel(item, lang)}
             </span>
           </div>
@@ -316,7 +328,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
       </div>
 
       {/* ── 2. CARD BODY: THÔNG TIN CHI TIẾT ĐIỂM ĐÓN / TRẢ ── */}
-      <div className="p-5 flex flex-col flex-1 gap-3.5">
+      <div className="p-5 flex flex-col flex-1 gap-3">
         
         {/* Địa chỉ đón & trả rõ ràng từng ngõ ngách, phân cấp rõ rệt */}
         <div 
@@ -352,6 +364,18 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           </div>
         </div>
 
+        {/* ── PROGRESSIVE DISCLOSURE: BẬT MÍ TIỆN ÍCH KHI LƯỚT CHUỘT / CHẠM ── */}
+        <div className="overflow-hidden transition-all duration-300 max-h-0 opacity-0 group-hover:max-h-8 group-hover:opacity-100 group-focus-within:max-h-8 group-focus-within:opacity-100">
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            {displayPerks.map((p, idx) => (
+              <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-blue-50/80 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 shadow-2xs">
+                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                <span>{p}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
         {/* Ghi chú chuyến xe */}
         {item.notes && (
           <p className="text-[11.5px] text-slate-500 dark:text-slate-400 line-clamp-1 italic px-0.5">
@@ -360,7 +384,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         )}
 
         {/* ── 3. DANH TÍNH TÀI XẾ & HỒ SƠ TÍN NHIỆM ── */}
-        <div className="mt-auto pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
+        <div className="mt-auto pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => onViewTrustProfile?.(item)}
@@ -371,7 +395,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
               <span className="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-xs shadow-2xs group-hover/driver:border-[#0071e3] transition-colors">
                 {avatarLetter}
               </span>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#107c41] border-2 border-white dark:border-slate-900 flex items-center justify-center" title="Đã xác minh">
+              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#107c41] border-2 border-white dark:border-slate-900 flex items-center justify-center">
                 <Check className="w-2 h-2 text-white stroke-[3]" />
               </span>
             </div>
@@ -416,10 +440,10 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           <button
             type="button"
             onClick={() => onBook(item)}
-            className="h-9.5 px-5 rounded-full text-xs font-bold tracking-tight inline-flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-[0.95] shadow-xs hover:shadow-md bg-[#0071e3] hover:bg-[#0077ed] text-white group-hover:bg-[#0077ed]"
+            className="h-9.5 px-5 rounded-full text-xs font-bold tracking-tight inline-flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-[0.92] shadow-xs hover:shadow-md bg-[#0071e3] hover:bg-[#0077ed] text-white group/btn"
           >
             <span>{isDriver ? 'Ghép chuyến' : 'Đón khách'}</span>
-            <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+            <ArrowRight className="w-3.5 h-3.5 ml-1.5 group-hover/btn:translate-x-1 transition-transform duration-200" />
           </button>
         </footer>
       </div>
