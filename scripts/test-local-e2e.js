@@ -3,7 +3,7 @@
  * Kiểm thử toàn diện toàn bộ các chức năng Web & API chạy tại http://localhost:5173
  */
 
-const BASE_URL = 'http://localhost:5173';
+const BASE_URL = process.env.CARMATE_API_URL || process.env.BASE_URL || 'http://localhost:5173';
 const ADMIN_PASSCODE = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY || 'admin123';
 
 // Không sử dụng header backdoor x-carmate-test
