@@ -4,6 +4,7 @@ import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
+import { LanguageToggle } from './Header.jsx';
 
 function FacebookIcon({ className = 'w-3.5 h-3.5' }) {
   return (
@@ -17,20 +18,12 @@ export default function Footer({ onNavigate, onOpenTerms }) {
   const { t, lang } = useI18n();
   const year = new Date().getFullYear();
 
-  const primaryLinks = [
+  const footerLinks = [
     { key: 'market', label: 'Khám phá chuyến' },
-    { key: 'match', label: 'Radar ghép' },
     { key: 'post', label: 'Đăng chuyến' },
     { key: 'benchmark', label: 'Bảng giá tuyến' },
-    { key: 'trust', label: 'Tín nhiệm cộng đồng' }
-  ];
-
-  const secondaryLinks = [
-    { key: 'policy', label: 'Quy chế cộng đồng' },
-    { key: 'terms', label: 'Điều khoản' },
-    { key: 'privacy', label: 'Bảo mật' },
-    { key: 'dispute', label: 'Xử lý khiếu nại' },
-    { key: 'help', label: 'Hỗ trợ' }
+    { key: 'terms', label: 'Quy chế & Điều khoản', isTerms: true },
+    { key: 'help', label: 'Hỗ trợ Zalo' }
   ];
 
   return (
@@ -89,56 +82,43 @@ export default function Footer({ onNavigate, onOpenTerms }) {
           </div>
         </div>
 
-        {/* ── TẦNG 2: INLINE NAVIGATION & SHORTCUT CUES ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+        {/* ── TẦNG 2: NAVIGATION TINH GỌN (CHUẨN APPLE) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs pt-1">
           {/* Main Links */}
-          <nav className="flex items-center gap-x-4 gap-y-2 flex-wrap">
-            {primaryLinks.map((l) => (
-              <button
-                key={l.key}
-                type="button"
-                onClick={() => onNavigate?.(l.key)}
-                className="text-[#1d1d1f] hover:text-[#0071e3] font-semibold transition-colors cursor-pointer"
-              >
-                {l.label}
-              </button>
-            ))}
-            <span className="text-black/[0.15] hidden sm:inline">|</span>
-            {secondaryLinks.map((l) => (
+          <nav className="flex items-center gap-x-6 gap-y-2 flex-wrap">
+            {footerLinks.map((l) => (
               <button
                 key={l.key}
                 type="button"
                 onClick={() => {
-                  if (['terms', 'policy', 'privacy', 'dispute'].includes(l.key)) {
+                  if (l.isTerms) {
                     onOpenTerms?.();
+                  } else if (l.key === 'help') {
+                    window.open(SITE_INFO.zaloOA, '_blank', 'noopener,noreferrer');
                   } else {
                     onNavigate?.(l.key);
                   }
                 }}
-                className="text-[#86868b] hover:text-[#1d1d1f] transition-colors cursor-pointer"
+                className="text-[#515154] hover:text-[#0071e3] font-medium transition-colors cursor-pointer"
               >
                 {l.label}
               </button>
             ))}
           </nav>
+
+          {/* Đổi ngôn ngữ kín đáo ở góc phải */}
+          <div className="flex items-center gap-2 shrink-0">
+            <LanguageToggle size="sm" />
+          </div>
         </div>
 
         {/* ── TẦNG 3: LEGAL & COPYRIGHT ── */}
-        <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11.5px] text-[#86868b]">
+        <div className="pt-2 border-t border-black/[0.04] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11.5px] text-[#86868b]">
           <p className="leading-relaxed">
             {SITE_INFO.legalName[lang]} · Nền tảng chia sẻ chi phí nhiên liệu tự nguyện, 0% chiết khấu.
           </p>
           <div className="flex items-center gap-3 shrink-0">
             <span>© {year} CarMate.vn</span>
-            <a
-              href={SITE_INFO.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook CarMate"
-              className="text-[#86868b] hover:text-[#0071e3] transition-colors"
-            >
-              <FacebookIcon />
-            </a>
           </div>
         </div>
 

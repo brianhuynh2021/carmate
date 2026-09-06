@@ -89,9 +89,6 @@ export default function Header({
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <LanguageToggle size="sm" />
-          <IconButton icon={FileText} label={t('nav.policy')} onClick={() => setShowPolicyModal(true)} className="hidden md:inline-flex text-[#86868b] hover:text-[#1d1d1f] hover:bg-black/[0.04]" />
-          
           {/* Trợ lý CarMate AI Button (Apple Command Capsule) */}
           <button
             type="button"
