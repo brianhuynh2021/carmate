@@ -27,7 +27,7 @@ import { recordEvent, getSummary as getAnalyticsSummaryHandler } from '../contro
 
 // --- Analytics & Funnel Tracking (Zero-Cost & PostHog Bridge) ---
 router.post('/analytics/event', optionalAuth, recordEvent);
-router.get('/admin/analytics/summary', optionalAuth, getAnalyticsSummaryHandler);
+router.get('/admin/analytics/summary', requireAdmin, getAnalyticsSummaryHandler);
 
 // --- Agentic AI Concierge & Dispatcher (Stanford Inner Loop & Tools) ---
 router.post('/agent/chat', optionalAuth, agentChatHandler);

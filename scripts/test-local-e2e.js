@@ -1283,8 +1283,20 @@ async function runTests() {
       })
     });
 
-    // 4. Lấy thống kê phễu chuyển đổi
-    const summaryRes = await fetch(`${BASE_URL}/api/admin/analytics/summary`);
+    // 4a. PII/BOLA: tổng quan phễu KHÔNG được lộ cho khách vãng lai (không token)
+    const summaryNoAuth = await fetch(`${BASE_URL}/api/admin/analytics/summary`);
+    assert(summaryNoAuth.status === 401 || summaryNoAuth.status === 403, 'Analytics 2b: Chặn tổng quan phễu khi không có quyền Admin (BOLA 401/403)');
+
+    // 4b. Lấy thống kê phễu chuyển đổi bằng quyền Admin
+    const adminAuthForAnalytics = await fetch(`${BASE_URL}/api/admin/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passcode: ADMIN_PASSCODE })
+    });
+    const analyticsAdminToken = (await adminAuthForAnalytics.json()).token;
+    const summaryRes = await fetch(`${BASE_URL}/api/admin/analytics/summary`, {
+      headers: { 'x-admin-key': analyticsAdminToken }
+    });
     const summaryData = await summaryRes.json();
     assert(summaryRes.status === 200 && summaryData.success === true, 'Analytics 3: Tải tổng quan phễu chuyển đổi thành công (HTTP 200)');
     assert(summaryData.data.totalEvents >= 4, 'Analytics 4: Đếm đúng tổng số sự kiện trong SQLite');
