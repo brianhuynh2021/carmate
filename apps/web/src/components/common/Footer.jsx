@@ -18,11 +18,11 @@ export default function Footer({ onNavigate, onOpenTerms }) {
   const year = new Date().getFullYear();
 
   const primaryLinks = [
-    { key: 'market', label: 'Tìm chuyến' },
-    { key: 'match', label: 'Ghép tiện tuyến' },
+    { key: 'market', label: 'Khám phá chuyến' },
+    { key: 'match', label: 'Radar ghép' },
     { key: 'post', label: 'Đăng chuyến' },
     { key: 'benchmark', label: 'Bảng giá tuyến' },
-    { key: 'trust', label: 'Hộ chiếu tín nhiệm' }
+    { key: 'trust', label: 'Tín nhiệm cộng đồng' }
   ];
 
   const secondaryLinks = [
@@ -34,11 +34,11 @@ export default function Footer({ onNavigate, onOpenTerms }) {
   ];
 
   return (
-    <footer className="mt-20 border-t border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-[#090d16]/90 backdrop-blur-md pb-24 md:pb-8 transition-colors">
+    <footer className="mt-20 border-t border-white/[0.08] bg-[#090d16]/90 backdrop-blur-md pb-24 md:pb-8 transition-colors">
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         
         {/* ── TẦNG 1: TRẠNG THÁI & LIÊN HỆ TRỰC TIẾP ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-white/5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/5">
           {/* Brand + Status */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">

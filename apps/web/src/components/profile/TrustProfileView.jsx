@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShieldCheck, BadgeCheck, Share2, FileText, Sun, Moon, Check,
+  ShieldCheck, BadgeCheck, Share2, FileText, Check,
   ChevronRight, Heart, Users, CigaretteOff, Star, Languages, Car
 } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
@@ -52,11 +52,10 @@ function SettingRow({ icon: Icon, tone, title, description, action, onClick }) {
   );
 }
 
-export default function TrustProfileView({ themeMode, setThemeMode, onOpenPolicy, onShowToast }) {
+export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
   const { t } = useI18n();
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [copied, setCopied] = useState(false);
-  const isLight = themeMode === 'light';
   const steps = t('profile.steps');
   const etiquettes = t('profile.etiquettes');
 
@@ -239,20 +238,9 @@ export default function TrustProfileView({ themeMode, setThemeMode, onOpenPolicy
       {/* Cài Đặt Ứng Dụng & Quy Chế */}
       <section className="surface overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <h3 className="text-base font-bold text-slate-900 dark:text-white px-5 pt-5 pb-3">{t('profile.settingsTitle')}</h3>
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 border-t border-slate-100 dark:border-slate-800">
+        <div className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
           <SettingRow icon={FileText} tone="primary" title={t('profile.policyTitle')} description={t('profile.policyDesc')} onClick={onOpenPolicy} />
-          <SettingRow
-            icon={isLight ? Sun : Moon}
-            tone="warning"
-            title={t('profile.themeTitle')}
-            description={isLight ? t('profile.themeLight') : t('profile.themeDark')}
-            action={
-              <Button variant="outline" size="xs" onClick={() => setThemeMode(isLight ? 'dark' : 'light')}>
-                {isLight ? t('profile.switchDark') : t('profile.switchLight')}
-              </Button>
-            }
-          />
-          <SettingRow icon={Languages} tone="neutral" title={t('profile.langTitle')} description={t('profile.langDesc')} action={<LanguageToggle />} />
+          <SettingRow icon={Languages} tone="neutral" title={t('profile.langTitle')} description={t('profile.langDesc')} action={<LanguageToggle size="sm" />} />
         </div>
       </section>
     </div>

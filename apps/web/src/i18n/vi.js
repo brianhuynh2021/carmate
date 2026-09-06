@@ -51,21 +51,20 @@ export default {
   },
 
   nav: {
-    market: 'Khám phá chuyến',
-    match: 'Ghép tiện tuyến',
+    market: 'Khám phá',
+    match: 'Radar ghép',
     post: 'Đăng chuyến',
-    booked: 'Vé của tôi',
+    myTrips: 'Chuyến của tôi',
+    booked: 'Vé đã cọc',
     profile: 'Tín nhiệm',
     policy: 'Quy chế',
-    themeToDark: 'Bật chế độ tối dịu mắt',
-    themeToLight: 'Chuyển giao diện sáng',
-    themeEyeCare: 'Chế độ tối dịu mắt',
     postCta: 'Đăng chuyến',
     mobile: {
       market: 'Khám phá',
-      match: 'Tiện tuyến',
+      match: 'Radar',
       post: 'Đăng chuyến',
-      booked: 'Vé xe',
+      myTrips: 'Chuyến tôi',
+      booked: 'Vé cọc',
       profile: 'Tín nhiệm'
     }
   },

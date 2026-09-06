@@ -51,21 +51,20 @@ export default {
   },
 
   nav: {
-    market: 'Explore Trips',
+    market: 'Explore',
     match: 'Smart Match',
-    post: 'Post a trip',
-    booked: 'My Tickets',
+    post: 'Post Trip',
+    myTrips: 'My Trips',
+    booked: 'My Bookings',
     profile: 'Trust',
     policy: 'Policy',
-    themeToDark: 'Switch to eye-care dark mode',
-    themeToLight: 'Switch to light mode',
-    themeEyeCare: 'Eye-Care dark mode',
-    postCta: 'Post a trip',
+    postCta: 'Post Trip',
     mobile: {
       market: 'Explore',
       match: 'Match',
       post: 'Post',
-      booked: 'Tickets',
+      myTrips: 'My Trips',
+      booked: 'Bookings',
       profile: 'Trust'
     }
   },

@@ -43,26 +43,13 @@ import AiConciergeModal from './components/agent/AiConciergeModal.jsx';
 import Button from './components/ui/Button.jsx';
 import EmptyState from './components/ui/EmptyState.jsx';
 
-const THEME_KEY = 'carmate_theme';
-
 export default function App() {
   const { t } = useI18n();
 
-  // Theme & navigation (Tự động bảo vệ mắt: OS dark mode hoặc sau 18:00)
-  const [themeMode, setThemeMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === 'dark' || saved === 'light') return saved;
-      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-      }
-      const hour = new Date().getHours();
-      if (hour >= 18 || hour < 6) return 'dark';
-      return 'light';
-    } catch {
-      return 'light';
-    }
-  });
+  // Cố định phong cách thiết kế Obsidian Dark của Cursor (Zero-glare, eye-friendly)
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
 
   // Nhận diện Subdomain chuyên dụng: ops.carmate.vn / admin.carmate.vn / ?portal=ops
   const isOpsPortal = typeof window !== 'undefined' && (
@@ -84,11 +71,6 @@ export default function App() {
     }
     return 'market';
   });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', themeMode === 'dark');
-    try { localStorage.setItem(THEME_KEY, themeMode); } catch {}
-  }, [themeMode]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -522,12 +504,10 @@ export default function App() {
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-[#090d16] text-slate-800 dark:text-slate-200 transition-colors selection:bg-primary-100 selection:text-primary-900">
+    <div className="min-h-screen flex flex-col bg-[#090d16] text-slate-200 antialiased transition-colors selection:bg-primary-900/60 selection:text-primary-200">
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        themeMode={themeMode}
-        setThemeMode={setThemeMode}
         setShowPolicyModal={setShowPolicyModal}
         bookedCount={activeBookedCount}
         myTripsCount={myTripsCount}
