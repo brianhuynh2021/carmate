@@ -1,10 +1,23 @@
 import React from 'react';
-import { ShieldCheck, BadgePercent, MessageCircle, Sparkles, MapPin, Navigation, ArrowLeftRight, Search, PlusCircle, Car, Zap, X, CornerDownLeft } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  BadgePercent, 
+  MessageCircle, 
+  Sparkles, 
+  MapPin, 
+  Navigation, 
+  ArrowLeftRight, 
+  Search, 
+  Car, 
+  Zap, 
+  X, 
+  Package, 
+  ArrowRight 
+} from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Chip from '../ui/Chip.jsx';
 import Button from '../ui/Button.jsx';
 import { POPULAR_HIGHWAYS } from './FilterBar.jsx';
-
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 
 export default function Hero({
@@ -32,17 +45,20 @@ export default function Hero({
     setSearchTo?.('');
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      const el = document.getElementById('market-results');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+  const isParcelActive = searchKeyword.toLowerCase().includes('gửi hàng');
+
+  const handleToggleParcel = () => {
+    if (isParcelActive) {
+      setSearchKeyword?.('');
+    } else {
+      setSearchKeyword?.('gửi hàng');
     }
   };
 
   const hasSearch = Boolean(searchKeyword || searchFrom || searchTo);
 
   const pills = [
-    { icon: BadgePercent, label: '0% phí sàn' },
+    { icon: BadgePercent, label: '100% không thu phí sàn' },
     { icon: Zap, label: 'Xe gia đình & Tiện chuyến' },
     { icon: MessageCircle, label: 'Zalo 1 chạm kết nối' },
     { icon: ShieldCheck, label: 'Xác minh SĐT thật' }
@@ -55,9 +71,9 @@ export default function Hero({
       <div className="absolute top-1/2 -left-20 w-[300px] h-[300px] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" aria-hidden="true" />
 
       <div className="relative max-w-[1120px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center space-y-4">
-        {/* Eyebrow badge with serene static Apple status dot */}
+        {/* Eyebrow badge with live pulse Apple status dot */}
         <div className="inline-flex items-center gap-2 h-7 pl-3 pr-3.5 rounded-full bg-white border border-black/[0.08] text-[12px] font-semibold text-[#1d1d1f] shadow-xs backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0" />
+          <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0 animate-pulse" />
           <span className="tracking-tight">{t('hero.eyebrow')}</span>
         </div>
 
@@ -71,7 +87,7 @@ export default function Hero({
           {t('hero.subtitle')}
         </p>
 
-        {/* Core Value Pills */}
+        {/* Core Value Pillars - Single definitive statement on fee */}
         <div className="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pt-0.5">
           {pills.map((p) => (
             <span
@@ -84,20 +100,22 @@ export default function Hero({
           ))}
         </div>
 
-        {/* ── APPLE OMNIBAR COMMAND HUB (Zero Fluff, Calming Focus) ── */}
+        {/* ── APPLE / CURSOR COMMAND OMNIBAR ── */}
         <div className="pt-2 max-w-4xl mx-auto w-full">
           <div className="p-2 sm:p-2.5 rounded-2xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] focus-within:ring-2 focus-within:ring-[#0071e3]/30 focus-within:border-[#0071e3] transition-all text-left">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-1.5">
               
-              {/* Điểm đón / xuất phát */}
+              {/* Điểm xuất phát */}
               <div className="relative flex-1 flex items-center min-w-0 px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#f5f5f7] border border-black/[0.04] hover:bg-[#ebebee] focus-within:bg-white focus-within:border-[#0071e3]/60 transition-colors">
-                <MapPin className="w-4 h-4 text-[#107c41] shrink-0 mr-2" />
+                <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0 mr-2.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <label htmlFor="search-from-input" className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#86868b] leading-none">
-                      [ ĐI ]
-                    </label>
-                    <span className="text-[10px] text-[#86868b] hidden xl:inline">Điểm đón / xuất phát</span>
+                  <div className="flex items-center gap-1.5 leading-none mb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                      Xuất phát
+                    </span>
+                    <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Điểm đón</span>
                   </div>
                   <LocationSuggestInput
                     id="search-from-input"
@@ -130,15 +148,17 @@ export default function Hero({
                 <ArrowLeftRight className="w-3.5 h-3.5" />
               </button>
 
-              {/* Điểm đến / trả khách */}
+              {/* Điểm đến */}
               <div className="relative flex-1 flex items-center min-w-0 px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#f5f5f7] border border-black/[0.04] hover:bg-[#ebebee] focus-within:bg-white focus-within:border-[#0071e3]/60 transition-colors">
-                <Navigation className="w-4 h-4 text-rose-500 shrink-0 mr-2" />
+                <div className="w-6 h-6 rounded-lg bg-rose-50 border border-rose-200/60 flex items-center justify-center shrink-0 mr-2.5">
+                  <Navigation className="w-3.5 h-3.5 text-rose-500" />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <label htmlFor="search-to-input" className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#86868b] leading-none">
-                      [ ĐẾN ]
-                    </label>
-                    <span className="text-[10px] text-[#86868b] hidden xl:inline">Điểm đến / nơi trả</span>
+                  <div className="flex items-center gap-1.5 leading-none mb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">
+                      Điểm đến
+                    </span>
+                    <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Nơi trả khách</span>
                   </div>
                   <LocationSuggestInput
                     id="search-to-input"
@@ -189,46 +209,79 @@ export default function Hero({
             </div>
           </div>
 
-          {/* Quick Highway Chips: Tuyến chạy phổ biến */}
-          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 pt-3">
-            <span className="text-[11.5px] font-mono font-semibold text-[#86868b] mr-1">
-              TUYẾN PHỔ BIẾN:
-            </span>
-            {POPULAR_HIGHWAYS.map((hw) => {
-              const isSelected = hw.id === 'all'
-                ? (!searchKeyword && !searchFrom && !searchTo)
-                : (searchKeyword.toLowerCase().includes(hw.id.toLowerCase()) || searchFrom.toLowerCase().includes(hw.id.toLowerCase()));
-              const label = hw.id === 'all' ? t('market.allRoutes') : (lang === 'en' && hw.labelEn ? hw.labelEn : hw.label);
-              return (
-                <Chip
-                  key={hw.id}
-                  active={isSelected}
-                  onClick={() => {
-                    if (hw.id === 'all') {
-                      handleClearAll();
-                    } else {
-                      setSearchKeyword?.(hw.id);
-                    }
-                  }}
-                  className="h-7 px-3 text-xs font-medium cursor-pointer active:scale-[0.98]"
-                >
-                  {label}
-                </Chip>
-              );
-            })}
+          {/* ── SINGLE-LINE HIGHWAY RAIL & SEPARATE PARCEL AMENITY FILTER ── */}
+          <div className="pt-3 max-w-4xl mx-auto w-full">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1 px-1">
+              {/* Micro label */}
+              <div className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-[#86868b] uppercase tracking-wider pr-1">
+                <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                <span className="hidden sm:inline">Tuyến:</span>
+              </div>
+
+              {/* Route Pills (Non-wrapping single horizontal rail) */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {POPULAR_HIGHWAYS.map((hw) => {
+                  const isSelected = hw.id === 'all'
+                    ? (!searchKeyword && !searchFrom && !searchTo)
+                    : (searchKeyword.toLowerCase().includes(hw.id.toLowerCase()) || searchFrom.toLowerCase().includes(hw.id.toLowerCase()));
+                  const label = hw.id === 'all' ? t('market.allRoutes') : (lang === 'en' && hw.labelEn ? hw.labelEn : hw.label);
+                  return (
+                    <Chip
+                      key={hw.id}
+                      active={isSelected}
+                      onClick={() => {
+                        if (hw.id === 'all') {
+                          handleClearAll();
+                        } else {
+                          setSearchKeyword?.(hw.id);
+                        }
+                      }}
+                      className="h-7.5 px-3 text-xs font-medium cursor-pointer shrink-0 whitespace-nowrap"
+                    >
+                      {label}
+                    </Chip>
+                  );
+                })}
+              </div>
+
+              {/* Subtle divider */}
+              <span className="h-4 w-px bg-black/[0.1] dark:bg-white/[0.1] shrink-0 mx-1" aria-hidden="true" />
+
+              {/* Tách riêng nút "Gửi đồ kèm xe" thành bộ lọc tinh tế, không tranh chấp màu với nút Tìm chuyến */}
+              <button
+                type="button"
+                onClick={handleToggleParcel}
+                title="Lọc các chuyến có nhận gửi hàng hoá, bưu phẩm kèm xe"
+                aria-pressed={isParcelActive}
+                className={`inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-medium whitespace-nowrap select-none cursor-pointer transition-all duration-150 shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none ${
+                  isParcelActive
+                    ? 'bg-amber-500/12 text-amber-900 border border-amber-400/50 font-semibold ring-1 ring-amber-400/20'
+                    : 'bg-white text-[#515154] border border-black/[0.08] hover:bg-[#f5f5f7] hover:border-black/[0.16] hover:text-[#1d1d1f]'
+                }`}
+              >
+                <Package className={`w-3.5 h-3.5 ${isParcelActive ? 'text-amber-600' : 'text-[#86868b]'}`} strokeWidth={2} />
+                <span>Nhận gửi đồ kèm xe</span>
+                {isParcelActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Dòng dẫn nhẹ nhàng dành riêng cho chủ xe */}
-          <div className="pt-2 text-xs text-[#515154] flex items-center justify-center gap-1.5 flex-wrap">
-            <span>🚗 Bạn là chủ xe còn ghế trống?</span>
-            <button
-              type="button"
-              onClick={onPostClick}
-              className="font-semibold text-[#0071e3] hover:text-[#0077ed] hover:underline inline-flex items-center gap-1 cursor-pointer active:scale-[0.98] transition-all"
-            >
-              <span>Đăng chuyến chia sẻ chi phí xăng xe ngay</span>
-              <span>➔</span>
-            </button>
+          {/* Dòng dẫn nhẹ nhàng dành riêng cho chủ xe - Apple Micro Pill Banner */}
+          <div className="pt-2.5 flex items-center justify-center">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-black/[0.06] text-xs text-[#515154] shadow-xs backdrop-blur-sm">
+              <Car className="w-3.5 h-3.5 text-[#0071e3] shrink-0" strokeWidth={2.2} />
+              <span>Bạn là chủ xe còn ghế trống?</span>
+              <button
+                type="button"
+                onClick={onPostClick}
+                className="font-semibold text-[#0071e3] hover:text-[#0077ed] inline-flex items-center gap-1 cursor-pointer group transition-colors"
+              >
+                <span>Đăng chuyến chia sẻ chi phí ngay</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

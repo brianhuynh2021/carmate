@@ -70,9 +70,9 @@ export default {
   },
 
   hero: {
-    eyebrow: 'Direct Bulletin Board · 0% Platform Fee',
+    eyebrow: 'Direct Rideshare Network · Nationwide',
     title: 'Intercity Ridesharing & Convenient Empty-Leg Matching',
-    subtitle: 'Directly connect vehicle owners with empty seats (family cars & returning commercial trips) to passengers on the same route — Fair fuel & toll cost sharing, 0% platform fee.',
+    subtitle: 'Directly connect vehicle owners with empty seats to passengers on the same route — Fair fuel and highway toll sharing with zero intermediary interference.',
     findTripCta: 'Find a ride',
     postTripCta: 'Post empty seats (Family & Empty-leg)',
     stat_members: 'verified members',

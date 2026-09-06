@@ -70,9 +70,9 @@ export default {
   },
 
   hero: {
-    eyebrow: 'Bảng tin kết nối trực tiếp · 0% phí sàn',
+    eyebrow: 'Bảng tin kết nối chuyến đi trực tiếp toàn quốc',
     title: 'Đi chung xe & Ghép xe tiện chuyến liên tỉnh',
-    subtitle: 'Kết nối trực tiếp xe còn ghế trống (xe gia đình & xe dịch vụ tiện chuyến chiều về) với người cùng tuyến — Chia sẻ chi phí xăng & cầu đường công bằng, không phí trung gian.',
+    subtitle: 'Kết nối trực tiếp xe còn ghế trống với hành khách cùng hành trình — Chia sẻ công bằng chi phí xăng xe và cầu đường, liên hệ thẳng không qua trung gian.',
     findTripCta: 'Tìm chuyến ngay',
     postTripCta: 'Đăng ghế trống (Xe nhà & Tiện chuyến)',
     stat_members: 'thành viên xác minh',
