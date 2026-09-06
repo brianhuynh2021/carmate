@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { SearchX, LayoutGrid, Car, Users, Sparkles } from 'lucide-react';
+import { SearchX, LayoutGrid, Car, Users, Sparkles, ChevronDown, MapPin, Navigation, Search, X, ArrowRight } from 'lucide-react';
 import { INITIAL_DRIVER_OFFERS, INITIAL_PASSENGER_REQUESTS, INITIAL_BOOKED_ESCROWS, TIME_SLOTS } from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
 import { useI18n } from './i18n/index.jsx';
@@ -575,30 +575,36 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* Lọc loại xe (Xe gia đình / Xe tiện chuyến) */}
-                  <select
-                    value={selectedCarCategory}
-                    onChange={(e) => setSelectedCarCategory(e.target.value)}
-                    aria-label="Lọc loại xe"
-                    className="h-9 px-3.5 rounded-full text-xs font-semibold bg-white border border-black/[0.08] text-[#1d1d1f] cursor-pointer shadow-xs hover:border-black/[0.16] outline-none transition-colors"
-                  >
-                    <option value="all">Mọi loại xe</option>
-                    <option value="family_car">🚗 Xe gia đình (Biển trắng)</option>
-                    <option value="convenient_trip">⚡ Xe tiện chuyến (Biển vàng)</option>
-                  </select>
+                  {/* Lọc loại xe (Xe gia đình / Xe tiện chuyến) - Apple Pill Select */}
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={selectedCarCategory}
+                      onChange={(e) => setSelectedCarCategory(e.target.value)}
+                      aria-label="Lọc loại xe"
+                      className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-semibold bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.12] text-[#1d1d1f] dark:text-white cursor-pointer shadow-xs hover:border-black/[0.16] dark:hover:border-white/20 outline-none appearance-none transition-colors"
+                    >
+                      <option value="all">Mọi loại xe</option>
+                      <option value="family_car">Xe gia đình (Biển trắng)</option>
+                      <option value="convenient_trip">Xe tiện chuyến (Biển vàng)</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#86868b] pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+                  </div>
 
-                  {/* Lọc khung giờ */}
-                  <select
-                    value={selectedTimeSlot}
-                    onChange={(e) => setSelectedTimeSlot(e.target.value)}
-                    aria-label="Chọn khung giờ"
-                    className="h-9 px-3.5 rounded-full text-xs font-semibold bg-white border border-black/[0.08] text-[#1d1d1f] cursor-pointer shadow-xs hover:border-black/[0.16] outline-none transition-colors"
-                  >
-                    <option value="all">Tất cả khung giờ</option>
-                    {TIME_SLOTS.map((slot) => (
-                      <option key={slot.id} value={slot.id}>{slot.short}</option>
-                    ))}
-                  </select>
+                  {/* Lọc khung giờ - Apple Pill Select */}
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={selectedTimeSlot}
+                      onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                      aria-label="Chọn khung giờ"
+                      className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-semibold bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.12] text-[#1d1d1f] dark:text-white cursor-pointer shadow-xs hover:border-black/[0.16] dark:hover:border-white/20 outline-none appearance-none transition-colors"
+                    >
+                      <option value="all">Tất cả khung giờ</option>
+                      {TIME_SLOTS.map((slot) => (
+                        <option key={slot.id} value={slot.id}>{slot.short}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#86868b] pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+                  </div>
 
                   {(selectedTimeSlot !== 'all' || marketViewMode !== 'all' || selectedCarCategory !== 'all' || searchKeyword || searchFrom || searchTo) && (
                     <Button variant="ghost" size="xs" onClick={resetFilters} className="text-xs text-[#0071e3] hover:text-[#0077ed]">
@@ -610,62 +616,68 @@ export default function App() {
 
               {/* Tag lọc đang áp dụng & Nút xem toàn quốc nhanh */}
               {(searchFrom || searchTo || searchKeyword) && (
-                <div className="flex items-center gap-2 flex-wrap p-3 rounded-2xl bg-white border border-black/[0.06] shadow-xs text-xs">
+                <div className="flex items-center gap-2 flex-wrap p-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-xs text-xs">
                   <span className="text-[#86868b] font-medium">Đang lọc:</span>
                   {searchFrom && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold border border-slate-200 dark:border-slate-700 shadow-2xs">
-                      📍 Điểm đi: {searchFrom}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/80 dark:bg-white/[0.06] text-[#1d1d1f] dark:text-white font-semibold border border-black/[0.06] dark:border-white/10 shadow-2xs">
+                      <MapPin className="w-3 h-3 text-[#107c41]" />
+                      <span>{searchFrom}</span>
                       <button
                         type="button"
                         onClick={() => setSearchFrom('')}
-                        className="ml-1 text-slate-400 hover:text-rose-500 font-bold cursor-pointer"
+                        className="ml-1 p-0.5 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer rounded-full"
                         title="Bỏ lọc điểm đi này"
                       >
-                        ✕
+                        <X className="w-3 h-3" />
                       </button>
                     </span>
                   )}
                   {searchTo && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold border border-slate-200 dark:border-slate-700 shadow-2xs">
-                      🏁 Điểm đến: {searchTo}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/80 dark:bg-white/[0.06] text-[#1d1d1f] dark:text-white font-semibold border border-black/[0.06] dark:border-white/10 shadow-2xs">
+                      <Navigation className="w-3 h-3 text-[#ff3b30]" />
+                      <span>{searchTo}</span>
                       <button
                         type="button"
                         onClick={() => setSearchTo('')}
-                        className="ml-1 text-slate-400 hover:text-rose-500 font-bold cursor-pointer"
+                        className="ml-1 p-0.5 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer rounded-full"
                         title="Bỏ lọc điểm đến này"
                       >
-                        ✕
+                        <X className="w-3 h-3" />
                       </button>
                     </span>
                   )}
                   {searchKeyword && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold border border-slate-200 dark:border-slate-700 shadow-2xs">
-                      🔍 Từ khóa: {searchKeyword}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/80 dark:bg-white/[0.06] text-[#1d1d1f] dark:text-white font-semibold border border-black/[0.06] dark:border-white/10 shadow-2xs">
+                      <Search className="w-3 h-3 text-[#0071e3]" />
+                      <span>{searchKeyword}</span>
                       <button
                         type="button"
                         onClick={() => setSearchKeyword('')}
-                        className="ml-1 text-slate-400 hover:text-rose-500 font-bold cursor-pointer"
+                        className="ml-1 p-0.5 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer rounded-full"
                         title="Bỏ lọc từ khóa này"
                       >
-                        ✕
+                        <X className="w-3 h-3" />
                       </button>
                     </span>
                   )}
                   <button
                     type="button"
                     onClick={resetFilters}
-                    className="ml-auto text-primary-600 dark:text-primary-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                    className="ml-auto text-[#0071e3] hover:text-[#0077ed] font-semibold cursor-pointer inline-flex items-center gap-1 group transition-colors"
                   >
                     <span>Xem tất cả {driverOffers.length + passengerRequests.length}+ chuyến toàn quốc</span>
-                    <span>➔</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 </div>
               )}
 
               {/* 4. Danh sách các chuyến xe (Spacious grid) */}
               <div id="market-results" className="space-y-4 scroll-mt-24">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  <span>{filteredItems.length === 1 ? t('market.resultsOne') : t('market.results', { n: filteredItems.length })}</span>
+                <div className="flex items-center justify-between text-xs text-[#86868b] font-medium pt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#107c41] shrink-0" />
+                    <span>{filteredItems.length === 1 ? t('market.resultsOne') : t('market.results', { n: filteredItems.length })}</span>
+                  </div>
                 </div>
 
                 {filteredItems.length === 0 ? (

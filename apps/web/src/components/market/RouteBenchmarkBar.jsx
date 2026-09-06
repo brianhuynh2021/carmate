@@ -65,24 +65,22 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
       {/* ── THANH CHỈ BÁO COMPACT TRÊN TRANG CHỦ (Apple Card & Subtle Depth) ── */}
       <div
         onClick={() => setShowDetail(true)}
-        className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 rounded-2xl bg-white border border-black/[0.08] hover:border-black/[0.16] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all cursor-pointer group active:scale-[0.99]"
+        className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 rounded-[18px] bg-white dark:bg-[#1c1c1e] border border-black/[0.06] hover:border-black/[0.14] dark:border-white/[0.08] dark:hover:border-white/20 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.06)] transition-all cursor-pointer group active:scale-[0.99]"
       >
-        <div className="flex items-center gap-3.5 min-w-0">
-          <span className="w-9 h-9 rounded-xl bg-[#0071e3]/10 text-[#0071e3] inline-flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] inline-flex items-center justify-center shrink-0">
             <Fuel className="w-4 h-4" />
           </span>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs sm:text-[13.5px] text-[#1d1d1f] font-semibold truncate">
-                {info.shortName}:
-              </span>
-              <strong className="font-bold text-xs sm:text-[13.5px] text-[#0071e3] tabular font-mono whitespace-nowrap">
-                ~{formatVND(info.suggestedRate)}{t('common.perSeat')}
-              </strong>
-            </div>
-            <p className="text-[11.5px] text-[#86868b] truncate mt-0.5">
-              {t('benchmark.inclusive')}
-            </p>
+          <div className="min-w-0 flex items-center gap-2 flex-wrap">
+            <span className="text-xs sm:text-[13px] text-[#1d1d1f] dark:text-white font-semibold truncate">
+              {info.shortName}:
+            </span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#0071e3]/10 text-[#0071e3] font-bold text-xs font-mono whitespace-nowrap">
+              ~{formatVND(info.suggestedRate)}{t('common.perSeat')}
+            </span>
+            <span className="text-[11.5px] text-[#86868b] dark:text-slate-400 hidden sm:inline truncate">
+              · {t('benchmark.inclusive')}
+            </span>
           </div>
         </div>
         <button
@@ -90,8 +88,8 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
           onClick={(e) => { e.stopPropagation(); setShowDetail(true); }}
           className="text-xs font-semibold text-[#0071e3] group-hover:text-[#0077ed] px-3 py-1.5 rounded-full hover:bg-[#0071e3]/10 inline-flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
         >
-          <span className="hidden sm:inline">{t('benchmark.basis')}</span>
-          <ChevronRight className="w-4 h-4" />
+          <span>{t('benchmark.basis')}</span>
+          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
 
