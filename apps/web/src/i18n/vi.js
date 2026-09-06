@@ -52,19 +52,19 @@ export default {
 
   nav: {
     market: 'Khám phá',
-    match: 'Radar ghép',
+    match: 'Ghép chuyến',
     post: 'Đăng chuyến',
-    myTrips: 'Chuyến của tôi',
-    booked: 'Vé đã cọc',
+    myTrips: 'Chuyến tôi đăng',
+    booked: 'Chuyến đã hẹn',
     profile: 'Tín nhiệm',
     policy: 'Quy chế',
     postCta: 'Đăng chuyến',
     mobile: {
       market: 'Khám phá',
-      match: 'Radar',
+      match: 'Ghép chuyến',
       post: 'Đăng chuyến',
-      myTrips: 'Chuyến tôi',
-      booked: 'Vé cọc',
+      myTrips: 'Tôi đăng',
+      booked: 'Đã hẹn',
       profile: 'Tín nhiệm'
     }
   },
@@ -202,11 +202,11 @@ export default {
   },
 
   booked: {
-    emptyTitle: 'Chưa có chuyến nào được ghép',
-    emptyDesc: 'Tìm chuyến cùng tuyến và kết nối Zalo để bắt đầu.',
+    emptyTitle: 'Chưa có lịch hẹn chuyến nào',
+    emptyDesc: 'Tìm chuyến tiện đường và nhắn Zalo với chủ xe để chốt điểm đón.',
     emptyCta: 'Tìm chuyến ngay',
-    title: 'Chuyến của tôi',
-    count: '{n} chuyến đang hoạt động',
+    title: 'Chuyến đi đã hẹn',
+    count: '{n} chuyến đang chờ khởi hành',
     escrowNote: 'Cam kết đang được giữ',
     codeLabel: 'Mã kết nối',
     zeroDeposit: 'Kết nối trực tiếp · Giữ chỗ 30 phút',

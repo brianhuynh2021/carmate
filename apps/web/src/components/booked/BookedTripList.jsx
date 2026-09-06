@@ -94,7 +94,7 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
       <SectionHeader
         icon={Clock}
         title={t('booked.title')}
-        description={`Quản lý vé hành trình · 0% chiết khấu sàn · Trực tiếp kết nối`}
+        description="Lịch hẹn đi chung xe · 0% chiết khấu sàn · Trực tiếp kết nối bạn đồng hành"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5">
             0đ Phí sàn · Kết nối Zalo

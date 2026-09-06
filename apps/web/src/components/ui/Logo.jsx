@@ -5,52 +5,44 @@ export function LogoMark({ className = 'w-9 h-9' }) {
     <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
         <linearGradient id="cmObsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#131b2e" />
+          <stop offset="0%" stopColor="#151d2e" />
           <stop offset="100%" stopColor="#080c16" />
         </linearGradient>
-        <linearGradient id="cmDawnCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+        {/* Dải chuyển màu cao tốc từ 4h sáng (Cyan) sang ấm áp bình minh (Amber) */}
+        <linearGradient id="cmTrackGrad" x1="10%" y1="50%" x2="90%" y2="50%">
           <stop offset="0%" stopColor="#38bdf8" />
-          <stop offset="50%" stopColor="#0ea5e9" />
-          <stop offset="100%" stopColor="#0284c7" />
+          <stop offset="42%" stopColor="#06b6d4" />
+          <stop offset="68%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#f97316" />
         </linearGradient>
-        <linearGradient id="cmWarmAmber" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#fde047" />
-          <stop offset="50%" stopColor="#f59e0b" />
-          <stop offset="100%" stopColor="#ea580c" />
-        </linearGradient>
-        <filter id="cmSoftGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2.5" floodColor="#38bdf8" floodOpacity="0.4" />
-        </filter>
-        <filter id="cmWarmGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2.5" floodColor="#f59e0b" floodOpacity="0.4" />
+        <filter id="cmNeonGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2.5" floodColor="#06b6d4" floodOpacity="0.4" />
+          <feDropShadow dx="0" dy="1" stdDeviation="3.5" floodColor="#f59e0b" floodOpacity="0.35" />
         </filter>
       </defs>
 
       {/* Nền Squircle Obsidian Dark chuẩn Apple / Cursor (#090D16) */}
       <rect width="100" height="100" rx="28" fill="url(#cmObsidianBg)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
 
-      {/* Dải sáng Cyan 4h sáng: Chữ C & Đường cao tốc ban mai */}
+      {/* Dải cao tốc CM Monogram liền mạch (Car C -> Mate M) */}
       <path
-        d="M 46 29 C 28 29, 18 39, 18 51 C 18 64, 30 73, 46 73 C 58 73, 66 66, 66 57 C 66 49, 58 45, 50 45"
-        stroke="url(#cmDawnCyan)"
-        strokeWidth="7.5"
+        d="M 38 35 C 20 35, 13 44, 13 52 C 13 61, 20 69, 38 69 C 45 69, 49 61, 53 48 C 55 41, 58 35, 63 35 C 67 35, 70 42, 73 50 C 76 42, 79 35, 84 35 C 88 35, 90 40, 90 48 L 90 69"
+        stroke="url(#cmTrackGrad)"
+        strokeWidth="7"
         strokeLinecap="round"
-        fill="none"
-        filter="url(#cmSoftGlow)"
+        strokeLinejoin="round"
+        filter="url(#cmNeonGlow)"
       />
 
-      {/* Dải sáng Amber ấm áp: Chữ M & Người bạn đồng hành */}
+      {/* Lõi laser vệt sáng phản quang trắng (Dấu ấn Cursor precision) */}
       <path
-        d="M 54 71 C 72 71, 82 61, 82 49 C 82 36, 70 27, 54 27 C 42 27, 34 34, 34 43 C 34 51, 42 55, 50 55"
-        stroke="url(#cmWarmAmber)"
-        strokeWidth="7.5"
+        d="M 38 35 C 20 35, 13 44, 13 52 C 13 61, 20 69, 38 69 C 45 69, 49 61, 53 48 C 55 41, 58 35, 63 35 C 67 35, 70 42, 73 50 C 76 42, 79 35, 84 35 C 88 35, 90 40, 90 48 L 90 69"
+        stroke="#ffffff"
+        strokeWidth="1.6"
         strokeLinecap="round"
-        fill="none"
-        filter="url(#cmWarmGlow)"
+        strokeLinejoin="round"
+        strokeOpacity="0.85"
       />
-
-      {/* Điểm chạm trung tâm: Giao điểm hai người bạn cùng đường */}
-      <circle cx="50" cy="50" r="3" fill="#ffffff" />
     </svg>
   );
 }

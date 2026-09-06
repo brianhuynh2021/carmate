@@ -59,11 +59,11 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
     <div className="max-w-4xl mx-auto space-y-6">
       <SectionHeader
         icon={Sparkles}
-        title="Ghép Tiện Tuyến Thông Minh"
-        description="Tự động tìm kiếm chủ xe và hành khách cùng lộ trình, tối ưu chi phí & thời gian"
+        title="Ghép Chuyến Cùng Đường"
+        description="Tự động tìm kiếm bạn đồng hành cùng lộ trình — chia sẻ chi phí xăng cộ và trò chuyện vui vẻ"
         action={
           <Badge tone="primary" icon={Zap} className="h-7 px-2.5 font-semibold">
-            Tự Động Kết Nối
+            Tự Động Ghép
           </Badge>
         }
       />
