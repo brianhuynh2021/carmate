@@ -22,24 +22,46 @@ export const TIME_SLOTS = [
   { id: '21:00-22:00', label: '21:00 – 22:00 (Chuyến đêm)', labelEn: '21:00 – 22:00 (Night)', short: '21:00 – 22:00', shortEn: '21:00 – 22:00', isAlias: true }
 ];
 
+/** Kiểm tra giờ đón cụ thể có nằm trong khung giờ hay không */
+export const isTimeInSlot = (timeStr, slotId) => {
+  if (!timeStr || !slotId || slotId === 'all') return true;
+  return mapTimeToSlot(timeStr) === slotId;
+};
+
 /** Lấy nhãn khung giờ theo ngôn ngữ, fallback về chuỗi thô của item. Hỗ trợ hiển thị giờ chính xác nếu có (ví dụ: 04:30). */
 export const getTimeSlotLabel = (idOrItem, lang = 'vi', variant = 'short') => {
   const exactTime = typeof idOrItem === 'object' ? idOrItem?.exactTime : null;
-  const id = typeof idOrItem === 'string' ? idOrItem : idOrItem?.timeSlot;
+  const id = typeof idOrItem === 'string' ? idOrItem : (idOrItem?.timeSlot || idOrItem?.timeSlotId);
   const slot = TIME_SLOTS.find((s) => s.id === id);
 
-  if (exactTime) {
+  // Chỉ gắn exactTime nếu nó thực sự thuộc khung giờ tương ứng
+  const isValidExactTime = exactTime && (!slot || slot.id === 'all' || isTimeInSlot(exactTime, slot.id));
+
+  if (isValidExactTime) {
     if (!slot || slot.id === 'all') return exactTime;
     const slotText = variant === 'short' ? (lang === 'en' ? slot.shortEn : slot.short) : (lang === 'en' ? slot.labelEn : slot.label);
     return `${exactTime} (${slotText})`;
   }
 
-  if (!slot) {
-    if (typeof idOrItem === 'object') return idOrItem?.timeSlotLabel || idOrItem?.timeSlot || '';
-    return idOrItem || '';
+  if (slot && slot.id !== 'all') {
+    return variant === 'short' ? (lang === 'en' ? slot.shortEn : slot.short) : (lang === 'en' ? slot.labelEn : slot.label);
   }
-  if (variant === 'short') return lang === 'en' ? slot.shortEn : slot.short;
-  return lang === 'en' ? slot.labelEn : slot.label;
+
+  if (typeof idOrItem === 'object') {
+    const rawLabel = idOrItem?.timeSlotLabel || idOrItem?.timeSlot || '';
+    // Tự động làm sạch nếu nhãn lưu cũ bị dính lỗi lệch giờ ví dụ "17:00 (03:00 – 05:00)"
+    const mismatchMatch = String(rawLabel).match(/^(\d{1,2}:\d{2})\s*\((.*)\)$/);
+    if (mismatchMatch) {
+      const extractedTime = mismatchMatch[1];
+      const innerSlot = mismatchMatch[2].trim();
+      const matchedSlot = TIME_SLOTS.find(s => s.short === innerSlot || s.label.includes(innerSlot));
+      if (matchedSlot && !isTimeInSlot(extractedTime, matchedSlot.id)) {
+        return matchedSlot.short;
+      }
+    }
+    return rawLabel;
+  }
+  return idOrItem || '';
 };
 
 /** Tự động ánh xạ giờ chính xác (vd: 04:30) vào khung giờ 24/7 tương ứng */

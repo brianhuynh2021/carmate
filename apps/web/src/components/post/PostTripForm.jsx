@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Car, Users, PlusCircle, MapPin, Navigation, CalendarDays, Receipt, ExternalLink, ArrowLeftRight, Sparkles, Plus, Check, Clock, ChevronDown } from 'lucide-react';
-import { ROUTE_BENCHMARKS, TIME_SLOTS, formatVND, getTimeSlotLabel, isGoogleMapsUrl, getGoogleMapsUrl, mapTimeToSlot } from '@carmate/shared';
+import { ROUTE_BENCHMARKS, TIME_SLOTS, formatVND, getTimeSlotLabel, isGoogleMapsUrl, getGoogleMapsUrl, mapTimeToSlot, isTimeInSlot } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
 import Chip from '../ui/Chip.jsx';
@@ -86,6 +86,9 @@ function TimeSlotPicker({ value, onChange, exactTime, onExactTimeChange }) {
                   type="button"
                   onClick={() => {
                     onChange(slot.id);
+                    if (exactTime && !isTimeInSlot(exactTime, slot.id)) {
+                      onExactTimeChange?.('');
+                    }
                     setIsOpen(false);
                   }}
                   className={`w-full px-3 py-2.5 rounded-xl text-left text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
@@ -118,7 +121,11 @@ function TimeSlotPicker({ value, onChange, exactTime, onExactTimeChange }) {
               type="button"
               onClick={() => {
                 onChange(p.id);
-                onExactTimeChange?.('');
+                if (exactTime && !isTimeInSlot(exactTime, p.id)) {
+                  onExactTimeChange?.('');
+                } else if (!exactTime) {
+                  onExactTimeChange?.('');
+                }
               }}
               className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-medium transition-all cursor-pointer ${
                 isActive
@@ -181,7 +188,7 @@ function FormSection({ icon: Icon, title, children }) {
   );
 }
 
-export default function PostTripForm({ onSubmit, currentUser }) {
+export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   const { t, lang } = useI18n();
   const data = useDataLabel();
 
@@ -196,7 +203,7 @@ export default function PostTripForm({ onSubmit, currentUser }) {
   const [carCategory, setCarCategory] = useState('family_car'); // 'family_car' | 'convenient_trip'
   const [seats, setSeats] = useState(3);
   const [price, setPrice] = useState(150000);
-  const [phoneReal, setPhoneReal] = useState(() => currentUser?.phone || '0984883750');
+  const [phoneReal, setPhoneReal] = useState(() => currentUser?.phone || '');
   const [zaloConfirmed, setZaloConfirmed] = useState(true);
   const [formError, setFormError] = useState(null);
 
@@ -312,13 +319,17 @@ export default function PostTripForm({ onSubmit, currentUser }) {
     const toCity = cleanTo.split(/[,-]/)[0].trim() || cleanTo;
     const derivedRoute = `${fromCity} ⇄ ${toCity}`;
 
+    const isExactTimeValid = exactTime && isTimeInSlot(exactTime.trim(), timeSlot);
+    const validExactTime = isExactTimeValid ? exactTime.trim() : undefined;
+    const timeSlotLabel = validExactTime ? `${validExactTime} (${slot.short})` : slot.short;
+
     onSubmit({
       id: `${isDriver ? 'DRV' : 'REQ'}-${Date.now().toString().slice(-4)}`,
       type: isDriver ? 'driver_offer' : 'passenger_request',
       carCategory: isDriver ? carCategory : undefined,
       maskedCode: `${isDriver ? 'CX' : 'KH'}-${Math.floor(100 + Math.random() * 900)}`,
       publicName: `${isDriver ? (carCategory === 'convenient_trip' ? 'Xe tiện chuyến' : 'Chủ xe') : 'Khách'} #${Math.floor(100 + Math.random() * 900)}`,
-      phoneReal: phoneReal.trim() || '0984883750',
+      phoneReal: phoneReal.trim() || currentUser?.phone || '',
       direction: 'both',
       from: cleanFrom,
       to: cleanTo,
@@ -328,8 +339,8 @@ export default function PostTripForm({ onSubmit, currentUser }) {
       waypointNote: waypointNote.trim(),
       date: isRecurringWeekly ? `${scheduleDay} (Lặp lại hàng tuần)` : scheduleDay,
       timeSlot,
-      exactTime: exactTime ? exactTime.trim() : undefined,
-      timeSlotLabel: exactTime ? `${exactTime.trim()} (${slot.short})` : slot.short,
+      exactTime: validExactTime,
+      timeSlotLabel,
       carType: isDriver ? carType : undefined,
       capacity: isDriver ? Number(seats) + 1 : undefined,
       availableSeats: isDriver ? Number(seats) : undefined,
@@ -801,6 +812,24 @@ export default function PostTripForm({ onSubmit, currentUser }) {
         {formError && (
           <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold text-rose-700 dark:text-rose-300">
             ⚠️ {formError}
+          </div>
+        )}
+
+        {!currentUser && (
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200">
+            <div className="flex items-center gap-2.5">
+              <span className="text-base">🔒</span>
+              <span>Bạn chưa đăng nhập. Khi bấm Đăng chuyến, CarMate sẽ mở xác thực SĐT/Zalo nhanh để gắn bài đăng chính chủ vào tài khoản của bạn.</span>
+            </div>
+            {onOpenAuth && (
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="shrink-0 font-bold text-amber-800 dark:text-amber-300 underline hover:opacity-80 cursor-pointer"
+              >
+                Đăng nhập ngay
+              </button>
+            )}
           </div>
         )}
 

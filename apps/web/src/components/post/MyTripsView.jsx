@@ -409,7 +409,7 @@ export default function MyTripsView({
 
                           <span className="text-[12px] text-slate-600 dark:text-slate-400 font-medium inline-flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Giờ chạy: <strong className="text-slate-900 dark:text-white font-semibold">{trip.timeSlotLabel || trip.timeSlot}</strong></span>
+                            <span>Giờ chạy: <strong className="text-slate-900 dark:text-white font-semibold">{getTimeSlotLabel(trip)}</strong></span>
                           </span>
                         </div>
 

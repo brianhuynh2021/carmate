@@ -187,6 +187,7 @@ export default function App() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [pendingBookingTrip, setPendingBookingTrip] = useState(null);
+  const [pendingPostTrip, setPendingPostTrip] = useState(null);
 
   // Kích hoạt ghép chuyến có bảo vệ danh tính: Chưa đăng nhập sẽ yêu cầu xác thực OTP trước
   const handleInitiateBook = (trip) => {
@@ -220,6 +221,13 @@ export default function App() {
 
     updateMyTripsCount(user);
     showToast(`Chào mừng ${user.name}! Đã đăng nhập thành công.`);
+
+    // Nếu người dùng có chuyến đang chờ đăng, tự động hoàn tất đăng chuyến
+    if (pendingPostTrip) {
+      const tripToPost = { ...pendingPostTrip };
+      setPendingPostTrip(null);
+      handlePostTrip(tripToPost, user);
+    }
 
     // Nếu người dùng đã chọn chuyến trước khi đăng nhập, tự động mở modal ghép chuyến
     if (pendingBookingTrip) {
@@ -316,11 +324,19 @@ export default function App() {
   }, [driverOffers, passengerRequests, marketViewMode, searchKeyword, searchFrom, searchTo, selectedTimeSlot, selectedDirection, selectedCarCategory]);
 
   // Handlers với kết nối Backend Engine
-  const handlePostTrip = async (newTrip) => {
-    if (currentUser) {
-      newTrip.userId = currentUser.id;
-      if (!newTrip.phoneReal && currentUser.phone) newTrip.phoneReal = currentUser.phone;
-      if (!newTrip.publicName && currentUser.name) newTrip.publicName = currentUser.name;
+  const handlePostTrip = async (newTrip, authUser = currentUser) => {
+    // Bắt buộc xác thực danh tính để bảo vệ liên hệ và quyền quản lý bài đăng
+    if (!authUser) {
+      setPendingPostTrip(newTrip);
+      setShowAuthModal(true);
+      showToast('Vui lòng xác thực SĐT hoặc Zalo để hoàn tất đăng chuyến');
+      return;
+    }
+
+    newTrip.userId = authUser.id;
+    if (authUser.phone && !newTrip.phoneReal) newTrip.phoneReal = authUser.phone;
+    if (authUser.name && (!newTrip.publicName || newTrip.publicName.startsWith('Chủ xe #') || newTrip.publicName.startsWith('Khách #'))) {
+      newTrip.publicName = authUser.name;
     }
 
     if (newTrip.type === 'driver_offer') setDriverOffers(prev => [newTrip, ...prev]);
@@ -329,13 +345,13 @@ export default function App() {
     setTicketToShare(newTrip);
     setActiveTab('market');
 
-    // Lưu bài vào localStorage theo tài khoản đăng nhập hoặc phiên khách
+    // Lưu bài vào localStorage theo tài khoản đăng nhập chính chủ
     try {
-      const storageKey = currentUser ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}` : 'carmate_guest_trip_ids';
+      const storageKey = `carmate_my_trip_ids_${authUser.id || authUser.phone}`;
       const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
       const updated = [newTrip.id, ...stored.filter(id => id !== newTrip.id)];
       localStorage.setItem(storageKey, JSON.stringify(updated));
-      updateMyTripsCount(currentUser);
+      updateMyTripsCount(authUser);
     } catch {}
 
     try {
@@ -349,11 +365,11 @@ export default function App() {
         setTicketToShare(res.data);
         if (res.data.id !== newTrip.id) {
           try {
-            const storageKey = currentUser ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}` : 'carmate_guest_trip_ids';
+            const storageKey = `carmate_my_trip_ids_${authUser.id || authUser.phone}`;
             const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
             const updated = [res.data.id, ...stored.filter(id => id !== newTrip.id)];
             localStorage.setItem(storageKey, JSON.stringify(updated));
-            updateMyTripsCount(currentUser);
+            updateMyTripsCount(authUser);
           } catch {}
         }
       }
@@ -740,7 +756,7 @@ export default function App() {
 
         {activeTab === 'post' && (
           <div className={`${container} py-8`}>
-            <PostTripForm onSubmit={handlePostTrip} currentUser={currentUser} />
+            <PostTripForm onSubmit={handlePostTrip} currentUser={currentUser} onOpenAuth={() => setShowAuthModal(true)} />
           </div>
         )}
 

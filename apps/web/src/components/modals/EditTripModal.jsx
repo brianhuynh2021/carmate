@@ -3,7 +3,7 @@ import {
   Edit3, Clock, Users, DollarSign, MapPin, FileText, CheckCircle2,
   ArrowLeftRight, Sparkles, Navigation, Plus, Check, CornerDownLeft
 } from 'lucide-react';
-import { TIME_SLOTS, formatVND, mapTimeToSlot } from '@carmate/shared';
+import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
@@ -17,6 +17,7 @@ export default function EditTripModal({ trip, onClose, onSave }) {
   const [toLocation, setToLocation] = useState(trip.to || '');
   const [price, setPrice] = useState(trip.basePricePerSeat || trip.expectedPrice || 150000);
   const [seats, setSeats] = useState(trip.availableSeats || trip.seatsNeeded || 3);
+  const [date, setDate] = useState(trip.date || 'Hôm nay');
   const [timeSlot, setTimeSlot] = useState(trip.timeSlot || '07:00-09:00');
   const [exactTime, setExactTime] = useState(trip.exactTime || '');
   const [waypointNote, setWaypointNote] = useState(trip.waypointNote || '');
@@ -47,6 +48,7 @@ export default function EditTripModal({ trip, onClose, onSave }) {
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
     if (saving) return;
+    if (!fromLocation.trim() || !toLocation.trim()) return;
     setSaving(true);
 
     const slot = TIME_SLOTS.find(s => s.id === timeSlot) || TIME_SLOTS[2];
@@ -55,6 +57,10 @@ export default function EditTripModal({ trip, onClose, onSave }) {
     const fromCity = cleanFrom.split(/[,-]/)[0].trim() || cleanFrom;
     const toCity = cleanTo.split(/[,-]/)[0].trim() || cleanTo;
     const derivedRoute = `${fromCity} ⇄ ${toCity}`;
+
+    const isExactTimeValid = exactTime && isTimeInSlot(exactTime.trim(), timeSlot);
+    const validExactTime = isExactTimeValid ? exactTime.trim() : undefined;
+    const timeSlotLabel = validExactTime ? `${validExactTime} (${slot.short})` : slot.short;
 
     const updates = {
       from: cleanFrom,
@@ -67,8 +73,8 @@ export default function EditTripModal({ trip, onClose, onSave }) {
       seatsNeeded: !isDriver ? Number(seats) : undefined,
       date,
       timeSlot,
-      exactTime: exactTime ? exactTime.trim() : undefined,
-      timeSlotLabel: exactTime ? `${exactTime.trim()} (${slot.short})` : slot.short,
+      exactTime: validExactTime,
+      timeSlotLabel,
       waypointNote: waypointNote.trim(),
       notes: notes.trim()
     };
@@ -318,7 +324,13 @@ export default function EditTripModal({ trip, onClose, onSave }) {
             </label>
             <select
               value={timeSlot}
-              onChange={(e) => setTimeSlot(e.target.value)}
+              onChange={(e) => {
+                const newSlot = e.target.value;
+                setTimeSlot(newSlot);
+                if (exactTime && !isTimeInSlot(exactTime, newSlot)) {
+                  setExactTime('');
+                }
+              }}
               className="w-full h-10 px-3 rounded-xl text-xs font-semibold bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white outline-none focus:border-primary-500 cursor-pointer shadow-2xs"
             >
               {TIME_SLOTS.filter(s => s.id !== 'all' && !s.isAlias).map(slot => (
