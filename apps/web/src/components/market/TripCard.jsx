@@ -12,96 +12,19 @@ import {
   Package,
   Camera
 } from 'lucide-react';
-import { formatVND, getTimeSlotLabel, isGoogleMapsUrl, ROUTE_BENCHMARKS, decodeHtmlEntities, formatTripDateDisplay } from '@carmate/shared';
+import { 
+  formatVND, 
+  getTimeSlotLabel, 
+  isGoogleMapsUrl, 
+  ROUTE_BENCHMARKS, 
+  decodeHtmlEntities, 
+  formatTripDateDisplay,
+  parseLocation,
+  getCorridorDisplay
+} from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 
-export function parseLocation(str) {
-  if (!str || typeof str !== 'string') return { main: '', sub: '' };
-  const cleanStr = decodeHtmlEntities(str);
-
-  // Check if contains parentheses e.g. "Bù Đốp (Cây xăng Petrolimex 17, QL13)"
-  const parenMatch = cleanStr.match(/^(.*?)\s*\((.*?)\)$/);
-  if (parenMatch) {
-    return { main: parenMatch[1].trim(), sub: parenMatch[2].trim() };
-  }
-  // Check if contains slash e.g. "Bù Đốp / Lộc Ninh"
-  if (cleanStr.includes(' / ')) {
-    const parts = cleanStr.split(' / ');
-    return { main: parts[0].trim(), sub: parts.slice(1).join(' / ').trim() };
-  }
-  if (cleanStr.includes('; ')) {
-    const parts = cleanStr.split('; ');
-    return { main: parts[0].trim(), sub: parts.slice(1).join('; ').trim() };
-  }
-  return { main: cleanStr.trim(), sub: '' };
-}
-
-/**
- * Trích xuất địa danh đô thị/tỉnh thành lớn để làm tiêu đề vé xe chuẩn Apple Wallet & Fly.io
- * Tránh hoàn toàn việc nhét tên cây xăng/ngã tư dài ngoằng vào tiêu đề chính gây vỡ chữ '...'
- */
-export function getCorridorDisplay(item, fromParsed, toParsed) {
-  const extractTerritory = (parsed, raw) => {
-    const text = ((parsed.sub || '') + ' ' + (parsed.main || '') + ' ' + (raw || '')).toLowerCase();
-    
-    // Tuyến Sài Gòn / TP.HCM
-    if (/sài gòn|tp\.hcm|hồ chí minh|hàng xanh|miền đông|thủ đức|quận\s*\d+/i.test(text)) {
-      return { city: 'Sài Gòn', code: 'SGN', region: 'TP. Hồ Chí Minh', point: parsed.main || 'TP.HCM' };
-    }
-    // Bình Phước & Các Huyện Trục QL13, QL14
-    if (/bù đốp/i.test(text)) return { city: 'Bù Đốp', code: 'BĐ', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/lộc ninh/i.test(text)) return { city: 'Lộc Ninh', code: 'LN', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/bình long/i.test(text)) return { city: 'Bình Long', code: 'BL', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/chơn thành/i.test(text)) return { city: 'Chơn Thành', code: 'CT', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/đồng xoài/i.test(text)) return { city: 'Đồng Xoài', code: 'ĐX', region: 'Bình Phước (QL14)', point: parsed.main };
-    if (/phước long/i.test(text)) return { city: 'Phước Long', code: 'PL', region: 'Bình Phước (ĐT741)', point: parsed.main };
-    if (/bình phước/i.test(text)) return { city: 'Bình Phước', code: 'BP', region: 'Tỉnh Bình Phước', point: parsed.main };
-
-    // Đồng Nai & Trục QL20
-    if (/gia kiệm/i.test(text)) return { city: 'Gia Kiệm', code: 'GK', region: 'Đồng Nai (QL20)', point: parsed.main };
-    if (/dầu giây/i.test(text)) return { city: 'Dầu Giây', code: 'DG', region: 'Đồng Nai (QL1A/20)', point: parsed.main };
-    if (/long khánh/i.test(text)) return { city: 'Long Khánh', code: 'LK', region: 'Tỉnh Đồng Nai', point: parsed.main };
-    if (/định quán/i.test(text)) return { city: 'Định Quán', code: 'ĐQ', region: 'Đồng Nai (QL20)', point: parsed.main };
-    if (/biên hòa|biên hoà/i.test(text)) return { city: 'Biên Hòa', code: 'BH', region: 'Tỉnh Đồng Nai', point: parsed.main };
-    if (/đồng nai/i.test(text)) return { city: 'Đồng Nai', code: 'ĐN', region: 'Tỉnh Đồng Nai', point: parsed.main };
-
-    // Các tỉnh thành phố khác
-    if (/vũng tàu/i.test(text)) return { city: 'Vũng Tàu', code: 'VT', region: 'Bà Rịa - Vũng Tàu', point: parsed.main };
-    if (/bà rịa/i.test(text)) return { city: 'Bà Rịa', code: 'BR', region: 'Bà Rịa - Vũng Tàu', point: parsed.main };
-    if (/đà lạt/i.test(text)) return { city: 'Đà Lạt', code: 'DLI', region: 'Lâm Đồng (QL20)', point: parsed.main };
-    if (/buôn ma thuột|đắk lắk/i.test(text)) return { city: 'B.M.Thuột', code: 'BMT', region: 'Đắk Lắk (QL14)', point: parsed.main };
-    if (/đắk nông|gia nghĩa/i.test(text)) return { city: 'Đắk Nông', code: 'ĐN', region: 'Tỉnh Đắk Nông', point: parsed.main };
-    if (/bình dương|thủ dầu một|bến cát/i.test(text)) return { city: 'Bình Dương', code: 'BD', region: 'Tỉnh Bình Dương', point: parsed.main };
-    if (/tây ninh/i.test(text)) return { city: 'Tây Ninh', code: 'TN', region: 'Tỉnh Tây Ninh', point: parsed.main };
-    if (/cần thơ/i.test(text)) return { city: 'Cần Thơ', code: 'CT', region: 'Đồng Bằng Sông Cửu Long', point: parsed.main };
-
-    // Rút gọn địa danh fallback
-    const cleanWord = (parsed.main || '')
-      .replace(/^(Cây xăng|Bến xe|Ngã 4|Ngã ba|Ngã 3|Trạm thu phí|KCN|Chợ|Cổng chào)\s+/i, '')
-      .split(/[\s,.-]+/)[0] || 'Điểm đón';
-    const code = cleanWord.slice(0, 3).toUpperCase();
-    return { city: cleanWord, code, region: 'Tuyến kết nối', point: parsed.main || cleanWord };
-  };
-
-  const fromInfo = extractTerritory(fromParsed, item.from);
-  const toInfo = extractTerritory(toParsed, item.to);
-
-  // Fallback từ benchmark nếu cần
-  const benchmark = ROUTE_BENCHMARKS[item.routeCategory];
-  if (benchmark?.name && (fromInfo.city === toInfo.city || !fromInfo.city || !toInfo.city)) {
-    const parts = benchmark.name.split('⇄');
-    if (parts.length === 2) {
-      fromInfo.city = parts[0].trim();
-      toInfo.city = parts[1].replace(/\(.*?\)/, '').trim();
-      fromInfo.code = fromInfo.city.slice(0, 3).toUpperCase();
-      toInfo.code = toInfo.city.slice(0, 3).toUpperCase();
-      fromInfo.region = benchmark.highway || 'Trục chính';
-      toInfo.region = 'TP. Hồ Chí Minh';
-    }
-  }
-
-  return { fromInfo, toInfo };
-}
+export { parseLocation, getCorridorDisplay };
 
 /**
  * 6 Dải màu nghệ thuật sống động lấy cảm hứng từ Fly.io & Apple Boarding Pass
@@ -283,48 +206,62 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           </span>
         </div>
 
-        {/* Center: Boarding Pass Route Display (Tuyệt đối KHÔNG bị cắt chữ ...) */}
-        <div className="relative z-10 mt-4 mb-1 flex items-center justify-between gap-2">
-          {/* Điểm xuất phát lớn */}
+        {/* TẦNG 2: HÀNH LANG TUYẾN ĐƯỜNG (RỘNG RÃI, TUYỆT ĐỐI KHÔNG BỊ CẮT '...') */}
+        <div className="relative z-10 mt-3.5 mb-2.5 flex items-center justify-between gap-3">
+          {/* Điểm xuất phát lớn - Không bị đè bởi ngày giờ */}
           <div className="flex-1 min-w-0">
             <span className="text-[11px] font-mono tracking-widest text-white/70 uppercase font-black block">
               {fromInfo.code}
             </span>
-            <h3 className="text-[21px] sm:text-[23px] font-black tracking-tight text-white leading-none mt-1 truncate">
+            <h3 className="text-[19px] sm:text-[21px] font-black tracking-tight text-white leading-tight mt-0.5">
               {fromInfo.city}
             </h3>
-            <p className="text-[11.5px] text-white/80 font-medium truncate mt-1.5">
+            <p className="text-[11px] text-white/80 font-medium truncate mt-0.5">
               {fromInfo.region}
             </p>
           </div>
 
-          {/* Icon tuyến đường cao tốc & Micro-animation xe lăn bánh khi lướt qua */}
-          <div className="flex flex-col items-center justify-center shrink-0 px-2.5">
-            <div className="flex items-center gap-1 text-white/90">
-              <span className="w-2 h-2 rounded-full bg-white/90 ring-2 ring-white/30" />
-              <div className="w-11 sm:w-15 border-t-2 border-dashed border-white/40 group-hover:border-white/70 relative flex items-center justify-center transition-colors">
-                <Car className="w-3.5 h-3.5 text-white absolute -top-2 transition-transform duration-300 ease-out group-hover:translate-x-2.5" />
+          {/* Icon xe lăn bánh siêu nhỏ gọn ở giữa, KHÔNG mang text dài ngày giờ */}
+          <div className="flex items-center justify-center shrink-0 px-1 select-none">
+            <div className="flex items-center gap-1 text-white/85">
+              <span className="w-2 h-2 rounded-full bg-white/90 ring-2 ring-white/30 shrink-0" />
+              <div className="w-8 sm:w-10 border-t-2 border-dashed border-white/40 group-hover:border-white/75 relative flex items-center justify-center transition-colors">
+                <Car className="w-3.5 h-3.5 text-white absolute -top-2 transition-transform duration-300 ease-out group-hover:translate-x-2" />
               </div>
-              <ArrowRight className="w-3.5 h-3.5 text-white group-hover:translate-x-1 transition-transform duration-200" />
+              <ArrowRight className="w-3.5 h-3.5 text-white group-hover:translate-x-1 transition-transform duration-200 shrink-0" />
             </div>
-            {/* Tag ngày & giờ xuất phát chuẩn kính mờ - Không còn mập mờ "Sáng Thứ 3" */}
-            <span className="mt-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white tracking-wide group-hover:bg-white/25 transition-colors text-center">
-              {item.date ? `${formatTripDateDisplay(item.date)} · ` : ''}{getTimeSlotLabel(item, lang)}
-            </span>
           </div>
 
-          {/* Điểm đích đến lớn */}
+          {/* Điểm đích đến lớn - Không bị đè bởi ngày giờ */}
           <div className="flex-1 min-w-0 text-right">
             <span className="text-[11px] font-mono tracking-widest text-white/70 uppercase font-black block">
               {toInfo.code}
             </span>
-            <h3 className="text-[21px] sm:text-[23px] font-black tracking-tight text-white leading-none mt-1 truncate">
+            <h3 className="text-[19px] sm:text-[21px] font-black tracking-tight text-white leading-tight mt-0.5">
               {toInfo.city}
             </h3>
-            <p className="text-[11.5px] text-white/80 font-medium truncate mt-1.5">
+            <p className="text-[11px] text-white/80 font-medium truncate mt-0.5">
               {toInfo.region}
             </p>
           </div>
+        </div>
+
+        {/* TẦNG 3: THANH LỊCH TRÌNH KHỞI HÀNH TRÀN VIỀN (ĐẦY ĐỦ NGÀY + GIỜ KHÔNG BỊ ÉP CHẬT) */}
+        <div className="relative z-10 pt-2.5 border-t border-white/20 flex items-center justify-between gap-2 text-white">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex items-center gap-1 text-[11.5px] font-bold tracking-tight">
+              <Clock className="w-3.5 h-3.5 text-white/90 shrink-0" />
+              <span className="truncate">{item.date ? formatTripDateDisplay(item.date) : 'Hôm nay'}</span>
+            </div>
+            <span className="text-white/40 font-mono">·</span>
+            <span className="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[11px] font-mono font-bold text-white tracking-wide shrink-0">
+              {getTimeSlotLabel(item, lang)}
+            </span>
+          </div>
+
+          <span className="text-[11px] font-medium text-white/75 shrink-0 hidden xs:inline">
+            {isDriver ? 'Đón dọc tuyến' : 'Tìm ghép xe'}
+          </span>
         </div>
       </div>
 

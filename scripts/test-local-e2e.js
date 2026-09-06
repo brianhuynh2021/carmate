@@ -857,6 +857,17 @@ async function runTests() {
     const xpanderPhotos = findSampleCarPhotos('Mitsubishi Xpander');
     assert(Array.isArray(xpanderPhotos) && xpanderPhotos.length >= 3 && xpanderPhotos.length <= 5, 'Bộ ảnh mẫu Xpander có từ 3 đến 5 góc chụp');
     assert(SAMPLE_CAR_PHOTO_SETS[0].plateMask.includes('***'), 'Biển số được tự động che bảo mật (93A - ***.**)');
+
+    // 18.4 Kiểm thử trích xuất hành lang chuẩn xác (Xóa bỏ lỗi cắt cụt "Phan Thiết" thành "Phan")
+    const { getCorridorDisplay, parseLocation } = await import('../packages/shared/src/utils/geo.js');
+    const phanThietItem = { from: 'Sài Gòn', to: 'Phan Thiết (Mũi Né / Đồi Cát Bay)' };
+    const ptCorridor = getCorridorDisplay(phanThietItem, parseLocation(phanThietItem.from), parseLocation(phanThietItem.to));
+    assert(ptCorridor.toInfo.city === 'Phan Thiết', 'Trích xuất đúng "Phan Thiết" nguyên vẹn (Không bị cắt cụt thành "Phan")');
+    assert(ptCorridor.toInfo.code === 'PTH', 'Mã hành lang chuẩn PTH cho Phan Thiết');
+
+    const benTreItem = { from: 'Sài Gòn', to: 'TP Bến Tre' };
+    const btCorridor = getCorridorDisplay(benTreItem, parseLocation(benTreItem.from), parseLocation(benTreItem.to));
+    assert(btCorridor.toInfo.city === 'Bến Tre', 'Trích xuất đúng "Bến Tre" nguyên vẹn (Không bị cắt cụt thành "Bến")');
   } catch (err) {
     assert(false, 'Kiểm thử An ninh, Stanford & MIT Engine', err.message);
   }
