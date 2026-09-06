@@ -974,6 +974,12 @@ async function runTests() {
       }).catch(() => {});
     }
 
+    if (newTripId) {
+      await fetch(`${BASE_URL}/api/admin/trips/${newTripId}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': adminToken }
+      }).catch(() => {});
+    }
   } catch (err) {
     assert(false, 'Kịch bản Pentest Chuyên Sâu', err.message);
   }
