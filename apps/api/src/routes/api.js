@@ -3,7 +3,7 @@ import { listTrips, getTrip, createTrip, updateStatus, updateTripHandler, delete
 import { getMatches } from '../controllers/matchController.js';
 import { listBookings, createBooking, reportDelay, cancelBooking, completeBooking, submitReview } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile } from '../controllers/miscController.js';
-import { requestOtp, verifyOtp, zaloLogin, getMe } from '../controllers/authController.js';
+import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe } from '../controllers/authController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -26,10 +26,11 @@ import { agentChatHandler } from '../controllers/agentController.js';
 // --- Agentic AI Concierge & Dispatcher (Stanford Inner Loop & Tools) ---
 router.post('/agent/chat', optionalAuth, agentChatHandler);
 
-// --- Auth & Identity (Zero-Cost / Zalo & Phone OTP với Auth Limiter & JWT) ---
+// --- Auth & Identity (Zero-Cost / Google & Zalo với Auth Limiter & JWT) ---
+router.post('/auth/google-login', googleLogin);
+router.post('/auth/zalo-login', zaloLogin);
 router.post('/auth/request-otp', authLimiter, requestOtp);
 router.post('/auth/verify-otp', authLimiter, verifyOtp);
-router.post('/auth/zalo-login', zaloLogin);
 router.get('/auth/me', requireAuth, getMe);
 
 // --- Health & Meta ---

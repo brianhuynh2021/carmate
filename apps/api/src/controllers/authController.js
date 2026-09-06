@@ -1,5 +1,5 @@
 import { cleanPhoneNumber, isValidVietnamesePhone } from '@carmate/shared';
-import { getUserByPhone, saveUser, getTripsByPhone } from '../db/sqliteStore.js';
+import { getUserByPhone, getUserById, getUserByEmail, saveUser, getTripsByPhone } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
 
 // Bộ nhớ đệm OTP tạm thời trong RAM (5 phút hết hạn, 0đ chi phí SMS)
@@ -202,6 +202,73 @@ export async function zaloLogin(req, res) {
     return res.status(200).json({
       success: true,
       message: isNewUser ? 'Kích hoạt tài khoản Zalo mới thành công' : 'Đăng nhập Zalo thành công',
+      user,
+      token,
+      tripIds,
+      isNewUser
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/auth/google-login
+ * Đăng nhập / Đăng ký 1 chạm bằng tài khoản Google (0đ chi phí SMS)
+ */
+export async function googleLogin(req, res) {
+  try {
+    const { email, name, avatar, googleId, phone } = req.body || {};
+    if (!email && !googleId) {
+      return res.status(400).json({ success: false, error: 'Thông tin tài khoản Google không hợp lệ' });
+    }
+
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const userId = googleId ? `USR-GG-${googleId}` : `USR-GG-${Buffer.from(cleanEmail).toString('hex').slice(0, 12)}`;
+
+    let user = getUserById(userId) || (cleanEmail ? getUserByEmail(cleanEmail) : null);
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      user = {
+        id: userId,
+        email: cleanEmail,
+        googleId: googleId || '',
+        phone: phone ? cleanPhoneNumber(phone) : '',
+        name: name?.trim() || cleanEmail.split('@')[0] || 'Thành viên Google',
+        avatar: avatar || '',
+        role: 'passenger',
+        provider: 'google',
+        trustScore: 100,
+        isCccdVerified: false,
+        isGplxVerified: false,
+        safeTripsCount: 0
+      };
+      await saveUser(user);
+    } else {
+      if (name && (!user.name || user.name.startsWith('Thành viên'))) user.name = name.trim();
+      if (avatar && !user.avatar) user.avatar = avatar;
+      if (phone && !user.phone) user.phone = cleanPhoneNumber(phone);
+      user.provider = user.provider || 'google';
+      await saveUser(user);
+    }
+
+    const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
+    const tripIds = myTrips.map((t) => t.id);
+
+    // Cấp mã JWT Token bảo mật 7 ngày
+    const token = generateToken({
+      userId: user.id,
+      phone: user.phone || '',
+      email: user.email || '',
+      role: user.role || 'passenger',
+      name: user.name
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: isNewUser ? 'Đăng ký tài khoản Google thành công' : 'Đăng nhập Google thành công',
       user,
       token,
       tripIds,

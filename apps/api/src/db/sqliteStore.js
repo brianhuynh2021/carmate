@@ -596,6 +596,20 @@ export function getUserById(id) {
   }
 }
 
+export function getUserByEmail(email) {
+  const database = getRawDB();
+  if (!email) return null;
+  const cleanEmail = email.trim().toLowerCase();
+  const row = database.prepare('SELECT payload FROM users WHERE payload LIKE ?').get(`%"email":"${cleanEmail}"%`);
+  if (!row) return null;
+
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
 export async function saveUser(user) {
   const database = getRawDB();
   const clean = cleanPhoneNumber(user.phone);

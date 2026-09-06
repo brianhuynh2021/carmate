@@ -1,24 +1,54 @@
 import React, { useState } from 'react';
-import { Phone, ShieldCheck, CheckCircle2, ArrowRight, Sparkles, User, KeyRound, AlertCircle } from 'lucide-react';
+import { Phone, ShieldCheck, User, AlertCircle, Mail, ArrowRight, Sparkles } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
-import { ZaloIcon } from '../ui/SocialIcons.jsx';
+import { GoogleIcon, ZaloIcon } from '../ui/SocialIcons.jsx';
 import TermsModal from './TermsModal.jsx';
 import PolicyModal from './PolicyModal.jsx';
 import api from '../../api/client.js';
 
 export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
-  const [authMethod, setAuthMethod] = useState('zalo'); // 'zalo' | 'otp'
+  const [authTab, setAuthTab] = useState('google'); // 'google' | 'zalo'
   const [phone, setPhone] = useState(initialPhone);
   const [name, setName] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [devOtpHint, setDevOtpHint] = useState('');
+  const [email, setEmail] = useState('');
+  const [showGoogleForm, setShowGoogleForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeLegalModal, setActiveLegalModal] = useState(null); // 'terms' | 'policy' | null
 
-  // 1. Luồng đăng nhập Zalo (1 chạm - 0đ chi phí)
+  // 1. Luồng đăng nhập Google 1 chạm (0đ chi phí)
+  const handleGoogleSubmit = async (e) => {
+    e?.preventDefault();
+    if (!email.trim() || !email.includes('@')) {
+      setError('Vui lòng nhập địa chỉ email Google (Gmail) hợp lệ');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await api.googleLogin({
+        email: email.trim(),
+        name: name.trim() || email.trim().split('@')[0],
+        phone: phone.trim() || undefined
+      });
+
+      if (res?.success && res?.user) {
+        onSuccess?.(res.user, res.tripIds || []);
+        onClose();
+      } else {
+        setError(res?.error || 'Đăng nhập Google không thành công');
+      }
+    } catch (err) {
+      setError(err.message || 'Lỗi kết nối máy chủ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Luồng đăng nhập Zalo 1 chạm (0đ SMS viễn thông)
   const handleZaloLogin = async (e) => {
     e?.preventDefault();
     if (!phone.trim() || phone.replace(/\D/g, '').length < 9) {
@@ -48,147 +78,155 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
     }
   };
 
-  // 2. Luồng gửi mã OTP
-  const handleRequestOtp = async (e) => {
-    e?.preventDefault();
-    if (!phone.trim() || phone.replace(/\D/g, '').length < 9) {
-      setError('Vui lòng nhập số điện thoại hợp lệ để nhận mã');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await api.requestOtp(phone.trim());
-      if (res?.success) {
-        setOtpSent(true);
-        if (res.devOtp) {
-          setDevOtpHint(res.devOtp);
-          setOtp(res.devOtp); // Tự động điền mã mẫu để tiện test 0đ
-        }
-      } else {
-        setError(res?.error || 'Không thể tạo mã xác thực');
-      }
-    } catch (err) {
-      setError(err.message || 'Lỗi kết nối máy chủ');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 3. Luồng xác nhận mã OTP
-  const handleVerifyOtp = async (e) => {
-    e?.preventDefault();
-    if (!otp.trim()) {
-      setError('Vui lòng nhập mã OTP 6 số');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await api.verifyOtp({
-        phone: phone.trim(),
-        otp: otp.trim(),
-        name: name.trim() || undefined
-      });
-
-      if (res?.success && res?.user) {
-        onSuccess?.(res.user, res.tripIds || []);
-        onClose();
-      } else {
-        setError(res?.error || 'Mã xác thực không chính xác');
-      }
-    } catch (err) {
-      setError(err.message || 'Mã xác thực không chính xác hoặc đã hết hạn');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const renderLegalDisclaimer = () => (
-    <div className="pt-2 text-center space-y-1">
-      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed px-1">
-        Bằng việc tiếp tục, bạn đồng ý với{' '}
-        <button
-          type="button"
-          onClick={() => setActiveLegalModal('terms')}
-          className="text-[#0071e3] dark:text-blue-400 font-semibold underline underline-offset-2 hover:opacity-85 cursor-pointer inline"
-        >
-          Điều khoản dịch vụ
-        </button>{' '}
-        &{' '}
-        <button
-          type="button"
-          onClick={() => setActiveLegalModal('policy')}
-          className="text-[#0071e3] dark:text-blue-400 font-semibold underline underline-offset-2 hover:opacity-85 cursor-pointer inline"
-        >
-          Chính sách bảo mật
-        </button>{' '}
-        của CarMate.
-      </p>
-      <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
-        <span>🔒 Cam kết 100% không mất phí · Không gửi tin nhắn rác</span>
-      </p>
-    </div>
-  );
-
   return (
     <Modal
       onClose={onClose}
       size="sm"
       icon={ShieldCheck}
       iconTone="brand"
-      title="Đăng Nhập & Kích Hoạt Tài Khoản"
-      subtitle="Đồng bộ chuyến xe · Quản lý bài đăng · Tự động kích hoạt"
+      title="Đăng Nhập CarMate"
+      subtitle="Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn"
     >
       <div className="space-y-4">
-        {/* Lựa chọn phương thức đăng nhập */}
-        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80">
+        {/* Lựa chọn phương thức: Google hoặc Zalo (Apple Capsule Segmented) */}
+        <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-black/[0.04] dark:bg-slate-800/80">
           <button
             type="button"
-            onClick={() => { setAuthMethod('zalo'); setError(''); }}
-            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              authMethod === 'zalo'
+            onClick={() => { setAuthTab('google'); setError(''); }}
+            className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              authTab === 'google'
+                ? 'bg-white dark:bg-slate-900 text-[#1d1d1f] dark:text-white shadow-xs'
+                : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
+            }`}
+          >
+            <GoogleIcon className="w-4 h-4 shrink-0" />
+            <span>Google 1 chạm</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setAuthTab('zalo'); setError(''); }}
+            className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              authTab === 'zalo'
                 ? 'bg-white dark:bg-slate-900 text-[#0068ff] shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                : 'text-[#86868b] hover:text-[#0068ff]'
             }`}
           >
-            <ZaloIcon className="w-4 h-4" />
-            <span>Zalo 1 chạm (0đ)</span>
+            <ZaloIcon className="w-4 h-4 shrink-0" />
+            <span>Số Zalo (0đ SMS)</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => { setAuthMethod('otp'); setError(''); }}
-            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              authMethod === 'otp'
-                ? 'bg-white dark:bg-slate-900 text-primary-700 dark:text-primary-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            <Phone className="w-3.5 h-3.5" />
-            <span>Số điện thoại / OTP</span>
-          </button>
-        </div>
-
-        {/* Thông điệp rõ ràng: Đăng nhập & Đăng ký hợp nhất */}
-        <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/50 text-[11px] text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span><strong>Chưa có tài khoản?</strong> Chỉ cần nhập số điện thoại, hệ thống sẽ tự động đăng ký tài khoản mới trong 0.05 giây mà không cần mật khẩu.</span>
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+          <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* ── Tab 1: Đăng nhập Zalo (Ưu tiên số 1 - 0đ) ── */}
-        {authMethod === 'zalo' && (
+        {/* ── TAB 1: GOOGLE 1 CHẠM ── */}
+        {authTab === 'google' && (
+          <div className="space-y-3.5">
+            {!showGoogleForm ? (
+              <div className="space-y-3">
+                <div className="p-4 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/60 border border-black/[0.06] dark:border-slate-700/60 text-center space-y-1.5">
+                  <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 shadow-xs flex items-center justify-center mx-auto border border-black/[0.06]">
+                    <GoogleIcon className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-bold text-[#1d1d1f] dark:text-white pt-1">Đăng nhập tài khoản Google</p>
+                  <p className="text-[11.5px] text-[#86868b] dark:text-slate-400 leading-relaxed px-1">
+                    Xác thực danh tính 1 chạm, tự động bảo vệ tài khoản và đồng bộ chuyến xe miễn phí.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleForm(true)}
+                  disabled={loading}
+                  className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-black/[0.14] dark:border-slate-600 hover:border-black/[0.3] hover:bg-black/[0.02] text-[#1d1d1f] dark:text-white text-sm font-semibold flex items-center justify-center gap-3 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer"
+                >
+                  <GoogleIcon className="w-5 h-5 shrink-0" />
+                  <span>Tiếp tục với Google</span>
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleGoogleSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Địa chỉ Email Google (Gmail) *
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      required
+                      autoFocus
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="ban@gmail.com"
+                      className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Tên hiển thị của bạn (Tùy chọn)
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="VD: Tuấn Nguyễn, Chị Linh..."
+                      className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Số điện thoại Zalo liên hệ đón (Tùy chọn)
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="VD: 0984 883 750"
+                      className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleForm(false)}
+                    className="py-3 px-4 rounded-2xl text-xs font-bold text-[#86868b] hover:bg-black/[0.04] cursor-pointer"
+                  >
+                    Quay lại
+                  </button>
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    size="lg"
+                    disabled={loading}
+                    className="bg-[#0071e3] hover:bg-[#0055d4] text-white font-bold text-sm shadow-md py-3 rounded-2xl cursor-pointer"
+                  >
+                    <span>{loading ? 'Đang xác thực...' : 'Xác nhận đăng nhập Google'}</span>
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB 2: ZALO 1 CHẠM (0Đ SMS) ── */}
+        {authTab === 'zalo' && (
           <form onSubmit={handleZaloLogin} className="space-y-3.5">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -199,17 +237,18 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
                 <input
                   type="tel"
                   required
+                  autoFocus
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="VD: 0984 883 750"
-                  className="w-full h-11 pl-9 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0068ff] focus:ring-1 focus:ring-[#0068ff]"
+                  className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0068ff] focus:ring-1 focus:ring-[#0068ff]"
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Tên hiển thị (Tài xế / Người đi xe)
+                Tên hiển thị (Tài xế / Hành khách)
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -218,7 +257,7 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="VD: Tuấn Nguyễn, Anh Hải..."
-                  className="w-full h-11 pl-9 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0068ff] focus:ring-1 focus:ring-[#0068ff]"
+                  className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0068ff] focus:ring-1 focus:ring-[#0068ff]"
                 />
               </div>
             </div>
@@ -228,123 +267,43 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
               fullWidth
               size="lg"
               disabled={loading}
-              className="bg-[#0068ff] hover:bg-[#0055d4] text-white font-bold text-sm shadow-md py-3 cursor-pointer"
+              className="bg-[#0068ff] hover:bg-[#0055d4] text-white font-bold text-sm shadow-md py-3 rounded-2xl cursor-pointer"
             >
               <ZaloIcon className="w-5 h-5 mr-2" />
               <span>{loading ? 'Đang kết nối...' : 'Tiếp tục với Zalo (0đ chi phí)'}</span>
             </Button>
-
-            {renderLegalDisclaimer()}
           </form>
         )}
 
-        {/* ── Tab 2: Xác thực qua OTP ── */}
-        {authMethod === 'otp' && (
-          <div className="space-y-3.5">
-            {!otpSent ? (
-              <form onSubmit={handleRequestOtp} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Số điện thoại nhận mã *
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="VD: 0984 883 750"
-                      className="w-full h-11 pl-9 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  size="lg"
-                  variant="primary"
-                  disabled={loading}
-                  className="font-bold text-sm py-3 cursor-pointer"
-                >
-                  <KeyRound className="w-4 h-4 mr-2" />
-                  <span>{loading ? 'Đang tạo mã...' : 'Nhận mã xác thực OTP'}</span>
-                </Button>
-
-                {renderLegalDisclaimer()}
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-3.5">
-                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-                  <span>Mã OTP gửi đến: <strong>{phone}</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => { setOtpSent(false); setOtp(''); }}
-                    className="text-primary-600 dark:text-primary-400 font-bold hover:underline cursor-pointer"
-                  >
-                    Đổi số
-                  </button>
-                </div>
-
-                {devOtpHint && (
-                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between">
-                    <span>⚡ Mã OTP thử nghiệm miễn phí: <strong>{devOtpHint}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => setOtp(devOtpHint)}
-                      className="px-2 py-0.5 rounded bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-white font-bold cursor-pointer"
-                    >
-                      Dán mã
-                    </button>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Nhập mã xác thực 6 chữ số *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    placeholder="123456"
-                    className="w-full h-11 px-3 text-center tracking-widest text-lg font-bold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tên của bạn (Tùy chọn)
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="VD: Tuấn Nguyễn"
-                    className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  size="lg"
-                  variant="primary"
-                  disabled={loading}
-                  className="font-bold text-sm py-3 cursor-pointer"
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  <span>{loading ? 'Đang xác thực...' : 'Xác nhận & Đăng nhập'}</span>
-                </Button>
-
-                {renderLegalDisclaimer()}
-              </form>
-            )}
+        {/* ── FOOTER TINH TẾ CHUẨN APPLE (THAY THẾ CHỮ XẤU CŨ) ── */}
+        <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2">
+          {/* Micro Trust Badge sang trọng */}
+          <div className="flex items-center justify-center gap-1.5 py-1 px-3.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] text-[11px] font-medium text-[#86868b] dark:text-slate-400 w-fit mx-auto border border-black/[0.04] dark:border-white/[0.06]">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
+            <span>Bảo mật danh tính · 100% không tốn phí SMS</span>
           </div>
-        )}
+
+          {/* Điều khoản & Pháp lý */}
+          <p className="text-[11px] text-center text-[#86868b] dark:text-slate-400 leading-relaxed px-2">
+            Bằng việc tiếp tục, bạn đồng ý với{' '}
+            <button
+              type="button"
+              onClick={() => setActiveLegalModal('terms')}
+              className="text-[#0071e3] dark:text-blue-400 font-semibold underline underline-offset-2 hover:opacity-85 cursor-pointer inline"
+            >
+              Điều khoản dịch vụ
+            </button>{' '}
+            &{' '}
+            <button
+              type="button"
+              onClick={() => setActiveLegalModal('policy')}
+              className="text-[#0071e3] dark:text-blue-400 font-semibold underline underline-offset-2 hover:opacity-85 cursor-pointer inline"
+            >
+              Chính sách bảo mật
+            </button>{' '}
+            của CarMate.
+          </p>
+        </div>
       </div>
 
       {/* Modal Điều khoản Dịch vụ & An toàn */}

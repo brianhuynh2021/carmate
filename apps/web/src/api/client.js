@@ -150,6 +150,17 @@ export const api = {
     return res;
   },
 
+  async googleLogin(payload) {
+    const res = await request('/auth/google-login', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (res?.token && typeof localStorage !== 'undefined') {
+      localStorage.setItem('carmate_auth_token', res.token);
+    }
+    return res;
+  },
+
   async zaloLogin(payload) {
     const res = await request('/auth/zalo-login', {
       method: 'POST',
