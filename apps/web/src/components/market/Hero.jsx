@@ -65,10 +65,12 @@ export default function Hero({
   ];
 
   return (
-    <section className="relative overflow-hidden border-b border-slate-200/80 hero-canvas">
-      {/* Background ambient subtle glow (Soft, zero-glare, eye-care) */}
-      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[380px] rounded-full bg-primary-500/10 blur-[140px] pointer-events-none" aria-hidden="true" />
-      <div className="absolute top-1/2 -left-20 w-[300px] h-[300px] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" aria-hidden="true" />
+    <section className="relative border-b border-slate-200/80 hero-canvas">
+      {/* Background ambient subtle glow (Soft, zero-glare, eye-care) - clip blurs safely */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[380px] rounded-full bg-primary-500/10 blur-[140px]" />
+        <div className="absolute top-1/2 -left-20 w-[300px] h-[300px] rounded-full bg-emerald-500/10 blur-[120px]" />
+      </div>
 
       <div className="relative max-w-[1120px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center space-y-4">
         {/* Eyebrow badge with live pulse Apple status dot */}

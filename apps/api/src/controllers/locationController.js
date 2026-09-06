@@ -229,6 +229,38 @@ export const CURATED_LOCATIONS = [
     detail: 'Đường Trưng Nữ Vương, Phường 2, TP. Tây Ninh, Tỉnh Tây Ninh',
     category: 'station',
     keywords: ['ben xe tay ninh', 'trung nu vuong', 'tay ninh']
+  },
+
+  // --- ĐỒNG NAI, TRỤC QL20 & ĐÔNG NAM BỘ ---
+  {
+    name: 'Chợ Gia Kiệm (Huyện Thống Nhất)',
+    detail: 'Quốc lộ 20, Xã Gia Kiệm, Huyện Thống Nhất, Tỉnh Đồng Nai',
+    category: 'building',
+    keywords: ['gia kiem', 'cho gia kiem', 'thong nhat', 'dong nai', 'ql20', 'doc mo']
+  },
+  {
+    name: 'Xã Gia Kiệm (Thống Nhất, Đồng Nai)',
+    detail: 'Quốc lộ 20, Huyện Thống Nhất, Tỉnh Đồng Nai (Khu vực Dốc Mơ / Gia Kiệm)',
+    category: 'building',
+    keywords: ['gia kiem', 'xa gia kiem', 'doc mo', 'thong nhat', 'dong nai', 'ql20']
+  },
+  {
+    name: 'Ngã 3 Dầu Giây (Nút giao QL1A & QL20)',
+    detail: 'Thị trấn Dầu Giây, Huyện Thống Nhất, Tỉnh Đồng Nai',
+    category: 'highway',
+    keywords: ['dau giay', 'nga 3 dau giay', 'nga ba dau giay', 'ql1a', 'ql20', 'thong nhat', 'dong nai']
+  },
+  {
+    name: 'Bến xe Thành phố Biên Hòa',
+    detail: 'Số 4 Nguyễn Ái Quốc, Phường Quang Vinh, TP. Biên Hòa, Đồng Nai',
+    category: 'station',
+    keywords: ['bien hoa', 'ben xe bien hoa', 'nguyen ai quoc', 'dong nai']
+  },
+  {
+    name: 'Bến xe Thành phố Long Khánh',
+    detail: 'Đường Hùng Vương, Phường Xuân An, TP. Long Khánh, Đồng Nai',
+    category: 'station',
+    keywords: ['long khanh', 'ben xe long khanh', 'hung vuong', 'dong nai']
   }
 ];
 
@@ -262,38 +294,46 @@ export async function suggestLocationsHandler(req, res) {
   const cleanQ = removeAccents(query);
   const rawTokens = cleanQ.split(/[\s,.-]+/).filter(t => t.length >= 2);
 
-  // 1. Tìm kiếm trong kho Curated với chấm điểm mức độ khớp (Matching Score)
+  // 1. Tìm kiếm trong kho Curated với chấm điểm độ liên quan chuẩn xác (Strict Relevance Scoring)
   const localMatches = CURATED_LOCATIONS.map(item => {
     const normName = removeAccents(item.name);
     const normDetail = removeAccents(item.detail);
     const normKeywords = item.keywords.map(k => removeAccents(k)).join(' ');
+    const allWords = (normName + ' ' + normDetail + ' ' + normKeywords).split(/[\s,.-]+/);
 
     let score = 0;
-    if (normName.includes(cleanQ)) score += 100;
-    if (normDetail.includes(cleanQ)) score += 60;
-    if (normKeywords.includes(cleanQ)) score += 80;
+    if (normName.includes(cleanQ)) score += 220;
+    else if (normKeywords.includes(cleanQ)) score += 160;
+    else if (normDetail.includes(cleanQ)) score += 100;
 
-    // Khớp từng từ đơn lẻ (Token matching)
-    let tokenMatches = 0;
-    rawTokens.forEach(t => {
-      if (normName.includes(t)) tokenMatches += 3;
-      else if (normDetail.includes(t) || normKeywords.includes(t)) tokenMatches += 1;
-    });
-    score += tokenMatches * 15;
+    if (rawTokens.length >= 2) {
+      // Khi gõ từ 2 từ trở lên (VD: "Gia Kiệm"): Tất cả các từ bắt buộc phải xuất hiện
+      const matchedCount = rawTokens.filter(t => allWords.some(w => w === t || w.startsWith(t))).length;
+      if (matchedCount === rawTokens.length) {
+        score += 80;
+      } else if (!normName.includes(cleanQ) && !normKeywords.includes(cleanQ)) {
+        // Loại bỏ kết quả chỉ khớp 1 mẩu từ ngẫu nhiên (chống "gia" khớp nhầm "giao" trong Chơn Thành)
+        return { ...item, score: 0 };
+      }
+    } else if (rawTokens.length === 1) {
+      const t = rawTokens[0];
+      if (allWords.some(w => w === t)) score += 40;
+      else if (allWords.some(w => w.startsWith(t))) score += 20;
+    }
 
     return { ...item, score };
   })
   .filter(item => item.score > 0)
   .sort((a, b) => b.score - a.score);
 
-  // 2. Gọi Photon Geocoding nếu truy vấn dài hơn 2 ký tự và chưa đủ kết quả
+  // 2. Gọi Photon Geocoding nếu truy vấn dài hơn 2 ký tự
   let onlineMatches = [];
   if (query.length >= 2) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout an toàn
 
-      const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6`;
+      const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8`;
       const response = await fetch(photonUrl, {
         signal: controller.signal,
         headers: { 'Accept': 'application/json' }
@@ -316,12 +356,18 @@ export async function suggestLocationsHandler(req, res) {
                 p.country
               ].filter(Boolean);
 
-              // Loại bớt các kết quả trùng lặp
               const detail = parts.join(', ') || p.name;
               let category = 'building';
               if (p.osm_value === 'bus_stop' || p.osm_key === 'highway') category = 'station';
               else if (p.osm_key === 'aeroway') category = 'airport';
               else if (p.type === 'street' || p.osm_key === 'highway') category = 'street';
+
+              const normOnlineName = removeAccents(name);
+              const normOnlineDetail = removeAccents(detail);
+              let score = 50;
+              if (normOnlineName.includes(cleanQ)) score += 200;
+              else if (normOnlineDetail.includes(cleanQ)) score += 80;
+              else if (rawTokens.every(t => normOnlineName.includes(t) || normOnlineDetail.includes(t))) score += 70;
 
               return {
                 name,
@@ -329,27 +375,29 @@ export async function suggestLocationsHandler(req, res) {
                 category,
                 lat: f.geometry?.coordinates?.[1],
                 lng: f.geometry?.coordinates?.[0],
-                isOnline: true
+                isOnline: true,
+                score,
+                countryCode: (p.countrycode || '').toLowerCase()
               };
             })
             .filter(item => {
-              // Lọc chỉ giữ kết quả tại Việt Nam hoặc liên quan
+              // Lọc ưu tiên địa điểm Việt Nam
               const d = removeAccents(item.detail);
-              return d.includes('viet nam') || d.includes('ho chi minh') || d.includes('ha noi') || d.includes('binh phuoc');
+              return item.countryCode === 'vn' || d.includes('viet nam') || d.includes('dong nai') || d.includes('ho chi minh') || d.includes('ha noi') || d.includes('binh phuoc');
             });
         }
       }
     } catch (e) {
-      // Offline hoặc timeout -> dùng kết quả local, không crash
       console.warn('[Location Suggest] Geocoding fallback to local cache:', e.message);
     }
   }
 
-  // 3. Hợp nhất, khử trùng lặp và giới hạn số lượng trả về
+  // 3. Hợp nhất danh sách và xếp hạng theo điểm số tương quan thực tế
+  const allCandidates = [...localMatches, ...onlineMatches].sort((a, b) => b.score - a.score);
   const seen = new Set();
   const merged = [];
 
-  for (const item of [...localMatches, ...onlineMatches]) {
+  for (const item of allCandidates) {
     const key = removeAccents(item.name).toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);

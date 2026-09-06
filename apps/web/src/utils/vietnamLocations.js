@@ -240,6 +240,43 @@ export const POPULAR_LOCATIONS = [
     icon: 'station',
     keywords: ['ben xe bai chay', 'bai chay', 'ha long', 'quang ninh']
   },
+
+  // ── ĐỒNG NAI & TRỤC QL20 (DẦU GIÂY, GIA KIỆM, ĐỊNH QUÁN) ──
+  {
+    name: 'Chợ Gia Kiệm (Huyện Thống Nhất)',
+    category: 'building',
+    detail: 'Quốc lộ 20, Xã Gia Kiệm, Huyện Thống Nhất, Tỉnh Đồng Nai',
+    icon: 'building',
+    keywords: ['gia kiem', 'cho gia kiem', 'thong nhat', 'dong nai', 'ql20', 'doc mo']
+  },
+  {
+    name: 'Xã Gia Kiệm (Thống Nhất, Đồng Nai)',
+    category: 'building',
+    detail: 'Quốc lộ 20, Huyện Thống Nhất, Tỉnh Đồng Nai (Khu vực Dốc Mơ / Gia Kiệm)',
+    icon: 'building',
+    keywords: ['gia kiem', 'xa gia kiem', 'doc mo', 'thong nhat', 'dong nai', 'ql20']
+  },
+  {
+    name: 'Ngã 3 Dầu Giây (Nút giao QL1A & QL20)',
+    category: 'highway',
+    detail: 'Thị trấn Dầu Giây, Huyện Thống Nhất, Tỉnh Đồng Nai',
+    icon: 'highway',
+    keywords: ['dau giay', 'nga 3 dau giay', 'nga ba dau giay', 'ql1a', 'ql20', 'thong nhat', 'dong nai']
+  },
+  {
+    name: 'Bến xe Thành phố Biên Hòa',
+    category: 'station',
+    detail: 'Số 4 Nguyễn Ái Quốc, Phường Quang Vinh, TP. Biên Hòa, Đồng Nai',
+    icon: 'station',
+    keywords: ['bien hoa', 'ben xe bien hoa', 'nguyen ai quoc', 'dong nai']
+  },
+  {
+    name: 'Bến xe Thành phố Long Khánh',
+    category: 'station',
+    detail: 'Đường Hùng Vương, Phường Xuân An, TP. Long Khánh, Đồng Nai',
+    icon: 'station',
+    keywords: ['long khanh', 'ben xe long khanh', 'hung vuong', 'dong nai']
+  },
   {
     name: 'Trạm dừng chân V52 (Hải Dương)',
     category: 'highway',
@@ -463,16 +500,26 @@ export function searchLocations(query = '', limit = 8) {
     const normName = removeAccents(item.name);
     const normDetail = removeAccents(item.detail);
     const normKeywords = (item.keywords || []).map(k => removeAccents(k)).join(' ');
+    const allWords = (normName + ' ' + normDetail + ' ' + normKeywords).split(/[\s,.-]+/);
 
     let score = 0;
-    if (normName.includes(clean)) score += 100;
-    if (normDetail.includes(clean)) score += 60;
-    if (normKeywords.includes(clean)) score += 80;
+    if (normName.includes(clean)) score += 220;
+    else if (normKeywords.includes(clean)) score += 160;
+    else if (normDetail.includes(clean)) score += 100;
 
-    tokens.forEach(token => {
-      if (normName.includes(token)) score += 30;
-      else if (normDetail.includes(token) || normKeywords.includes(token)) score += 15;
-    });
+    if (tokens.length >= 2) {
+      // Khi gõ từ 2 từ trở lên: bắt buộc phải xuất hiện đầy đủ các từ
+      const matchedCount = tokens.filter(t => allWords.some(w => w === t || w.startsWith(t))).length;
+      if (matchedCount === tokens.length) {
+        score += 80;
+      } else if (!normName.includes(clean) && !normKeywords.includes(clean)) {
+        return { ...item, score: 0 };
+      }
+    } else if (tokens.length === 1) {
+      const t = tokens[0];
+      if (allWords.some(w => w === t)) score += 40;
+      else if (allWords.some(w => w.startsWith(t))) score += 20;
+    }
 
     return { ...item, score };
   })
@@ -483,15 +530,14 @@ export function searchLocations(query = '', limit = 8) {
     return scored.slice(0, limit);
   }
 
-  // Fallback nếu không có kết quả khớp: Trả về địa điểm nổi bật + tuỳ chọn chính xác từ khoá người dùng
+  // Fallback nếu không có kết quả khớp: Trả về tuỳ chọn chính xác từ khoá người dùng
   return [
     {
       name: query,
-      detail: 'Vị trí tuỳ chỉnh (Gõ trực tiếp)',
+      detail: 'Điểm đón / trả tuỳ chỉnh theo từ khoá bạn gõ',
       category: 'building',
       isCustom: true
-    },
-    ...POPULAR_LOCATIONS.slice(0, Math.max(1, limit - 1))
+    }
   ];
 }
 
