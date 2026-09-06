@@ -343,7 +343,7 @@ export default function MyTripsView({
                     className={`p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#1c1c1e] border transition-all duration-200 flex flex-col justify-between gap-4 relative group ${
                       isFull
                         ? 'border-slate-200 dark:border-slate-800 opacity-85 bg-slate-50/50 dark:bg-[#18181a]'
-                        : 'border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_rgba(0,113,227,0.07)] hover:border-[#0071e3]/40'
+                        : 'border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_0_0_1.5px_rgba(0,113,227,0.3),0_12px_28px_rgba(0,113,227,0.1)] active:shadow-[0_0_0_2px_rgba(0,113,227,0.5)] hover:border-[#0071e3]/50 active:border-[#0071e3]/80'
                     }`}
                   >
                     <div className="space-y-3.5">

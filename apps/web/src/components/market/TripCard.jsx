@@ -173,8 +173,17 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
   return (
     <article
       id={`trip-${item.id}`}
-      className="flex flex-col relative overflow-hidden rounded-3xl bg-white dark:bg-[#151c28] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_24px_54px_rgba(0,113,227,0.16)] hover:-translate-y-2 active:scale-[0.985] transition-all duration-300 ease-out group select-none"
+      className="flex flex-col relative overflow-hidden rounded-3xl bg-white dark:bg-[#151c28] border border-slate-200/90 dark:border-slate-800/80 hover:border-[#0071e3]/50 dark:hover:border-sky-400/50 active:border-[#0071e3]/80 dark:active:border-sky-400/80 shadow-[0_8px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_0_0_1.5px_rgba(0,113,227,0.35),0_16px_40px_-6px_rgba(0,113,227,0.18),0_24px_54px_rgba(0,0,0,0.06)] active:shadow-[0_0_0_2px_rgba(0,113,227,0.55),0_8px_24px_-4px_rgba(0,113,227,0.25)] dark:hover:shadow-[0_0_0_1.5px_rgba(56,189,248,0.4),0_16px_40px_-6px_rgba(14,165,233,0.22),0_24px_54px_rgba(0,0,0,0.4)] dark:active:shadow-[0_0_0_2px_rgba(56,189,248,0.65),0_8px_24px_-4px_rgba(14,165,233,0.3)] hover:-translate-y-2 active:scale-[0.985] transition-all duration-300 ease-out group select-none cursor-pointer"
     >
+      {/* Lớp viền ánh sáng vi mô khi hover hoặc chạm (Luminous Shimmer Border) */}
+      <div 
+        aria-hidden="true" 
+        className="absolute inset-0 rounded-3xl pointer-events-none opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 ring-1 ring-inset ring-[#0071e3]/25 dark:ring-sky-400/30 z-30" 
+      />
+      <div 
+        aria-hidden="true" 
+        className="absolute inset-x-6 top-0 h-[1.5px] rounded-full pointer-events-none opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-transparent via-white/80 to-transparent z-30" 
+      />
       {/* ── 1. VISUAL ROUTE POSTER (FLY.IO ARTWORK + APPLE BOARDING PASS) ── */}
       <div 
         role="button"
