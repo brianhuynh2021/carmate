@@ -46,9 +46,24 @@ export default function Header({
 
   const isMac = typeof window !== 'undefined' && typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent || navigator.platform || '');
 
+  const [isScrolled, setIsScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <header
-      className="sticky top-0 z-30 bg-[#f5f5f7]/80 backdrop-blur-2xl border-b border-black/[0.06] transition-colors"
+      className={`sticky top-0 z-30 transition-all duration-200 border-b ${
+        isScrolled
+          ? 'bg-[#f5f5f7]/96 dark:bg-[#151c28]/96 backdrop-blur-xl border-black/[0.08] dark:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.04)]'
+          : 'bg-[#f5f5f7]/92 dark:bg-[#151c28]/92 backdrop-blur-xl border-black/[0.05] dark:border-white/[0.06]'
+      }`}
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="max-w-[1320px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
@@ -59,7 +74,7 @@ export default function Header({
         />
 
         {/* Điều hướng phong cách Apple Segmented Capsule Navigation */}
-        <nav className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed]/90 border border-black/[0.04] shrink-0" aria-label="Primary">
+        <nav className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.05] dark:border-white/[0.08] shrink-0 shadow-2xs" aria-label="Primary">
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
             return (
