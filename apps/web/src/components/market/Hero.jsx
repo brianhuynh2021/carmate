@@ -123,6 +123,32 @@ export default function Hero({
           ))}
         </div>
 
+        {/* Dynamic Route Suggester Capsule (Hiệu ứng 1: Gợi ý cặp tuyến HOT tự động) */}
+        <div className="pt-2 flex items-center justify-center">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all">
+            <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#1d1d1f] dark:text-white">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+              <span>Gợi ý tuyến HOT:</span>
+            </span>
+            <div key={routeCycleIndex} className="anim-fade-in flex items-center gap-1.5 text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff]">
+              <span>{activeRouteHint.from}</span>
+              <ArrowLeftRight className="w-3 h-3 text-slate-400 shrink-0" />
+              <span>{activeRouteHint.to}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchFrom?.(activeRouteHint.from);
+                setSearchTo?.(activeRouteHint.to);
+              }}
+              title="Điền nhanh cặp tuyến này"
+              className="ml-1 text-[11px] font-bold text-[#0071e3] hover:text-[#0077ed] dark:text-[#2997ff] bg-[#0071e3]/10 hover:bg-[#0071e3]/20 px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-0.5"
+            >
+              <span>Áp dụng ⚡</span>
+            </button>
+          </div>
+        </div>
+
         {/* ── APPLE / CURSOR COMMAND OMNIBAR ── */}
         <div className="pt-2 max-w-4xl mx-auto w-full relative z-40">
           <div className="p-2 sm:p-2.5 rounded-2xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(0,113,227,0.14)] focus-within:ring-2 focus-within:ring-[#0071e3]/30 focus-within:border-[#0071e3] transition-all text-left relative z-40">
@@ -216,20 +242,22 @@ export default function Hero({
                   </button>
                 )}
 
-                <Button
-                  variant="primary"
-                  size="md"
+                <button
+                  type="button"
                   onClick={() => {
                     const el = document.getElementById('market-results');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="relative overflow-hidden rounded-xl font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[0_4px_16px_rgba(0,113,227,0.3)] hover:shadow-[0_8px_24px_rgba(0,113,227,0.45)] whitespace-nowrap shrink-0 px-6 cursor-pointer active:scale-[0.98] hover:scale-[1.02] transition-all group"
+                  className="relative overflow-hidden h-11 px-6 rounded-xl font-bold text-sm bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white shadow-[0_4px_16px_rgba(0,113,227,0.35)] hover:shadow-[0_8px_24px_rgba(0,113,227,0.5)] whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.98] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 group"
                 >
-                  {/* Tia sáng quét nhẹ qua nút định kỳ (Luminous CTA Shimmer) */}
-                  <span className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] animate-shimmer-sweep pointer-events-none" />
-                  <Search className="w-4 h-4 mr-1.5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
-                  <span>{t('hero.findTripCta') || 'Tìm chuyến ngay'}</span>
-                </Button>
+                  {/* Tia sáng ngọc trai quét qua mặt nút định kỳ (Hiệu ứng 2: Shimmer Sweep) */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.45)_50%,transparent_80%)] animate-shimmer-sweep pointer-events-none"
+                  />
+                  <Search className="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 relative z-10" strokeWidth={2.4} />
+                  <span className="relative z-10 tracking-tight">{t('hero.findTripCta') || 'Tìm chuyến ngay'}</span>
+                </button>
               </div>
             </div>
           </div>
