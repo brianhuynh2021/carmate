@@ -6,6 +6,20 @@ export const cleanPhoneNumber = (phone = '') => {
 };
 
 /**
+ * Kiểm tra số điện thoại di động hợp lệ theo các nhà mạng chính thống Việt Nam
+ * Hỗ trợ các đầu số: Viettel (03x, 086, 096-098), Vinaphone (081-085, 088, 091, 094),
+ * Mobifone (070-079, 089, 090, 093), Vietnamobile/Wintel/Itelecom/Gmobile (052-059, 087, 092, 099)
+ */
+export const isValidVietnamesePhone = (phone = '') => {
+  const cleaned = cleanPhoneNumber(phone);
+  let normalized = cleaned;
+  if (normalized.startsWith('84') && normalized.length === 11) {
+    normalized = '0' + normalized.slice(2);
+  }
+  return /^(0)(3[2-9]|5[25689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$/.test(normalized);
+};
+
+/**
  * Xử lý số điện thoại sang định dạng quốc tế (ví dụ: 84988234567 cho WhatsApp / Telegram)
  */
 export const toInternationalPhone = (phone = '') => {

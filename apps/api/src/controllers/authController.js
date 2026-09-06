@@ -1,13 +1,16 @@
-import { cleanPhoneNumber } from '@carmate/shared';
+import { cleanPhoneNumber, isValidVietnamesePhone } from '@carmate/shared';
 import { getUserByPhone, saveUser, getTripsByPhone } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
 
 // Bộ nhớ đệm OTP tạm thời trong RAM (5 phút hết hạn, 0đ chi phí SMS)
 const otpMap = new Map();
 
+// Bộ nhớ đệm giới hạn tần suất theo từng số điện thoại (Cooldown 60s & Tối đa 5 lần/ngày)
+const phoneRateLimitMap = new Map();
+
 /**
  * POST /api/auth/request-otp
- * Khởi tạo mã xác thực OTP
+ * Khởi tạo mã xác thực OTP kèm cơ chế chống Spam dội bom SMS
  */
 export function requestOtp(req, res) {
   try {
@@ -17,9 +20,44 @@ export function requestOtp(req, res) {
     }
 
     const cleaned = cleanPhoneNumber(phone);
-    if (!cleaned || cleaned.length < 9) {
-      return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ (cần ít nhất 9-10 chữ số)' });
+    if (!cleaned || !isValidVietnamesePhone(cleaned)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Số điện thoại không đúng định dạng nhà mạng Việt Nam (Viettel, Vina, Mobi, Vietnamobile...)'
+      });
     }
+
+    const now = Date.now();
+    const phoneLimit = phoneRateLimitMap.get(cleaned) || { lastRequestedAt: 0, count: 0, resetAt: now + 24 * 60 * 60 * 1000 };
+
+    // Reset bộ đếm nếu đã qua 24 giờ
+    if (now > phoneLimit.resetAt) {
+      phoneLimit.count = 0;
+      phoneLimit.resetAt = now + 24 * 60 * 60 * 1000;
+    }
+
+    const isDev = process.env.NODE_ENV !== 'production';
+    const cooldownMs = isDev ? 5 * 1000 : 60 * 1000; // Dev: 5s để test nhanh; Prod: 60s chống click liên tục
+
+    if (now - phoneLimit.lastRequestedAt < cooldownMs) {
+      const waitSec = Math.ceil((cooldownMs - (now - phoneLimit.lastRequestedAt)) / 1000);
+      return res.status(429).json({
+        success: false,
+        error: `Vui lòng đợi ${waitSec} giây trước khi yêu cầu mã tiếp theo.`
+      });
+    }
+
+    const maxDaily = isDev ? 50 : 5;
+    if (phoneLimit.count >= maxDaily) {
+      return res.status(429).json({
+        success: false,
+        error: 'Số điện thoại này đã đạt giới hạn nhận mã trong ngày (tối đa 5 lần/ngày). Vui lòng thử lại sau 24h.'
+      });
+    }
+
+    phoneLimit.count += 1;
+    phoneLimit.lastRequestedAt = now;
+    phoneRateLimitMap.set(cleaned, phoneLimit);
 
     // Sinh mã ngẫu nhiên 6 chữ số
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -27,11 +65,9 @@ export function requestOtp(req, res) {
 
     otpMap.set(cleaned, { code, expiresAt });
 
-    const isDev = process.env.NODE_ENV !== 'production';
-
     return res.status(200).json({
       success: true,
-      message: 'Mã xác thực đã được gửi',
+      message: 'Mã xác thực đã được tạo thành công',
       phone: cleaned,
       // Chỉ gửi kèm devOtp ở môi trường phát triển để test thuận tiện 0đ
       ...(isDev ? { devOtp: code } : {})
@@ -122,6 +158,13 @@ export async function zaloLogin(req, res) {
     }
 
     const cleaned = cleanPhoneNumber(phone);
+    if (!cleaned || !isValidVietnamesePhone(cleaned)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Số điện thoại không đúng định dạng nhà mạng Việt Nam (Viettel, Vina, Mobi, Vietnamobile...)'
+      });
+    }
+
     let user = getUserByPhone(cleaned);
     let isNewUser = false;
 
