@@ -69,7 +69,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
       />
 
       {/* Điều khiển Radar */}
-      <div className="surface p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 space-y-4 shadow-xs">
+      <div className="surface p-5 rounded-2xl border border-black/[0.08] space-y-4 shadow-xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -166,7 +166,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                 return (
                   <article
                     key={match.pairId}
-                    className="surface p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-primary-300 dark:hover:border-primary-700 transition-all space-y-4"
+                    className="surface p-5 sm:p-6 rounded-2xl border border-black/[0.08] shadow-xs hover:border-[#0071e3]/40 transition-all space-y-4"
                   >
                     {/* Header Điểm Tương Thích */}
                     <div className="flex items-center justify-between gap-3 flex-wrap border-b border-slate-100 dark:border-slate-800 pb-3.5">
@@ -317,7 +317,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {manualList.map((item) => (
-                <article key={item.id} className="surface p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
+                <article key={item.id} className="surface p-5 rounded-2xl border border-black/[0.08] shadow-xs space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                       {item.routeCategory}

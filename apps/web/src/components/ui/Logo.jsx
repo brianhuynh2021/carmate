@@ -5,9 +5,9 @@ export function LogoMark({ className = 'w-9 h-9' }) {
     <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
         <linearGradient id="cmBrandSquircle" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#0f172a" />
-          <stop offset="60%" stopColor="#0369a1" />
-          <stop offset="100%" stopColor="#0284c7" />
+          <stop offset="0%" stopColor="#1d1d1f" />
+          <stop offset="60%" stopColor="#004a99" />
+          <stop offset="100%" stopColor="#0071e3" />
         </linearGradient>
         {/* Dải chuyển màu cao tốc từ 4h sáng (Cyan) sang ấm áp bình minh (Amber) */}
         <linearGradient id="cmTrackGrad" x1="10%" y1="50%" x2="90%" y2="50%">
@@ -23,7 +23,7 @@ export function LogoMark({ className = 'w-9 h-9' }) {
       </defs>
 
       {/* Nền Squircle Sapphire Gradient cao cấp chuẩn Apple */}
-      <rect width="100" height="100" rx="26" fill="url(#cmBrandSquircle)" stroke="rgba(2,132,199,0.3)" strokeWidth="1.5" />
+      <rect width="100" height="100" rx="26" fill="url(#cmBrandSquircle)" stroke="rgba(0,113,227,0.3)" strokeWidth="1.5" />
 
       {/* Dải cao tốc CM Monogram liền mạch (Car C -> Mate M) */}
       <path
@@ -35,7 +35,7 @@ export function LogoMark({ className = 'w-9 h-9' }) {
         filter="url(#cmNeonGlow)"
       />
 
-      {/* Lõi laser vệt sáng phản quang trắng (Dấu ấn Cursor precision) */}
+      {/* Lõi laser vệt sáng phản quang trắng (Dấu ấn Apple precision) */}
       <path
         d="M 38 35 C 20 35, 13 44, 13 52 C 13 61, 20 69, 38 69 C 45 69, 49 61, 53 48 C 55 41, 58 35, 63 35 C 67 35, 70 42, 73 50 C 76 42, 79 35, 84 35 C 88 35, 90 40, 90 48 L 90 69"
         stroke="#ffffff"
@@ -55,16 +55,16 @@ export default function Logo({ size = 'md', tagline, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-2.5 select-none cursor-pointer group text-left shrink-0"
+      className="inline-flex items-center gap-2.5 select-none cursor-pointer group text-left shrink-0 active:scale-[0.98] transition-transform"
       aria-label="CarMate - Về trang chủ"
     >
-      <LogoMark className={`${mark} transition-transform duration-200 group-hover:scale-105 shrink-0 shadow-sm`} />
+      <LogoMark className={`${mark} transition-transform duration-200 group-hover:scale-105 shrink-0 shadow-xs`} />
       <div className="flex items-center gap-2">
-        <span className={`font-display font-black tracking-tight ${text} text-slate-900 leading-none`}>
-          Car<span className="text-primary-600">Mate</span>
+        <span className={`font-display font-black tracking-tight ${text} text-[#1d1d1f] leading-none`}>
+          Car<span className="text-[#0071e3]">Mate</span>
         </span>
         {tagline && (
-          <span className="hidden 2xl:inline-block text-[11px] font-medium text-slate-500 whitespace-nowrap border-l border-slate-300 pl-2 leading-none">
+          <span className="hidden 2xl:inline-block text-[11px] font-medium text-[#86868b] whitespace-nowrap border-l border-black/[0.1] pl-2 leading-none">
             {tagline}
           </span>
         )}

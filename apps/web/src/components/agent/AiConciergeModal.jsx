@@ -272,7 +272,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                 <Bot className="w-4 h-4" />
               </div>
               <div className="p-3 rounded-2xl rounded-tl-xs bg-slate-100 dark:bg-[#181a24] border border-slate-200/60 dark:border-white/[0.08] text-xs font-mono text-slate-500 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-500 animate-ping"></span>
+                <span className="w-2 h-2 rounded-full bg-[#0071e3] animate-pulse"></span>
                 <span>Agent đang suy luận & gọi công cụ tra cứu...</span>
               </div>
             </div>
