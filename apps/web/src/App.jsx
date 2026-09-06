@@ -590,7 +590,7 @@ export default function App() {
               onPostClick={() => setActiveTab('post')}
             />
 
-            <div className={`${container} py-5 sm:py-6 space-y-5`}>
+            <div className={`${container} py-5 sm:py-6 space-y-5 relative z-10`}>
 
               {/* 2. Bảng giá tham chiếu thị trường (Sleek full-width indicator) */}
               <RouteBenchmarkBar

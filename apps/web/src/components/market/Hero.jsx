@@ -65,7 +65,7 @@ export default function Hero({
   ];
 
   return (
-    <section className="relative border-b border-slate-200/80 hero-canvas">
+    <section className="relative z-30 border-b border-slate-200/80 hero-canvas">
       {/* Background ambient subtle glow (Soft, zero-glare, eye-care) - clip blurs safely */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[380px] rounded-full bg-primary-500/10 blur-[140px]" />
@@ -103,12 +103,12 @@ export default function Hero({
         </div>
 
         {/* ── APPLE / CURSOR COMMAND OMNIBAR ── */}
-        <div className="pt-2 max-w-4xl mx-auto w-full">
-          <div className="p-2 sm:p-2.5 rounded-2xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] focus-within:ring-2 focus-within:ring-[#0071e3]/30 focus-within:border-[#0071e3] transition-all text-left">
+        <div className="pt-2 max-w-4xl mx-auto w-full relative z-40">
+          <div className="p-2 sm:p-2.5 rounded-2xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] focus-within:ring-2 focus-within:ring-[#0071e3]/30 focus-within:border-[#0071e3] transition-all text-left relative z-40">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-1.5">
               
               {/* Điểm xuất phát */}
-              <div className="relative flex-1 flex items-center min-w-0 px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#f5f5f7] border border-black/[0.04] hover:bg-[#ebebee] focus-within:bg-white focus-within:border-[#0071e3]/60 transition-colors">
+              <div className="relative flex-1 flex items-center min-w-0 px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#f5f5f7] border border-black/[0.04] hover:bg-[#ebebee] focus-within:bg-white focus-within:border-[#0071e3]/60 transition-colors focus-within:z-50">
                 <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0 mr-2.5">
                   <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                 </div>
@@ -151,7 +151,7 @@ export default function Hero({
               </button>
 
               {/* Điểm đến */}
-              <div className="relative flex-1 flex items-center min-w-0 px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#f5f5f7] border border-black/[0.04] hover:bg-[#ebebee] focus-within:bg-white focus-within:border-[#0071e3]/60 transition-colors">
+              <div className="relative flex-1 flex items-center min-w-0 px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#f5f5f7] border border-black/[0.04] hover:bg-[#ebebee] focus-within:bg-white focus-within:border-[#0071e3]/60 transition-colors focus-within:z-50">
                 <div className="w-6 h-6 rounded-lg bg-rose-50 border border-rose-200/60 flex items-center justify-center shrink-0 mr-2.5">
                   <Navigation className="w-3.5 h-3.5 text-rose-500" />
                 </div>
@@ -212,7 +212,7 @@ export default function Hero({
           </div>
 
           {/* ── SINGLE-LINE HIGHWAY RAIL & SEPARATE PARCEL AMENITY FILTER ── */}
-          <div className="pt-3 max-w-4xl mx-auto w-full">
+          <div className="pt-3 max-w-4xl mx-auto w-full relative z-20">
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1 px-1">
               {/* Micro label */}
               <div className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-[#86868b] uppercase tracking-wider pr-1">
@@ -271,7 +271,7 @@ export default function Hero({
           </div>
 
           {/* Dòng dẫn nhẹ nhàng dành riêng cho chủ xe - Apple Micro Pill Banner */}
-          <div className="pt-2.5 flex items-center justify-center">
+          <div className="pt-2.5 flex items-center justify-center relative z-10">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-black/[0.06] text-xs text-[#515154] shadow-xs backdrop-blur-sm">
               <Car className="w-3.5 h-3.5 text-[#0071e3] shrink-0" strokeWidth={2.2} />
               <span>Bạn là chủ xe còn ghế trống?</span>
