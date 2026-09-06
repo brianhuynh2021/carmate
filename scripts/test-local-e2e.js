@@ -715,8 +715,68 @@ async function runTests() {
     assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[ACT]')), 'API Chat có bước [ACT]');
     assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[VERIFY]')), 'API Chat có bước [VERIFY]');
     assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[RESOLVE]')), 'API Chat có bước [RESOLVE]');
+
+    // 16. KIỂM THỬ MIT OUTER SYSTEM (3-TIER HUMAN-IN-THE-LOOP & TRAJECTORY STEPPER)
+    console.log('\n--- 16. Kiểm thử MIT Outer System (3-Tier Human-in-the-Loop & Trajectory Stepper) ---');
+    
+    // 16.1 Tạo booking với tài khoản User A
+    const bookRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        from: 'Bù Đốp',
+        to: 'Sài Gòn',
+        seats: 1,
+        timeSlot: '17:00 - 18:00',
+        contactName: 'Mr. Huỳnh Nguyễn',
+        contactPhone: '0984883750',
+        basePricePerSeat: 120000,
+        fullTripAmount: 120000
+      })
+    });
+    const bookData = await bookRes.json();
+    assert(bookRes.status === 201 && bookData.success === true, 'MIT Tier 1: Tạo kết nối chuyến xe và sinh mã Escrow thành công');
+    const escrowId = bookData.data?.escrowId;
+    assert(escrowId && escrowId.startsWith('ESC-'), 'MIT Tier 1: Mã Escrow định dạng chuẩn ESC-');
+    assert(bookData.data.status === 'zalo_active', 'MIT Tier 2: Trạng thái khởi tạo là zalo_active (Bước 2/4: Chốt Zalo & Điểm hẹn)');
+
+    // 16.2 Báo trễ giờ hẹn văn minh (+15 phút)
+    const delayRes = await fetch(`${BASE_URL}/api/bookings/${escrowId}/delay`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        minutes: 15,
+        note: 'Do kẹt xe tại ngã tư Chơn Thành'
+      })
+    });
+    const delayData = await delayRes.json();
+    assert(delayRes.status === 200 && delayData.success === true, 'MIT Tier 2: Báo trễ giờ hẹn thành công qua API');
+    assert(delayData.data.status === 'delayed', 'MIT Tier 2: Trạng thái booking chuyển sang delayed');
+    assert(delayData.data.delayedMinutes === 15, 'MIT Tier 2: Lưu chính xác số phút trễ (+15p)');
+
+    // 16.3 Huỷ chuyến văn minh (0đ phạt, thông báo lý do)
+    const cancelRes = await fetch(`${BASE_URL}/api/bookings/${escrowId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        reason: 'Việc gia đình đột xuất'
+      })
+    });
+    const cancelData = await cancelRes.json();
+    assert(cancelRes.status === 200 && cancelData.success === true, 'MIT Tier 3: Huỷ chuyến văn minh thành công (0đ tiền phạt)');
+    assert(cancelData.data.status === 'cancelled', 'MIT Tier 3: Trạng thái chuyển thành cancelled');
+    assert(cancelData.data.cancelReason === 'Việc gia đình đột xuất', 'MIT Tier 3: Lưu lý do huỷ chuyến chuẩn xác');
   } catch (err) {
-    assert(false, 'Kiểm thử An ninh & PII', err.message);
+    assert(false, 'Kiểm thử An ninh, Stanford & MIT Engine', err.message);
   }
   const passed = results.filter(r => r.pass).length;
   const failed = results.filter(r => !r.pass).length;

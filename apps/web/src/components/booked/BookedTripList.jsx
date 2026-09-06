@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Clock, Phone, CheckCircle2, Timer, ShieldCheck, XCircle,
-  Share2, Check, Ticket, MessageSquare, ArrowRight, History, Star
+  Share2, Check, Ticket, MessageSquare, ArrowRight, History, Star,
+  Sparkles, Lock, Shield
 } from 'lucide-react';
 import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -50,6 +51,107 @@ function Countdown30Min({ createdAt }) {
   );
 }
 
+/**
+ * MIT Outer System Trajectory Stepper:
+ * Minh bạch hoá toàn bộ 4 giai đoạn tương tác từ AI Match đến Tín nhiệm cộng đồng
+ */
+function MitTrajectoryStepper({ status, delayedMinutes }) {
+  const isCompleted = status === 'completed';
+  const isCancelled = status === 'cancelled';
+  const isDelayed = status === 'delayed';
+
+  const steps = [
+    {
+      id: 1,
+      label: 'Khớp AI & Định mức',
+      desc: 'RON 95 + BOT',
+      state: 'completed',
+    },
+    {
+      id: 2,
+      label: isDelayed ? `Báo trễ +${delayedMinutes || 15}p` : 'Chốt Zalo & Điểm hẹn',
+      desc: isCancelled ? 'Đã dừng chuyến' : 'Thoả thuận & gửi GPS',
+      state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active',
+    },
+    {
+      id: 3,
+      label: 'Lên xe & Phụ xăng',
+      desc: '0% phí sàn · Chia sẻ trực tiếp',
+      state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : 'pending',
+    },
+    {
+      id: 4,
+      label: 'Tín nhiệm 2 chiều',
+      desc: isCompleted ? 'Đã ghi nhận uy tín' : 'Ghi nhận sau chuyến',
+      state: isCompleted ? 'completed' : 'pending',
+    },
+  ];
+
+  return (
+    <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.06] shadow-2xs">
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
+          <span>Tiến trình đồng hành (MIT Trajectory Log)</span>
+        </span>
+        <span className="text-[11px] font-semibold text-[#86868b] tabular">
+          {isCompleted ? '4/4 hoàn tất' : isCancelled ? 'Đã dừng' : isDelayed ? 'Bước 2/4 (Báo trễ)' : 'Bước 2/4 đang kết nối'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {steps.map((step) => {
+          const isDone = step.state === 'completed';
+          const isActive = step.state === 'active';
+          const isDelayState = step.state === 'delayed';
+          const isCancelState = step.state === 'cancelled';
+
+          return (
+            <div
+              key={step.id}
+              className={`p-2 rounded-xl border transition-all ${
+                isDone
+                  ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-200'
+                  : isActive
+                  ? 'bg-blue-50/80 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-2 ring-blue-500/20'
+                  : isDelayState
+                  ? 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+                  : isCancelState
+                  ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 text-rose-900 opacity-60'
+                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] text-[#86868b]'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span
+                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                    isDone
+                      ? 'bg-emerald-600 text-white'
+                      : isActive
+                      ? 'bg-[#0071e3] text-white animate-pulse'
+                      : isDelayState
+                      ? 'bg-amber-500 text-white'
+                      : isCancelState
+                      ? 'bg-rose-500 text-white'
+                      : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#86868b]'
+                  }`}
+                >
+                  {isDone ? '✓' : step.id}
+                </span>
+                <span className="text-xs font-bold truncate">
+                  {step.label}
+                </span>
+              </div>
+              <p className="text-[11px] leading-tight opacity-75 truncate">
+                {step.desc}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, onComplete, onFindTrip, onReview }) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
@@ -62,7 +164,8 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
 
   const handleCopyForFamily = (record) => {
     const totalAmount = record.fullTripAmount || record.totalDeal || 0;
-    const text = `🚗 THÔNG TIN CHUYẾN ĐI CARMATE (GỬI NGƯỜI THÂN)\n• Mã chuyến: ${record.escrowId}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${record.timeSlot}\n• Đối tác: ${record.contactName} (SĐT: ${record.contactPhone})\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats} ghế · Trọn gói xăng & cầu đường, gửi khi lên xe)\n👉 Theo dõi lộ trình qua: https://carmate.vn`;
+    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: ${record.escrowId}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${record.timeSlot}\n• Đối tác: ${record.contactName} (SĐT: ${record.contactPhone})\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats} ghế · Trọn gói xăng & cầu đường, gửi khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
+
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text);
@@ -202,6 +305,9 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                 </div>
 
                 <div className="p-5 space-y-4">
+                  {/* MIT Trajectory Log Stepper */}
+                  <MitTrajectoryStepper status={record.status} delayedMinutes={record.delayedMinutes} />
+
                   {/* Lộ Trình & Thời Gian */}
                   <div className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06]">
                     <div className="flex items-center justify-between gap-3 mb-3 text-xs sm:text-[13px]">
@@ -236,8 +342,9 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                         </a>
                       </div>
 
-                      <p className="text-xs text-sky-100/95 leading-relaxed font-medium">
-                        🔒 <strong>Quy định bắt buộc:</strong> Mở Zalo để gửi định vị GPS và thống nhất chính xác điểm đón dọc tuyến:
+                      <p className="text-xs text-sky-100/95 leading-relaxed font-medium flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-sky-300 shrink-0" />
+                        <span><strong>Quy định phối hợp:</strong> Mở Zalo để gửi định vị GPS và thống nhất chính xác điểm đón dọc tuyến:</span>
                       </p>
 
                       {/* Nút Zalo Tiên Quyết Số 1 */}
