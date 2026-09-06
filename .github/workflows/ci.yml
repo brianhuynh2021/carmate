@@ -16,6 +16,7 @@ jobs:
       NODE_ENV: test
       PORT: 5173
       JWT_SECRET: ci_test_jwt_secret_must_be_long_enough_32_chars_ok
+      CARMATE_ADMIN_PASSCODE: ci_admin_secure_passcode_2026_x9
 
     steps:
       - name: Checkout repository
@@ -53,6 +54,25 @@ jobs:
 
       - name: Run E2E Test Suite (97+ Tests)
         run: npm test
+
+      - name: Verify Production Fail-Closed (Security Assurance)
+        run: |
+          echo "Verifying server refuses to start in production without CARMATE_ADMIN_PASSCODE or JWT_SECRET..."
+          # Case 1: Thiếu CARMATE_ADMIN_PASSCODE trong production -> Phải fail-closed
+          if PORT=5993 NODE_ENV=production JWT_SECRET=test_secret_32_chars_long_ci_ok CARMATE_ADMIN_PASSCODE="" node apps/api/src/index.js 2>&1 | grep -q "FATAL SECURITY ERROR"; then
+            echo "PASS: Server correctly failed-closed when CARMATE_ADMIN_PASSCODE was missing."
+          else
+            echo "FAIL: Server did not fail-closed when CARMATE_ADMIN_PASSCODE was missing!"
+            exit 1
+          fi
+
+          # Case 2: Thiếu JWT_SECRET trong production -> Phải fail-closed
+          if PORT=5994 NODE_ENV=production JWT_SECRET="" CARMATE_ADMIN_PASSCODE=prod_pass_123 node apps/api/src/index.js 2>&1 | grep -q "FATAL SECURITY ERROR"; then
+            echo "PASS: Server correctly failed-closed when JWT_SECRET was missing."
+          else
+            echo "FAIL: Server did not fail-closed when JWT_SECRET was missing!"
+            exit 1
+          fi
 
       - name: Stop Server
         if: always()

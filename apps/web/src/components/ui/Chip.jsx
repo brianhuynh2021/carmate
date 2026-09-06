@@ -10,12 +10,12 @@ export default function Chip({ active = false, onClick, icon: Icon, children, sh
       aria-pressed={active}
       className={`inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-full text-[12.5px] font-medium whitespace-nowrap select-none cursor-pointer border transition-all duration-150 touch-manipulation active:scale-95 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
         active
-          ? 'bg-primary-500/20 text-primary-300 border-primary-500/50 font-bold shadow-sm'
-          : 'bg-[#151c2e] text-slate-300 border-white/[0.08] hover:bg-[#1b243b] hover:border-white/[0.18] hover:text-white'
+          ? 'bg-primary-600 text-white border-primary-600 font-bold shadow-xs'
+          : 'bg-white text-slate-700 border-slate-200/90 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 shadow-2xs'
       } ${className}`}
       {...rest}
     >
-      {active && showCheck ? <Check className="w-3.5 h-3.5 text-primary-400" strokeWidth={2.5} /> : Icon ? <Icon className="w-3.5 h-3.5 text-slate-400" /> : null}
+      {active && showCheck ? <Check className="w-3.5 h-3.5 text-white" strokeWidth={2.5} /> : Icon ? <Icon className="w-3.5 h-3.5 text-slate-400" /> : null}
       <span>{children}</span>
     </button>
   );
@@ -26,7 +26,7 @@ export function Segmented({ options, value, onChange, fullWidth = false, size = 
   const h = size === 'sm' ? 'h-8 text-[12.5px]' : 'h-9 text-[13px]';
   return (
     <div
-      className={`inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/60 dark:bg-[#151c2e] border border-black/5 dark:border-white/[0.08] ${fullWidth ? 'w-full' : ''}`}
+      className={`inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/70 border border-slate-300/60 ${fullWidth ? 'w-full' : ''}`}
       role="tablist"
     >
       {options.map((opt) => {
@@ -43,14 +43,14 @@ export function Segmented({ options, value, onChange, fullWidth = false, size = 
               fullWidth ? 'flex-1' : ''
             } ${
               active
-                ? 'bg-white text-slate-900 shadow-2xs border-black/[0.06] dark:bg-[#1e293b] dark:text-white dark:border-white/10'
-                : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-black/[0.03] dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.04]'
+                ? 'bg-white text-slate-900 shadow-xs border-slate-200 font-bold'
+                : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-white/60'
             }`}
           >
             {Icon && (
               <Icon
                 className={`w-3.5 h-3.5 shrink-0 ${
-                  active ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400 dark:text-slate-500'
+                  active ? 'text-primary-600' : 'text-slate-400'
                 }`}
               />
             )}

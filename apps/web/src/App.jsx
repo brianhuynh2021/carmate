@@ -522,7 +522,7 @@ export default function App() {
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#090d16] text-slate-200 antialiased transition-colors selection:bg-primary-900/60 selection:text-primary-200">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased transition-colors selection:bg-primary-100 selection:text-primary-800">
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -580,7 +580,7 @@ export default function App() {
                     value={selectedCarCategory}
                     onChange={(e) => setSelectedCarCategory(e.target.value)}
                     aria-label="Lọc loại xe"
-                    className="h-9 px-3 rounded-full text-xs font-semibold bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-700 dark:text-slate-200 cursor-pointer shadow-2xs hover:border-slate-300 outline-none transition-colors"
+                    className="h-9 px-3 rounded-full text-xs font-semibold bg-white border border-slate-200/90 text-slate-700 cursor-pointer shadow-2xs hover:border-slate-300 outline-none transition-colors"
                   >
                     <option value="all">Mọi loại xe</option>
                     <option value="family_car">🚗 Xe gia đình (Biển trắng)</option>
@@ -592,7 +592,7 @@ export default function App() {
                     value={selectedTimeSlot}
                     onChange={(e) => setSelectedTimeSlot(e.target.value)}
                     aria-label="Chọn khung giờ"
-                    className="h-9 px-3 rounded-full text-xs font-semibold bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-700 dark:text-slate-200 cursor-pointer shadow-2xs hover:border-slate-300 outline-none transition-colors"
+                    className="h-9 px-3 rounded-full text-xs font-semibold bg-white border border-slate-200/90 text-slate-700 cursor-pointer shadow-2xs hover:border-slate-300 outline-none transition-colors"
                   >
                     <option value="all">Tất cả khung giờ</option>
                     {TIME_SLOTS.map((slot) => (
@@ -601,7 +601,7 @@ export default function App() {
                   </select>
 
                   {(selectedTimeSlot !== 'all' || marketViewMode !== 'all' || selectedCarCategory !== 'all' || searchKeyword || searchFrom || searchTo) && (
-                    <Button variant="ghost" size="xs" onClick={resetFilters} className="text-xs text-primary-600 dark:text-primary-400">
+                    <Button variant="ghost" size="xs" onClick={resetFilters} className="text-xs text-primary-600 hover:text-primary-700">
                       {t('market.resetFilters')}
                     </Button>
                   )}

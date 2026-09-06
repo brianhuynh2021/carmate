@@ -46,7 +46,7 @@ export default function Header({
 
   return (
     <header
-      className="sticky top-0 z-30 bg-[#090d16]/90 backdrop-blur-2xl border-b border-white/[0.08] transition-colors"
+      className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-2xs transition-colors"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4 md:gap-6">
@@ -57,7 +57,7 @@ export default function Header({
         />
 
         {/* Điều hướng phong cách Cursor / Linear Pill Capsule Navigation */}
-        <nav className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[#151c2e] border border-white/[0.08] shrink-0" aria-label="Primary">
+        <nav className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-slate-100/90 border border-slate-200/80 shrink-0" aria-label="Primary">
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
             return (
@@ -68,15 +68,15 @@ export default function Header({
                 aria-current={active ? 'page' : undefined}
                 className={`h-9 px-3.5 xl:px-4 rounded-full inline-flex items-center gap-1.5 xl:gap-2 text-[13px] xl:text-[13.5px] font-semibold whitespace-nowrap cursor-pointer transition-colors duration-150 select-none outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 border ${
                   active
-                    ? 'bg-[#1e293b] text-white shadow-xs border-white/10'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'
+                    ? 'bg-white text-slate-900 shadow-xs border-slate-200/70'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 border-transparent'
                 }`}
               >
-                <tab.icon className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-primary-400' : ''}`} strokeWidth={active ? 2.2 : 2} />
+                <tab.icon className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-primary-600' : 'text-slate-400'}`} strokeWidth={active ? 2.2 : 2} />
                 <span className="whitespace-nowrap">{tab.label}</span>
                 {tab.badge > 0 && (
                   <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono font-bold inline-flex items-center justify-center tabular-nums shrink-0 transition-colors ${
-                    active ? 'bg-primary-500 text-white' : 'bg-slate-700 text-slate-300'
+                    active ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-700'
                   }`}>
                     {tab.badge}
                   </span>
@@ -88,7 +88,7 @@ export default function Header({
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <LanguageToggle size="sm" />
-          <IconButton icon={FileText} label={t('nav.policy')} onClick={() => setShowPolicyModal(true)} className="hidden md:inline-flex text-slate-400 hover:text-white hover:bg-white/5" />
+          <IconButton icon={FileText} label={t('nav.policy')} onClick={() => setShowPolicyModal(true)} className="hidden md:inline-flex text-slate-500 hover:text-slate-900 hover:bg-slate-100" />
           
           {/* Trợ lý CarMate AI Button (Cursor Command Capsule) */}
           <button
@@ -96,11 +96,11 @@ export default function Header({
             onClick={onOpenAi}
             title="Trợ lý CarMate AI (Phím tắt: ⌘K hoặc Ctrl+K)"
             aria-label="Mở Trợ lý CarMate AI"
-            className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-full text-xs font-bold bg-primary-500/10 hover:bg-primary-500/20 text-primary-300 border border-primary-500/30 hover:border-primary-500/60 cursor-pointer select-none outline-none focus:outline-none transition-colors shadow-2xs group"
+            className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-full text-xs font-bold bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/80 cursor-pointer select-none outline-none focus:outline-none transition-colors shadow-2xs group"
           >
-            <Sparkles className="w-3.5 h-3.5 text-primary-400 group-hover:scale-110 transition-transform animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-sky-600 group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline">Trợ lý AI</span>
-            <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-md bg-white/10 text-slate-400 border border-white/10 ml-0.5">
+            <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-md bg-sky-100 text-sky-800 border border-sky-200/90 ml-0.5">
               ⌘K
             </kbd>
           </button>
@@ -112,13 +112,13 @@ export default function Header({
                 type="button"
                 onClick={() => setActiveTab('my-trips')}
                 title={`Tài xế: ${currentUser.name} (${currentUser.phone})`}
-                className="h-9 pl-2 pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 dark:border-emerald-500/30 cursor-pointer select-none outline-none focus:outline-none shadow-2xs hover:bg-emerald-500/20 transition-colors"
+                className="h-9 pl-2 pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs hover:bg-emerald-100 transition-colors"
               >
                 <span className="relative flex items-center justify-center">
                   <span className="w-5 h-5 rounded-full bg-emerald-600 text-white inline-flex items-center justify-center text-[10px] font-bold">
                     {currentUser.name?.[0]?.toUpperCase() || 'T'}
                   </span>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white dark:border-[#090d16]" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
                 </span>
                 <span className="max-w-[80px] sm:max-w-[110px] truncate">{currentUser.name}</span>
               </button>
@@ -129,9 +129,9 @@ export default function Header({
                   type="button"
                   onClick={() => setActiveTab('admin')}
                   title="Cổng Quản Trị Hệ Thống CarMate"
-                  className="h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer select-none outline-none focus:outline-none hover:bg-rose-500/20 transition-colors shadow-2xs"
+                  className="h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors shadow-2xs cursor-pointer select-none outline-none focus:outline-none"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-rose-500" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
                   <span className="hidden xl:inline">Quản trị</span>
                 </button>
               )}
@@ -141,7 +141,7 @@ export default function Header({
                 onClick={onLogout}
                 title="Đăng xuất"
                 aria-label="Đăng xuất tài khoản"
-                className="w-8 h-8 rounded-full inline-flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer active:scale-90 transition-all"
+                className="w-8 h-8 rounded-full inline-flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer active:scale-90 transition-all"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -150,9 +150,9 @@ export default function Header({
             <button
               type="button"
               onClick={onOpenAuth}
-              className="h-9 px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-[#151c2e] text-slate-200 hover:text-white border border-white/[0.08] hover:border-white/[0.18] shadow-2xs cursor-pointer active:scale-95 transition-all"
+              className="h-9 px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 shadow-2xs cursor-pointer active:scale-95 transition-all"
             >
-              <User className="w-3.5 h-3.5 text-primary-400" />
+              <User className="w-3.5 h-3.5 text-primary-600" />
               <span>Đăng nhập / Đăng ký</span>
             </button>
           )}

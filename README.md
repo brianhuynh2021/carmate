@@ -114,7 +114,7 @@ npm run build     # Build kiểm tra đóng gói Cloudflare (< 100ms)
 
 Mở trình duyệt truy cập vào **`http://localhost:5173`** và trải nghiệm theo 5 bước:
 
-1. **Test Lọc Tuyến 1-Chạm (Google Simplicity):**
+1. **Test Lọc Tuyến 1-Chạm:**
    * Bấm vào các chip: `Tất cả`, `QL13`, `QL51`, `QL20`, `CT Long Thành`.
    * Danh sách chuyến xe lọc tức thì trong 1ms.
 2. **Test Xuất Vé Hành Trình (Viral Boarding Pass):**

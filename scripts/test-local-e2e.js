@@ -4,6 +4,7 @@
  */
 
 const BASE_URL = 'http://localhost:5173';
+const ADMIN_PASSCODE = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY || 'admin123';
 
 // Không sử dụng header backdoor x-carmate-test
 const _rawFetch = globalThis.fetch;
@@ -372,11 +373,11 @@ async function runTests() {
     });
     assert(failAuthRes.status === 401, 'Nhập sai mã Admin bị từ chối chính xác (HTTP 401)');
 
-    // 10.2 Đúng mật khẩu admin123
+    // 10.2 Đúng mật khẩu
     const okAuthRes = await fetch(`${BASE_URL}/api/admin/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ passcode: 'admin123' })
+      body: JSON.stringify({ passcode: ADMIN_PASSCODE })
     });
     const okAuthData = await okAuthRes.json();
     assert(okAuthRes.status === 200 && okAuthData.success === true, 'Đăng nhập Cổng Quản Trị thành công với mã bí mật');
@@ -579,7 +580,7 @@ async function runTests() {
 
     // 13.2 Chặn raw passcode làm bearer token
     const rawPasscodeRes = await fetch(`${BASE_URL}/api/admin/users`, {
-      headers: { 'x-admin-key': 'admin123' }
+      headers: { 'x-admin-key': ADMIN_PASSCODE }
     });
     assert(rawPasscodeRes.status === 401 || rawPasscodeRes.status === 403, 'Bảo mật Admin: Dùng raw passcode làm token bị từ chối 401/403 (Bắt buộc JWT có chữ ký)');
 
