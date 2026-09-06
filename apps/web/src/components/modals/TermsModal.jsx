@@ -3,10 +3,11 @@ import { ShieldCheck, FileText, CheckCircle2, AlertTriangle, Lock, Users, Car, X
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
-export default function TermsModal({ onClose }) {
+export default function TermsModal({ onClose, zIndex = 'z-50' }) {
   return (
     <Modal
       onClose={onClose}
+      zIndex={zIndex}
       size="md"
       icon={ShieldCheck}
       iconTone="brand"

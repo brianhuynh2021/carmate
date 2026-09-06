@@ -3,6 +3,8 @@ import { Phone, ShieldCheck, CheckCircle2, ArrowRight, Sparkles, User, KeyRound,
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
+import TermsModal from './TermsModal.jsx';
+import PolicyModal from './PolicyModal.jsx';
 import api from '../../api/client.js';
 
 export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
@@ -14,6 +16,7 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
   const [devOtpHint, setDevOtpHint] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activeLegalModal, setActiveLegalModal] = useState(null); // 'terms' | 'policy' | null
 
   // 1. Luồng đăng nhập Zalo (1 chạm - 0đ chi phí)
   const handleZaloLogin = async (e) => {
@@ -104,6 +107,33 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
       setLoading(false);
     }
   };
+
+  const renderLegalDisclaimer = () => (
+    <div className="pt-2 text-center space-y-1">
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed px-1">
+        Bằng việc tiếp tục, bạn đồng ý với{' '}
+        <button
+          type="button"
+          onClick={() => setActiveLegalModal('terms')}
+          className="text-[#0071e3] dark:text-blue-400 font-semibold underline underline-offset-2 hover:opacity-85 cursor-pointer inline"
+        >
+          Điều khoản dịch vụ
+        </button>{' '}
+        &{' '}
+        <button
+          type="button"
+          onClick={() => setActiveLegalModal('policy')}
+          className="text-[#0071e3] dark:text-blue-400 font-semibold underline underline-offset-2 hover:opacity-85 cursor-pointer inline"
+        >
+          Chính sách bảo mật
+        </button>{' '}
+        của CarMate.
+      </p>
+      <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
+        <span>🔒 Cam kết 100% không mất phí · Không gửi tin nhắn rác</span>
+      </p>
+    </div>
+  );
 
   return (
     <Modal
@@ -204,11 +234,7 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
               <span>{loading ? 'Đang kết nối...' : 'Tiếp tục với Zalo (0đ chi phí)'}</span>
             </Button>
 
-            <div className="text-center">
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                🔒 Cam kết 100% không mất phí, không gửi tin nhắn rác. Mọi chuyến xe bạn đã đăng sẽ tự động đồng bộ.
-              </p>
-            </div>
+            {renderLegalDisclaimer()}
           </form>
         )}
 
@@ -245,6 +271,8 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
                   <KeyRound className="w-4 h-4 mr-2" />
                   <span>{loading ? 'Đang tạo mã...' : 'Nhận mã xác thực OTP'}</span>
                 </Button>
+
+                {renderLegalDisclaimer()}
               </form>
             ) : (
               <form onSubmit={handleVerifyOtp} className="space-y-3.5">
@@ -311,11 +339,23 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   <span>{loading ? 'Đang xác thực...' : 'Xác nhận & Đăng nhập'}</span>
                 </Button>
+
+                {renderLegalDisclaimer()}
               </form>
             )}
           </div>
         )}
       </div>
+
+      {/* Modal Điều khoản Dịch vụ & An toàn */}
+      {activeLegalModal === 'terms' && (
+        <TermsModal onClose={() => setActiveLegalModal(null)} zIndex="z-[60]" />
+      )}
+
+      {/* Modal Quy chế & Chính sách bảo mật */}
+      {activeLegalModal === 'policy' && (
+        <PolicyModal onClose={() => setActiveLegalModal(null)} zIndex="z-[60]" />
+      )}
     </Modal>
   );
 }

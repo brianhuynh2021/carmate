@@ -18,12 +18,13 @@ function PolicySection({ icon: Icon, title, children }) {
   );
 }
 
-export default function PolicyModal({ onClose }) {
+export default function PolicyModal({ onClose, zIndex = 'z-50' }) {
   const { t } = useI18n();
 
   return (
     <Modal
       onClose={onClose}
+      zIndex={zIndex}
       size="xl"
       icon={Scale}
       title={t('policy.title')}

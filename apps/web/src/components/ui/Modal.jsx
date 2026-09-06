@@ -21,7 +21,8 @@ export default function Modal({
   size = 'md',
   footer,
   children,
-  bodyClassName = ''
+  bodyClassName = '',
+  zIndex = 'z-50'
 }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
@@ -36,7 +37,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/25 backdrop-blur-md p-0 sm:p-4 anim-fade-in"
+      className={`fixed inset-0 ${zIndex} flex items-end sm:items-center justify-center bg-black/25 backdrop-blur-md p-0 sm:p-4 anim-fade-in`}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
       role="dialog"
       aria-modal="true"
