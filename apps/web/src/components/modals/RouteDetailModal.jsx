@@ -259,37 +259,38 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
           : `Lộ trình ${tripFrom} ➔ ${tripTo}${waypointNote ? ` (${waypointNote})` : ''} · Kết nối trực tiếp`
       }
       footer={
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
-          <div className="flex items-baseline gap-1.5 w-full sm:w-auto">
-            <span className="text-xs text-slate-500">Chi phí chia sẻ:</span>
-            <span className="font-display font-bold text-lg text-slate-900 dark:text-white">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <div className="flex items-baseline gap-1 shrink-0">
+            <span className="text-xl font-bold text-[#1d1d1f] dark:text-white tracking-tight leading-none">
               {formatVND(price)}
             </span>
-            <span className="text-xs text-slate-500">/người</span>
+            <span className="text-xs text-[#86868b] dark:text-slate-400">
+              /người
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2">
             <a
               href={zaloUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 sm:flex-none h-11 px-4 rounded-xl font-semibold text-xs bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-sm inline-flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
+              title="Nhắn tin trao đổi qua Zalo"
+              className="h-10 px-3.5 rounded-xl font-medium text-xs text-[#0068ff] bg-[#0068ff]/10 hover:bg-[#0068ff]/15 border border-[#0068ff]/20 inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98]"
             >
-              <ZaloIcon className="w-4 h-4 shrink-0" />
-              <span>Hẹn đón qua Zalo</span>
+              <ZaloIcon className="w-3.5 h-3.5 shrink-0" />
+              <span>Nhắn Zalo</span>
             </a>
 
-            <Button
-              variant={isDriver ? 'primary' : 'dark'}
-              size="md"
+            <button
+              type="button"
               onClick={() => {
                 onClose();
                 onBook(trip);
               }}
-              className="flex-1 sm:flex-none h-11"
+              className="h-10 px-5 rounded-xl font-semibold text-xs text-white bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] shadow-sm shadow-[#0071e3]/20 transition-all cursor-pointer active:scale-[0.98] shrink-0"
             >
-              {isDriver ? 'Ghép chuyến' : 'Đón đi cùng'}
-            </Button>
+              {isDriver ? 'Ghép chuyến này' : 'Đón khách này'}
+            </button>
           </div>
         </div>
       }
