@@ -61,8 +61,8 @@ export default function Header({
     <header
       className={`sticky top-0 z-30 transition-all duration-200 border-b ${
         isScrolled
-          ? 'bg-[#f5f5f7]/96 dark:bg-[#151c28]/96 backdrop-blur-xl border-black/[0.08] dark:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.04)]'
-          : 'bg-[#f5f5f7]/92 dark:bg-[#151c28]/92 backdrop-blur-xl border-black/[0.05] dark:border-white/[0.06]'
+          ? 'bg-[#f5f5f7] dark:bg-[#151c28] border-black/[0.08] dark:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.06)]'
+          : 'bg-[#f5f5f7] dark:bg-[#151c28] border-black/[0.05] dark:border-white/[0.06]'
       }`}
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >

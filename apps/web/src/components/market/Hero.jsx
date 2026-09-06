@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   BadgePercent, 
@@ -19,6 +19,15 @@ import Chip from '../ui/Chip.jsx';
 import Button from '../ui/Button.jsx';
 import { POPULAR_HIGHWAYS } from './FilterBar.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
+
+const POPULAR_ROTATING_ROUTES = [
+  { from: 'Lộc Ninh (Bình Phước)', to: 'Sài Gòn (BX Miền Đông)' },
+  { from: 'Sài Gòn', to: 'Phan Thiết (Mũi Né)' },
+  { from: 'Sài Gòn', to: 'Vũng Tàu' },
+  { from: 'Hà Nội', to: 'Hải Phòng' },
+  { from: 'Sài Gòn', to: 'Đà Lạt' },
+  { from: 'Bù Đốp', to: 'TP. Hồ Chí Minh' },
+];
 
 export default function Hero({
   searchKeyword = '',
@@ -56,6 +65,18 @@ export default function Hero({
   };
 
   const hasSearch = Boolean(searchKeyword || searchFrom || searchTo);
+
+  // Hiệu ứng gợi ý cặp tuyến HOT xoay vòng tự động mỗi 3.2s
+  const [routeCycleIndex, setRouteCycleIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRouteCycleIndex((prev) => (prev + 1) % POPULAR_ROTATING_ROUTES.length);
+    }, 3200);
+    return () => clearInterval(timer);
+  }, []);
+
+  const activeRouteHint = POPULAR_ROTATING_ROUTES[routeCycleIndex];
 
   const pills = [
     { icon: BadgePercent, label: '100% không thu phí sàn' },
@@ -104,7 +125,7 @@ export default function Hero({
 
         {/* ── APPLE / CURSOR COMMAND OMNIBAR ── */}
         <div className="pt-2 max-w-4xl mx-auto w-full relative z-40">
-          <div className="p-2 sm:p-2.5 rounded-2xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] focus-within:ring-2 focus-within:ring-[#0071e3]/30 focus-within:border-[#0071e3] transition-all text-left relative z-40">
+          <div className="p-2 sm:p-2.5 rounded-2xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(0,113,227,0.14)] focus-within:ring-2 focus-within:ring-[#0071e3]/30 focus-within:border-[#0071e3] transition-all text-left relative z-40">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-1.5">
               
               {/* Điểm xuất phát */}
@@ -124,7 +145,7 @@ export default function Hero({
                     variant="omnibar"
                     value={searchFrom}
                     onChange={setSearchFrom}
-                    placeholder="Tỉnh thành, bến xe đi (VD: Hà Nội, Lộc Ninh...)"
+                    placeholder={`Tỉnh thành, bến xe đi (VD: ${activeRouteHint.from}...)`}
                   />
                 </div>
                 {searchFrom && (
@@ -167,7 +188,7 @@ export default function Hero({
                     variant="omnibar"
                     value={searchTo}
                     onChange={setSearchTo}
-                    placeholder="Tỉnh thành, bến xe đến (VD: Hải Phòng, Sài Gòn...)"
+                    placeholder={`Tỉnh thành, bến xe đến (VD: ${activeRouteHint.to}...)`}
                   />
                 </div>
                 {searchTo && (
@@ -182,7 +203,7 @@ export default function Hero({
                 )}
               </div>
 
-              {/* Action Buttons: TÌM CHUYẾN (Apple Blue Primary CTA) + Clear */}
+              {/* Action Buttons: TÌM CHUYẾN (Apple Blue Primary CTA với Shimmer Animation) */}
               <div className="flex items-center gap-1.5 shrink-0 pt-1 sm:pt-0">
                 {hasSearch && (
                   <button
@@ -202,10 +223,12 @@ export default function Hero({
                     const el = document.getElementById('market-results');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="rounded-xl font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-xs whitespace-nowrap shrink-0 px-6 cursor-pointer active:scale-[0.98] transition-all"
+                  className="relative overflow-hidden rounded-xl font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[0_4px_16px_rgba(0,113,227,0.3)] hover:shadow-[0_8px_24px_rgba(0,113,227,0.45)] whitespace-nowrap shrink-0 px-6 cursor-pointer active:scale-[0.98] hover:scale-[1.02] transition-all group"
                 >
-                  <Search className="w-4 h-4 mr-1.5" />
-                  <span>{t('hero.findTripCta') || 'Tìm chuyến'}</span>
+                  {/* Tia sáng quét nhẹ qua nút định kỳ (Luminous CTA Shimmer) */}
+                  <span className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] animate-shimmer-sweep pointer-events-none" />
+                  <Search className="w-4 h-4 mr-1.5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                  <span>{t('hero.findTripCta') || 'Tìm chuyến ngay'}</span>
                 </Button>
               </div>
             </div>
