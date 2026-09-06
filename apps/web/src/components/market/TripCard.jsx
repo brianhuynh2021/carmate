@@ -8,8 +8,7 @@ import {
   MapPin, 
   Navigation, 
   Clock, 
-  ArrowRight,
-  ShieldCheck
+  ArrowRight
 } from 'lucide-react';
 import { formatVND, getTimeSlotLabel, isGoogleMapsUrl, ROUTE_BENCHMARKS, decodeHtmlEntities } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -45,41 +44,41 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
     
     // Tuyến Sài Gòn / TP.HCM
     if (/sài gòn|tp\.hcm|hồ chí minh|hàng xanh|miền đông|thủ đức|quận\s*\d+/i.test(text)) {
-      return { city: 'Sài Gòn', code: 'SGN', point: parsed.main || 'TP.HCM' };
+      return { city: 'Sài Gòn', code: 'SGN', region: 'TP. Hồ Chí Minh', point: parsed.main || 'TP.HCM' };
     }
     // Bình Phước & Các Huyện Trục QL13, QL14
-    if (/bù đốp/i.test(text)) return { city: 'Bù Đốp', code: 'BĐ', point: parsed.main };
-    if (/lộc ninh/i.test(text)) return { city: 'Lộc Ninh', code: 'LN', point: parsed.main };
-    if (/bình long/i.test(text)) return { city: 'Bình Long', code: 'BL', point: parsed.main };
-    if (/chơn thành/i.test(text)) return { city: 'Chơn Thành', code: 'CT', point: parsed.main };
-    if (/đồng xoài/i.test(text)) return { city: 'Đồng Xoài', code: 'ĐX', point: parsed.main };
-    if (/phước long/i.test(text)) return { city: 'Phước Long', code: 'PL', point: parsed.main };
-    if (/bình phước/i.test(text)) return { city: 'Bình Phước', code: 'BP', point: parsed.main };
+    if (/bù đốp/i.test(text)) return { city: 'Bù Đốp', code: 'BĐ', region: 'Bình Phước (QL13)', point: parsed.main };
+    if (/lộc ninh/i.test(text)) return { city: 'Lộc Ninh', code: 'LN', region: 'Bình Phước (QL13)', point: parsed.main };
+    if (/bình long/i.test(text)) return { city: 'Bình Long', code: 'BL', region: 'Bình Phước (QL13)', point: parsed.main };
+    if (/chơn thành/i.test(text)) return { city: 'Chơn Thành', code: 'CT', region: 'Bình Phước (QL13)', point: parsed.main };
+    if (/đồng xoài/i.test(text)) return { city: 'Đồng Xoài', code: 'ĐX', region: 'Bình Phước (QL14)', point: parsed.main };
+    if (/phước long/i.test(text)) return { city: 'Phước Long', code: 'PL', region: 'Bình Phước (ĐT741)', point: parsed.main };
+    if (/bình phước/i.test(text)) return { city: 'Bình Phước', code: 'BP', region: 'Tỉnh Bình Phước', point: parsed.main };
 
     // Đồng Nai & Trục QL20
-    if (/gia kiệm/i.test(text)) return { city: 'Gia Kiệm', code: 'GK', point: parsed.main };
-    if (/dầu giây/i.test(text)) return { city: 'Dầu Giây', code: 'DG', point: parsed.main };
-    if (/long khánh/i.test(text)) return { city: 'Long Khánh', code: 'LK', point: parsed.main };
-    if (/định quán/i.test(text)) return { city: 'Định Quán', code: 'ĐQ', point: parsed.main };
-    if (/biên hòa|biên hoà/i.test(text)) return { city: 'Biên Hòa', code: 'BH', point: parsed.main };
-    if (/đồng nai/i.test(text)) return { city: 'Đồng Nai', code: 'ĐN', point: parsed.main };
+    if (/gia kiệm/i.test(text)) return { city: 'Gia Kiệm', code: 'GK', region: 'Đồng Nai (QL20)', point: parsed.main };
+    if (/dầu giây/i.test(text)) return { city: 'Dầu Giây', code: 'DG', region: 'Đồng Nai (QL1A/20)', point: parsed.main };
+    if (/long khánh/i.test(text)) return { city: 'Long Khánh', code: 'LK', region: 'Tỉnh Đồng Nai', point: parsed.main };
+    if (/định quán/i.test(text)) return { city: 'Định Quán', code: 'ĐQ', region: 'Đồng Nai (QL20)', point: parsed.main };
+    if (/biên hòa|biên hoà/i.test(text)) return { city: 'Biên Hòa', code: 'BH', region: 'Tỉnh Đồng Nai', point: parsed.main };
+    if (/đồng nai/i.test(text)) return { city: 'Đồng Nai', code: 'ĐN', region: 'Tỉnh Đồng Nai', point: parsed.main };
 
     // Các tỉnh thành phố khác
-    if (/vũng tàu/i.test(text)) return { city: 'Vũng Tàu', code: 'VT', point: parsed.main };
-    if (/bà rịa/i.test(text)) return { city: 'Bà Rịa', code: 'BR', point: parsed.main };
-    if (/đà lạt/i.test(text)) return { city: 'Đà Lạt', code: 'DLI', point: parsed.main };
-    if (/buôn ma thuột|đắk lắk/i.test(text)) return { city: 'B.M.Thuột', code: 'BMT', point: parsed.main };
-    if (/đắk nông|gia nghĩa/i.test(text)) return { city: 'Đắk Nông', code: 'ĐN', point: parsed.main };
-    if (/bình dương|thủ dầu một|bến cát/i.test(text)) return { city: 'Bình Dương', code: 'BD', point: parsed.main };
-    if (/tây ninh/i.test(text)) return { city: 'Tây Ninh', code: 'TN', point: parsed.main };
-    if (/cần thơ/i.test(text)) return { city: 'Cần Thơ', code: 'CT', point: parsed.main };
+    if (/vũng tàu/i.test(text)) return { city: 'Vũng Tàu', code: 'VT', region: 'Bà Rịa - Vũng Tàu', point: parsed.main };
+    if (/bà rịa/i.test(text)) return { city: 'Bà Rịa', code: 'BR', region: 'Bà Rịa - Vũng Tàu', point: parsed.main };
+    if (/đà lạt/i.test(text)) return { city: 'Đà Lạt', code: 'DLI', region: 'Lâm Đồng (QL20)', point: parsed.main };
+    if (/buôn ma thuột|đắk lắk/i.test(text)) return { city: 'B.M.Thuột', code: 'BMT', region: 'Đắk Lắk (QL14)', point: parsed.main };
+    if (/đắk nông|gia nghĩa/i.test(text)) return { city: 'Đắk Nông', code: 'ĐN', region: 'Tỉnh Đắk Nông', point: parsed.main };
+    if (/bình dương|thủ dầu một|bến cát/i.test(text)) return { city: 'Bình Dương', code: 'BD', region: 'Tỉnh Bình Dương', point: parsed.main };
+    if (/tây ninh/i.test(text)) return { city: 'Tây Ninh', code: 'TN', region: 'Tỉnh Tây Ninh', point: parsed.main };
+    if (/cần thơ/i.test(text)) return { city: 'Cần Thơ', code: 'CT', region: 'Đồng Bằng Sông Cửu Long', point: parsed.main };
 
     // Rút gọn địa danh fallback
     const cleanWord = (parsed.main || '')
       .replace(/^(Cây xăng|Bến xe|Ngã 4|Ngã ba|Ngã 3|Trạm thu phí|KCN|Chợ|Cổng chào)\s+/i, '')
       .split(/[\s,.-]+/)[0] || 'Điểm đón';
     const code = cleanWord.slice(0, 3).toUpperCase();
-    return { city: cleanWord, code, point: parsed.main || cleanWord };
+    return { city: cleanWord, code, region: 'Tuyến kết nối', point: parsed.main || cleanWord };
   };
 
   const fromInfo = extractTerritory(fromParsed, item.from);
@@ -94,6 +93,8 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
       toInfo.city = parts[1].replace(/\(.*?\)/, '').trim();
       fromInfo.code = fromInfo.city.slice(0, 3).toUpperCase();
       toInfo.code = toInfo.city.slice(0, 3).toUpperCase();
+      fromInfo.region = benchmark.highway || 'Trục chính';
+      toInfo.region = 'TP. Hồ Chí Minh';
     }
   }
 
@@ -101,56 +102,54 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
 }
 
 /**
- * Danh sách Palette màu nghệ thuật lấy cảm hứng từ Fly.io & Apple Boarding Pass
- * Mang lại cá tính sống động, phân định rõ ràng giữa các card thay vì đồng màu đơn điệu
+ * 6 Dải màu nghệ thuật sống động lấy cảm hứng từ Fly.io & Apple Boarding Pass
+ * Tươi sáng, rực rỡ và phân định tuyệt đối giữa các card
  */
 const ROUTE_PALETTES = [
   {
-    id: 'ocean',
-    bgGradient: 'bg-gradient-to-br from-[#0c1427] via-[#152a55] to-[#1d4ed8]',
-    accentColor: '#38bdf8',
-    glowColor: 'bg-sky-400/20'
+    id: 'sunset-magenta',
+    bgGradient: 'bg-gradient-to-br from-[#3b0764] via-[#6b21a8] to-[#db2777]',
+    glowColor: 'bg-pink-500/25'
   },
   {
-    id: 'sunrise',
-    bgGradient: 'bg-gradient-to-br from-[#1e102d] via-[#4c1d63] to-[#c2410c]',
-    accentColor: '#fb923c',
-    glowColor: 'bg-amber-400/20'
+    id: 'ocean-electric',
+    bgGradient: 'bg-gradient-to-br from-[#0c2340] via-[#0369a1] to-[#0284c7]',
+    glowColor: 'bg-sky-400/25'
   },
   {
-    id: 'emerald',
-    bgGradient: 'bg-gradient-to-br from-[#042018] via-[#064e3b] to-[#047857]',
-    accentColor: '#34d399',
-    glowColor: 'bg-emerald-400/20'
+    id: 'amber-dawn',
+    bgGradient: 'bg-gradient-to-br from-[#451a03] via-[#b45309] to-[#ea580c]',
+    glowColor: 'bg-amber-400/25'
   },
   {
-    id: 'sunset',
-    bgGradient: 'bg-gradient-to-br from-[#270b2e] via-[#5b1548] to-[#be185d]',
-    accentColor: '#f472b6',
-    glowColor: 'bg-pink-400/20'
+    id: 'emerald-mint',
+    bgGradient: 'bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#10b981]',
+    glowColor: 'bg-emerald-400/25'
   },
   {
-    id: 'gold',
-    bgGradient: 'bg-gradient-to-br from-[#241703] via-[#633008] to-[#b45309]',
-    accentColor: '#fbbf24',
-    glowColor: 'bg-amber-400/20'
+    id: 'royal-indigo',
+    bgGradient: 'bg-gradient-to-br from-[#1e1b4b] via-[#4338ca] to-[#7c3aed]',
+    glowColor: 'bg-indigo-400/25'
   },
   {
-    id: 'twilight',
-    bgGradient: 'bg-gradient-to-br from-[#0a0f1d] via-[#1a2238] to-[#4338ca]',
-    accentColor: '#818cf8',
-    glowColor: 'bg-indigo-400/20'
+    id: 'rose-coral',
+    bgGradient: 'bg-gradient-to-br from-[#4c0519] via-[#9f1239] to-[#f43f5e]',
+    glowColor: 'bg-rose-400/25'
   }
 ];
 
 function getPaletteForItem(item) {
   if (item.carCategory === 'convenient_trip') {
-    return ROUTE_PALETTES[4]; // Gold sang trọng cho xe tiện chuyến
+    return ROUTE_PALETTES[2]; // Amber Gold cho xe tiện chuyến
   }
-  // Băm hash để mỗi card sở hữu màu sắc nghệ thuật riêng
-  const rawId = String(item.id || item.author || 'trip');
-  const hash = rawId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return ROUTE_PALETTES[hash % ROUTE_PALETTES.length];
+  const raw = String(item.id || item.author || 'trip');
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash |= 0;
+  }
+  const positiveHash = Math.abs(hash);
+  return ROUTE_PALETTES[positiveHash % ROUTE_PALETTES.length];
 }
 
 export function RouteTimeline({ from, to, routeCategory, waypointNote, compact = false }) {
@@ -238,7 +237,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
   return (
     <article
       id={`trip-${item.id}`}
-      className="flex flex-col relative overflow-hidden rounded-3xl bg-white dark:bg-[#151c28] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_48px_rgba(0,113,227,0.14)] hover:-translate-y-1.5 transition-all duration-300 group"
+      className="flex flex-col relative overflow-hidden rounded-3xl bg-white dark:bg-[#151c28] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_48px_rgba(0,113,227,0.16)] hover:-translate-y-1.5 transition-all duration-300 group"
     >
       {/* ── 1. VISUAL ROUTE POSTER (FLY.IO ARTWORK + APPLE BOARDING PASS) ── */}
       <div 
@@ -248,11 +247,11 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item); }}
         className={`relative overflow-hidden p-5 text-white select-none cursor-pointer transition-all duration-300 ${palette.bgGradient}`}
       >
-        {/* Glow hiệu ứng nền nghệ thuật */}
-        <div className={`absolute -right-8 -bottom-8 w-36 h-36 rounded-full ${palette.glowColor} blur-2xl pointer-events-none`} />
-        <div className="absolute -left-8 -top-8 w-36 h-36 rounded-full bg-black/30 blur-xl pointer-events-none" />
+        {/* Glow hiệu ứng nền nghệ thuật đa tầng */}
+        <div className={`absolute -right-8 -bottom-8 w-40 h-40 rounded-full ${palette.glowColor} blur-2xl pointer-events-none`} />
+        <div className="absolute -left-8 -top-8 w-40 h-40 rounded-full bg-black/25 blur-xl pointer-events-none" />
 
-        {/* Top Header: Badge trạng thái & Ghế trống */}
+        {/* Top Header: Badge phân loại xe & Số ghế trống */}
         <div className="relative z-10 flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider backdrop-blur-md bg-white/15 border border-white/20 text-white shadow-2xs">
             <Car className="w-3 h-3 text-white" strokeWidth={2.5} />
@@ -271,75 +270,85 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           </span>
         </div>
 
-        {/* Center: Boarding Pass Route Display (Tuyệt đối không bị cắt chữ ...) */}
-        <div className="relative z-10 mt-4 mb-2 flex items-center justify-between gap-2">
-          {/* Điểm xuất phát */}
+        {/* Center: Boarding Pass Route Display (Tuyệt đối KHÔNG bị cắt chữ ...) */}
+        <div className="relative z-10 mt-4 mb-1 flex items-center justify-between gap-2">
+          {/* Điểm xuất phát lớn */}
           <div className="flex-1 min-w-0">
-            <span className="text-[10.5px] font-mono tracking-widest text-white/70 uppercase font-black">
+            <span className="text-[11px] font-mono tracking-widest text-white/70 uppercase font-black block">
               {fromInfo.code}
             </span>
-            <h3 className="text-[20px] sm:text-[22px] font-black tracking-tight text-white leading-none mt-0.5 truncate">
+            <h3 className="text-[21px] sm:text-[23px] font-black tracking-tight text-white leading-none mt-1 truncate">
               {fromInfo.city}
             </h3>
-            <p className="text-[11.5px] text-white/80 font-medium truncate mt-1">
-              {fromParsed.sub ? fromParsed.main : fromInfo.point}
+            <p className="text-[11.5px] text-white/80 font-medium truncate mt-1.5">
+              {fromInfo.region}
             </p>
           </div>
 
-          {/* Icon tuyến đường cao tốc ở giữa */}
-          <div className="flex flex-col items-center justify-center shrink-0 px-2">
+          {/* Icon tuyến đường cao tốc & giờ xuất phát ở giữa */}
+          <div className="flex flex-col items-center justify-center shrink-0 px-2.5">
             <div className="flex items-center gap-1 text-white/90">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/25" />
-              <div className="w-10 sm:w-14 border-t-2 border-dashed border-white/40 relative flex items-center justify-center">
-                <Car className="w-3.5 h-3.5 text-white/90 absolute -top-2 bg-transparent" />
+              <span className="w-2 h-2 rounded-full bg-white/90 ring-2 ring-white/30" />
+              <div className="w-11 sm:w-15 border-t-2 border-dashed border-white/40 relative flex items-center justify-center">
+                <Car className="w-3.5 h-3.5 text-white absolute -top-2" />
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="text-[10px] font-mono text-white/75 mt-1 font-semibold">
+            {/* Tag giờ xuất phát chuẩn kính mờ */}
+            <span className="mt-1.5 px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white tracking-wide">
               {getTimeSlotLabel(item, lang)}
             </span>
           </div>
 
-          {/* Điểm đích đến */}
+          {/* Điểm đích đến lớn */}
           <div className="flex-1 min-w-0 text-right">
-            <span className="text-[10.5px] font-mono tracking-widest text-white/70 uppercase font-black">
+            <span className="text-[11px] font-mono tracking-widest text-white/70 uppercase font-black block">
               {toInfo.code}
             </span>
-            <h3 className="text-[20px] sm:text-[22px] font-black tracking-tight text-white leading-none mt-0.5 truncate">
+            <h3 className="text-[21px] sm:text-[23px] font-black tracking-tight text-white leading-none mt-1 truncate">
               {toInfo.city}
             </h3>
-            <p className="text-[11.5px] text-white/80 font-medium truncate mt-1">
-              {toParsed.sub ? toParsed.main : toInfo.point}
+            <p className="text-[11.5px] text-white/80 font-medium truncate mt-1.5">
+              {toInfo.region}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── 2. CARD BODY: THÔNG TIN CHI TIẾT & ĐIỂM ĐÓN THẬT ── */}
+      {/* ── 2. CARD BODY: THÔNG TIN CHI TIẾT ĐIỂM ĐÓN / TRẢ ── */}
       <div className="p-5 flex flex-col flex-1 gap-3.5">
         
-        {/* Địa chỉ đón & trả rõ ràng từng ngõ ngách */}
+        {/* Địa chỉ đón & trả rõ ràng từng ngõ ngách, phân cấp rõ rệt */}
         <div 
           role="button"
           tabIndex={0}
           onClick={() => onViewRoute?.(item)}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item); }}
-          className="space-y-2 cursor-pointer select-none group/route"
+          className="space-y-2.5 cursor-pointer select-none group/route"
           title="Bấm để xem bản đồ lộ trình"
         >
-          <div className="flex items-baseline gap-2.5 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0 translate-y-0.5 ring-2 ring-[#107c41]/20" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 shrink-0">Đón:</span>
-            <span className="truncate text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover/route:text-[#0071e3] transition-colors">
-              {fromParsed.sub ? `${fromParsed.main} (${fromParsed.sub})` : fromParsed.main}
-            </span>
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0 border border-emerald-200 dark:border-emerald-800/80">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-tight">Điểm đón</span>
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate group-hover/route:text-[#0071e3] transition-colors mt-0.5">
+                {fromParsed.sub ? `${fromParsed.main} (${fromParsed.sub})` : fromParsed.main}
+              </p>
+            </div>
           </div>
-          <div className="flex items-baseline gap-2.5 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-[#ff3b30] shrink-0 translate-y-0.5 ring-2 ring-[#ff3b30]/20" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 shrink-0">Trả:</span>
-            <span className="truncate text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover/route:text-[#0071e3] transition-colors">
-              {toParsed.sub ? `${toParsed.main} (${toParsed.sub})` : toParsed.main}
-            </span>
+
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="flex items-center justify-center w-4 h-4 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0 border border-rose-200 dark:border-rose-800/80">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-tight">Điểm trả</span>
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate group-hover/route:text-[#0071e3] transition-colors mt-0.5">
+                {toParsed.sub ? `${toParsed.main} (${toParsed.sub})` : toParsed.main}
+              </p>
+            </div>
           </div>
         </div>
 
