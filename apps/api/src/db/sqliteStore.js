@@ -226,6 +226,19 @@ export async function initDB() {
     console.log('[SQLite DB] Hoàn tất di chuyển sang SQLite Database!');
   }
 
+  // Tự động dọn dẹp các thực thể HTML cũ (như &#x2F;) trong DB nếu có
+  try {
+    db.exec(`
+      UPDATE trips SET 
+        fromLocation = REPLACE(fromLocation, '&#x2F;', '/'),
+        toLocation = REPLACE(toLocation, '&#x2F;', '/'),
+        payload = REPLACE(payload, '&#x2F;', '/')
+      WHERE fromLocation LIKE '%&#x2F;%' OR toLocation LIKE '%&#x2F;%' OR payload LIKE '%&#x2F;%';
+    `);
+  } catch (err) {
+    console.warn('[SQLite DB] Bỏ qua dọn dẹp thực thể:', err.message);
+  }
+
   return db;
 }
 

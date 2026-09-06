@@ -8,7 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import {
   getRouteCorridor, findNearestWaypoint, calculateDistanceKm,
   formatDistance, formatVND, getZaloChatUrl, cleanPhoneNumber,
-  isGoogleMapsUrl, getGoogleMapsUrl, findLocationCoords
+  isGoogleMapsUrl, getGoogleMapsUrl, findLocationCoords, decodeHtmlEntities
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -31,10 +31,13 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
   const corridor = getRouteCorridor(trip.routeCategory);
   const isDriver = trip.type === 'driver_offer';
   const price = trip.basePricePerSeat || trip.expectedPrice || trip.suggestedContribution || 180000;
+  const tripFrom = decodeHtmlEntities(trip.from);
+  const tripTo = decodeHtmlEntities(trip.to);
+  const waypointNote = decodeHtmlEntities(trip.waypointNote);
 
   // Tìm toạ độ 2 đầu điểm đón và điểm trả nếu không có corridor cố định
-  const fromCoords = corridor ? corridor.startLandmark : findLocationCoords(trip.from);
-  const toCoords = corridor ? corridor.endLandmark : findLocationCoords(trip.to);
+  const fromCoords = corridor ? corridor.startLandmark : findLocationCoords(tripFrom);
+  const toCoords = corridor ? corridor.endLandmark : findLocationCoords(tripTo);
 
   // Danh sách các điểm toạ độ hiển thị trên map
   const mapWaypoints = [];
@@ -42,10 +45,10 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
     mapWaypoints.push(...corridor.waypoints);
   } else {
     if (fromCoords) {
-      mapWaypoints.push({ name: trip.from, sub: 'Điểm đón ban đầu', lat: fromCoords.lat, lng: fromCoords.lng, isStart: true, type: 'pickup' });
+      mapWaypoints.push({ name: tripFrom, sub: 'Điểm đón ban đầu', lat: fromCoords.lat, lng: fromCoords.lng, isStart: true, type: 'pickup' });
     }
     if (toCoords) {
-      mapWaypoints.push({ name: trip.to, sub: 'Điểm trả kết thúc', lat: toCoords.lat, lng: toCoords.lng, isEnd: true, type: 'dropoff' });
+      mapWaypoints.push({ name: tripTo, sub: 'Điểm trả kết thúc', lat: toCoords.lat, lng: toCoords.lng, isEnd: true, type: 'dropoff' });
     }
   }
 
@@ -240,8 +243,8 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
   };
 
   // Chuẩn bị tin nhắn Zalo chốt điểm đón
-  const targetPickupName = proximityResult?.waypoint?.name || trip.from;
-  const zaloProposalMsg = `Chào bạn, tôi thấy chuyến đi ${trip.from} ➔ ${trip.to} của bạn trên CarMate. Chỗ tôi rất gần ${targetPickupName}${proximityResult ? ` (cách ~${proximityResult.formattedDistance})` : ''}. Bạn cho tôi ghép đón tại điểm này nhé!`;
+  const targetPickupName = proximityResult?.waypoint?.name || tripFrom;
+  const zaloProposalMsg = `Chào bạn, tôi thấy chuyến đi ${tripFrom} ➔ ${tripTo} của bạn trên CarMate. Chỗ tôi rất gần ${targetPickupName}${proximityResult ? ` (cách ~${proximityResult.formattedDistance})` : ''}. Bạn cho tôi ghép đón tại điểm này nhé!`;
   const zaloUrl = getZaloChatUrl(trip.phoneReal, zaloProposalMsg);
 
   return (
@@ -253,7 +256,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
       subtitle={
         corridor
           ? `Hành lang ${corridor.name} · Cột mốc chi tiết & Định hình độ gần`
-          : `Lộ trình ${trip.from} ➔ ${trip.to}${trip.waypointNote ? ` (${trip.waypointNote})` : ''} · Kết nối trực tiếp`
+          : `Lộ trình ${tripFrom} ➔ ${tripTo}${waypointNote ? ` (${waypointNote})` : ''} · Kết nối trực tiếp`
       }
       footer={
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
@@ -403,7 +406,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
                     Điểm đón ban đầu:
                   </p>
                   <a
-                    href={getGoogleMapsUrl(trip.from || corridor?.startLandmark?.name)}
+                    href={getGoogleMapsUrl(tripFrom || corridor?.startLandmark?.name)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[11.5px] font-semibold text-emerald-700 dark:text-emerald-300 hover:underline inline-flex items-center gap-0.5 shrink-0"
@@ -414,10 +417,10 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
                   </a>
                 </div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {isGoogleMapsUrl(trip.from) ? '📍 Vị trí ghim trên Google Maps' : (trip.from || corridor?.startLandmark?.name)}
+                  {isGoogleMapsUrl(tripFrom) ? '📍 Vị trí ghim trên Google Maps' : (tripFrom || corridor?.startLandmark?.name)}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {corridor ? corridor.startLandmark.address : `Khu vực ${trip.from} (Điểm đón do chủ xe & khách tự thỏa thuận)`}
+                  {corridor ? corridor.startLandmark.address : `Khu vực ${tripFrom} (Điểm đón do chủ xe & khách tự thỏa thuận)`}
                 </p>
               </div>
             </div>
@@ -431,7 +434,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
                     Điểm đến kết thúc:
                   </p>
                   <a
-                    href={getGoogleMapsUrl(trip.to || corridor?.endLandmark?.name)}
+                    href={getGoogleMapsUrl(tripTo || corridor?.endLandmark?.name)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[11.5px] font-semibold text-rose-700 dark:text-rose-300 hover:underline inline-flex items-center gap-0.5 shrink-0"
@@ -442,24 +445,24 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
                   </a>
                 </div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {isGoogleMapsUrl(trip.to) ? '📍 Vị trí ghim trên Google Maps' : (trip.to || corridor?.endLandmark?.name)}
+                  {isGoogleMapsUrl(tripTo) ? '📍 Vị trí ghim trên Google Maps' : (tripTo || corridor?.endLandmark?.name)}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {corridor ? corridor.endLandmark.address : `Khu vực ${trip.to} (Điểm trả đích đến theo thỏa thuận)`}
+                  {corridor ? corridor.endLandmark.address : `Khu vực ${tripTo} (Điểm trả đích đến theo thỏa thuận)`}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Các trạm trung gian hoặc trục đường tiện đón trả */}
-          {trip.waypointNote ? (
+          {waypointNote ? (
             <div className="pt-2">
               <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
                 Trục đường tiện đón trả dọc tuyến:
               </p>
               <div className="p-2.5 rounded-xl bg-primary-50/60 dark:bg-primary-950/30 border border-primary-200/60 dark:border-primary-900/40 text-xs text-primary-900 dark:text-primary-200 font-medium flex items-center gap-2">
                 <Navigation className="w-3.5 h-3.5 text-primary-600 shrink-0" />
-                <span>{trip.waypointNote}</span>
+                <span>{waypointNote}</span>
               </div>
             </div>
           ) : corridor?.waypoints && corridor.waypoints.length > 2 ? (
@@ -481,7 +484,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
           ) : (
             <div className="pt-2">
               <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-                💡 Đón trả linh hoạt tại các điểm thuận đường di chuyển giữa {trip.from} và {trip.to}.
+                💡 Đón trả linh hoạt tại các điểm thuận đường di chuyển giữa {tripFrom} và {tripTo}.
               </p>
             </div>
           )}

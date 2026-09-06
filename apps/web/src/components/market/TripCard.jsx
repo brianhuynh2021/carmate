@@ -1,23 +1,29 @@
 import React from 'react';
 import { Car, Users, Star, BadgeCheck, Share2, Check, MapPin, Navigation, AlertTriangle, ExternalLink, Route } from 'lucide-react';
-import { formatVND, getTimeSlotLabel, isGoogleMapsUrl, getGoogleMapsUrl, getRouteCorridor, ROUTE_BENCHMARKS } from '@carmate/shared';
+import { formatVND, getTimeSlotLabel, isGoogleMapsUrl, getGoogleMapsUrl, getRouteCorridor, ROUTE_BENCHMARKS, decodeHtmlEntities } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 
 function parseLocation(str) {
   if (!str || typeof str !== 'string') return { main: '', sub: '' };
+  const cleanStr = decodeHtmlEntities(str);
+
   // Check if contains parentheses e.g. "Bù Đốp (Cây xăng Petrolimex 17, QL13)"
-  const parenMatch = str.match(/^(.*?)\s*\((.*?)\)$/);
+  const parenMatch = cleanStr.match(/^(.*?)\s*\((.*?)\)$/);
   if (parenMatch) {
     return { main: parenMatch[1].trim(), sub: parenMatch[2].trim() };
   }
-  // Check if contains slash e.g. "Bù Đốp / Lộc Ninh"
-  if (str.includes(' / ')) {
-    const parts = str.split(' / ');
+  // Check if contains slash e.g. "Bù Đốp / Lộc Ninh" or "Bến xe Miền Đông mới / Ngã 4 Hàng Xanh"
+  if (cleanStr.includes(' / ')) {
+    const parts = cleanStr.split(' / ');
     return { main: parts[0].trim(), sub: parts.slice(1).join(' / ').trim() };
   }
-  return { main: str.trim(), sub: '' };
+  if (cleanStr.includes('; ')) {
+    const parts = cleanStr.split('; ');
+    return { main: parts[0].trim(), sub: parts.slice(1).join('; ').trim() };
+  }
+  return { main: cleanStr.trim(), sub: '' };
 }
 
 export function RouteTimeline({ from, to, routeCategory, waypointNote, compact = false }) {
