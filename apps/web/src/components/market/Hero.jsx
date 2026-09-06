@@ -86,7 +86,7 @@ export default function Hero({
   ];
 
   return (
-    <section className="relative z-30 border-b border-slate-200/80 hero-canvas">
+    <section className="relative z-20 border-b border-slate-200/80 hero-canvas">
       {/* Background ambient subtle glow (Soft, zero-glare, eye-care) - clip blurs safely */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[380px] rounded-full bg-primary-500/10 blur-[140px]" />
