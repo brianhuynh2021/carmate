@@ -502,6 +502,11 @@ export function parseLocation(str) {
   if (!str || typeof str !== 'string') return { main: '', sub: '' };
   const cleanStr = decodeHtmlEntities(str);
 
+  // Kháng dữ liệu pentest / HTML tags: không hiển thị thô ra giao diện người dùng
+  if (/<[a-z]|onerror|onload|script|&lt;|&gt;/i.test(cleanStr)) {
+    return { main: 'Điểm hẹn đón dọc tuyến', sub: 'Thoả thuận điểm đón qua Zalo' };
+  }
+
   // Check if contains parentheses e.g. "Bù Đốp (Cây xăng Petrolimex 17, QL13)"
   const parenMatch = cleanStr.match(/^(.*?)\s*\((.*?)\)$/);
   if (parenMatch) {

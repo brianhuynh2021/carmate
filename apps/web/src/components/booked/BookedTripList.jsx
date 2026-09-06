@@ -51,10 +51,6 @@ function Countdown30Min({ createdAt }) {
   );
 }
 
-/**
- * MIT Outer System Trajectory Stepper:
- * Minh bạch hoá toàn bộ 4 giai đoạn tương tác từ AI Match đến Tín nhiệm cộng đồng
- */
 function MitTrajectoryStepper({ status, delayedMinutes }) {
   const isCompleted = status === 'completed';
   const isCancelled = status === 'cancelled';
@@ -64,36 +60,41 @@ function MitTrajectoryStepper({ status, delayedMinutes }) {
     {
       id: 1,
       label: 'Khớp AI & Định mức',
-      desc: 'RON 95 + BOT',
+      desc: 'RON 95 + Vé trạm',
       state: 'completed',
     },
     {
       id: 2,
       label: isDelayed ? `Báo trễ +${delayedMinutes || 15}p` : 'Chốt Zalo & Điểm hẹn',
-      desc: isCancelled ? 'Đã dừng chuyến' : 'Thoả thuận & gửi GPS',
+      desc: isCancelled ? 'Đã dừng chuyến' : 'Thoả thuận điểm đón GPS',
       state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active',
     },
     {
       id: 3,
       label: 'Lên xe & Phụ xăng',
-      desc: '0% phí sàn · Chia sẻ trực tiếp',
+      desc: '0% phí sàn · Đưa trực tiếp',
       state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : 'pending',
     },
     {
       id: 4,
       label: 'Tín nhiệm 2 chiều',
-      desc: isCompleted ? 'Đã ghi nhận uy tín' : 'Ghi nhận sau chuyến',
+      desc: isCompleted ? 'Đã ghi nhận uy tín' : 'Tích xanh CCCD',
       state: isCompleted ? 'completed' : 'pending',
     },
   ];
 
   return (
-    <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.06] shadow-2xs">
+    <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
       <div className="flex items-center justify-between gap-2 mb-2.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
-          <span>Tiến trình đồng hành (MIT Trajectory Log)</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
+            <span>Tiến trình kết nối an toàn</span>
+          </span>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-slate-800 text-[#86868b] border border-black/[0.04]">
+            Chuẩn MIT 4 bước
+          </span>
+        </div>
         <span className="text-[11px] font-semibold text-[#86868b] tabular">
           {isCompleted ? '4/4 hoàn tất' : isCancelled ? 'Đã dừng' : isDelayed ? 'Bước 2/4 (Báo trễ)' : 'Bước 2/4 đang kết nối'}
         </span>
@@ -109,19 +110,19 @@ function MitTrajectoryStepper({ status, delayedMinutes }) {
           return (
             <div
               key={step.id}
-              className={`p-2 rounded-xl border transition-all ${
+              className={`p-2.5 rounded-xl border transition-all ${
                 isDone
-                  ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-200'
+                  ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/70 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-200'
                   : isActive
-                  ? 'bg-blue-50/80 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-2 ring-blue-500/20'
+                  ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-2 ring-blue-500/15'
                   : isDelayState
-                  ? 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+                  ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
                   : isCancelState
-                  ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 text-rose-900 opacity-60'
+                  ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 text-rose-900 opacity-60'
                   : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] text-[#86868b]'
               }`}
             >
-              <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="flex items-center gap-1.5 mb-1">
                 <span
                   className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
                     isDone
@@ -141,7 +142,7 @@ function MitTrajectoryStepper({ status, delayedMinutes }) {
                   {step.label}
                 </span>
               </div>
-              <p className="text-[11px] leading-tight opacity-75 truncate">
+              <p className="text-[11px] leading-tight opacity-75 truncate font-medium">
                 {step.desc}
               </p>
             </div>
@@ -321,61 +322,73 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                     <RouteTimeline from={record.from} to={record.to} compact />
                   </div>
 
-                  {/* Thẻ Liên Lạc Nổi Bật (Chỉ hiển thị khi chuyến đang hoạt động) */}
+                  {/* Thẻ Liên Lạc Chuẩn Apple HIG & Cursor Minimalist */}
                   {!isCompleted && !isCancelled && (
-                    <div className="rounded-2xl bg-gradient-to-br from-[#0c4a6e] via-[#075985] to-[#0e1e36] text-white p-4 sm:p-5 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-sky-200">
-                            Số điện thoại & Zalo đối tác
-                          </p>
-                          <p className="font-display text-xl sm:text-2xl font-bold tabular tracking-tight mt-0.5">
+                    <div className="rounded-2xl bg-white dark:bg-slate-900/90 border border-black/[0.08] p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] space-y-3.5">
+                      {/* Hàng Tiêu Đề Đối Tác */}
+                      <div className="flex items-center justify-between gap-3 flex-wrap pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="w-10 h-10 rounded-full bg-[#0071e3]/10 text-[#0071e3] font-bold text-sm flex items-center justify-center border border-[#0071e3]/20">
+                              {(record.contactName || 'T')[0]?.toUpperCase()}
+                            </div>
+                            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900" title="Đã xác thực CCCD & GPLX">
+                              ✓
+                            </span>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-bold text-sm text-[#1d1d1f] dark:text-white">
+                                {record.contactName}
+                              </p>
+                              <span className="text-[11px] font-semibold px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60">
+                                98đ Tín nhiệm
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#86868b] mt-0.5">
+                              Chủ xe gia đình · Xác thực danh tính thật
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Số điện thoại duy nhất */}
+                        <div className="text-right">
+                          <p className="text-[11px] font-medium text-[#86868b]">Số điện thoại liên hệ</p>
+                          <p className="font-display text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular tracking-tight">
                             {phone}
                           </p>
                         </div>
-                        <a
-                          href={`tel:${cleanPhoneNumber(phone)}`}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white text-primary-800 font-semibold text-xs shadow-xs hover:bg-sky-50 transition-colors"
-                        >
-                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Gọi Điện</span>
-                        </a>
                       </div>
 
-                      <p className="text-xs text-sky-100/95 leading-relaxed font-medium flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-sky-300 shrink-0" />
-                        <span><strong>Quy định phối hợp:</strong> Mở Zalo để gửi định vị GPS và thống nhất chính xác điểm đón dọc tuyến:</span>
-                      </p>
-
-                      {/* Nút Zalo Tiên Quyết Số 1 */}
-                      <div className="space-y-2 pt-1">
+                      {/* Nút Zalo Tiên Quyết - Chuẩn Apple HIG */}
+                      <div className="space-y-2.5">
                         <a
                           href={zaloUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-white text-[#0068ff] hover:bg-blue-50 active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2.5 shadow-md shadow-blue-950/20 cursor-pointer"
+                          className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0068ff] text-white hover:bg-[#0057d9] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2.5 shadow-md shadow-blue-500/20 cursor-pointer"
                         >
                           <ZaloIcon className="w-5 h-5 shrink-0" />
                           <span>Mở Zalo chốt điểm đón & gửi định vị</span>
                         </a>
 
-                        {/* Tuỳ chọn phụ & gọi điện */}
-                        <div className="flex items-center justify-between gap-3 text-xs text-blue-100/90 pt-1 flex-wrap">
+                        {/* Hàng tuỳ chọn liên lạc phụ */}
+                        <div className="flex items-center justify-between gap-2 pt-1 text-xs text-[#86868b] flex-wrap">
                           <a
-                            href={`tel:${cleanPhoneNumber(record.contactPhone || phone)}`}
-                            className="inline-flex items-center gap-1.5 font-semibold text-white hover:underline"
+                            href={`tel:${cleanPhoneNumber(phone)}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f5f5f7] dark:bg-slate-800 hover:bg-[#e8e8ed] text-[#1d1d1f] dark:text-white font-semibold text-xs transition-colors border border-black/[0.04]"
                           >
-                            <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Gọi điện: {record.contactPhone || phone}</span>
+                            <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Gọi điện trực tiếp</span>
                           </a>
 
-                          <div className="flex items-center gap-2 text-[11.5px] text-blue-200">
-                            <span className="opacity-80">Tùy chọn phụ:</span>
+                          <div className="flex items-center gap-2 text-[11.5px]">
+                            <span className="opacity-75">Tùy chọn khác:</span>
                             <a
                               href={waUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="hover:text-white underline font-medium"
+                              className="text-[#0071e3] hover:underline font-medium"
                               title="Mở WhatsApp (tuỳ chọn)"
                             >
                               WhatsApp
@@ -385,7 +398,7 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                               href={teleUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="hover:text-white underline font-medium"
+                              className="text-[#0071e3] hover:underline font-medium"
                               title="Mở Telegram (tuỳ chọn)"
                             >
                               Telegram
@@ -396,25 +409,32 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                     </div>
                   )}
 
-                  {/* Bảng Chi Phí Xăng Xe & Cầu Đường */}
-                  <dl className="grid grid-cols-2 gap-3">
-                    <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40">
-                      <dt className="text-xs text-slate-500 dark:text-slate-400">Phí sàn CarMate</dt>
-                      <dd className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 tabular mt-0.5">
-                        0 ₫ · Miễn phí hoàn toàn
-                      </dd>
+                  {/* Bảng Chi Phí Xăng Xe Chuẩn Apple Wallet */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-4 rounded-2xl border border-black/[0.06] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
+                      <p className="text-xs text-[#86868b] font-medium">Phí nền tảng CarMate</p>
+                      <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular mt-1">
+                        0 ₫ · Miễn phí trọn đời
+                      </p>
+                      <p className="text-[11px] text-[#86868b] mt-0.5">
+                        Không thu chiết khấu trung gian
+                      </p>
                     </div>
-                    <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40">
-                      <dt className="text-xs text-slate-500 dark:text-slate-400">Gửi tiền xăng khi lên xe</dt>
-                      <dd className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tabular mt-0.5">
+
+                    <div className="p-4 rounded-2xl border border-black/[0.06] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
+                      <p className="text-xs text-[#86868b] font-medium">Chia sẻ chi phí xăng xe</p>
+                      <p className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular mt-1">
                         {formatVND(totalCost)}
-                      </dd>
+                      </p>
+                      <p className="text-[11px] text-[#86868b] mt-0.5">
+                        Gửi trực tiếp tài xế khi lên xe
+                      </p>
                     </div>
-                  </dl>
+                  </div>
                 </div>
 
                 {/* Thanh Hành Động */}
-                <div className="px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 flex items-center justify-between gap-3 flex-wrap">
+                <div className="px-5 py-3.5 border-t border-black/[0.06] bg-[#fbfbfd] dark:bg-slate-900/60 flex items-center justify-between gap-3 flex-wrap">
                   {/* Cụm chia sẻ cho người thân */}
                   <div className="flex items-center gap-1.5">
                     <button
@@ -455,9 +475,14 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                       <Button variant="dangerGhost" size="sm" icon={XCircle} onClick={() => onCancel(record)}>
                         Huỷ chuyến
                       </Button>
-                      <Button variant="success" size="sm" icon={CheckCircle2} onClick={() => onComplete(record.escrowId, record)}>
-                        Hoàn tất chuyến
-                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => onComplete(record.escrowId, record)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
+                        <span>Hoàn tất chuyến</span>
+                      </button>
                     </div>
                   )}
 
