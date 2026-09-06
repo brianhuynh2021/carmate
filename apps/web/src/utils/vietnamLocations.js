@@ -486,12 +486,90 @@ function removeAccents(str = '') {
 }
 
 /**
+ * TOP ĐẦU MỐI GIAO THÔNG & BẾN XE TRỌNG ĐIỂM TOÀN QUỐC (MIT & STANFORD HCI GOLD STANDARD)
+ * Khi ô tìm kiếm rỗng, hiển thị các Hubs lớn nhất toàn quốc (Sân bay, Bến xe liên tỉnh, Thành phố lớn)
+ * thay vì các địa danh cấp huyện nhỏ lẻ để tránh gây hiểu lầm.
+ */
+export const TOP_TRANSIT_HUBS = [
+  {
+    name: 'Sân bay Quốc tế Tân Sơn Nhất',
+    category: 'airport',
+    detail: 'Đường Trường Sơn, Phường 2, Quận Tân Bình, TP.HCM (Nhà ga T1, T2)',
+    icon: 'airport',
+    keywords: ['san bay tan son nhat', 'tan son nhat', 'tan binh', 'truong son', 'tphcm', 'sai gon']
+  },
+  {
+    name: 'Sân bay Quốc tế Nội Bài',
+    category: 'airport',
+    detail: 'Xã Phú Minh, Huyện Sóc Sơn, Hà Nội (Nhà ga T1, T2)',
+    icon: 'airport',
+    keywords: ['san bay noi bai', 'noi bai', 'soc son', 'ha noi']
+  },
+  {
+    name: 'Bến xe Miền Đông mới',
+    category: 'station',
+    detail: '501 Hoàng Hữu Nam, TP. Thủ Đức, TP.HCM (Xa Lộ Hà Nội)',
+    icon: 'station',
+    keywords: ['ben xe mien dong moi', 'mien dong moi', 'thu duc', 'xa lo ha noi', 'sai gon']
+  },
+  {
+    name: 'Bến xe Mỹ Đình (Hà Nội)',
+    category: 'station',
+    detail: 'Số 20 Phạm Hùng, Phường Mỹ Đình 2, Nam Từ Liêm, Hà Nội',
+    icon: 'station',
+    keywords: ['ben xe my dinh', 'my dinh', 'pham hung', 'ha noi']
+  },
+  {
+    name: 'Bến xe Miền Tây',
+    category: 'station',
+    detail: '395 Kinh Dương Vương, Phường An Lạc, Quận Bình Tân, TP.HCM',
+    icon: 'station',
+    keywords: ['ben xe mien tay', 'kinh duong vuong', 'binh tan', 'an lac', 'sai gon']
+  },
+  {
+    name: 'Sài Gòn (TP.HCM)',
+    category: 'city',
+    detail: 'Trung tâm TP. Hồ Chí Minh (Quận 1, 3, Bình Thạnh, Thủ Đức...)',
+    icon: 'city',
+    keywords: ['sai gon', 'tp.hcm', 'tp hcm', 'ho chi minh']
+  },
+  {
+    name: 'Hà Nội',
+    category: 'city',
+    detail: 'Thủ đô Hà Nội (Hoàn Kiếm, Ba Đình, Cầu Giấy, Tây Hồ...)',
+    icon: 'city',
+    keywords: ['ha noi', 'thu do']
+  },
+  {
+    name: 'Bến xe Vũng Tàu',
+    category: 'station',
+    detail: 'Nam Kỳ Khởi Nghĩa, Phường Thắng Tam, TP. Vũng Tàu',
+    icon: 'station',
+    keywords: ['vung tau', 'ben xe vung tau']
+  },
+  {
+    name: 'Bến xe Phan Thiết',
+    category: 'station',
+    detail: '1 Từ Văn Tư, Phường Phú Trinh, TP. Phan Thiết, Bình Thuận',
+    icon: 'station',
+    keywords: ['phan thiet', 'ben xe phan thiet', 'mui ne']
+  },
+  {
+    name: 'Bến xe Liên tỉnh Đà Lạt',
+    category: 'station',
+    detail: 'Số 1 Tô Hiến Thành, Phường 3, TP. Đà Lạt, Lâm Đồng',
+    icon: 'station',
+    keywords: ['da lat', 'ben xe da lat', 'lam dong']
+  }
+];
+
+/**
  * Tìm gợi ý địa điểm cục bộ tức thời 0ms (Fuzzy token matching)
  */
 export function searchLocations(query = '', limit = 8) {
   const clean = removeAccents(query);
   if (!clean) {
-    return POPULAR_LOCATIONS.slice(0, limit);
+    return TOP_TRANSIT_HUBS.slice(0, limit);
   }
 
   const tokens = clean.split(/[\s,.-]+/).filter(t => t.length >= 2);

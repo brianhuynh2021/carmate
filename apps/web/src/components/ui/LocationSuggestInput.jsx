@@ -11,7 +11,9 @@ import {
   Loader2, 
   Hospital, 
   Navigation,
-  Check
+  Check,
+  Clock,
+  Sparkles
 } from 'lucide-react';
 import { searchLocations, fetchLocationSuggestions, POPULAR_LOCATIONS } from '../../utils/vietnamLocations.js';
 
@@ -106,10 +108,27 @@ export default function LocationSuggestInput({
     };
   }, []);
 
+  const [recentLocations, setRecentLocations] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('carmate_recent_places') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
   const handleSelect = (item) => {
     const finalName = item.name || value;
     onChange?.(finalName);
     onSelect?.(item);
+
+    // Lưu vào lịch sử tìm kiếm gần đây (Tối đa 4 mục gần nhất theo chuẩn Grab / Maps)
+    try {
+      const recents = JSON.parse(localStorage.getItem('carmate_recent_places') || '[]');
+      const filtered = [item, ...recents.filter(r => r.name !== item.name)].slice(0, 4);
+      localStorage.setItem('carmate_recent_places', JSON.stringify(filtered));
+      setRecentLocations(filtered);
+    } catch {}
+
     setIsOpen(false);
   };
 
@@ -220,11 +239,20 @@ export default function LocationSuggestInput({
               : 'left-0 w-full sm:min-w-[380px] md:min-w-[420px] max-w-[94vw]'
           }`}
         >
-          {/* Header Bảng Gợi Ý */}
+          {/* Header Bảng Gợi Ý (Stanford HCI & MIT Media Lab Clear Framing) */}
           <div className="px-4 py-3 bg-[#f5f5f7] dark:bg-white/[0.04] border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
-              <Search className="w-3.5 h-3.5 text-[#0071e3]" />
-              <span>Điểm đón & trả gợi ý</span>
+              {value.trim() ? (
+                <>
+                  <Search className="w-3.5 h-3.5 text-[#0071e3]" />
+                  <span>Gợi ý theo từ khoá</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Bến xe & Đầu mối phổ biến</span>
+                </>
+              )}
             </div>
 
             {loading ? (
@@ -233,8 +261,8 @@ export default function LocationSuggestInput({
                 <span>Đang tìm...</span>
               </span>
             ) : (
-              <span className="text-[11.5px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
-                {displayedSuggestions.length} kết quả
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                {value.trim() ? `${displayedSuggestions.length} kết quả` : '1-chạm chọn nhanh'}
               </span>
             )}
           </div>
@@ -269,6 +297,52 @@ export default function LocationSuggestInput({
 
           {/* Danh sách địa điểm gợi ý */}
           <ul className="py-1 max-h-72 sm:max-h-80 overflow-y-auto divide-y divide-slate-100/70 dark:divide-white/[0.04]">
+            {/* Lịch sử điểm đón gần đây nếu có */}
+            {!value.trim() && recentLocations.length > 0 && activeCategoryFilter === 'all' && (
+              <>
+                <li className="bg-slate-50/70 dark:bg-white/[0.02] px-4 py-1.5 border-b border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3 h-3 text-[#0071e3]" />
+                    <span>Lịch sử tìm kiếm gần đây</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      localStorage.removeItem('carmate_recent_places');
+                      setRecentLocations([]);
+                    }}
+                    className="text-[10.5px] text-slate-400 hover:text-rose-500 cursor-pointer"
+                  >
+                    Xoá
+                  </button>
+                </li>
+                {recentLocations.map((item, idx) => (
+                  <li key={`recent-${item.name}-${idx}`}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(item)}
+                      className="w-full px-4 py-2 text-left flex items-center justify-between gap-3 hover:bg-slate-100/80 dark:hover:bg-white/[0.06] transition-colors cursor-pointer text-slate-900 dark:text-slate-200"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-blue-50 dark:bg-blue-950/40 text-[#0071e3]">
+                          <Clock className="w-3.5 h-3.5" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold truncate leading-tight text-slate-900 dark:text-white">
+                            {item.name}
+                          </p>
+                          <p className="text-[10.5px] text-slate-400 truncate">
+                            {item.detail}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
+                    </button>
+                  </li>
+                ))}
+              </>
+            )}
             {/* Mục 1: Lựa chọn giữ nguyên chuỗi người dùng đã nhập */}
             {value.trim() && (
               <li>
