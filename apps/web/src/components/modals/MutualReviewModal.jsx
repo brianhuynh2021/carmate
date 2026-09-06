@@ -35,10 +35,10 @@ const PASSENGER_WARNING_TAGS = [
 ];
 
 export default function MutualReviewModal({ booking, onClose, onSubmitReview }) {
-  if (!booking) return null;
+  // Hook phải gọi trước mọi early return (Rules of Hooks)
 
   // Tự động nhận diện vai trò mặc định (hoặc cho phép hoán đổi)
-  const defaultIsDriver = booking.partyRole?.includes('Chủ xe đón') || false;
+  const defaultIsDriver = booking?.partyRole?.includes('Chủ xe đón') || false;
   const [reviewerRole, setReviewerRole] = useState(defaultIsDriver ? 'driver' : 'passenger');
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
@@ -83,6 +83,8 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
   const isLowRating = rating <= 2;
   const hasWarningTag = selectedTags.some(t => warningTags.includes(t));
+
+  if (!booking) return null;
 
   return (
     <Modal

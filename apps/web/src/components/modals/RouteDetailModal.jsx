@@ -26,14 +26,12 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
   const [locationError, setLocationError] = useState(null);
   const [selectedQuickStop, setSelectedQuickStop] = useState('');
 
-  if (!trip) return null;
-
-  const corridor = getRouteCorridor(trip.routeCategory);
-  const isDriver = trip.type === 'driver_offer';
-  const price = trip.basePricePerSeat || trip.expectedPrice || trip.suggestedContribution || 180000;
-  const tripFrom = decodeHtmlEntities(trip.from);
-  const tripTo = decodeHtmlEntities(trip.to);
-  const waypointNote = decodeHtmlEntities(trip.waypointNote);
+  const corridor = trip ? getRouteCorridor(trip.routeCategory) : null;
+  const isDriver = trip?.type === 'driver_offer';
+  const price = trip ? (trip.basePricePerSeat || trip.expectedPrice || trip.suggestedContribution || 180000) : 0;
+  const tripFrom = decodeHtmlEntities(trip?.from);
+  const tripTo = decodeHtmlEntities(trip?.to);
+  const waypointNote = decodeHtmlEntities(trip?.waypointNote);
 
   // Tìm toạ độ 2 đầu điểm đón và điểm trả nếu không có corridor cố định
   const fromCoords = corridor ? corridor.startLandmark : findLocationCoords(tripFrom);
@@ -61,7 +59,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
 
   // Khởi tạo bản đồ Leaflet
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!trip || !mapContainerRef.current) return;
 
     // Hủy map cũ nếu có
     if (mapInstanceRef.current) {
@@ -201,6 +199,9 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
       }
     };
   }, [corridor, trip, userLocation]);
+
+  // Mọi hook đã được gọi ở trên — an toàn để early return tại đây
+  if (!trip) return null;
 
   // Lấy toạ độ GPS thực tế của người dùng
   const handleGetLiveGPS = () => {

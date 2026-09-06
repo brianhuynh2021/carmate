@@ -4,15 +4,14 @@ import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
 export default function CarPhotosModal({ trip, isOpen, onClose }) {
-  if (!isOpen || !trip) return null;
+  // Hook phải luôn được gọi trước mọi early return (Rules of Hooks)
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  const photos = Array.isArray(trip.carPhotos) && trip.carPhotos.length >= 1
+  const photos = Array.isArray(trip?.carPhotos) && trip.carPhotos.length >= 1
     ? trip.carPhotos
     : [];
 
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  if (photos.length === 0) return null;
+  if (!isOpen || !trip || photos.length === 0) return null;
 
   const currentPhoto = photos[activeIndex] || photos[0];
   const total = photos.length;

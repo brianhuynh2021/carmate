@@ -1,0 +1,5 @@
+node_modules
+dist
+archive
+apps/api/data
+package-lock.json

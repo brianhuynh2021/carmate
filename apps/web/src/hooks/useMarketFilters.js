@@ -35,8 +35,8 @@ export function matchLocationFuzzy(fieldValue, query) {
   }
 
   // 3. Khớp cụm từ khóa (Token matching: nếu có từ định danh >= 3 ký tự trùng nhau)
-  const queryTokens = normQuery.split(/[\s,–—\-\/]+/).filter(t => t.length >= 3);
-  const fieldTokens = normField.split(/[\s,–—\-\/]+/).filter(t => t.length >= 3);
+  const queryTokens = normQuery.split(/[\s,–—\-/]+/).filter(t => t.length >= 3);
+  const fieldTokens = normField.split(/[\s,–—\-/]+/).filter(t => t.length >= 3);
   const common = queryTokens.filter(t => fieldTokens.includes(t));
   if (common.length >= 1) {
     return true;

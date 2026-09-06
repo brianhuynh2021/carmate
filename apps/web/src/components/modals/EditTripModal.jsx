@@ -10,18 +10,18 @@ import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
 
 export default function EditTripModal({ trip, onClose, onSave }) {
-  if (!trip) return null;
+  // Hook phải gọi trước mọi early return (Rules of Hooks)
 
-  const isDriver = trip.type === 'driver_offer';
-  const [fromLocation, setFromLocation] = useState(trip.from || '');
-  const [toLocation, setToLocation] = useState(trip.to || '');
-  const [price, setPrice] = useState(trip.basePricePerSeat || trip.expectedPrice || 150000);
-  const [seats, setSeats] = useState(trip.availableSeats || trip.seatsNeeded || 3);
-  const [date, setDate] = useState(trip.date || 'Hôm nay');
-  const [timeSlot, setTimeSlot] = useState(trip.timeSlot || '07:00-09:00');
-  const [exactTime, setExactTime] = useState(trip.exactTime || '');
-  const [waypointNote, setWaypointNote] = useState(trip.waypointNote || '');
-  const [notes, setNotes] = useState(trip.notes || '');
+  const isDriver = trip?.type === 'driver_offer';
+  const [fromLocation, setFromLocation] = useState(trip?.from || '');
+  const [toLocation, setToLocation] = useState(trip?.to || '');
+  const [price, setPrice] = useState(trip?.basePricePerSeat || trip?.expectedPrice || 150000);
+  const [seats, setSeats] = useState(trip?.availableSeats || trip?.seatsNeeded || 3);
+  const [date, setDate] = useState(trip?.date || 'Hôm nay');
+  const [timeSlot, setTimeSlot] = useState(trip?.timeSlot || '07:00-09:00');
+  const [exactTime, setExactTime] = useState(trip?.exactTime || '');
+  const [waypointNote, setWaypointNote] = useState(trip?.waypointNote || '');
+  const [notes, setNotes] = useState(trip?.notes || '');
   const [saving, setSaving] = useState(false);
 
   // Đảo chiều điểm đi / điểm đến ⇄
@@ -103,6 +103,8 @@ export default function EditTripModal({ trip, onClose, onSave }) {
 
   const quickDates = ['Hôm nay', 'Ngày mai', 'Thứ 7', 'Chủ nhật'];
   const seatOptions = [1, 2, 3, 4, 5, 6, 7];
+
+  if (!trip) return null;
 
   return (
     <Modal

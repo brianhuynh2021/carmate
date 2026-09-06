@@ -1376,6 +1376,40 @@ async function runTests() {
   } catch (err) {
     assert(false, '24. Kiểm thử Xóa Tài Khoản Vĩnh Viễn', err.message);
   }
+  console.log('\n--- 25. Kiểm thử Phân Quyền Toàn Bộ Cổng Admin (Anti-BOLA Regression Guard) ---');
+  // Quét MỌI route /admin/* (trừ /admin/auth là cổng đăng nhập): không token
+  // đều phải bị chặn 401/403. Đây là lưới chống lỗ hổng "quên requireAdmin"
+  // tái diễn mỗi khi thêm endpoint admin mới.
+  try {
+    const adminRoutes = [
+      ['GET', '/api/admin/metrics'],
+      ['GET', '/api/admin/trips'],
+      ['GET', '/api/admin/users'],
+      ['GET', '/api/admin/reports'],
+      ['GET', '/api/admin/ai-intelligence'],
+      ['GET', '/api/admin/analytics/summary'],
+      ['PATCH', '/api/admin/trips/DRV-TEST/toggle-hide'],
+      ['DELETE', '/api/admin/trips/DRV-TEST'],
+      ['PATCH', '/api/admin/users/USR-TEST'],
+      ['PATCH', '/api/admin/users/USR-TEST/status']
+    ];
+
+    let blockedCount = 0;
+    for (const [method, path] of adminRoutes) {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        ...(method !== 'GET' ? { body: '{}' } : {})
+      });
+      const blocked = res.status === 401 || res.status === 403;
+      assert(blocked, `Admin Guard: ${method} ${path} bị chặn khi không có quyền (nhận ${res.status})`);
+      if (blocked) blockedCount += 1;
+    }
+    assert(blockedCount === adminRoutes.length, `Admin Guard: Toàn bộ ${adminRoutes.length} route admin đều yêu cầu xác thực`);
+  } catch (err) {
+    assert(false, '25. Kiểm thử Phân Quyền Toàn Bộ Cổng Admin', err.message);
+  }
+
   const passed = results.filter(r => r.pass).length;
   const failed = results.filter(r => !r.pass).length;
   const total = results.length;
