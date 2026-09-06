@@ -7,6 +7,9 @@
     "apps/*",
     "packages/*"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "node apps/api/src/index.js",
     "start": "node apps/api/src/index.js",
