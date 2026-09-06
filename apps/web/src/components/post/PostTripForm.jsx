@@ -189,6 +189,7 @@ export default function PostTripForm({ onSubmit, currentUser }) {
   // Lộ trình hoàn toàn tự do toàn quốc (Hà Nội, Hải Phòng, Đà Nẵng, Bình Phước, Sài Gòn...)
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
+  const [waypointNote, setWaypointNote] = useState('');
   const [timeSlot, setTimeSlot] = useState('07:00-09:00');
   const [exactTime, setExactTime] = useState('');
   const [carType, setCarType] = useState('Mitsubishi Xpander (Xe 7 chỗ)');
