@@ -2,7 +2,7 @@
 
 > **Website chính thức:** [https://carmate.vn](https://carmate.vn)  
 > **Kiến trúc Monorepo:** `@carmate/shared` • `@carmate/web` • `@carmate/api`  
-> **Triết lý sản phẩm:** Kết hợp 4 trường phái **Google** (Tối giản & PLG) • **MIT** (Tối ưu hiệu năng 85KB) • **Stanford** (Thấu cảm văn hoá đồng hương & Zalo) • **Cursor Founder** (Khởi nghiệp Lean 0đ, sáng tạo bản địa).
+> **Triết lý sản phẩm:** Tối giản & Tinh gọn (Lean 0đ) • Tối ưu hiệu năng tải trang (< 85KB gzipped) • Bảo mật cao cấp (Fail-closed, OWASP Top 10) • Thấu cảm sâu sắc văn hoá kết nối bản địa.
 
 ---
 

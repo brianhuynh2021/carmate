@@ -12,7 +12,8 @@
     "start": "node apps/api/src/index.js",
     "dev:all": "node apps/api/src/index.js",
     "build": "npm run build --workspace=@carmate/web",
-    "preview": "npm run preview --workspace=@carmate/web"
+    "preview": "npm run preview --workspace=@carmate/web",
+    "test": "node scripts/test-local-e2e.js"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

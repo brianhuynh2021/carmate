@@ -21,9 +21,9 @@ export const SITE_INFO = {
   facebook: 'https://www.facebook.com/profile.php?id=61593891160413',
   foundedYear: 2024,
   stats: {
-    members: 12800,
-    tripsCompleted: 41500,
-    routes: 10,
+    members: 250,
+    tripsCompleted: 180,
+    routes: 8,
     avgRating: 4.9
   }
 };

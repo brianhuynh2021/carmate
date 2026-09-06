@@ -46,9 +46,9 @@ import EmptyState from './components/ui/EmptyState.jsx';
 export default function App() {
   const { t } = useI18n();
 
-  // Cố định phong cách thiết kế Obsidian Dark của Cursor (Zero-glare, eye-friendly)
+  // Đảm bảo giao diện Clean Light Theme sáng sủa, sạch sẽ mặc định
   useEffect(() => {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('dark');
   }, []);
 
   // Nhận diện Subdomain chuyên dụng: ops.carmate.vn / admin.carmate.vn / ?portal=ops
@@ -186,6 +186,18 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
+  const [pendingBookingTrip, setPendingBookingTrip] = useState(null);
+
+  // Kích hoạt ghép chuyến có bảo vệ danh tính: Chưa đăng nhập sẽ yêu cầu xác thực OTP trước
+  const handleInitiateBook = (trip) => {
+    if (!currentUser) {
+      setPendingBookingTrip(trip);
+      setShowAuthModal(true);
+      showToast('Vui lòng xác thực số điện thoại để kết nối trực tiếp với chủ xe');
+      return;
+    }
+    setSelectedItemForEscrow(trip);
+  };
 
   const handleAuthSuccess = (user, tripIds = []) => {
     setCurrentUser(user);
@@ -203,6 +215,12 @@ export default function App() {
     }
     updateMyTripsCount();
     showToast(`Chào mừng ${user.name}! Đã đăng nhập thành công.`);
+
+    // Nếu người dùng đã chọn chuyến trước khi đăng nhập, tự động mở modal ghép chuyến
+    if (pendingBookingTrip) {
+      setSelectedItemForEscrow(pendingBookingTrip);
+      setPendingBookingTrip(null);
+    }
   };
 
   const handleLogout = () => {
@@ -663,7 +681,7 @@ export default function App() {
                       <TripCard
                         key={item.id}
                         item={item}
-                        onBook={setSelectedItemForEscrow}
+                        onBook={handleInitiateBook}
                         onShare={setTicketToShare}
                         onViewTrustProfile={setSelectedDriverForTrust}
                         onViewRoute={setSelectedTripForRoute}
@@ -678,7 +696,7 @@ export default function App() {
 
         {activeTab === 'match' && (
           <div className={`${container} py-8`}>
-            <MatchRadarView driverOffers={driverOffers} passengerRequests={passengerRequests} onBook={setSelectedItemForEscrow} onViewTrustProfile={setSelectedDriverForTrust} />
+            <MatchRadarView driverOffers={driverOffers} passengerRequests={passengerRequests} onBook={handleInitiateBook} onViewTrustProfile={setSelectedDriverForTrust} />
           </div>
         )}
 
@@ -741,7 +759,13 @@ export default function App() {
 
       {/* Modals */}
       {selectedItemForEscrow && (
-        <EscrowBookingModal item={selectedItemForEscrow} onClose={() => setSelectedItemForEscrow(null)} onConfirmBooking={handleConfirmBooking} onViewTrustProfile={setSelectedDriverForTrust} />
+        <EscrowBookingModal
+          item={selectedItemForEscrow}
+          currentUser={currentUser}
+          onClose={() => setSelectedItemForEscrow(null)}
+          onConfirmBooking={handleConfirmBooking}
+          onViewTrustProfile={setSelectedDriverForTrust}
+        />
       )}
       {selectedDriverForTrust && (
         <TrustProfileModal
@@ -749,7 +773,7 @@ export default function App() {
           onClose={() => setSelectedDriverForTrust(null)}
           onBook={(item) => {
             setSelectedDriverForTrust(null);
-            setSelectedItemForEscrow(item);
+            handleInitiateBook(item);
           }}
         />
       )}
@@ -784,7 +808,7 @@ export default function App() {
           onClose={() => setSelectedTripForRoute(null)}
           onBook={(item) => {
             setSelectedTripForRoute(null);
-            setSelectedItemForEscrow(item);
+            handleInitiateBook(item);
           }}
         />
       )}

@@ -126,7 +126,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                   Trợ Lý CarMate AI (AI Concierge)
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary-100 text-primary-800 dark:bg-primary-950 dark:text-primary-300">
-                  Stanford + MIT
+                  AI Dispatcher
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">

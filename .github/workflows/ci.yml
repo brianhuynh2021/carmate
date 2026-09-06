@@ -1,0 +1,62 @@
+name: CarMate CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  test:
+    name: Build & E2E Security Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      NODE_ENV: test
+      PORT: 5173
+      JWT_SECRET: ci_test_jwt_secret_must_be_long_enough_32_chars_ok
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Start Server in Background
+        run: |
+          node apps/api/src/index.js &
+          echo $! > server.pid
+
+      - name: Wait for Server Readiness
+        run: |
+          for i in {1..30}; do
+            if curl -s -f http://localhost:5173/api/health > /dev/null; then
+              echo "Server is healthy and ready!"
+              exit 0
+            fi
+            echo "Waiting for server to start... ($i/30)"
+            sleep 1
+          done
+          echo "Server failed to start in time"
+          exit 1
+
+      - name: Run E2E Test Suite (97+ Tests)
+        run: npm test
+
+      - name: Stop Server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) 2>/dev/null || true
+          fi

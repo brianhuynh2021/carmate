@@ -79,7 +79,8 @@ export async function createBooking(req, res) {
         body.driverPhone = tripPhone;
         body.targetPhone = tripPhone;
         body.driverId = targetTrip.userId;
-        body.contactPhone = body.contactPhone || tripPhone;
+        body.contactPhone = tripPhone || body.contactPhone;
+        body.phoneReal = tripPhone || body.phoneReal;
         body.contactName = targetTrip.publicName || body.contactName;
         body.targetTripId = targetTrip.id;
       }

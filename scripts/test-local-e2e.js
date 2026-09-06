@@ -25,6 +25,7 @@ function assert(condition, testName, details = '') {
 
 async function runTests() {
   console.log('\n🚀 BẮT ĐẦU KIỂM THỬ TOÀN DIỆN LOCAL CARMATE (http://localhost:5173)\n');
+  let sharedTokenA = '';
 
   // 1. Kiểm tra Web Frontend Server
   console.log('--- 1. Kiểm thử Giao diện Web Frontend ---');
@@ -113,8 +114,7 @@ async function runTests() {
     const postTripRes = await fetch(`${BASE_URL}/api/trips`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-carmate-test': 'e2e-runner'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(newTripPayload)
     });
@@ -332,6 +332,11 @@ async function runTests() {
     const specificTrustRes = await fetch(`${BASE_URL}/api/trust/tuan-bp`).then(r => r.json());
     assert(specificTrustRes.success === true && specificTrustRes.data.id === 'tuan-bp', 'Tải hồ sơ thành viên cụ thể (tuan-bp)');
     assert(Array.isArray(specificTrustRes.data.recentMutualReviews), 'Có danh sách nhận xét 2 chiều từ cộng đồng');
+
+    const notFoundTrustRes = await fetch(`${BASE_URL}/api/trust/random-xyz-999`);
+    const notFoundJson = await notFoundTrustRes.json();
+    assert(notFoundTrustRes.status === 404, 'Truy vấn ID hồ sơ không tồn tại trả về HTTP 404');
+    assert(notFoundJson.success === false, 'Trả về { success: false } rõ ràng cho ID không tồn tại');
   } catch (err) {
     assert(false, 'Kiểm thử Trust Profile', err.message);
   }
@@ -459,6 +464,7 @@ async function runTests() {
     const loginAData = await loginARes.json();
     assert(loginARes.status === 200 && typeof loginAData.token === 'string', 'Đăng nhập User A nhận JWT Token hợp lệ');
     const tokenA = loginAData.token;
+    sharedTokenA = tokenA;
 
     // 11.2 Kiểm tra endpoint /api/auth/me với tokenA
     const meRes = await fetch(`${BASE_URL}/api/auth/me`, {
@@ -588,17 +594,27 @@ async function runTests() {
     // 13.4 Chống Stored XSS: input có HTML tag được escape
     const xssTripRes = await fetch(`${BASE_URL}/api/trips`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
       body: JSON.stringify({
         from: '<img src=x onerror=alert(1)>',
         to: '<svg onload=alert(2)>',
         phoneReal: '0984883750',
+        userId: 'USR-0984883750',
         routeCategory: 'Tuyến QL13',
         direction: 'Bình Phước ➔ TP.HCM'
       })
     });
     const xssTripData = await xssTripRes.json();
     assert(xssTripRes.status === 201 && !xssTripData.data.from.includes('<img'), 'Chống Stored XSS: Ký tự HTML độc hại được mã hóa thực thể an toàn');
+    if (xssTripData?.data?.id && sharedTokenA) {
+      await fetch(`${BASE_URL}/api/trips/${xssTripData.data.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sharedTokenA}` }
+      }).catch(() => {});
+    }
 
     // 13.5 Radar so khớp O(N+M) hoạt động và che PII
     const matchesRes = await fetch(`${BASE_URL}/api/matches?route=Tuy%E1%BA%BFn+QL13`).then(r => r.json());
