@@ -41,15 +41,15 @@ export function RouteTimeline({ from, to, routeCategory, waypointNote, compact =
             <span className="w-1.5 h-1.5 rounded-full bg-[#107c41]" />
           </span>
           {/* Đường line kết nối giữa điểm đón và điểm trả */}
-          <span className={`w-[1.5px] ${compact ? 'h-4' : 'h-5'} bg-slate-200 dark:bg-slate-700 my-0.5`} />
+          <span className={`w-[1.5px] ${compact ? 'h-4' : 'min-h-[22px] h-full'} bg-black/[0.08] dark:bg-white/10 my-1`} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className={`font-semibold text-slate-900 dark:text-white leading-tight truncate ${compact ? 'text-xs' : 'text-[14px]'}`}>
+          <p className={`font-semibold text-[#1d1d1f] dark:text-white leading-snug truncate ${compact ? 'text-xs' : 'text-[14px]'}`}>
             {fromIsMap ? '📍 Vị trí ghim trên Google Maps' : fromParsed.main}
           </p>
           {fromParsed.sub && !fromIsMap && (
-            <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-normal leading-tight">
+            <p className="text-[12px] text-[#6e6e73] dark:text-slate-400 mt-0.5 truncate font-normal leading-snug">
               {fromParsed.sub}
             </p>
           )}
@@ -65,11 +65,11 @@ export function RouteTimeline({ from, to, routeCategory, waypointNote, compact =
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className={`font-semibold text-slate-900 dark:text-white leading-tight truncate ${compact ? 'text-xs' : 'text-[14px]'}`}>
+          <p className={`font-semibold text-[#1d1d1f] dark:text-white leading-snug truncate ${compact ? 'text-xs' : 'text-[14px]'}`}>
             {toIsMap ? '📍 Vị trí ghim trên Google Maps' : toParsed.main}
           </p>
           {toParsed.sub && !toIsMap && (
-            <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-normal leading-tight">
+            <p className="text-[12px] text-[#6e6e73] dark:text-slate-400 mt-0.5 truncate font-normal leading-snug">
               {toParsed.sub}
             </p>
           )}
@@ -113,7 +113,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
   const avatarLetter = (driverDisplayName.replace(/^(Chủ xe|Bác tài|Khách|Anh|Chị)\s*/i, '').trim()[0] || (isDriver ? 'T' : 'K')).toUpperCase();
 
   return (
-    <article id={`trip-${item.id}`} className="p-4 sm:p-5 flex flex-col relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_26px_rgba(0,0,0,0.07)] hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200">
+    <article id={`trip-${item.id}`} className="p-4 sm:p-5 flex flex-col relative overflow-hidden rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:border-black/[0.14] dark:hover:border-white/20 transition-all duration-200">
       {/* ── 1. HEADER DANH TÍNH CHỦ XE / HÀNH KHÁCH ── */}
       <header className="flex items-center justify-between gap-3">
         <button
@@ -122,17 +122,17 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           title="Xem hồ sơ tín nhiệm & xác minh"
           className="flex items-center gap-2.5 min-w-0 text-left cursor-pointer group"
         >
-          <span className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700/80 flex items-center justify-center text-slate-800 dark:text-slate-200 font-semibold text-xs shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+          <span className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-50 to-orange-100/70 dark:from-amber-950/40 dark:to-orange-950/30 text-amber-900 dark:text-amber-200 border border-amber-200/80 dark:border-amber-700/40 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
             {avatarLetter}
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-[13.5px] text-slate-900 dark:text-white truncate group-hover:text-[#0071e3] transition-colors">
+              <span className="font-semibold text-[13.5px] text-[#1d1d1f] dark:text-white truncate group-hover:text-[#0071e3] transition-colors">
                 {driverDisplayName}
               </span>
               <BadgeCheck className="w-3.5 h-3.5 text-[#0071e3] shrink-0" title="Thành viên đã xác thực CCCD & GPLX" />
             </div>
-            <p className="text-[11.5px] text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-[11.5px] text-[#86868b] dark:text-slate-400 truncate">
               {item.carType || (isConvenient ? 'Tài xế tiện chuyến' : 'Xe gia đình')}
               {item.hometown ? ` · ${item.hometown}` : ''}
             </p>
@@ -152,7 +152,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
               onClick={() => onShare(item)}
               title="Chia sẻ chuyến đi"
               aria-label="Chia sẻ chuyến đi"
-              className="w-7 h-7 rounded-full border border-slate-200 dark:border-slate-700 inline-flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="w-7 h-7 rounded-full border border-black/[0.08] dark:border-white/10 inline-flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] dark:hover:bg-white/5 transition-colors cursor-pointer"
             >
               <Share2 className="w-3 h-3" />
             </button>
@@ -163,12 +163,12 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
       {/* ── 2. THANH THỜI GIAN & LỘ TRÌNH ── */}
       <div className="mt-3.5 flex items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-medium text-[11.5px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f5f5f7] dark:bg-white/[0.06] text-[#1d1d1f] dark:text-white border border-black/[0.04] dark:border-white/10 font-medium text-[11.5px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#107c41] shrink-0" />
             <span>{getTimeSlotLabel(item, lang)}</span>
           </span>
           {distanceKm && (
-            <span className="text-[11.5px] text-slate-400 dark:text-slate-500 font-medium">
+            <span className="text-[11.5px] text-[#86868b] dark:text-slate-400 font-medium">
               ~{distanceKm} km
             </span>
           )}
@@ -184,14 +184,13 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         </button>
       </div>
 
-      {/* ── 3. TIMELINE HÀNH TRÌNH (TỐI GIẢN CHUẨN APPLE) ── */}
+      {/* ── 3. TIMELINE HÀNH TRÌNH (THIẾT KẾ THOÁNG ĐẠT, KHÔNG HỘP LỒNG HỘP) ── */}
       <div
         role="button"
         tabIndex={0}
         onClick={() => onViewRoute?.(item)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item); }}
-        title="Bấm để xem bản đồ lộ trình chi tiết & đo khoảng cách"
-        className="mt-2.5 py-3 px-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition-colors cursor-pointer group/route"
+        className="my-3 py-1 cursor-pointer group/route transition-opacity hover:opacity-90 select-none"
       >
         <RouteTimeline from={item.from} to={item.to} routeCategory={item.routeCategory} waypointNote={item.waypointNote} />
       </div>
@@ -206,13 +205,13 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
                   ⚡ Tiện chuyến
                 </span>
               ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 shrink-0">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#f5f5f7] dark:bg-white/[0.06] text-[#1d1d1f] dark:text-slate-200 border border-black/[0.06] dark:border-white/10 shrink-0">
                   🚗 Xe gia đình
                 </span>
               )}
               {/* Badge Nhận Gửi Kèm Đồ / Bưu Phẩm */}
               {(item.acceptsParcel || (Array.isArray(item.perks) && item.perks.some(p => /hàng|đồ|bưu phẩm/i.test(p)))) && (
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 shrink-0">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#f5f5f7] dark:bg-white/[0.06] text-[#515154] dark:text-slate-300 border border-black/[0.06] dark:border-white/10 shrink-0">
                   📦 Nhận gửi đồ
                 </span>
               )}
@@ -224,11 +223,11 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           )}
         </div>
 
-        <span className="text-[12px] font-medium text-slate-600 dark:text-slate-400 shrink-0">
+        <span className="text-[12px] font-medium text-[#515154] dark:text-slate-400 shrink-0">
           {isDriver ? (
-            <span>Còn <strong className="text-slate-900 dark:text-white font-semibold">{item.availableSeats}</strong> chỗ</span>
+            <span>Còn <strong className="text-[#1d1d1f] dark:text-white font-semibold">{item.availableSeats}</strong> chỗ</span>
           ) : (
-            <span>Cần <strong className="text-slate-900 dark:text-white font-semibold">{item.seatsNeeded || 1}</strong> chỗ</span>
+            <span>Cần <strong className="text-[#1d1d1f] dark:text-white font-semibold">{item.seatsNeeded || 1}</strong> chỗ</span>
           )}
         </span>
       </div>
@@ -241,7 +240,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
       )}
 
       {item.notes && (
-        <p className="mt-2 text-[12px] text-slate-500 dark:text-slate-400 line-clamp-1 italic">
+        <p className="mt-2 text-[12px] text-[#86868b] dark:text-slate-400 line-clamp-1 italic">
           &ldquo;{item.notes}&rdquo;
         </p>
       )}
@@ -250,21 +249,21 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
       {perks.length > 0 && (
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {perks.slice(0, 3).map((p) => (
-            <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50">
-              <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={2.5} />
+            <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] text-[#515154] dark:text-slate-300 bg-[#f5f5f7] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/10">
+              <Check className="w-3 h-3 text-[#107c41] shrink-0" strokeWidth={2.5} />
               <span>{p}</span>
             </span>
           ))}
         </div>
       )}
 
-      {/* ── 5. GIÁ & NÚT CÔNG CỤ (ACTION BUTTON) ── */}
-      <footer className="mt-auto pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
+      {/* ── 5. GIÁ & NÚT CÔNG CỤ (APPLE MIDNIGHT BUTTON) ── */}
+      <footer className="mt-auto pt-3.5 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-3">
         <div className="flex items-baseline gap-1">
-          <span className="text-xl sm:text-[22px] font-bold text-slate-900 dark:text-white tracking-tight leading-none">
+          <span className="text-xl sm:text-[22px] font-bold text-[#1d1d1f] dark:text-white tracking-tight leading-none">
             {formatVND(price)}
           </span>
-          <span className="text-[11.5px] text-slate-500 dark:text-slate-400">
+          <span className="text-[11.5px] text-[#86868b] dark:text-slate-400">
             /người
           </span>
         </div>
@@ -272,7 +271,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         <button
           type="button"
           onClick={() => onBook(item)}
-          className="h-9 px-4.5 rounded-xl text-xs font-semibold tracking-tight inline-flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-[0.98] shadow-xs bg-[#0071e3] hover:bg-[#0077ed] text-white"
+          className="h-9 px-4.5 rounded-xl text-xs font-semibold tracking-tight inline-flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-[0.98] shadow-xs bg-[#1d1d1f] hover:bg-[#2d2d2f] dark:bg-white dark:text-[#1d1d1f] dark:hover:bg-slate-100 text-white"
         >
           {isDriver ? 'Ghép chuyến' : 'Đón khách'}
         </button>
