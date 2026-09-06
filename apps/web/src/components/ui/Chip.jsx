@@ -10,12 +10,12 @@ export default function Chip({ active = false, onClick, icon: Icon, children, sh
       aria-pressed={active}
       className={`inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-full text-[12.5px] font-medium whitespace-nowrap select-none cursor-pointer border transition-all duration-150 touch-manipulation active:scale-95 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
         active
-          ? 'bg-primary-500/10 text-primary-700 border-primary-500/30 dark:bg-primary-500/15 dark:text-primary-300 dark:border-primary-500/40 font-bold shadow-2xs'
-          : 'bg-white/90 text-slate-700 border-slate-200/90 hover:bg-slate-50 hover:border-slate-300 dark:bg-[#151c2e] dark:text-slate-300 dark:border-white/[0.08] dark:hover:bg-[#1b243b] dark:hover:border-white/[0.16]'
+          ? 'bg-primary-500/20 text-primary-300 border-primary-500/50 font-bold shadow-sm'
+          : 'bg-[#151c2e] text-slate-300 border-white/[0.08] hover:bg-[#1b243b] hover:border-white/[0.18] hover:text-white'
       } ${className}`}
       {...rest}
     >
-      {active && showCheck ? <Check className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" strokeWidth={2.5} /> : Icon ? <Icon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" /> : null}
+      {active && showCheck ? <Check className="w-3.5 h-3.5 text-primary-400" strokeWidth={2.5} /> : Icon ? <Icon className="w-3.5 h-3.5 text-slate-400" /> : null}
       <span>{children}</span>
     </button>
   );

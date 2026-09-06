@@ -62,25 +62,25 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
 
   return (
     <>
-      {/* ── THANH CHỈ BÁO COMPACT TRÊN TRANG CHỦ ── */}
+      {/* ── THANH CHỈ BÁO COMPACT TRÊN TRANG CHỦ (Obsidian Glass Cursor-Grade) ── */}
       <div
         onClick={() => setShowDetail(true)}
-        className="flex items-center justify-between gap-2.5 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl bg-primary-50/80 dark:bg-primary-950/40 border border-primary-100/90 dark:border-primary-900/60 shadow-xs hover:border-primary-200 transition-colors cursor-pointer group"
+        className="flex items-center justify-between gap-2.5 px-3.5 sm:px-5 py-3 rounded-2xl bg-[#0f1422] border border-white/[0.08] hover:border-primary-500/40 hover:bg-[#131a2c] shadow-lg transition-all cursor-pointer group"
       >
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-[#151c2e] text-primary-600 dark:text-primary-400 inline-flex items-center justify-center shrink-0 shadow-xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-9 h-9 rounded-xl bg-primary-500/15 border border-primary-500/25 text-primary-400 inline-flex items-center justify-center shrink-0 shadow-xs">
             <Fuel className="w-4 h-4" />
           </span>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs sm:text-[13px] text-slate-700 dark:text-slate-300 font-semibold truncate">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs sm:text-[13.5px] text-slate-200 font-semibold truncate">
                 {info.shortName}:
               </span>
-              <strong className="font-extrabold text-xs sm:text-[13px] text-primary-700 dark:text-primary-300 tabular font-display whitespace-nowrap">
+              <strong className="font-extrabold text-xs sm:text-[13.5px] text-primary-400 tabular font-mono whitespace-nowrap">
                 ~{formatVND(info.suggestedRate)}{t('common.perSeat')}
               </strong>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+            <p className="text-[11.5px] text-slate-400 truncate mt-0.5">
               {t('benchmark.inclusive')}
             </p>
           </div>
@@ -88,7 +88,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowDetail(true); }}
-          className="text-xs font-bold text-primary-700 dark:text-primary-300 group-hover:text-primary-800 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full hover:bg-primary-100/60 dark:hover:bg-primary-900/40 inline-flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+          className="text-xs font-bold text-primary-400 group-hover:text-primary-300 px-2.5 py-1.5 rounded-full hover:bg-white/5 inline-flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
         >
           <span className="hidden sm:inline">{t('benchmark.basis')}</span>
           <ChevronRight className="w-4 h-4" />
