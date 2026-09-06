@@ -184,13 +184,13 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         </button>
       </div>
 
-      {/* ── 3. TIMELINE HÀNH TRÌNH (THIẾT KẾ THOÁNG ĐẠT, KHÔNG HỘP LỒNG HỘP) ── */}
+      {/* ── 3. KHỐI THÔNG TIN HÀNH TRÌNH (BỀ MẶT DỊU MẮT CHUẨN APPLE) ── */}
       <div
         role="button"
         tabIndex={0}
         onClick={() => onViewRoute?.(item)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item); }}
-        className="my-3 py-1 cursor-pointer group/route transition-opacity hover:opacity-90 select-none"
+        className="my-3 p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.03] dark:border-white/[0.06] hover:bg-[#ededf0] dark:hover:bg-white/[0.07] transition-all cursor-pointer group/route"
       >
         <RouteTimeline from={item.from} to={item.to} routeCategory={item.routeCategory} waypointNote={item.waypointNote} />
       </div>
@@ -257,7 +257,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         </div>
       )}
 
-      {/* ── 5. GIÁ & NÚT CÔNG CỤ (APPLE MIDNIGHT BUTTON) ── */}
+      {/* ── 5. GIÁ & NÚT CÔNG CỤ (APPLE SIGNATURE BLUE CTA BUTTON) ── */}
       <footer className="mt-auto pt-3.5 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-3">
         <div className="flex items-baseline gap-1">
           <span className="text-xl sm:text-[22px] font-bold text-[#1d1d1f] dark:text-white tracking-tight leading-none">
@@ -271,7 +271,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         <button
           type="button"
           onClick={() => onBook(item)}
-          className="h-9 px-4.5 rounded-xl text-xs font-semibold tracking-tight inline-flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-[0.98] shadow-xs bg-[#1d1d1f] hover:bg-[#2d2d2f] dark:bg-white dark:text-[#1d1d1f] dark:hover:bg-slate-100 text-white"
+          className="h-9 px-4.5 rounded-xl text-xs font-semibold tracking-tight inline-flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-[0.98] shadow-sm shadow-[#0071e3]/20 bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] dark:bg-[#0a84ff] dark:hover:bg-[#409cff] text-white"
         >
           {isDriver ? 'Ghép chuyến' : 'Đón khách'}
         </button>
