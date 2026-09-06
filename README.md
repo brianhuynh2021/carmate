@@ -22,118 +22,140 @@ CarMate được tạo ra để kết nối những người **CÙNG ĐƯỜNG, 
 
 ```text
 carmate/
-├── package.json                        # Root Workspace cấu hình ["apps/*", "packages/*"]
-├── ARCHITECTURE.md                     # Tài liệu kiến trúc chuyên sâu & Lộ trình 4 pha
-├── README.md                           # Hướng dẫn khởi chạy & kiểm thử local
+├── package.json                    # Workspace ["apps/*", "packages/*"], yêu cầu Node >= 22
+├── fly.toml                        # Cấu hình triển khai Fly.io (region Singapore)
+├── Dockerfile                      # Build 2 stage: build web -> chạy server Node
+├── .github/workflows/ci.yml        # CI: build + chạy toàn bộ E2E mỗi lần push
+├── ARCHITECTURE.md                 # Tài liệu kiến trúc & lộ trình
+├── PENTEST_REPORT.md               # Báo cáo kiểm thử xâm nhập & trạng thái khắc phục
+│
+├── scripts/
+│   ├── test-local-e2e.js           # Bộ E2E (API, phân quyền, PII, XSS, AI agent)
+│   ├── backup-db.js                # Sao lưu SQLite an toàn khi server đang chạy
+│   ├── restore-db.js               # Khôi phục từ bản sao lưu
+│   └── setup-backup-cron.sh        # Cài lịch sao lưu tự động hằng ngày
 │
 ├── packages/
-│   └── shared/                         # @carmate/shared (Dùng chung cho Web & API)
-│       ├── package.json
+│   └── shared/                     # @carmate/shared — dùng chung Web & API
 │       └── src/
-│           ├── index.js                # Xuất khẩu toàn bộ module tập trung
-│           ├── constants/
-│           │   ├── routes.js           # 10 tuyến quốc lộ chính & định mức giá
-│           │   ├── timeSlots.js        # Khung giờ di chuyển linh hoạt
-│           │   ├── policies.js         # Quy chế nền tảng: 0% phí, hai bên tự thoả thuận
-│           │   └── mockData.js         # Dữ liệu mẫu tích hợp nhãn đồng hương
-│           └── utils/
-│               ├── pricing.js          # Thuật toán tính giá trọn gói (xăng + cầu đường)
-│               └── zalo.js             # Helper mở Zalo chat 1-chạm & sinh nội dung vé
+│           ├── constants/          # routes, timeSlots, policies, mockData, site
+│           └── utils/              # pricing, zalo, geo, date
 │
 └── apps/
-    ├── web/                            # @carmate/web (React 19 + Vite + TailwindCSS)
-    │   ├── package.json
-    │   ├── vite.config.js              # Build siêu tốc < 160ms, Gzip ~85KB
+    ├── web/                        # @carmate/web (React 19 + Vite + Tailwind)
     │   └── src/
-    │       ├── App.jsx                 # Bộ điều phối state & tabs (~220 dòng sạch sẽ)
+    │       ├── App.jsx             # Điều phối state & tab
+    │       ├── api/client.js       # Lớp gọi API, tự đính kèm JWT
+    │       ├── i18n/               # Song ngữ Việt / Anh
+    │       ├── utils/              # ticketCanvas, nlpTripParser, vietnamLocations
     │       └── components/
-    │           ├── market/             # FilterBar (Chip quốc lộ), TripCard (0đ Zalo)
-    │           ├── post/               # PostTripForm (Chọn ngày T3-T4, lặp lại hàng tuần)
-    │           ├── radar/              # MatchRadarView (Khớp lệnh toạ độ 2 chiều)
-    │           ├── booked/             # BookedTripList (Nút Nhắn Zalo & Gọi Ngay)
-    │           └── modals/             # TicketShareModal, EscrowBookingModal, PolicyModal
+    │           ├── market/         # FilterBar, TripCard, RouteBenchmarkBar, Hero
+    │           ├── post/           # PostTripForm, SmartTripComposer, MyTripsView
+    │           ├── radar/          # MatchRadarView — ghép 2 chiều
+    │           ├── booked/         # BookedTripList — nút Zalo & Gọi ngay
+    │           ├── admin/          # AdminDashboardView
+    │           ├── agent/          # AiConciergeModal — trợ lý AI
+    │           ├── modals/         # Auth, Ticket, Review, Policy, Cancel...
+    │           ├── profile/        # TrustProfileView
+    │           ├── common/         # Header, Footer, BottomNav, ErrorBoundary
+    │           └── ui/             # Button, Modal, Field, Badge, Chip...
     │
-    └── api/                            # @carmate/api (Backend REST API Node.js)
-        ├── package.json
+    └── api/                        # @carmate/api (Express 5 + SQLite)
+        ├── data/                   # carmate.sqlite + backups (không commit)
         └── src/
-            └── index.js                # Port 4000: /api/trips, /api/escrows, /api/health
+            ├── index.js            # Máy chủ hợp nhất: phục vụ cả web lẫn /api
+            ├── routes/api.js       # Khai báo toàn bộ endpoint
+            ├── controllers/        # trip, booking, auth, admin, match, agent...
+            ├── middlewares/        # security (rate limit, CORS, XSS), authMiddleware
+            ├── db/sqliteStore.js   # Truy cập SQLite (WAL, prepared statement)
+            ├── agent/              # Trợ lý AI + tool calling
+            └── utils/token.js      # Ký & xác thực JWT
 ```
 
 ---
 
-## 💻 3. Hướng Dẫn Khởi Chạy 1 Lệnh Dưới Máy Local (Devbox & 1-Command Startup)
+## 💻 3. Khởi Chạy Dưới Máy Local
 
-Hệ thống đã được tích hợp bộ điều phối thông minh: **chỉ cần đúng 1 lệnh duy nhất là tự động dựng cả Web lẫn Backend API cùng lúc!**
+**Yêu cầu: Node.js >= 22** (`better-sqlite3` sẽ lỗi trên Node 20).
 
-* 🌐 **Giao diện Web:** [http://localhost:5173](http://localhost:5173)
-* 🔌 **Backend API:** [http://localhost:4000](http://localhost:4000) (Kiểm tra sức khoẻ: [http://localhost:4000/api/health](http://localhost:4000/api/health))
+Máy chủ hợp nhất phục vụ **cả web lẫn API trên một cổng duy nhất** — không cần chạy hai tiến trình:
 
-### 🚀 Cách 1: Chạy 1 Lệnh Ngay Bằng npm (Khuyên Dùng Trên Mac Hiện Tại)
-Không cần cài đặt thêm bất kỳ công cụ nào ngoài Node.js có sẵn trên máy:
 ```bash
-# Cài thư viện (chỉ cần chạy lần đầu):
-npm install
-
-# ĐÚNG 1 LỆNH DUY NHẤT: Dựng đồng thời Web (5173) & API (4000)
+npm install     # chỉ lần đầu
 npm run dev
-# hoặc:
-npm start
-```
-* Bảng điều khiển sẽ hiển thị luồng log màu: `[WEB:5173]` và `[API:4000]`.
-* Khi muốn tắt, chỉ cần bấm **`Ctrl + C`** là cả 2 server đều tự động tắt sạch sẽ.
-
----
-
-### 📦 Cách 2: Khởi Chạy Bằng Devbox (Nếu Dùng Môi Trường Devbox / Nix)
-Dự án đã có sẵn file cấu hình chuẩn [`devbox.json`](file:///Users/huynhnguyen/Desktop/carmate/devbox.json).
-
-1. Nếu máy chưa có Devbox, cài đặt nhanh bằng Homebrew hoặc cURL:
-```bash
-brew install devbox
-# hoặc: curl -fsSL https://get.jetpack.io/devbox | bash
 ```
 
-2. Khởi chạy toàn bộ hệ thống bằng 1 lệnh qua Devbox:
+* 🌐 **Web:** [http://localhost:5173](http://localhost:5173)
+* 🔌 **API:** [http://localhost:5173/api](http://localhost:5173/api)
+* 🩺 **Health:** [http://localhost:5173/api/health](http://localhost:5173/api/health)
+
+Ở chế độ dev, Vite chạy dưới dạng middleware nên sửa code là giao diện tự cập nhật ngay. Nhấn `Ctrl + C` để dừng.
+
+### Các lệnh khác
+
 ```bash
+npm test              # chạy toàn bộ bộ kiểm thử E2E
+npm run build         # build web ra apps/web/dist
+npm run backup        # sao lưu database ngay
+npm run backup:setup  # cài lịch sao lưu tự động 02:00 hằng ngày
+npm run restore       # liệt kê các bản sao lưu
+```
+
+### Biến môi trường
+
+Ở môi trường dev, chưa cấu hình gì vẫn chạy được: JWT secret được sinh ngẫu nhiên mỗi phiên và mã admin tạm là `admin123`.
+
+Ở **production, thiếu biến bắt buộc thì server từ chối khởi động** — đây là cơ chế fail-closed có chủ đích:
+
+| Biến | Bắt buộc | Ý nghĩa |
+|---|---|---|
+| `JWT_SECRET` | ✅ production | Khoá ký phiên đăng nhập |
+| `CARMATE_ADMIN_PASSCODE` | ✅ production | Mã vào cổng quản trị |
+| `ALLOWED_ORIGINS` | | Danh sách domain được gọi API, ngăn cách bằng dấu phẩy |
+| `TRUST_PROXY` | | Đặt `true` khi có proxy/CDN đứng trước |
+| `CARMATE_ADMIN_MFA_CODE` | | Bật xác thực 2 lớp cho cổng quản trị |
+| `GEMINI_API_KEY` | | Bật trợ lý AI (thiếu thì tự chuyển sang bộ suy luận cục bộ) |
+| `DISABLE_VITE_DEV` | | Đặt `true` để bỏ Vite middleware, phục vụ bản dist đã build |
+
+> ⚠️ Không đặt khoá bí mật vào `apps/web/.env`. Vite nhúng mọi biến `VITE_*` thẳng vào bundle công khai — khoá API phải nằm ở `apps/api/.env`.
+
+### Chạy bằng Devbox (tuỳ chọn)
+
+```bash
+brew install devbox    # hoặc: curl -fsSL https://get.jetpack.io/devbox | bash
 devbox run dev
 ```
-*(Hoặc vào môi trường devbox bằng `devbox shell` rồi gõ `npm run dev`).*
 
 ---
 
-### 🛠️ Các Lệnh Riêng Lẻ Khác (Khi Cần Thiết):
+## 🧪 4. Kiểm Thử
+
+### Tự động
+
 ```bash
-npm run dev:web   # Chỉ chạy riêng Web (5173)
-npm run dev:api   # Chỉ chạy riêng API (4000)
-npm run build     # Build kiểm tra đóng gói Cloudflare (< 100ms)
+npm run dev     # cửa sổ 1: chạy server
+npm test        # cửa sổ 2: chạy toàn bộ E2E
 ```
 
----
+Bộ kiểm thử bao trùm API, phân quyền (chống IDOR), che giấu thông tin cá nhân, chống XSS lưu trữ, cổng quản trị và trợ lý AI. CI cũng chạy đúng bộ này mỗi lần push.
 
-## 🧪 4. Kịch Bản Kiểm Thử Trực Tiếp Trên Trình Duyệt (Step-by-Step Test)
+### Thủ công trên trình duyệt
 
-Mở trình duyệt truy cập vào **`http://localhost:5173`** và trải nghiệm theo 5 bước:
+Mở **`http://localhost:5173`**:
 
-1. **Test Lọc Tuyến 1-Chạm:**
-   * Bấm vào các chip: `Tất cả`, `QL13`, `QL51`, `QL20`, `CT Long Thành`.
-   * Danh sách chuyến xe lọc tức thì trong 1ms.
-2. **Test Xuất Vé Hành Trình (Viral Boarding Pass):**
-   * Trên bất kỳ thẻ chuyến xe nào, bấm vào **biểu tượng nút Share** (cạnh nút Ghép Chuyến).
-   * Thẻ vé Boarding Pass sang trọng hiện lên kèm nút **"Sao Chép Bài Đăng Zalo / Facebook"**.
-3. **Test Quy Trình Ghép Chuyến & Kết Nối Trực Tiếp (Mô Hình CarMate):**
-   * Bấm nút **"Ghép Chuyến"** trên thẻ chuyến đi của Chủ Xe (hoặc **"Đón Đi Cùng"** trên bài của khách).
-   * Popup kết nối hiện ra với lựa chọn mặc định: **"Kết Nối Trực Tiếp (Chốt Zalo 30 Phút) — Khuyên Dùng"** (Không thu phí sàn).
-   * Bấm **"Xác Nhận Ghép Chuyến & Nhắn Zalo Bác Tài"** ➔ Hệ thống lập tức ghi nhận kết nối thành công mà không bắt nạp tiền.
-4. **Test Danh Sách Chuyến Đã Ghép & Kết Nối Zalo:**
-   * Chuyển sang tab **"Chuyến Đã Ghép"**.
-   * Xem chuyến vừa kết nối: Có nhãn thông báo đếm ngược 30 phút, thông tin SĐT thật.
-   * Bấm nút màu xanh **"Nhắn Zalo"** ➔ Tự động mở đường link `https://zalo.me/[sdt]` dẫn thẳng vào khung chat Zalo của đối phương.
-   * Bấm nút **"Gọi Ngay"** ➔ Mở popup cuộc gọi trực tiếp.
-5. **Test Đăng Chuyến Lịch Trình Cá Nhân (Thứ 3 đi, Thứ 4 về):**
-   * Chuyển sang tab **"Đăng Chuyến"**.
-   * Bấm chọn nhanh ngày di chuyển: **[Sáng Thứ 3]** hoặc **[Chiều Thứ 4]**.
-   * Tích chọn: **☑️ Lặp lại hàng tuần (Lịch đi làm cố định)**.
-   * Bấm Đăng tin ➔ Chuyến đi xuất hiện ngay lập tức trên sàn và bật sẵn thẻ vé để đi chia sẻ!
+1. **Lọc tuyến 1 chạm** — bấm các chip `Tất cả`, `QL13`, `QL51`, `QL20`, `CT Long Thành`; danh sách lọc tức thì.
+
+2. **Xuất vé hành trình** — bấm biểu tượng chia sẻ trên thẻ chuyến; thẻ vé hiện ra kèm nút sao chép nội dung đăng Zalo / Facebook.
+
+3. **Ghép chuyến** — bấm **"Ghép Chuyến"**. Chưa đăng nhập thì cửa sổ xác thực hiện ra trước: nhập số điện thoại, rồi nhập mã OTP. Ở môi trường dev, mã `123456` luôn hợp lệ và mã thật cũng được trả kèm trong phản hồi API để tiện thử.
+
+   > Bước đăng nhập này là có chủ đích: số điện thoại thật của tài xế chỉ hiện ra sau khi xác thực, nhằm bảo vệ dữ liệu cá nhân.
+
+4. **Chuyến đã ghép** — mở tab **"Chuyến Đã Ghép"**: có đồng hồ đếm ngược 30 phút và số điện thoại thật. Nút **"Nhắn Zalo"** mở `https://zalo.me/[sdt]`, nút **"Gọi Ngay"** mở trình gọi điện.
+
+5. **Đăng chuyến** — mở tab **"Đăng Chuyến"**, chọn nhanh ngày đi, tích **"Lặp lại hàng tuần"** rồi đăng. Chuyến xuất hiện ngay trên sàn kèm thẻ vé để chia sẻ.
+
+6. **Cổng quản trị** — vào `http://localhost:5173/#admin` (hoặc `?portal=ops`), đăng nhập bằng `CARMATE_ADMIN_PASSCODE` (dev mặc định `admin123`) để xem số liệu, quản lý chuyến và thành viên. Khi triển khai thật, cổng này cũng tự bật trên subdomain `ops.` hoặc `admin.`.
 
 ---
 
