@@ -655,6 +655,66 @@ async function runTests() {
     assert(draftZalo.includes('em biết xe có người nhà'), 'Bản nháp Zalo tinh tế ghi nhận xe có người nhà');
     assert(draftZalo.includes('Ngã 4 Bình Phước'), 'Bản nháp Zalo gắn chính xác điểm hẹn đón mong muốn');
     assert(draftZalo.includes('120.000'), 'Bản nháp Zalo hiển thị đúng mức phụ xăng');
+
+    // 15. KIỂM THỬ STANFORD AGENTIC INNER LOOP (PHASE 2)
+    console.log('\n--- 15. Kiểm thử Stanford Agentic Inner Loop (Verify -> Reflect -> Replan) ---');
+    const { initDB } = await import('../apps/api/src/db/sqliteStore.js');
+    await initDB();
+    const { runStanfordInnerLoop } = await import('../apps/api/src/agent/carmateAgent.js');
+    
+    const mockTrips = [
+      { id: 'TRIP-FAM-1', publicName: 'Anh Huỳnh', seats: 4, hasRelatives: true, price: 120000, note: 'chở vợ con' },
+      { id: 'TRIP-CONV-2', publicName: 'Bác Tài 7 chỗ', seats: 3, hasRelatives: false, price: 140000 }
+    ];
+
+    // 15.1 Verify: Loại trừ xe gia đình khi khách cần >= 2 ghế
+    const loop2Seats = runStanfordInnerLoop({
+      from: 'Bù Đốp',
+      to: 'Sài Gòn',
+      seatsRequested: 2,
+      rawTrips: mockTrips,
+      benchmark: { suggestedRate: 140000 }
+    });
+    assert(loop2Seats.finalTrips.length === 1, 'Verify: Tự động loại trừ xe gia đình chở vợ con khi khách cần 2 ghế');
+    assert(loop2Seats.finalTrips[0].publicName === 'Bác Tài 7 chỗ', 'Verify: Giữ lại chuyến xe có đủ 2 ghế trống');
+    assert(loop2Seats.innerLoopLog.some(l => l.includes('[VERIFY]')), 'Verify: Ghi nhận nhật ký thẩm tra số ghế');
+
+    // 15.2 Verify: Chấp nhận xe gia đình khi khách chỉ đi 1 người
+    const loop1Seat = runStanfordInnerLoop({
+      from: 'Bù Đốp',
+      to: 'Sài Gòn',
+      seatsRequested: 1,
+      rawTrips: mockTrips,
+      benchmark: { suggestedRate: 140000 }
+    });
+    assert(loop1Seat.finalTrips.length === 2, 'Verify: Xe gia đình chở người thân hoàn toàn khả dụng khi khách đi 1 người');
+
+    // 15.3 Reflect: Phản tư tính công bằng với bảng định mức
+    assert(loop1Seat.innerLoopLog.some(l => l.includes('[REFLECT]')), 'Reflect: Tự động đối chiếu mức phụ xăng với định mức chuẩn');
+    assert(loop1Seat.finalTrips[0].reflection.includes('Phụ xăng rất công bằng'), 'Reflect: Đánh giá chi phí 120k công bằng, thấp hơn 140k');
+
+    // 15.4 Replan: Tái lập kế hoạch khi không có chuyến khớp điểm đón
+    const loopEmpty = runStanfordInnerLoop({
+      from: 'Địa điểm không có xe',
+      to: 'Nơi xa xôi',
+      seatsRequested: 1,
+      rawTrips: [],
+      benchmark: { suggestedRate: 140000 }
+    });
+    assert(loopEmpty.innerLoopLog.some(l => l.includes('[REPLAN]')), 'Replan: Tự kích hoạt quét mở rộng hành lang trục chính');
+
+    // 15.5 Endpoint /api/agent/chat trả về chuẩn cấu trúc Stanford
+    const chatAgentRes = await fetch(`${BASE_URL}/api/agent/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Tìm xe từ Bình Phước về Sài Gòn chiều nay cần 2 ghế' })
+    }).then(r => r.json());
+    assert(chatAgentRes.success === true, 'API Chat Agentic phản hồi thành công');
+    assert(Array.isArray(chatAgentRes.data.reasoningSteps) && chatAgentRes.data.reasoningSteps.length >= 4, 'API Chat trả về chuỗi tư duy đầy đủ các bước');
+    assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[PLAN]')), 'API Chat có bước [PLAN]');
+    assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[ACT]')), 'API Chat có bước [ACT]');
+    assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[VERIFY]')), 'API Chat có bước [VERIFY]');
+    assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[RESOLVE]')), 'API Chat có bước [RESOLVE]');
   } catch (err) {
     assert(false, 'Kiểm thử An ninh & PII', err.message);
   }

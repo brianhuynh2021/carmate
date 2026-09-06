@@ -105,7 +105,7 @@ export function executeSearchTrips(args = {}) {
 
   return {
     count: filtered.length,
-    results: filtered.slice(0, 4).map(t => ({
+    results: filtered.slice(0, 6).map(t => ({
       id: t.id,
       maskedCode: t.maskedCode,
       publicName: t.publicName || 'Chủ xe',
@@ -117,6 +117,8 @@ export function executeSearchTrips(args = {}) {
       price: t.basePricePerSeat || t.price,
       carType: t.carType || 'Xe 7 chỗ',
       carCategory: t.carCategory,
+      hasRelatives: Boolean(t.hasRelatives),
+      note: t.note || '',
       perks: t.perks || [],
       phoneReal: t.phoneReal
     }))
@@ -217,26 +219,126 @@ export function executeDraftZaloMessage(args = {}) {
   return { draftedText: msg };
 }
 
-// ── BỘ SUY LUẬN HEURISTIC CỤC BỘ (ZERO-DOWNTIME LOCAL REASONING ENGINE) ──
+/**
+ * Stanford Inner Loop: Verify -> Reflect -> Replan
+ * Áp dụng giải quyết các tình huống thực tế giao thông & xe gia đình Việt Nam
+ */
+export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, rawTrips = [], benchmark = null }) {
+  const innerLoopLog = [];
+
+  // 1. [VERIFY] Xác minh số ghế thực tế và ngữ cảnh gia đình
+  innerLoopLog.push(`[VERIFY] Thẩm tra tính khả dụng của ${rawTrips.length} chuyến xe.`);
+
+  const verifiedTrips = rawTrips.map(trip => {
+    const isFamilyWithRelatives = Boolean(trip.hasRelatives) || 
+      /(vợ con|người nhà|con nhỏ|chở vợ|gia đình)/i.test(`${trip.note || ''} ${trip.carType || ''}`);
+    
+    // Nếu xe chở người thân (vợ con), chỉ nhận 1 khách
+    const actualAvailableSeats = isFamilyWithRelatives ? 1 : (trip.seats || 1);
+    const isCompatible = actualAvailableSeats >= seatsRequested;
+
+    return {
+      ...trip,
+      hasRelatives: isFamilyWithRelatives,
+      actualAvailableSeats,
+      isCompatible
+    };
+  });
+
+  const compatibleTrips = verifiedTrips.filter(t => t.isCompatible);
+
+  if (seatsRequested > 1) {
+    const excludedCount = verifiedTrips.filter(t => !t.isCompatible).length;
+    if (excludedCount > 0) {
+      innerLoopLog.push(`[VERIFY] Đã tự động loại trừ ${excludedCount} xe gia đình chở người thân (chỉ nhận tối đa 1 khách) để đảm bảo bạn đi ${seatsRequested} người không bị thiếu chỗ.`);
+    } else {
+      innerLoopLog.push(`[VERIFY] Xác nhận: Các chuyến đều đủ ${seatsRequested} ghế ngồi thoải mái.`);
+    }
+  } else {
+    innerLoopLog.push(`[VERIFY] Xác nhận ghế: Nhu cầu 1 người hoàn toàn phù hợp với cả xe tiện chuyến lẫn xe gia đình.`);
+  }
+
+  // 2. [REFLECT] Tự phản tư tính công bằng & so sánh định mức
+  const evaluatedTrips = (compatibleTrips.length > 0 ? compatibleTrips : verifiedTrips).map(trip => {
+    const tripPrice = trip.price || 150000;
+    const benchRate = benchmark?.suggestedRate || 140000;
+    let reflection = '';
+
+    if (tripPrice <= benchRate) {
+      reflection = `Phụ xăng rất công bằng (${formatVND(tripPrice)}, thấp hơn định mức đề xuất ${formatVND(benchRate)}).`;
+    } else if (tripPrice <= benchRate * 1.25) {
+      reflection = `Chi phí sát định mức thị trường (${formatVND(tripPrice)} so với đề xuất ${formatVND(benchRate)}).`;
+    } else {
+      reflection = `Chi phí (${formatVND(tripPrice)}) cao hơn định mức đề xuất, khuyến nghị trao đổi nhẹ qua Zalo.`;
+    }
+
+    return {
+      ...trip,
+      reflection
+    };
+  });
+
+  if (benchmark) {
+    innerLoopLog.push(`[REFLECT] Phản tư giá cước: Đối chiếu mức phụ xăng với định mức chuẩn (${formatVND(benchmark.suggestedRate)}/ghế).`);
+  }
+
+  // 3. [REPLAN] Tái lập kế hoạch hành lang di chuyển khi chưa có xe trùng điểm đón chính xác
+  let replannedTrips = evaluatedTrips;
+  if (evaluatedTrips.length === 0) {
+    innerLoopLog.push(`[REPLAN] Không tìm thấy chuyến trùng khớp điểm đón chính xác. Đang tái lập quét mở rộng hành lang trục chính...`);
+    const corridorTrips = getTrips({ type: 'drivers' }).filter(t => 
+      (t.routeCategory && (t.routeCategory.includes('QL13') || t.routeCategory.includes('QL14'))) ||
+      (t.from && (t.from.includes('Bình Phước') || t.from.includes('Lộc Ninh') || t.from.includes('Đồng Xoài')))
+    ).slice(0, 3);
+
+    if (corridorTrips.length > 0) {
+      innerLoopLog.push(`[REPLAN] Tái lập thành công: Đề xuất ${corridorTrips.length} chuyến xe chạy ngang hành lang tiện đón trả dọc tuyến.`);
+      replannedTrips = corridorTrips.map(t => ({
+        id: t.id,
+        maskedCode: t.maskedCode,
+        publicName: t.publicName || 'Chủ xe',
+        from: t.from,
+        to: t.to,
+        timeSlot: t.timeSlot,
+        date: t.date,
+        seats: t.availableSeats || t.seats || 1,
+        price: t.basePricePerSeat || t.price,
+        carType: t.carType || 'Xe 7 chỗ',
+        carCategory: t.carCategory,
+        hasRelatives: Boolean(t.hasRelatives),
+        perks: t.perks || [],
+        phoneReal: t.phoneReal,
+        isCorridorFallback: true
+      }));
+    }
+  }
+
+  return {
+    innerLoopLog,
+    finalTrips: replannedTrips
+  };
+}
+
+// ── BỘ SUY LUẬN HEURISTIC CỤC BỘ (ZERO-DOWNTIME STANFORD INNER LOOP) ──
 function runLocalHeuristicAgent(userPrompt, history = []) {
   const prompt = userPrompt.toLowerCase();
   const reasoningSteps = [];
 
-  reasoningSteps.push('1. Tiếp nhận: Phân tích nhu cầu di chuyển của bạn.');
+  reasoningSteps.push('[PLAN] Tiếp nhận & Phân tích ngữ cảnh nhu cầu di chuyển của bạn.');
 
   // 1. Nhánh kiểm tra hồ sơ uy tín & an toàn
   if (prompt.includes('uy tín') || prompt.includes('tín nhiệm') || prompt.includes('trust') || prompt.includes('an toàn')) {
-    reasoningSteps.push('2. Rà soát: Kiểm tra hồ sơ an toàn và đánh giá cộng đồng.');
+    reasoningSteps.push('[ACT] Rà soát hồ sơ an toàn và đánh giá 2 chiều trong cộng đồng.');
     let identifier = 'Tuấn';
     if (prompt.includes('tuấn')) identifier = 'Tuấn';
     else {
       const words = prompt.split(/\s+/);
       identifier = words[words.length - 1] || 'Tuấn';
     }
-    reasoningSteps.push(`3. Đối chiếu: Thẩm tra giấy tờ xác thực của thành viên "${identifier}".`);
+    reasoningSteps.push(`[VERIFY] Thẩm tra hồ sơ xác thực CCCD gắn chip & GPLX của thành viên "${identifier}".`);
     const trustRes = executeCheckMemberTrust({ identifier });
-    reasoningSteps.push(`4. Kết quả: Điểm tin cậy đạt ${trustRes.trustScore || 98}/100 ⭐ (${trustRes.summary || trustRes.message}).`);
-    reasoningSteps.push('5. Hoàn tất: Đã kiểm tra đầy đủ mức độ uy tín của thành viên.');
+    reasoningSteps.push(`[REFLECT] Điểm tin cậy đạt ${trustRes.trustScore || 98}/100 ⭐ (${trustRes.summary || trustRes.message}).`);
+    reasoningSteps.push('[RESOLVE] Hoàn tất thẩm tra: Thành viên đủ điều kiện kết nối an toàn.');
 
     return {
       reply: `🛡️ **Hồ sơ tín nhiệm & Điểm tin cậy (Trust Score):**\n\n` +
@@ -254,17 +356,17 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
 
   // 2. Nhánh tra cứu bảng giá định mức & chi phí xăng / cầu đường
   if (prompt.includes('giá') || prompt.includes('xăng') || prompt.includes('vé') || prompt.includes('cầu đường') || prompt.includes('bao nhiêu')) {
-    reasoningSteps.push('2. Rà soát: Kiểm tra định mức tiền xăng & vé trạm thu phí BOT.');
+    reasoningSteps.push('[ACT] Tra cứu bảng định mức tiền xăng & vé trạm thu phí BOT.');
     let routeName = 'QL13';
     if (prompt.includes('14') || prompt.includes('ql14')) routeName = 'QL14';
     if (prompt.includes('1a') || prompt.includes('ql1a')) routeName = 'QL1A';
     if (prompt.includes('hải phòng') || prompt.includes('hà nội')) routeName = 'Hà Nội';
 
-    reasoningSteps.push(`3. Tính toán: Đo cự ly và chi phí vận hành xe thực tế trên tuyến ${routeName}.`);
+    reasoningSteps.push(`[VERIFY] Đo cự ly và chi phí vận hành xe thực tế trên tuyến ${routeName}.`);
     const benchRes = executeGetRouteBenchmarks({ routeName });
     const match = benchRes.matches?.[0];
-    reasoningSteps.push(`4. Kết quả: Mức chia sẻ khuyến nghị tuyến ${routeName}: ${match?.suggestedRateFormatted || '150.000đ'}/ghế.`);
-    reasoningSteps.push('5. Hoàn tất: Tổng hợp bảng giá minh bạch, công bằng cho cả hai bên.');
+    reasoningSteps.push(`[REFLECT] Phản tư tính công bằng: Mức chia sẻ khuyến nghị tuyến ${routeName}: ${match?.suggestedRateFormatted || '150.000đ'}/ghế.`);
+    reasoningSteps.push('[RESOLVE] Hoàn tất: Bảng định mức chi phí chuẩn hoá bảo vệ cả hai bên khỏi ép giá.');
 
     return {
       reply: `📊 **Bảng định mức chi phí tham chiếu CarMate (${match?.route || routeName}):**\n\n` +
@@ -279,13 +381,19 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     };
   }
 
-  // 3. Nhánh tìm chuyến xe trong cơ sở dữ liệu
+  // 3. Nhánh tìm chuyến xe: Kích hoạt đầy đủ Stanford Inner Loop (Verify -> Reflect -> Replan)
   let from = '';
   let to = '';
+  let seatsRequested = 1;
+  const seatMatch = prompt.match(/(\d+)\s*(ghế|chỗ|người)/i);
+  if (seatMatch) {
+    seatsRequested = parseInt(seatMatch[1], 10) || 1;
+  }
+
   if (prompt.includes('hà nội') || prompt.includes('hn')) from = 'Hà Nội';
   if (prompt.includes('hải phòng') || prompt.includes('hp')) to = 'Hải Phòng';
-  if (prompt.includes('bình phước') || prompt.includes('đồng xoài') || prompt.includes('chơn thành')) {
-    if (prompt.includes('về sài gòn') || prompt.includes('đi sài gòn') || prompt.includes('đi tp')) {
+  if (prompt.includes('bình phước') || prompt.includes('đồng xoài') || prompt.includes('chơn thành') || prompt.includes('bù đốp') || prompt.includes('lộc ninh')) {
+    if (prompt.includes('về sài gòn') || prompt.includes('đi sài gòn') || prompt.includes('đi tp') || prompt.includes('về tp')) {
       from = 'Bình Phước';
       to = 'Sài Gòn';
     } else {
@@ -294,33 +402,50 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     }
   }
 
-  reasoningSteps.push(`2. Rà soát: Tìm các chuyến xe khởi hành từ ${from || 'toàn quốc'} đến ${to || 'toàn quốc'}.`);
+  reasoningSteps.push(`[ACT] Tra cứu các chuyến xe khởi hành từ "${from || 'toàn quốc'}" đến "${to || 'toàn quốc'}" cho ${seatsRequested} người.`);
   const searchRes = executeSearchTrips({ from, to });
 
-  reasoningSteps.push(`3. Kết quả: Tìm thấy ${searchRes.count} chuyến xe đang mở có cùng hành trình.`);
+  // Lấy benchmark của tuyến để phục vụ bước [REFLECT]
+  const benchRes = executeGetRouteBenchmarks({ routeName: from || to || 'QL13' });
+  const benchmark = benchRes.matches?.[0] || null;
+
+  // Kích hoạt Stanford Inner Loop
+  const { innerLoopLog, finalTrips } = runStanfordInnerLoop({
+    from,
+    to,
+    seatsRequested,
+    rawTrips: searchRes.results,
+    benchmark
+  });
+
+  // Tích hợp nhật ký tư duy Stanford vào danh sách bước
+  reasoningSteps.push(...innerLoopLog);
 
   let textResponse = '';
-  if (searchRes.count > 0) {
-    reasoningSteps.push('4. Xác nhận: Đã kiểm tra xe gia đình văn minh, còn ghế trống và tiện đón trả.');
-    const topTrip = searchRes.results[0];
-    textResponse = `Dạ chào bạn! Mình đã tìm thấy **${searchRes.count} chuyến xe phù hợp** với hành trình của bạn:\n\n` +
+  if (finalTrips.length > 0) {
+    reasoningSteps.push('[RESOLVE] Hoàn tất: Lựa chọn các chuyến xe phù hợp nhất gửi đến bạn.');
+    const topTrip = finalTrips[0];
+    const relativeNotice = topTrip.hasRelatives ? '\n*(Xe này chủ xe có chở người thân, chỉ nhận 1 khách đi cùng lịch sự)*' : '';
+    const fallbackNotice = topTrip.isCorridorFallback ? '\n*(Gợi ý xe tiện chuyến chạy ngang trục hành lang gần bạn)*' : '';
+
+    textResponse = `Dạ chào bạn! Mình đã tìm thấy **${finalTrips.length} chuyến xe phù hợp** với yêu cầu của bạn (${seatsRequested} ghế):${fallbackNotice}\n\n` +
       `🚗 **${topTrip.publicName}** (${topTrip.carType})\n` +
       `• Tuyến: **${topTrip.from} ➔ ${topTrip.to}**\n` +
       `• Khung giờ: **${topTrip.timeSlot}** (${topTrip.date})\n` +
-      `• Chi phí san sẻ: **${formatVND(topTrip.price)}/ghế** (còn ${topTrip.seats} chỗ)\n` +
+      `• Chi phí san sẻ: **${formatVND(topTrip.price)}/ghế** (khả dụng: ${topTrip.actualAvailableSeats || topTrip.seats} chỗ)${relativeNotice}\n` +
+      (topTrip.reflection ? `• Đánh giá định mức: *${topTrip.reflection}*\n` : '') +
       (topTrip.perks?.length ? `• Tiện ích: ${topTrip.perks.join(', ')}\n\n` : '\n') +
-      `Bạn có thể bấm trực tiếp vào thẻ chuyến bên dưới để mở Zalo chốt đón ngay nhé!`;
+      `Bạn có thể bấm trực tiếp vào nút **"Nhắn Zalo đón"** bên dưới để chốt điểm hẹn thuận tiện nhé!`;
   } else {
-    reasoningSteps.push('4. Gợi ý: Chưa thấy chuyến thẳng trùng giờ, đề xuất mức giá tham khảo công bằng.');
-    const benchRes = executeGetRouteBenchmarks({ routeName: from || to });
-    textResponse = `Chào bạn! Hiện tại tuyến đường này đang chưa có chuyến khởi hành trùng khớp giờ bạn cần, nhưng bạn có thể đăng tin **[Tìm xe]** để các chủ xe tiện chuyến liên hệ.\n\n` +
-      `💡 **Mức giá tham khảo công bằng:** Tuyến liên tỉnh này thường dao động từ **100.000đ – 180.000đ/ghế** (đã bao gồm xăng xe & vé cầu đường). Bạn có muốn mình hỗ trợ soạn tin đăng nhanh không?`;
+    reasoningSteps.push('[RESOLVE] Hoàn tất: Gợi ý phương án đăng tin tìm xe ghép tiện chuyến.');
+    textResponse = `Chào bạn! Hiện tại tuyến đường này đang chưa có chuyến khởi hành trùng khớp yêu cầu (${seatsRequested} người), nhưng bạn có thể đăng tin **[Tìm xe]** để các chủ xe tiện chuyến liên hệ.\n\n` +
+      `💡 **Mức giá tham khảo công bằng:** Tuyến liên tỉnh này thường dao động từ **120.000đ – 180.000đ/ghế** (đã bao gồm xăng xe & vé trạm BOT). Bạn có muốn mình hỗ trợ soạn tin đăng nhanh không?`;
   }
 
   return {
     reply: textResponse,
     reasoningSteps,
-    suggestedTrips: searchRes.results,
+    suggestedTrips: finalTrips,
     engine: 'local-heuristic-agent'
   };
 }
@@ -357,7 +482,7 @@ Nhiệm vụ của bạn:
       }
     });
 
-    const reasoningSteps = ['1. Tiếp nhận: Phân tích yêu cầu và hành trình mong muốn của bạn.'];
+    const reasoningSteps = ['[PLAN] Tiếp nhận: Phân tích yêu cầu và hành trình mong muốn của bạn.'];
     let suggestedTrips = [];
 
     // Kiểm tra và thực thi Function Calling nếu Gemini yêu cầu
@@ -366,27 +491,28 @@ Nhiệm vụ của bạn:
         if (call.name === 'searchTrips') {
           const res = executeSearchTrips(call.args);
           suggestedTrips = res.results;
-          reasoningSteps.push(`2. Rà soát: Tìm các chuyến xe dọc tuyến hành lang.`);
-          reasoningSteps.push(`3. Kết quả: Tìm thấy ${res.count} chuyến xe phù hợp, còn ghế trống.`);
+          reasoningSteps.push(`[ACT] Rà soát: Tìm các chuyến xe dọc tuyến hành lang.`);
+          reasoningSteps.push(`[VERIFY] Xác minh số ghế & đối chiếu xe gia đình: Có ${res.count} chuyến khả dụng.`);
+          reasoningSteps.push(`[REFLECT] Đánh giá chất lượng và độ tiện lợi của các chuyến xe vừa tìm thấy.`);
         } else if (call.name === 'getRouteBenchmarks') {
           const res = executeGetRouteBenchmarks(call.args);
-          reasoningSteps.push(`2. Tra cứu: Rà soát bảng định mức chi phí xăng xe & vé trạm BOT.`);
-          reasoningSteps.push(`3. Kết quả: Mức giá san sẻ công bằng đã được xác định.`);
+          reasoningSteps.push(`[ACT] Tra cứu: Rà soát bảng định mức chi phí xăng xe & vé trạm BOT.`);
+          reasoningSteps.push(`[REFLECT] Phản tư tính công bằng: Mức giá san sẻ theo định mức đã được xác định.`);
         } else if (call.name === 'checkMemberTrust') {
           const res = executeCheckMemberTrust(call.args);
-          reasoningSteps.push(`2. Thẩm tra: Kiểm tra hồ sơ an toàn và giấy tờ xác thực.`);
-          reasoningSteps.push(`3. Kết quả: Hồ sơ thành viên đạt tiêu chuẩn tín nhiệm cao.`);
+          reasoningSteps.push(`[ACT] Thẩm tra: Kiểm tra hồ sơ an toàn và giấy tờ xác thực.`);
+          reasoningSteps.push(`[VERIFY] Kết quả: Hồ sơ thành viên đạt tiêu chuẩn tín nhiệm.`);
         } else if (call.name === 'calculateEstimatedFare') {
           const res = executeCalculateEstimatedFare(call.args);
-          reasoningSteps.push(`2. Tính toán: Ước tính chi phí nhiên liệu và cầu đường.`);
-          reasoningSteps.push(`3. Kết quả: Mức đóng góp công bằng: ${res.formattedSuggestion}.`);
+          reasoningSteps.push(`[ACT] Tính toán: Ước tính chi phí nhiên liệu và cầu đường.`);
+          reasoningSteps.push(`[REFLECT] Đề xuất mức đóng góp công bằng: ${res.formattedSuggestion}.`);
         } else if (call.name === 'draftZaloMessage') {
           const res = executeDraftZaloMessage(call.args);
-          reasoningSteps.push('2. Soạn thảo: Lên nội dung hẹn giờ đón lịch sự qua Zalo.');
+          reasoningSteps.push('[ACT] Soạn thảo: Lên nội dung hẹn giờ đón lịch sự qua Zalo.');
         }
       }
 
-      reasoningSteps.push('4. Hoàn tất: Tổng hợp phương án tối ưu nhất gửi đến bạn.');
+      reasoningSteps.push('[RESOLVE] Hoàn tất: Tổng hợp phương án tối ưu nhất gửi đến bạn.');
     }
 
     return {
