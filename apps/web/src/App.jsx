@@ -296,32 +296,56 @@ export default function App() {
     showToast('Đã đăng xuất tài khoản.');
   };
 
-  const updateMyTripsCount = (user = currentUser) => {
+  const updateMyTripsCount = (user = currentUser, offers = driverOffers, requests = passengerRequests) => {
     try {
+      let storedIds = [];
       if (!user) {
         // Khi chưa đăng nhập (khách vãng lai), chỉ đếm chuyến do chính máy này tạo ở chế độ khách
         // Tự động dọn sạch cache legacy cũ nếu còn sót từ phiên test trước
         if (localStorage.getItem('carmate_my_trip_ids')) {
           localStorage.removeItem('carmate_my_trip_ids');
         }
-        const guestStored = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
-        setMyTripsCount(Array.isArray(guestStored) ? guestStored.length : 0);
-        return;
+        storedIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
+      } else {
+        const userKey = `carmate_my_trip_ids_${user.id || user.phone}`;
+        storedIds = JSON.parse(localStorage.getItem(userKey) || localStorage.getItem('carmate_my_trip_ids') || '[]');
       }
-      const userKey = `carmate_my_trip_ids_${user.id || user.phone}`;
-      const stored = JSON.parse(localStorage.getItem(userKey) || '[]');
-      setMyTripsCount(Array.isArray(stored) ? stored.length : 0);
+      if (!Array.isArray(storedIds)) storedIds = [];
+
+      const all = [...(offers || []), ...(requests || [])];
+      const userPhoneClean = user?.phone ? String(user.phone).replace(/\D/g, '') : '';
+
+      // Đồng bộ chuẩn xác 100% với bộ lọc của MyTripsView
+      const validTrips = all.filter((t) => {
+        if (user) {
+          if (t.userId && t.userId === user.id) return true;
+          if (userPhoneClean && t.phoneReal && String(t.phoneReal).replace(/\D/g, '') === userPhoneClean) return true;
+          return storedIds.includes(t.id);
+        }
+        return storedIds.includes(t.id);
+      });
+
+      // Tự động dọn dẹp các ID cũ/đã xoá khỏi localStorage để không tích lũy rác lệch badge
+      if (all.length > 0 && storedIds.length > 0) {
+        const cleanIds = storedIds.filter(id => all.some(t => t.id === id));
+        if (cleanIds.length !== storedIds.length) {
+          const storageKey = user ? `carmate_my_trip_ids_${user.id || user.phone}` : 'carmate_guest_trip_ids';
+          localStorage.setItem(storageKey, JSON.stringify(cleanIds));
+        }
+      }
+
+      setMyTripsCount(validTrips.length);
     } catch {
       setMyTripsCount(0);
     }
   };
 
   useEffect(() => {
-    updateMyTripsCount(currentUser);
-    const handleStorageChange = () => updateMyTripsCount(currentUser);
+    updateMyTripsCount(currentUser, driverOffers, passengerRequests);
+    const handleStorageChange = () => updateMyTripsCount(currentUser, driverOffers, passengerRequests);
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [currentUser]);
+  }, [currentUser, driverOffers, passengerRequests]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -829,6 +853,7 @@ export default function App() {
               driverOffers={driverOffers}
               passengerRequests={passengerRequests}
               currentUser={currentUser}
+              onTripsCountChange={setMyTripsCount}
               onOpenAuth={() => openAuthWithContext()}
               onEditTrip={(trip) => setEditingTrip(trip)}
               onToggleStatus={handleToggleTripStatus}

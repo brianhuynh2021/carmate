@@ -36,6 +36,7 @@ export default function MyTripsView({
   driverOffers = [],
   passengerRequests = [],
   currentUser = null,
+  onTripsCountChange,
   onOpenAuth,
   onEditTrip,
   onToggleStatus,
@@ -49,21 +50,56 @@ export default function MyTripsView({
   const [myTripIds, setMyTripIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'open' | 'full'
 
-  // Đồng bộ danh sách chuyến xe theo trạng thái đăng nhập
+  // Tổng hợp tất cả chuyến của người dùng
+  const allTrips = [...driverOffers, ...passengerRequests];
+  const userPhoneClean = currentUser?.phone ? String(currentUser.phone).replace(/\D/g, '') : '';
+  const myTrips = allTrips.filter((t) => {
+    if (currentUser) {
+      if (t.userId && t.userId === currentUser.id) return true;
+      if (userPhoneClean && t.phoneReal && String(t.phoneReal).replace(/\D/g, '') === userPhoneClean) return true;
+      return myTripIds.includes(t.id);
+    }
+    // Chế độ Khách: Chỉ nhận diện chuyến do chính máy này tạo tạm
+    return myTripIds.includes(t.id);
+  });
+
+  // Báo cáo số lượng chuyến thực tế về cho App (Đồng bộ tuyệt đối với Badge ở Header)
+  useEffect(() => {
+    onTripsCountChange?.(myTrips.length);
+  }, [myTrips.length, onTripsCountChange]);
+
+  // Đồng bộ danh sách chuyến xe theo trạng thái đăng nhập & dọn sạch ID ma
   const syncTripIds = () => {
     try {
       if (currentUser) {
         const userKey = `carmate_my_trip_ids_${currentUser.id || currentUser.phone}`;
         const stored = JSON.parse(localStorage.getItem(userKey) || localStorage.getItem('carmate_my_trip_ids') || '[]');
-        setMyTripIds(Array.isArray(stored) ? stored : []);
+        const validStored = Array.isArray(stored) ? stored : [];
+        if (allTrips.length > 0) {
+          const clean = validStored.filter(id => allTrips.some(t => t.id === id));
+          if (clean.length !== validStored.length) {
+            localStorage.setItem(userKey, JSON.stringify(clean));
+          }
+          setMyTripIds(clean);
+        } else {
+          setMyTripIds(validStored);
+        }
       } else {
         // Khi chưa đăng nhập (khách vãng lai): Chỉ lấy chuyến tạo tạm trên máy này
-        // Tự động dọn dẹp khóa cũ carmate_my_trip_ids nếu còn sót từ phiên trước
         if (localStorage.getItem('carmate_my_trip_ids')) {
           localStorage.removeItem('carmate_my_trip_ids');
         }
         const guestStored = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
-        setMyTripIds(Array.isArray(guestStored) ? guestStored : []);
+        const validGuest = Array.isArray(guestStored) ? guestStored : [];
+        if (allTrips.length > 0) {
+          const clean = validGuest.filter(id => allTrips.some(t => t.id === id));
+          if (clean.length !== validGuest.length) {
+            localStorage.setItem('carmate_guest_trip_ids', JSON.stringify(clean));
+          }
+          setMyTripIds(clean);
+        } else {
+          setMyTripIds(validGuest);
+        }
       }
     } catch {
       setMyTripIds([]);
@@ -72,19 +108,7 @@ export default function MyTripsView({
 
   useEffect(() => {
     syncTripIds();
-  }, [currentUser]);
-
-  // Tổng hợp tất cả chuyến của người dùng
-  const allTrips = [...driverOffers, ...passengerRequests];
-  const myTrips = allTrips.filter((t) => {
-    if (currentUser) {
-      if (t.userId && t.userId === currentUser.id) return true;
-      if (currentUser.phone && t.phoneReal && t.phoneReal === currentUser.phone) return true;
-      return myTripIds.includes(t.id);
-    }
-    // Chế độ Khách: Chỉ nhận diện chuyến do chính máy này tạo tạm
-    return myTripIds.includes(t.id);
-  });
+  }, [currentUser, driverOffers.length, passengerRequests.length]);
 
   const activeTripsCount = myTrips.filter((t) => t.status !== 'full').length;
   const fullTripsCount = myTrips.filter((t) => t.status === 'full').length;
