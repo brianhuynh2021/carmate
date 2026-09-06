@@ -24,6 +24,7 @@ export default function useAppModals() {
   });
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [pendingBookingTrip, setPendingBookingTrip] = useState(null);
   const [pendingPostTrip, setPendingPostTrip] = useState(null);
 
@@ -85,6 +86,8 @@ export default function useAppModals() {
     setShowTermsModal,
     showAiModal,
     setShowAiModal,
+    showDeleteAccountModal,
+    setShowDeleteAccountModal,
     pendingBookingTrip,
     setPendingBookingTrip,
     pendingPostTrip,

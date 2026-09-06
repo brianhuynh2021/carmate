@@ -1,5 +1,5 @@
 import { cleanPhoneNumber, isValidVietnamesePhone } from '@carmate/shared';
-import { getUserByPhone, getUserById, getUserByEmail, saveUser, getTripsByPhone } from '../db/sqliteStore.js';
+import { getUserByPhone, getUserById, getUserByEmail, saveUser, getTripsByPhone, deleteUserAccount } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
 
 // Bộ nhớ đệm OTP tạm thời trong RAM (5 phút hết hạn, 0đ chi phí SMS)
@@ -393,5 +393,29 @@ export async function getMe(req, res) {
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/auth/me
+ * Xóa vĩnh viễn tài khoản & thanh tẩy thông tin cá nhân
+ * Tuân thủ Apple App Store Guideline 5.1.1 (v) & Nghị định 13/2023/NĐ-CP (Điều 16)
+ */
+export async function deleteAccount(req, res) {
+  try {
+    if (!req.user || (!req.user.id && !req.user.phone)) {
+      return res.status(401).json({ success: false, error: 'Chưa đăng nhập hoặc phiên làm việc không hợp lệ' });
+    }
+
+    const result = await deleteUserAccount(req.user.id, req.user.phone);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Tài khoản và toàn bộ dữ liệu cá nhân của bạn đã được xóa vĩnh viễn khỏi hệ thống.',
+      details: result
+    });
+  } catch (err) {
+    console.error('[Auth] Lỗi khi xóa tài khoản:', err);
+    return res.status(500).json({ success: false, error: 'Không thể xóa tài khoản. Vui lòng thử lại sau.' });
   }
 }

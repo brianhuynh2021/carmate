@@ -3,7 +3,7 @@ import { listTrips, getTrip, createTrip, updateStatus, updateTripHandler, delete
 import { getMatches } from '../controllers/matchController.js';
 import { listBookings, createBooking, reportDelay, cancelBooking, completeBooking, submitReview, getBookingPublicSummary, driverConfirmBooking } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile } from '../controllers/miscController.js';
-import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe } from '../controllers/authController.js';
+import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe, deleteAccount } from '../controllers/authController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -38,6 +38,8 @@ router.post('/auth/zalo-login', zaloLogin);
 router.post('/auth/request-otp', authLimiter, requestOtp);
 router.post('/auth/verify-otp', authLimiter, verifyOtp);
 router.get('/auth/me', requireAuth, getMe);
+router.delete('/auth/me', requireAuth, deleteAccount);
+router.delete('/auth/account', requireAuth, deleteAccount);
 
 // --- Health & Meta ---
 router.get('/health', getHealth);

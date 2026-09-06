@@ -804,6 +804,56 @@ export async function saveUser(user) {
   return full;
 }
 
+/**
+ * Xóa vĩnh viễn tài khoản người dùng & thanh tẩy dữ liệu cá nhân (PII Cleanse)
+ * Tuân thủ Apple App Store Guideline 5.1.1 (v) & Nghị định 13/2023/NĐ-CP (Điều 16)
+ */
+export async function deleteUserAccount(userId, phone) {
+  const database = getRawDB();
+
+  let user = null;
+  if (userId) user = getUserById(userId);
+  if (!user && phone) user = getUserByPhone(phone);
+
+  const effectiveUserId = user?.id || userId;
+  const effectivePhone = user?.phone || (phone ? cleanPhoneNumber(phone) : null);
+
+  // 1. Xóa các bài đăng của người dùng này (để không còn xuất hiện trên sàn)
+  if (effectiveUserId) {
+    database.prepare('DELETE FROM trips WHERE userId = ?').run(effectiveUserId);
+  }
+  if (effectivePhone) {
+    database.prepare('DELETE FROM trips WHERE phoneReal = ?').run(effectivePhone);
+  }
+
+  // 2. Ẩn danh hóa các cuốc ghép trong lịch sử để không làm hỏng dữ liệu của người đi cùng
+  if (effectivePhone) {
+    const userBookings = database.prepare('SELECT escrowId, payload FROM bookings WHERE passengerPhone = ?').all(effectivePhone);
+    for (const b of userBookings) {
+      try {
+        const payload = JSON.parse(b.payload || '{}');
+        payload.passengerPhone = '[Đã xóa]';
+        payload.passengerName = '[Tài khoản đã xóa]';
+        database.prepare('UPDATE bookings SET passengerPhone = ?, payload = ? WHERE escrowId = ?')
+          .run('[Đã xóa]', JSON.stringify(payload), b.escrowId);
+      } catch {}
+    }
+  }
+
+  // 3. Xóa vĩnh viễn khỏi bảng users
+  let deleted = false;
+  if (effectiveUserId) {
+    const info = database.prepare('DELETE FROM users WHERE id = ?').run(effectiveUserId);
+    deleted = info.changes > 0;
+  }
+  if (!deleted && effectivePhone) {
+    const info = database.prepare('DELETE FROM users WHERE phone = ?').run(effectivePhone);
+    deleted = info.changes > 0;
+  }
+
+  return { success: true, userDeleted: deleted };
+}
+
 export function getTripsByPhone(phone) {
   const database = getRawDB();
   const clean = cleanPhoneNumber(phone);

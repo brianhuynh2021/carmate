@@ -194,6 +194,18 @@ export const api = {
     return request('/auth/me');
   },
 
+  async deleteAccount() {
+    const res = await request('/auth/me', {
+      method: 'DELETE'
+    });
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('carmate_auth_token');
+      localStorage.removeItem('carmate_user');
+      localStorage.removeItem('carmate_my_trip_ids');
+    }
+    return res;
+  },
+
   logout() {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('carmate_auth_token');

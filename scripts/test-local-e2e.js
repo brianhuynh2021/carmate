@@ -1296,6 +1296,74 @@ async function runTests() {
   } catch (err) {
     assert(false, '23. Kiểm thử Analytics & Phễu Chuyển Đổi', err.message);
   }
+
+  console.log('\n--- 24. Kiểm thử Xóa Tài Khoản Vĩnh Viễn (Apple Guideline 5.1.1 v & NĐ 13/2023) ---');
+  try {
+    // 1. Chặn xóa khi chưa đăng nhập (Bắt buộc HTTP 401)
+    const unauthorizedDel = await fetch(`${BASE_URL}/api/auth/me`, { method: 'DELETE' });
+    assert(unauthorizedDel.status === 401, 'Delete Account 1: Chặn xóa tài khoản khi không có token (HTTP 401)');
+
+    // 2. Tạo một tài khoản người dùng test chuyên biệt
+    const testPhone = '0988556677';
+    const otpRes = await fetch(`${BASE_URL}/api/auth/request-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: testPhone })
+    });
+    const otpData = await otpRes.json();
+    const verifyRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: testPhone, otp: otpData.devOtp || '123456', name: 'User To Delete' })
+    });
+    const verifyData = await verifyRes.json();
+    const deleteToken = verifyData.token;
+    assert(verifyRes.status === 200 && !!deleteToken, 'Delete Account 2: Khởi tạo tài khoản test thành công');
+
+    // 3. Đăng 1 chuyến đi thuộc tài khoản này
+    const postTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${deleteToken}`
+      },
+      body: JSON.stringify({
+        type: 'driver_offer',
+        from: 'Sài Gòn',
+        to: 'Bình Phước',
+        phoneReal: testPhone,
+        userId: verifyData.user.id,
+        price: 150000,
+        routeCategory: 'QL13',
+        timeSlot: 'morning'
+      })
+    });
+    const postTripData = await postTripRes.json();
+    const createdTripId = postTripData.data?.id;
+    assert(postTripRes.status === 201 && !!createdTripId, 'Delete Account 3: Đăng chuyến thử nghiệm thành công');
+
+    // 4. Gọi API Xóa vĩnh viễn tài khoản
+    const delRes = await fetch(`${BASE_URL}/api/auth/me`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${deleteToken}`
+      }
+    });
+    const delData = await delRes.json();
+    assert(delRes.status === 200 && delData.success === true, 'Delete Account 4: Xóa vĩnh viễn tài khoản thành công (HTTP 200)');
+
+    // 5. Kiểm tra tài khoản đã bị xóa khỏi hệ thống
+    const meAfterRes = await fetch(`${BASE_URL}/api/auth/me`, {
+      headers: { 'Authorization': `Bearer ${deleteToken}` }
+    });
+    assert(meAfterRes.status === 404, 'Delete Account 5: Tài khoản không còn tồn tại trong hệ thống (HTTP 404)');
+
+    // 6. Kiểm tra chuyến xe của user đã bị gỡ sạch khỏi sàn
+    const tripCheckRes = await fetch(`${BASE_URL}/api/trips/${createdTripId}`);
+    assert(tripCheckRes.status === 404, 'Delete Account 6: Toàn bộ bài đăng của tài khoản đã bị xóa sạch (HTTP 404)');
+  } catch (err) {
+    assert(false, '24. Kiểm thử Xóa Tài Khoản Vĩnh Viễn', err.message);
+  }
   const passed = results.filter(r => r.pass).length;
   const failed = results.filter(r => !r.pass).length;
   const total = results.length;

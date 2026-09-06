@@ -41,6 +41,7 @@ import AiConciergeModal from './components/agent/AiConciergeModal.jsx';
 import CarPhotosModal from './components/modals/CarPhotosModal.jsx';
 import ZaloReentryModal from './components/modals/ZaloReentryModal.jsx';
 import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal.jsx';
+import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
 
 // Custom Hooks
 import useZaloReentry from './hooks/useZaloReentry.js';
@@ -152,6 +153,8 @@ export default function App() {
     setShowTermsModal,
     showAiModal,
     setShowAiModal,
+    showDeleteAccountModal,
+    setShowDeleteAccountModal,
     pendingBookingTrip,
     setPendingBookingTrip,
     pendingPostTrip,
@@ -361,6 +364,16 @@ export default function App() {
     showToast('Đã đăng xuất tài khoản.');
   };
 
+  const handleAccountDeleted = () => {
+    if (currentUser) {
+      const uId = currentUser.id;
+      const uPhone = currentUser.phone ? String(currentUser.phone).replace(/\D/g, '') : '';
+      setDriverOffers(prev => prev.filter(t => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone)));
+      setPassengerRequests(prev => prev.filter(t => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone)));
+    }
+    handleLogout();
+  };
+
   const handleViewTripInMarket = (trip) => {
     if (!trip) return;
     setActiveTab('market');
@@ -423,6 +436,7 @@ export default function App() {
         onOpenAuth={() => openAuthWithContext()}
         onLogout={handleLogout}
         onOpenAi={() => setShowAiModal(true)}
+        onOpenDeleteAccount={() => setShowDeleteAccountModal(true)}
       />
 
       <main className="flex-1 pb-24 md:pb-0">
@@ -853,6 +867,15 @@ export default function App() {
               window.location.hash = '';
             }
           }}
+          onShowToast={showToast}
+        />
+      )}
+
+      {showDeleteAccountModal && (
+        <DeleteAccountModal
+          currentUser={currentUser}
+          onClose={() => setShowDeleteAccountModal(false)}
+          onDeleted={handleAccountDeleted}
           onShowToast={showToast}
         />
       )}

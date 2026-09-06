@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Compass, Sparkles, PlusCircle, Clock, ShieldCheck, FileText, Globe, Car, User, LogOut, ChevronDown, HelpCircle } from 'lucide-react';
+import { Compass, Sparkles, PlusCircle, Clock, ShieldCheck, FileText, Globe, Car, User, LogOut, ChevronDown, HelpCircle, Trash2 } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Logo from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
@@ -34,7 +34,8 @@ export default function Header({
   currentUser = null,
   onOpenAuth,
   onLogout,
-  onOpenAi
+  onOpenAi,
+  onOpenDeleteAccount
 }) {
   const { t } = useI18n();
   const tabs = [
@@ -217,10 +218,25 @@ export default function Header({
                       setIsUserMenuOpen(false);
                       onLogout?.();
                     }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
+                    <LogOut className="w-3.5 h-3.5 text-slate-400" />
                     <span>Đăng xuất</span>
+                  </button>
+
+                  <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
+
+                  {/* Mục 5: Xóa tài khoản vĩnh viễn (Apple Guideline 5.1.1 v & NĐ 13/2023) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onOpenDeleteAccount?.();
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Xóa tài khoản vĩnh viễn</span>
                   </button>
                 </div>
               )}
