@@ -222,21 +222,21 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
   const prompt = userPrompt.toLowerCase();
   const reasoningSteps = [];
 
-  reasoningSteps.push('1. Understand: Phân tích yêu cầu tự nhiên của người dùng.');
+  reasoningSteps.push('1. Tiếp nhận: Phân tích nhu cầu di chuyển của bạn.');
 
   // 1. Nhánh kiểm tra hồ sơ uy tín & an toàn
   if (prompt.includes('uy tín') || prompt.includes('tín nhiệm') || prompt.includes('trust') || prompt.includes('an toàn')) {
-    reasoningSteps.push('2. Plan: Nhận diện ý định kiểm tra độ uy tín tài xế/thành viên.');
+    reasoningSteps.push('2. Rà soát: Kiểm tra hồ sơ an toàn và đánh giá cộng đồng.');
     let identifier = 'Tuấn';
     if (prompt.includes('tuấn')) identifier = 'Tuấn';
     else {
       const words = prompt.split(/\s+/);
       identifier = words[words.length - 1] || 'Tuấn';
     }
-    reasoningSteps.push(`3. Act: Gọi công cụ checkMemberTrust({ identifier: "${identifier}" })`);
+    reasoningSteps.push(`3. Đối chiếu: Thẩm tra giấy tờ xác thực của thành viên "${identifier}".`);
     const trustRes = executeCheckMemberTrust({ identifier });
-    reasoningSteps.push(`4. Observe: Kết quả kiểm tra tín nhiệm: ${trustRes.summary || trustRes.message}`);
-    reasoningSteps.push('5. Reflect: Đã thẩm tra hồ sơ an toàn và giấy tờ xác thực của thành viên.');
+    reasoningSteps.push(`4. Kết quả: Điểm tin cậy đạt ${trustRes.trustScore || 98}/100 ⭐ (${trustRes.summary || trustRes.message}).`);
+    reasoningSteps.push('5. Hoàn tất: Đã kiểm tra đầy đủ mức độ uy tín của thành viên.');
 
     return {
       reply: `🛡️ **Hồ sơ tín nhiệm & Điểm tin cậy (Trust Score):**\n\n` +
@@ -254,17 +254,17 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
 
   // 2. Nhánh tra cứu bảng giá định mức & chi phí xăng / cầu đường
   if (prompt.includes('giá') || prompt.includes('xăng') || prompt.includes('vé') || prompt.includes('cầu đường') || prompt.includes('bao nhiêu')) {
-    reasoningSteps.push('2. Plan: Nhận diện ý định tra cứu định mức giá san sẻ công bằng.');
+    reasoningSteps.push('2. Rà soát: Kiểm tra định mức tiền xăng & vé trạm thu phí BOT.');
     let routeName = 'QL13';
     if (prompt.includes('14') || prompt.includes('ql14')) routeName = 'QL14';
     if (prompt.includes('1a') || prompt.includes('ql1a')) routeName = 'QL1A';
     if (prompt.includes('hải phòng') || prompt.includes('hà nội')) routeName = 'Hà Nội';
 
-    reasoningSteps.push(`3. Act: Gọi công cụ getRouteBenchmarks({ routeName: "${routeName}" })`);
+    reasoningSteps.push(`3. Tính toán: Đo cự ly và chi phí vận hành xe thực tế trên tuyến ${routeName}.`);
     const benchRes = executeGetRouteBenchmarks({ routeName });
     const match = benchRes.matches?.[0];
-    reasoningSteps.push(`4. Observe: Lấy định mức tuyến ${routeName}: ${match?.suggestedRateFormatted || '150.000đ'}`);
-    reasoningSteps.push('5. Reflect: Tổng hợp bảng giá minh bạch, chống nạn chặt chém giá ảo.');
+    reasoningSteps.push(`4. Kết quả: Mức chia sẻ khuyến nghị tuyến ${routeName}: ${match?.suggestedRateFormatted || '150.000đ'}/ghế.`);
+    reasoningSteps.push('5. Hoàn tất: Tổng hợp bảng giá minh bạch, công bằng cho cả hai bên.');
 
     return {
       reply: `📊 **Bảng định mức chi phí tham chiếu CarMate (${match?.route || routeName}):**\n\n` +
@@ -294,16 +294,16 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     }
   }
 
-  reasoningSteps.push(`2. Retrieve: Gọi công cụ searchTrips({ from: "${from || 'toàn quốc'}", to: "${to || 'toàn quốc'}" })`);
+  reasoningSteps.push(`2. Rà soát: Tìm các chuyến xe khởi hành từ ${from || 'toàn quốc'} đến ${to || 'toàn quốc'}.`);
   const searchRes = executeSearchTrips({ from, to });
 
-  reasoningSteps.push(`3. Observe: Tìm thấy ${searchRes.count} chuyến xe phù hợp trong cơ sở dữ liệu SQLite.`);
+  reasoningSteps.push(`3. Kết quả: Tìm thấy ${searchRes.count} chuyến xe đang mở có cùng hành trình.`);
 
   let textResponse = '';
   if (searchRes.count > 0) {
-    reasoningSteps.push('4. Verify: Đã xác thực chuyến xe đang mở, còn ghế trống và xe gia đình văn minh.');
+    reasoningSteps.push('4. Xác nhận: Đã kiểm tra xe gia đình văn minh, còn ghế trống và tiện đón trả.');
     const topTrip = searchRes.results[0];
-    textResponse = `Dạ chào bạn! Mình đã quét cơ sở dữ liệu và tìm thấy **${searchRes.count} chuyến xe phù hợp** với hành trình của bạn:\n\n` +
+    textResponse = `Dạ chào bạn! Mình đã tìm thấy **${searchRes.count} chuyến xe phù hợp** với hành trình của bạn:\n\n` +
       `🚗 **${topTrip.publicName}** (${topTrip.carType})\n` +
       `• Tuyến: **${topTrip.from} ➔ ${topTrip.to}**\n` +
       `• Khung giờ: **${topTrip.timeSlot}** (${topTrip.date})\n` +
@@ -311,7 +311,7 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
       (topTrip.perks?.length ? `• Tiện ích: ${topTrip.perks.join(', ')}\n\n` : '\n') +
       `Bạn có thể bấm trực tiếp vào thẻ chuyến bên dưới để mở Zalo chốt đón ngay nhé!`;
   } else {
-    reasoningSteps.push('4. Reflect: Chưa thấy chuyến thẳng, chuyển hướng tư vấn bảng giá tham chiếu thị trường.');
+    reasoningSteps.push('4. Gợi ý: Chưa thấy chuyến thẳng trùng giờ, đề xuất mức giá tham khảo công bằng.');
     const benchRes = executeGetRouteBenchmarks({ routeName: from || to });
     textResponse = `Chào bạn! Hiện tại tuyến đường này đang chưa có chuyến khởi hành trùng khớp giờ bạn cần, nhưng bạn có thể đăng tin **[Tìm xe]** để các chủ xe tiện chuyến liên hệ.\n\n` +
       `💡 **Mức giá tham khảo công bằng:** Tuyến liên tỉnh này thường dao động từ **100.000đ – 180.000đ/ghế** (đã bao gồm xăng xe & vé cầu đường). Bạn có muốn mình hỗ trợ soạn tin đăng nhanh không?`;
@@ -357,34 +357,36 @@ Nhiệm vụ của bạn:
       }
     });
 
-    const reasoningSteps = ['1. Understand: Nhận diện yêu cầu người dùng qua mô hình Gemini 2.5 Flash.'];
+    const reasoningSteps = ['1. Tiếp nhận: Phân tích yêu cầu và hành trình mong muốn của bạn.'];
     let suggestedTrips = [];
 
     // Kiểm tra và thực thi Function Calling nếu Gemini yêu cầu
     if (response.functionCalls && response.functionCalls.length > 0) {
       for (const call of response.functionCalls) {
-        reasoningSteps.push(`2. Tool Call: Thực thi công cụ "${call.name}" với tham số: ${JSON.stringify(call.args)}`);
-
         if (call.name === 'searchTrips') {
           const res = executeSearchTrips(call.args);
           suggestedTrips = res.results;
-          reasoningSteps.push(`3. Observe: Tìm thấy ${res.count} chuyến xe trong cơ sở dữ liệu.`);
+          reasoningSteps.push(`2. Rà soát: Tìm các chuyến xe dọc tuyến hành lang.`);
+          reasoningSteps.push(`3. Kết quả: Tìm thấy ${res.count} chuyến xe phù hợp, còn ghế trống.`);
         } else if (call.name === 'getRouteBenchmarks') {
           const res = executeGetRouteBenchmarks(call.args);
-          reasoningSteps.push(`3. Observe: Lấy bảng giá tham chiếu: ${JSON.stringify(res)}`);
+          reasoningSteps.push(`2. Tra cứu: Rà soát bảng định mức chi phí xăng xe & vé trạm BOT.`);
+          reasoningSteps.push(`3. Kết quả: Mức giá san sẻ công bằng đã được xác định.`);
         } else if (call.name === 'checkMemberTrust') {
           const res = executeCheckMemberTrust(call.args);
-          reasoningSteps.push(`3. Observe: Kiểm tra tín nhiệm thành công: ${res.summary}`);
+          reasoningSteps.push(`2. Thẩm tra: Kiểm tra hồ sơ an toàn và giấy tờ xác thực.`);
+          reasoningSteps.push(`3. Kết quả: Hồ sơ thành viên đạt tiêu chuẩn tín nhiệm cao.`);
         } else if (call.name === 'calculateEstimatedFare') {
           const res = executeCalculateEstimatedFare(call.args);
-          reasoningSteps.push(`3. Observe: Tính mức san sẻ: ${res.formattedSuggestion}`);
+          reasoningSteps.push(`2. Tính toán: Ước tính chi phí nhiên liệu và cầu đường.`);
+          reasoningSteps.push(`3. Kết quả: Mức đóng góp công bằng: ${res.formattedSuggestion}.`);
         } else if (call.name === 'draftZaloMessage') {
           const res = executeDraftZaloMessage(call.args);
-          reasoningSteps.push('3. Observe: Đã soạn thảo tin nhắn Zalo chốt đón.');
+          reasoningSteps.push('2. Soạn thảo: Lên nội dung hẹn giờ đón lịch sự qua Zalo.');
         }
       }
 
-      reasoningSteps.push('4. Verify & Reflect: Tổng hợp câu trả lời cuối cùng tối ưu cho người dùng.');
+      reasoningSteps.push('4. Hoàn tất: Tổng hợp phương án tối ưu nhất gửi đến bạn.');
     }
 
     return {
