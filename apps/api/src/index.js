@@ -31,7 +31,7 @@ const defaultAllowedOrigins = [
   'https://www.carmate.vn',
   'https://ops.carmate.vn'
 ];
-const customAllowed = (process.env.ALLOWED_ORIGINS || '')
+const customAllowed = (process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
