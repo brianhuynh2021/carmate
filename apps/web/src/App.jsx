@@ -545,7 +545,7 @@ export default function App() {
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f1f5f9] dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 antialiased transition-colors selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
+    <div className="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-[#090d16] text-slate-900 dark:text-slate-100 antialiased transition-colors selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -714,7 +714,7 @@ export default function App() {
                     action={<Button variant="outline" onClick={() => { setSearchKeyword(''); resetFilters(); }}>{t('market.resetFilters')}</Button>}
                   />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-7">
                     {filteredItems.map((item) => (
                       <TripCard
                         key={item.id}
