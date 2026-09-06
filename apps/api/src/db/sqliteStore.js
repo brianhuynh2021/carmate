@@ -7,7 +7,9 @@ import {
   INITIAL_PASSENGER_REQUESTS,
   INITIAL_BOOKED_ESCROWS,
   SITE_INFO,
-  cleanPhoneNumber
+  cleanPhoneNumber,
+  isTripExpired,
+  getTomorrowISO
 } from '@carmate/shared';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -258,6 +260,24 @@ export async function initDB() {
     console.warn('[SQLite DB] Bỏ qua dọn dẹp thực thể:', err.message);
   }
 
+  // Đồng bộ lại ngày khởi hành & thuộc tính định kỳ cho các chuyến xe mẫu (DRV-101, REQ-201...)
+  try {
+    const allSeeds = [...INITIAL_DRIVER_OFFERS, ...INITIAL_PASSENGER_REQUESTS];
+    const updateStmt = db.prepare(`
+      UPDATE trips 
+      SET date = ?, timeSlot = ?, payload = ?
+      WHERE id = ?
+    `);
+    const syncSeeds = db.transaction(() => {
+      for (const s of allSeeds) {
+        updateStmt.run(s.date || 'Hôm nay', s.timeSlot || '07:00-08:00', JSON.stringify(s), s.id);
+      }
+    });
+    syncSeeds();
+  } catch (err) {
+    console.warn('[SQLite DB] Bỏ qua đồng bộ seed:', err.message);
+  }
+
   return db;
 }
 
@@ -388,17 +408,20 @@ export function getPaginatedTrips(filters = {}) {
     params.push(kw, kw, kw, kw);
   }
 
-  const countRow = database.prepare(`SELECT COUNT(*) as total ${baseSql}`).get(...params);
-  const total = countRow ? countRow.total : 0;
+  const allRows = database.prepare(`SELECT * ${baseSql} ORDER BY createdAt DESC`).all(...params);
+  let trips = allRows.map(rowToTrip).filter(Boolean);
 
+  // Mặc định tự động loại bỏ các chuyến đã hết hạn (>30 phút sau giờ khởi hành)
+  if (!filters.includeExpired) {
+    trips = trips.filter((t) => !isTripExpired(t));
+  }
+
+  const total = trips.length;
   const limit = Math.max(1, Math.min(100, parseInt(filters.limit, 10) || 50));
   const offset = Math.max(0, parseInt(filters.offset, 10) || 0);
+  const paginatedTrips = trips.slice(offset, offset + limit);
 
-  const querySql = `SELECT * ${baseSql} ORDER BY createdAt DESC LIMIT ? OFFSET ?`;
-  const rows = database.prepare(querySql).all(...params, limit, offset);
-  const trips = rows.map(rowToTrip).filter(Boolean);
-
-  return { total, trips };
+  return { total, trips: paginatedTrips };
 }
 
 export function getTrips(filters = {}) {
@@ -443,7 +466,14 @@ export function getTrips(filters = {}) {
   sql += ' ORDER BY createdAt DESC';
 
   const rows = database.prepare(sql).all(...params);
-  return rows.map(rowToTrip).filter(Boolean);
+  let trips = rows.map(rowToTrip).filter(Boolean);
+
+  // Mặc định lọc bỏ các chuyến quá giờ để đảm bảo dữ liệu sàn luôn tươi mới
+  if (!filters.includeExpired) {
+    trips = trips.filter((t) => !isTripExpired(t));
+  }
+
+  return trips;
 }
 
 export function getTripById(id) {
@@ -457,11 +487,30 @@ export async function addTrip(tripData) {
   const cleanPhone = cleanPhoneNumber(tripData.phoneReal || tripData.phone || '');
   const id = tripData.id || `${tripData.type === 'passenger_request' ? 'REQ' : 'DRV'}-${Date.now()}`;
   const maskedCode = tripData.maskedCode || `${tripData.type === 'passenger_request' ? 'HK' : 'CX'}-${Math.floor(100 + Math.random() * 900)}`;
+
+  let dateVal = tripData.date || 'Hôm nay';
+  if (tripData.departureTime && /mai/i.test(tripData.departureTime) && (!tripData.date || tripData.date === 'Hôm nay')) {
+    dateVal = 'Ngày mai';
+  }
+
+  let timeSlotVal = tripData.timeSlot;
+  if (!timeSlotVal && tripData.departureTime) {
+    const m = tripData.departureTime.match(/(\d{1,2}):(\d{2})/);
+    if (m) {
+      const h = Number(m[1]);
+      const nextH = (h + 1) % 24;
+      timeSlotVal = `${String(h).padStart(2, '0')}:${m[2]}-${String(nextH).padStart(2, '0')}:${m[2]}`;
+    }
+  }
+  if (!timeSlotVal) timeSlotVal = '07:00-08:00';
+
   const completeTrip = {
     ...tripData,
     id,
     maskedCode,
     phoneReal: cleanPhone,
+    date: dateVal,
+    timeSlot: timeSlotVal,
     status: tripData.status || 'active',
     createdAt: tripData.createdAt || Date.now()
   };
@@ -489,8 +538,8 @@ export async function addTrip(tripData) {
     toLocation: completeTrip.to || completeTrip.toLocation || '',
     routeCategory: completeTrip.routeCategory || completeTrip.route || '',
     direction: completeTrip.direction || 'both',
-    timeSlot: completeTrip.timeSlot || '07:00-08:00',
-    date: completeTrip.date || 'Hôm nay',
+    timeSlot: completeTrip.timeSlot,
+    date: completeTrip.date,
     price: Number(completeTrip.basePricePerSeat || completeTrip.expectedPrice || 150000),
     seats: Number(completeTrip.availableSeats || completeTrip.seatsNeeded || 1),
     carCategory: completeTrip.carCategory || 'family_car',
@@ -511,6 +560,56 @@ export async function updateTrip(id, updates) {
   const merged = { ...existing, ...updates, updatedAt: Date.now() };
   await addTrip(merged);
   return merged;
+}
+
+/**
+ * Tái đăng 1 chạm (1-Tap Re-publish) chuyến xe sang ngày mới
+ * Giúp tài xế nhân bản toàn bộ thông tin lộ trình, xe, giá sang ngày mai chỉ trong 1 chạm.
+ */
+export async function republishTrip(id, updates = {}) {
+  const existing = getTripById(id);
+  if (!existing) return null;
+
+  const newDate = updates.date || getTomorrowISO();
+  const newTimeSlot = updates.timeSlot || existing.timeSlot || '07:00-09:00';
+  const newExactTime = updates.exactTime !== undefined ? updates.exactTime : (existing.exactTime || '');
+
+  const prefix = existing.type === 'passenger_request' ? 'REQ' : 'DRV';
+  const codePrefix = existing.type === 'passenger_request' ? 'HK' : 'CX';
+  const newId = `${prefix}-${Date.now()}`;
+  const newMaskedCode = `${codePrefix}-${Math.floor(100 + Math.random() * 900)}`;
+
+  // Chỉ cho phép đổi các trường lịch trình khi tái đăng. Không lấy nguyên
+  // `updates` để tránh ghi đè quyền sở hữu (phoneReal/userId) — nếu không,
+  // chủ bài có thể tái đăng thành chuyến đứng tên số điện thoại người khác.
+  const ALLOWED_REPUBLISH_FIELDS = [
+    'date', 'timeSlot', 'exactTime', 'availableSeats', 'seatsNeeded',
+    'basePricePerSeat', 'expectedPrice', 'notes', 'perks', 'direction'
+  ];
+  const safeUpdates = {};
+  for (const key of ALLOWED_REPUBLISH_FIELDS) {
+    if (updates[key] !== undefined) safeUpdates[key] = updates[key];
+  }
+
+  const duplicatedData = {
+    ...existing,
+    ...safeUpdates,
+    // Quyền sở hữu luôn kế thừa từ bài gốc, không nhận từ client
+    phoneReal: existing.phoneReal,
+    phone: existing.phone,
+    userId: existing.userId,
+    id: newId,
+    maskedCode: newMaskedCode,
+    date: newDate,
+    timeSlot: newTimeSlot,
+    exactTime: newExactTime,
+    status: 'active',
+    isHidden: 0,
+    isBanned: 0,
+    createdAt: Date.now()
+  };
+
+  return await addTrip(duplicatedData);
 }
 
 export async function deleteTrip(id) {

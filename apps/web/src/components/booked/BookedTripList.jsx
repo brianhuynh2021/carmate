@@ -51,7 +51,7 @@ function Countdown30Min({ createdAt }) {
   );
 }
 
-function MitTrajectoryStepper({ status, delayedMinutes }) {
+function TripProgressStepper({ status, delayedMinutes }) {
   const isCompleted = status === 'completed';
   const isCancelled = status === 'cancelled';
   const isDelayed = status === 'delayed';
@@ -306,8 +306,8 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                 </div>
 
                 <div className="p-5 space-y-4">
-                  {/* MIT Trajectory Log Stepper */}
-                  <MitTrajectoryStepper status={record.status} delayedMinutes={record.delayedMinutes} />
+                  {/* Quy trình kết nối an toàn 4 bước */}
+                  <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} />
 
                   {/* Lộ Trình & Thời Gian */}
                   <div className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06]">

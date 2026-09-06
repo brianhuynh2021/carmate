@@ -27,7 +27,6 @@ carmate/
 ├── Dockerfile                      # Build 2 stage: build web -> chạy server Node
 ├── .github/workflows/ci.yml        # CI: build + chạy toàn bộ E2E mỗi lần push
 ├── ARCHITECTURE.md                 # Tài liệu kiến trúc & lộ trình
-├── PENTEST_REPORT.md               # Báo cáo kiểm thử xâm nhập & trạng thái khắc phục
 │
 ├── scripts/
 │   ├── test-local-e2e.js           # Bộ E2E (API, phân quyền, PII, XSS, AI agent)

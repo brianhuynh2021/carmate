@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listTrips, getTrip, createTrip, updateStatus, updateTripHandler, deleteTripHandler } from '../controllers/tripController.js';
+import { listTrips, getTrip, createTrip, updateStatus, updateTripHandler, deleteTripHandler, republishTripHandler } from '../controllers/tripController.js';
 import { getMatches } from '../controllers/matchController.js';
 import { listBookings, createBooking, reportDelay, cancelBooking, completeBooking, submitReview } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile } from '../controllers/miscController.js';
@@ -49,6 +49,7 @@ router.post('/trips', postTripLimiter, optionalAuth, createTrip);
 router.put('/trips/:id', optionalAuth, requireTripOwnership, updateTripHandler);
 router.delete('/trips/:id', optionalAuth, requireTripOwnership, deleteTripHandler);
 router.patch('/trips/:id/status', optionalAuth, requireTripOwnership, updateStatus);
+router.post('/trips/:id/republish', postTripLimiter, optionalAuth, requireTripOwnership, republishTripHandler);
 
 // --- Smart Matching Radar ---
 router.get('/matches', optionalAuth, getMatches);

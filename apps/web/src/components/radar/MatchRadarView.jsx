@@ -3,7 +3,7 @@ import {
   Car, Users, Sparkles, CheckCircle2,
   MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap
 } from 'lucide-react';
-import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, cleanPhoneNumber } from '@carmate/shared';
+import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, cleanPhoneNumber, isTripExpired } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { Segmented } from '../ui/Chip.jsx';
 import { Field, Select } from '../ui/Field.jsx';
@@ -47,9 +47,14 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
     return () => { active = false; };
   }, [selectedRouteKey]);
 
-  // Danh sách duyệt thủ công (Fallback & Direct Browse)
+  // Lọc chỉ giữ các cặp ghép còn hạn chạy
+  const validMatches = useMemo(() => {
+    return matches.filter((m) => !isTripExpired(m.driver) && !isTripExpired(m.passenger));
+  }, [matches]);
+
+  // Danh sách duyệt thủ công (Fallback & Direct Browse) loại bỏ chuyến quá giờ
   const manualList = useMemo(() => {
-    const source = userRole === 'driver' ? passengerRequests : driverOffers;
+    const source = (userRole === 'driver' ? passengerRequests : driverOffers).filter((i) => !isTripExpired(i));
     return selectedRouteKey === 'all'
       ? source
       : source.filter((i) => i.routeCategory === selectedRouteKey);
@@ -138,7 +143,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
             <h3 className="text-base font-bold text-[#1d1d1f] flex items-center gap-2">
               <span>Các Cặp Ghép Tối Ưu Nhất</span>
               <span className="px-2 py-0.5 rounded-full text-xs bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 font-bold tabular">
-                {matches.length}
+                {validMatches.length}
               </span>
             </h3>
             <span className="text-xs text-[#86868b]">Khớp lệnh tiện tuyến & cùng giờ</span>
@@ -148,7 +153,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
             <div className="surface p-12 rounded-3xl text-center text-sm text-[#86868b] animate-pulse">
               Đang phân tích các cặp chuyến cùng lộ trình...
             </div>
-          ) : matches.length === 0 ? (
+          ) : validMatches.length === 0 ? (
             <EmptyState
               icon={Sparkles}
               title="Chưa có cặp ghép hoàn hảo trên tuyến này"
@@ -161,7 +166,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
             />
           ) : (
             <div className="space-y-4">
-              {matches.map((match) => {
+              {validMatches.map((match) => {
                 const isPerfect = match.score >= 90;
                 const driver = match.driver;
                 const passenger = match.passenger;

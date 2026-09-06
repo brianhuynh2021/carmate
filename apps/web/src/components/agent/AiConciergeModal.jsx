@@ -10,8 +10,6 @@ import {
   ShieldCheck, 
   CheckCircle2, 
   ExternalLink,
-  ChevronDown,
-  ChevronUp,
   RotateCcw,
   Users,
   HeartHandshake
@@ -27,36 +25,6 @@ const QUICK_PROMPTS = [
   'Soạn giúp tôi tin nhắn Zalo hẹn đón lịch sự ở cây xăng'
 ];
 
-function renderStanfordReasoningStep(step, idx) {
-  const match = step.match(/^\[([A-Z]+)\]\s*(.*)$/);
-  if (match) {
-    const [, tag, content] = match;
-    let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
-    if (tag === 'VERIFY') badgeClass = 'bg-blue-50 text-blue-700 border-blue-200/80';
-    if (tag === 'REFLECT') badgeClass = 'bg-amber-50 text-amber-800 border-amber-200/80';
-    if (tag === 'REPLAN') badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200/80';
-    if (tag === 'PLAN') badgeClass = 'bg-purple-50 text-purple-700 border-purple-200/80';
-    if (tag === 'ACT') badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
-    if (tag === 'RESOLVE') badgeClass = 'bg-teal-50 text-teal-800 border-teal-200/80';
-
-    return (
-      <div key={idx} className="flex items-start gap-2 py-1.5 border-b border-black/[0.04] last:border-0 leading-relaxed">
-        <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-black uppercase tracking-wider shrink-0 border ${badgeClass}`}>
-          {tag}
-        </span>
-        <span className="text-[11px] text-[#424245] font-sans flex-1">{content}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div key={idx} className="flex items-start gap-1.5 py-1 text-[11px] text-[#515154]">
-      <span className="text-[#0071e3] shrink-0 font-bold">➔</span>
-      <span className="flex-1">{step}</span>
-    </div>
-  );
-}
-
 export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
   const [messages, setMessages] = useState([
     {
@@ -69,7 +37,6 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [expandedReasoning, setExpandedReasoning] = useState({});
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -84,10 +51,6 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
   }, [messages, isLoading]);
 
   if (!isOpen) return null;
-
-  const toggleReasoning = (id) => {
-    setExpandedReasoning(prev => ({ ...prev, [id]: !prev[id] }));
-  };
 
   const handleSend = async (textToSend) => {
     const query = (textToSend || inputMessage).trim();
@@ -179,8 +142,6 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar">
           {messages.map((m) => {
             const isUser = m.role === 'user';
-            const hasReasoning = m.reasoningSteps && m.reasoningSteps.length > 0;
-            const isExpanded = expandedReasoning[m.id];
 
             return (
               <div
@@ -194,29 +155,6 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                 )}
 
                 <div className={`max-w-[88%] sm:max-w-[82%] space-y-2.5 ${isUser ? 'items-end' : 'items-start'}`}>
-                  {/* Reasoning Dropdown (Stanford Inner Loop Drawer) */}
-                  {hasReasoning && !isUser && (
-                    <div className="rounded-xl border border-black/[0.06] bg-[#f5f5f7] overflow-hidden text-xs shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => toggleReasoning(m.id)}
-                        className="w-full px-3.5 py-2 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#515154] hover:text-[#1d1d1f] hover:bg-black/[0.02] cursor-pointer transition-colors"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
-                          <span>Mạch tư duy Agentic AI ({m.reasoningSteps.length} bước)</span>
-                        </span>
-                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                      </button>
-
-                      {isExpanded && (
-                        <div className="px-3.5 py-2.5 border-t border-black/[0.06] space-y-1 bg-white">
-                          {m.reasoningSteps.map((step, idx) => renderStanfordReasoningStep(step, idx))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* Main Chat Bubble */}
                   <div
                     className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-line ${

@@ -765,7 +765,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* ── TAB 4: AI AGENTIC OBSERVABILITY & QUỸ ĐẠO SUY LUẬN (MIT & STANFORD) ── */}
+      {/* ── TAB 4: AI OBSERVABILITY & NHẬT KÝ LUỒNG ĐIỀU PHỐI ── */}
       {activeTab === 'ai' && (
         <div className="space-y-6">
           {/* Telemetry KPI Cards */}
@@ -800,7 +800,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <p className="text-2xl font-bold font-display tabular text-[#0071e3]">
                 {aiIntelligence?.summary?.avgLatencyMs || 0} ms
               </p>
-              <p className="text-[11px] text-[#86868b]">Thời gian thực thi Stanford Loop</p>
+              <p className="text-[11px] text-[#86868b]">Thời gian phản hồi luồng AI</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
@@ -873,10 +873,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <div>
                 <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[#0071e3]" />
-                  <span>Hộp Đen Quỹ Đạo Suy Luận AI (Agentic Reasoning Trajectory Stream)</span>
+                  <span>Nhật ký luồng xử lý AI (AI Execution Trajectory Log)</span>
                 </h3>
                 <p className="text-xs text-[#86868b] mt-0.5">
-                  Lưu trữ chuỗi tư duy Stanford Inner Loop [PLAN ➔ ACT ➔ VERIFY ➔ REFLECT ➔ REPLAN ➔ RESOLVE]
+                  Nhật ký xử lý đa bước tự động [Lập kế hoạch ➔ Rà soát chuyến ➔ Kiểm tra định mức ➔ Đề xuất]
                 </p>
               </div>
               <span className="text-xs text-[#86868b] tabular font-medium">

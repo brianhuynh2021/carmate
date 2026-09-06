@@ -82,6 +82,13 @@ export const api = {
     });
   },
 
+  async republishTrip(id, updates = {}) {
+    return request(`/trips/${id}/republish`, {
+      method: 'POST',
+      body: JSON.stringify(updates)
+    });
+  },
+
   // Matches Radar
   async getMatches(params = {}) {
     const query = new URLSearchParams();

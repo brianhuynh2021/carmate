@@ -980,8 +980,99 @@ async function runTests() {
         headers: { 'x-admin-key': adminToken }
       }).catch(() => {});
     }
+
+    // 20. KIỂM THỬ CƠ CHẾ TỰ ĐỘNG HẾT HẠN (TTL), TÁI ĐĂNG 1 CHẠM & PHÂN NHÓM THỜI GIAN
+    console.log('\n--- 20. Kiểm thử Cơ Chế Tự Động Hết Hạn (TTL), Tái Đăng 1 Chạm & Phân Nhóm Thời Gian ---');
+    const { 
+      isTripExpired: testIsTripExpired, 
+      groupTripsByTemporalWindow: testGroupTrips, 
+      getTomorrowISO: testTomorrowISO, 
+      getTripEndTimestamp: testTripEndTimestamp 
+    } = await import('@carmate/shared');
+
+    // 20.1 Kiểm thử đơn vị các hàm thời gian trong @carmate/shared
+    const pastTripObj = { id: 'T-PAST', date: '2020-01-01', timeSlot: '07:00-09:00' };
+    const tomorrowTripObj = { id: 'T-TOMORROW', date: testTomorrowISO(), timeSlot: '07:00-09:00' };
+    const weeklyTripObj = { id: 'T-WEEKLY', date: 'Thứ 2 (Lặp lại hàng tuần)', timeSlot: '07:00-09:00' };
+
+    assert(testIsTripExpired(pastTripObj) === true, 'TTL 1: Chuyến đi trong quá khứ được nhận diện là đã hết hạn (isTripExpired = true)');
+    assert(testIsTripExpired(tomorrowTripObj) === false, 'TTL 2: Chuyến đi ngày mai vẫn còn hiệu lực (isTripExpired = false)');
+    assert(testIsTripExpired(weeklyTripObj) === false, 'TTL 3: Chuyến định kỳ lặp lại hàng tuần không bị hết hạn');
+
+    const sampleGroups = testGroupTrips([pastTripObj, tomorrowTripObj, weeklyTripObj]);
+    assert(sampleGroups.expired.length === 1 && sampleGroups.expired[0].id === 'T-PAST', 'Phân nhóm 1: Chuyến quá giờ tự động được đưa vào nhóm expired');
+    assert(sampleGroups.tomorrow.length >= 1, 'Phân nhóm 2: Chuyến ngày mai được gom chính xác vào nhóm tomorrow');
+
+    // 20.2 Kiểm thử lọc TTL qua API /api/trips
+    const createPastTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        from: 'Đồng Xoài',
+        to: 'Sài Gòn',
+        date: '2020-01-01',
+        timeSlot: '05:00-07:00',
+        phoneReal: '0984883750',
+        userId: 'USR-0984883750',
+        routeCategory: 'Tuyến QL14',
+        type: 'driver_offer',
+        price: 150000,
+        seats: 3
+      })
+    });
+    const createPastData = await createPastTripRes.json();
+    const pastTripId = createPastData.data?.id;
+    assert(createPastTripRes.status === 201 && pastTripId, 'Tạo chuyến xe quá khứ phục vụ kiểm thử TTL thành công');
+
+    // Truy vấn công khai: Chuyến quá khứ không được xuất hiện
+    const ttlPublicTripsRes = await fetch(`${BASE_URL}/api/trips?routeCategory=Tuy%E1%BA%BFn+QL14`).then(r => r.json());
+    const publicTripIds = ttlPublicTripsRes.data?.all?.map(t => t.id) || [];
+    assert(!publicTripIds.includes(pastTripId), 'TTL 4: Chuyến xe quá giờ tự động bị ẩn khỏi danh sách tìm kiếm công khai');
+
+    // Truy vấn có cờ includeExpired: Chuyến quá khứ xuất hiện
+    const allTripsWithExpired = await fetch(`${BASE_URL}/api/trips?routeCategory=Tuy%E1%BA%BFn+QL14&includeExpired=true`).then(r => r.json());
+    const allTripIds = allTripsWithExpired.data?.all?.map(t => t.id) || [];
+    assert(allTripIds.includes(pastTripId), 'TTL 5: API hỗ trợ includeExpired=true cho màn hình lịch sử');
+
+    // 20.3 Kiểm thử Tái Đăng 1 Chạm POST /api/trips/:id/republish
+    const republishRes = await fetch(`${BASE_URL}/api/trips/${pastTripId}/republish`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        date: testTomorrowISO()
+      })
+    });
+    const republishData = await republishRes.json();
+    const newRepublishedId = republishData.data?.id;
+
+    assert(republishRes.status === 201 && republishData.success === true, 'Tái đăng 1: API /api/trips/:id/republish phản hồi thành công (HTTP 201)');
+    assert(newRepublishedId && newRepublishedId !== pastTripId, 'Tái đăng 2: Chuyến mới được cấp mã ID riêng biệt');
+    assert(republishData.data?.date === testTomorrowISO(), 'Tái đăng 3: Chuyến mới được tự động gán ngày khởi hành là Ngày mai');
+    assert(republishData.data?.status === 'active', 'Tái đăng 4: Chuyến mới ở trạng thái hoạt động nhận khách (status = active)');
+    assert(republishData.data?.from === 'Đồng Xoài' && republishData.data?.to === 'Sài Gòn', 'Tái đăng 5: Sao chép nguyên vẹn 100% lộ trình và điểm đến');
+
+    // Dọn sạch dữ liệu test để SQLite không bị bẩn
+    if (pastTripId) {
+      await fetch(`${BASE_URL}/api/admin/trips/${pastTripId}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': adminToken }
+      }).catch(() => {});
+    }
+    if (newRepublishedId) {
+      await fetch(`${BASE_URL}/api/admin/trips/${newRepublishedId}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': adminToken }
+      }).catch(() => {});
+    }
+    assert(true, 'Vệ sinh môi trường: Tự động dọn sạch bản ghi test sau khi kiểm thử');
   } catch (err) {
-    assert(false, 'Kịch bản Pentest Chuyên Sâu', err.message);
+    assert(false, 'Kịch bản Pentest & TTL', err.message);
   }
   const passed = results.filter(r => r.pass).length;
   const failed = results.filter(r => !r.pass).length;

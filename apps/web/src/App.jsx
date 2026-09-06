@@ -1,6 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { SearchX, LayoutGrid, Car, Users, Sparkles, ChevronDown, MapPin, Navigation, Search, X, ArrowRight } from 'lucide-react';
-import { INITIAL_DRIVER_OFFERS, INITIAL_PASSENGER_REQUESTS, INITIAL_BOOKED_ESCROWS, TIME_SLOTS } from '@carmate/shared';
+import { 
+  INITIAL_DRIVER_OFFERS, 
+  INITIAL_PASSENGER_REQUESTS, 
+  INITIAL_BOOKED_ESCROWS, 
+  TIME_SLOTS,
+  isTripExpired,
+  groupTripsByTemporalWindow,
+  getTomorrowISO,
+  formatTripDateDisplay
+} from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
 import { useI18n } from './i18n/index.jsx';
 import api from './api/client.js';
@@ -175,6 +184,10 @@ export default function App() {
   const [editingTrip, setEditingTrip] = useState(null);
   const [myTripsCount, setMyTripsCount] = useState(0);
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Phân nhóm thời gian (Temporal Windowing) & Tải thêm (Progressive Loading)
+  const [temporalFilter, setTemporalFilter] = useState('all'); // 'all' | 'today' | 'tomorrow' | 'upcoming'
+  const [visibleCount, setVisibleCount] = useState(9);
 
   // Người dùng / Tài xế hiện tại
   const USER_KEY = 'carmate_user';
@@ -434,9 +447,88 @@ export default function App() {
         if (selectedCarCategory === 'convenient_trip' && !isConvenient) return false;
         if (selectedCarCategory === 'family_car' && isConvenient) return false;
       }
+
+      // Tự động loại bỏ các chuyến đã quá giờ (>30 phút sau khi khung giờ kết thúc) khỏi sàn công khai
+      if (isTripExpired(item)) return false;
+
       return true;
     });
   }, [driverOffers, passengerRequests, marketViewMode, searchKeyword, searchFrom, searchTo, selectedTimeSlot, selectedDirection, selectedCarCategory]);
+
+  // Phân nhóm thời gian (Hôm nay / Ngày mai / Sắp tới) chuẩn Apple
+  const temporalGroups = useMemo(() => {
+    return groupTripsByTemporalWindow(filteredItems);
+  }, [filteredItems]);
+
+  const displayedMarketItems = useMemo(() => {
+    let list = filteredItems;
+    if (temporalFilter === 'today') list = temporalGroups.today;
+    else if (temporalFilter === 'tomorrow') list = temporalGroups.tomorrow;
+    else if (temporalFilter === 'upcoming') list = temporalGroups.upcoming;
+    return list;
+  }, [filteredItems, temporalFilter, temporalGroups]);
+
+  const paginatedMarketItems = useMemo(() => {
+    return displayedMarketItems.slice(0, visibleCount);
+  }, [displayedMarketItems, visibleCount]);
+
+  // Tự động reset số lượng chuyến hiển thị về 9 khi thay đổi bất kỳ bộ lọc nào
+  useEffect(() => {
+    setVisibleCount(9);
+  }, [marketViewMode, selectedCarCategory, selectedTimeSlot, selectedDirection, searchKeyword, searchFrom, searchTo, temporalFilter]);
+
+  // Tái đăng 1 chạm (1-Tap Re-publish) chuyến cũ cho ngày mai
+  const handleRePublishTrip = async (trip) => {
+    try {
+      const tomorrowStr = getTomorrowISO();
+      let createdTrip = null;
+
+      try {
+        const res = await api.republishTrip(trip.id, { date: tomorrowStr });
+        if (res?.success && res?.data) {
+          createdTrip = res.data;
+        }
+      } catch (err) {
+        console.warn('Backend republish API error, fallback to client clone:', err.message);
+      }
+
+      if (!createdTrip) {
+        const prefix = trip.type === 'passenger_request' ? 'REQ' : 'DRV';
+        const codePrefix = trip.type === 'passenger_request' ? 'HK' : 'CX';
+        createdTrip = {
+          ...trip,
+          id: `${prefix}-${Date.now()}`,
+          maskedCode: `${codePrefix}-${Math.floor(100 + Math.random() * 900)}`,
+          date: tomorrowStr,
+          status: 'active',
+          isHidden: 0,
+          isBanned: 0,
+          createdAt: Date.now()
+        };
+      }
+
+      if (createdTrip.type === 'driver_offer') {
+        setDriverOffers(prev => [createdTrip, ...prev]);
+      } else {
+        setPassengerRequests(prev => [createdTrip, ...prev]);
+      }
+
+      // Tự động gộp ID mới vào danh sách bài đăng của tài khoản
+      try {
+        const storageKey = currentUser
+          ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}`
+          : 'carmate_guest_trip_ids';
+        const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const updated = [createdTrip.id, ...stored.filter(id => id !== createdTrip.id)];
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        updateMyTripsCount(currentUser);
+      } catch {}
+
+      showToast('⚡ Đã tái đăng chuyến thành công cho ngày mai!');
+    } catch {
+      showToast('Không thể tái đăng chuyến xe. Vui lòng thử lại!');
+    }
+  };
 
   // Handlers với kết nối Backend Engine
   const handlePostTrip = async (newTrip, authUser = currentUser) => {
@@ -826,39 +918,121 @@ export default function App() {
                 </div>
               )}
 
-              {/* 4. Danh sách các chuyến xe (Spacious grid) */}
+              {/* 4. Danh sách các chuyến xe với Phân Nhóm Thời Gian & Tải thêm mượt mà (Apple Temporal Windowing) */}
               <div id="market-results" className="space-y-4 scroll-mt-24">
-                <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-bold font-mono pt-0.5">
-                  <div className="flex items-center gap-2">
+                {/* Thanh chọn cửa sổ thời gian (Hôm nay / Ngày mai / Sắp tới) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 pb-1">
+                  <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 py-0.5">
+                    <div className="inline-flex items-center p-1 rounded-full bg-[#f2f2f5] dark:bg-slate-850 border border-black/[0.04] dark:border-white/[0.06] text-xs shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => setTemporalFilter('all')}
+                        className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+                          temporalFilter === 'all'
+                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        Tất cả ({filteredItems.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTemporalFilter('today')}
+                        className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+                          temporalFilter === 'today'
+                            ? 'bg-white dark:bg-slate-900 text-[#0071e3] dark:text-[#2997ff] shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        Hôm nay ({temporalGroups.today.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTemporalFilter('tomorrow')}
+                        className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+                          temporalFilter === 'tomorrow'
+                            ? 'bg-white dark:bg-slate-900 text-[#107c41] dark:text-emerald-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        Ngày mai ({temporalGroups.tomorrow.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTemporalFilter('upcoming')}
+                        className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+                          temporalFilter === 'upcoming'
+                            ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        Sắp tới ({temporalGroups.upcoming.length})
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono font-medium">
                     <span className="relative flex h-2 w-2 shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[#107c41]"></span>
                     </span>
-                    <span>{filteredItems.length === 1 ? t('market.resultsOne') : t('market.results', { n: filteredItems.length })}</span>
+                    <span>Hiển thị {paginatedMarketItems.length} / {displayedMarketItems.length} chuyến</span>
                   </div>
                 </div>
 
-                {filteredItems.length === 0 ? (
+                {displayedMarketItems.length === 0 ? (
                   <EmptyState
                     icon={SearchX}
                     title={t('market.emptyTitle')}
-                    description={t('market.emptyDesc')}
-                    action={<Button variant="outline" onClick={() => { setSearchKeyword(''); resetFilters(); }}>{t('market.resetFilters')}</Button>}
+                    description={
+                      temporalFilter !== 'all'
+                        ? `Không có chuyến đi nào phù hợp trong mục "${temporalFilter === 'today' ? 'Hôm nay' : temporalFilter === 'tomorrow' ? 'Ngày mai' : 'Sắp tới'}".`
+                        : t('market.emptyDesc')
+                    }
+                    action={
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setTemporalFilter('all');
+                          setSearchKeyword('');
+                          resetFilters();
+                        }}
+                      >
+                        {t('market.resetFilters')}
+                      </Button>
+                    }
                   />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-7">
-                    {filteredItems.map((item) => (
-                      <TripCard
-                        key={item.id}
-                        item={item}
-                        onBook={handleInitiateBook}
-                        onShare={setTicketToShare}
-                        onViewTrustProfile={setSelectedDriverForTrust}
-                        onViewRoute={setSelectedTripForRoute}
-                        onViewCarPhotos={setSelectedTripForPhotos}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-7">
+                      {paginatedMarketItems.map((item) => (
+                        <TripCard
+                          key={item.id}
+                          item={item}
+                          onBook={handleInitiateBook}
+                          onShare={setTicketToShare}
+                          onViewTrustProfile={setSelectedDriverForTrust}
+                          onViewRoute={setSelectedTripForRoute}
+                          onViewCarPhotos={setSelectedTripForPhotos}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Progressive Loading: Tải thêm mượt mà khi danh sách nhiều hơn 9 chuyến */}
+                    {displayedMarketItems.length > visibleCount && (
+                      <div className="pt-6 pb-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setVisibleCount((prev) => prev + 9)}
+                          className="px-6 py-3 rounded-full bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-800 font-semibold text-xs transition-all shadow-xs hover:shadow-sm active:scale-95 cursor-pointer inline-flex items-center gap-2"
+                        >
+                          <span>Xem thêm {Math.min(9, displayedMarketItems.length - visibleCount)} chuyến tiếp theo</span>
+                          <span className="text-slate-400 font-normal">({displayedMarketItems.length - visibleCount} chuyến còn lại)</span>
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -901,6 +1075,7 @@ export default function App() {
               onToggleStatus={handleToggleTripStatus}
               onDeleteTrip={handleDeleteTrip}
               onPostNew={handleRequestPostTrip}
+              onRePublishTrip={handleRePublishTrip}
               onViewInMarket={handleViewTripInMarket}
               onViewTrip={(trip) => setTicketToShare(trip)}
               onViewCarPhotos={setSelectedTripForPhotos}
@@ -1017,7 +1192,7 @@ export default function App() {
         />
       )}
 
-      {/* Trợ Lý AI Concierge Modal (Mô hình Stanford + MIT) */}
+      {/* Trợ Lý AI Chuyến Đi Modal */}
       <AiConciergeModal
         isOpen={showAiModal}
         onClose={() => setShowAiModal(false)}

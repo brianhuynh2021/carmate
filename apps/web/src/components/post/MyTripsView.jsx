@@ -24,7 +24,8 @@ import {
   getTimeSlotLabel, 
   getRouteCorridor, 
   ROUTE_BENCHMARKS,
-  formatTripDateDisplay
+  formatTripDateDisplay,
+  isTripExpired
 } from '@carmate/shared';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -42,6 +43,7 @@ export default function MyTripsView({
   onToggleStatus,
   onDeleteTrip,
   onPostNew,
+  onRePublishTrip,
   onViewInMarket,
   onViewTrip,
   onViewCarPhotos
@@ -110,14 +112,22 @@ export default function MyTripsView({
     syncTripIds();
   }, [currentUser, driverOffers.length, passengerRequests.length]);
 
-  const activeTripsCount = myTrips.filter((t) => t.status !== 'full').length;
-  const fullTripsCount = myTrips.filter((t) => t.status === 'full').length;
+  const [mainTab, setMainTab] = useState('active'); // 'active' | 'history'
 
-  const filteredTrips = myTrips.filter((t) => {
-    if (statusFilter === 'open') return t.status !== 'full';
-    if (statusFilter === 'full') return t.status === 'full';
-    return true;
-  });
+  // Phân chia theo chuẩn Apple: Chuyến còn hạn (Active) và Lịch sử chuyến đã qua giờ (History)
+  const activeTrips = myTrips.filter((t) => !isTripExpired(t));
+  const historyTrips = myTrips.filter((t) => isTripExpired(t));
+
+  const activeOpenCount = activeTrips.filter((t) => t.status !== 'full').length;
+  const activeFullCount = activeTrips.filter((t) => t.status === 'full').length;
+
+  const filteredTrips = mainTab === 'history'
+    ? historyTrips
+    : activeTrips.filter((t) => {
+        if (statusFilter === 'open') return t.status !== 'full';
+        if (statusFilter === 'full') return t.status === 'full';
+        return true;
+      });
 
   const handleConfirmDelete = (trip) => {
     const codeStr = trip.maskedCode ? `(${trip.maskedCode})` : '';
@@ -152,45 +162,76 @@ export default function MyTripsView({
           description={
             currentUser
               ? `Tài khoản: ${currentUser.name} (${currentUser.phone || 'Đã xác thực'}) · Quản lý trạng thái nhận khách thời gian thực.`
-              : 'Quản lý, cập nhật giờ khởi hành, giá vé hoặc đóng chỗ khi đã đủ khách.'
+              : 'Quản lý, cập nhật giờ khởi hành, giá vé hoặc tái đăng bài khi hết hạn.'
           }
         />
 
         {myTrips.length > 0 && (
-          <div className="inline-flex items-center p-1 rounded-full bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06] text-xs self-start sm:self-auto shrink-0 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('all')}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                statusFilter === 'all'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Tất cả ({myTrips.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('open')}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                statusFilter === 'open'
-                  ? 'bg-white dark:bg-slate-900 text-[#107c41] dark:text-emerald-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Còn chỗ ({activeTripsCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('full')}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                statusFilter === 'full'
-                  ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Đã đủ ({fullTripsCount})
-            </button>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
+            {/* Primary Apple Capsule: Đang tìm khách vs Lịch sử đã kết thúc */}
+            <div className="inline-flex items-center p-1 rounded-full bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06] text-xs shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setMainTab('active')}
+                className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+                  mainTab === 'active'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Đang tìm khách ({activeTrips.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMainTab('history')}
+                className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+                  mainTab === 'history'
+                    ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Lịch sử ({historyTrips.length})
+              </button>
+            </div>
+
+            {/* Sub-pill: Chỉ hiển thị khi ở tab Đang tìm khách */}
+            {mainTab === 'active' && activeTrips.length > 0 && (
+              <div className="inline-flex items-center p-1 rounded-full bg-[#f2f2f5] dark:bg-slate-850 border border-black/[0.03] dark:border-white/[0.04] text-[11px] shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-2.5 py-1 rounded-full font-semibold transition-all cursor-pointer ${
+                    statusFilter === 'all'
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Tất cả
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('open')}
+                  className={`px-2.5 py-1 rounded-full font-semibold transition-all cursor-pointer ${
+                    statusFilter === 'open'
+                      ? 'bg-white dark:bg-slate-900 text-[#107c41] dark:text-emerald-400 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Còn chỗ ({activeOpenCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('full')}
+                  className={`px-2.5 py-1 rounded-full font-semibold transition-all cursor-pointer ${
+                    statusFilter === 'full'
+                      ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Đã đủ ({activeFullCount})
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -325,29 +366,56 @@ export default function MyTripsView({
         )
       ) : (
         <div className="space-y-4">
+          {/* Banner hướng dẫn khi ở Tab Lịch sử */}
+          {mainTab === 'history' && historyTrips.length > 0 && (
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-500/20 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </span>
+                <p className="text-slate-700 dark:text-slate-300 font-medium leading-snug">
+                  Các chuyến xe đã qua giờ khởi hành được lưu trữ tại đây. Nhấn <strong>⚡ Tái đăng cho ngày mai</strong> để tiếp tục nhận khách trong 2 giây mà không cần nhập lại lộ trình hay mức giá.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 font-medium">
-            <span>Đang hiển thị {filteredTrips.length} / {myTrips.length} chuyến</span>
+            <span>
+              Đang hiển thị {filteredTrips.length} {mainTab === 'history' ? 'chuyến trong lịch sử' : 'chuyến đang tìm khách'}
+            </span>
             <span>Tự động đồng bộ với bảng tin cộng đồng</span>
           </div>
 
           {filteredTrips.length === 0 ? (
             <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.08] space-y-2">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                Không có chuyến đi nào trong mục này
+                {mainTab === 'history' ? 'Chưa có chuyến xe nào trong lịch sử' : 'Không có chuyến đi nào đang nhận khách'}
               </p>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('all')}
-                className="text-xs text-[#0071e3] hover:underline font-semibold cursor-pointer"
-              >
-                Quay lại xem tất cả chuyến đi
-              </button>
+              {mainTab === 'history' ? (
+                <button
+                  type="button"
+                  onClick={() => setMainTab('active')}
+                  className="text-xs text-[#0071e3] hover:underline font-semibold cursor-pointer"
+                >
+                  Xem các chuyến đang hoạt động
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className="text-xs text-[#0071e3] hover:underline font-semibold cursor-pointer"
+                >
+                  Quay lại xem tất cả chuyến đi
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredTrips.map((trip) => {
                 const isDriver = trip.type === 'driver_offer';
                 const isFull = trip.status === 'full';
+                const expired = isTripExpired(trip);
                 const price = trip.basePricePerSeat || trip.expectedPrice || trip.suggestedContribution || 150000;
                 const seats = trip.availableSeats || trip.seatsNeeded || 1;
                 const isConvenient = isDriver && (
@@ -365,9 +433,11 @@ export default function MyTripsView({
                   <div
                     key={trip.id}
                     className={`p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#1c1c1e] border transition-all duration-200 flex flex-col justify-between gap-4 relative group ${
-                      isFull
-                        ? 'border-slate-200 dark:border-slate-800 opacity-85 bg-slate-50/50 dark:bg-[#18181a]'
-                        : 'border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_0_0_1.5px_rgba(0,113,227,0.3),0_12px_28px_rgba(0,113,227,0.1)] active:shadow-[0_0_0_2px_rgba(0,113,227,0.5)] hover:border-[#0071e3]/50 active:border-[#0071e3]/80'
+                      expired
+                        ? 'border-amber-500/25 dark:border-amber-500/20 bg-amber-50/15 dark:bg-[#1f1e1a] opacity-90'
+                        : isFull
+                          ? 'border-slate-200 dark:border-slate-800 opacity-85 bg-slate-50/50 dark:bg-[#18181a]'
+                          : 'border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_0_0_1.5px_rgba(0,113,227,0.3),0_12px_28px_rgba(0,113,227,0.1)] active:shadow-[0_0_0_2px_rgba(0,113,227,0.5)] hover:border-[#0071e3]/50 active:border-[#0071e3]/80'
                     }`}
                   >
                     <div className="space-y-3.5">
@@ -396,7 +466,12 @@ export default function MyTripsView({
                         </div>
 
                         {/* Status Beacon */}
-                        {isFull ? (
+                        {expired ? (
+                          <span className="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[11.5px] font-bold inline-flex items-center gap-1.5 border border-amber-200/90 dark:border-amber-800/60">
+                            <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                            <span>Đã qua giờ chạy</span>
+                          </span>
+                        ) : isFull ? (
                           <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11.5px] font-bold inline-flex items-center gap-1.5 border border-slate-200 dark:border-slate-700">
                             <Lock className="w-3 h-3 text-slate-500" />
                             <span>Đã đủ người</span>
@@ -469,7 +544,20 @@ export default function MyTripsView({
 
                     {/* ── D. ACTION TOOLBAR (APPLE TACTILE SQUIRCLE BUTTONS) ── */}
                     <div className="pt-3 flex items-center justify-between gap-2 border-t border-black/[0.06] dark:border-white/[0.06] flex-wrap">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Nút Tái Đăng 1 Chạm: Luôn hiển thị nổi bật trên chuyến hết hạn, hoặc cho phép sao chép nhanh */}
+                        {expired ? (
+                          <button
+                            type="button"
+                            onClick={() => onRePublishTrip?.(trip)}
+                            className="h-8.5 px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs shadow-orange-500/20"
+                            title="Tái đăng chuyến này cho ngày mai trong 2 giây"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-100" />
+                            <span>⚡ Tái đăng cho ngày mai</span>
+                          </button>
+                        ) : null}
+
                         <button
                           type="button"
                           onClick={() => onEditTrip?.(trip)}
@@ -480,19 +568,21 @@ export default function MyTripsView({
                           <span>Chỉnh sửa</span>
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => onToggleStatus?.(trip.id, isFull ? 'active' : 'full')}
-                          className={`h-8.5 px-3 rounded-xl font-semibold text-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-                            isFull
-                              ? 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/90 dark:border-emerald-800/60 shadow-2xs'
-                              : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700'
-                          }`}
-                          title={isFull ? 'Mở lại bài đăng để tiếp tục nhận khách' : 'Đánh dấu đã đủ người để không nhận thêm liên hệ Zalo'}
-                        >
-                          {isFull ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                          <span>{isFull ? 'Mở nhận khách' : 'Báo đủ chỗ'}</span>
-                        </button>
+                        {!expired && (
+                          <button
+                            type="button"
+                            onClick={() => onToggleStatus?.(trip.id, isFull ? 'active' : 'full')}
+                            className={`h-8.5 px-3 rounded-xl font-semibold text-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                              isFull
+                                ? 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/90 dark:border-emerald-800/60 shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700'
+                            }`}
+                            title={isFull ? 'Mở lại bài đăng để tiếp tục nhận khách' : 'Đánh dấu đã đủ người để không nhận thêm liên hệ Zalo'}
+                          >
+                            {isFull ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                            <span>{isFull ? 'Mở nhận khách' : 'Báo đủ chỗ'}</span>
+                          </button>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5">

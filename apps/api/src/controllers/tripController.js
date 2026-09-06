@@ -1,4 +1,4 @@
-import { getTrips, getPaginatedTrips, getTripById, addTrip, updateTrip, deleteTrip, getDB } from '../db/sqliteStore.js';
+import { getTrips, getPaginatedTrips, getTripById, addTrip, updateTrip, republishTrip, deleteTrip, getDB } from '../db/sqliteStore.js';
 import { cleanPhoneNumber } from '@carmate/shared';
 
 /**
@@ -41,7 +41,7 @@ export function sanitizeTripForPublic(trip, reqUser) {
  */
 export function listTrips(req, res) {
   try {
-    const { type = 'all', routeCategory, direction, timeSlot, q, page = 1, limit = 50 } = req.query;
+    const { type = 'all', routeCategory, direction, timeSlot, q, includeExpired, page = 1, limit = 50 } = req.query;
 
     const p = Math.max(1, parseInt(page, 10) || 1);
     const l = Math.max(1, Math.min(100, parseInt(limit, 10) || 50));
@@ -53,6 +53,7 @@ export function listTrips(req, res) {
       direction,
       timeSlot,
       q,
+      includeExpired: includeExpired === 'true',
       limit: l,
       offset
     });
@@ -202,3 +203,27 @@ export async function deleteTripHandler(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
+
+/**
+ * POST /api/trips/:id/republish - Tái đăng 1 chạm chuyến cũ cho ngày mai
+ */
+export async function republishTripHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const updates = req.body || {};
+
+    const newTrip = await republishTrip(id, updates);
+    if (!newTrip) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến xe gốc để tái đăng' });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Tái đăng chuyến xe thành công',
+      data: newTrip
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
