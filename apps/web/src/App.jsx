@@ -367,6 +367,50 @@ export default function App() {
     if (marketViewMode === 'all' || marketViewMode === 'drivers') list = list.concat(driverOffers);
     if (marketViewMode === 'all' || marketViewMode === 'passengers') list = list.concat(passengerRequests);
 
+    // Hàm đối chiếu địa danh thông minh chuẩn Đi Chung Xe Liên Tỉnh (Hai chiều & Hành lang Tỉnh / Bến xe)
+    const matchLocationFuzzy = (fieldValue, query) => {
+      if (!query || !query.trim()) return true;
+      if (!fieldValue) return false;
+
+      const normField = String(fieldValue).toLowerCase().trim();
+      const normQuery = String(query).toLowerCase().trim();
+
+      // 1. So khớp 2 chiều: query chứa fieldValue (VD: "chợ thanh hoà, bù đốp" chứa "bù đốp")
+      // hoặc fieldValue chứa query (VD: "Bù Đốp, Bình Phước" chứa "bù đốp")
+      if (normField.includes(normQuery) || normQuery.includes(normField)) {
+        return true;
+      }
+
+      // 2. Nhóm hành lang & đô thị liên tỉnh trọng điểm
+      const corridorGroups = [
+        ['sài gòn', 'sai gon', 'tp. hcm', 'tp hcm', 'tphcm', 'hồ chí minh', 'ho chi minh', 'miền đông', 'miền tây', 'an sương', 'tân sơn nhất', 'quận 1', 'quận 2', 'quận 3', 'quận 4', 'quận 5', 'quận 7', 'quận 9', 'quận 10', 'bình thạnh', 'thủ đức', 'gò vấp', 'cống quỳnh', 'nguyễn cư trinh', 'bến thành', 'hàng xanh', 'suối tiên'],
+        ['bình phước', 'binh phuoc', 'bù đốp', 'bu dop', 'thanh hoà', 'thanh hoa', 'đồng xoài', 'dong xoai', 'chơn thành', 'chon thanh', 'phước long', 'phuoc long', 'lộc ninh', 'loc ninh', 'bù gia mập', 'bù đăng', 'hớn quản'],
+        ['vũng tàu', 'vung tau', 'bà rịa', 'ba ria', 'phú mỹ', 'phu my', 'long hải', 'châu đức', 'xuyên mộc', 'bãi sau', 'bãi trước'],
+        ['đà lạt', 'da lat', 'lâm đồng', 'lam dong', 'bảo lộc', 'bao loc', 'đức trọng', 'di linh', 'đơn dương', 'prenn'],
+        ['hà nội', 'ha noi', 'nội bài', 'mỹ đình', 'giáp bát', 'nước ngầm', 'gia lâm', 'yên nghĩa', 'hoàn kiếm', 'cầu giấy'],
+        ['hải phòng', 'hai phong', 'cầu rào', 'niệm nghĩa', 'đồ sơn', 'thuỷ nguyên'],
+        ['cần thơ', 'can tho', 'bến tre', 'tiền giang', 'mỹ tho', 'đồng tháp', 'cao lãnh', 'vĩnh long', 'long an', 'tân an']
+      ];
+
+      for (const group of corridorGroups) {
+        const fieldMatch = group.some(alias => normField.includes(alias));
+        const queryMatch = group.some(alias => normQuery.includes(alias));
+        if (fieldMatch && queryMatch) {
+          return true;
+        }
+      }
+
+      // 3. Khớp cụm từ khóa (Token matching: nếu có từ định danh >= 3 ký tự trùng nhau)
+      const queryTokens = normQuery.split(/[\s,–—\-\/]+/).filter(t => t.length >= 3);
+      const fieldTokens = normField.split(/[\s,–—\-\/]+/).filter(t => t.length >= 3);
+      const common = queryTokens.filter(t => fieldTokens.includes(t));
+      if (common.length >= 1) {
+        return true;
+      }
+
+      return false;
+    };
+
     return list.filter((item) => {
       if (searchKeyword.trim()) {
         const kw = searchKeyword.toLowerCase();
@@ -376,14 +420,12 @@ export default function App() {
         if (!matchText.includes(kw)) return false;
       }
       if (searchFrom.trim()) {
-        const kw = searchFrom.toLowerCase();
-        const matchText = `${item.from} ${item.hometown || ''}`.toLowerCase();
-        if (!matchText.includes(kw)) return false;
+        const fromField = `${item.from} ${item.hometown || ''}`;
+        if (!matchLocationFuzzy(fromField, searchFrom)) return false;
       }
       if (searchTo.trim()) {
-        const kw = searchTo.toLowerCase();
-        const matchText = `${item.to}`.toLowerCase();
-        if (!matchText.includes(kw)) return false;
+        const toField = `${item.to}`;
+        if (!matchLocationFuzzy(toField, searchTo)) return false;
       }
       if (selectedTimeSlot !== 'all' && item.timeSlot !== selectedTimeSlot) return false;
       if (selectedDirection !== 'all' && item.direction !== selectedDirection) return false;

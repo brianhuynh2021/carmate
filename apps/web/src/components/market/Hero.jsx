@@ -164,7 +164,7 @@ export default function Hero({
                     <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
                       Xuất phát
                     </span>
-                    <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Điểm đón</span>
+                    <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Tỉnh / Bến xe</span>
                   </div>
                   <LocationSuggestInput
                     id="search-from-input"
@@ -207,7 +207,7 @@ export default function Hero({
                     <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">
                       Điểm đến
                     </span>
-                    <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Nơi trả khách</span>
+                    <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Tỉnh / Bến xe</span>
                   </div>
                   <LocationSuggestInput
                     id="search-to-input"
@@ -262,8 +262,16 @@ export default function Hero({
             </div>
           </div>
 
+          {/* Mẹo Đi Chung Xe & Ghép Tuyến (Giáo dục mô hình tinh thần chuẩn Stanford HCI & BlaBlaCar) */}
+          <div className="pt-2 px-2 flex items-center justify-center">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.04] dark:border-white/[0.06] text-[11px] text-[#515154] dark:text-slate-400 max-w-2xl text-center leading-snug">
+              <span className="text-amber-500 font-bold shrink-0">💡 Mẹo ghép xe:</span>
+              <span>Nên chọn <strong>Tỉnh thành, Bến xe hoặc Quận/Huyện</strong> để tìm thấy nhiều xe nhất. Chi tiết ngõ ngách sẽ chốt linh hoạt cùng tài xế qua Zalo!</span>
+            </div>
+          </div>
+
           {/* ── SINGLE-LINE HIGHWAY RAIL & SEPARATE PARCEL AMENITY FILTER ── */}
-          <div className="pt-3 max-w-4xl mx-auto w-full relative z-20">
+          <div className="pt-2 max-w-4xl mx-auto w-full relative z-20">
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1 px-1">
               {/* Micro label */}
               <div className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-[#86868b] uppercase tracking-wider pr-1">

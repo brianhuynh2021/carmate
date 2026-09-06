@@ -1,5 +1,5 @@
-import React from 'react';
-import { Compass, Sparkles, PlusCircle, Clock, ShieldCheck, FileText, Globe, Car, User, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Compass, Sparkles, PlusCircle, Clock, ShieldCheck, FileText, Globe, Car, User, LogOut, ChevronDown, HelpCircle } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Logo from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
@@ -37,7 +37,6 @@ export default function Header({
   onOpenAi
 }) {
   const { t } = useI18n();
-
   const tabs = [
     { id: 'market', label: t('nav.market'), icon: Compass },
     { id: 'match', label: t('nav.match'), icon: Sparkles },
@@ -47,15 +46,28 @@ export default function Header({
 
   const isMac = typeof window !== 'undefined' && typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent || navigator.platform || '');
 
-  const [isScrolled, setIsScrolled] = React.useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Đóng menu người dùng khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
@@ -120,14 +132,16 @@ export default function Header({
             </kbd>
           </button>
 
-          {/* Tài khoản Người dùng / Tài xế */}
+          {/* Tài khoản Người dùng / Quản trị viên (Apple Profile Capsule & Dropdown) */}
           {currentUser ? (
-            <div className="flex items-center gap-1 pl-1">
+            <div className="relative" ref={userMenuRef}>
               <button
                 type="button"
-                onClick={() => setActiveTab('my-trips')}
-                title={`Tài xế: ${currentUser.name} (${currentUser.phone})`}
-                className="h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] border border-black/[0.08] shadow-xs hover:bg-[#f5f5f7] transition-all active:scale-[0.98] shrink-0"
+                onClick={() => setIsUserMenuOpen(prev => !prev)}
+                aria-expanded={isUserMenuOpen}
+                aria-haspopup="true"
+                title={`Tài khoản: ${currentUser.name} (${currentUser.phone || ''})`}
+                className="h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               >
                 <span className="relative flex items-center justify-center">
                   <span className="w-5 h-5 rounded-full bg-[#107c41] text-white inline-flex items-center justify-center text-[10px] font-bold">
@@ -136,30 +150,80 @@ export default function Header({
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
                 </span>
                 <span className="max-w-[70px] sm:max-w-[110px] truncate">{currentUser.name}</span>
+                <ChevronDown className={`w-3 h-3 text-[#86868b] transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Cổng Quản Trị Chỉ Hiển Thị Riêng Cho Admin / Founder */}
-              {(currentUser.role === 'admin' || currentUser.phone?.includes('0984883750') || currentUser.phone?.includes('0984 883 750')) && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('admin')}
-                  title="Cổng Quản Trị Hệ Thống CarMate"
-                  className="h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 hover:bg-rose-100 transition-colors shadow-xs cursor-pointer select-none outline-none focus:outline-none"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
-                  <span className="hidden xl:inline">Quản trị</span>
-                </button>
+              {/* Apple Profile Popover Menu */}
+              {isUserMenuOpen && (
+                <div className="absolute right-0 top-[calc(100%+8px)] w-60 rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
+                  {/* Header Thông tin tài khoản */}
+                  <div className="px-3 py-2 border-b border-black/[0.05] dark:border-white/[0.06] mb-1">
+                    <p className="text-xs font-bold text-[#1d1d1f] dark:text-white truncate">{currentUser.name}</p>
+                    <p className="text-[11px] text-[#86868b] font-mono">{currentUser.phone || 'Đã xác thực danh tính'}</p>
+                    {(currentUser.role === 'admin' || currentUser.phone?.includes('0984883750') || currentUser.phone?.includes('0984 883 750')) && (
+                      <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                        <ShieldCheck className="w-3 h-3" /> Quản trị viên
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Mục 1: Chuyến xe của tôi */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('my-trips');
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  >
+                    <Car className="w-3.5 h-3.5 text-[#0071e3]" />
+                    <span>Chuyến xe của tôi</span>
+                  </button>
+
+                  {/* Mục 2: Cổng Quản Trị Hệ Thống (CHỈ HIỂN THỊ NẾU LÀ ADMIN) */}
+                  {(currentUser.role === 'admin' || currentUser.phone?.includes('0984883750') || currentUser.phone?.includes('0984 883 750')) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('admin');
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Cổng Quản Trị Hệ Thống</span>
+                    </button>
+                  )}
+
+                  {/* Mục 3: Chính sách & An toàn */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPolicyModal?.(true);
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-[#515154] dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Quy chế an toàn 100%</span>
+                  </button>
+
+                  <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
+
+                  {/* Mục 4: Đăng xuất */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onLogout?.();
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
               )}
-
-              <button
-                type="button"
-                onClick={onLogout}
-                title="Đăng xuất"
-                aria-label="Đăng xuất tài khoản"
-                className="w-8 h-8 rounded-full inline-flex items-center justify-center text-[#86868b] hover:text-rose-600 hover:bg-rose-50 cursor-pointer active:scale-90 transition-all"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
             </div>
           ) : (
             <button

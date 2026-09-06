@@ -17,6 +17,20 @@ export default defineConfig({
       '@carmate/shared': path.resolve(__dirname, '../../packages/shared/src/index.js'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons';
+          }
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     proxy: {
