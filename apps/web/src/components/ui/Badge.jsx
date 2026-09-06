@@ -1,12 +1,12 @@
 import React from 'react';
 
 const TONES = {
-  neutral: 'bg-slate-100/90 text-slate-700 border border-slate-200/70 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-  primary: 'bg-primary-50 text-primary-700 border border-primary-200/70 dark:bg-primary-950/60 dark:text-primary-300 dark:border-primary-900/60',
-  success: 'bg-success-50 text-success-700 border border-success-200/70 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60',
-  warning: 'bg-warning-50 text-warning-700 border border-warning-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/60',
-  danger: 'bg-danger-50 text-danger-700 border border-danger-200/70 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/60',
-  outline: 'bg-transparent text-slate-600 border border-slate-300 dark:text-slate-300 dark:border-slate-700'
+  neutral: 'bg-black/[0.04] text-[#515154] border border-black/[0.06]',
+  primary: 'bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20',
+  success: 'bg-[#34c759]/10 text-[#107c41] border border-[#34c759]/20',
+  warning: 'bg-[#ff9500]/10 text-[#b25e00] border border-[#ff9500]/20',
+  danger: 'bg-[#ff3b30]/10 text-[#d70015] border border-[#ff3b30]/20',
+  outline: 'bg-white text-[#515154] border border-black/[0.08]'
 };
 
 export default function Badge({ tone = 'neutral', icon: Icon, children, className = '' }) {
@@ -18,14 +18,14 @@ export default function Badge({ tone = 'neutral', icon: Icon, children, classNam
   );
 }
 
-/** Avatar chữ cái đầu chuẩn Google Profile Avatar */
+/** Avatar chữ cái đầu chuẩn Apple Profile Avatar */
 export function Avatar({ label = '', tone = 'primary', size = 'md', className = '' }) {
   const dims = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm';
   const tones = {
-    primary: 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300',
-    warning: 'bg-warning-100 text-warning-700 dark:bg-warning-500/20 dark:text-amber-300',
-    success: 'bg-success-100 text-success-700 dark:bg-success-600/20 dark:text-emerald-300',
-    neutral: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+    primary: 'bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20',
+    warning: 'bg-[#ff9500]/10 text-[#b25e00]',
+    success: 'bg-[#34c759]/10 text-[#107c41]',
+    neutral: 'bg-black/[0.05] text-[#515154]'
   };
   const initials = label
     .replace(/[^A-Za-zÀ-ỹ0-9 ]/g, ' ')

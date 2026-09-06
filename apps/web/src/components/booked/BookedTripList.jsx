@@ -103,19 +103,21 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
       />
 
       {/* Tabs Chuyển Đổi: Đang Hoạt Động vs Lịch Sử */}
-      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/70">
+      <div className="flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed]/90 border border-black/[0.04]">
         <button
           type="button"
           onClick={() => setActiveTab('active')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
             activeTab === 'active'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
-          <Clock className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+          <Clock className={`w-4 h-4 ${activeTab === 'active' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
           <span>Chuyến đang diễn ra</span>
-          <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] bg-primary-100 dark:bg-primary-900/60 text-primary-700 dark:text-primary-300 font-bold tabular">
+          <span className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
+            activeTab === 'active' ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
+          }`}>
             {activeBookings.length}
           </span>
         </button>
@@ -123,15 +125,17 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
         <button
           type="button"
           onClick={() => setActiveTab('history')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
             activeTab === 'history'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
-          <History className="w-4 h-4 text-slate-500" />
+          <History className={`w-4 h-4 ${activeTab === 'history' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
           <span>Lịch sử chuyến đi</span>
-          <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold tabular">
+          <span className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
+            activeTab === 'history' ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
+          }`}>
             {historyBookings.length}
           </span>
         </button>
@@ -163,18 +167,18 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
             const isDelayed = record.status === 'delayed';
 
             return (
-              <article key={record.escrowId} className="surface overflow-hidden shadow-xs border border-slate-200/80 dark:border-slate-800 rounded-3xl">
+              <article key={record.escrowId} className="surface overflow-hidden shadow-xs border border-black/[0.08] rounded-3xl">
                 {/* Header Vé */}
-                <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-3 flex-wrap border-b border-slate-100 dark:border-slate-800/80">
+                <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-3 flex-wrap border-b border-black/[0.06]">
                   <div className="flex items-center gap-3">
-                    <span className="w-10 h-10 rounded-2xl bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 inline-flex items-center justify-center">
+                    <span className="w-10 h-10 rounded-2xl bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 inline-flex items-center justify-center">
                       <Ticket className="w-5 h-5" />
                     </span>
                     <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Mã chuyến xe</p>
-                      <p className="text-base font-bold text-slate-900 dark:text-white">
-                        <span className="tabular font-display tracking-tight text-primary-700 dark:text-primary-300">{record.escrowId}</span>
-                        <span className="text-slate-400 mx-1.5">·</span>
+                      <p className="text-xs text-[#86868b]">Mã chuyến xe</p>
+                      <p className="text-base font-bold text-[#1d1d1f]">
+                        <span className="tabular font-display tracking-tight text-[#0071e3]">{record.escrowId}</span>
+                        <span className="text-[#86868b] mx-1.5">·</span>
                         <span>{record.contactName}</span>
                       </p>
                     </div>
@@ -199,12 +203,12 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
 
                 <div className="p-5 space-y-4">
                   {/* Lộ Trình & Thời Gian */}
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
+                  <div className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06]">
                     <div className="flex items-center justify-between gap-3 mb-3 text-xs sm:text-[13px]">
-                      <span className="font-semibold text-slate-900 dark:text-white tabular">
+                      <span className="font-semibold text-[#1d1d1f] tabular">
                         {record.timeSlot} {record.targetItem?.date ? `(${record.targetItem.date})` : ''}
                       </span>
-                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                      <span className="text-[#86868b] font-medium">
                         {record.seats} người đồng hành
                       </span>
                     </div>

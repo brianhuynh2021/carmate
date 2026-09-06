@@ -98,16 +98,16 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
         {/* Nút chuyển ngữ cảnh chỉ hiện khi duyệt thủ công */}
         {radarMode === 'manual' && (
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Bạn đang tìm kiếm với tư cách:</span>
-            <div className="inline-flex gap-2">
+          <div className="pt-3 border-t border-black/[0.06] flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-xs text-[#86868b] font-medium">Bạn đang tìm kiếm với tư cách:</span>
+            <div className="inline-flex gap-1.5 p-1 rounded-full bg-[#e8e8ed]/90 border border-black/[0.04]">
               <button
                 type="button"
                 onClick={() => setUserRole('passenger')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all ${
                   userRole === 'passenger'
-                    ? 'bg-primary-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
                 }`}
               >
                 Tôi là Khách (tìm Chủ xe)
@@ -115,10 +115,10 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
               <button
                 type="button"
                 onClick={() => setUserRole('driver')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all ${
                   userRole === 'driver'
-                    ? 'bg-primary-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
                 }`}
               >
                 Tôi là Chủ xe (tìm Khách ghép)
@@ -132,17 +132,17 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
       {radarMode === 'smart' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <h3 className="text-base font-bold text-[#1d1d1f] flex items-center gap-2">
               <span>Các Cặp Ghép Tối Ưu Nhất</span>
-              <span className="px-2 py-0.5 rounded-full text-xs bg-primary-100 dark:bg-primary-900/60 text-primary-700 dark:text-primary-300 font-bold tabular">
+              <span className="px-2 py-0.5 rounded-full text-xs bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 font-bold tabular">
                 {matches.length}
               </span>
             </h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Phù hợp theo tuyến, giờ & số ghế</span>
+            <span className="text-xs text-[#86868b]">Phù hợp theo tuyến, giờ & số ghế</span>
           </div>
 
           {loading ? (
-            <div className="surface p-12 rounded-3xl text-center text-sm text-slate-500 animate-pulse">
+            <div className="surface p-12 rounded-3xl text-center text-sm text-[#86868b] animate-pulse">
               Đang tìm các cặp chuyến cùng lộ trình...
             </div>
           ) : matches.length === 0 ? (
@@ -169,16 +169,16 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                     className="surface p-5 sm:p-6 rounded-2xl border border-black/[0.08] shadow-xs hover:border-[#0071e3]/40 transition-all space-y-4"
                   >
                     {/* Header Điểm Tương Thích */}
-                    <div className="flex items-center justify-between gap-3 flex-wrap border-b border-slate-100 dark:border-slate-800 pb-3.5">
+                    <div className="flex items-center justify-between gap-3 flex-wrap border-b border-black/[0.06] pb-3.5">
                       <div className="flex items-center gap-2.5">
                         <span className={`px-3 py-1 rounded-full text-xs font-extrabold tabular shadow-xs ${
                           isPerfect
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-primary-600 text-white'
+                            ? 'bg-[#107c41] text-white'
+                            : 'bg-[#0071e3] text-white'
                         }`}>
                           {match.score}% PHÙ HỢP
                         </span>
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <span className="text-xs font-semibold text-[#1d1d1f]">
                           {match.routeCategory}
                         </span>
                       </div>
@@ -188,9 +188,9 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                         {match.reasons?.map((reason, idx) => (
                           <span
                             key={idx}
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11.5px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11.5px] font-medium bg-[#f5f5f7] border border-black/[0.04] text-[#515154]"
                           >
-                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            <CheckCircle2 className="w-3 h-3 text-[#107c41]" />
                             <span>{reason}</span>
                           </span>
                         ))}
@@ -200,61 +200,61 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                     {/* Khung 2 Bên: Chủ Xe <-> Hành Khách */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Cột Chủ Xe */}
-                      <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/80 dark:border-blue-900/40 space-y-2.5">
+                      <div className="p-4 rounded-2xl bg-[#0071e3]/[0.04] border border-[#0071e3]/15 space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-[#0071e3] uppercase tracking-wider flex items-center gap-1.5">
                             <Car className="w-3.5 h-3.5" />
                             <span>Chủ Xe Gia Đình</span>
                           </span>
-                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular">
+                          <span className="text-xs font-semibold text-[#515154] tabular">
                             {driver.availableSeats} chỗ trống
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className="font-bold text-slate-900 dark:text-white text-sm">
+                          <p className="font-bold text-[#1d1d1f] text-sm">
                             {driver.publicName}
                           </p>
                           {onViewTrustProfile && (
                             <button
                               type="button"
                               onClick={() => onViewTrustProfile(driver)}
-                              className="text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline cursor-pointer"
+                              className="text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer"
                             >
                               Xem tín nhiệm
                             </button>
                           )}
                         </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                        <p className="text-xs text-[#515154]">
                           {driver.from} ➔ {driver.to}
                         </p>
                         <div className="flex items-center justify-between pt-1 text-xs">
-                          <span className="text-slate-500 tabular">Khung giờ: {driver.timeSlotLabel}</span>
-                          <span className="font-extrabold text-primary-700 dark:text-primary-300 tabular">
+                          <span className="text-[#86868b] tabular">Khung giờ: {driver.timeSlotLabel}</span>
+                          <span className="font-extrabold text-[#0071e3] tabular">
                             ~{formatVND(driver.basePricePerSeat)}/ghế
                           </span>
                         </div>
                       </div>
 
                       {/* Cột Hành Khách */}
-                      <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100/80 dark:border-amber-900/40 space-y-2.5">
+                      <div className="p-4 rounded-2xl bg-[#ff9500]/[0.05] border border-[#ff9500]/20 space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-[#b25e00] uppercase tracking-wider flex items-center gap-1.5">
                             <Users className="w-3.5 h-3.5" />
                             <span>Hành Khách Tiện Đường</span>
                           </span>
-                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular">
+                          <span className="text-xs font-semibold text-[#515154] tabular">
                             Cần {passenger.seatsNeeded} ghế
                           </span>
                         </div>
-                        <p className="font-bold text-slate-900 dark:text-white text-sm">
+                        <p className="font-bold text-[#1d1d1f] text-sm">
                           {passenger.publicName}
                         </p>
-                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                        <p className="text-xs text-[#515154]">
                           {passenger.from} ➔ {passenger.to}
                         </p>
                         <div className="flex items-center justify-between pt-1 text-xs">
-                          <span className="text-slate-500 tabular">Khung giờ: {passenger.timeSlotLabel}</span>
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 tabular">
+                          <span className="text-[#86868b] tabular">Khung giờ: {passenger.timeSlotLabel}</span>
+                          <span className="font-semibold text-[#515154] tabular">
                             {passenger.notes?.slice(0, 32)}...
                           </span>
                         </div>

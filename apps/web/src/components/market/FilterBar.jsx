@@ -24,20 +24,20 @@ export function SearchBar({ searchKeyword, setSearchKeyword }) {
   return (
     <div className="space-y-3">
       <div className="relative group">
-        <Search className="w-5 h-5 text-primary-600 dark:text-primary-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" />
+        <Search className="w-5 h-5 text-[#0071e3] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" />
         <input
           type="search"
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
           placeholder="Tìm tỉnh thành, bến xe, quốc lộ toàn quốc…"
-          className="w-full h-13 pl-12 pr-11 rounded-full text-sm font-medium bg-white dark:bg-[#151c2e] text-slate-900 dark:text-slate-100 placeholder:text-slate-400 border border-slate-200/90 dark:border-white/[0.08] shadow-sm hover:shadow-md hover:border-slate-300 focus:border-primary-600 focus:ring-4 focus:ring-primary-600/15 outline-none transition-all duration-200 [&::-webkit-search-cancel-button]:hidden"
+          className="w-full h-13 pl-12 pr-11 rounded-full text-sm font-medium bg-white text-[#1d1d1f] placeholder:text-[#86868b] border border-black/[0.08] shadow-xs hover:border-black/[0.16] focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/15 outline-none transition-all duration-200 [&::-webkit-search-cancel-button]:hidden"
         />
         {searchKeyword && (
           <button
             type="button"
             onClick={() => setSearchKeyword('')}
             aria-label={t('common.clear')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full inline-flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full inline-flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:bg-black/[0.05] cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -80,14 +80,14 @@ export function FilterPanel({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t('market.sidebarTitle')}</h3>
+        <h3 className="text-base font-semibold text-[#1d1d1f]">{t('market.sidebarTitle')}</h3>
         {hasActive && (
           <Button variant="ghost" size="xs" icon={RotateCcw} onClick={onReset}>{t('market.resetFilters')}</Button>
         )}
       </div>
 
       <div>
-        <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-2">{t('market.viewMode')}</p>
+        <p className="text-[13px] font-medium text-[#515154] mb-2">{t('market.viewMode')}</p>
         <Segmented
           fullWidth
           size="sm"
@@ -110,8 +110,8 @@ export function FilterPanel({
       </Field>
 
       {showHelp && (
-        <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
-          <p className="text-[13px] font-semibold text-slate-900 dark:text-white mb-3">{t('market.howItWorks')}</p>
+        <div className="pt-6 border-t border-black/[0.06]">
+          <p className="text-[13px] font-semibold text-[#1d1d1f] mb-3">{t('market.howItWorks')}</p>
           <ol className="space-y-3">
             {[
               { icon: MousePointerClick, text: t('market.step1') },
@@ -119,10 +119,10 @@ export function FilterPanel({
               { icon: Banknote, text: t('market.step3') }
             ].map((s, i) => (
               <li key={i} className="flex items-start gap-3">
-                <span className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 inline-flex items-center justify-center shrink-0">
+                <span className="w-7 h-7 rounded-lg bg-[#f5f5f7] border border-black/[0.04] text-[#515154] inline-flex items-center justify-center shrink-0">
                   <s.icon className="w-3.5 h-3.5" />
                 </span>
-                <span className="text-[13px] text-slate-600 dark:text-slate-400 leading-snug pt-0.5">{s.text}</span>
+                <span className="text-[13px] text-[#515154] leading-snug pt-0.5">{s.text}</span>
               </li>
             ))}
           </ol>
