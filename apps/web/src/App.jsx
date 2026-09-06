@@ -205,15 +205,20 @@ export default function App() {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
     } catch {}
 
-    // Tự động gộp tất cả chuyến xe của SĐT này vào mục "Bài của tôi"
-    if (Array.isArray(tripIds) && tripIds.length > 0) {
-      try {
-        const stored = JSON.parse(localStorage.getItem('carmate_my_trip_ids') || '[]');
-        const merged = Array.from(new Set([...tripIds, ...stored]));
-        localStorage.setItem('carmate_my_trip_ids', JSON.stringify(merged));
-      } catch {}
-    }
-    updateMyTripsCount();
+    // Tự động gộp tất cả chuyến xe của tài khoản này vào mục "Bài của tôi" theo user key
+    try {
+      const userKey = `carmate_my_trip_ids_${user.id || user.phone}`;
+      const stored = JSON.parse(localStorage.getItem(userKey) || '[]');
+      const guestStored = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
+      const incoming = Array.isArray(tripIds) ? tripIds : [];
+      const merged = Array.from(new Set([...incoming, ...stored, ...guestStored]));
+      localStorage.setItem(userKey, JSON.stringify(merged));
+      // Dọn sạch guest key và legacy key sau khi đã liên kết chính chủ
+      localStorage.removeItem('carmate_guest_trip_ids');
+      localStorage.removeItem('carmate_my_trip_ids');
+    } catch {}
+
+    updateMyTripsCount(user);
     showToast(`Chào mừng ${user.name}! Đã đăng nhập thành công.`);
 
     // Nếu người dùng đã chọn chuyến trước khi đăng nhập, tự động mở modal ghép chuyến
@@ -227,14 +232,27 @@ export default function App() {
     setCurrentUser(null);
     try {
       localStorage.removeItem(USER_KEY);
+      localStorage.removeItem('carmate_my_trip_ids');
       api.logout();
     } catch {}
+    setMyTripsCount(0);
     showToast('Đã đăng xuất tài khoản.');
   };
 
-  const updateMyTripsCount = () => {
+  const updateMyTripsCount = (user = currentUser) => {
     try {
-      const stored = JSON.parse(localStorage.getItem('carmate_my_trip_ids') || '[]');
+      if (!user) {
+        // Khi chưa đăng nhập (khách vãng lai), chỉ đếm chuyến do chính máy này tạo ở chế độ khách
+        // Tự động dọn sạch cache legacy cũ nếu còn sót từ phiên test trước
+        if (localStorage.getItem('carmate_my_trip_ids')) {
+          localStorage.removeItem('carmate_my_trip_ids');
+        }
+        const guestStored = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
+        setMyTripsCount(Array.isArray(guestStored) ? guestStored.length : 0);
+        return;
+      }
+      const userKey = `carmate_my_trip_ids_${user.id || user.phone}`;
+      const stored = JSON.parse(localStorage.getItem(userKey) || '[]');
       setMyTripsCount(Array.isArray(stored) ? stored.length : 0);
     } catch {
       setMyTripsCount(0);
@@ -242,10 +260,11 @@ export default function App() {
   };
 
   useEffect(() => {
-    updateMyTripsCount();
-    window.addEventListener('storage', updateMyTripsCount);
-    return () => window.removeEventListener('storage', updateMyTripsCount);
-  }, []);
+    updateMyTripsCount(currentUser);
+    const handleStorageChange = () => updateMyTripsCount(currentUser);
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [currentUser]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -310,12 +329,13 @@ export default function App() {
     setTicketToShare(newTrip);
     setActiveTab('market');
 
-    // Lưu bài vào localStorage để quản lý ở mục "Bài của tôi"
+    // Lưu bài vào localStorage theo tài khoản đăng nhập hoặc phiên khách
     try {
-      const stored = JSON.parse(localStorage.getItem('carmate_my_trip_ids') || '[]');
+      const storageKey = currentUser ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}` : 'carmate_guest_trip_ids';
+      const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
       const updated = [newTrip.id, ...stored.filter(id => id !== newTrip.id)];
-      localStorage.setItem('carmate_my_trip_ids', JSON.stringify(updated));
-      updateMyTripsCount();
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      updateMyTripsCount(currentUser);
     } catch {}
 
     try {
@@ -329,10 +349,11 @@ export default function App() {
         setTicketToShare(res.data);
         if (res.data.id !== newTrip.id) {
           try {
-            const stored = JSON.parse(localStorage.getItem('carmate_my_trip_ids') || '[]');
+            const storageKey = currentUser ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}` : 'carmate_guest_trip_ids';
+            const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
             const updated = [res.data.id, ...stored.filter(id => id !== newTrip.id)];
-            localStorage.setItem('carmate_my_trip_ids', JSON.stringify(updated));
-            updateMyTripsCount();
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+            updateMyTripsCount(currentUser);
           } catch {}
         }
       }
@@ -370,10 +391,12 @@ export default function App() {
     setDriverOffers(prev => prev.filter(t => t.id !== tripId));
     setPassengerRequests(prev => prev.filter(t => t.id !== tripId));
     try {
-      const stored = JSON.parse(localStorage.getItem('carmate_my_trip_ids') || '[]');
+      const storageKey = currentUser ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}` : 'carmate_guest_trip_ids';
+      const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
       const updated = stored.filter(id => id !== tripId);
-      localStorage.setItem('carmate_my_trip_ids', JSON.stringify(updated));
-      updateMyTripsCount();
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      localStorage.removeItem('carmate_my_trip_ids');
+      updateMyTripsCount(currentUser);
     } catch {}
     showToast('Đã xóa bài đăng chuyến đi thành công.');
 
@@ -726,6 +749,8 @@ export default function App() {
             <MyTripsView
               driverOffers={driverOffers}
               passengerRequests={passengerRequests}
+              currentUser={currentUser}
+              onOpenAuth={() => setShowAuthModal(true)}
               onEditTrip={(trip) => setEditingTrip(trip)}
               onToggleStatus={handleToggleTripStatus}
               onDeleteTrip={handleDeleteTrip}
