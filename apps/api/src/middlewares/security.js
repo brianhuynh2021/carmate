@@ -85,14 +85,14 @@ export const globalApiLimiter = createRateLimiter({
 // 2. Rate Limiter siết chặt cho OTP & Đăng nhập (Chống Brute-Force & Spam SMS/Zalo)
 export const authLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: process.env.NODE_ENV === 'production' ? 15 : 100,
+  max: process.env.NODE_ENV === 'production' ? 15 : 1000,
   message: 'Bạn đã yêu cầu OTP hoặc đăng nhập quá nhiều lần. Vui lòng đợi 15 phút để bảo vệ tài khoản.'
 });
 
 // 3. Rate Limiter cho Đăng chuyến xe (Chống Bot cào hoặc spam bài rác)
 export const postTripLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000, // 10 phút
-  max: process.env.NODE_ENV === 'production' ? 20 : 100,
+  max: process.env.NODE_ENV === 'production' ? 20 : 1000,
   message: 'Bạn đăng chuyến quá nhanh. Vui lòng đợi ít phút trước khi tạo thêm chuyến mới.'
 });
 

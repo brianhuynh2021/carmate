@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Phone, Users, ShieldCheck, MapPin, Building2, Bus, Milestone, Check, Sparkles, Navigation } from 'lucide-react';
+import { Phone, Users, ShieldCheck, MapPin, Building2, Bus, Milestone, Check, Sparkles, Navigation, Copy, CheckCheck } from 'lucide-react';
 import { formatVND, calculatePricing, getTimeSlotLabel, getZaloChatUrl, cleanPhoneNumber } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -7,6 +7,7 @@ import Button from '../ui/Button.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import { searchLocations } from '../../utils/vietnamLocations.js';
+import { generateSmartZaloDraft } from '../../utils/nlpTripParser.js';
 import api from '../../api/client.js';
 
 // Điểm đón mốc nổi tiếng dọc trục QL13 & liên tỉnh (Hotspot Chips 1 chạm kiểu Grab)
@@ -29,6 +30,7 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
   const [commitOnTime, setCommitOnTime] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [unmaskedPhone, setUnmaskedPhone] = useState(item?.phoneReal || '');
+  const [copiedDraft, setCopiedDraft] = useState(false);
 
   // Autocomplete Dropdown State
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -64,9 +66,29 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
   const activePhone = unmaskedPhone || item.phoneReal || '';
   const phoneClean = cleanPhoneNumber(activePhone);
 
-  // Soạn sẵn tin nhắn Zalo lịch sự, rõ ràng
-  const pickupText = pickupPoint.trim() ? `\n• Điểm hẹn đón mong muốn: ${pickupPoint.trim()}` : '';
-  const zaloMessage = `Xin chào ${item.publicName}, tôi thấy chuyến đi của bạn trên CarMate:\n• Lộ trình: ${item.from} ➔ ${item.to}\n• Thời gian: ${timeSlot} (${item.date || 'Hôm nay'})\n• Số ghế: ${seats} người${pickupText}\n• Đóng góp dự kiến: ${formatVND(pricing.total)} (gửi khi lên xe)\n• Cam kết: Tôi cam kết có mặt đúng giờ, không hủy đột xuất.\nNhờ bạn xác nhận điểm đón giúp tôi nhé!`;
+  // Soạn sẵn tin nhắn Zalo chuẩn văn hóa Việt Nam & linh hoạt theo điểm đón, số ghế, xe gia đình
+  const zaloMessage = generateSmartZaloDraft({
+    driverName: item.publicName || 'anh/chị',
+    from: item.from,
+    to: item.to,
+    timeSlot,
+    date: item.date || 'Hôm nay',
+    seats,
+    price: Math.round(pricing.total / (seats || 1)),
+    pickupPoint: pickupPoint.trim(),
+    isParcel: false,
+    hasRelatives: Boolean(item.hasRelatives)
+  });
+
+  const handleCopyDraft = async () => {
+    try {
+      await navigator.clipboard.writeText(zaloMessage);
+      setCopiedDraft(true);
+      setTimeout(() => setCopiedDraft(false), 2000);
+    } catch {
+      // Bỏ qua nếu không truy cập được clipboard
+    }
+  };
 
   const handleConfirmAndZalo = async () => {
     if (!commitOnTime || submitting) return;
@@ -327,6 +349,40 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
               {formatVND(pricing.total)}
             </p>
           </div>
+        </div>
+
+        {/* Bản nháp tin nhắn Zalo tương tác (Cursor Preview & 1-Click Copy) */}
+        <div className="p-3.5 rounded-2xl bg-slate-900 text-slate-100 border border-slate-800 space-y-2 relative overflow-hidden shadow-inner">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-300 inline-flex items-center gap-1.5">
+              <ZaloIcon className="w-3.5 h-3.5" />
+              Nội dung gửi qua Zalo:
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyDraft}
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white border border-white/10 inline-flex items-center gap-1 transition-all cursor-pointer active:scale-95"
+            >
+              {copiedDraft ? (
+                <>
+                  <CheckCheck className="w-3 h-3 text-emerald-400" />
+                  <span className="text-emerald-400 font-semibold">Đã chép</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3 text-slate-400" />
+                  <span>Sao chép</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div className="p-2.5 rounded-xl bg-black/40 border border-slate-800 text-[11px] leading-relaxed text-slate-300 font-sans whitespace-pre-line select-all">
+            {zaloMessage}
+          </div>
+          <p className="text-[10px] text-slate-400 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+            <span>Tin nhắn tự động cập nhật theo điểm đón và số ghế bạn chọn.</span>
+          </p>
         </div>
 
         {/* Khối Cam Kết Văn Minh & Chống Bùng Kèo */}

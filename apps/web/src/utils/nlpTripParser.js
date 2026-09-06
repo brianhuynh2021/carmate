@@ -43,9 +43,9 @@ export function parseNaturalTrip(text) {
     if (phoneReal.startsWith('84')) phoneReal = '0' + phoneReal.slice(2);
   }
 
-  // 3. Giá tiền (VD: 150k, 150.000, 200k, 180 nghìn, 150000)
+  // 3. Giá tiền (VD: 150k, 150.000, 200k, 180 nghìn, 150000, phụ xăng 120k, phụ 100k)
   let price = null;
-  const priceKMatch = lower.match(/(\d{2,3})\s*(?:k|nghìn|ngàn)/);
+  const priceKMatch = lower.match(/(?:phụ xăng|tiền xăng|phụ|chia sẻ|giá|vé)?\s*(\d{2,3})\s*(?:k|nghìn|ngàn)/i);
   if (priceKMatch) {
     price = parseInt(priceKMatch[1], 10) * 1000;
   } else {
@@ -60,21 +60,22 @@ export function parseNaturalTrip(text) {
     }
   }
 
-  // 4. Số ghế trống hoặc cần tìm (VD: còn 3 ghế, 3 chỗ, 2 người...)
+  // 4. Số ghế trống hoặc cần tìm (VD: còn 3 ghế, còn 1 ghế sau, chỉ nhận 1 khách, dư 2 chỗ...)
   let seats = null;
-  const seatsMatch = lower.match(/(?:còn|trống|cần|ghép)\s*([1-7])\s*(?:ghế|chỗ|người|vé)/) ||
-                     lower.match(/([1-7])\s*(?:ghế|chỗ|người)\b/);
+  const seatsMatch = lower.match(/(?:còn|trống|cần|ghép|chỉ nhận|nhận|dư|còn lại|chở thêm|chỉ chở)\s*([1-7])\s*(?:ghế\s*sau|ghế|chỗ|người|vé|khách)/i) ||
+                     lower.match(/([1-7])\s*(?:ghế|chỗ|người|khách)\b/);
   if (seatsMatch) {
     seats = parseInt(seatsMatch[1], 10);
   }
 
-  // 5. Loại xe & Phân loại Biển Trắng / Biển Vàng
+  // 5. Loại xe & Phân loại Biển Trắng / Biển Vàng & Xe Gia Đình Có Người Thân
+  const hasRelatives = /(vợ con|vợ|con nhỏ|người nhà|gia đình mình|chở vợ|chở con)/i.test(lower);
   let carCategory = 'family_car';
   let carType = 'Xe 7 chỗ';
 
   if (/(tiện chuyến|biển vàng|xe dịch vụ|xe ghép)/i.test(lower)) {
     carCategory = 'convenient_trip';
-  } else if (/(xe nhà|xe gia đình|biển trắng)/i.test(lower)) {
+  } else if (hasRelatives || /(xe nhà|xe gia đình|biển trắng)/i.test(lower)) {
     carCategory = 'family_car';
   }
 
@@ -83,8 +84,9 @@ export function parseNaturalTrip(text) {
   else if (/innova/i.test(lower)) carType = 'Toyota Innova (Xe 7 chỗ)';
   else if (/carnival/i.test(lower)) carType = 'Kia Carnival (Xe 7 chỗ)';
   else if (/cross|corolla/i.test(lower)) carType = 'Toyota Corolla Cross (Xe 5 chỗ)';
-  else if (/7\s*chỗ/i.test(lower)) carType = 'Xe 7 chỗ rộng rãi';
-  else if (/5\s*chỗ|4\s*chỗ/i.test(lower)) carType = 'Xe 5 chỗ cá nhân';
+  else if (/7\s*chỗ/i.test(lower)) carType = hasRelatives ? 'Xe 7 chỗ gia đình (chở người thân)' : 'Xe 7 chỗ rộng rãi';
+  else if (/5\s*chỗ|4\s*chỗ/i.test(lower)) carType = hasRelatives ? 'Xe 5 chỗ gia đình (chở người thân)' : 'Xe 5 chỗ cá nhân';
+  else if (hasRelatives) carType = 'Xe gia đình (chở người thân)';
 
   // 6. Thời gian & Khung giờ
   let scheduleDay = 'Hôm nay';
@@ -194,12 +196,47 @@ export function parseNaturalTrip(text) {
     scheduleDay,
     timeSlot,
     exactTime,
-    seats: seats || (role === 'driver' ? 3 : 1),
+    seats: seats || (role === 'driver' ? (hasRelatives ? 1 : 3) : 1),
     price: price || 150000,
     phoneReal,
     carCategory,
     carType,
+    hasRelatives,
     acceptsParcel,
     rawText: raw
   };
+}
+
+/**
+ * generateSmartZaloDraft — Soạn thảo tin nhắn Zalo thông minh chuẩn văn hóa Việt Nam
+ * Hỗ trợ 2 chiều: Khách ghép ghế hoặc Người gửi bưu phẩm kiện hàng
+ */
+export function generateSmartZaloDraft({
+  driverName = 'anh/chị',
+  from = '',
+  to = '',
+  timeSlot = '',
+  date = 'Hôm nay',
+  seats = 1,
+  price = 0,
+  pickupPoint = '',
+  isParcel = false,
+  hasRelatives = false
+}) {
+  const pickupText = pickupPoint ? `\n• Điểm hẹn đón: ${pickupPoint}` : '';
+  const priceText = price ? `\n• Chi phí phụ xăng dự kiến: ${new Intl.NumberFormat('vi-VN').format(price)}đ/ghế` : '';
+
+  if (isParcel) {
+    return `Chào ${driverName}, em thấy xe mình chạy tuyến ${from} ➔ ${to} lúc ${timeSlot} (${date}).
+Em có 1 kiện đồ nhỏ muốn gửi kèm theo xe. Anh cho em gửi vị trí đón nhận bưu phẩm qua Zalo này nhé! Cảm ơn anh.`;
+  }
+
+  const relativeNote = hasRelatives ? ' (em biết xe có người nhà, em đi 1 mình gọn gàng)' : '';
+
+  return `Chào ${driverName}, em thấy chuyến xe của anh trên CarMate:
+• Lộ trình: ${from} ➔ ${to}
+• Khung giờ: ${timeSlot} (${date})
+• Số người đăng ký: ${seats} người${relativeNote}${pickupText}${priceText}
+• Cam kết: Em cam kết có mặt đúng giờ hẹn, không hủy gấp.
+Anh cho em xin điểm hẹn đón thuận tiện nhất của anh nhé!`;
 }

@@ -624,6 +624,37 @@ async function runTests() {
       const firstMatch = matchesRes.data.matches[0];
       assert(firstMatch.driver.phoneReal === undefined && firstMatch.passenger.phoneReal === undefined, 'PII Protection: Radar che giấu SĐT thật của tài xế và khách');
     }
+
+    // 14. KIỂM THỬ CURSOR INLINE CO-PILOT & ZALO SMART DRAFT (PHASE 1)
+    console.log('\n--- 14. Kiểm thử Cursor Inline Co-Pilot & Zalo Smart Draft ---');
+    const { parseNaturalTrip, generateSmartZaloDraft } = await import('../apps/web/src/utils/nlpTripParser.js');
+    
+    // 14.1 Nhận diện xe gia đình chở vợ con
+    const familyTripText = 'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
+    const parsedFamily = parseNaturalTrip(familyTripText);
+    assert(parsedFamily.role === 'driver', 'NLP nhận diện đúng vai trò chủ xe');
+    assert(parsedFamily.hasRelatives === true, 'NLP phát hiện chính xác xe gia đình chở vợ con (hasRelatives: true)');
+    assert(parsedFamily.seats === 1, 'NLP phân tích đúng số ghế trống thực tế là 1 (dù là xe 7 chỗ)');
+    assert(parsedFamily.price === 120000, 'NLP trích xuất chính xác chi phí phụ xăng 120k');
+    assert(parsedFamily.phoneReal === '0984883750', 'NLP trích xuất đúng số điện thoại Zalo');
+
+    // 14.2 Tạo bản nháp tin nhắn Zalo thông minh
+    const draftZalo = generateSmartZaloDraft({
+      driverName: 'Mr. Huỳnh Nguyễn',
+      from: 'Bù Đốp',
+      to: 'Sài Gòn',
+      timeSlot: '17:00 - 18:00',
+      date: 'Hôm nay',
+      seats: 1,
+      price: 120000,
+      pickupPoint: 'Ngã 4 Bình Phước',
+      isParcel: false,
+      hasRelatives: true
+    });
+    assert(draftZalo.includes('Mr. Huỳnh Nguyễn'), 'Bản nháp Zalo xưng hô đúng tên chủ xe');
+    assert(draftZalo.includes('em biết xe có người nhà'), 'Bản nháp Zalo tinh tế ghi nhận xe có người nhà');
+    assert(draftZalo.includes('Ngã 4 Bình Phước'), 'Bản nháp Zalo gắn chính xác điểm hẹn đón mong muốn');
+    assert(draftZalo.includes('120.000'), 'Bản nháp Zalo hiển thị đúng mức phụ xăng');
   } catch (err) {
     assert(false, 'Kiểm thử An ninh & PII', err.message);
   }

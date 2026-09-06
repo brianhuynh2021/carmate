@@ -1,10 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, ArrowRight, CornerDownLeft, Check, RotateCcw, Zap, ClipboardPaste } from 'lucide-react';
+import {
+  Sparkles,
+  ArrowRight,
+  CornerDownLeft,
+  Check,
+  RotateCcw,
+  Zap,
+  ClipboardPaste,
+  Car,
+  Users,
+  MapPin,
+  Navigation,
+  Clock,
+  Coins,
+  Phone,
+  Package,
+  HeartHandshake
+} from 'lucide-react';
 import { parseNaturalTrip } from '../../utils/nlpTripParser.js';
 import { formatVND } from '@carmate/shared';
 
 const SAMPLES = [
-  'Chiều nay 17h mình chạy Hà Nội về Hải Phòng xe 7 chỗ còn 3 ghế, đón Mỹ Đình hoặc Big C, 150k/ghế. Ai đi nhắn Zalo 0984883750',
+  'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750',
   'Sáng mai 7h mình từ Lộc Ninh về Sài Gòn xe Veloz tiện chuyến còn 4 chỗ 180k đón dọc QL13 sđt 0913889922',
   'Tìm xe đi từ Đà Nẵng ra Huế sáng mai tầm 9h cần 2 ghế sđt 0905112233'
 ];
@@ -122,15 +139,18 @@ export default function SmartTripComposer({ onApply, onInstantSubmit }) {
               key={idx}
               type="button"
               onClick={() => handleApplySample(sample)}
-              className="text-[11px] px-2.5 py-1 rounded-full bg-slate-800/80 hover:bg-slate-700 border border-slate-700/70 text-slate-300 hover:text-white transition-colors cursor-pointer text-left truncate max-w-xs"
+              className="text-[11px] px-2.5 py-1 rounded-full bg-slate-800/80 hover:bg-slate-700 border border-slate-700/70 text-slate-300 hover:text-white transition-colors cursor-pointer text-left truncate max-w-xs inline-flex items-center gap-1"
             >
-              ⚡ Mẫu {idx + 1}: {idx === 0 ? 'Hà Nội ➔ Hải Phòng' : idx === 1 ? 'Lộc Ninh ➔ Sài Gòn' : 'Đà Nẵng ➔ Huế'}
+              <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+              <span className="truncate">
+                {idx === 0 ? 'Bù Đốp ➔ Sài Gòn (Chở vợ con)' : idx === 1 ? 'Lộc Ninh ➔ Sài Gòn' : 'Đà Nẵng ➔ Huế'}
+              </span>
             </button>
           ))}
         </div>
       )}
 
-      {/* Real-time Extracted Entity Pills (Chuẩn Cursor) */}
+      {/* Real-time Extracted Entity Pills (Chuẩn Cursor & Apple) */}
       {parsedResult && (
         <div className="mt-3.5 pt-3 border-t border-slate-800/80 space-y-2.5 relative z-10 animate-in fade-in duration-200">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
@@ -154,57 +174,74 @@ export default function SmartTripComposer({ onApply, onInstantSubmit }) {
 
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {/* Vai trò */}
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold">
-              <span>{parsedResult.role === 'driver' ? '🚗 Chủ xe' : '👥 Khách tìm xe'}</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold">
+              {parsedResult.role === 'driver' ? <Car className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+              <span>{parsedResult.role === 'driver' ? 'Chủ xe' : 'Khách tìm xe'}</span>
             </span>
 
             {/* Điểm đón */}
             {parsedResult.fromLocation && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-                <span>📍 Đi: {parsedResult.fromLocation}</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Đi: {parsedResult.fromLocation}</span>
               </span>
             )}
 
             {/* Điểm đến */}
             {parsedResult.toLocation && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold">
-                <span>🎯 Đến: {parsedResult.toLocation}</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold">
+                <Navigation className="w-3.5 h-3.5 text-rose-400" />
+                <span>Đến: {parsedResult.toLocation}</span>
               </span>
             )}
 
             {/* Giờ đi */}
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono">
-              <span>🕒 {parsedResult.timeSlot} · {parsedResult.scheduleDay}</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>{parsedResult.timeSlot} · {parsedResult.scheduleDay}</span>
             </span>
 
             {/* Số ghế */}
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold">
-              <span>💺 {parsedResult.seats} ghế</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold">
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span>{parsedResult.seats} ghế</span>
             </span>
 
             {/* Giá chia sẻ */}
             {parsedResult.price && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold font-mono">
-                <span>💰 {formatVND(parsedResult.price)}/ghế</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold font-mono">
+                <Coins className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{formatVND(parsedResult.price)}/ghế</span>
+              </span>
+            )}
+
+            {/* Xe gia đình chở người thân */}
+            {parsedResult.hasRelatives && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-medium">
+                <HeartHandshake className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Xe chở người thân · Chỉ nhận {parsedResult.seats} khách</span>
               </span>
             )}
 
             {/* Số điện thoại Zalo */}
             {parsedResult.phoneReal && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-semibold">
-                <span>📱 Zalo: {parsedResult.phoneReal}</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-semibold">
+                <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Zalo: {parsedResult.phoneReal}</span>
               </span>
             )}
 
             {/* Phân loại xe */}
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-xs">
-              <span>{parsedResult.carCategory === 'convenient_trip' ? '⚡ Xe tiện chuyến' : '🚗 Xe gia đình'}</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-xs">
+              <Car className="w-3.5 h-3.5 text-slate-400" />
+              <span>{parsedResult.carCategory === 'convenient_trip' ? 'Xe tiện chuyến' : 'Xe gia đình'}</span>
             </span>
 
             {/* Nhận gửi đồ / bưu phẩm */}
             {parsedResult.acceptsParcel && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-                <span>📦 Nhận gửi đồ/hàng</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+                <Package className="w-3.5 h-3.5 text-amber-400" />
+                <span>Nhận gửi đồ/hàng</span>
               </span>
             )}
           </div>
@@ -213,4 +250,3 @@ export default function SmartTripComposer({ onApply, onInstantSubmit }) {
     </div>
   );
 }
-
