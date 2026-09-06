@@ -85,9 +85,13 @@ app.use('/api', (req, res) => {
 
 // 4. Mount Frontend (Vite Dev Middleware trong dev hoặc Static Dist trong production)
 const isProduction = process.env.NODE_ENV === 'production';
+// Cho phép tắt Vite dev middleware độc lập với NODE_ENV (dùng cho CI):
+// CI cần phục vụ bản dist đã build, nhưng vẫn giữ NODE_ENV=test để không
+// dính rate limit nghiêm ngặt của production.
+const disableViteDev = process.env.DISABLE_VITE_DEV === 'true';
 let viteDevServer = null;
 
-if (!isProduction) {
+if (!isProduction && !disableViteDev) {
   try {
     const { createServer: createViteServer } = await import('vite');
     viteDevServer = await createViteServer({

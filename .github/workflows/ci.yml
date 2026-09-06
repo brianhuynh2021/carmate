@@ -34,26 +34,38 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
-      - name: Start Server in Background
+      - name: Start Server, Wait for Readiness & Run E2E Suite
+        env:
+          # Bỏ Vite dev middleware (phục vụ bản dist đã build) nhưng GIỮ NODE_ENV=test,
+          # vì rate limit của production (20 bài/10 phút) sẽ chặn chính bộ test.
+          DISABLE_VITE_DEV: 'true'
         run: |
-          node apps/api/src/index.js &
-          echo $! > server.pid
+          set -e
+          # Server phải chạy CÙNG step với test: mỗi step của Actions là một shell riêng,
+          # tiến trình nền khởi động ở step trước sẽ bị kết thúc khi step đó đóng lại.
+          node apps/api/src/index.js > server.log 2>&1 &
+          SERVER_PID=$!
+          echo $SERVER_PID > server.pid
 
-      - name: Wait for Server Readiness
-        run: |
-          for i in {1..30}; do
-            if curl -s -f http://localhost:5173/api/health > /dev/null; then
-              echo "Server is healthy and ready!"
-              exit 0
+          for i in $(seq 1 30); do
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+              echo "::error::Server process died during startup."
+              cat server.log
+              exit 1
             fi
-            echo "Waiting for server to start... ($i/30)"
+            if curl -sf http://localhost:5173/api/health > /dev/null; then
+              echo "Server is healthy and ready!"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "::error::Server failed to become ready within 30s."
+              cat server.log
+              exit 1
+            fi
             sleep 1
           done
-          echo "Server failed to start in time"
-          exit 1
 
-      - name: Run E2E Test Suite (97+ Tests)
-        run: npm test
+          npm test
 
       - name: Verify Production Fail-Closed (Security Assurance)
         run: |
