@@ -44,6 +44,8 @@ export default function Header({
     { id: 'booked', label: t('nav.booked'), icon: Clock, badge: bookedCount }
   ];
 
+  const isMac = typeof window !== 'undefined' && typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent || navigator.platform || '');
+
   return (
     <header
       className="sticky top-0 z-30 bg-[#f5f5f7]/80 backdrop-blur-2xl border-b border-black/[0.06] transition-colors"
@@ -94,14 +96,14 @@ export default function Header({
           <button
             type="button"
             onClick={onOpenAi}
-            title="Trợ lý CarMate AI (Phím tắt: ⌘K hoặc Ctrl+K)"
+            title={isMac ? "Trợ lý CarMate AI (Phím tắt: ⌘K)" : "Trợ lý CarMate AI (Phím tắt: Ctrl+K)"}
             aria-label="Mở Trợ lý CarMate AI"
             className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline font-medium">Trợ lý AI</span>
             <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-md bg-black/[0.05] text-[#515154] border border-black/[0.06] ml-0.5">
-              ⌘K
+              {isMac ? '⌘K' : 'Ctrl K'}
             </kbd>
           </button>
 
