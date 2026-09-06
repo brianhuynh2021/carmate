@@ -535,7 +535,7 @@ export default function App() {
         onOpenAi={() => setShowAiModal(true)}
       />
 
-      <main className="flex-1">
+      <main className="flex-1 pb-24 md:pb-0">
         {/* ── Tìm chuyến ── */}
         {activeTab === 'market' && (
           <>

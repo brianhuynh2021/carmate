@@ -51,7 +51,7 @@ export default function Header({
       className="sticky top-0 z-30 bg-[#f5f5f7]/80 backdrop-blur-2xl border-b border-black/[0.06] transition-colors"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
-      <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4 md:gap-6">
+      <div className="max-w-[1320px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
         <Logo
           size="sm"
           onClick={() => setActiveTab('market')}
@@ -98,7 +98,7 @@ export default function Header({
             onClick={onOpenAi}
             title={isMac ? "Trợ lý CarMate AI (Phím tắt: ⌘K)" : "Trợ lý CarMate AI (Phím tắt: Ctrl+K)"}
             aria-label="Mở Trợ lý CarMate AI"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group"
+            className="inline-flex items-center justify-center gap-1.5 h-9 w-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline font-medium">Trợ lý AI</span>
@@ -114,7 +114,7 @@ export default function Header({
                 type="button"
                 onClick={() => setActiveTab('my-trips')}
                 title={`Tài xế: ${currentUser.name} (${currentUser.phone})`}
-                className="h-9 pl-2 pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] border border-black/[0.08] shadow-xs hover:bg-[#f5f5f7] transition-all active:scale-[0.98]"
+                className="h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] border border-black/[0.08] shadow-xs hover:bg-[#f5f5f7] transition-all active:scale-[0.98] shrink-0"
               >
                 <span className="relative flex items-center justify-center">
                   <span className="w-5 h-5 rounded-full bg-[#107c41] text-white inline-flex items-center justify-center text-[10px] font-bold">
@@ -122,7 +122,7 @@ export default function Header({
                   </span>
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
                 </span>
-                <span className="max-w-[80px] sm:max-w-[110px] truncate">{currentUser.name}</span>
+                <span className="max-w-[70px] sm:max-w-[110px] truncate">{currentUser.name}</span>
               </button>
 
               {/* Cổng Quản Trị Chỉ Hiển Thị Riêng Cho Admin / Founder */}
@@ -152,10 +152,11 @@ export default function Header({
             <button
               type="button"
               onClick={onOpenAuth}
-              className="h-9 px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all"
+              className="h-9 px-2.5 sm:px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all shrink-0"
             >
-              <User className="w-3.5 h-3.5 text-[#0071e3]" />
-              <span>Đăng nhập / Đăng ký</span>
+              <User className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
+              <span className="hidden sm:inline">Đăng nhập / Đăng ký</span>
+              <span className="sm:hidden">Đăng nhập</span>
             </button>
           )}
 

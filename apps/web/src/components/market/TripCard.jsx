@@ -113,7 +113,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
   const avatarLetter = (driverDisplayName.replace(/^(Chủ xe|Bác tài|Khách|Anh|Chị)\s*/i, '').trim()[0] || (isDriver ? 'T' : 'K')).toUpperCase();
 
   return (
-    <article id={`trip-${item.id}`} className="p-5 flex flex-col relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_26px_rgba(0,0,0,0.07)] hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200">
+    <article id={`trip-${item.id}`} className="p-4 sm:p-5 flex flex-col relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_26px_rgba(0,0,0,0.07)] hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200">
       {/* ── 1. HEADER DANH TÍNH CHỦ XE / HÀNH KHÁCH ── */}
       <header className="flex items-center justify-between gap-3">
         <button
