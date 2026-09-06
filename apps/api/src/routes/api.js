@@ -14,6 +14,7 @@ import {
   listAdminUsers,
   updateUserStatusHandler,
   getAdminReports,
+  getAdminAiIntelligence,
   requireAdmin
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
@@ -77,5 +78,6 @@ router.get('/admin/users', requireAdmin, listAdminUsers);
 router.patch('/admin/users/:id', requireAdmin, updateUserStatusHandler);
 router.patch('/admin/users/:id/status', requireAdmin, updateUserStatusHandler);
 router.get('/admin/reports', requireAdmin, getAdminReports);
+router.get('/admin/ai-intelligence', requireAdmin, getAdminAiIntelligence);
 
 export default router;

@@ -286,10 +286,28 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
   let replannedTrips = evaluatedTrips;
   if (evaluatedTrips.length === 0) {
     innerLoopLog.push(`[REPLAN] Không tìm thấy chuyến trùng khớp điểm đón chính xác. Đang tái lập quét mở rộng hành lang trục chính...`);
-    const corridorTrips = getTrips({ type: 'drivers' }).filter(t => 
-      (t.routeCategory && (t.routeCategory.includes('QL13') || t.routeCategory.includes('QL14'))) ||
-      (t.from && (t.from.includes('Bình Phước') || t.from.includes('Lộc Ninh') || t.from.includes('Đồng Xoài')))
-    ).slice(0, 3);
+    
+    // Kiểm tra tính tương thích hành lang: Chỉ Replan xe có cùng hướng di chuyển
+    const toLower = (to || '').toLowerCase();
+    const isHeadingSouth = /sài gòn|tp|hcm|bình dương|đồng nai|miền đông|hàng xanh/i.test(toLower);
+    const isHeadingBinhPhuoc = /bình phước|đồng xoài|chơn thành|bù đốp|lộc ninh/i.test(toLower);
+    const isHeadingNorth = /hải phòng|hà nội/i.test(toLower);
+
+    const corridorTrips = getTrips({ type: 'drivers' }).filter(t => {
+      const tTo = (t.to || '').toLowerCase();
+      const tFrom = (t.from || '').toLowerCase();
+      if (isHeadingSouth && (tTo.includes('sài gòn') || tTo.includes('bến xe') || tTo.includes('hàng xanh'))) {
+        return (t.routeCategory && (t.routeCategory.includes('QL13') || t.routeCategory.includes('QL14'))) ||
+          tFrom.includes('bình phước') || tFrom.includes('lộc ninh') || tFrom.includes('đồng xoài');
+      }
+      if (isHeadingBinhPhuoc && (tTo.includes('bình phước') || tTo.includes('đồng xoài') || tTo.includes('chơn thành'))) {
+        return true;
+      }
+      if (isHeadingNorth && (tTo.includes('hải phòng') || tTo.includes('hà nội'))) {
+        return true;
+      }
+      return false;
+    }).slice(0, 3);
 
     if (corridorTrips.length > 0) {
       innerLoopLog.push(`[REPLAN] Tái lập thành công: Đề xuất ${corridorTrips.length} chuyến xe chạy ngang hành lang tiện đón trả dọc tuyến.`);
@@ -310,6 +328,8 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
         phoneReal: t.phoneReal,
         isCorridorFallback: true
       }));
+    } else {
+      innerLoopLog.push(`[REPLAN] Toàn bộ hành lang hiện chưa có chuyến xe phù hợp hướng ${to || 'yêu cầu'}. Đã ghi nhận vào Hộp đen Tuyến khát xe (Unmet Demand).`);
     }
   }
 
@@ -390,15 +410,24 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     seatsRequested = parseInt(seatMatch[1], 10) || 1;
   }
 
-  if (prompt.includes('hà nội') || prompt.includes('hn')) from = 'Hà Nội';
-  if (prompt.includes('hải phòng') || prompt.includes('hp')) to = 'Hải Phòng';
-  if (prompt.includes('bình phước') || prompt.includes('đồng xoài') || prompt.includes('chơn thành') || prompt.includes('bù đốp') || prompt.includes('lộc ninh')) {
-    if (prompt.includes('về sài gòn') || prompt.includes('đi sài gòn') || prompt.includes('đi tp') || prompt.includes('về tp')) {
-      from = 'Bình Phước';
-      to = 'Sài Gòn';
-    } else {
-      from = 'Sài Gòn';
-      to = 'Bình Phước';
+  // Tự động nhận diện cú pháp tự nhiên: từ X đi/đến/về Y
+  const naturalRouteMatch = prompt.match(/từ\s+([^,]+?)\s+(?:đi|đến|về|sang)\s+([^,?.!]+)/i);
+  if (naturalRouteMatch) {
+    from = naturalRouteMatch[1].trim();
+    to = naturalRouteMatch[2].trim();
+  }
+
+  if (!from && !to) {
+    if (prompt.includes('hà nội') || prompt.includes('hn')) from = 'Hà Nội';
+    if (prompt.includes('hải phòng') || prompt.includes('hp')) to = 'Hải Phòng';
+    if (prompt.includes('bình phước') || prompt.includes('đồng xoài') || prompt.includes('chơn thành') || prompt.includes('bù đốp') || prompt.includes('lộc ninh')) {
+      if (prompt.includes('về sài gòn') || prompt.includes('đi sài gòn') || prompt.includes('đi tp') || prompt.includes('về tp') || prompt.includes('hàng xanh')) {
+        from = 'Bình Phước';
+        to = 'Sài Gòn';
+      } else {
+        from = 'Sài Gòn';
+        to = 'Bình Phước';
+      }
     }
   }
 
@@ -429,7 +458,7 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     const fallbackNotice = topTrip.isCorridorFallback ? '\n*(Gợi ý xe tiện chuyến chạy ngang trục hành lang gần bạn)*' : '';
 
     textResponse = `Dạ chào bạn! Mình đã tìm thấy **${finalTrips.length} chuyến xe phù hợp** với yêu cầu của bạn (${seatsRequested} ghế):${fallbackNotice}\n\n` +
-      `🚗 **${topTrip.publicName}** (${topTrip.carType})\n` +
+      `• **${topTrip.publicName}** (${topTrip.carType})\n` +
       `• Tuyến: **${topTrip.from} ➔ ${topTrip.to}**\n` +
       `• Khung giờ: **${topTrip.timeSlot}** (${topTrip.date})\n` +
       `• Chi phí san sẻ: **${formatVND(topTrip.price)}/ghế** (khả dụng: ${topTrip.actualAvailableSeats || topTrip.seats} chỗ)${relativeNotice}\n` +
@@ -446,6 +475,7 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     reply: textResponse,
     reasoningSteps,
     suggestedTrips: finalTrips,
+    requestedRoute: (from && to) ? `${from} ➔ ${to}` : '',
     engine: 'local-heuristic-agent'
   };
 }

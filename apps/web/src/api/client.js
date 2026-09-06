@@ -226,6 +226,10 @@ export const api = {
     return request('/admin/reports');
   },
 
+  async getAdminAiIntelligence() {
+    return request('/admin/ai-intelligence');
+  },
+
   // Agentic AI Concierge & Dispatcher (Stanford Inner Loop)
   async agentChat(message, history = []) {
     return request('/agent/chat', {

@@ -19,7 +19,8 @@ import {
   LogOut,
   RefreshCw,
   ExternalLink,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles
 } from 'lucide-react';
 import api from '../../api/client.js';
 import Button from '../ui/Button.jsx';
@@ -36,13 +37,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [mfaCode, setMfaCode] = useState('');
   const [requireMfa, setRequireMfa] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'users' | 'reports'
+  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'users' | 'reports' | 'ai'
 
   // Data states
   const [metrics, setMetrics] = useState(null);
   const [trips, setTrips] = useState([]);
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState(null);
+  const [aiIntelligence, setAiIntelligence] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusNotice, setStatusNotice] = useState(null);
@@ -89,11 +91,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const loadAllAdminData = async () => {
     setIsLoading(true);
     try {
-      const [metricsRes, tripsRes, usersRes, reportsRes] = await Promise.allSettled([
+      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes] = await Promise.allSettled([
         api.getAdminMetrics(),
         api.getAdminTrips(),
         api.getAdminUsers(),
-        api.getAdminReports()
+        api.getAdminReports(),
+        api.getAdminAiIntelligence()
       ]);
 
       if (metricsRes.status === 'fulfilled' && metricsRes.value?.success) {
@@ -107,6 +110,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
       }
       if (reportsRes.status === 'fulfilled' && reportsRes.value?.success) {
         setReports(reportsRes.value.data || null);
+      }
+      if (aiRes.status === 'fulfilled' && aiRes.value?.success) {
+        setAiIntelligence(aiRes.value.data || null);
       }
     } catch (err) {
       console.warn('[Admin] Lỗi nạp dữ liệu:', err);
@@ -429,39 +435,54 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
       {/* Tabs Quản Trị & Bộ Tìm Kiếm */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div className="inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/60 dark:bg-[#151c2e] border border-black/5 dark:border-white/[0.08]">
+        <div className="inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/60 dark:bg-[#151c2e] border border-black/5 dark:border-white/[0.08] flex-wrap">
           <button
             type="button"
             onClick={() => setActiveTab('trips')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all ${
+            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
               activeTab === 'trips'
                 ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            🚗 Quản lý Chuyến xe ({trips.length})
+            <Car className="w-3.5 h-3.5 text-[#0071e3]" />
+            <span>Chuyến xe ({trips.length})</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('users')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all ${
+            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
               activeTab === 'users'
                 ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            🛡️ Thành viên & Xác minh ({users.length})
+            <Users className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Thành viên ({users.length})</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('reports')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all ${
+            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
               activeTab === 'reports'
                 ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            📋 Báo cáo Sự cố
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+            <span>Báo cáo sự cố</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('ai')}
+            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+              activeTab === 'ai'
+                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>AI Trajectories ({aiIntelligence?.summary?.totalQueries || 0})</span>
           </button>
         </div>
 
@@ -736,6 +757,208 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       <span className="text-rose-600">Đã huỷ</span>
                     </div>
                     <p className="text-slate-600 dark:text-slate-300 mt-1">Lý do: &ldquo;{item.cancelReason || 'Thay đổi kế hoạch gia đình'}&rdquo;</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 4: AI AGENTIC OBSERVABILITY & QUỸ ĐẠO SUY LUẬN (MIT & STANFORD) ── */}
+      {activeTab === 'ai' && (
+        <div className="space-y-6">
+          {/* Telemetry KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
+              <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-[#0071e3]" />
+                Lượt tương tác AI
+              </span>
+              <p className="text-2xl font-bold font-display tabular text-[#1d1d1f] dark:text-white">
+                {aiIntelligence?.summary?.totalQueries || 0}
+              </p>
+              <p className="text-[11px] text-[#86868b]">Truy vấn ngôn ngữ tự nhiên</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
+              <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                Tỷ lệ giải quyết mục tiêu
+              </span>
+              <p className="text-2xl font-bold font-display tabular text-emerald-600 dark:text-emerald-400">
+                {aiIntelligence?.summary?.resolutionRate ?? 100}%
+              </p>
+              <p className="text-[11px] text-[#86868b]">Khớp chuyến thành công</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
+              <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-blue-500" />
+                Độ trễ trung bình
+              </span>
+              <p className="text-2xl font-bold font-display tabular text-[#0071e3]">
+                {aiIntelligence?.summary?.avgLatencyMs || 0} ms
+              </p>
+              <p className="text-[11px] text-[#86868b]">Thời gian thực thi Stanford Loop</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
+              <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
+                Nhu cầu khát xe (Unmet)
+              </span>
+              <p className="text-2xl font-bold font-display tabular text-amber-600 dark:text-amber-400">
+                {aiIntelligence?.summary?.unmetDemandCount || 0}
+              </p>
+              <p className="text-[11px] text-[#86868b]">Lượt khách tìm nhưng thiếu xe</p>
+            </div>
+          </div>
+
+          {/* Radar Tuyến Đường Khát Xe (Unmet Demand Radar) */}
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-500" />
+                  <span>Radar Tuyến Đường Khát Xe (Unmet Demand Discovery)</span>
+                </h3>
+                <p className="text-xs text-[#86868b] mt-0.5">
+                  Phát hiện tự động các tuyến đường hành khách hỏi tìm nhiều nhất qua AI nhưng hiện tại chưa có chủ xe nào đăng bài
+                </p>
+              </div>
+              <Badge tone="warning" className="text-xs font-semibold">
+                Cơ hội mở rộng cộng đồng
+              </Badge>
+            </div>
+
+            {(!aiIntelligence?.unmetDemandRoutes || aiIntelligence.unmetDemandRoutes.length === 0) ? (
+              <div className="p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-xs text-[#86868b]">
+                Hiện tại tất cả các yêu cầu tìm xe đều được đáp ứng hoặc có chuyến xe chạy ngang thuận tiện.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {aiIntelligence.unmetDemandRoutes.map((routeItem, idx) => (
+                  <div
+                    key={routeItem.route || idx}
+                    className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] flex items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm font-bold text-[#1d1d1f] dark:text-white">
+                          {routeItem.route}
+                        </p>
+                      </div>
+                      <p className="text-xs text-[#86868b]">
+                        Gợi ý: Đăng bài thông báo vào nhóm Zalo địa phương để kêu gọi thêm chủ xe tuyến này.
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300/60 tabular">
+                        {routeItem.count} lượt tìm
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Hộp Đen Quỹ Đạo Suy Luận Thời Gian Thực (Live Trajectory Stream) */}
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#0071e3]" />
+                  <span>Hộp Đen Quỹ Đạo Suy Luận AI (Agentic Reasoning Trajectory Stream)</span>
+                </h3>
+                <p className="text-xs text-[#86868b] mt-0.5">
+                  Lưu trữ chuỗi tư duy Stanford Inner Loop [PLAN ➔ ACT ➔ VERIFY ➔ REFLECT ➔ REPLAN ➔ RESOLVE]
+                </p>
+              </div>
+              <span className="text-xs text-[#86868b] tabular font-medium">
+                {aiIntelligence?.recentTrajectories?.length || 0} lượt gần nhất
+              </span>
+            </div>
+
+            {(!aiIntelligence?.recentTrajectories || aiIntelligence.recentTrajectories.length === 0) ? (
+              <div className="p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-xs text-[#86868b]">
+                Chưa có dữ liệu quỹ đạo nào được lưu. Hãy thử trò chuyện với Trợ lý CarMate AI để xem luồng suy luận xuất hiện tại đây.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {aiIntelligence.recentTrajectories.map((traj) => (
+                  <div
+                    key={traj.id}
+                    className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-[#0071e3]">
+                            {traj.id}
+                          </span>
+                          {traj.requestedRoute && (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-900 border border-blue-200">
+                              {traj.requestedRoute}
+                            </span>
+                          )}
+                          {traj.unmetDemand ? (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              Khát xe (0 chuyến)
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-900 border border-emerald-200">
+                              {traj.suggestionsCount} xe phù hợp
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-semibold text-[#1d1d1f] dark:text-white pt-1">
+                          &ldquo;{traj.userGoal}&rdquo;
+                        </p>
+                      </div>
+
+                      <div className="text-right text-[11px] text-[#86868b] tabular shrink-0">
+                        <span className="font-bold text-[#1d1d1f]">{traj.executionTimeMs}ms</span>
+                        <span className="mx-1">·</span>
+                        <span>{new Date(traj.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+
+                    {/* Chuỗi reasoning steps */}
+                    {Array.isArray(traj.reasoningSteps) && traj.reasoningSteps.length > 0 && (
+                      <div className="p-3 rounded-xl bg-white dark:bg-[#12131a] border border-black/[0.04] space-y-1.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                          Chuỗi lập luận ({traj.reasoningSteps.length} bước):
+                        </span>
+                        <div className="space-y-1 font-mono text-[11px]">
+                          {traj.reasoningSteps.map((step, sIdx) => {
+                            const isVerify = step.startsWith('[VERIFY]');
+                            const isReflect = step.startsWith('[REFLECT]');
+                            const isReplan = step.startsWith('[REPLAN]');
+                            return (
+                              <div
+                                key={sIdx}
+                                className={`p-1.5 rounded-lg leading-relaxed ${
+                                  isVerify
+                                    ? 'bg-blue-50/80 text-blue-900 border border-blue-200/60'
+                                    : isReflect
+                                    ? 'bg-amber-50/80 text-amber-900 border border-amber-200/60'
+                                    : isReplan
+                                    ? 'bg-emerald-50/80 text-emerald-900 border border-emerald-200/60'
+                                    : 'text-[#515154] bg-black/[0.02]'
+                                }`}
+                              >
+                                {step}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

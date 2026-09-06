@@ -111,7 +111,23 @@ export async function initDB() {
     );
   `);
 
-  // 5. Tự động chuyển đổi dữ liệu từ file JSON cũ sang SQLite (Migration)
+  // 5. Bảng Lưu Trữ Quỹ Đạo AI (ai_trajectories - MIT & Stanford Observability)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ai_trajectories (
+      id TEXT PRIMARY KEY,
+      userGoal TEXT,
+      requestedRoute TEXT,
+      reasoningSteps TEXT,
+      suggestionsCount INTEGER DEFAULT 0,
+      executionTimeMs INTEGER DEFAULT 0,
+      unmetDemand INTEGER DEFAULT 0,
+      createdAt INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_traj_created ON ai_trajectories(createdAt);
+    CREATE INDEX IF NOT EXISTS idx_ai_traj_unmet ON ai_trajectories(unmetDemand);
+  `);
+
+  // 6. Tự động chuyển đổi dữ liệu từ file JSON cũ sang SQLite (Migration)
   const tripCount = db.prepare('SELECT COUNT(*) as count FROM trips').get().count;
   if (tripCount === 0) {
     console.log('[SQLite DB] Bắt đầu di chuyển dữ liệu từ file JSON sang SQLite...');
@@ -793,3 +809,81 @@ export function getAdminMetrics() {
     memoryUsageMB: heapUsedMB
   };
 }
+
+/**
+ * ── AI AGENTIC OBSERVABILITY (MIT & STANFORD TRAJECTORY HUB) ──
+ */
+
+export function recordAiTrajectory({
+  userGoal,
+  requestedRoute = '',
+  reasoningSteps = [],
+  suggestionsCount = 0,
+  executionTimeMs = 0,
+  unmetDemand = false
+}) {
+  const database = getRawDB();
+  const id = `TRAJ-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const stmt = database.prepare(`
+    INSERT INTO ai_trajectories (
+      id, userGoal, requestedRoute, reasoningSteps, suggestionsCount, executionTimeMs, unmetDemand, createdAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    id,
+    userGoal,
+    requestedRoute,
+    JSON.stringify(reasoningSteps),
+    suggestionsCount,
+    executionTimeMs,
+    unmetDemand ? 1 : 0,
+    Date.now()
+  );
+  return id;
+}
+
+export function getAiTrajectories(limit = 30) {
+  const database = getRawDB();
+  const rows = database.prepare(`
+    SELECT * FROM ai_trajectories ORDER BY createdAt DESC LIMIT ?
+  `).all(limit);
+  return rows.map(r => ({
+    ...r,
+    reasoningSteps: r.reasoningSteps ? JSON.parse(r.reasoningSteps) : [],
+    unmetDemand: Boolean(r.unmetDemand)
+  }));
+}
+
+export function getAiIntelligenceStats() {
+  const database = getRawDB();
+  const total = database.prepare('SELECT COUNT(*) as count FROM ai_trajectories').get().count;
+  const resolved = database.prepare('SELECT COUNT(*) as count FROM ai_trajectories WHERE suggestionsCount > 0').get().count;
+  const avgLatencyRow = database.prepare('SELECT AVG(executionTimeMs) as avgLat FROM ai_trajectories').get();
+  const avgLatencyMs = Math.round(avgLatencyRow?.avgLat || 0);
+  const unmetTotal = database.prepare('SELECT COUNT(*) as count FROM ai_trajectories WHERE unmetDemand = 1').get().count;
+
+  // Nhóm các tuyến xe chưa được đáp ứng nhiều nhất (Unmet Demand)
+  const unmetRoutes = database.prepare(`
+    SELECT requestedRoute as route, COUNT(*) as count, MAX(createdAt) as lastQueriedAt
+    FROM ai_trajectories
+    WHERE unmetDemand = 1 AND requestedRoute IS NOT NULL AND requestedRoute != ''
+    GROUP BY requestedRoute
+    ORDER BY count DESC
+    LIMIT 10
+  `).all();
+
+  const recentTrajectories = getAiTrajectories(20);
+
+  return {
+    summary: {
+      totalQueries: total,
+      resolvedQueries: resolved,
+      resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : 100,
+      avgLatencyMs,
+      unmetDemandCount: unmetTotal
+    },
+    unmetDemandRoutes: unmetRoutes,
+    recentTrajectories
+  };
+}
+

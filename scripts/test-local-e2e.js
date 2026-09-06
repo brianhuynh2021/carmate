@@ -775,6 +775,49 @@ async function runTests() {
     assert(cancelRes.status === 200 && cancelData.success === true, 'MIT Tier 3: Huỷ chuyến văn minh thành công (0đ tiền phạt)');
     assert(cancelData.data.status === 'cancelled', 'MIT Tier 3: Trạng thái chuyển thành cancelled');
     assert(cancelData.data.cancelReason === 'Việc gia đình đột xuất', 'MIT Tier 3: Lưu lý do huỷ chuyến chuẩn xác');
+
+    // 17. KIỂM THỬ AI OBSERVABILITY & TRAJECTORY DASHBOARD (PHASE 4)
+    console.log('\n--- 17. Kiểm thử AI Observability & Trajectory Dashboard (Phase 4) ---');
+
+    // 17.1 Hộp đen tự động ghi nhận quỹ đạo khi gọi Agent Chat
+    const trajChatRes = await fetch(`${BASE_URL}/api/agent/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Tìm xe từ Bù Đốp đi Sài Gòn chiều nay'
+      })
+    });
+    const trajChatData = await trajChatRes.json();
+    assert(trajChatRes.status === 200 && trajChatData.success === true, 'Phase 4: Gọi Agent Chat ghi nhận telemetry thành công');
+    assert(typeof trajChatData.data.executionTimeMs === 'number' && trajChatData.data.executionTimeMs >= 0, 'Phase 4: Agent Chat đo lường chính xác thời gian thực thi (executionTimeMs)');
+
+    // 17.2 Phát hiện Tuyến khát xe (Unmet Demand Detection)
+    const unmetChatRes = await fetch(`${BASE_URL}/api/agent/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Tìm giúp xe từ Bù Đốp đi Móng Cái Quảng Ninh gấp'
+      })
+    });
+    const unmetChatData = await unmetChatRes.json();
+    assert(unmetChatRes.status === 200 && unmetChatData.success === true, 'Phase 4: Truy vấn tuyến lạ phản hồi thành công');
+    assert(Array.isArray(unmetChatData.data.suggestedTrips) && unmetChatData.data.suggestedTrips.length === 0, 'Phase 4: Tuyến lạ ghi nhận 0 chuyến (kích hoạt cờ Unmet Demand)');
+
+    // 17.3 Admin truy vấn Telemetry & Trajectory Hub qua /api/admin/ai-intelligence
+    const aiIntelRes = await fetch(`${BASE_URL}/api/admin/ai-intelligence`, {
+      headers: { 'x-admin-key': adminToken }
+    });
+    const aiIntelData = await aiIntelRes.json();
+    assert(aiIntelRes.status === 200 && aiIntelData.success === true, 'Phase 4: Admin tải Telemetry & Quỹ đạo AI thành công (HTTP 200)');
+    assert(aiIntelData.data?.summary && typeof aiIntelData.data.summary.totalQueries === 'number', 'Phase 4: Telemetry tổng hợp số lượng truy vấn AI');
+    assert(typeof aiIntelData.data.summary.resolutionRate === 'number', 'Phase 4: Đo lường Task Resolution Rate (%)');
+    assert(typeof aiIntelData.data.summary.avgLatencyMs === 'number', 'Phase 4: Đo lường Average Latency (ms)');
+    assert(Array.isArray(aiIntelData.data.recentTrajectories) && aiIntelData.data.recentTrajectories.length > 0, 'Phase 4: Hộp đen lưu trữ danh sách Trajectories thời gian thực');
+    
+    const firstTraj = aiIntelData.data.recentTrajectories[0];
+    assert(firstTraj.id && firstTraj.id.startsWith('TRAJ-'), 'Phase 4: Mã Trajectory chuẩn TRAJ-xxxx');
+    assert(Array.isArray(firstTraj.reasoningSteps) && firstTraj.reasoningSteps.length > 0, 'Phase 4: Lưu giữ chuỗi lập luận Stanford Loop [PLAN ➔ ACT...]');
+    assert(Array.isArray(aiIntelData.data.unmetDemandRoutes), 'Phase 4: Báo cáo danh sách tuyến đường khát xe (Unmet Demand Routes)');
   } catch (err) {
     assert(false, 'Kiểm thử An ninh, Stanford & MIT Engine', err.message);
   }

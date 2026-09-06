@@ -8,7 +8,8 @@ import {
   deleteTripPermanent,
   getAllUsers,
   updateUserStatus,
-  getDB
+  getDB,
+  getAiIntelligenceStats
 } from '../db/sqliteStore.js';
 
 const JWT_SECRET = getJwtSecret();
@@ -277,3 +278,19 @@ export function getAdminReports(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
+
+/**
+ * GET /api/admin/ai-intelligence - Báo cáo Telemetry & Hộp đen Quỹ đạo AI (MIT & Stanford)
+ */
+export function getAdminAiIntelligence(req, res) {
+  try {
+    const stats = getAiIntelligenceStats();
+    return res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
