@@ -7,7 +7,14 @@ import TermsModal from './TermsModal.jsx';
 import PolicyModal from './PolicyModal.jsx';
 import api from '../../api/client.js';
 
-export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
+export default function AuthModal({
+  onClose,
+  onSuccess,
+  initialPhone = '',
+  title = 'Đăng Nhập CarMate',
+  subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
+  contextNotice
+}) {
   const [authTab, setAuthTab] = useState('google'); // 'google' | 'zalo'
   const [phone, setPhone] = useState(initialPhone);
   const [name, setName] = useState('');
@@ -84,10 +91,17 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '' }) {
       size="sm"
       icon={ShieldCheck}
       iconTone="brand"
-      title="Đăng Nhập CarMate"
-      subtitle="Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn"
+      title={title}
+      subtitle={subtitle}
     >
       <div className="space-y-4">
+        {contextNotice && (
+          <div className="p-3 rounded-2xl bg-[#0071e3]/10 dark:bg-[#0071e3]/15 border border-[#0071e3]/20 text-xs font-semibold text-[#0071e3] dark:text-[#2997ff] flex items-center gap-2 leading-relaxed">
+            <Sparkles className="w-4 h-4 shrink-0 text-[#0071e3] dark:text-[#2997ff]" />
+            <span>{contextNotice}</span>
+          </div>
+        )}
+
         {/* Lựa chọn phương thức: Google hoặc Zalo (Apple Capsule Segmented) */}
         <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-black/[0.04] dark:bg-slate-800/80">
           <button

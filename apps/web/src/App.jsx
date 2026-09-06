@@ -20,6 +20,7 @@ import TripCard from './components/market/TripCard.jsx';
 
 // Views
 import PostTripForm from './components/post/PostTripForm.jsx';
+import PostTripAuthGuard from './components/post/PostTripAuthGuard.jsx';
 import MatchRadarView from './components/radar/MatchRadarView.jsx';
 import BookedTripList from './components/booked/BookedTripList.jsx';
 import TrustProfileView from './components/profile/TrustProfileView.jsx';
@@ -186,16 +187,51 @@ export default function App() {
     }
   });
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalConfig, setAuthModalConfig] = useState({
+    title: 'Đăng Nhập CarMate',
+    subtitle: 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
+    contextNotice: null,
+    pendingTab: null
+  });
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [pendingBookingTrip, setPendingBookingTrip] = useState(null);
   const [pendingPostTrip, setPendingPostTrip] = useState(null);
 
+  // Mở AuthModal với ngữ cảnh & lời dẫn rõ ràng chuẩn Apple
+  const openAuthWithContext = ({
+    title = 'Đăng Nhập CarMate',
+    subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
+    contextNotice = null,
+    pendingTab = null
+  } = {}) => {
+    setAuthModalConfig({ title, subtitle, contextNotice, pendingTab });
+    setShowAuthModal(true);
+  };
+
+  // Guarded Action Interceptor: Chặn khách chưa đăng nhập vào form tạo xe
+  const handleRequestPostTrip = () => {
+    if (!currentUser) {
+      openAuthWithContext({
+        title: 'Đăng Nhập Để Tạo Chuyến Xe',
+        subtitle: 'Xác thực tài khoản chính chủ để đăng bài & kết nối khách an toàn',
+        contextNotice: 'Đăng nhập chính chủ để tạo chuyến xe và quản lý khách ghép',
+        pendingTab: 'post'
+      });
+      return;
+    }
+    setActiveTab('post');
+  };
+
   // Kích hoạt ghép chuyến có bảo vệ danh tính: Chưa đăng nhập sẽ yêu cầu xác thực OTP trước
   const handleInitiateBook = (trip) => {
     if (!currentUser) {
       setPendingBookingTrip(trip);
-      setShowAuthModal(true);
+      openAuthWithContext({
+        title: 'Xác Thực Để Ghép Chuyến',
+        subtitle: 'Bảo vệ số điện thoại · Kết nối an toàn với chủ xe',
+        contextNotice: `Ghép chuyến tuyến ${trip.from} ⇄ ${trip.to}`
+      });
       showToast('Vui lòng xác thực số điện thoại để kết nối trực tiếp với chủ xe');
       return;
     }
@@ -223,6 +259,17 @@ export default function App() {
 
     updateMyTripsCount(user);
     showToast(`Chào mừng ${user.name}! Đã đăng nhập thành công.`);
+
+    // Nếu có tab đang chờ mở (ví dụ: bấm Tạo chuyến trước khi login), tự động chuyển hướng
+    if (authModalConfig.pendingTab) {
+      setActiveTab(authModalConfig.pendingTab);
+    }
+    setAuthModalConfig({
+      title: 'Đăng Nhập CarMate',
+      subtitle: 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
+      contextNotice: null,
+      pendingTab: null
+    });
 
     // Nếu người dùng có chuyến đang chờ đăng, tự động hoàn tất đăng chuyến
     if (pendingPostTrip) {
@@ -567,11 +614,12 @@ export default function App() {
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onRequestPostTrip={handleRequestPostTrip}
         setShowPolicyModal={setShowPolicyModal}
         bookedCount={activeBookedCount}
         myTripsCount={myTripsCount}
         currentUser={currentUser}
-        onOpenAuth={() => setShowAuthModal(true)}
+        onOpenAuth={() => openAuthWithContext()}
         onLogout={handleLogout}
         onOpenAi={() => setShowAiModal(true)}
       />
@@ -587,7 +635,7 @@ export default function App() {
               setSearchFrom={setSearchFrom}
               searchTo={searchTo}
               setSearchTo={setSearchTo}
-              onPostClick={() => setActiveTab('post')}
+              onPostClick={handleRequestPostTrip}
             />
 
             <div className={`${container} py-5 sm:py-6 space-y-5 relative z-10`}>
@@ -759,7 +807,19 @@ export default function App() {
 
         {activeTab === 'post' && (
           <div className={`${container} py-8`}>
-            <PostTripForm onSubmit={handlePostTrip} currentUser={currentUser} onOpenAuth={() => setShowAuthModal(true)} />
+            {!currentUser ? (
+              <PostTripAuthGuard
+                onOpenAuth={() => openAuthWithContext({
+                  title: 'Đăng Nhập Để Tạo Chuyến Xe',
+                  subtitle: 'Xác thực tài khoản chính chủ để đăng bài & kết nối khách an toàn',
+                  contextNotice: 'Đăng nhập chính chủ để tạo chuyến xe và quản lý khách ghép',
+                  pendingTab: 'post'
+                })}
+                onBackToMarket={() => setActiveTab('market')}
+              />
+            ) : (
+              <PostTripForm onSubmit={handlePostTrip} currentUser={currentUser} onOpenAuth={() => openAuthWithContext()} />
+            )}
           </div>
         )}
 
@@ -769,11 +829,11 @@ export default function App() {
               driverOffers={driverOffers}
               passengerRequests={passengerRequests}
               currentUser={currentUser}
-              onOpenAuth={() => setShowAuthModal(true)}
+              onOpenAuth={() => openAuthWithContext()}
               onEditTrip={(trip) => setEditingTrip(trip)}
               onToggleStatus={handleToggleTripStatus}
               onDeleteTrip={handleDeleteTrip}
-              onPostNew={() => setActiveTab('post')}
+              onPostNew={handleRequestPostTrip}
               onViewInMarket={handleViewTripInMarket}
               onViewTrip={(trip) => setTicketToShare(trip)}
               onViewCarPhotos={setSelectedTripForPhotos}
@@ -884,6 +944,9 @@ export default function App() {
           onClose={() => setShowAuthModal(false)}
           onSuccess={handleAuthSuccess}
           initialPhone={currentUser?.phone || ''}
+          title={authModalConfig.title}
+          subtitle={authModalConfig.subtitle}
+          contextNotice={authModalConfig.contextNotice}
         />
       )}
 
@@ -897,7 +960,13 @@ export default function App() {
         }}
       />
 
-      <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} bookedCount={activeBookedCount} myTripsCount={myTripsCount} />
+      <BottomNavBar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onRequestPostTrip={handleRequestPostTrip}
+        bookedCount={activeBookedCount}
+        myTripsCount={myTripsCount}
+      />
       <PwaInstallPrompt />
       <Toast message={toastMessage} />
     </div>

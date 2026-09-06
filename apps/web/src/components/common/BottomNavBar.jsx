@@ -2,7 +2,7 @@ import React from 'react';
 import { Compass, Sparkles, Plus, Clock, Car } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 
-export default function BottomNavBar({ activeTab, setActiveTab, bookedCount = 0, myTripsCount = 0 }) {
+export default function BottomNavBar({ activeTab, setActiveTab, onRequestPostTrip, bookedCount = 0, myTripsCount = 0 }) {
   const { t } = useI18n();
 
   const items = [
@@ -27,7 +27,7 @@ export default function BottomNavBar({ activeTab, setActiveTab, bookedCount = 0,
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => onRequestPostTrip ? onRequestPostTrip() : setActiveTab(item.id)}
                 aria-label={t('nav.post')}
                 className="flex flex-col items-center justify-center -mt-6 cursor-pointer active:scale-95 transition-transform touch-manipulation"
               >

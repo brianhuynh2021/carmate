@@ -27,6 +27,7 @@ export function LanguageToggle({ size = 'md' }) {
 export default function Header({
   activeTab,
   setActiveTab,
+  onRequestPostTrip,
   setShowPolicyModal,
   bookedCount = 0,
   myTripsCount = 0,
@@ -176,7 +177,7 @@ export default function Header({
             <Button
               size="sm"
               icon={PlusCircle}
-              onClick={() => setActiveTab('post')}
+              onClick={onRequestPostTrip || (() => setActiveTab('post'))}
               className="bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-full shadow-xs active:scale-[0.98] transition-all font-bold px-4"
             >
               {t('nav.postCta')}
