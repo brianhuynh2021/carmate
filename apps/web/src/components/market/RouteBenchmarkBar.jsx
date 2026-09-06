@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ROUTE_BENCHMARKS, formatVND } from '@carmate/shared';
-import { Fuel, Scale, ChevronRight, Check, TrendingDown, Route, Users, Sparkles, Milestone } from 'lucide-react';
+import { Fuel, Scale, ChevronRight, Check, TrendingDown, Route, Sparkles, Milestone } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -11,7 +11,6 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
   const [showDetail, setShowDetail] = useState(false);
   const [selectedRouteKey, setSelectedRouteKey] = useState(null);
   const [selectedRegion, setSelectedRegion] = useState('south'); // 'north' | 'central' | 'south'
-  const [passengerCount, setPassengerCount] = useState(2); // 1 | 2 | 3 | 4
 
   const routeKeys = Object.keys(ROUTE_BENCHMARKS);
 
@@ -49,17 +48,6 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
   // Tổng chi phí vận hành xe thực tế
   const totalOperatingCost = (info.fuelCost || 0) + (info.botFee || 0);
 
-  // Mức chi phí chia sẻ ước tính theo số người ngồi ghép
-  const calculatedSharePerPerson = useMemo(() => {
-    // Nếu chỉ 1 khách ghép, chia đôi với chủ xe
-    // Nếu 2-3 khách ghép, chia đều chi phí + một phần khấu hao xe
-    if (passengerCount === 1) {
-      return Math.round((totalOperatingCost * 0.65) / 10000) * 10000;
-    }
-    const perSeat = Math.round((totalOperatingCost / (passengerCount + 0.5)) / 10000) * 10000;
-    return Math.max(perSeat, info.minSafePrice || 50000);
-  }, [totalOperatingCost, passengerCount, info]);
-
   return (
     <>
       {/* ── THANH CHỈ BÁO COMPACT TRÊN TRANG CHỦ (Apple Squircle & Cursor High-Definition Telemetry) ── */}
@@ -93,30 +81,30 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
         </button>
       </div>
 
-      {/* ── MODAL ĐỊNH MỨC XĂNG & CẦU ĐƯỜNG CHUẨN CURSOR ── */}
+      {/* ── MODAL ĐỊNH MỨC XĂNG & CẦU ĐƯỜNG ĐẲNG CẤP APPLE & CURSOR ── */}
       {open && (
         <Modal
           onClose={close}
           size="lg"
           icon={Scale}
           title={t('benchmark.modalTitle')}
-          subtitle={t('benchmark.modalSub')}
+          subtitle="Minh bạch theo cự ly, tiêu hao nhiên liệu thực tế và vé trạm BOT từng tuyến"
           footer={
             <div className="flex items-center justify-end w-full">
-              <Button onClick={close} variant="primary" size="sm" className="px-5 font-semibold">
+              <Button onClick={close} variant="primary" size="sm" className="px-6 font-bold rounded-full">
                 {t('common.understood')}
               </Button>
             </div>
           }
         >
-          <div className="space-y-5 text-left">
-            {/* 1. BỘ CHỌN THEO MIỀN (REGIONAL SELECTOR - KHÔNG CÒN ĐÁM MÂY 10 NÚT RỐI RẮM) */}
+          <div className="space-y-4 sm:space-y-5 text-left">
+            {/* 1. BỘ CHỌN KHU VỰC & TUYẾN ĐƯỜNG (APPLE SEGMENTED & SQUIRCLE PILLS) */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
                   Khu vực & Tuyến hành lang
                 </span>
-                <span className="text-[11px] text-slate-400">Chọn để xem định mức</span>
+                <span className="text-[11.5px] text-slate-500 dark:text-slate-400 font-medium">Bấm chọn tuyến để xem</span>
               </div>
 
               {/* Segmented Miền Bắc - Trung - Nam */}
@@ -133,14 +121,14 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                   }
                 }}
                 options={[
-                  { value: 'north', label: 'Miền Bắc (Hà Nội, Hải Phòng...)' },
-                  { value: 'central', label: 'Miền Trung (Đà Nẵng, Huế...)' },
-                  { value: 'south', label: 'Miền Nam (Sài Gòn, Bình Phước...)' }
+                  { value: 'north', label: 'Miền Bắc' },
+                  { value: 'central', label: 'Miền Trung' },
+                  { value: 'south', label: 'Miền Nam' }
                 ]}
               />
 
               {/* Danh sách tuyến thuộc miền đã chọn */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {routesInRegion.map((k) => (
                   <Chip
                     key={k}
@@ -157,143 +145,126 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
               </div>
             </div>
 
-            {/* 2. BỘ TÍNH TOÁN CHI PHÍ TƯƠNG TÁC (INTERACTIVE COST CALCULATOR) */}
-            <section className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/70 dark:from-[#151c2e] dark:to-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] space-y-4 shadow-2xs">
+            {/* 2. HERO RESULT CARD: "Mức chia sẻ đề xuất cho tuyến này" (ĐỈNH CAO APPLE & CON NGƯỜI VN) */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-slate-50/90 dark:from-slate-900 dark:to-slate-800/90 border border-slate-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(15,23,42,0.04)] text-center relative overflow-hidden">
+              {/* Background ambient glow */}
+              <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-24 bg-[#0071e3]/10 dark:bg-[#0071e3]/20 blur-2xl pointer-events-none rounded-full" />
+
+              <p className="text-xs sm:text-[13px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider font-mono">
+                Mức chia sẻ đề xuất cho tuyến này
+              </p>
+
+              <div className="mt-2.5 flex items-baseline justify-center gap-1.5">
+                <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+                  ~{formatVND(info.suggestedRate)}
+                </span>
+                <span className="text-sm sm:text-base font-bold text-slate-600 dark:text-slate-400 font-mono">
+                  /ghế
+                </span>
+              </div>
+
+              <p className="mt-2.5 text-xs text-slate-600 dark:text-slate-300 font-medium max-w-md mx-auto leading-relaxed">
+                Áp dụng tính trên <strong>từng ghế trống thực tế</strong> (phù hợp cho cả xe gia đình có người thân hoặc xe đi công việc). Trọn gói xăng & vé BOT, thanh toán trực tiếp khi lên xe.
+              </p>
+            </div>
+
+            {/* 3. BÓC TÁCH CHI PHÍ THỰC TẾ (CURSOR HIGH-PRECISION TELEMETRY) */}
+            <section className="p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Route className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                  <span>Chi phí xe thực tế ({info.shortName})</span>
-                </h4>
-                <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                  <Route className="w-3.5 h-3.5 text-[#0071e3]" />
+                  <span>Bóc tách chi phí lăn bánh ({info.shortName})</span>
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
                   Cự ly: ~{info.distanceKm} km
                 </span>
               </div>
 
-              {/* 2 Thẻ chi phí kỹ thuật */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="p-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200/70 dark:border-white/5 shadow-2xs">
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              {/* 3 Thẻ chi phí đo lường */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+                  <p className="text-[11.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
                     <Fuel className="w-3.5 h-3.5 text-amber-500" />
                     <span>Xăng RON 95</span>
                   </p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white tabular mt-1">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white font-mono mt-1">
                     ~{formatVND(info.fuelCost)}
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200/70 dark:border-white/5 shadow-2xs">
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+                  <p className="text-[11.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
                     <Milestone className="w-3.5 h-3.5 text-blue-500" />
                     <span>Vé cầu đường / BOT</span>
                   </p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white tabular mt-1">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white font-mono mt-1">
                     ~{formatVND(info.botFee)}
                   </p>
                 </div>
 
-                <div className="col-span-2 sm:col-span-1 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
-                  <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/90 dark:border-emerald-800/60 shadow-2xs">
+                  <p className="text-[11.5px] text-emerald-800 dark:text-emerald-300 font-bold">
                     Tổng chi phí chuyến xe
                   </p>
-                  <p className="text-sm font-black text-emerald-800 dark:text-emerald-200 tabular mt-1">
+                  <p className="text-sm font-black text-emerald-900 dark:text-emerald-200 font-mono mt-1">
                     ~{formatVND(totalOperatingCost)}
                   </p>
                 </div>
               </div>
-
-              {/* TƯƠNG TÁC SỐ NGƯỜI GHÉP XE (THE CURSOR INTERACTIVE SLIDER) */}
-              <div className="pt-2 border-t border-slate-200/80 dark:border-white/10 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-                    <span>Số người cùng san sẻ chi phí:</span>
-                  </label>
-                  <span className="text-xs font-bold text-primary-600 dark:text-primary-400 tabular">
-                    {passengerCount} người cùng đi
-                  </span>
-                </div>
-
-                {/* Nút chọn số người đi cùng */}
-                <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 3, 4].map((count) => (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => setPassengerCount(count)}
-                      className={`h-9 rounded-xl text-xs font-semibold tabular transition-all cursor-pointer shadow-2xs ${
-                        passengerCount === count
-                          ? 'bg-primary-600 text-white font-bold shadow-sm'
-                          : 'bg-white hover:bg-slate-100 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 border border-slate-200 dark:border-white/10'
-                      }`}
-                    >
-                      {count} khách
-                    </button>
-                  ))}
-                </div>
-
-                {/* Hộp kết quả đề xuất trực quan */}
-                <div className="p-3.5 rounded-xl bg-white dark:bg-[#1e293b] border border-primary-200 dark:border-primary-500/30 flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Mức san sẻ công bằng mỗi người:
-                    </p>
-                    <p className="text-[11.5px] text-slate-600 dark:text-slate-300 mt-0.5">
-                      Trọn gói xăng & vé BOT, thanh toán trực tiếp khi lên xe
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-lg font-black text-primary-600 dark:text-primary-400 font-display tabular">
-                      ~{formatVND(calculatedSharePerPerson)}
-                    </span>
-                    <span className="text-xs text-slate-400 font-mono"> /ghế</span>
-                  </div>
-                </div>
-              </div>
             </section>
 
-            {/* 3. SO SÁNH THỊ TRƯỜNG TINH TẾ (CLEAN COMPARATIVE MATRIX - KHÔNG CHÓI LÓA) */}
-            <section className="p-4 rounded-2xl bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] space-y-3">
-              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                <TrendingDown className="w-4 h-4 text-emerald-500" />
-                <span>So sánh mức giá thị trường trên tuyến này</span>
-              </h4>
+            {/* 4. SO SÁNH THỊ TRƯỜNG THỰC TẾ (APPLE VALUE COMPARISON) */}
+            <section className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                  <TrendingDown className="w-4 h-4 text-emerald-600" />
+                  <span>So sánh giá thị trường tuyến này</span>
+                </span>
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-800/60">
+                  Tiết kiệm ~45% - 50%
+                </span>
+              </div>
 
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-slate-50 dark:bg-white/[0.02]">
-                  <span className="text-slate-600 dark:text-slate-400">Limousine 9 chỗ</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200 tabular font-mono">
+                <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">Limousine 9 chỗ đón trả</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
                     {info.marketLimoRef}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-slate-50 dark:bg-white/[0.02]">
-                  <span className="text-slate-600 dark:text-slate-400">Xe khách truyền thống</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200 tabular font-mono">
+                <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">Xe khách truyền thống</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
                     {info.traditionalBusRef}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-primary-500/10 border border-primary-500/20 text-primary-900 dark:text-primary-200">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-                    <span className="font-bold">Định mức chia sẻ CarMate</span>
+                <div className="flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 text-slate-900 dark:text-white">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#0071e3]" />
+                    <span className="font-bold text-[#0071e3] dark:text-blue-300">CarMate (Đi ghép xe gia đình)</span>
                   </div>
-                  <span className="font-black text-sm text-primary-700 dark:text-primary-300 tabular font-mono">
+                  <span className="font-black text-sm text-[#0071e3] dark:text-blue-300 font-mono">
                     ~{formatVND(info.suggestedRate)}/ghế
                   </span>
                 </div>
               </div>
             </section>
 
-            {/* 4. CAM KẾT VĂN MINH */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
-              <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02]">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>Toàn bộ chi phí chia sẻ trực tiếp giữa chủ xe và khách khi lên xe.</span>
+            {/* 5. NGUYÊN TẮC VĂN MINH & THỎA THUẬN TỰ DO (TÂM LÝ CON NGƯỜI VN) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span className="text-slate-700 dark:text-slate-300 font-medium">
+                  <strong>Thỏa thuận tự do:</strong> Hai bên tự do nhắn Zalo hẹn điểm đón trả và chốt chi phí phù hợp nhất.
+                </span>
               </div>
-              <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02]">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>0đ Phí sàn trung gian · Tự do hẹn điểm đón trả thuận tiện.</span>
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span className="text-slate-700 dark:text-slate-300 font-medium">
+                  <strong>0đ Phí sàn trung gian:</strong> Toàn bộ chi phí chia sẻ trực tiếp khi lên xe, tuyệt đối không giữ tiền.
+                </span>
               </div>
             </div>
           </div>
