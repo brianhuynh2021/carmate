@@ -137,7 +137,46 @@ Mở trình duyệt truy cập vào **`http://localhost:5173`** và trải nghi�
 
 ---
 
-## ☁️ 5. Hướng Dẫn Triển Khai Lên `carmate.vn` Qua Cloudflare (Khi Sẵn Sàng)
+## 💾 5. Sao Lưu & Khôi Phục Dữ Liệu (Bắt Buộc Trước Khi Go-Live)
+
+Dữ liệu nằm trong SQLite tại `apps/api/data/carmate.sqlite`. Container bị xoá hoặc cấu hình volume sai là **mất toàn bộ chuyến đi và thành viên**. Hãy bật sao lưu trước khi có người dùng thật.
+
+```bash
+npm run backup          # tạo 1 bản sao lưu ngay
+npm run backup:setup    # cài lịch tự động 02:00 hằng ngày
+npm run restore         # liệt kê các bản sao lưu hiện có
+```
+
+**Sao lưu an toàn khi server đang chạy.** Script dùng SQLite Online Backup API, không phải `cp` — copy file thường trong lúc có giao dịch đang ghi sẽ tạo bản sao hỏng hoặc thiếu phần dữ liệu còn nằm trong WAL. Mỗi bản đều được `integrity_check` rồi mới nén gzip; bản lỗi bị xoá ngay thay vì âm thầm lưu lại.
+
+Mặc định giữ 14 bản gần nhất trong `apps/api/data/backups/` (đã thêm vào `.gitignore`).
+
+```bash
+node scripts/backup-db.js --out /mnt/backup --keep 30
+```
+
+### Khôi phục
+
+```bash
+# 1. DỪNG server trước — ghi đè khi đang chạy sẽ hỏng dữ liệu
+# 2. Khôi phục bản mới nhất
+npm run restore -- --latest
+# 3. Khởi động lại server
+```
+
+DB hiện tại luôn được giữ lại thành `carmate.sqlite.before-restore-<timestamp>` để quay lui nếu cần.
+
+> **Kiểm chứng định kỳ:** một bản sao lưu chưa từng khôi phục thử thì chưa phải là bản sao lưu. Nên chạy thử `--latest` trên máy local mỗi vài tháng.
+
+### Lưu ý triển khai
+
+- Volume Docker `carmate-data` phải trỏ đúng `/app/apps/api/data`, nếu không dữ liệu sẽ mất sau mỗi lần redeploy.
+- Backup nằm **cùng volume** với DB. Với dữ liệu thật, hãy đồng bộ thêm ra nơi khác (S3, Google Drive, máy khác) — cùng ổ đĩa thì hỏng ổ là mất cả hai.
+- Yêu cầu **Node >= 22** (`better-sqlite3` sẽ segfault trên Node 20).
+
+---
+
+## ☁️ 6. Hướng Dẫn Triển Khai Lên `carmate.vn` Qua Cloudflare (Khi Sẵn Sàng)
 
 Khi anh đã test mượt mà dưới máy local và sẵn sàng đưa lên tên miền thật:
 

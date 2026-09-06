@@ -16,7 +16,10 @@
     "dev:all": "node apps/api/src/index.js",
     "build": "npm run build --workspace=@carmate/web",
     "preview": "npm run preview --workspace=@carmate/web",
-    "test": "node scripts/test-local-e2e.js"
+    "test": "node scripts/test-local-e2e.js",
+    "backup": "node scripts/backup-db.js",
+    "backup:setup": "bash scripts/setup-backup-cron.sh",
+    "restore": "node scripts/restore-db.js"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

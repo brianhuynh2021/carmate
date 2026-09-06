@@ -35,6 +35,9 @@ export async function initDB() {
   // Kích hoạt WAL Mode & Tối ưu hiệu năng
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
+  // Gộp WAL về file chính sau mỗi ~1000 trang (~4MB) để WAL không phình vô hạn.
+  // Không có mốc này, carmate.sqlite-wal có thể lớn hơn cả DB chính.
+  db.pragma('wal_autocheckpoint = 1000');
   db.pragma('cache_size = -64000'); // 64MB cache
   db.pragma('foreign_keys = ON');
 
@@ -240,6 +243,26 @@ export async function initDB() {
   }
 
   return db;
+}
+
+/**
+ * Gộp toàn bộ WAL vào file chính rồi đóng kết nối.
+ * Gọi khi tắt server để dữ liệu nằm trọn trong carmate.sqlite,
+ * tránh mất giao dịch còn kẹt trong WAL nếu volume bị huỷ.
+ */
+export function closeDB() {
+  if (!db) return;
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+  } catch (err) {
+    console.warn('[SQLite DB] Không thể checkpoint WAL khi đóng:', err.message);
+  }
+  try {
+    db.close();
+  } catch (err) {
+    console.warn('[SQLite DB] Lỗi khi đóng kết nối:', err.message);
+  }
+  db = null;
 }
 
 export function getRawDB() {

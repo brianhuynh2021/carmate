@@ -1,7 +1,7 @@
 # 🏛️ CarMate — Kiến Trúc Hệ Thống & Tài Liệu Thiết Kế (System Architecture)
 
 > **Tài liệu Thiết kế Kiến trúc Toàn diện (Comprehensive Architecture & Design Document)**  
-> Kết hợp 4 trường phái tư duy: **Google** (Tối giản & PLG) • **MIT** (Kỹ thuật tối ưu & Tiết kiệm) • **Stanford** (Thấu cảm văn hóa bản địa) • **Cursor Founder** (Khởi nghiệp thực dụng, Lean 0đ, không thủ tục rườm rà).
+> Bốn nguyên tắc thiết kế xuyên suốt: **Tối giản & tăng trưởng tự thân** • **Hiệu năng và chi phí vận hành thấp** • **Thấu cảm văn hoá bản địa** • **Khởi nghiệp tinh gọn, không giữ tiền trung gian**.
 
 ---
 
@@ -44,26 +44,26 @@ graph TB
 
 ---
 
-## 2. Triết Lý Thiết Kế 4 Trụ Cột (Google + MIT + Stanford + Cursor)
+## 2. Bốn Trụ Cột Thiết Kế
 
 ```mermaid
 mindmap
   root((CarMate DNA))
-    Google Simplicity
+    Tối giản (Simplicity)
       Tìm kiếm 1-chạm không rườm rà
       Chip lọc nhanh quốc lộ QL13, QL51...
       Product-Led Growth: Vé xe tự lan toả
-    MIT Engineering
+    Kỹ thuật (Engineering)
       Monorepo gọn nhẹ @carmate/shared
       Sub-85KB Bundle size cho mạng 4G
       Chi phí hạ tầng cực thấp $10-20/tháng
       Radar 2 chiều quét toạ độ không gian
-    Stanford Empathy
+    Thấu cảm (Empathy)
       Thấu cảm thói quen người Việt
       Nút Nhắn Zalo & Gọi Điện thoại thật
       Văn hoá xe gia đình & đồng hương
       Cam kết trọn gói đã gồm xăng + cầu đường
-    Cursor Founder Lean
+    Tinh gọn (Lean)
       Triển khai thực chiến ngay, không rào cản
       Mô hình Kết Nối Trực Tiếp CarMate + Chốt Zalo
       Không giữ tiền cá nhân tránh nghi ngờ
@@ -71,19 +71,19 @@ mindmap
       Tài xế tự do sắp giờ, không ép cuốc
 ```
 
-### 2.1. Triết lý Google: Tối giản hoá & Tăng trưởng tự thân (PLG)
+### 2.1. Tối giản hoá & Tăng trưởng tự thân (PLG)
 - **1-Click Search:** Người dùng không phải điền biểu mẫu phức tạp. Chọn nhanh các tuyến huyết mạch bằng các chip bấm tức thì.
 - **Viral Boarding Pass:** Tự động xuất tấm vé ảnh sang trọng có mộc bảo chứng của CarMate để chủ xe tự mang đi đăng vào các hội nhóm Zalo/Facebook tìm bạn đồng hành, biến mỗi người dùng thành một kênh phân phối tự nhiên.
 
-### 2.2. Triết lý MIT: Hiệu năng đỉnh cao & Chi phí vận hành tối thiểu
+### 2.2. Hiệu năng & Chi phí vận hành tối thiểu
 - **Monorepo Architecture:** Cấu trúc `apps/web`, `apps/api`, `packages/shared` giúp tái sử dụng 100% logic tính giá và kiểm tra dữ liệu.
 - **Tối ưu payload mạng yếu:** Bundle size toàn bộ web app nén gzip chỉ **84KB**, phản hồi dưới 100ms trên mạng di động dọc các tuyến quốc lộ xa trung tâm.
 
-### 2.3. Triết lý Stanford: Thấu cảm sâu sắc văn hoá người Việt
+### 2.3. Thấu cảm văn hoá người Việt
 - **Nhu cầu nghe giọng nói & nhắn tin Zalo:** Người Việt tin vào người thật. App cung cấp song song nút **"Gọi Ngay"** (mở trình gọi điện thật) và **"Nhắn Zalo"** (`zalo.me/sdt`).
 - **Tâm lý đồng hương & xe gia đình:** Gắn nhãn quê quán (*"Đồng hương Lộc Ninh"*, *"Đồng hương Vũng Tàu"*...) và cam kết *"Không khói thuốc"*, *"Đã gồm tiền xăng + phí cầu đường"*.
 
-### 2.4. Triết lý Founder Cursor: Khởi nghiệp thực chiến, Lean 0đ, không rủi ro pháp lý
+### 2.4. Khởi nghiệp tinh gọn, không rủi ro pháp lý
 - **Dự án cộng đồng văn minh phi thương mại:** Kết nối những người cùng đường chia sẻ chi phí nhiên liệu. Hoàn toàn hợp pháp theo Nghị định 52/2013 & 85/2021 về TMĐT, không rủi ro pháp lý.
 - **Sáng kiến Giữ Chỗ 0đ Của CarMate (Không cầm tiền trung gian):** Tuyệt đối không bắt khách nạp tiền hay chuyển cọc vào tài khoản cá nhân của Founder (tránh tâm lý e ngại lừa đảo). Khách giữ chỗ 0đ, cam kết bằng danh tính thật qua Zalo trong 30 phút, thanh toán tiền mặt/chuyển khoản trực tiếp cho chủ xe khi bước lên xe.
 - **Tự nhiên hoá KYC qua Zalo:** Không tốn tiền mua dịch vụ eKYC đắt đỏ. Dùng đường link `https://zalo.me/[sdt]` (0đ thủ tục, 0đ chi phí), tận dụng hồ sơ Zalo thật của người dùng để tự động loại trừ tài khoản ảo, lừa đảo.
@@ -163,7 +163,7 @@ carmate/
     │       └── components/
     │           ├── common/             # Header, Footer, BottomNav, Toast
     │           ├── ui/                 # Design system: Button, Chip, Modal, Field, Badge
-    │           ├── market/             # FilterBar (Chip quốc lộ Google), TripCard (Văn hoá VN), RouteBenchmarkBar
+    │           ├── market/             # FilterBar (Chip quốc lộ), TripCard, RouteBenchmarkBar
     │           ├── post/               # PostTripForm (Đăng chuyến & kích hoạt thẻ vé)
     │           ├── radar/              # MatchRadarView (Khớp lệnh toạ độ 2 chiều)
     │           ├── booked/             # BookedTripList (Mở SĐT thật & Nút Nhắn Zalo)

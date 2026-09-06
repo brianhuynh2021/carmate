@@ -29,6 +29,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Database
+apps/api/data/backups/
+apps/api/data/*.before-restore-*
+apps/api/data/backup.log
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

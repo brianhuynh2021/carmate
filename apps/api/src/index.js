@@ -4,7 +4,7 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { initDB } from './db/sqliteStore.js';
+import { initDB, closeDB } from './db/sqliteStore.js';
 import apiRouter from './routes/api.js';
 import { securityHeadersMiddleware, sanitizeInput, globalApiLimiter } from './middlewares/security.js';
 
@@ -142,10 +142,27 @@ async function startServer() {
       console.log(`🩺 API Health:   \x1b[33mhttp://localhost:${PORT}/api/health\x1b[0m\n`);
     });
 
+    let shuttingDown = false;
     const shutdown = () => {
+      if (shuttingDown) return;
+      shuttingDown = true;
       console.log('\n[CarMate] Đang tắt máy chủ an toàn...');
+
+      // Cưỡng bức thoát nếu còn kết nối treo, tránh container bị kill cứng
+      // giữa chừng và bỏ lại WAL chưa gộp.
+      const forceExit = setTimeout(() => {
+        console.warn('[CarMate] Hết thời gian chờ, buộc thoát.');
+        closeDB();
+        process.exit(1);
+      }, 10000);
+      forceExit.unref();
+
       server.close(() => {
-        console.log('[CarMate] Máy chủ đã dừng.');
+        // Gộp WAL vào file chính TRƯỚC khi thoát, nếu không các giao dịch
+        // còn nằm trong carmate.sqlite-wal sẽ mất khi volume bị huỷ.
+        closeDB();
+        clearTimeout(forceExit);
+        console.log('[CarMate] Máy chủ đã dừng, dữ liệu đã được ghi an toàn.');
         process.exit(0);
       });
     };
