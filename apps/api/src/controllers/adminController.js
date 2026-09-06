@@ -1,4 +1,6 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { getJwtSecret } from '../utils/token.js';
 import {
   getAdminMetrics,
   getAllTripsAdmin,
@@ -9,15 +11,27 @@ import {
   getDB
 } from '../db/sqliteStore.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'carmate_super_secure_jwt_secret_key_2026';
-const ADMIN_PASSCODE = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY || 'admin123';
+const JWT_SECRET = getJwtSecret();
+const ADMIN_PASSCODE = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY;
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (!ADMIN_PASSCODE || ADMIN_PASSCODE.trim() === '') {
+  if (isProduction) {
+    throw new Error('FATAL SECURITY ERROR: CARMATE_ADMIN_PASSCODE must be configured in production!');
+  }
+  console.warn('[Security Notice] CARMATE_ADMIN_PASSCODE chưa cấu hình trong dev. Sử dụng mã dev tạm thời.');
+}
+
+const EFFECTIVE_ADMIN_PASSCODE = ADMIN_PASSCODE || (!isProduction ? 'admin123' : '');
 const ADMIN_MFA_CODE = process.env.CARMATE_ADMIN_MFA_CODE || '';
 
 // Bộ nhớ đệm giới hạn tần suất đăng nhập (Chống Brute-Force mật mã Admin)
 const failedAttemptsMap = new Map(); // ip -> { count, lockedUntil }
 
 /**
- * Middleware kiểm tra quyền Quản trị viên (Strict Cryptographic Verification)
+ * Middleware kiểm tra quyền Quản trị viên (Strict Cryptographic JWT Verification)
+ * Không chấp nhận passcode làm bearer token, bắt buộc token ký bởi secret
  */
 export function requireAdmin(req, res, next) {
   const authHeader = req.headers['x-admin-key'] || req.headers.authorization;
@@ -27,12 +41,7 @@ export function requireAdmin(req, res, next) {
 
   const token = authHeader.replace('Bearer ', '').trim();
 
-  // 1. Cho phép admin passcode trực tiếp (để test script hoặc CLI curl nội bộ)
-  if (token === ADMIN_PASSCODE) {
-    return next();
-  }
-
-  // 2. Xác thực cryptographic JWT Token có chữ ký bí mật
+  // Xác thực cryptographic JWT Token có chữ ký bí mật
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded && (decoded.role === 'super_admin' || decoded.role === 'admin')) {
@@ -43,7 +52,6 @@ export function requireAdmin(req, res, next) {
     // Token không hợp lệ hoặc hết hạn
   }
 
-  // 3. CHẶN VĨNH VIỄN chuỗi lỏng lẻo carmate_admin_session_*
   return res.status(403).json({ success: false, error: 'Mã xác thực Admin không hợp lệ hoặc phiên đã hết hạn' });
 }
 
@@ -67,8 +75,17 @@ export function adminAuth(req, res) {
 
     const { passcode, mfaCode } = req.body || {};
 
-    // 2. Kiểm tra mật mã chính
-    if (!passcode || passcode !== ADMIN_PASSCODE) {
+    // 2. Kiểm tra mật mã chính bằng crypto.timingSafeEqual chống Timing Attack
+    let isPasscodeValid = false;
+    if (typeof passcode === 'string' && EFFECTIVE_ADMIN_PASSCODE) {
+      const inputBuffer = Buffer.from(passcode);
+      const targetBuffer = Buffer.from(EFFECTIVE_ADMIN_PASSCODE);
+      if (inputBuffer.length === targetBuffer.length) {
+        isPasscodeValid = crypto.timingSafeEqual(inputBuffer, targetBuffer);
+      }
+    }
+
+    if (!isPasscodeValid) {
       const currentFailures = (tracker?.count || 0) + 1;
       if (currentFailures >= 5) {
         failedAttemptsMap.set(clientIp, { count: currentFailures, lockedUntil: now + 15 * 60 * 1000 });

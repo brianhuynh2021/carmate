@@ -10,8 +10,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5173
-      - JWT_SECRET=carmate_prod_jwt_super_secret_key_change_me_2026
-      - CARMATE_ADMIN_PASSCODE=123456
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in environment}
+      - CARMATE_ADMIN_PASSCODE=${CARMATE_ADMIN_PASSCODE:?CARMATE_ADMIN_PASSCODE must be set in environment}
     volumes:
       - carmate-data:/app/apps/api/data
 

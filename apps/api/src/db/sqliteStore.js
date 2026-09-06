@@ -297,6 +297,58 @@ function rowToTrip(row) {
   }
 }
 
+export function getPaginatedTrips(filters = {}) {
+  const database = getRawDB();
+  let baseSql = 'FROM trips WHERE 1=1';
+  const params = [];
+
+  const type = filters.type || 'all';
+  if (type === 'drivers') {
+    baseSql += ' AND type = ?';
+    params.push('driver_offer');
+  } else if (type === 'passengers') {
+    baseSql += ' AND type = ?';
+    params.push('passenger_request');
+  }
+
+  if (!filters.includeHidden) {
+    baseSql += ' AND isHidden = 0';
+  }
+
+  if (filters.routeCategory && filters.routeCategory !== 'all') {
+    baseSql += ' AND routeCategory = ?';
+    params.push(filters.routeCategory);
+  }
+
+  if (filters.direction && filters.direction !== 'all') {
+    baseSql += ' AND direction = ?';
+    params.push(filters.direction);
+  }
+
+  if (filters.timeSlot && filters.timeSlot !== 'all') {
+    baseSql += ' AND timeSlot = ?';
+    params.push(filters.timeSlot);
+  }
+
+  if (filters.q && filters.q.trim()) {
+    const kw = `%${filters.q.trim()}%`;
+    baseSql += ' AND (fromLocation LIKE ? OR toLocation LIKE ? OR routeCategory LIKE ? OR payload LIKE ?)';
+    params.push(kw, kw, kw, kw);
+  }
+
+  const countRow = database.prepare(`SELECT COUNT(*) as total ${baseSql}`).get(...params);
+  const total = countRow ? countRow.total : 0;
+
+  const limit = Math.max(1, Math.min(100, parseInt(filters.limit, 10) || 50));
+  const offset = Math.max(0, parseInt(filters.offset, 10) || 0);
+
+  const querySql = `SELECT * ${baseSql} ORDER BY createdAt DESC LIMIT ? OFFSET ?`;
+  const rows = database.prepare(querySql).all(...params, limit, offset);
+  const trips = rows.map(rowToTrip).filter(Boolean);
+
+  return { total, trips };
+}
+
 export function getTrips(filters = {}) {
   const database = getRawDB();
   let sql = 'SELECT * FROM trips WHERE 1=1';
@@ -330,20 +382,16 @@ export function getTrips(filters = {}) {
     params.push(filters.timeSlot);
   }
 
+  if (filters.q && filters.q.trim()) {
+    const kw = `%${filters.q.trim()}%`;
+    sql += ' AND (fromLocation LIKE ? OR toLocation LIKE ? OR routeCategory LIKE ? OR payload LIKE ?)';
+    params.push(kw, kw, kw, kw);
+  }
+
   sql += ' ORDER BY createdAt DESC';
 
   const rows = database.prepare(sql).all(...params);
-  let list = rows.map(rowToTrip).filter(Boolean);
-
-  if (filters.q && filters.q.trim()) {
-    const kw = filters.q.trim().toLowerCase();
-    list = list.filter((item) => {
-      const searchTarget = `${item.from} ${item.to} ${item.routeCategory} ${item.hometown || ''} ${item.notes || ''}`.toLowerCase();
-      return searchTarget.includes(kw);
-    });
-  }
-
-  return list;
+  return rows.map(rowToTrip).filter(Boolean);
 }
 
 export function getTripById(id) {
@@ -489,6 +537,20 @@ export function getUserByPhone(phone) {
   if (!clean) return null;
 
   const row = database.prepare('SELECT payload FROM users WHERE phone = ?').get(clean);
+  if (!row) return null;
+
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
+export function getUserById(id) {
+  const database = getRawDB();
+  if (!id) return null;
+  const clean = cleanPhoneNumber(id);
+  const row = database.prepare('SELECT payload FROM users WHERE id = ? OR phone = ?').get(id, clean || id);
   if (!row) return null;
 
   try {

@@ -6,7 +6,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initDB } from './db/sqliteStore.js';
 import apiRouter from './routes/api.js';
-import { securityHeadersMiddleware, sanitizeInput, globalApiLimiter } from './middleware/security.js';
+import { securityHeadersMiddleware, sanitizeInput, globalApiLimiter } from './middlewares/security.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,13 +17,41 @@ const app = express();
 const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 5173; // Khởi động duy nhất 1 cổng 5173
 
+// 0. Trust Proxy (Chỉ kích hoạt khi được cấu hình qua biến môi trường TRUST_PROXY)
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
+
 // 1. Cấu hình An Ninh & Middleware
 app.use(securityHeadersMiddleware);
 
+// CORS Whitelist: Cho phép domain cục bộ, production domains và domain tuỳ biến qua ALLOWED_ORIGINS
+const defaultAllowedOrigins = [
+  'https://carmate.vn',
+  'https://www.carmate.vn',
+  'https://ops.carmate.vn'
+];
+const customAllowed = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const allowedOrigins = new Set([...defaultAllowedOrigins, ...customAllowed]);
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    // Cho phép request cùng nguồn (no origin), curl, mobile app hoặc local development
+    if (!origin) return callback(null, true);
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-carmate-test']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+  credentials: true
 }));
 
 // Giới hạn gói tin 1MB chống tấn công DDoS làm tràn RAM
@@ -132,7 +160,8 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('[CarMate Safety] Bắt được Uncaught Exception (Đã cách ly, ghi nhận log):', err.message);
+  console.error('[FATAL] Uncaught Exception. Exiting for clean process restart:', err);
+  process.exit(1);
 });
 
 startServer();

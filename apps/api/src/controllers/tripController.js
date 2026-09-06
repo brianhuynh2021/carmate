@@ -1,4 +1,40 @@
-import { getTrips, getTripById, addTrip, updateTrip, deleteTrip, getDB } from '../db/sqliteStore.js';
+import { getTrips, getPaginatedTrips, getTripById, addTrip, updateTrip, deleteTrip, getDB } from '../db/sqliteStore.js';
+import { cleanPhoneNumber } from '@carmate/shared';
+
+/**
+ * Che giấu thông tin định danh cá nhân (PII Protection - Nghị định 13/2023/NĐ-CP)
+ * Chỉ trả SĐT thật (phoneReal) cho chính chủ sở hữu bài đăng hoặc Quản trị viên.
+ */
+export function sanitizeTripForPublic(trip, reqUser) {
+  if (!trip) return null;
+  const userPhone = reqUser ? cleanPhoneNumber(reqUser.phone || '') : null;
+  const tripPhone = cleanPhoneNumber(trip.phoneReal || trip.phone || '');
+  const isOwner = Boolean(
+    (userPhone && tripPhone && userPhone === tripPhone) ||
+    (reqUser && (reqUser.role === 'admin' || reqUser.role === 'super_admin')) ||
+    (reqUser && reqUser.id && (reqUser.id === trip.userId || reqUser.id === trip.creatorId))
+  );
+
+  const sanitized = { ...trip };
+
+  // Chuẩn hóa phoneMasked dạng 098***2233
+  const rawPhone = trip.phoneReal || trip.phone || '';
+  if (rawPhone && (!sanitized.phoneMasked || sanitized.phoneMasked === rawPhone)) {
+    const cleaned = cleanPhoneNumber(rawPhone);
+    sanitized.phoneMasked = cleaned.length >= 7 ? `${cleaned.slice(0, 3)}***${cleaned.slice(-4)}` : '098***2233';
+  }
+
+  // Ẩn triệt để phoneReal nếu không phải chủ sở hữu hoặc admin
+  if (!isOwner) {
+    delete sanitized.phoneReal;
+    delete sanitized.phone;
+    if (sanitized.licensePlate && typeof sanitized.licensePlate === 'string') {
+      sanitized.licensePlate = sanitized.licensePlate.replace(/\d{2}$/, 'xx');
+    }
+  }
+
+  return sanitized;
+}
 
 /**
  * GET /api/trips - Lấy danh sách chuyến xe kèm bộ lọc
@@ -7,23 +43,32 @@ export function listTrips(req, res) {
   try {
     const { type = 'all', routeCategory, direction, timeSlot, q, page = 1, limit = 50 } = req.query;
 
-    const filtered = getTrips({ type, routeCategory, direction, timeSlot, q });
-    const db = getDB();
-
     const p = Math.max(1, parseInt(page, 10) || 1);
     const l = Math.max(1, Math.min(100, parseInt(limit, 10) || 50));
     const offset = (p - 1) * l;
-    const paginated = filtered.slice(offset, offset + l);
+
+    const { total, trips } = getPaginatedTrips({
+      type,
+      routeCategory,
+      direction,
+      timeSlot,
+      q,
+      limit: l,
+      offset
+    });
+
+    const sanitizedList = trips.map((t) => sanitizeTripForPublic(t, req.user));
+    const db = getDB();
 
     return res.status(200).json({
       success: true,
-      total: filtered.length,
+      total,
       page: p,
       limit: l,
       data: {
-        all: paginated,
-        driverOffers: paginated.filter((t) => t.type === 'driver_offer'),
-        passengerRequests: paginated.filter((t) => t.type === 'passenger_request'),
+        all: sanitizedList,
+        driverOffers: sanitizedList.filter((t) => t.type === 'driver_offer'),
+        passengerRequests: sanitizedList.filter((t) => t.type === 'passenger_request'),
         totalDrivers: db.driverOffers.length,
         totalPassengers: db.passengerRequests.length
       }
@@ -45,7 +90,8 @@ export function getTrip(req, res) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến xe' });
     }
 
-    return res.status(200).json({ success: true, data: trip });
+    const sanitized = sanitizeTripForPublic(trip, req.user);
+    return res.status(200).json({ success: true, data: sanitized });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }

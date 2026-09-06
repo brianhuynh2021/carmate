@@ -1,15 +1,49 @@
-import { getDB, getBookings, addBooking, updateBookingStatus, removeBooking } from '../db/sqliteStore.js';
+import { getDB, getBookings, getTripById, addBooking, updateBookingStatus, removeBooking } from '../db/sqliteStore.js';
+import { cleanPhoneNumber } from '@carmate/shared';
 
 /**
  * GET /api/bookings - Lấy danh sách chuyến đi đã kết nối (Chuyến của tôi)
+ * Chống rò rỉ PII: Chỉ trả về các booking của chính người dùng đã đăng nhập hoặc Admin
  */
 export function listBookings(req, res) {
   try {
-    const bookings = getBookings();
+    const user = req.user;
+    // Nếu chưa đăng nhập: Không bao giờ trả về danh sách booking công khai
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: []
+      });
+    }
+
+    const allBookings = getBookings();
+    
+    // Quản trị viên hệ thống: Xem toàn bộ
+    if (user.role === 'admin' || user.role === 'super_admin') {
+      return res.status(200).json({
+        success: true,
+        count: allBookings.length,
+        data: allBookings
+      });
+    }
+
+    // Người dùng thông thường: Chỉ xem các booking của bản thân
+    const userPhone = cleanPhoneNumber(user.phone || '');
+    const userBookings = allBookings.filter((b) => {
+      const bContact = cleanPhoneNumber(b.contactPhone || '');
+      const bCreator = cleanPhoneNumber(b.userPhone || b.creatorPhone || '');
+      const bTarget = cleanPhoneNumber(b.targetPhone || '');
+      return (
+        (userPhone && (bContact === userPhone || bCreator === userPhone || bTarget === userPhone)) ||
+        (user.id && (b.userId === user.id || b.creatorId === user.id || b.driverId === user.id))
+      );
+    });
+
     return res.status(200).json({
       success: true,
-      count: bookings.length,
-      data: bookings
+      count: userBookings.length,
+      data: userBookings
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -23,11 +57,32 @@ export async function createBooking(req, res) {
   try {
     const body = req.body;
 
-    if (!body.from || !body.to || !body.contactPhone) {
+    if (!body.from || !body.to) {
       return res.status(400).json({
         success: false,
-        error: 'Thiếu thông tin bắt buộc: điểm đón (from), điểm đến (to) hoặc SĐT liên hệ'
+        error: 'Thiếu thông tin bắt buộc: điểm đón (from) hoặc điểm đến (to)'
       });
+    }
+
+    // Gắn thông tin người dùng đang đăng nhập
+    if (req.user) {
+      body.userId = req.user.id || body.userId;
+      body.userPhone = req.user.phone || body.userPhone;
+    }
+
+    // Nếu có tripId, truy vấn SĐT thật của chuyến xe từ DB để cấp quyền kết nối Zalo
+    const targetTripId = body.tripId || body.targetTripId || body.targetId || (body.targetItem && body.targetItem.id);
+    if (targetTripId) {
+      const targetTrip = getTripById(targetTripId);
+      if (targetTrip) {
+        const tripPhone = targetTrip.phoneReal || targetTrip.phone;
+        body.driverPhone = tripPhone;
+        body.targetPhone = tripPhone;
+        body.driverId = targetTrip.userId;
+        body.contactPhone = body.contactPhone || tripPhone;
+        body.contactName = targetTrip.publicName || body.contactName;
+        body.targetTripId = targetTrip.id;
+      }
     }
 
     const booking = await addBooking(body);

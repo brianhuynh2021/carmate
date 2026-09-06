@@ -4,7 +4,7 @@ import { getMatches } from '../controllers/matchController.js';
 import { listBookings, createBooking, reportDelay, cancelBooking, completeBooking, submitReview } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile } from '../controllers/miscController.js';
 import { requestOtp, verifyOtp, zaloLogin, getMe } from '../controllers/authController.js';
-import { requireAuth, optionalAuth, requireTripOwnership } from '../middlewares/authMiddleware.js';
+import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
   getMetrics,
@@ -16,7 +16,7 @@ import {
   getAdminReports,
   requireAdmin
 } from '../controllers/adminController.js';
-import { authLimiter, postTripLimiter } from '../middleware/security.js';
+import { authLimiter, postTripLimiter } from '../middlewares/security.js';
 
 const router = Router();
 
@@ -34,37 +34,37 @@ router.get('/auth/me', requireAuth, getMe);
 
 // --- Health & Meta ---
 router.get('/health', getHealth);
-router.get('/stats', getStats);
 router.get('/benchmarks', getBenchmarks);
+router.get('/stats', getStats);
 router.get('/trust', getTrustProfile);
 router.get('/trust/:memberId', getTrustProfile);
 router.get('/locations/suggest', suggestLocationsHandler);
 
-// --- Trips (với Post Limiter chống spam và bảo vệ quyền sở hữu Anti-IDOR) ---
-router.get('/trips', listTrips);
-router.get('/trips/:id', getTrip);
+// --- Trips (với Post Limiter chống spam và bảo vệ quyền sở hữu Anti-IDOR & PII) ---
+router.get('/trips', optionalAuth, listTrips);
+router.get('/trips/:id', optionalAuth, getTrip);
 router.post('/trips', postTripLimiter, optionalAuth, createTrip);
 router.put('/trips/:id', optionalAuth, requireTripOwnership, updateTripHandler);
 router.delete('/trips/:id', optionalAuth, requireTripOwnership, deleteTripHandler);
 router.patch('/trips/:id/status', optionalAuth, requireTripOwnership, updateStatus);
 
 // --- Smart Matching Radar ---
-router.get('/matches', getMatches);
+router.get('/matches', optionalAuth, getMatches);
 
 // --- Bookings / Zalo Connections (Aliases for /escrows) ---
-router.get('/bookings', listBookings);
-router.post('/bookings', createBooking);
-router.post('/bookings/:id/delay', reportDelay);
-router.post('/bookings/:id/cancel', cancelBooking);
-router.post('/bookings/:id/complete', completeBooking);
-router.post('/bookings/:id/review', submitReview);
+router.get('/bookings', optionalAuth, listBookings);
+router.post('/bookings', optionalAuth, createBooking);
+router.post('/bookings/:id/delay', optionalAuth, requireBookingParty, reportDelay);
+router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
+router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
+router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitReview);
 
-router.get('/escrows', listBookings);
-router.post('/escrows', createBooking);
-router.post('/escrows/:id/delay', reportDelay);
-router.post('/escrows/:id/cancel', cancelBooking);
-router.post('/escrows/:id/complete', completeBooking);
-router.post('/escrows/:id/review', submitReview);
+router.get('/escrows', optionalAuth, listBookings);
+router.post('/escrows', optionalAuth, createBooking);
+router.post('/escrows/:id/delay', optionalAuth, requireBookingParty, reportDelay);
+router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
+router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);
+router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitReview);
 
 // --- Admin Management Portal Engine ---
 router.post('/admin/auth', adminAuth);
