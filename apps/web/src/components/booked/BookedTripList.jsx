@@ -59,21 +59,21 @@ function MitTrajectoryStepper({ status, delayedMinutes }) {
   const steps = [
     {
       id: 1,
-      label: 'Khớp AI & Định mức',
-      desc: 'RON 95 + Vé trạm',
+      label: 'Khớp xe tiện đường',
+      desc: 'Chi phí xăng & vé trạm',
       state: 'completed',
     },
     {
       id: 2,
-      label: isDelayed ? `Báo trễ +${delayedMinutes || 15}p` : 'Chốt Zalo & Điểm hẹn',
-      desc: isCancelled ? 'Đã dừng chuyến' : 'Thoả thuận điểm đón GPS',
+      label: isDelayed ? `Báo trễ +${delayedMinutes || 15}p` : 'Hẹn điểm đón Zalo',
+      desc: isCancelled ? 'Đã dừng kết nối' : 'Thoả thuận điểm đón GPS',
       state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active',
     },
     {
       id: 3,
       label: 'Lên xe & Phụ xăng',
       desc: '0% phí sàn · Đưa trực tiếp',
-      state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : 'pending',
+      state: isCompleted ? 'completed' : 'pending',
     },
     {
       id: 4,
@@ -92,7 +92,7 @@ function MitTrajectoryStepper({ status, delayedMinutes }) {
             <span>Tiến trình kết nối an toàn</span>
           </span>
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-slate-800 text-[#86868b] border border-black/[0.04]">
-            Chuẩn MIT 4 bước
+            Quy trình 4 bước
           </span>
         </div>
         <span className="text-[11px] font-semibold text-[#86868b] tabular">
@@ -118,8 +118,8 @@ function MitTrajectoryStepper({ status, delayedMinutes }) {
                   : isDelayState
                   ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
                   : isCancelState
-                  ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 text-rose-900 opacity-60'
-                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] text-[#86868b]'
+                  ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 text-rose-900'
+                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] text-[#86868b] opacity-60'
               }`}
             >
               <div className="flex items-center gap-1.5 mb-1">
@@ -136,13 +136,13 @@ function MitTrajectoryStepper({ status, delayedMinutes }) {
                       : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#86868b]'
                   }`}
                 >
-                  {isDone ? '✓' : step.id}
+                  {isDone ? '✓' : isCancelState ? '✕' : step.id}
                 </span>
-                <span className="text-xs font-bold truncate">
+                <span className="text-[11.5px] font-bold leading-tight line-clamp-1">
                   {step.label}
                 </span>
               </div>
-              <p className="text-[11px] leading-tight opacity-75 truncate font-medium">
+              <p className="text-[10.5px] leading-tight opacity-75 truncate font-medium">
                 {step.desc}
               </p>
             </div>
