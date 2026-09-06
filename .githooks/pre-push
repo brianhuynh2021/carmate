@@ -1,0 +1,68 @@
+#!/bin/sh
+# CarMate pre-push guard
+# Chặn push lên main nếu bộ test E2E chưa xanh.
+# Thay thế cho branch protection (không khả dụng trên private repo + GitHub Free).
+# Bỏ qua 1 lần khi thật sự cần:  git push --no-verify
+
+REMOTE_REF_PREFIX="refs/heads/"
+PROTECTED="main"
+PORT=4999
+
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  branch="${remote_ref#$REMOTE_REF_PREFIX}"
+  [ "$branch" = "$PROTECTED" ] || continue
+
+  echo "[pre-push] Đích là '$PROTECTED' — chạy bộ test E2E trước khi cho phép push."
+
+  ROOT=$(git rev-parse --show-toplevel)
+  cd "$ROOT" || exit 1
+
+  if lsof -ti:$PORT >/dev/null 2>&1; then
+    echo "[pre-push] Cổng $PORT đang bận. Giải phóng rồi thử lại."
+    exit 1
+  fi
+
+  LOG=$(mktemp)
+  NODE_ENV=test PORT=$PORT \
+    JWT_SECRET=prepush_local_secret_not_for_production \
+    CARMATE_ADMIN_PASSCODE=admin123 \
+    node apps/api/src/index.js > "$LOG" 2>&1 &
+  SERVER_PID=$!
+
+  # Chờ server sẵn sàng (tối đa 30s)
+  ready=0
+  i=1
+  while [ $i -le 30 ]; do
+    if curl -sf "http://localhost:$PORT/api/health" >/dev/null 2>&1; then ready=1; break; fi
+    sleep 1
+    i=$((i + 1))
+  done
+
+  if [ $ready -ne 1 ]; then
+    echo "[pre-push] Server không khởi động được. Log:"
+    tail -20 "$LOG"
+    kill $SERVER_PID 2>/dev/null
+    rm -f "$LOG"
+    exit 1
+  fi
+
+  CARMATE_API_URL="http://localhost:$PORT" \
+    CARMATE_ADMIN_PASSCODE=admin123 \
+    npm test
+  STATUS=$?
+
+  kill $SERVER_PID 2>/dev/null
+  wait $SERVER_PID 2>/dev/null
+  rm -f "$LOG"
+
+  if [ $STATUS -ne 0 ]; then
+    echo ""
+    echo "[pre-push] ❌ Test THẤT BẠI — huỷ push lên '$PROTECTED'."
+    echo "[pre-push]    Sửa lỗi rồi push lại, hoặc dùng 'git push --no-verify' nếu thực sự cần."
+    exit 1
+  fi
+
+  echo "[pre-push] ✅ Test xanh — cho phép push lên '$PROTECTED'."
+done
+
+exit 0

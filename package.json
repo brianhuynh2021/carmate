@@ -17,6 +17,7 @@
     "build": "npm run build --workspace=@carmate/web",
     "preview": "npm run preview --workspace=@carmate/web",
     "test": "node scripts/test-local-e2e.js",
+    "hooks:install": "git config core.hooksPath .githooks && echo \"✅ Git hooks đã kích hoạt (.githooks)\"",
     "backup": "node scripts/backup-db.js",
     "backup:setup": "bash scripts/setup-backup-cron.sh",
     "restore": "node scripts/restore-db.js"
