@@ -60,6 +60,10 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
       : source.filter((i) => i.routeCategory === selectedRouteKey);
   }, [userRole, selectedRouteKey, driverOffers, passengerRequests]);
 
+  // Đếm số lượng xe và khách còn hiệu lực
+  const activeDriversCount = driverOffers.filter((i) => !isTripExpired(i)).length;
+  const activePassengersCount = passengerRequests.filter((i) => !isTripExpired(i)).length;
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <SectionHeader
@@ -73,65 +77,152 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
         }
       />
 
-      {/* Điều khiển Radar */}
-      <div className="surface p-4 sm:p-5 rounded-3xl border border-black/[0.08] space-y-4 shadow-[0_2px_16px_rgba(0,0,0,0.03)]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs font-semibold text-[#86868b] uppercase tracking-wider mb-2">
-              Chế độ tìm kiếm
-            </p>
-            <Segmented
-              fullWidth
-              value={radarMode}
-              onChange={setRadarMode}
-              options={[
-                { value: 'smart', label: 'Ghép Tiện Tuyến', icon: Sparkles },
-                { value: 'manual', label: 'Duyệt Theo Nhu Cầu', icon: Users }
-              ]}
-            />
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-[#86868b] uppercase tracking-wider mb-2">
-              Tuyến hành lang quốc lộ
-            </p>
-            <Select value={selectedRouteKey} onChange={(e) => setSelectedRouteKey(e.target.value)}>
-              <option value="all">Tất cả các tuyến quốc lộ</option>
-              {routeKeys.map((key) => (
-                <option key={key} value={key}>{ROUTE_BENCHMARKS[key].shortName}</option>
-              ))}
-            </Select>
-          </div>
+      {/* ── HERO MASTER ROLE SWITCH: VỊ TRÍ SỐ 1 CHO NGƯỜI DÙNG (APPLE HIG & STANFORD HCI) ── */}
+      <div className="surface p-3 sm:p-4 rounded-3xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-3.5 bg-gradient-to-b from-white to-[#fafafc]">
+        {/* Label dẫn hướng tinh tế */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3]"></span>
+            <span>Mục đích tìm kiếm của bạn</span>
+          </span>
+          <span className="text-[11px] text-slate-500 font-medium">
+            Chọn để hệ thống quét đúng đối tác
+          </span>
         </div>
 
-        {/* Nút chuyển ngữ cảnh: Luôn hiển thị để định vị rõ vai trò người xem */}
-        <div className="pt-3 border-t border-black/[0.06] flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-xs text-[#86868b] font-medium">Bạn đang tìm kiếm với tư cách:</span>
-          <div className="inline-flex gap-1.5 p-1 rounded-full bg-[#e8e8ed]/90 border border-black/[0.04]">
-            <button
-              type="button"
-              onClick={() => setUserRole('passenger')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+        {/* Cụm 2 Tab Hero chuẩn Apple Liquid Segmented */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-1.5 rounded-2xl bg-[#ebebed] border border-black/[0.04]">
+          {/* TAB 1: TÔI CẦN ĐI XE (HÀNH KHÁCH) */}
+          <button
+            type="button"
+            onClick={() => setUserRole('passenger')}
+            className={`group relative p-3 sm:p-3.5 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-3.5 text-left ${
+              userRole === 'passenger'
+                ? 'bg-white text-slate-900 shadow-[0_3px_12px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.05]'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-200 ${
                 userRole === 'passenger'
-                  ? 'bg-white text-[#0071e3] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
-                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+                  ? 'bg-[#0071e3] text-white shadow-sm scale-105'
+                  : 'bg-white/80 text-slate-500 group-hover:bg-white group-hover:text-slate-700'
               }`}
             >
-              <Users className="w-3.5 h-3.5" />
-              <span>Tôi là Khách (tìm Bác tài)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserRole('driver')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+              <Users className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1.5">
+                <span className={`text-sm sm:text-base font-extrabold transition-colors ${
+                  userRole === 'passenger' ? 'text-[#0071e3]' : 'text-slate-800'
+                }`}>
+                  Tôi Cần Đi Xe
+                </span>
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-bold tabular transition-colors ${
+                    userRole === 'passenger'
+                      ? 'bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20'
+                      : 'bg-black/[0.04] text-slate-500'
+                  }`}
+                >
+                  {activeDriversCount} xe sẵn sàng
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium truncate pt-0.5">
+                Tìm Bác tài có ghế trống cùng lộ trình
+              </p>
+            </div>
+          </button>
+
+          {/* TAB 2: TÔI CÓ XE TRỐNG (CHỦ XE / BÁC TÀI) */}
+          <button
+            type="button"
+            onClick={() => setUserRole('driver')}
+            className={`group relative p-3 sm:p-3.5 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-3.5 text-left ${
+              userRole === 'driver'
+                ? 'bg-white text-slate-900 shadow-[0_3px_12px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.05]'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-200 ${
                 userRole === 'driver'
-                  ? 'bg-white text-[#0071e3] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
-                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+                  ? 'bg-[#107c41] text-white shadow-sm scale-105'
+                  : 'bg-white/80 text-slate-500 group-hover:bg-white group-hover:text-slate-700'
               }`}
             >
-              <Car className="w-3.5 h-3.5" />
-              <span>Tôi là Chủ xe (tìm Khách ghép)</span>
-            </button>
+              <Car className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1.5">
+                <span className={`text-sm sm:text-base font-extrabold transition-colors ${
+                  userRole === 'driver' ? 'text-[#107c41]' : 'text-slate-800'
+                }`}>
+                  Tôi Có Xe Trống
+                </span>
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-bold tabular transition-colors ${
+                    userRole === 'driver'
+                      ? 'bg-[#107c41]/10 text-[#107c41] border border-[#107c41]/20'
+                      : 'bg-black/[0.04] text-slate-500'
+                  }`}
+                >
+                  {activePassengersCount} khách tìm xe
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium truncate pt-0.5">
+                Đón khách ghép để chia sẻ chi phí xăng
+              </p>
+            </div>
+          </button>
+        </div>
+
+        {/* Thanh Tùy Chọn Lọc Phụ (Apple Filter Pills Bar) */}
+        <div className="pt-2 px-1 border-t border-black/[0.05] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[#86868b] font-semibold">Chế độ xem:</span>
+            <div className="inline-flex p-0.5 rounded-full bg-[#ebebed] border border-black/[0.04]">
+              <button
+                type="button"
+                onClick={() => setRadarMode('smart')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                  radarMode === 'smart'
+                    ? 'bg-white text-[#0071e3] shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Ghép Tiện Tuyến (AI Radar)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRadarMode('manual')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                  radarMode === 'manual'
+                    ? 'bg-white text-[#0071e3] shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Tất Cả Danh Sách</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[#86868b] font-semibold whitespace-nowrap">Hành lang:</span>
+            <div className="relative min-w-[210px]">
+              <Select
+                value={selectedRouteKey}
+                onChange={(e) => setSelectedRouteKey(e.target.value)}
+                className="h-8.5 text-xs font-medium pl-3 pr-8 rounded-full bg-white border border-slate-200 shadow-2xs"
+              >
+                <option value="all">Tất cả các tuyến quốc lộ</option>
+                {routeKeys.map((key) => (
+                  <option key={key} value={key}>{ROUTE_BENCHMARKS[key].shortName}</option>
+                ))}
+              </Select>
+            </div>
           </div>
         </div>
       </div>
