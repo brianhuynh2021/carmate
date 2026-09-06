@@ -16,13 +16,15 @@ import {
   MapPin, 
   LogIn, 
   RefreshCw,
-  Info
+  Info,
+  Camera
 } from 'lucide-react';
 import { 
   formatVND, 
   getTimeSlotLabel, 
   getRouteCorridor, 
-  ROUTE_BENCHMARKS 
+  ROUTE_BENCHMARKS,
+  formatTripDateDisplay
 } from '@carmate/shared';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -40,7 +42,8 @@ export default function MyTripsView({
   onDeleteTrip,
   onPostNew,
   onViewInMarket,
-  onViewTrip
+  onViewTrip,
+  onViewCarPhotos
 }) {
   const { lang } = useI18n();
   const [myTripIds, setMyTripIds] = useState([]);
@@ -364,7 +367,7 @@ export default function MyTripsView({
                           </span>
 
                           <span className="text-xs text-slate-500 dark:text-slate-400 font-mono font-medium">
-                            · {trip.date || 'Hôm nay'}
+                            · {trip.date ? formatTripDateDisplay(trip.date) : 'Hôm nay'}
                           </span>
                         </div>
 
@@ -424,6 +427,18 @@ export default function MyTripsView({
                             <ShieldCheck className="w-3 h-3 text-blue-600" />
                             <span>Zalo Direct (0đ SMS)</span>
                           </span>
+
+                          {trip.carPhotos && trip.carPhotos.length >= 3 && (
+                            <button
+                              type="button"
+                              onClick={() => onViewCarPhotos?.(trip)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 font-medium hover:bg-emerald-100 transition-colors cursor-pointer"
+                              title="Xem các góc ảnh xe thực tế đã tải lên"
+                            >
+                              <Camera className="w-3 h-3 text-emerald-600" />
+                              <span>{trip.carPhotos.length} ảnh xe (Đã che biển)</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

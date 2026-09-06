@@ -6,3 +6,4 @@ export * from './utils/pricing.js';
 export * from './utils/zalo.js';
 export * from './utils/geo.js';
 export * from './constants/site.js';
+export * from './utils/date.js';

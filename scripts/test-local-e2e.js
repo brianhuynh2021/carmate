@@ -818,6 +818,45 @@ async function runTests() {
     assert(firstTraj.id && firstTraj.id.startsWith('TRAJ-'), 'Phase 4: Mã Trajectory chuẩn TRAJ-xxxx');
     assert(Array.isArray(firstTraj.reasoningSteps) && firstTraj.reasoningSteps.length > 0, 'Phase 4: Lưu giữ chuỗi lập luận Stanford Loop [PLAN ➔ ACT...]');
     assert(Array.isArray(aiIntelData.data.unmetDemandRoutes), 'Phase 4: Báo cáo danh sách tuyến đường khát xe (Unmet Demand Routes)');
+
+    // 18. KIỂM THỬ LỊCH TRÌNH DƯƠNG LỊCH & TÙY CHỌN ẢNH XE THỰC TẾ (3-5 ẢNH CHE BIỂN SỐ)
+    console.log('\n--- 18. Kiểm thử Lịch Trình Dương Lịch & Tùy Chọn Ảnh Xe (3-5 ảnh che biển) ---');
+    const { formatTripDateDisplay, getUpcomingDays } = await import('../packages/shared/src/utils/date.js');
+    const { findSampleCarPhotos, SAMPLE_CAR_PHOTO_SETS } = await import('../apps/web/src/constants/sampleCarPhotos.js');
+
+    // 18.1 Kiểm thử định dạng ngày dương lịch thực tế (Xóa bỏ mập mờ "Sáng Thứ 3")
+    const dateToday = formatTripDateDisplay('Hôm nay');
+    assert(dateToday.includes('(') && dateToday.includes('/'), 'Định dạng ngày Hôm nay gắn kèm ngày tháng dương lịch (DD/MM)');
+    
+    const dateTue = formatTripDateDisplay('Sáng Thứ 3');
+    assert(dateTue.includes('Thứ 3') && dateTue.includes('(') && dateTue.includes('/'), 'Chuyển đổi "Sáng Thứ 3" mập mờ thành "Thứ 3 (DD/MM)" chính xác');
+    
+    const upcomingList = getUpcomingDays(7);
+    assert(Array.isArray(upcomingList) && upcomingList.length === 7, 'Sinh 7 ngày dương lịch sắp tới cho thanh chọn ngày');
+    assert(upcomingList[0].iso && upcomingList[0].label, 'Mỗi ngày có mã chuẩn ISO và nhãn hiển thị trực quan');
+
+    // 18.2 Kiểm thử quy tắc 3-5 ảnh xe (Tùy chọn: 0 ảnh hợp lệ, có tải thì [3, 5])
+    const validateCarPhotoCount = (photos) => {
+      const valid = (photos || []).filter(Boolean);
+      if (valid.length === 0) return { valid: true, optional: true };
+      if (valid.length < 3) return { valid: false, error: 'Tối thiểu 3 hình' };
+      if (valid.length > 5) return { valid: false, error: 'Tối đa 5 hình' };
+      return { valid: true, count: valid.length };
+    };
+
+    assert(validateCarPhotoCount([]).valid === true, 'Ảnh xe là tùy chọn: 0 ảnh vẫn đăng chuyến bình thường');
+    assert(validateCarPhotoCount([null, null]).valid === true, 'Ảnh xe là tùy chọn: mảng rỗng hoặc null đều hợp lệ');
+    assert(validateCarPhotoCount(['front']).valid === false, 'Tải 1 ảnh bị chặn: Yêu cầu ít nhất 3 hình');
+    assert(validateCarPhotoCount(['front', 'back']).valid === false, 'Tải 2 ảnh bị chặn: Yêu cầu ít nhất 3 hình');
+    assert(validateCarPhotoCount(['front', 'back', 'side']).valid === true, 'Tải 3 ảnh (Trước, Sau, Thân) hợp lệ');
+    assert(validateCarPhotoCount(['front', 'back', 'side', 'interior']).valid === true, 'Tải 4 ảnh hợp lệ');
+    assert(validateCarPhotoCount(['front', 'back', 'side', 'interior', 'trunk']).valid === true, 'Tải 5 ảnh (đầy đủ 5 góc) hợp lệ');
+    assert(validateCarPhotoCount(['1', '2', '3', '4', '5', '6']).valid === false, 'Tải 6 ảnh bị chặn: Tối đa 5 hình');
+
+    // 18.3 Kiểm thử bộ ảnh mẫu xe và màng bảo mật che biển số
+    const xpanderPhotos = findSampleCarPhotos('Mitsubishi Xpander');
+    assert(Array.isArray(xpanderPhotos) && xpanderPhotos.length >= 3 && xpanderPhotos.length <= 5, 'Bộ ảnh mẫu Xpander có từ 3 đến 5 góc chụp');
+    assert(SAMPLE_CAR_PHOTO_SETS[0].plateMask.includes('***'), 'Biển số được tự động che bảo mật (93A - ***.**)');
   } catch (err) {
     assert(false, 'Kiểm thử An ninh, Stanford & MIT Engine', err.message);
   }

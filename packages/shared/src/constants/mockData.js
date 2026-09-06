@@ -23,6 +23,40 @@ export const INITIAL_DRIVER_OFFERS = [
     rating: 4.95,
     completedCount: 142,
     perks: ['Không khói thuốc', 'Trọn gói xăng & cầu đường', 'Xe gia đình'],
+    carPhotos: [
+      {
+        angle: 'front',
+        label: 'Góc Trước (Đầu xe)',
+        url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
+        caption: 'Đầu xe sáng đẹp, đèn LED hiện đại'
+      },
+      {
+        angle: 'back',
+        label: 'Góc Sau (Đuôi xe & Cốp)',
+        url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
+        caption: 'Đuôi xe sạch sẽ, cốp rộng để hành lý'
+      },
+      {
+        angle: 'side',
+        label: 'Góc Thân xe (Bên hông)',
+        url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80',
+        caption: 'Thân xe nguyên bản, không trầy xước'
+      },
+      {
+        angle: 'interior',
+        label: 'Nội thất & Ghế ngồi',
+        url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80',
+        caption: 'Nội thất bọc da êm ái, máy lạnh 2 giàn'
+      },
+      {
+        angle: 'trunk',
+        label: 'Khoang cốp để đồ',
+        url: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800&q=80',
+        caption: 'Khoang hành lý rộng rãi, có thể hạ hàng ghế 3'
+      }
+    ],
+    hasCarPhotos: true,
+    plateMask: '93A - ***.86',
     notes: 'Xe gia đình sạch sẽ, đón dọc QL13 tiện đường, không hút thuốc. Đi làm văn phòng văn minh.',
     createdAt: Date.now() - 3600000 * 2
   },
@@ -50,6 +84,34 @@ export const INITIAL_DRIVER_OFFERS = [
     rating: 4.9,
     completedCount: 98,
     perks: ['Trọn gói xăng & cầu đường', 'Cốp rộng', 'Xe gia đình'],
+    carPhotos: [
+      {
+        angle: 'front',
+        label: 'Góc Trước (Đầu xe)',
+        url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80',
+        caption: 'Mặt trước thể thao, đèn chiếu sáng sắc nét'
+      },
+      {
+        angle: 'back',
+        label: 'Góc Sau (Đuôi xe & Cốp)',
+        url: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=800&q=80',
+        caption: 'Cốp sau rộng, mở nhẹ nhàng'
+      },
+      {
+        angle: 'side',
+        label: 'Góc Thân xe (Bên hông)',
+        url: 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&w=800&q=80',
+        caption: 'Dáng xe cao ráo, gầm thoáng'
+      },
+      {
+        angle: 'interior',
+        label: 'Nội thất & Ghế ngồi',
+        url: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=800&q=80',
+        caption: 'Ghế da phối nỉ êm ái, sạch sẽ không mùi thuốc'
+      }
+    ],
+    hasCarPhotos: true,
+    plateMask: '93A - ***.52',
     notes: 'Xe gia đình rộng rãi, cốp lớn để hành lý. Đón trả linh hoạt dọc tuyến, hai bên tự hẹn điểm.',
     createdAt: Date.now() - 3600000 * 4
   },

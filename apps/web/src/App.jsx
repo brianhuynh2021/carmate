@@ -39,6 +39,7 @@ import EditTripModal from './components/modals/EditTripModal.jsx';
 import AuthModal from './components/modals/AuthModal.jsx';
 import TermsModal from './components/modals/TermsModal.jsx';
 import AiConciergeModal from './components/agent/AiConciergeModal.jsx';
+import CarPhotosModal from './components/modals/CarPhotosModal.jsx';
 
 import Button from './components/ui/Button.jsx';
 import EmptyState from './components/ui/EmptyState.jsx';
@@ -162,6 +163,7 @@ export default function App() {
   // Modals
   const [selectedItemForEscrow, setSelectedItemForEscrow] = useState(null);
   const [selectedDriverForTrust, setSelectedDriverForTrust] = useState(null);
+  const [selectedTripForPhotos, setSelectedTripForPhotos] = useState(null);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false);
   const [cancelRecord, setCancelRecord] = useState(null);
@@ -739,6 +741,7 @@ export default function App() {
                         onShare={setTicketToShare}
                         onViewTrustProfile={setSelectedDriverForTrust}
                         onViewRoute={setSelectedTripForRoute}
+                        onViewCarPhotos={setSelectedTripForPhotos}
                       />
                     ))}
                   </div>
@@ -773,6 +776,7 @@ export default function App() {
               onPostNew={() => setActiveTab('post')}
               onViewInMarket={handleViewTripInMarket}
               onViewTrip={(trip) => setTicketToShare(trip)}
+              onViewCarPhotos={setSelectedTripForPhotos}
             />
           </div>
         )}
@@ -866,6 +870,13 @@ export default function App() {
             setSelectedTripForRoute(null);
             handleInitiateBook(item);
           }}
+        />
+      )}
+      {selectedTripForPhotos && (
+        <CarPhotosModal
+          trip={selectedTripForPhotos}
+          isOpen={!!selectedTripForPhotos}
+          onClose={() => setSelectedTripForPhotos(null)}
         />
       )}
       {showAuthModal && (

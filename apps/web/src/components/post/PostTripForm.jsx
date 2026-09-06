@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Car, Users, PlusCircle, MapPin, Navigation, CalendarDays, Receipt, ExternalLink, ArrowLeftRight, Sparkles, Plus, Check, Clock, ChevronDown } from 'lucide-react';
-import { ROUTE_BENCHMARKS, TIME_SLOTS, formatVND, getTimeSlotLabel, isGoogleMapsUrl, getGoogleMapsUrl, mapTimeToSlot, isTimeInSlot } from '@carmate/shared';
+import { Car, Users, PlusCircle, MapPin, Navigation, CalendarDays, Receipt, ExternalLink, ArrowLeftRight, Sparkles, Plus, Check, Clock, ChevronDown, Camera, Upload, Trash2, ShieldCheck, Eye, Image as ImageIcon } from 'lucide-react';
+import { ROUTE_BENCHMARKS, TIME_SLOTS, formatVND, getTimeSlotLabel, isGoogleMapsUrl, getGoogleMapsUrl, mapTimeToSlot, isTimeInSlot, getUpcomingDays, formatTripDateDisplay } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
 import Chip from '../ui/Chip.jsx';
@@ -9,6 +9,7 @@ import { SectionHeader } from '../ui/EmptyState.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
+import { findSampleCarPhotos, SAMPLE_CAR_PHOTO_SETS } from '../../constants/sampleCarPhotos.js';
 
 import SmartTripComposer from './SmartTripComposer.jsx';
 
@@ -188,9 +189,19 @@ function FormSection({ icon: Icon, title, children }) {
   );
 }
 
+const CAR_PHOTO_SLOTS = [
+  { id: 'front', label: 'Góc Trước (Đầu xe)', required: true, desc: 'Mặt trước, đèn pha & kính lái' },
+  { id: 'back', label: 'Góc Sau (Đuôi xe & Cốp)', required: true, desc: 'Đuôi xe & khoang cốp để đồ' },
+  { id: 'side', label: 'Góc Thân xe (Trái/Phải)', required: true, desc: 'Thân xe bên hông sáng đẹp' },
+  { id: 'interior', label: 'Nội thất & Ghế ngồi', required: false, desc: 'Ghế da sạch sẽ, máy lạnh' },
+  { id: 'trunk', label: 'Khoang hành lý', required: false, desc: 'Cốp rộng để đồ thoải mái' }
+];
+
 export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   const { t, lang } = useI18n();
   const data = useDataLabel();
+
+  const upcomingDays = useMemo(() => getUpcomingDays(7), []);
 
   const [role, setRole] = useState('driver');
   // Lộ trình hoàn toàn tự do toàn quốc (Hà Nội, Hải Phòng, Đà Nẵng, Bình Phước, Sài Gòn...)
@@ -207,12 +218,15 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   const [zaloConfirmed, setZaloConfirmed] = useState(true);
   const [formError, setFormError] = useState(null);
 
+  // Ảnh thực tế xe (Tùy chọn - Tối thiểu 3 hình, tối đa 5 hình)
+  const [carPhotos, setCarPhotos] = useState([]);
+
   useEffect(() => {
     if (currentUser?.phone) {
       setPhoneReal(currentUser.phone);
     }
   }, [currentUser]);
-  const [scheduleDay, setScheduleDay] = useState('Hôm nay');
+  const [scheduleDay, setScheduleDay] = useState(() => upcomingDays[0]?.label || 'Hôm nay');
   const [isRecurringWeekly, setIsRecurringWeekly] = useState(false);
   const [notes, setNotes] = useState('');
   // Tiện ích & Yêu cầu do chủ xe / hành khách tự tích và tự nêu
@@ -262,6 +276,60 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
     if (parsed.acceptsParcel) setAcceptsParcel(true);
   };
 
+  const handlePhotoUpload = (slotIndex, file, slotDef) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 900;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+        setCarPhotos((prev) => {
+          const next = [...prev];
+          next[slotIndex] = {
+            angle: slotDef.id,
+            label: slotDef.label,
+            url: dataUrl,
+            caption: slotDef.desc
+          };
+          return next;
+        });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = (slotIndex) => {
+    setCarPhotos((prev) => {
+      const next = [...prev];
+      next[slotIndex] = null;
+      return next;
+    });
+  };
+
+  const handleApplySampleCarPhotos = () => {
+    const samples = findSampleCarPhotos(carType);
+    setCarPhotos(samples);
+  };
+
   const handleSwapRoute = () => {
     const temp = fromLocation;
     setFromLocation(toLocation);
@@ -289,6 +357,19 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
     if (!toLocation.trim()) {
       setFormError('Vui lòng nhập điểm đến / trả khách cụ thể (quận, bến xe hoặc dán link Google Maps).');
       return;
+    }
+
+    // Kiểm tra số lượng ảnh xe thực tế (Tùy chọn: nếu có tải thì ít nhất 3 hình, tối đa 5 hình)
+    const validPhotos = (carPhotos || []).filter(Boolean);
+    if (isDriver && validPhotos.length > 0) {
+      if (validPhotos.length < 3) {
+        setFormError('Tùy chọn hình ảnh xe: Nếu tải ảnh, vui lòng cung cấp ít nhất 3 hình (Trước, Sau, Thân xe) và tối đa 5 hình để đảm bảo độ tin cậy.');
+        return;
+      }
+      if (validPhotos.length > 5) {
+        setFormError('Chỉ được tải tối đa 5 hình ảnh xe.');
+        return;
+      }
     }
 
     const slot = TIME_SLOTS.find((s) => s.id === timeSlot) || TIME_SLOTS[2];
@@ -342,6 +423,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       exactTime: validExactTime,
       timeSlotLabel,
       carType: isDriver ? carType : undefined,
+      carPhotos: isDriver && validPhotos.length >= 3 ? validPhotos : undefined,
+      hasCarPhotos: isDriver && validPhotos.length >= 3,
       capacity: isDriver ? Number(seats) + 1 : undefined,
       availableSeats: isDriver ? Number(seats) : undefined,
       seatsNeeded: !isDriver ? Number(seats) : undefined,
@@ -551,20 +634,30 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
           <div>
             <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-2">{t('post.date')}</p>
             <div className="flex flex-wrap gap-2 mb-2.5">
-              {days.map((day) => (
-                <Chip key={day} active={scheduleDay === day} onClick={() => setScheduleDay(day)}>
-                  {data.date(day)}
-                </Chip>
-              ))}
+              {upcomingDays.map((d) => {
+                const isActive = scheduleDay === d.label || scheduleDay === d.iso || scheduleDay === d.fullDisplay;
+                return (
+                  <Chip
+                    key={d.iso}
+                    active={isActive}
+                    onClick={() => setScheduleDay(d.label)}
+                  >
+                    {d.label}
+                  </Chip>
+                );
+              })}
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-2">
-              <span className="shrink-0">Hoặc ngày cụ thể khác:</span>
+              <span className="shrink-0">Hoặc chọn ngày lịch cụ thể:</span>
               <input
-                type="text"
-                value={days.includes(scheduleDay) ? '' : scheduleDay}
-                onChange={(e) => setScheduleDay(e.target.value)}
-                placeholder="VD: 25/12, Thứ 6 tuần sau..."
-                className="h-8 px-3 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#151c2e] text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 w-full max-w-xs transition-all"
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setScheduleDay(formatTripDateDisplay(e.target.value));
+                  }
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#151c2e] text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-primary-500 cursor-pointer transition-all font-mono"
               />
             </div>
             <Checkbox className="mt-3" checked={isRecurringWeekly} onChange={(e) => setIsRecurringWeekly(e.target.checked)} label={t('post.recurring')} />
@@ -706,6 +799,133 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
               </div>
             )}
           </div>
+
+          {/* HÌNH ẢNH XE THỰC TẾ (TÙY CHỌN TĂNG TÍN NHIỆM: ÍT NHẤT 3 HÌNH & TỐI ĐA 5 HÌNH) */}
+          {isDriver && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.08] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-slate-900 dark:text-white">
+                        Hình ảnh thực tế của xe
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                        Tùy chọn tăng tín nhiệm
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Khách an tâm hơn khi thấy hình xe thật. <strong className="text-slate-700 dark:text-slate-300">Yêu cầu ít nhất 3 hình và tối đa 5 hình</strong> (Góc Trước, Góc Sau, Thân xe). Biển số tự động che bảo mật.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Nút nạp nhanh ảnh mẫu theo dòng xe */}
+                <button
+                  type="button"
+                  onClick={handleApplySampleCarPhotos}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 hover:bg-primary-100 dark:hover:bg-primary-900/60 border border-primary-200 dark:border-primary-800 transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Dùng ảnh mẫu {carType?.split(' ')[0] || 'xe'}</span>
+                </button>
+              </div>
+
+              {/* 5 Slot Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                {CAR_PHOTO_SLOTS.map((slot, index) => {
+                  const currentPhoto = carPhotos[index];
+                  return (
+                    <div
+                      key={slot.id}
+                      className={`relative rounded-2xl border transition-all overflow-hidden flex flex-col justify-between ${
+                        currentPhoto
+                          ? 'border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10 ring-1 ring-emerald-500/30'
+                          : slot.required
+                          ? 'border-dashed border-slate-300 dark:border-white/20 bg-white dark:bg-[#121827] hover:border-primary-500 hover:bg-primary-50/30 dark:hover:bg-primary-950/20'
+                          : 'border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0e1320] hover:border-slate-300 opacity-90'
+                      }`}
+                    >
+                      {currentPhoto ? (
+                        <div className="relative aspect-[4/3] w-full group overflow-hidden bg-black/40">
+                          <img
+                            src={currentPhoto.url || currentPhoto}
+                            alt={slot.label}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                          {/* Masked plate badge */}
+                          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-[9px] font-mono font-bold text-white flex items-center gap-1">
+                            <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                            <span>93A-***.**</span>
+                          </div>
+                          {/* Delete button */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhoto(index)}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center transition-colors cursor-pointer"
+                            title="Xóa hình này"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                          {/* Slot badge bottom */}
+                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1 text-[10px] text-white text-center font-semibold truncate">
+                            {slot.label}
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="relative aspect-[4/3] w-full flex flex-col items-center justify-center p-2 text-center cursor-pointer select-none">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handlePhotoUpload(index, file, slot);
+                            }}
+                          />
+                          <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center mb-1.5 group-hover:text-primary-500 transition-colors">
+                            <Upload className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 leading-tight">
+                            {index + 1}. {slot.label.split(' ')[0]} {slot.label.split(' ')[1] || ''}
+                          </span>
+                          <span className="text-[9.5px] mt-0.5 text-slate-400 leading-none">
+                            {slot.required ? '(Tối thiểu)' : '(Tùy chọn)'}
+                          </span>
+                        </label>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Status & Privacy bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-xs">
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>
+                    Bảo mật biển số: Tự động gắn màng bảo vệ <code>93A-***.**</code>, giữ kín danh tính chủ xe.
+                  </span>
+                </div>
+                <div className="font-mono text-[11.5px] font-semibold text-right">
+                  {carPhotos.filter(Boolean).length === 0 ? (
+                    <span className="text-slate-400 dark:text-slate-500">Chưa tải ảnh (Không bắt buộc)</span>
+                  ) : carPhotos.filter(Boolean).length >= 3 ? (
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      ✓ Đã có {carPhotos.filter(Boolean).length}/5 hình (Đủ điều kiện hiển thị huy hiệu)
+                    </span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      ⚠️ Cần thêm {3 - carPhotos.filter(Boolean).length} hình nữa (Tối thiểu 3 hình)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* SỐ ĐIỆN THOẠI ZALO - THIẾT KẾ TINH TẾ CHUẨN CURSOR (ZERO-FRICTION) */}
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/40 to-slate-50 dark:from-[#131a2e] dark:to-[#0f1424] border border-blue-200/60 dark:border-blue-500/20 shadow-xs space-y-3">

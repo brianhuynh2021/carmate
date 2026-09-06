@@ -1,8 +1,4 @@
-/**
- * nlpTripParser.js — Vietnamese Carpooling Natural Language Parser
- * Thiết kế theo triết lý Cursor: Nhận diện văn phong tiếng Việt tự nhiên
- * từ bài đăng Facebook/Zalo, bóc tách thực thể tức thì (0ms latency, 100% clientside).
- */
+import { formatTripDateDisplay } from '@carmate/shared';
 
 const KNOWN_LOCATIONS = [
   // Miền Bắc
@@ -88,17 +84,17 @@ export function parseNaturalTrip(text) {
   else if (/5\s*chỗ|4\s*chỗ/i.test(lower)) carType = hasRelatives ? 'Xe 5 chỗ gia đình (chở người thân)' : 'Xe 5 chỗ cá nhân';
   else if (hasRelatives) carType = 'Xe gia đình (chở người thân)';
 
-  // 6. Thời gian & Khung giờ
-  let scheduleDay = 'Hôm nay';
-  if (/ngày mai|sáng mai|chiều mai|tối mai/i.test(lower)) scheduleDay = 'Ngày mai';
-  else if (/cuối tuần/i.test(lower)) scheduleDay = 'Cuối tuần';
-  else if (/thứ 2|thứ hai/i.test(lower)) scheduleDay = 'Sáng Thứ 2';
-  else if (/thứ 3|thứ ba/i.test(lower)) scheduleDay = 'Sáng Thứ 3';
-  else if (/thứ 4|thứ tư/i.test(lower)) scheduleDay = 'Chiều Thứ 4';
-  else if (/thứ 5|thứ năm/i.test(lower)) scheduleDay = 'Chiều Thứ 5';
-  else if (/thứ 6|thứ sáu/i.test(lower)) scheduleDay = 'Chiều Thứ 6';
-  else if (/thứ 7|thứ bảy/i.test(lower)) scheduleDay = 'Sáng Thứ 7';
-  else if (/chủ nhật|cn/i.test(lower)) scheduleDay = 'Chủ nhật';
+  // 6. Thời gian & Khung giờ (Được tính toán theo ngày dương lịch thực tế)
+  let scheduleDay = formatTripDateDisplay('Hôm nay');
+  if (/ngày mai|sáng mai|chiều mai|tối mai/i.test(lower)) scheduleDay = formatTripDateDisplay('Ngày mai');
+  else if (/cuối tuần/i.test(lower)) scheduleDay = formatTripDateDisplay('Cuối tuần');
+  else if (/thứ 2|thứ hai/i.test(lower)) scheduleDay = formatTripDateDisplay('Thứ 2');
+  else if (/thứ 3|thứ ba/i.test(lower)) scheduleDay = formatTripDateDisplay('Thứ 3');
+  else if (/thứ 4|thứ tư/i.test(lower)) scheduleDay = formatTripDateDisplay('Thứ 4');
+  else if (/thứ 5|thứ năm/i.test(lower)) scheduleDay = formatTripDateDisplay('Thứ 5');
+  else if (/thứ 6|thứ sáu/i.test(lower)) scheduleDay = formatTripDateDisplay('Thứ 6');
+  else if (/thứ 7|thứ bảy/i.test(lower)) scheduleDay = formatTripDateDisplay('Thứ 7');
+  else if (/chủ nhật|cn/i.test(lower)) scheduleDay = formatTripDateDisplay('Chủ nhật');
 
   let timeSlot = '07:00-09:00';
   let exactTime = '';

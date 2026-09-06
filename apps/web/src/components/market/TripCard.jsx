@@ -9,9 +9,10 @@ import {
   Navigation, 
   Clock, 
   ArrowRight,
-  Package
+  Package,
+  Camera
 } from 'lucide-react';
-import { formatVND, getTimeSlotLabel, isGoogleMapsUrl, ROUTE_BENCHMARKS, decodeHtmlEntities } from '@carmate/shared';
+import { formatVND, getTimeSlotLabel, isGoogleMapsUrl, ROUTE_BENCHMARKS, decodeHtmlEntities, formatTripDateDisplay } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 
 export function parseLocation(str) {
@@ -211,7 +212,7 @@ export function RouteTimeline({ from, to, routeCategory, waypointNote, compact =
   );
 }
 
-export default function TripCard({ item, onBook, onShare, onViewTrustProfile, onViewRoute }) {
+export default function TripCard({ item, onBook, onShare, onViewTrustProfile, onViewRoute, onViewCarPhotos }) {
   const { lang } = useI18n();
   const isDriver = item.type === 'driver_offer';
   const isConvenient = isDriver && (
@@ -306,9 +307,9 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-white group-hover:translate-x-1 transition-transform duration-200" />
             </div>
-            {/* Tag giờ xuất phát chuẩn kính mờ */}
-            <span className="mt-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white tracking-wide group-hover:bg-white/25 transition-colors">
-              {getTimeSlotLabel(item, lang)}
+            {/* Tag ngày & giờ xuất phát chuẩn kính mờ - Không còn mập mờ "Sáng Thứ 3" */}
+            <span className="mt-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white tracking-wide group-hover:bg-white/25 transition-colors text-center">
+              {item.date ? `${formatTripDateDisplay(item.date)} · ` : ''}{getTimeSlotLabel(item, lang)}
             </span>
           </div>
 
@@ -381,6 +382,36 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           <p className="text-[11.5px] text-slate-500 dark:text-slate-400 line-clamp-1 italic px-0.5">
             &ldquo;{item.notes}&rdquo;
           </p>
+        )}
+
+        {/* Nút xem ảnh xe thực tế nếu chủ xe đã tải (Tối thiểu 3 hình, tối đa 5 hình) */}
+        {isDriver && item.carPhotos && item.carPhotos.length >= 3 && (
+          <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Camera className="w-3.5 h-3.5" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 block truncate">
+                  Có {item.carPhotos.length} ảnh xe thực tế
+                </span>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 block font-medium">
+                  Đã che biển số · Góc Trước, Sau, Thân xe
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewCarPhotos?.(item);
+              }}
+              className="px-2.5 py-1 rounded-xl text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-colors shadow-2xs cursor-pointer shrink-0"
+            >
+              Xem ảnh
+            </button>
+          </div>
         )}
 
         {/* ── 3. DANH TÍNH TÀI XẾ & HỒ SƠ TÍN NHIỆM ── */}
