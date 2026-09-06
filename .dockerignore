@@ -1,11 +1,19 @@
 node_modules
+**/node_modules
 .git
 .gitignore
+.github
 *.md
 .env
 .env.*
 !.env.example
+
+# Dữ liệu runtime — volume cung cấp lúc chạy, không nhúng vào image
 apps/api/data/*.sqlite*
-dist
-build
+apps/api/data/backups
+apps/api/data/backup.log
+
+# dist do stage builder tự tạo
+apps/web/dist
+archive
 .DS_Store

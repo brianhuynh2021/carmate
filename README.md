@@ -176,25 +176,104 @@ DB hiện tại luôn được giữ lại thành `carmate.sqlite.before-restore
 
 ---
 
-## ☁️ 6. Hướng Dẫn Triển Khai Lên `carmate.vn` Qua Cloudflare (Khi Sẵn Sàng)
+## ☁️ 6. Triển Khai Production (Fly.io + Cloudflare)
 
-Khi anh đã test mượt mà dưới máy local và sẵn sàng đưa lên tên miền thật:
+### Vì sao Fly.io
 
-### Bước 1: Build gói web tĩnh
-```bash
-npm run build
+Backend dùng `better-sqlite3` (native C++) và ghi SQLite xuống ổ đĩa, nên **không chạy được trên nền tảng serverless/edge** — Cloudflare Workers, Vercel Functions và tương tự đều không có Node.js đầy đủ lẫn ổ đĩa ghi được. Fly.io chạy thẳng Docker, có volume bền và region **Singapore (`sin`)** — độ trễ tới Việt Nam khoảng 30ms.
+
+Cloudflare vẫn được dùng, nhưng đúng vai trò của nó: DNS + CDN + SSL miễn phí đặt trước Fly.
+
 ```
-Thư mục sản phẩm siêu nhẹ sẽ được tạo ra tại: `apps/web/dist`.
+Người dùng VN → Cloudflare (DNS/CDN/SSL) → Fly.io Singapore (app + SQLite)
+```
 
-### Bước 2: Đẩy lên Cloudflare Pages (Miễn phí 100%)
-1. Đăng nhập [dash.cloudflare.com](https://dash.cloudflare.com).
-2. Vào **Workers & Pages** ➔ **Create application** ➔ chọn tab **Pages** ➔ **Upload assets**.
-3. Kéo thả toàn bộ thư mục `apps/web/dist` lên. Bấm **Deploy**.
-4. Website của anh lập tức có link chạy online toàn cầu (dạng `carmate-xxx.pages.dev`).
+### Bước 1: Cài flyctl và đăng nhập
 
-### Bước 3: Cấu hình tên miền `carmate.vn` tại PA Việt Nam
-1. Đăng nhập trang quản lý PA Việt Nam: [https://support.pavietnam.vn](https://support.pavietnam.vn).
-2. Vào mục **Quản lý tên miền** ➔ chọn **`carmate.vn`**.
-3. Có 2 cách trỏ:
-   * **Cách 1 (Dễ nhất):** Thêm bản ghi **CNAME** với tên `@` và `www` trỏ về địa chỉ `carmate-xxx.pages.dev` của Cloudflare.
-   * **Cách 2 (Xịn nhất):** Đổi cặp NameServer của PA Việt Nam sang cặp NameServer do Cloudflare cấp (ví dụ: `alan.ns.cloudflare.com` & `zoe.ns.cloudflare.com`). Toàn bộ việc quản lý DNS, chống tấn công DDoS, bật SSL miễn phí sẽ do Cloudflare lo trọn gói!
+```bash
+brew install flyctl     # hoặc: curl -L https://fly.io/install.sh | sh
+fly auth signup         # hoặc: fly auth login
+```
+
+### Bước 2: Tạo app và volume
+
+Repo đã có sẵn [`fly.toml`](fly.toml), nên **không chạy `fly launch`** (lệnh đó sẽ ghi đè cấu hình).
+
+```bash
+fly apps create carmate                              # đổi tên nếu đã có người dùng
+fly volumes create carmate_data --region sin --size 1 # 1GB, đủ cho giai đoạn đầu
+```
+
+### Bước 3: Đặt biến bí mật
+
+Server **từ chối khởi động** nếu thiếu — đây là cơ chế fail-closed có chủ đích, không phải lỗi.
+
+```bash
+fly secrets set \
+  JWT_SECRET="$(openssl rand -hex 32)" \
+  CARMATE_ADMIN_PASSCODE="<mật-khẩu-mạnh-của-bạn>"
+```
+
+Tuỳ chọn — bật xác thực 2 lớp cho cổng admin, và AI Concierge:
+
+```bash
+fly secrets set CARMATE_ADMIN_MFA_CODE="<mã-mfa>"
+fly secrets set GEMINI_API_KEY="<khoá-gemini>"
+```
+
+### Bước 4: Triển khai
+
+```bash
+fly deploy
+fly logs          # theo dõi khởi động
+fly status        # kiểm tra máy và volume
+```
+
+Kiểm tra nhanh:
+```bash
+curl https://carmate.fly.dev/api/health
+```
+
+### Bước 5: Trỏ tên miền `carmate.vn`
+
+```bash
+fly certs add carmate.vn
+fly certs add www.carmate.vn
+fly ips list        # lấy IPv4 (A) và IPv6 (AAAA)
+```
+
+Tại Cloudflare (hoặc PA Việt Nam):
+1. Thêm bản ghi **A** `@` → IPv4 vừa lấy, và **AAAA** `@` → IPv6
+2. Thêm **CNAME** `www` → `carmate.vn`
+3. Nếu dùng Cloudflare proxy (mây cam), đặt SSL/TLS mode là **Full (strict)**
+
+Cuối cùng, cập nhật `ALLOWED_ORIGINS` trong `fly.toml` cho khớp domain thật rồi `fly deploy` lại.
+
+### Những điểm dễ sai
+
+| Vấn đề | Hậu quả |
+|---|---|
+| Quên tạo volume, hoặc mount sai `/app/apps/api/data` | **Mất toàn bộ dữ liệu sau mỗi lần deploy** |
+| Chạy nhiều hơn 1 máy | Hai tiến trình ghi cùng file SQLite → **hỏng dữ liệu**. `fly.toml` đã ghim 1 máy, đừng `fly scale count 2` |
+| Quên `TRUST_PROXY=true` | Rate limiter thấy mọi request đến từ cùng một IP → chặn nhầm người dùng thật |
+| Chạy `fly launch` khi đã có `fly.toml` | Ghi đè cấu hình volume và region |
+
+### Vận hành
+
+```bash
+fly ssh console                                    # vào máy
+fly ssh console -C "node scripts/backup-db.js"     # sao lưu thủ công
+fly logs                                           # xem log
+fly status                                         # trạng thái máy
+```
+
+**Sao lưu:** backup nằm trên cùng volume với DB, nên chỉ cứu được khi xoá nhầm dữ liệu — không cứu được khi mất volume. Khi đã có người dùng thật, kéo bản sao về máy của bạn:
+
+```bash
+fly ssh sftp get /app/apps/api/data/backups/<tên-file>.gz
+```
+
+**Chi phí ước tính:** ~$2-3/tháng (`shared-cpu-1x` 512MB + volume 1GB).
+
+**Trần chịu tải:** SQLite một máy phục vụ tốt tới vài nghìn người dùng/ngày. Vượt mốc đó mới cần tính tới Postgres.
+

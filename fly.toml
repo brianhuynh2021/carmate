@@ -1,0 +1,52 @@
+# CarMate — cấu hình triển khai Fly.io
+# Region: Singapore (sin) — gần Việt Nam nhất, độ trễ ~30ms.
+#
+# Lần đầu triển khai, xem hướng dẫn trong README mục 6.
+
+app = 'carmate'
+primary_region = 'sin'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  NODE_ENV = 'production'
+  PORT = '8080'
+  # Có proxy của Fly đứng trước, cần bật để rate limiter đọc đúng IP thật
+  # từ X-Forwarded-For thay vì thấy mọi request đến từ một IP nội bộ.
+  TRUST_PROXY = 'true'
+  # Domain được phép gọi API. Thêm domain thật khi trỏ tên miền.
+  ALLOWED_ORIGINS = 'https://carmate.vn,https://www.carmate.vn'
+
+# Ổ đĩa bền cho SQLite. KHÔNG bỏ mục này — thiếu nó, dữ liệu nằm trong
+# lớp ghi tạm của container và mất sạch sau mỗi lần deploy.
+[[mounts]]
+  source = 'carmate_data'
+  destination = '/app/apps/api/data'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # SQLite ghi vào một file trên volume: chỉ được chạy DUY NHẤT 1 máy.
+  # Hai instance ghi song song sẽ làm hỏng dữ liệu.
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = 'requests'
+    soft_limit = 200
+    hard_limit = 250
+
+  # Fly chỉ định tuyến traffic tới máy đã qua kiểm tra sức khoẻ.
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '20s'
+    method = 'GET'
+    path = '/api/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'

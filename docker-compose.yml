@@ -6,10 +6,10 @@ services:
     container_name: carmate-production
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "5173:8080"
     environment:
       - NODE_ENV=production
-      - PORT=5173
+      - PORT=8080
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in environment}
       - CARMATE_ADMIN_PASSCODE=${CARMATE_ADMIN_PASSCODE:?CARMATE_ADMIN_PASSCODE must be set in environment}
     volumes:
