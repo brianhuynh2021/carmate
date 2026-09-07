@@ -113,6 +113,13 @@ export function securityHeadersMiddleware(req, res, next) {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-DNS-Prefetch-Control', 'off');
   res.setHeader('X-Download-Options', 'noopen');
+  // Che dấu vết framework (chống fingerprinting) — Express mặc định lộ x-powered-by.
+  res.removeHeader('X-Powered-By');
+  // HSTS: ép trình duyệt luôn dùng HTTPS trong 1 năm (chỉ bật ở production, sau
+  // reverse proxy đã force HTTPS). Tránh downgrade attack và SSL-strip.
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
   next();
 }
 

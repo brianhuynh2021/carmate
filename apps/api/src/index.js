@@ -74,6 +74,9 @@ const app = express();
 const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 5173; // Khởi động duy nhất 1 cổng 5173
 
+// Che dấu vết framework: không lộ header "X-Powered-By: Express" (chống fingerprinting)
+app.disable('x-powered-by');
+
 // 0. Trust Proxy (Chỉ kích hoạt khi được cấu hình qua biến môi trường TRUST_PROXY)
 if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);

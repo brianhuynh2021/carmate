@@ -1,7 +1,7 @@
 {
-  "name": "CarMate: Đi chung xe gia đình tiện tuyến",
+  "name": "CarMate — Ghép Xe & Đi Chung Tiện Chuyến",
   "short_name": "CarMate",
-  "description": "Nền tảng kết nối chủ xe gia đình có ghế trống với người cần đi cùng tuyến. 0% phí sàn, liên hệ Zalo trực tiếp.",
+  "description": "Nền tảng kết nối chủ xe gia đình có ghế trống với người cần đi cùng tuyến. 0% phí trung gian, liên hệ Zalo trực tiếp.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
