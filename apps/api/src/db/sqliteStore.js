@@ -157,9 +157,27 @@ export async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
   `);
 
-  // 7. Tự động chuyển đổi dữ liệu từ file JSON cũ sang SQLite (Migration)
+  // 7. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
+  //
+  // BẤT BIẾN SÀN GIAO DỊCH: mọi chuyến hiển thị trên sàn phải liên hệ được với
+  // một người thật. Dữ liệu mẫu vi phạm bất biến này — khách bấm đặt chỗ sẽ gọi
+  // vào số không có người nhận, phá vỡ niềm tin ngay lần dùng đầu tiên.
+  //
+  // Vì vậy seed bị KHOÁ mặc định ở production (fail-safe default, cùng nguyên lý
+  // với JWT_SECRET và CARMATE_ADMIN_PASSCODE). Muốn nạp dữ liệu mẫu lên
+  // production phải chủ động đặt SEED_DEMO_DATA=true — không thể xảy ra do vô ý.
   const tripCount = db.prepare('SELECT COUNT(*) as count FROM trips').get().count;
-  if (tripCount === 0) {
+  const isProductionEnv = process.env.NODE_ENV === 'production';
+  const demoSeedAllowed = process.env.SEED_DEMO_DATA === 'true' || !isProductionEnv;
+
+  if (tripCount === 0 && !demoSeedAllowed) {
+    console.log(
+      '[SQLite DB] Sàn khởi tạo trống (production): bỏ qua dữ liệu mẫu để không hiển thị chuyến ảo.'
+    );
+    console.log('[SQLite DB] Đặt SEED_DEMO_DATA=true nếu thực sự cần nạp dữ liệu mẫu.');
+  }
+
+  if (tripCount === 0 && demoSeedAllowed) {
     console.log('[SQLite DB] Bắt đầu di chuyển dữ liệu từ file JSON sang SQLite...');
     let initialDrivers = INITIAL_DRIVER_OFFERS;
     let initialPassengers = INITIAL_PASSENGER_REQUESTS;

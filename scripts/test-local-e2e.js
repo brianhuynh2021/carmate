@@ -3088,6 +3088,67 @@ async function runTests() {
     assert(false, '39. Kiểm thử Cô Lập Trạng Thái Định Giá Tham Khảo', err.message);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n--- 40. KIỂM THỬ BẤT BIẾN SÀN THẬT (KHÔNG CHUYẾN ẢO TRÊN PRODUCTION) ---');
+  try {
+    // BẤT BIẾN: mọi chuyến hiển thị trên sàn phải liên hệ được với người thật.
+    // Dữ liệu mẫu vi phạm bất biến này (khách gọi vào số không có người nhận),
+    // nên seed phải bị khoá mặc định ở production.
+    const storePath = path.resolve(process.cwd(), 'apps/api/src/db/sqliteStore.js');
+    const storeContent = fs.readFileSync(storePath, 'utf8');
+
+    assert(
+      storeContent.includes('SEED_DEMO_DATA'),
+      'Bất biến Sàn Thật 1: sqliteStore có cờ SEED_DEMO_DATA điều khiển dữ liệu mẫu'
+    );
+    assert(
+      /demoSeedAllowed[\s\S]{0,120}NODE_ENV === 'production'/.test(storeContent) ||
+        /isProductionEnv[\s\S]{0,200}SEED_DEMO_DATA/.test(storeContent),
+      'Bất biến Sàn Thật 2: Điều kiện seed phụ thuộc NODE_ENV (khoá mặc định ở production)'
+    );
+    assert(
+      storeContent.includes('tripCount === 0 && demoSeedAllowed'),
+      'Bất biến Sàn Thật 3: Chỉ nạp dữ liệu mẫu khi được phép tường minh'
+    );
+
+    // Fail-safe default: production KHÔNG set SEED_DEMO_DATA -> phải bỏ qua seed.
+    const guardLogic = (nodeEnv, seedFlag) => seedFlag === 'true' || nodeEnv !== 'production';
+    assert(
+      guardLogic('production', undefined) === false,
+      'Bất biến Sàn Thật 4: Production không cấu hình gì -> TỪ CHỐI nạp dữ liệu mẫu'
+    );
+    assert(
+      guardLogic('production', 'true') === true,
+      'Bất biến Sàn Thật 5: Production chủ động bật SEED_DEMO_DATA=true -> cho phép nạp'
+    );
+    assert(
+      guardLogic('development', undefined) === true,
+      'Bất biến Sàn Thật 6: Môi trường phát triển vẫn có dữ liệu mẫu để làm việc'
+    );
+    assert(
+      guardLogic('test', undefined) === true,
+      'Bất biến Sàn Thật 7: Môi trường test vẫn có dữ liệu mẫu cho bộ kiểm thử'
+    );
+
+    // Sàn trống phải mời người dùng đăng chuyến, không gợi ý "xoá bộ lọc" vô nghĩa.
+    const appPath = path.resolve(process.cwd(), 'apps/web/src/App.jsx');
+    const appContent = fs.readFileSync(appPath, 'utf8');
+    assert(
+      appContent.includes('driverOffers.length === 0 && passengerRequests.length === 0'),
+      'Empty State 1: Phân biệt sàn chưa có chuyến với bộ lọc quá hẹp'
+    );
+    assert(
+      appContent.includes('Sàn đang chờ chuyến đầu tiên'),
+      'Empty State 2: Sàn trống hiển thị lời mời đăng chuyến đầu tiên'
+    );
+    assert(
+      /Đăng chuyến đầu tiên[\s\S]{0,200}<\/Button>|setActiveTab\('post'\)/.test(appContent),
+      'Empty State 3: Có hành động 1-chạm chuyển sang màn đăng chuyến'
+    );
+  } catch (err) {
+    assert(false, '40. Kiểm thử Bất Biến Sàn Thật', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

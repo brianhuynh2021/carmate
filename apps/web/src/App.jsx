@@ -778,26 +778,42 @@ export default function App() {
                 </div>
 
                 {displayedMarketItems.length === 0 ? (
-                  <EmptyState
-                    icon={SearchX}
-                    title={t('market.emptyTitle')}
-                    description={
-                      temporalFilter !== 'all'
-                        ? `Không có chuyến đi nào phù hợp trong mục "${temporalFilter === 'today' ? 'Hôm nay' : temporalFilter === 'tomorrow' ? 'Ngày mai' : 'Sắp tới'}".`
-                        : t('market.emptyDesc')
-                    }
-                    action={
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setTemporalFilter('all');
-                          resetFilters();
-                        }}
-                      >
-                        {t('market.resetFilters')}
-                      </Button>
-                    }
-                  />
+                  // Phân biệt hai trạng thái rỗng khác nhau: sàn chưa có chuyến nào
+                  // (mời đăng chuyến đầu tiên) và bộ lọc quá hẹp (mời nới bộ lọc).
+                  // Gợi ý "xoá bộ lọc" khi sàn vốn đã trống chỉ làm người dùng bối rối.
+                  driverOffers.length === 0 && passengerRequests.length === 0 ? (
+                    <EmptyState
+                      icon={Car}
+                      title="Sàn đang chờ chuyến đầu tiên"
+                      description="CarMate vừa mở tuyến. Hãy đăng chuyến của bạn để những người cùng đường ghép chung — hoàn toàn miễn phí, không thu phí sàn."
+                      action={
+                        <Button variant="primary" onClick={() => setActiveTab('post')}>
+                          Đăng chuyến đầu tiên
+                        </Button>
+                      }
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={SearchX}
+                      title={t('market.emptyTitle')}
+                      description={
+                        temporalFilter !== 'all'
+                          ? `Không có chuyến đi nào phù hợp trong mục "${temporalFilter === 'today' ? 'Hôm nay' : temporalFilter === 'tomorrow' ? 'Ngày mai' : 'Sắp tới'}".`
+                          : t('market.emptyDesc')
+                      }
+                      action={
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setTemporalFilter('all');
+                            resetFilters();
+                          }}
+                        >
+                          {t('market.resetFilters')}
+                        </Button>
+                      }
+                    />
+                  )
                 ) : (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-7">
