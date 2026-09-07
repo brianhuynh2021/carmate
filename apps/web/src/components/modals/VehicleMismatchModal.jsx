@@ -8,7 +8,7 @@ const MISMATCH_OPTIONS = [
   {
     id: 'yellow_plate',
     label: 'Xe biển vàng (Dịch vụ)',
-    desc: 'Tài xế đăng ký xe gia đình biển trắng nhưng thực tế đón bằng xe dịch vụ kinh doanh biển vàng.'
+    desc: 'Chủ xe đăng ký xe gia đình biển trắng nhưng thực tế đón bằng xe dịch vụ kinh doanh biển vàng.'
   },
   {
     id: 'overcrowded',
@@ -167,7 +167,7 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed text-[11.5px]">
             <b>CarMate cam kết bảo mật tuyệt đối:</b> Báo cáo này sẽ được chuyển thẳng đến điện thoại của Ban Quản Trị
-            qua Telegram để can thiệp và đổi loại xe hoặc khóa tài xế vi phạm.
+            qua Telegram để can thiệp và đổi loại xe hoặc khóa tài khoản vi phạm.
           </p>
         </div>
       </div>

@@ -21,7 +21,7 @@ import { ZaloIcon } from '../ui/SocialIcons.jsx';
 const QUICK_PROMPTS = [
   'Tìm xe từ Hàng Xanh về Đồng Xoài chiều nay',
   'Giá xăng và vé cầu đường tuyến QL13 hiện khoảng bao nhiêu?',
-  'Kiểm tra độ uy tín của tài xế Tuấn Bình Phước',
+  'Kiểm tra độ uy tín của Chủ xe Tuấn Bình Phước',
   'Soạn giúp tôi tin nhắn Zalo hẹn đón lịch sự ở cây xăng'
 ];
 

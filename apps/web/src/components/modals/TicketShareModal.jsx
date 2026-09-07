@@ -15,13 +15,19 @@ import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import { FacebookIcon, ZaloIcon } from '../ui/SocialIcons.jsx';
-import { generateTicketImage, downloadTicketImage } from '../../utils/ticketCanvas.js';
+import {
+  generateTicketImage,
+  downloadTicketImage,
+  generateTicketStoryImage,
+  downloadTicketStoryImage
+} from '../../utils/ticketCanvas.js';
 
 export default function TicketShareModal({ trip, onClose, onShowToast, onViewInMarket }) {
   const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
 
   if (!trip) return null;
   const shareText = generateSocialShareText(trip);
@@ -55,13 +61,29 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
       const dataUrl = await generateTicketImage(trip, lang);
       if (dataUrl) {
         downloadTicketImage(dataUrl, trip.id?.slice(0, 8) || 've-xe');
-        onShowToast?.('Đã tải ảnh vé xe độ nét cao (.png)! Hãy đăng lên Zalo Story hoặc Facebook.');
+        onShowToast?.('Đã tải ảnh vé xe chuẩn vuông 4:5! Thích hợp gửi nhóm Zalo / Messenger.');
       }
     } catch (err) {
       console.warn('[Share] Lỗi tạo ảnh vé:', err);
       onShowToast?.('Không thể tạo file ảnh vé, vui lòng thử lại.');
     } finally {
       setIsGeneratingImage(false);
+    }
+  };
+
+  const handleDownloadStory = async () => {
+    try {
+      setIsGeneratingStory(true);
+      const dataUrl = await generateTicketStoryImage(trip, lang);
+      if (dataUrl) {
+        downloadTicketStoryImage(dataUrl, trip.id?.slice(0, 8) || 'story');
+        onShowToast?.('Đã tải ảnh Story 9:16 sắc nét! Đăng ngay lên Zalo Story, FB Story hoặc TikTok.');
+      }
+    } catch (err) {
+      console.warn('[Share] Lỗi tạo ảnh story:', err);
+      onShowToast?.('Không thể tạo file ảnh Story, vui lòng thử lại.');
+    } finally {
+      setIsGeneratingStory(false);
     }
   };
 
@@ -92,7 +114,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
       subtitle={t('ticket.subtitle') || 'Gửi vào Zalo hoặc Facebook để tìm bạn đồng hành cùng tuyến'}
       footer={
         <div className="space-y-2.5 w-full">
-          {/* Cặp đôi nút hành động đắc lực: Mở Zalo & Tải ảnh Vé Xe HD */}
+          {/* Cặp đôi nút hành động đắc lực: Mở Zalo & Tải ảnh Story 9:16 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <a
               href="https://zalo.me/"
@@ -107,26 +129,41 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
 
             <button
               type="button"
-              disabled={isGeneratingImage}
-              onClick={handleDownloadTicket}
-              className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white shadow-md shadow-emerald-500/20 transition-all inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+              disabled={isGeneratingStory}
+              onClick={handleDownloadStory}
+              className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] text-white shadow-md shadow-emerald-500/20 transition-all inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
             >
-              {isGeneratingImage ? (
+              {isGeneratingStory ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Đang kết xuất vé...</span>
+                  <span>Đang kết xuất Story...</span>
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4 shrink-0" />
-                  <span>Tải ảnh vé (.png)</span>
+                  <span>Tải ảnh Story 9:16</span>
                 </>
               )}
             </button>
           </div>
 
-          {/* 3 Lựa chọn phụ thanh lịch */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* 4 Lựa chọn bổ sung thanh lịch */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              type="button"
+              disabled={isGeneratingImage}
+              onClick={handleDownloadTicket}
+              className="py-2.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-75"
+              title="Tải ảnh vé tỉ lệ vuông 4:5 thích hợp gửi tin nhắn nhóm chat"
+            >
+              {isGeneratingImage ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
+              ) : (
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+              )}
+              <span>{isGeneratingImage ? 'Đang tạo...' : 'Ảnh vé 4:5'}</span>
+            </button>
+
             <a
               href={fbUrl}
               target="_blank"
@@ -148,7 +185,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
               ) : (
                 <Copy className="w-3.5 h-3.5 text-slate-500" />
               )}
-              <span>{copied ? 'Đã chép' : 'Sao chép tin'}</span>
+              <span>{copied ? 'Đã chép' : 'Sao chép'}</span>
             </button>
 
             <button
@@ -157,7 +194,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
               className="py-2.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
             >
               <Share2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Gửi app khác</span>
+              <span>Khác</span>
             </button>
           </div>
 

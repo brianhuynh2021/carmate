@@ -1,7 +1,7 @@
 /**
  * Cấu hình quy chuẩn các dòng xe & giới hạn số ghế chở khách hợp pháp (Nghị định 100/2019/NĐ-CP)
- * - Xe 4–5 chỗ (Sedan/Hatchback/CUV): 1 tài xế + tối đa 4 khách (khuyên chọn 3 để êm ái hàng sau)
- * - Xe 7 chỗ (MPV/SUV): 1 tài xế + tối đa 6 khách (để trống 1 ghế lái)
+ * - Xe 4–5 chỗ (Sedan/Hatchback/CUV): 1 Chủ xe cầm lái + tối đa 4 Người đi cùng (khuyên chọn 3 để êm ái hàng sau)
+ * - Xe 7 chỗ (MPV/SUV): 1 Chủ xe cầm lái + tối đa 6 Người đi cùng (để trống 1 ghế lái)
  */
 export const VEHICLE_SEAT_CONFIGS = {
   5: {
@@ -13,8 +13,8 @@ export const VEHICLE_SEAT_CONFIGS = {
     maxPassengerSeats: 4,
     allowedSeats: [1, 2, 3, 4],
     recommendedSeats: 3,
-    comfortNote: 'Tối đa 4 khách (Khuyên nhận 3 khách để hàng ghế sau ngồi thoải mái)',
-    overloadNotice: 'Xe 5 chỗ chỉ được chở tối đa 4 khách (trừ 1 ghế tài xế) theo quy định an toàn giao thông'
+    comfortNote: 'Tối đa 4 người đi cùng (Khuyên nhận 3 người để hàng ghế sau ngồi thoải mái)',
+    overloadNotice: 'Xe 5 chỗ chỉ được nhận tối đa 4 người đi cùng (trừ 1 ghế lái của Chủ xe) theo quy chuẩn an toàn'
   },
   7: {
     capacity: 7,
@@ -25,8 +25,8 @@ export const VEHICLE_SEAT_CONFIGS = {
     maxPassengerSeats: 6,
     allowedSeats: [1, 2, 3, 4, 5, 6],
     recommendedSeats: 5,
-    comfortNote: 'Tối đa 6 khách (Trừ 1 ghế tài xế, còn lại không gian để vali hành lý)',
-    overloadNotice: 'Xe 7 chỗ chỉ được chở tối đa 6 khách (trừ 1 ghế tài xế) theo quy định an toàn giao thông'
+    comfortNote: 'Tối đa 6 người đi cùng (Trừ 1 ghế lái của Chủ xe, còn lại không gian để vali hành lý)',
+    overloadNotice: 'Xe 7 chỗ chỉ được nhận tối đa 6 người đi cùng (trừ 1 ghế lái của Chủ xe) theo quy chuẩn an toàn'
   }
 };
 

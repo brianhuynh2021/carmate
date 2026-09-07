@@ -196,7 +196,7 @@ export default function AuthModal({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tên hiển thị (Tài xế / Hành khách)
+                    Tên hiển thị (Chủ xe / Người đi cùng)
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />

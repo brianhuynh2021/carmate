@@ -24,13 +24,17 @@ import {
   BarChart3,
   TrendingUp,
   Compass,
-  Send
+  Send,
+  Plus,
+  RotateCcw,
+  Sliders,
+  Save
 } from 'lucide-react';
 import api from '../../api/client.js';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 import Modal from '../ui/Modal.jsx';
-import { formatVND } from '@carmate/shared';
+import { formatVND, DEFAULT_TRUST_RULES } from '@carmate/shared';
 
 const ADMIN_TOKEN_KEY = 'carmate_admin_token';
 
@@ -47,7 +51,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [isResendingMfa, setIsResendingMfa] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
-  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'users' | 'reports' | 'ai' | 'analytics'
+  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'users' | 'reports' | 'ai' | 'analytics' | 'trust'
 
   // Data states
   const [metrics, setMetrics] = useState(null);
@@ -56,6 +60,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [reports, setReports] = useState(null);
   const [aiIntelligence, setAiIntelligence] = useState(null);
   const [analyticsSummary, setAnalyticsSummary] = useState(null);
+  const [trustRules, setTrustRules] = useState([]);
+  const [isSavingRules, setIsSavingRules] = useState(false);
+  const [showAddRuleModal, setShowAddRuleModal] = useState(false);
+  const [newRuleForm, setNewRuleForm] = useState({
+    id: '',
+    title: '',
+    description: '',
+    points: 5,
+    type: 'add',
+    role: 'all',
+    category: 'community'
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusNotice, setStatusNotice] = useState(null);
@@ -142,13 +158,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const loadAllAdminData = async () => {
     setIsLoading(true);
     try {
-      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes] = await Promise.allSettled([
+      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes, trustRulesRes] = await Promise.allSettled([
         api.getAdminMetrics(),
         api.getAdminTrips(),
         api.getAdminUsers(),
         api.getAdminReports(),
         api.getAdminAiIntelligence(),
-        api.getAdminAnalyticsSummary()
+        api.getAdminAnalyticsSummary(),
+        api.getAdminTrustRules()
       ]);
 
       if (metricsRes.status === 'fulfilled' && metricsRes.value?.success) {
@@ -169,11 +186,110 @@ export default function AdminDashboardView({ onExitAdmin }) {
       if (analyticsRes.status === 'fulfilled' && analyticsRes.value?.success) {
         setAnalyticsSummary(analyticsRes.value.data || null);
       }
+      if (trustRulesRes.status === 'fulfilled' && trustRulesRes.value?.success && Array.isArray(trustRulesRes.value.data)) {
+        setTrustRules(trustRulesRes.value.data);
+      } else {
+        setTrustRules((prev) => (prev.length > 0 ? prev : DEFAULT_TRUST_RULES));
+      }
     } catch (err) {
       console.warn('[Admin] Lỗi nạp dữ liệu:', err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRuleToggle = (ruleId) => {
+    setTrustRules((prev) =>
+      prev.map((r) => (r.id === ruleId ? { ...r, enabled: !r.enabled } : r))
+    );
+  };
+
+  const handleRulePointChange = (ruleId, newPoints) => {
+    const pts = Number(newPoints);
+    setTrustRules((prev) =>
+      prev.map((r) => (r.id === ruleId ? { ...r, points: pts } : r))
+    );
+  };
+
+  const handleRuleAccumulateCapChange = (ruleId, newMax) => {
+    const max = Number(newMax);
+    setTrustRules((prev) =>
+      prev.map((r) => (r.id === ruleId ? { ...r, maxAccumulated: max } : r))
+    );
+  };
+
+  const handleRuleDelete = (ruleId) => {
+    setTrustRules((prev) => prev.filter((r) => r.id !== ruleId));
+    showNotice(`Đã xóa tiêu chí ${ruleId}`);
+  };
+
+  const handleSaveRules = async () => {
+    setIsSavingRules(true);
+    try {
+      const res = await api.updateAdminTrustRules(trustRules);
+      if (res?.success) {
+        showNotice('Đã lưu và cập nhật chính sách điểm tín nhiệm toàn sàn');
+        if (res.data) setTrustRules(res.data);
+      } else {
+        showNotice(res?.error || 'Lỗi khi lưu chính sách', 'error');
+      }
+    } catch (err) {
+      showNotice('Lỗi: ' + err.message, 'error');
+    } finally {
+      setIsSavingRules(false);
+    }
+  };
+
+  const handleResetRules = async () => {
+    try {
+      const res = await api.resetAdminTrustRules();
+      if (res?.success) {
+        setTrustRules(res.data || DEFAULT_TRUST_RULES);
+        showNotice('Đã khôi phục quy tắc tín nhiệm về mặc định');
+      } else {
+        showNotice(res?.error || 'Lỗi khi khôi phục', 'error');
+      }
+    } catch (err) {
+      showNotice('Lỗi: ' + err.message, 'error');
+    }
+  };
+
+  const handleAddRuleSubmit = (e) => {
+    e.preventDefault();
+    if (!newRuleForm.id.trim() || !newRuleForm.title.trim()) {
+      showNotice('Vui lòng điền mã và tên tiêu chí', 'error');
+      return;
+    }
+    const cleanId = newRuleForm.id.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    if (trustRules.some((r) => r.id === cleanId)) {
+      showNotice(`Mã tiêu chí "${cleanId}" đã tồn tại`, 'error');
+      return;
+    }
+
+    const createdRule = {
+      id: cleanId,
+      title: newRuleForm.title.trim(),
+      description: newRuleForm.description.trim() || 'Tiêu chí quản trị bổ sung',
+      points: Number(newRuleForm.points) || 5,
+      type: newRuleForm.type || 'add',
+      role: newRuleForm.role || 'all',
+      category: newRuleForm.category || 'community',
+      enabled: true,
+      isLocked: false
+    };
+
+    setTrustRules((prev) => [...prev, createdRule]);
+    setShowAddRuleModal(false);
+    setNewRuleForm({
+      id: '',
+      title: '',
+      description: '',
+      points: 5,
+      type: 'add',
+      role: 'all',
+      category: 'community'
+    });
+    showNotice(`Đã thêm tiêu chí "${createdRule.title}". Bấm "Lưu thay đổi" để áp dụng.`);
   };
 
   useEffect(() => {
@@ -522,7 +638,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Tài Xế & Thành Viên</p>
+          <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Chủ Xe & Thành Viên</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
               {overview.verifiedDriversCount || 0}
@@ -626,6 +742,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 {analyticsSummary.totalEvents}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('trust')}
+            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+              activeTab === 'trust'
+                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Quy Tắc Tín Nhiệm ({trustRules.length})</span>
           </button>
         </div>
 
@@ -781,7 +909,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         )}
                       </div>
                       <span className="text-[11px] text-slate-400">
-                        {u.hometown || 'Bình Phước'} · {u.role === 'driver' ? 'Tài xế' : 'Khách'}
+                        {u.hometown || 'Bình Phước'} · {u.role === 'driver' ? 'Chủ xe' : 'Người đi cùng'}
                       </span>
                     </td>
                     <td className="py-3 px-4 font-mono">
@@ -923,7 +1051,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
                             <div>
-                              <span className="text-slate-400">Tài xế: </span>
+                              <span className="text-slate-400">Chủ xe: </span>
                               <span className="font-bold text-slate-800 dark:text-slate-200">{report.driverName}</span>
                               <span className="font-mono text-slate-500 ml-1">({report.driverPhone})</span>
                             </div>
@@ -1514,6 +1642,263 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
+      {/* ── TAB 6: QUẢN LÝ QUY TẮC TÍN NHIỆM & UY TÍN (TRUST & REPUTATION ENGINE) ── */}
+      {activeTab === 'trust' && (
+        <div className="space-y-6">
+          {/* Header & Quick Action Bar */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Quy Chuẩn Tín Nhiệm Động (Zero-Code Policy)</span>
+              </div>
+              <h3 className="text-xl font-bold font-display text-slate-900 dark:text-white">
+                Chính Sách Điểm Tín Nhiệm & Quy Tắc Sàn
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+                Điều chỉnh trọng số, bật/tắt tiêu chí, khóa trần hoặc thêm tiêu chí mới trực tiếp trên sàn mà không cần sửa code. Mọi thay đổi áp dụng tức thì cho cả Chủ xe và Người đi cùng.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetRules}
+                className="h-10 px-3.5 font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4 mr-1.5" />
+                Khôi phục mặc định
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddRuleModal(true)}
+                className="h-10 px-3.5 font-bold cursor-pointer"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Thêm tiêu chí mới
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveRules}
+                loading={isSavingRules}
+                className="h-10 px-4 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
+              >
+                <Save className="w-4 h-4 mr-1.5" />
+                Lưu thay đổi chính sách
+              </Button>
+            </div>
+          </div>
+
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm">
+              <span className="text-[11px] font-mono uppercase font-bold text-slate-400">Tiêu chí kích hoạt</span>
+              <p className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                {trustRules.filter((r) => r.enabled).length}
+                <span className="text-sm font-normal text-slate-400"> / {trustRules.length}</span>
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Đang vận hành toàn sàn</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm">
+              <span className="text-[11px] font-mono uppercase font-bold text-slate-400">Điểm bình quân sàn</span>
+              <p className="text-2xl font-bold font-mono text-sky-600 dark:text-sky-400 mt-1">
+                {users.length > 0
+                  ? Math.round(users.reduce((acc, u) => acc + (u.trustScore || 50), 0) / users.length)
+                  : 75}
+                <span className="text-sm font-normal text-slate-400"> / 100</span>
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Dựa trên {users.length} thành viên</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm">
+              <span className="text-[11px] font-mono uppercase font-bold text-slate-400">Tỷ lệ có Avatar</span>
+              <p className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
+                {users.length > 0
+                  ? Math.round((users.filter((u) => Boolean(u.avatar)).length / users.length) * 100)
+                  : 0}%
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Tránh tài khoản ẩn danh</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm">
+              <span className="text-[11px] font-mono uppercase font-bold text-slate-400">Trần thiếu Avatar</span>
+              <p className="text-2xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-1">
+                {trustRules.find((r) => r.id === 'no_avatar_cap')?.points || 65}
+                <span className="text-sm font-normal text-slate-400"> điểm</span>
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Bất biến toán học MIT</p>
+            </div>
+          </div>
+
+          {/* Rules Table / Cards */}
+          <div className="rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Danh Sách Tiêu Chí & Trọng Số</h4>
+                <p className="text-[11.5px] text-slate-500">
+                  Kéo thanh trượt hoặc chỉnh trực tiếp để thay đổi số điểm. Bấm công tắc để tạm dừng áp dụng.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-slate-400">{trustRules.length} tiêu chí</span>
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+              {trustRules.map((rule) => {
+                const isCap = rule.type === 'cap';
+                const isAccumulate = rule.type === 'accumulate';
+                const isSub = rule.type === 'sub' || rule.points < 0;
+                const isBase = rule.type === 'base';
+
+                return (
+                  <div
+                    key={rule.id}
+                    className={`p-4 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                      !rule.enabled ? 'opacity-50 bg-slate-50/50 dark:bg-slate-900/40' : 'hover:bg-slate-50/70 dark:hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    {/* Left: Info */}
+                    <div className="space-y-1 max-w-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                          {rule.title}
+                        </span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold">
+                          {rule.id}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            rule.role === 'driver'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                              : rule.role === 'passenger'
+                                ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
+                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }`}
+                        >
+                          {rule.role === 'driver' ? 'Chủ xe' : rule.role === 'passenger' ? 'Người đi cùng' : 'Cả hai'}
+                        </span>
+                        {rule.isLocked && (
+                          <span className="text-[10px] text-slate-400 font-semibold">(Cốt lõi)</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        {rule.description}
+                      </p>
+                    </div>
+
+                    {/* Right: Controls */}
+                    <div className="flex items-center gap-4 shrink-0">
+                      {/* Points Slider / Input */}
+                      <div className="flex items-center gap-2">
+                        {isAccumulate ? (
+                          <div className="text-right space-y-1">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <span className="text-xs text-slate-400">Mỗi chuyến:</span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={10}
+                                value={rule.points}
+                                onChange={(e) => handleRulePointChange(rule.id, e.target.value)}
+                                className="w-14 h-8 px-2 text-center text-xs font-mono font-bold rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                              />
+                              <span className="text-xs font-bold text-emerald-600">đ</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <span className="text-[11px] text-slate-400">Trần cộng:</span>
+                              <input
+                                type="number"
+                                min={5}
+                                max={30}
+                                value={rule.maxAccumulated || 15}
+                                onChange={(e) => handleRuleAccumulateCapChange(rule.id, e.target.value)}
+                                className="w-14 h-7 px-2 text-center text-xs font-mono font-bold rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                              />
+                              <span className="text-[11px] font-bold text-emerald-600">đ</span>
+                            </div>
+                          </div>
+                        ) : isCap ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-slate-400">Trần tối đa:</span>
+                            <input
+                              type="number"
+                              min={40}
+                              max={90}
+                              value={rule.points}
+                              onChange={(e) => handleRulePointChange(rule.id, e.target.value)}
+                              className="w-16 h-8 px-2 text-center text-xs font-mono font-bold rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400"
+                            />
+                            <span className="text-xs font-bold text-rose-600">đ</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min={isSub ? -30 : 1}
+                              max={isSub ? -1 : 30}
+                              step={1}
+                              value={rule.points}
+                              onChange={(e) => handleRulePointChange(rule.id, e.target.value)}
+                              className="w-24 accent-emerald-600 cursor-pointer"
+                            />
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                value={rule.points}
+                                onChange={(e) => handleRulePointChange(rule.id, e.target.value)}
+                                className={`w-14 h-8 px-1 text-center text-xs font-mono font-bold rounded-lg border ${
+                                  isSub
+                                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400'
+                                    : isBase
+                                      ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white'
+                                      : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                                }`}
+                              />
+                              <span className="text-xs font-bold text-slate-500">đ</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Enable/Disable Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => handleRuleToggle(rule.id)}
+                        className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                          rule.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                        }`}
+                        title={rule.enabled ? 'Đang kích hoạt (Bấm để tắt)' : 'Đang tắt (Bấm để bật)'}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${
+                            rule.enabled ? 'left-5.5' : 'left-0.5'
+                          }`}
+                        />
+                      </button>
+
+                      {/* Delete Custom Rule button */}
+                      {!rule.isLocked && (
+                        <button
+                          type="button"
+                          onClick={() => handleRuleDelete(rule.id)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                          title="Xóa tiêu chí tùy biến này"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL XOÁ BÀI ĐĂNG ADMIN CHUẨN APPLE / HIG ── */}
       {adminTripToDelete && (
         <Modal
@@ -1632,6 +2017,134 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 : 'Tài khoản này sẽ bị cấm ngay lập tức: không thể đăng nhập, không thể đăng bài và không thể kết nối ghép chuyến trên toàn hệ thống.'}
             </p>
           </div>
+        </Modal>
+      )}
+
+      {/* ── MODAL THÊM TIÊU CHÍ TÍN NHIỆM MỚI ── */}
+      {showAddRuleModal && (
+        <Modal
+          onClose={() => setShowAddRuleModal(false)}
+          size="md"
+          icon={Plus}
+          iconTone="primary"
+          title="Thêm Tiêu Chí Tín Nhiệm Mới"
+          subtitle="Tự động áp dụng toàn sàn không cần viết code"
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddRuleModal(false)}
+                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Huỷ bỏ
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAddRuleSubmit}
+                className="px-5 font-bold rounded-full shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                Thêm tiêu chí
+              </Button>
+            </div>
+          }
+        >
+          <form onSubmit={handleAddRuleSubmit} className="space-y-4 text-left p-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Mã tiêu chí (ID không dấu)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: zalo_official_linked"
+                  value={newRuleForm.id}
+                  onChange={(e) => setNewRuleForm({ ...newRuleForm, id: e.target.value })}
+                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Đối tượng áp dụng
+                </label>
+                <select
+                  value={newRuleForm.role}
+                  onChange={(e) => setNewRuleForm({ ...newRuleForm, role: e.target.value })}
+                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                >
+                  <option value="all">Tất cả thành viên</option>
+                  <option value="driver">Chủ xe</option>
+                  <option value="passenger">Người đi cùng</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Tên tiêu chí hiển thị
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="VD: Đã liên kết Zalo Official Account"
+                value={newRuleForm.title}
+                onChange={(e) => setNewRuleForm({ ...newRuleForm, title: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Mô tả ý nghĩa tiêu chí
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Mô tả ngắn gọn về tiêu chí này để người dùng hiểu vì sao được cộng/trừ điểm..."
+                value={newRuleForm.description}
+                onChange={(e) => setNewRuleForm({ ...newRuleForm, description: e.target.value })}
+                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Loại điểm
+                </label>
+                <select
+                  value={newRuleForm.type}
+                  onChange={(e) => {
+                    const t = e.target.value;
+                    setNewRuleForm({
+                      ...newRuleForm,
+                      type: t,
+                      points: t === 'sub' ? -Math.abs(newRuleForm.points || 5) : Math.abs(newRuleForm.points || 5)
+                    });
+                  }}
+                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                >
+                  <option value="add">+ Thưởng điểm (Khuyến khích)</option>
+                  <option value="sub">- Trừ điểm (Xử phạt / Rủi ro)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Số điểm ({newRuleForm.type === 'sub' ? 'âm' : 'dương'})
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={newRuleForm.points}
+                  onChange={(e) => setNewRuleForm({ ...newRuleForm, points: Number(e.target.value) })}
+                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-mono font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                />
+              </div>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

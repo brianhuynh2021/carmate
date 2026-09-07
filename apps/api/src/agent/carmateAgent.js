@@ -52,11 +52,11 @@ export const toolDeclarations = [
   {
     name: 'checkMemberTrust',
     description:
-      'Kiểm tra hồ sơ Hộ chiếu tín nhiệm, điểm Karma, trạng thái duyệt CCCD/GPLX của tài xế hoặc thành viên.',
+      'Kiểm tra hồ sơ Hộ chiếu tín nhiệm, điểm Karma, trạng thái duyệt CCCD/GPLX của Chủ xe hoặc thành viên.',
     parameters: {
       type: Type.OBJECT,
       properties: {
-        identifier: { type: Type.STRING, description: 'Số điện thoại hoặc mã định danh của tài xế/thành viên' }
+        identifier: { type: Type.STRING, description: 'Số điện thoại hoặc mã định danh của Chủ xe/thành viên' }
       },
       required: ['identifier']
     }
@@ -191,7 +191,7 @@ export function executeCheckMemberTrust(args = {}) {
         isCccdVerified: true,
         isGplxVerified: true,
         status: 'active',
-        summary: `Tài xế ${matchedDriver.publicName} đạt Điểm tin cậy (Trust Score) 98/100, đã xác thực căn cước và bằng lái xe, chạy xe gia đình văn minh.`
+        summary: `Chủ xe ${matchedDriver.publicName} đạt Điểm tin cậy (Trust Score) 98/100, đã xác thực căn cước và bằng lái xe, chạy xe gia đình văn minh.`
       };
     }
 
@@ -580,7 +580,7 @@ Nhiệm vụ của bạn:
 2. LUÔN LUÔN gọi các công cụ (tools) được cung cấp:
    - 'searchTrips': để tra cứu chuyến xe thực tế trong cơ sở dữ liệu.
    - 'getRouteBenchmarks': để tra cứu mức giá tham chiếu công bằng.
-   - 'checkMemberTrust': để kiểm tra điểm tín nhiệm của tài xế.
+   - 'checkMemberTrust': để kiểm tra điểm tín nhiệm của Chủ xe.
    - 'calculateEstimatedFare': tính tiền xăng & vé cầu đường san sẻ.
    - 'draftZaloMessage': tạo tin nhắn mẫu chốt cuốc Zalo.
 3. Luôn trả lời lịch sự, thân thiện, súc tích, mang phong thái văn minh, hỗ trợ kết nối trực tiếp không thu phí sàn.`;

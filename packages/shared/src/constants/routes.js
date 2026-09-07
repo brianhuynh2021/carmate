@@ -205,3 +205,114 @@ export const ROUTE_BENCHMARKS = {
     calculationBasis: '70km cao tốc TP.HCM - Trung Lương.'
   }
 };
+
+// BẢNG HÀNH LANG ĐIỂM ĐÓN / TRẢ DỌC ĐƯỜNG (CORRIDOR WAYPOINTS) THEO TRỤC QUỐC LỘ & CAO TỐC
+export const CORRIDOR_WAYPOINTS = {
+  'Tuyến QL13': [
+    'Bến xe Miền Đông / Cầu Bình Triệu',
+    'Ngã 4 Bình Phước (Thủ Đức)',
+    'Lái Thiêu / Cổng chào Bình Dương',
+    'Aeon Mall Canary Thuận An',
+    'TP. Thủ Dầu Một / Đại Lộ Bình Dương',
+    'Ngã 4 Sở Sao / Mỹ Phước',
+    'Bến Cát / Bàu Bàng',
+    'Ngã 4 Chơn Thành (Bình Phước)',
+    'TP. Đồng Xoài / Phước Long',
+    'Lộc Ninh / Bù Đốp'
+  ],
+  'Tuyến QL51': [
+    'Hàng Xanh / Mai Chí Thọ (TP. Thủ Đức)',
+    'Đầu cao tốc Long Thành - Dầu Giây (Nút An Phú)',
+    'Phà Cát Lái / KCN Nhơn Trạch',
+    'Ngã 3 Vũng Tàu / Vòng xoay Tam Hiệp',
+    'Trạm dừng chân Mekong Long Thành',
+    'Ngã 3 Mỹ Xuân / Thị xã Phú Mỹ',
+    'TP. Bà Rịa / Cổng chào Bà Rịa',
+    'Bãi Trước / Bãi Sau TP. Vũng Tàu'
+  ],
+  'Tuyến QL20': [
+    'Nút giao Dầu Giây / Cao tốc Long Thành',
+    'Định Quán / Đá Ba Chồng',
+    'Tân Phú / Rừng Nam Cát Tiên',
+    'Chân đèo Chuối / Thị trấn Mađaguôi',
+    'Đèo Bảo Lộc / TP. Bảo Lộc',
+    'Huyện Di Linh / Ngã 3 Hòa Ninh',
+    'Đức Trọng / Sân bay Liên Khương',
+    'Đèo Prenn / Trung tâm TP. Đà Lạt'
+  ],
+  'Tuyến CT Hà Nội - Hải Phòng': [
+    'Nút giao Cổ Linh / AEON Mall Long Biên',
+    'Trạm thu phí Văn Giang (Hưng Yên)',
+    'Nút giao Yên Mỹ / Ân Thi',
+    'Nút giao Gia Lộc / TP. Hải Dương',
+    'Nút giao Đình Vũ / Cảng Đình Vũ',
+    'Nhà hát lớn / Trung tâm TP. Hải Phòng'
+  ],
+  'Tuyến CT Pháp Vân - Ninh Bình': [
+    'Nút giao Pháp Vân / Bến xe Nước Ngầm',
+    'Trạm thu phí Thường Tín (Hà Nội)',
+    'Nút giao Vực Vòng / Đồng Văn (Hà Nam)',
+    'TP. Phủ Lý (Hà Nam)',
+    'Nút giao Liêm Tuyền / TP. Nam Định',
+    'Nút giao Cao Bồ / TP. Ninh Bình',
+    'Khu du lịch Tràng An / Tam Cốc'
+  ],
+  'Tuyến Đà Nẵng - Huế': [
+    'Cầu Rồng / Bến xe Trung tâm Đà Nẵng',
+    'Khu công nghiệp Hòa Khánh / Liên Chiểu',
+    'Cửa hầm Hải Vân (Phía Nam)',
+    'Thị trấn Lăng Cô / Đầm Cầu Hai',
+    'Huyện Phú Lộc / Nước Ngọt',
+    'Phú Bài (Sân bay / TX. Hương Thủy)',
+    'Bến xe Phía Nam / Trung tâm TP. Huế'
+  ],
+  'Tuyến QL1A': [
+    'Bến xe Miền Tây / Vòng xoay An Lạc',
+    'Thị xã Bến Lức (Long An)',
+    'TP. Tân An (Long An)',
+    'TP. Mỹ Tho (Tiền Giang)',
+    'Thị xã Cai Lậy / Cái Bè',
+    'Cầu Mỹ Thuận / TP. Vĩnh Long',
+    'Bến xe Trung tâm TP. Cần Thơ'
+  ]
+};
+
+/**
+ * Lấy danh sách điểm đón dọc đường theo tên tuyến hoặc từ khóa
+ */
+export function getCorridorWaypoints(routeCategoryOrKeyword) {
+  if (!routeCategoryOrKeyword) return [];
+  const clean = routeCategoryOrKeyword.trim().toLowerCase();
+
+  for (const [key, waypoints] of Object.entries(CORRIDOR_WAYPOINTS)) {
+    if (
+      key.toLowerCase().includes(clean) ||
+      clean.includes(key.toLowerCase()) ||
+      (ROUTE_BENCHMARKS[key]?.keyword && clean.includes(ROUTE_BENCHMARKS[key].keyword.toLowerCase()))
+    ) {
+      return waypoints;
+    }
+  }
+
+  // Fallback thử tìm theo từ khóa chung
+  if (clean.includes('bình phước') || clean.includes('bù đốp') || clean.includes('đồng xoài') || clean.includes('ql13')) {
+    return CORRIDOR_WAYPOINTS['Tuyến QL13'];
+  }
+  if (clean.includes('vũng tàu') || clean.includes('bà rịa') || clean.includes('ql51')) {
+    return CORRIDOR_WAYPOINTS['Tuyến QL51'];
+  }
+  if (clean.includes('đà lạt') || clean.includes('bảo lộc') || clean.includes('lâm đồng') || clean.includes('ql20')) {
+    return CORRIDOR_WAYPOINTS['Tuyến QL20'];
+  }
+  if (clean.includes('hải phòng') || clean.includes('5b')) {
+    return CORRIDOR_WAYPOINTS['Tuyến CT Hà Nội - Hải Phòng'];
+  }
+  if (clean.includes('ninh bình') || clean.includes('nam định') || clean.includes('pháp vân')) {
+    return CORRIDOR_WAYPOINTS['Tuyến CT Pháp Vân - Ninh Bình'];
+  }
+  if (clean.includes('huế') || clean.includes('đà nẵng') || clean.includes('hải vân')) {
+    return CORRIDOR_WAYPOINTS['Tuyến Đà Nẵng - Huế'];
+  }
+
+  return [];
+}

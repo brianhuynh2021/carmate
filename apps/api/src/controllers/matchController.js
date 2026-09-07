@@ -62,7 +62,7 @@ export function getMatches(req, res) {
       passengerBucketMap.get(bucketKey).push(pass);
     }
 
-    // 3. Quét qua tài xế và tra cứu O(1) vào bucket tương ứng -> O(N)
+    // 3. Quét qua Chủ xe và tra cứu O(1) vào bucket tương ứng -> O(N)
     const matchedPairs = [];
 
     for (const driver of drivers) {

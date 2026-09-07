@@ -20,7 +20,7 @@ import {
 import { parseNaturalTrip, SMART_TRIP_TEMPLATES } from '../../utils/nlpTripParser.js';
 import { formatVND } from '@carmate/shared';
 
-export default function SmartTripComposer({ onApply, onInstantSubmit, currentRole = 'driver', onRoleChange }) {
+export default function SmartTripComposer({ onApply, onInstantSubmit, currentRole = 'driver', onRoleChange, currentUser }) {
   const [inputText, setInputText] = useState('');
   const [parsedResult, setParsedResult] = useState(null);
   const [activeCategory, setActiveCategory] = useState(currentRole === 'passenger' ? 'passenger' : 'driver');
@@ -39,15 +39,23 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
       return;
     }
     const result = parseNaturalTrip(inputText);
+    if (result && result.role === 'driver' && currentUser?.vehicle) {
+      result.carType = result.carType || `${currentUser.vehicle.brand} ${currentUser.vehicle.model}`.trim();
+      result.capacity = result.capacity || currentUser.vehicle.capacity;
+      result.carCategory = result.carCategory || currentUser.vehicle.carCategory;
+      if (currentUser.vehicle.photos?.length >= 3) {
+        result.carPhotos = currentUser.vehicle.photos;
+      }
+    }
     setParsedResult(result);
     if (result && onApply) {
       onApply(result);
     }
-    // Tự động đồng bộ vai trò lên Form cha nếu phát hiện câu của Khách/Tài xế
+    // Tự động đồng bộ vai trò lên Form cha nếu phát hiện câu của Khách/Chủ xe
     if (result?.role && onRoleChange && result.role !== currentRole) {
       onRoleChange(result.role);
     }
-  }, [inputText]);
+  }, [inputText, currentUser]);
 
   const handleApplyTemplate = (tmpl) => {
     setInputText(tmpl.text);
@@ -322,7 +330,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
               </span>
             )}
 
-            {/* CHỈ HIỂN THỊ THÔNG TIN XE CHO TÀI XẾ (KHÔNG GÁN VÔ LÝ CHO HÀNH KHÁCH) */}
+            {/* CHỈ HIỂN THỊ THÔNG TIN XE CHO CHỦ XE (KHÔNG GÁN VÔ LÝ CHO NGƯỜI ĐI CÙNG) */}
             {parsedResult.role === 'driver' && (
               <>
                 {parsedResult.hasRelatives && (

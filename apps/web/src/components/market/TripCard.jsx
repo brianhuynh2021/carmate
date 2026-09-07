@@ -10,7 +10,8 @@ import {
   Clock,
   ArrowRight,
   Package,
-  Camera
+  Camera,
+  Lock
 } from 'lucide-react';
 import {
   formatVND,
@@ -188,6 +189,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
       : ['Máy lạnh', 'Không khói thuốc', 'Cốp rộng']
     : ['Đúng giờ', 'Không hút thuốc'];
   const displayPerks = perksList.length > 0 ? perksList.slice(0, 3) : defaultPerks;
+  const isTripFull = item.status === 'full' || Boolean(item.isFull);
 
   return (
     <article
@@ -232,19 +234,26 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
             {distanceKm && <span className="text-white/80 font-mono">· ~{distanceKm}km</span>}
           </span>
 
-          {/* Huy hiệu ghế sống động */}
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide backdrop-blur-md bg-emerald-500/95 text-white border border-emerald-300/40 shadow-sm group-hover:bg-emerald-500 transition-colors">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-            {isDriver ? (
-              <span>
-                Còn <span className="font-mono">{item.availableSeats}</span> chỗ
-              </span>
-            ) : (
-              <span>
-                Cần <span className="font-mono">{item.seatsNeeded || 1}</span> chỗ
-              </span>
-            )}
-          </span>
+          {/* Huy hiệu ghế sống động hoặc Đã kín chỗ */}
+          {isTripFull ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide backdrop-blur-md bg-slate-900/90 text-slate-200 border border-white/20 shadow-sm">
+              <Lock className="w-3 h-3 text-slate-400" />
+              <span>Đã kín chỗ</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide backdrop-blur-md bg-emerald-500/95 text-white border border-emerald-300/40 shadow-sm group-hover:bg-emerald-500 transition-colors">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+              {isDriver ? (
+                <span>
+                  Còn <span className="font-mono">{item.availableSeats}</span> chỗ
+                </span>
+              ) : (
+                <span>
+                  Cần <span className="font-mono">{item.seatsNeeded || 1}</span> chỗ
+                </span>
+              )}
+            </span>
+          )}
         </div>
 
         {/* TẦNG 2: HÀNH LANG TUYẾN ĐƯỜNG (RỘNG RÃI, TUYỆT ĐỐI KHÔNG BỊ CẮT '...') */}
@@ -396,7 +405,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           </div>
         )}
 
-        {/* ── 3. DANH TÍNH TÀI XẾ & HỒ SƠ TÍN NHIỆM ── */}
+        {/* ── 3. DANH TÍNH CHỦ XE & HỒ SƠ TÍN NHIỆM ── */}
         <div className="mt-auto pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
           <button
             type="button"
@@ -405,9 +414,17 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
             title="Xem hồ sơ tín nhiệm & xác minh"
           >
             <div className="relative shrink-0">
-              <span className="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-xs shadow-2xs group-hover/driver:border-[#0071e3] transition-colors">
-                {avatarLetter}
-              </span>
+              {item.avatar || item.driverAvatar ? (
+                <img
+                  src={item.avatar || item.driverAvatar}
+                  alt={driverDisplayName}
+                  className="w-9 h-9 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-2xs group-hover/driver:border-[#0071e3] transition-colors"
+                />
+              ) : (
+                <span className="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-xs shadow-2xs group-hover/driver:border-[#0071e3] transition-colors">
+                  {avatarLetter}
+                </span>
+              )}
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#107c41] border-2 border-white dark:border-slate-900 flex items-center justify-center">
                 <Check className="w-2 h-2 text-white stroke-[3]" />
               </span>
@@ -448,14 +465,26 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
             <span className="text-[11.5px] text-slate-500 dark:text-slate-400 font-medium">/người</span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onBook(item)}
-            className="h-9.5 px-5 rounded-full text-xs font-bold tracking-tight inline-flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-[0.92] shadow-xs hover:shadow-md bg-[#0071e3] hover:bg-[#0077ed] text-white group/btn"
-          >
-            <span>{isDriver ? 'Ghép chuyến' : 'Đón khách'}</span>
-            <ArrowRight className="w-3.5 h-3.5 ml-1.5 group-hover/btn:translate-x-1 transition-transform duration-200" />
-          </button>
+          {isTripFull ? (
+            <button
+              type="button"
+              disabled
+              className="h-9.5 px-4 rounded-full text-xs font-semibold tracking-tight inline-flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-80"
+              title="Chuyến xe này đã nhận đủ người"
+            >
+              <Lock className="w-3.5 h-3.5 mr-1" />
+              <span>Đã kín chỗ</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onBook(item)}
+              className="h-9.5 px-5 rounded-full text-xs font-bold tracking-tight inline-flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-[0.92] shadow-xs hover:shadow-md bg-[#0071e3] hover:bg-[#0077ed] text-white group/btn"
+            >
+              <span>{isDriver ? 'Ghép chuyến' : 'Đón khách'}</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1.5 group-hover/btn:translate-x-1 transition-transform duration-200" />
+            </button>
+          )}
         </footer>
       </div>
     </article>

@@ -29,7 +29,7 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
   const hometown = item.hometown || 'Bình Phước';
   const carModel = item.carModel || item.car?.model || 'Mitsubishi Xpander (7 chỗ)';
   const plate = item.licensePlateMasked || item.car?.plate || '93A-289.xx (Đã đối soát)';
-  const karmaScore = item.karmaScore || item.trustScore || 98;
+  const karmaScore = item.karmaScore ?? item.trustScore ?? 75;
   const rating = item.rating || 4.95;
   const driverTrips =
     item.driverStats?.tripsCompleted || (isCurrentDriver ? item.safeTripsCount || item.tripsCompleted || 48 : 24);
@@ -98,9 +98,17 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
 
           <div className="relative flex items-start justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <span className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md text-white font-display text-lg font-bold inline-flex items-center justify-center shrink-0 border border-white/30 shadow-xs">
-                {name.slice(0, 2).toUpperCase()}
-              </span>
+              {item.avatar || item.driverAvatar ? (
+                <img
+                  src={item.avatar || item.driverAvatar}
+                  alt={name}
+                  className="w-12 h-12 rounded-full object-cover shrink-0 border border-white/30 shadow-xs ring-2 ring-white/20"
+                />
+              ) : (
+                <span className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md text-white font-display text-lg font-bold inline-flex items-center justify-center shrink-0 border border-white/30 shadow-xs">
+                  {name.slice(0, 2).toUpperCase()}
+                </span>
+              )}
               <div>
                 <h4 className="font-display text-lg sm:text-xl font-bold tracking-tight flex items-center gap-1.5">
                   <span>{name}</span>

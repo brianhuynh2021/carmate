@@ -1,5 +1,5 @@
-import { ROUTE_BENCHMARKS, cleanPhoneNumber } from '@carmate/shared';
-import { getDB, getUserById, getUserByPhone, getAllUsers, getTripsByPhone, getTripById } from '../db/sqliteStore.js';
+import { ROUTE_BENCHMARKS, cleanPhoneNumber, computeTrustScore, DEFAULT_TRUST_RULES } from '@carmate/shared';
+import { getDB, getUserById, getUserByPhone, getAllUsers, getTripsByPhone, getTripById, getTrustRules } from '../db/sqliteStore.js';
 
 /**
  * GET /api/health - Kiểm tra tình trạng hoạt động của API
@@ -138,20 +138,49 @@ export function getTrustProfile(req, res) {
     const computedDriverTrips = isDefaultOrDemo ? Math.max(12, driverTrips.length) : driverTrips.length;
     const computedPassengerTrips = isDefaultOrDemo ? Math.max(4, passengerTrips.length) : passengerTrips.length;
 
+    const activeRules = getTrustRules();
+    const vehicleData = user.vehicle || (firstDriverTrip ? {
+      plate: firstDriverTrip.licensePlate || firstDriverTrip.carPlate,
+      model: firstDriverTrip.carCategory || firstDriverTrip.carType,
+      hasVerifiedPhotos: Boolean(firstDriverTrip.hasVerifiedPhotos || (firstDriverTrip.realPhotos && firstDriverTrip.realPhotos.length >= 3)),
+      photos: firstDriverTrip.realPhotos || []
+    } : null);
+
+    const historyData = {
+      completedTrips: user.role === 'driver' ? computedDriverTrips : computedPassengerTrips,
+      rating: user.rating || 5.0,
+      lateReports: user.lateReports || 0,
+      cancelReports: user.cancelReports || 0,
+      mismatchReports: user.mismatchReports || 0
+    };
+
+    const effectiveAvatar = user.avatar || firstDriverTrip?.avatar || (isDefaultOrDemo ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' : null);
+    const userForTrust = {
+      ...user,
+      avatar: effectiveAvatar,
+      isCccdVerified: isDefaultOrDemo ? 1 : Boolean(user.isCccdVerified || user.verifiedCCCD),
+      isGplxVerified: isDefaultOrDemo ? 1 : Boolean(user.isGplxVerified || user.verifiedGPLX)
+    };
+
+    const trustCalc = computeTrustScore(userForTrust, vehicleData, historyData, activeRules);
+
     const profile = {
       id: isDefaultOrDemo ? memberId : user.id || memberId,
       name: isDefaultOrDemo ? 'Nguyễn Anh Tuấn' : user.name || 'Thành viên CarMate',
+      avatar: effectiveAvatar,
       publicName: isDefaultOrDemo
         ? 'Chủ xe Lộc Ninh #101'
         : user.name
-          ? `${user.name} (${user.role === 'driver' ? 'Chủ xe' : 'Hành khách'})`
+          ? `${user.name} (${user.role === 'driver' ? 'Chủ xe' : 'Người đi cùng'})`
           : firstDriverTrip?.maskedCode || 'Thành viên',
       hometown: user.hometown || firstDriverTrip?.hometown || 'Bình Phước',
       memberSince: user.createdAt
         ? new Date(user.createdAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
         : '2025',
-      karmaScore: user.trustScore || 98,
-      trustScore: user.trustScore || 98,
+      karmaScore: trustCalc.score,
+      trustScore: trustCalc.score,
+      trustLevel: trustCalc.level,
+      trustDetails: trustCalc,
       rating: user.rating || 5.0,
       totalCommunityTrips: computedDriverTrips + computedPassengerTrips,
       driverStats: {
@@ -199,6 +228,21 @@ export function getTrustProfile(req, res) {
     return res.status(200).json({
       success: true,
       data: profile
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/trust-rules/public - Lấy danh sách quy tắc tín nhiệm công khai
+ */
+export function getPublicTrustRulesHandler(req, res) {
+  try {
+    const rules = getTrustRules();
+    return res.status(200).json({
+      success: true,
+      data: rules.filter((r) => r.enabled)
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

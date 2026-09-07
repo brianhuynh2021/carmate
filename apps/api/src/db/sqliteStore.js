@@ -9,7 +9,8 @@ import {
   SITE_INFO,
   cleanPhoneNumber,
   isTripExpired,
-  getTomorrowISO
+  getTomorrowISO,
+  DEFAULT_TRUST_RULES
 } from '@carmate/shared';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -598,7 +599,7 @@ export async function updateTrip(id, updates) {
 
 /**
  * Tái đăng 1 chạm (1-Tap Re-publish) chuyến xe sang ngày mới
- * Giúp tài xế nhân bản toàn bộ thông tin lộ trình, xe, giá sang ngày mai chỉ trong 1 chạm.
+ * Giúp Chủ xe nhân bản toàn bộ thông tin lộ trình, xe, giá sang ngày mai chỉ trong 1 chạm.
  */
 export async function republishTrip(id, updates = {}) {
   const existing = getTripById(id);
@@ -1230,4 +1231,52 @@ export function getAnalyticsSummary() {
     topSearchedRoutes: topRoutes,
     recentEvents
   };
+}
+
+/**
+ * Lấy cấu hình quy tắc tính điểm tín nhiệm (Dynamic Trust Policy Rules)
+ */
+export function getTrustRules() {
+  const database = getRawDB();
+  try {
+    const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('trust_policy_rules');
+    if (row && row.value) {
+      const parsed = JSON.parse(row.value);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('[SQLite DB] Lỗi đọc trust_policy_rules:', e.message);
+  }
+  return DEFAULT_TRUST_RULES;
+}
+
+/**
+ * Lưu cấu hình quy tắc tính điểm tín nhiệm (Admin Update)
+ */
+export function saveTrustRules(rules) {
+  if (!Array.isArray(rules)) {
+    throw new Error('Rules phải là một danh sách mảng');
+  }
+  const database = getRawDB();
+  const jsonStr = JSON.stringify(rules);
+  database
+    .prepare(
+      `
+    INSERT INTO key_values (key, value) VALUES ('trust_policy_rules', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `
+    )
+    .run(jsonStr);
+  return rules;
+}
+
+/**
+ * Khôi phục cấu hình quy tắc tính điểm tín nhiệm về mặc định
+ */
+export function resetTrustRules() {
+  const database = getRawDB();
+  database.prepare('DELETE FROM key_values WHERE key = ?').run('trust_policy_rules');
+  return DEFAULT_TRUST_RULES;
 }

@@ -50,6 +50,7 @@ export default function Header({
   onOpenAuth,
   onLogout,
   onOpenAi,
+  onOpenProfile,
   onOpenDeleteAccount
 }) {
   const { t } = useI18n();
@@ -166,10 +167,18 @@ export default function Header({
                 title={`Tài khoản: ${currentUser.name} (${currentUser.phone || ''})`}
                 className="h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               >
-                <span className="relative flex items-center justify-center">
-                  <span className="w-5 h-5 rounded-full bg-[#107c41] text-white inline-flex items-center justify-center text-[10px] font-bold">
-                    {currentUser.name?.[0]?.toUpperCase() || 'T'}
-                  </span>
+                <span className="relative flex items-center justify-center shrink-0">
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-5 h-5 rounded-full object-cover shadow-2xs ring-1 ring-emerald-500/30"
+                    />
+                  ) : (
+                    <span className="w-5 h-5 rounded-full bg-[#107c41] text-white inline-flex items-center justify-center text-[10px] font-bold">
+                      {currentUser.name?.[0]?.toUpperCase() || 'T'}
+                    </span>
+                  )}
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
                 </span>
                 <span className="max-w-[70px] sm:max-w-[110px] truncate">{currentUser.name}</span>
@@ -182,19 +191,54 @@ export default function Header({
               {isUserMenuOpen && (
                 <div className="absolute right-0 top-[calc(100%+8px)] w-60 rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
                   {/* Header Thông tin tài khoản */}
-                  <div className="px-3 py-2 border-b border-black/[0.05] dark:border-white/[0.06] mb-1">
-                    <p className="text-xs font-bold text-[#1d1d1f] dark:text-white truncate">{currentUser.name}</p>
-                    <p className="text-[11px] text-[#86868b] font-mono">
-                      {currentUser.phone || 'Đã xác thực danh tính'}
-                    </p>
-                    {(currentUser.role === 'admin' ||
-                      currentUser.phone?.includes('0984883750') ||
-                      currentUser.phone?.includes('0984 883 750')) && (
-                      <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
-                        <ShieldCheck className="w-3 h-3" /> Quản trị viên
+                  <div className="px-3 py-2.5 border-b border-black/[0.05] dark:border-white/[0.06] mb-1 flex items-center gap-2.5">
+                    {currentUser.avatar ? (
+                      <img
+                        src={currentUser.avatar}
+                        alt={currentUser.name}
+                        className="w-9 h-9 rounded-full object-cover shadow-xs ring-1 ring-emerald-500/30 shrink-0"
+                      />
+                    ) : (
+                      <span className="w-9 h-9 rounded-full bg-[#107c41] text-white inline-flex items-center justify-center text-xs font-bold shadow-xs shrink-0">
+                        {currentUser.name?.[0]?.toUpperCase() || 'T'}
                       </span>
                     )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-[#1d1d1f] dark:text-white truncate">{currentUser.name}</p>
+                      <p className="text-[11px] text-[#86868b] font-mono truncate">
+                        {currentUser.phone || 'Đã xác thực danh tính'}
+                      </p>
+                      {(currentUser.role === 'admin' ||
+                        currentUser.phone?.includes('0984883750') ||
+                        currentUser.phone?.includes('0984 883 750')) && (
+                        <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                          <ShieldCheck className="w-3 h-3" /> Quản trị viên
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Mục 0: Hồ sơ & Garage của tôi */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenProfile?.();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group"
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <User className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
+                      <span>Hồ sơ & Garage của tôi</span>
+                    </div>
+                    {currentUser?.vehicle?.brand ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                        {currentUser.vehicle.brand}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-[#86868b] font-normal">Chưa có xe</span>
+                    )}
+                  </button>
 
                   {/* Mục 1: Chuyến xe của tôi */}
                   <button

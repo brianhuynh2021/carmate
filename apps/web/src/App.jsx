@@ -43,6 +43,7 @@ import ZaloReentryModal from './components/modals/ZaloReentryModal.jsx';
 import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal.jsx';
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
 import VehicleMismatchModal from './components/modals/VehicleMismatchModal.jsx';
+import UserProfileModal from './components/profile/UserProfileModal.jsx';
 
 // Custom Hooks
 import useZaloReentry from './hooks/useZaloReentry.js';
@@ -238,6 +239,43 @@ export default function App() {
     setPendingPostTrip,
     openAuthWithContext
   } = useAppModals();
+
+  // State Hồ sơ & Garage của tôi (Apple Portal Modal)
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Xử lý lưu thông tin cá nhân & Garage xe của Chủ xe
+  const handleSaveProfile = async (profileData) => {
+    try {
+      const res = await api.updateProfile(profileData);
+      const updated = res.user || { ...currentUser, ...profileData };
+      setCurrentUser(updated);
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+
+      // Đồng bộ hai tầng sang Persona Memory để Trợ lý AI và Form nạp tức thì 0ms
+      if (updated.vehicle) {
+        try {
+          const raw = localStorage.getItem('carmate_persona_memory_v1');
+          const mem = raw ? JSON.parse(raw) : { driver: { routes: [] }, passenger: { routes: [] } };
+          mem.driver = mem.driver || { routes: [] };
+          mem.driver.carProfile = {
+            vehicleCapacity: updated.vehicle.capacity || 5,
+            carType: `${updated.vehicle.brand || ''} ${updated.vehicle.model || ''}`.trim() || 'Toyota Vios (Xe 5 chỗ)',
+            carCategory: updated.vehicle.carCategory || 'family_car',
+            carPlate: updated.vehicle.plate || '',
+            carPhotos: updated.vehicle.photos || [],
+            lastUpdated: Date.now()
+          };
+          localStorage.setItem('carmate_persona_memory_v1', JSON.stringify(mem));
+        } catch (e) {
+          console.warn('[ProfileSync] Lỗi lưu personaMemory:', e);
+        }
+      }
+      return updated;
+    } catch (err) {
+      console.error('[Profile] Lỗi lưu hồ sơ:', err);
+      throw err;
+    }
+  };
 
   // Helper tính số lượng bài đăng của tôi
   const updateMyTripsCount = useCallback(
@@ -527,6 +565,7 @@ export default function App() {
         onOpenAuth={() => openAuthWithContext()}
         onLogout={handleLogout}
         onOpenAi={() => setShowAiModal(true)}
+        onOpenProfile={() => setShowProfileModal(true)}
         onOpenDeleteAccount={() => setShowDeleteAccountModal(true)}
       />
 
@@ -973,6 +1012,15 @@ export default function App() {
           title={authModalConfig.title}
           subtitle={authModalConfig.subtitle}
           contextNotice={authModalConfig.contextNotice}
+        />
+      )}
+
+      {showProfileModal && (
+        <UserProfileModal
+          currentUser={currentUser}
+          onClose={() => setShowProfileModal(false)}
+          onSave={handleSaveProfile}
+          onShowToast={showToast}
         />
       )}
 

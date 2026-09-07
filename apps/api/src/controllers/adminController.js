@@ -14,7 +14,10 @@ import {
   getTripById,
   updateTrip,
   getBookingById,
-  updateBookingStatus
+  updateBookingStatus,
+  getTrustRules,
+  saveTrustRules,
+  resetTrustRules
 } from '../db/sqliteStore.js';
 
 const JWT_SECRET = getJwtSecret();
@@ -395,7 +398,7 @@ export async function deleteTripAdminHandler(req, res) {
 }
 
 /**
- * GET /api/admin/users - Danh sách thành viên & tài xế
+ * GET /api/admin/users - Danh sách thành viên (Chủ xe & Người đi cùng)
  */
 export function listAdminUsers(req, res) {
   try {
@@ -559,6 +562,60 @@ export function getAdminAiIntelligence(req, res) {
     return res.status(200).json({
       success: true,
       data: stats
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/admin/trust-rules - Lấy toàn bộ danh sách quy tắc tín nhiệm (Admin Engine)
+ */
+export function getAdminTrustRulesHandler(req, res) {
+  try {
+    const rules = getTrustRules();
+    return res.status(200).json({
+      success: true,
+      data: rules
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * PUT /api/admin/trust-rules - Cập nhật danh sách quy tắc tín nhiệm & trọng số điểm (Admin Engine)
+ */
+export function updateAdminTrustRulesHandler(req, res) {
+  try {
+    const { rules } = req.body;
+    if (!Array.isArray(rules)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Dữ liệu quy tắc không hợp lệ (cần danh sách array)'
+      });
+    }
+    const saved = saveTrustRules(rules);
+    return res.status(200).json({
+      success: true,
+      message: 'Đã cập nhật quy tắc tín nhiệm thành công',
+      data: saved
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/admin/trust-rules/reset - Khôi phục cấu hình quy tắc gốc
+ */
+export function resetAdminTrustRulesHandler(req, res) {
+  try {
+    const defaultRules = resetTrustRules();
+    return res.status(200).json({
+      success: true,
+      message: 'Đã khôi phục quy tắc tín nhiệm về mặc định',
+      data: defaultRules
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

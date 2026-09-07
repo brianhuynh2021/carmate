@@ -136,7 +136,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Tôi là Khách (Nhận xét Tài xế)</span>
+            <span>Tôi là Người đi cùng (Nhận xét Chủ xe)</span>
           </button>
         </div>
 

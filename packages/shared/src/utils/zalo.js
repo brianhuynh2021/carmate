@@ -96,7 +96,7 @@ export const getWhatsAppShareUrl = (trip) => {
 
 /**
  * Sinh nội dung đăng tin chia sẻ nhanh lên các Hội Nhóm Zalo / Facebook / Telegram
- * (Công cụ Product-Led Growth giúp tài xế tự kéo khách)
+ * (Công cụ Product-Led Growth giúp Chủ xe kết nối Người đi cùng)
  */
 export const generateSocialShareText = (trip) => {
   if (!trip) return '';

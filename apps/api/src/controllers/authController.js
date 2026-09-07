@@ -188,7 +188,7 @@ export async function zaloLogin(req, res) {
       const parts = token.replace('TEST_ZALO_TOKEN_', '').split(':');
       verifiedPhone = parts[0] || rawPhone || '';
       verifiedZaloId = parts[1] || `zalo_mock_${Date.now()}`;
-      verifiedName = reqName || 'Tài xế Zalo Test';
+      verifiedName = reqName || 'Chủ xe Zalo Test';
     } else {
       // Xác thực trực tiếp với máy chủ Zalo Graph API
       try {
@@ -224,7 +224,7 @@ export async function zaloLogin(req, res) {
       user = {
         id: userId,
         phone: cleaned || '',
-        name: verifiedName || reqName?.trim() || `Tài xế Zalo ${userId.slice(-4)}`,
+        name: verifiedName || reqName?.trim() || `Chủ xe Zalo ${userId.slice(-4)}`,
         avatar: verifiedAvatar || '',
         role: 'driver',
         provider: 'zalo',
@@ -414,6 +414,125 @@ export async function getMe(req, res) {
       tripIds
     });
   } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * PATCH /api/auth/profile
+ * Cập nhật thông tin cá nhân & Garage xe của Chủ xe
+ * Tuân thủ MIT Invariants (ràng buộc số ghế, biển số xe, ảnh xe thật chính chủ)
+ */
+export async function updateProfile(req, res) {
+  try {
+    if (!req.user || !req.user.phone) {
+      return res.status(401).json({ success: false, error: 'Chưa đăng nhập' });
+    }
+
+    const existingUser = getUserByPhone(req.user.phone);
+    if (!existingUser) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy hồ sơ thành viên' });
+    }
+
+    const { name, email, avatar, bio, homeAddress, workAddress, vehicle } = req.body || {};
+
+    // 1. Kiểm tra định dạng Email nếu người dùng cung cấp
+    let cleanEmail = existingUser.email;
+    if (email !== undefined) {
+      const trimmedEmail = (email || '').trim().toLowerCase();
+      if (trimmedEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+          return res.status(400).json({ success: false, error: 'Địa chỉ email không đúng định dạng' });
+        }
+        cleanEmail = trimmedEmail;
+      } else {
+        cleanEmail = null;
+      }
+    }
+
+    // 2. Validate & Chuẩn hóa Hồ sơ Xe (Vehicle Garage) theo MIT Invariants
+    let updatedVehicle = existingUser.vehicle || null;
+    if (vehicle !== undefined) {
+      if (vehicle === null) {
+        updatedVehicle = null;
+      } else {
+        const brand = (vehicle.brand || '').trim();
+        const model = (vehicle.model || '').trim();
+        const rawPlate = (vehicle.plate || '').trim().toUpperCase();
+        const color = (vehicle.color || '').trim();
+        const carCategory = vehicle.carCategory || 'family_car';
+        let capacity = Number(vehicle.capacity) || 5;
+
+        // MIT Invariant 1: Sức chứa xe & số ghế khách tối đa
+        // Xe 5 chỗ: Tối đa 4 ghế khách; Xe 7 chỗ: Tối đa 6 ghế khách
+        if (capacity !== 5 && capacity !== 7 && capacity !== 4) {
+          capacity = 5;
+        }
+
+        // MIT Invariant 2: Định dạng Biển số xe Việt Nam
+        let formattedPlate = rawPlate;
+        if (rawPlate) {
+          const cleanPlate = rawPlate.replace(/[^0-9A-Z]/g, '');
+          const plateRegex = /^[0-9]{2}[A-Z]{1,2}[0-9]{4,5}$/;
+          if (!plateRegex.test(cleanPlate)) {
+            return res.status(400).json({
+              success: false,
+              error: 'Biển số xe không đúng định dạng Việt Nam (Ví dụ: 51K-892.41, 29A-456.78)'
+            });
+          }
+          if (!rawPlate.includes('-')) {
+            const prefixLen = cleanPlate.length >= 7 && cleanPlate[2] >= 'A' && cleanPlate[2] <= 'Z' && cleanPlate[3] >= 'A' && cleanPlate[3] <= 'Z' ? 4 : 3;
+            const prefix = cleanPlate.slice(0, prefixLen);
+            const suffix = cleanPlate.slice(prefixLen);
+            formattedPlate = `${prefix}-${suffix}`;
+          }
+        }
+
+        // Ảnh xe thật (Tối thiểu 3 ảnh để nhận huy hiệu xác thực)
+        const photos = Array.isArray(vehicle.photos) ? vehicle.photos.filter(Boolean) : [];
+        const hasVerifiedPhotos = photos.length >= 3;
+
+        updatedVehicle = {
+          brand,
+          model,
+          plate: formattedPlate,
+          color,
+          carCategory,
+          capacity,
+          maxPassengerSeats: capacity === 7 ? 6 : 4,
+          perks: Array.isArray(vehicle.perks) ? vehicle.perks : [],
+          photos,
+          hasVerifiedPhotos,
+          updatedAt: new Date().toISOString()
+        };
+      }
+    }
+
+    // 3. Hợp nhất dữ liệu và bảo toàn trạng thái
+    const updatedUserObj = {
+      ...existingUser,
+      name: name !== undefined ? (name || '').trim() || existingUser.name : existingUser.name,
+      email: cleanEmail,
+      avatar: avatar !== undefined ? avatar : existingUser.avatar,
+      bio: bio !== undefined ? (bio || '').trim() : existingUser.bio,
+      homeAddress: homeAddress !== undefined ? (homeAddress || '').trim() : existingUser.homeAddress,
+      workAddress: workAddress !== undefined ? (workAddress || '').trim() : existingUser.workAddress,
+      vehicle: updatedVehicle,
+      trustScore: updatedVehicle?.hasVerifiedPhotos
+        ? Math.min(100, Math.max(existingUser.trustScore || 95, 99))
+        : existingUser.trustScore
+    };
+
+    const saved = await saveUser(updatedUserObj);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật hồ sơ và garage xe thành công',
+      user: saved
+    });
+  } catch (err) {
+    console.error('[Profile] Lỗi cập nhật hồ sơ:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 }

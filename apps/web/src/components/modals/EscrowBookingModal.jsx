@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Phone,
   Users,
@@ -13,13 +13,20 @@ import {
   Copy,
   CheckCheck
 } from 'lucide-react';
-import { formatVND, calculatePricing, getTimeSlotLabel, getZaloChatUrl, cleanPhoneNumber } from '@carmate/shared';
+import {
+  formatVND,
+  calculatePricing,
+  getTimeSlotLabel,
+  getZaloChatUrl,
+  cleanPhoneNumber,
+  getCorridorWaypoints
+} from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
-import { searchLocations } from '../../utils/vietnamLocations.js';
+import { searchLocations, getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
 import { generateSmartZaloDraft } from '../../utils/nlpTripParser.js';
 import api from '../../api/client.js';
 
@@ -71,6 +78,17 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Gợi ý điểm đón dọc trục theo chuyến đi cụ thể (Corridor Waypoints + Hotspots)
+  const routeHotspots = useMemo(() => {
+    if (!item) return POPULAR_HOTSPOTS;
+    const fromNote = item.waypointNote ? item.waypointNote.split(/[,;\n]/).map(s => s.trim()).filter(Boolean) : [];
+    const corridorFrom = getCorridorWaypoints(item.from || '') || [];
+    const corridorTo = getCorridorWaypoints(item.to || '') || [];
+    const suggested = getSuggestedWaypoints(item.from || '', item.to || '') || [];
+    const combined = Array.from(new Set([...fromNote, ...corridorFrom, ...corridorTo, ...suggested, ...POPULAR_HOTSPOTS]));
+    return combined.slice(0, 10);
+  }, [item?.from, item?.to, item?.waypointNote]);
 
   if (!item) return null;
 
@@ -349,12 +367,12 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
           <div className="space-y-1 pt-1">
             <p className="text-[11px] text-slate-500 font-medium">Gợi ý điểm đón thuận tiện dọc tuyến:</p>
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              {POPULAR_HOTSPOTS.map((spot) => (
+              {routeHotspots.map((spot) => (
                 <button
                   key={spot}
                   type="button"
                   onClick={() => {
-                    setPickupPoint(spot);
+                    setPickupPoint(pickupPoint === spot ? '' : spot);
                     setShowSuggestions(false);
                   }}
                   className={`shrink-0 text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${

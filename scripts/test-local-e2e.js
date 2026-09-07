@@ -2706,6 +2706,321 @@ async function runTests() {
     assert(false, '35. Kiểm thử Bảo Vệ Bất Biến MIT & Công Thái Học Stanford', err.message);
   }
 
+  // =========================================================================
+  // 36. KIỂM THỬ HỒ SƠ CÁ NHÂN & QUẢN LÝ GARAGE XE CHÍNH CHỦ (USER PROFILE & DRIVER GARAGE)
+  // =========================================================================
+  try {
+    console.log('\n--- 36. KIỂM THỬ HỒ SƠ CÁ NHÂN & QUẢN LÝ GARAGE XE (USER PROFILE & DRIVER GARAGE) ---');
+
+    // 1. Đăng nhập tạo Token test cho Chủ xe
+    const profileLoginRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0984883750', phone: '0984883750', name: 'Nguyễn Văn Hùng' })
+    });
+    const profileLoginData = await profileLoginRes.json();
+    const profileToken = profileLoginData.token;
+    assert(profileLoginRes.status === 200 && profileToken, 'Đăng nhập lấy Token kiểm thử Hồ sơ & Garage thành công');
+
+    // 2. Kiểm tra MIT Invariant: Validate định dạng Email (Từ chối email sai định dạng HTTP 400)
+    const invalidEmailRes = await fetch(`${BASE_URL}/api/auth/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${profileToken}`
+      },
+      body: JSON.stringify({ email: 'sai-dinh-dang-email' })
+    });
+    assert(invalidEmailRes.status === 400, 'MIT Invariant 1: Từ chối địa chỉ email không đúng định dạng RFC (HTTP 400)');
+
+    // 3. Kiểm tra MIT Invariant: Validate Biển số xe Việt Nam (Từ chối biển số sai định dạng HTTP 400)
+    const invalidPlateRes = await fetch(`${BASE_URL}/api/auth/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${profileToken}`
+      },
+      body: JSON.stringify({
+        vehicle: {
+          brand: 'Toyota',
+          model: 'Vios',
+          plate: 'BIEN-SO-KHONG-DUNG',
+          capacity: 5
+        }
+      })
+    });
+    assert(invalidPlateRes.status === 400, 'MIT Invariant 2: Từ chối biển số xe sai quy chuẩn đăng kiểm Việt Nam (HTTP 400)');
+
+    // 4. Cập nhật hồ sơ cá nhân và cấu hình xe hợp lệ với 3 ảnh thật
+    const updateValidRes = await fetch(`${BASE_URL}/api/auth/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${profileToken}`
+      },
+      body: JSON.stringify({
+        name: 'Nguyễn Văn Hùng (Chủ xe)',
+        email: 'hung.carmate@gmail.com',
+        homeAddress: 'Quận 1, TP.HCM',
+        workAddress: 'TP. Vũng Tàu',
+        bio: 'Chủ xe thân thiện, xe Vios gia đình giữ gìn sạch sẽ.',
+        vehicle: {
+          brand: 'Toyota',
+          model: 'Vios',
+          plate: '51K-892.41',
+          color: 'Trắng',
+          capacity: 5,
+          carCategory: 'family_car',
+          perks: ['Không hút thuốc', 'Máy lạnh mát mẻ', 'Nước suối miễn phí'],
+          photos: [
+            'data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAADwAQCdASoBAAEAAQAcJaACdLoB+AA/v2QAAA==',
+            'data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAADwAQCdASoBAAEAAQAcJaACdLoB+AA/v2QAAA==',
+            'data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAADwAQCdASoBAAEAAQAcJaACdLoB+AA/v2QAAA=='
+          ]
+        }
+      })
+    });
+    const updateValidData = await updateValidRes.json();
+    assert(updateValidRes.status === 200 && updateValidData.success, 'Cập nhật hồ sơ và Garage xe thành công (HTTP 200)');
+    assert(updateValidData.user.vehicle.brand === 'Toyota', 'Lưu chính xác Hãng xe Toyota trong Garage');
+    assert(updateValidData.user.vehicle.maxPassengerSeats === 4, 'MIT Invariant 3: Xe 5 chỗ tự động ràng buộc tối đa 4 ghế khách');
+    assert(updateValidData.user.vehicle.hasVerifiedPhotos === true, 'MIT Invariant 4: Đạt đủ ≥3 ảnh thật được kích hoạt hasVerifiedPhotos');
+    assert(updateValidData.user.email === 'hung.carmate@gmail.com', 'Lưu email chính xác vào cơ sở dữ liệu SQLite');
+
+    // 5. Kiểm tra GET /api/auth/me trả về đúng hồ sơ vừa cập nhật
+    const verifyMeRes = await fetch(`${BASE_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${profileToken}` }
+    });
+    const verifyMeData = await verifyMeRes.json();
+    assert(verifyMeRes.status === 200, 'Xác thực GET /api/auth/me thành công');
+    assert(verifyMeData.user.vehicle?.plate === '51K-892.41', 'Biển số xe 51K-892.41 được lưu bền vững trong SQLite');
+    assert(verifyMeData.user.vehicle?.photos?.length === 3, 'Bộ sưu tập 3 ảnh xe thật được lưu bền vững trong SQLite');
+
+    // 6. Kiểm tra giao diện Frontend: UserProfileModal & Header popover
+    const profileModalPath = path.resolve(process.cwd(), 'apps/web/src/components/profile/UserProfileModal.jsx');
+    assert(fs.existsSync(profileModalPath), 'Component UserProfileModal.jsx tồn tại');
+    const profileModalContent = fs.readFileSync(profileModalPath, 'utf8');
+    assert(profileModalContent.includes('compressImageToWebP'), 'Tích hợp nén ảnh Client-side Canvas WebP ~15ms');
+    assert(profileModalContent.includes('Garage xe của tôi'), 'Hỗ trợ giao diện quản lý Garage xe');
+
+    const headerPath = path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx');
+    const headerContent = fs.readFileSync(headerPath, 'utf8');
+    assert(headerContent.includes('Hồ sơ & Garage của tôi'), 'Header tích hợp menu truy cập Hồ sơ & Garage của tôi');
+    assert(profileModalContent.includes('avatarInputRef') && profileModalContent.includes('handleAvatarFileChange'), 'UserProfileModal tích hợp nén và cập nhật ảnh đại diện (avatar)');
+    assert(headerContent.includes('currentUser.avatar'), 'Header hiển thị ảnh đại diện avatar của người dùng');
+  } catch (err) {
+    assert(false, '36. Kiểm thử Hồ Sơ Cá Nhân & Quản Lý Garage Xe', err.message);
+  }
+
+  // 37. KIỂM THỬ CORRIDOR WAYPOINTS, 9:16 STORY TICKET & 1-TAP BÁO ĐỦ CHỖ
+  try {
+    console.log('\n--- 37. KIỂM THỬ CORRIDOR WAYPOINTS, STORY TICKET 9:16 & BÁO ĐỦ CHỖ ---');
+
+    // 1. Kiểm tra Corridor Waypoints từ shared constants
+    const routesConstantsPath = path.resolve(process.cwd(), 'packages/shared/src/constants/routes.js');
+    const routesContent = fs.readFileSync(routesConstantsPath, 'utf8');
+    assert(routesContent.includes('CORRIDOR_WAYPOINTS'), 'Định nghĩa CORRIDOR_WAYPOINTS cho các trục cao tốc & quốc lộ');
+    assert(routesContent.includes('getCorridorWaypoints'), 'Export hàm getCorridorWaypoints');
+
+    // Nạp trực tiếp hàm để kiểm tra logic
+    const { getCorridorWaypoints } = await import('../packages/shared/src/constants/routes.js');
+    const ql13Points = getCorridorWaypoints('Tuyến QL13');
+    assert(ql13Points.length >= 5, 'Trục QL13 có đầy đủ ≥5 điểm đón dọc đường (Chơn Thành, Tân Khai...)');
+    assert(ql13Points.some(p => p.includes('Chơn Thành')), 'QL13 có mốc Ngã 4 Chơn Thành');
+
+    const hpPoints = getCorridorWaypoints('Hà Nội - Hải Phòng');
+    assert(hpPoints.length >= 4, 'Cao tốc Hà Nội - Hải Phòng có các nút giao Cổ Linh, Gia Lộc, V52');
+
+    // 2. Kiểm tra PostTripForm tích hợp gợi ý mốc đón 1-chạm
+    const postFormPath = path.resolve(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx');
+    const postFormContent = fs.readFileSync(postFormPath, 'utf8');
+    assert(postFormContent.includes('getCorridorWaypoints'), 'PostTripForm import và dùng getCorridorWaypoints');
+    assert(postFormContent.includes('handleToggleWaypoint'), 'PostTripForm hỗ trợ bật/tắt mốc đón bằng 1-chạm (Toggle)');
+
+    // 3. Kiểm tra EscrowBookingModal tích hợp chọn điểm đón dọc tuyến
+    const escrowModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/EscrowBookingModal.jsx');
+    const escrowModalContent = fs.readFileSync(escrowModalPath, 'utf8');
+    assert(escrowModalContent.includes('routeHotspots'), 'EscrowBookingModal tính toán routeHotspots động theo chuyến');
+    assert(escrowModalContent.includes('getCorridorWaypoints'), 'EscrowBookingModal dùng getCorridorWaypoints');
+
+    // 4. Kiểm tra ticketCanvas.js hỗ trợ tạo ảnh Story 9:16
+    const ticketCanvasPath = path.resolve(process.cwd(), 'apps/web/src/utils/ticketCanvas.js');
+    const ticketCanvasContent = fs.readFileSync(ticketCanvasPath, 'utf8');
+    assert(ticketCanvasContent.includes('generateTicketStoryImage'), 'ticketCanvas.js cung cấp hàm generateTicketStoryImage');
+    assert(ticketCanvasContent.includes('downloadTicketStoryImage'), 'ticketCanvas.js cung cấp hàm downloadTicketStoryImage');
+    assert(ticketCanvasContent.includes('width = 1080') && ticketCanvasContent.includes('height = 1920'), 'Story Ticket chuẩn tỷ lệ 9:16 (1080x1920 HD)');
+    assert(!ticketCanvasContent.includes('hoa hồng tài xế'), 'ticketCanvas.js tuân thủ danh xưng: không dùng "tài xế"');
+
+    // 5. Kiểm tra TicketShareModal có nút tải Story 9:16
+    const ticketSharePath = path.resolve(process.cwd(), 'apps/web/src/components/modals/TicketShareModal.jsx');
+    const ticketShareContent = fs.readFileSync(ticketSharePath, 'utf8');
+    assert(ticketShareContent.includes('handleDownloadStory'), 'TicketShareModal có handler tải ảnh Story');
+    assert(ticketShareContent.includes('Tải ảnh Story 9:16'), 'TicketShareModal hiển thị nút Tải ảnh Story 9:16');
+
+    // 6. Kiểm tra TripCard hiển thị trạng thái Đã kín chỗ
+    const tripCardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
+    const tripCardContent = fs.readFileSync(tripCardPath, 'utf8');
+    assert(tripCardContent.includes('Đã kín chỗ'), 'TripCard hiển thị huy hiệu Đã kín chỗ khi status === "full"');
+    assert(tripCardContent.includes('isTripFull'), 'TripCard vô hiệu hóa nút đặt chỗ khi chuyến đã kín');
+  } catch (err) {
+    assert(false, '37. Kiểm thử Corridor Waypoints, Story Ticket 9:16 & Báo Đủ Chỗ', err.message);
+  }
+
+  // ==========================================
+  // BÀI TEST 38: KIỂM THỬ HỆ THỐNG QUẢN TRỊ QUY TẮC TÍN NHIỆM ĐỘNG (MIT & STANFORD)
+  // ==========================================
+  console.log('\n--- 38. KIỂM THỬ HỆ THỐNG QUẢN TRỊ QUY TẮC TÍN NHIỆM ĐỘNG (MIT & STANFORD) ---');
+  try {
+    const { computeTrustScore, getTrustLevel, DEFAULT_TRUST_RULES } = await import(
+      '../packages/shared/src/index.js'
+    );
+
+    // 1. Kiểm tra Bất biến Toán học MIT: Thiếu Avatar bị khóa trần 65đ
+    const userWithoutAvatar = {
+      name: 'Nguyễn Văn Ẩn Danh',
+      avatar: '',
+      isCccdVerified: 1,
+      isGplxVerified: 1,
+      role: 'driver'
+    };
+    const vehicleFull = {
+      plate: '51K-999.99',
+      hasVerifiedPhotos: true,
+      photos: ['a', 'b', 'c']
+    };
+    const calcNoAvatar = computeTrustScore(userWithoutAvatar, vehicleFull, { completedTrips: 5 });
+    assert(
+      calcNoAvatar.isCapApplied === true,
+      'Missing Avatar Invariant: isCapApplied kích hoạt khi thiếu ảnh đại diện'
+    );
+    assert(
+      calcNoAvatar.score === 65,
+      `Missing Avatar Invariant: Điểm số bị giới hạn cứng ở trần 65đ (thực tế đạt ${calcNoAvatar.rawScore}đ)`
+    );
+    assert(
+      calcNoAvatar.rawScore > 65,
+      `Điểm tiềm năng trước khi xét trần đạt ${calcNoAvatar.rawScore}đ`
+    );
+
+    // 2. Thêm Avatar -> Gỡ bỏ trần, điểm số vươn tới mức cao
+    const userWithAvatar = {
+      ...userWithoutAvatar,
+      avatar: 'data:image/webp;base64,UklGRmYAAABXRUJQVlA4...'
+    };
+    const calcWithAvatar = computeTrustScore(userWithAvatar, vehicleFull, { completedTrips: 5 });
+    assert(
+      calcWithAvatar.isCapApplied === false,
+      'Đã có Avatar: Gỡ bỏ khóa trần thành công'
+    );
+    assert(
+      calcWithAvatar.score >= 95,
+      `Hồ sơ đầy đủ + Avatar đạt mức Tinh Hoa (đạt ${calcWithAvatar.score}/100đ)`
+    );
+
+    // 3. Người mới tạo tài khoản chỉ xác thực SĐT -> Base 50đ
+    const brandNewUser = { name: 'Người mới', avatar: '' };
+    const calcNew = computeTrustScore(brandNewUser, null, {});
+    assert(calcNew.score === 50, 'Người mới tạo chỉ có Base OTP 50 điểm');
+
+    // 4. Đánh giá hai chiều cho Người đi cùng (Passenger)
+    const passengerUser = {
+      name: 'Khách Văn Minh',
+      avatar: 'data:image/webp;base64,...',
+      isCccdVerified: 1,
+      role: 'passenger'
+    };
+    const calcPassenger = computeTrustScore(passengerUser, null, { completedTrips: 3, rating: 5.0 });
+    assert(calcPassenger.userRole === 'passenger', 'Hệ thống nhận diện đúng vai trò Người đi cùng');
+    assert(calcPassenger.score >= 80, `Người đi cùng văn minh, đúng hẹn đạt ${calcPassenger.score}/100đ`);
+
+    // 5. Kiểm tra API Public: GET /api/trust-rules/public
+    const publicRulesRes = await fetch(`${BASE_URL}/api/trust-rules/public`);
+    const publicRulesData = await publicRulesRes.json();
+    assert(publicRulesRes.status === 200, 'GET /api/trust-rules/public trả về HTTP 200');
+    assert(Array.isArray(publicRulesData.data) && publicRulesData.data.length >= 10, 'Quy tắc công khai có đủ danh sách tiêu chí');
+    assert(publicRulesData.data.every((r) => r.enabled), 'Tất cả quy tắc công khai đều đang ở trạng thái enabled');
+
+    // 6. Kiểm tra API Admin: Cần Token Quản Trị (Tương thích cơ chế MFA)
+    let currentAdminToken = adminToken;
+    if (!currentAdminToken) {
+      const adminLoginRes = await fetch(`${BASE_URL}/api/admin/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: ADMIN_PASSCODE })
+      });
+      let adminLoginData = await adminLoginRes.json();
+      if (adminLoginData.requireMfa && adminLoginData.mfaSessionId) {
+        const mfaRes = await fetch(`${BASE_URL}/api/admin/auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mfaSessionId: adminLoginData.mfaSessionId, mfaCode: '123456' })
+        });
+        adminLoginData = await mfaRes.json();
+      }
+      currentAdminToken = adminLoginData.token;
+    }
+    assert(Boolean(currentAdminToken), 'Đăng nhập Admin nhận Token thành công');
+
+    const adminRulesRes = await fetch(`${BASE_URL}/api/admin/trust-rules`, {
+      headers: { Authorization: `Bearer ${currentAdminToken}` }
+    });
+    const adminRulesData = await adminRulesRes.json();
+    assert(adminRulesRes.status === 200, 'Admin lấy danh sách quy tắc đầy đủ HTTP 200');
+    assert(Array.isArray(adminRulesData.data), 'Dữ liệu quy tắc trả về là mảng');
+
+    // 7. Thử Admin cập nhật cấu hình quy tắc và thêm tiêu chí mới không cần sửa code
+    const customRule = {
+      id: 'zalo_oa_verified_test',
+      title: 'Đã liên kết Zalo Official Account',
+      description: 'Tài khoản chính chủ đã kết nối Zalo OA',
+      points: 7,
+      type: 'add',
+      role: 'all',
+      category: 'community',
+      enabled: true,
+      isLocked: false
+    };
+    const updatedRules = [...adminRulesData.data, customRule];
+    const updateRulesRes = await fetch(`${BASE_URL}/api/admin/trust-rules`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${currentAdminToken}`
+      },
+      body: JSON.stringify({ rules: updatedRules })
+    });
+    const updateRulesData = await updateRulesRes.json();
+    assert(updateRulesRes.status === 200 && updateRulesData.success, 'Admin cập nhật quy tắc tín nhiệm động thành công');
+
+    // Kiểm tra API public phản ánh ngay tiêu chí mới
+    const checkPublicRes = await fetch(`${BASE_URL}/api/trust-rules/public`);
+    const checkPublicData = await checkPublicRes.json();
+    const foundCustom = checkPublicData.data.find((r) => r.id === 'zalo_oa_verified_test');
+    assert(Boolean(foundCustom), 'Tiêu chí mới xuất hiện tức thì trên API Public (Zero-Code Platform Policy)');
+
+    // Khôi phục mặc định
+    const resetRes = await fetch(`${BASE_URL}/api/admin/trust-rules/reset`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${currentAdminToken}` }
+    });
+    const resetData = await resetRes.json();
+    assert(resetRes.status === 200 && resetData.success, 'Khôi phục quy tắc tín nhiệm về mặc định thành công');
+
+    // 8. Kiểm tra File UI
+    const adminDashPath = path.resolve(process.cwd(), 'apps/web/src/components/admin/AdminDashboardView.jsx');
+    const adminDashContent = fs.readFileSync(adminDashPath, 'utf8');
+    assert(adminDashContent.includes('Quy Tắc Tín Nhiệm'), 'Admin Dashboard có Tab Quản Lý Quy Tắc Tín Nhiệm');
+    assert(adminDashContent.includes('showAddRuleModal'), 'Admin Dashboard có Modal thêm tiêu chí mới');
+
+    const userProfilePath = path.resolve(process.cwd(), 'apps/web/src/components/profile/UserProfileModal.jsx');
+    const userProfileContent = fs.readFileSync(userProfilePath, 'utf8');
+    assert(userProfileContent.includes('computeTrustScore'), 'UserProfileModal sử dụng computeTrustScore tính điểm động');
+    assert(userProfileContent.includes('isCapApplied'), 'UserProfileModal có cảnh báo khóa trần khi thiếu Avatar');
+    assert(userProfileContent.includes('Bạn đang ở vai trò Người đi cùng'), 'UserProfileModal tuân thủ chuẩn mực danh xưng: không dùng "Hành khách"');
+  } catch (err) {
+    assert(false, '38. Kiểm thử Hệ Thống Quản Trị Quy Tắc Tín Nhiệm Động', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

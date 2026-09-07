@@ -419,17 +419,17 @@ export async function reportVehicleMismatch(req, res) {
     const teleMsg =
       `🚨 <b>[CARMATE CẢNH BÁO GIAN LẬN LOẠI XE]</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `⚠️ <b>Hành khách vừa báo cáo xe đón không đúng mô tả!</b>\n` +
+      `⚠️ <b>Người đi cùng vừa báo cáo xe đón không đúng mô tả!</b>\n` +
       `⏰ <b>Thời gian:</b> ${timeStr}\n` +
       `📋 <b>Mã đặt chuyến:</b> <code>${id}</code>\n` +
-      `🚗 <b>Tài xế:</b> ${driverName} (<code>${driverPhone}</code>)\n` +
+      `🚗 <b>Chủ xe:</b> ${driverName} (<code>${driverPhone}</code>)\n` +
       `🏷️ <b>Loại xe đã đăng ký:</b> ${declaredCatLabel}\n` +
       `⚡ <b>Vấn đề phản ánh:</b> <b>${mismatchTitle}</b>\n` +
       (cleanActualPlate ? `🔢 <b>Biển số đón thực tế:</b> <code>${cleanActualPlate}</code>\n` : '') +
-      (cleanNote ? `📝 <b>Ghi chú của khách:</b> <i>&ldquo;${cleanNote}&rdquo;</i>\n` : '') +
+      (cleanNote ? `📝 <b>Ghi chú của người đi cùng:</b> <i>&ldquo;${cleanNote}&rdquo;</i>\n` : '') +
       `👤 <b>Người báo cáo:</b> ${reporterName} (<code>${reporterPhone}</code>)\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `👉 <b>Thao tác:</b> Đăng nhập Cổng Admin để bấm 1-chạm đổi sang Biển vàng hoặc khóa tài xế.`;
+      `👉 <b>Thao tác:</b> Đăng nhập Cổng Admin để bấm 1-chạm đổi sang Biển vàng hoặc khóa tài khoản vi phạm.`;
 
     sendTelegramMessage(teleMsg, { parseMode: 'HTML' }).catch(() => {});
 

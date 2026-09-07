@@ -201,6 +201,13 @@ export const api = {
     return request('/auth/me');
   },
 
+  async updateProfile(profileData) {
+    return request('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(profileData)
+    });
+  },
+
   async deleteAccount() {
     const res = await request('/auth/me', {
       method: 'DELETE'
@@ -297,6 +304,28 @@ export const api = {
     return request('/agent/chat', {
       method: 'POST',
       body: JSON.stringify({ message, history })
+    });
+  },
+
+  // Dynamic Trust & Reputation Policy Rules
+  async getPublicTrustRules() {
+    return request('/trust-rules/public');
+  },
+
+  async getAdminTrustRules() {
+    return request('/admin/trust-rules');
+  },
+
+  async updateAdminTrustRules(rules) {
+    return request('/admin/trust-rules', {
+      method: 'PUT',
+      body: JSON.stringify({ rules })
+    });
+  },
+
+  async resetAdminTrustRules() {
+    return request('/admin/trust-rules/reset', {
+      method: 'POST'
     });
   }
 };

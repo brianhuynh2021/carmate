@@ -31,7 +31,8 @@ import {
   getUpcomingDays,
   formatTripDateDisplay,
   VEHICLE_SEAT_CONFIGS,
-  formatVND
+  formatVND,
+  getCorridorWaypoints
 } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
@@ -273,17 +274,34 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
     setPredictedTrip(getTopPredictedTrip(role));
   }, [role]);
 
-  // Tự động nạp cấu hình xe & ảnh xe thật đã xác thực của Chủ xe nếu có
+  // Tự động nạp cấu hình xe & ảnh xe thật đã xác thực của Chủ xe nếu có (từ Garage hoặc Bộ nhớ thói quen)
   useEffect(() => {
-    if (role === 'driver' && savedCarProfile) {
-      if (savedCarProfile.vehicleCapacity) setVehicleCapacity(savedCarProfile.vehicleCapacity);
-      if (savedCarProfile.carType) setCarType(savedCarProfile.carType);
-      if (savedCarProfile.carCategory) setCarCategory(savedCarProfile.carCategory);
-      if (savedCarProfile.hasVerifiedPhotos && carPhotos.length === 0) {
-        setCarPhotos(savedCarProfile.carPhotos);
+    if (role === 'driver') {
+      const userVehicle = currentUser?.vehicle;
+      if (userVehicle) {
+        if (userVehicle.capacity) setVehicleCapacity(Number(userVehicle.capacity));
+        const vehicleTypeName = `${userVehicle.brand || ''} ${userVehicle.model || ''}`.trim();
+        if (vehicleTypeName) setCarType(vehicleTypeName);
+        if (userVehicle.carCategory) setCarCategory(userVehicle.carCategory);
+        const validPics = (userVehicle.photos || []).filter(Boolean);
+        if (validPics.length > 0 && carPhotos.length === 0) {
+          setCarPhotos(validPics);
+        }
+        if (Array.isArray(userVehicle.perks)) {
+          if (userVehicle.perks.includes('Không hút thuốc')) setNoSmoking(true);
+          if (userVehicle.perks.includes('Cốp rộng chứa hành lý')) setLargeTrunk(true);
+          if (userVehicle.perks.includes('Máy lạnh mát mẻ')) setAcOn(true);
+        }
+      } else if (savedCarProfile) {
+        if (savedCarProfile.vehicleCapacity) setVehicleCapacity(savedCarProfile.vehicleCapacity);
+        if (savedCarProfile.carType) setCarType(savedCarProfile.carType);
+        if (savedCarProfile.carCategory) setCarCategory(savedCarProfile.carCategory);
+        if (savedCarProfile.hasVerifiedPhotos && carPhotos.length === 0) {
+          setCarPhotos(savedCarProfile.carPhotos);
+        }
       }
     }
-  }, [role]);
+  }, [role, currentUser, savedCarProfile]);
 
   // Định giá phụ xăng thông minh dựa trên cự ly km thực tế
   const routePriceBenchmark = useMemo(() => {
@@ -340,15 +358,24 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   const isDriver = role === 'driver';
   const days = t('post.days');
 
-  // Gợi ý mốc đón trả thông minh dọc tuyến theo điểm đi & đến
+  // Gợi ý mốc đón trả thông minh dọc tuyến theo điểm đi & đến kết hợp Corridor Waypoints
   const suggestedWaypoints = useMemo(() => {
-    return getSuggestedWaypoints(fromLocation, toLocation);
+    const locWaypoints = getSuggestedWaypoints(fromLocation, toLocation) || [];
+    const corridorFrom = getCorridorWaypoints(fromLocation) || [];
+    const corridorTo = getCorridorWaypoints(toLocation) || [];
+    const combined = Array.from(new Set([...corridorFrom, ...corridorTo, ...locWaypoints]));
+    return combined.slice(0, 12);
   }, [fromLocation, toLocation]);
 
-  const handleAddWaypoint = (wp) => {
+  const handleToggleWaypoint = (wp) => {
     if (!waypointNote.trim()) {
       setWaypointNote(wp);
-    } else if (!waypointNote.includes(wp)) {
+      return;
+    }
+    if (waypointNote.includes(wp)) {
+      const parts = waypointNote.split(/[,;\n]/).map(s => s.trim()).filter(s => s && s !== wp);
+      setWaypointNote(parts.join(', '));
+    } else {
       setWaypointNote(`${waypointNote.trim()}, ${wp}`);
     }
   };
@@ -527,6 +554,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       carCategory: isDriver ? carCategory : undefined,
       maskedCode: `${isDriver ? 'CX' : 'KH'}-${Math.floor(100 + Math.random() * 900)}`,
       publicName: `${isDriver ? (carCategory === 'convenient_trip' ? 'Xe tiện chuyến' : 'Chủ xe') : 'Khách'} #${Math.floor(100 + Math.random() * 900)}`,
+      avatar: currentUser?.avatar || undefined,
       phoneReal: phoneReal.trim() || currentUser?.phone || '',
       direction: 'both',
       from: cleanFrom,
@@ -598,6 +626,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       <div className="mt-6">
         <SmartTripComposer
           currentRole={role}
+          currentUser={currentUser}
           onRoleChange={(newRole) => setRole(newRole)}
           onApply={handleApplySmart}
           onInstantSubmit={(parsed) => {
@@ -802,7 +831,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                   <button
                     key={wp}
                     type="button"
-                    onClick={() => handleAddWaypoint(wp)}
+                    onClick={() => handleToggleWaypoint(wp)}
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer shadow-2xs ${
                       isAdded
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
@@ -877,9 +906,15 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                     <Car className="w-3.5 h-3.5 text-[#0071e3]" />
                     <span>Dòng xe & Quy mô chỗ ngồi:</span>
                   </span>
-                  <span className="text-xs font-normal text-slate-400">
-                    {vehicleCapacity === 5 ? 'Tối đa 4 khách' : 'Tối đa 6 khách'}
-                  </span>
+                  {currentUser?.vehicle?.brand ? (
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Garage: {currentUser.vehicle.brand} {currentUser.vehicle.model} ({currentUser.vehicle.plate || `${currentUser.vehicle.capacity} chỗ`})
+                    </span>
+                  ) : (
+                    <span className="text-xs font-normal text-slate-400">
+                      {vehicleCapacity === 5 ? 'Tối đa 4 khách' : 'Tối đa 6 khách'}
+                    </span>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06]">
                   <button
@@ -962,7 +997,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                         ? 'Đầy 4 ghế khách (1 ghế phụ + 3 ghế sau)'
                         : `Còn trống ${seats} ghế nhận khách (trừ 1 ghế lái)`}
                   </span>
-                  <span className="text-slate-400 text-[10.5px]">Đã trừ 1 ghế tài xế</span>
+                  <span className="text-slate-400 text-[10.5px]">Đã trừ 1 ghế lái của Chủ xe</span>
                 </p>
               )}
             </div>
@@ -1113,15 +1148,25 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                 </div>
 
                 {/* Huy hiệu cam kết ảnh thật hoặc nút dùng lại ảnh thật đã lưu */}
-                {savedCarProfile?.hasVerifiedPhotos && carPhotos.filter(Boolean).length === 0 ? (
+                {((currentUser?.vehicle?.photos?.filter(Boolean).length || 0) > 0 || savedCarProfile?.hasVerifiedPhotos) &&
+                carPhotos.filter(Boolean).length === 0 ? (
                   <button
                     type="button"
-                    onClick={() => setCarPhotos(savedCarProfile.carPhotos)}
+                    onClick={() => {
+                      const garagePics = currentUser?.vehicle?.photos?.filter(Boolean) || [];
+                      if (garagePics.length > 0) {
+                        setCarPhotos(garagePics);
+                      } else if (savedCarProfile?.carPhotos) {
+                        setCarPhotos(savedCarProfile.carPhotos);
+                      }
+                    }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
                     title="Tái sử dụng ảnh xe thật chính chủ của bạn"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Dùng lại {savedCarProfile.carPhotos.length} ảnh xe đã lưu</span>
+                    <span>
+                      Dùng lại ảnh từ Garage ({currentUser?.vehicle?.photos?.filter(Boolean).length || savedCarProfile?.carPhotos?.length || 0} ảnh)
+                    </span>
                   </button>
                 ) : (
                   <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shrink-0 self-start sm:self-auto">

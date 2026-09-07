@@ -478,7 +478,7 @@ export default function BookedTripList({
                       <p className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular mt-1">
                         {formatVND(totalCost)}
                       </p>
-                      <p className="text-[11px] text-[#86868b] mt-0.5">Gửi trực tiếp tài xế khi lên xe</p>
+                      <p className="text-[11px] text-[#86868b] mt-0.5">Gửi trực tiếp Chủ xe khi lên xe</p>
                     </div>
                   </div>
                 </div>

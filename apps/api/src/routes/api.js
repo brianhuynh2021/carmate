@@ -20,8 +20,8 @@ import {
   driverConfirmBooking,
   reportVehicleMismatch
 } from '../controllers/bookingController.js';
-import { getHealth, getBenchmarks, getStats, getTrustProfile } from '../controllers/miscController.js';
-import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe, deleteAccount } from '../controllers/authController.js';
+import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
+import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe, updateProfile, deleteAccount } from '../controllers/authController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -35,6 +35,9 @@ import {
   getAdminAiIntelligence,
   convertTripCarCategoryHandler,
   resolveMismatchReportHandler,
+  getAdminTrustRulesHandler,
+  updateAdminTrustRulesHandler,
+  resetAdminTrustRulesHandler,
   requireAdmin
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
@@ -58,6 +61,8 @@ router.post('/auth/zalo-login', zaloLogin);
 router.post('/auth/request-otp', authLimiter, requestOtp);
 router.post('/auth/verify-otp', authLimiter, verifyOtp);
 router.get('/auth/me', requireAuth, getMe);
+router.patch('/auth/profile', requireAuth, updateProfile);
+router.put('/auth/profile', requireAuth, updateProfile);
 router.delete('/auth/me', requireAuth, deleteAccount);
 router.delete('/auth/account', requireAuth, deleteAccount);
 
@@ -67,6 +72,7 @@ router.get('/benchmarks', getBenchmarks);
 router.get('/stats', getStats);
 router.get('/trust', getTrustProfile);
 router.get('/trust/:memberId', getTrustProfile);
+router.get('/trust-rules/public', getPublicTrustRulesHandler);
 router.get('/locations/suggest', suggestLocationsHandler);
 
 // --- Trips (với Post Limiter chống spam và bảo vệ quyền sở hữu Anti-IDOR & PII) ---
@@ -115,5 +121,8 @@ router.patch('/admin/users/:id/status', requireAdmin, updateUserStatusHandler);
 router.get('/admin/reports', requireAdmin, getAdminReports);
 router.patch('/admin/bookings/:id/resolve-mismatch', requireAdmin, resolveMismatchReportHandler);
 router.get('/admin/ai-intelligence', requireAdmin, getAdminAiIntelligence);
+router.get('/admin/trust-rules', requireAdmin, getAdminTrustRulesHandler);
+router.put('/admin/trust-rules', requireAdmin, updateAdminTrustRulesHandler);
+router.post('/admin/trust-rules/reset', requireAdmin, resetAdminTrustRulesHandler);
 
 export default router;
