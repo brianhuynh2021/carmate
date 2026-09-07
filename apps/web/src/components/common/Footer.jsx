@@ -1,5 +1,4 @@
 import React from 'react';
-import { Phone, Mail, MapPin, ExternalLink, Activity, Terminal } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
@@ -80,16 +79,6 @@ export default function Footer({ onNavigate, onOpenTerms }) {
             >
               <FacebookIcon className="w-3.5 h-3.5 text-[#1877F2]" />
               <span>Fanpage</span>
-            </a>
-
-            {/* Hotline (Ẩn tên cá nhân Mr. Huỳnh Nguyễn để bảo vệ riêng tư & chống spam) */}
-            <a
-              href={`tel:${SITE_INFO.phoneRaw || '0984883750'}`}
-              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-mono font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
-              title="Hotline hỗ trợ kỹ thuật"
-            >
-              <Phone className="w-3.5 h-3.5 text-[#107c41]" />
-              <span>Hotline: {SITE_INFO.hotline}</span>
             </a>
           </div>
         </div>
