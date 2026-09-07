@@ -20,7 +20,9 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
+import { GoogleIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import api from '../../api/client.js';
+import { useTranslation } from '../../i18n/index.jsx';
 import { computeTrustScore, getTrustLevel, DEFAULT_TRUST_RULES } from '@carmate/shared';
 
 // Danh sách hãng xe phổ biến tại Việt Nam
@@ -107,6 +109,7 @@ function compressImageToWebP(file, maxDimension = 1200, quality = 0.82) {
 }
 
 export default function UserProfileModal({ currentUser, onClose, onSave, onShowToast }) {
+  const { t, lang } = useTranslation();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'garage' | 'trust'
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -116,6 +119,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
   const [phone, setPhone] = useState(() => currentUser?.phone || '');
   const [email, setEmail] = useState(() => currentUser?.email || '');
   const [avatar, setAvatar] = useState(() => currentUser?.avatar || '');
+  const [gender, setGender] = useState(() => currentUser?.gender || '');
   const [homeAddress, setHomeAddress] = useState(() => currentUser?.homeAddress || '');
   const [workAddress, setWorkAddress] = useState(() => currentUser?.workAddress || '');
   const [bio, setBio] = useState(() => currentUser?.bio || '');
@@ -165,7 +169,9 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           setPublicRules(res.data);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn('[ProfileModal] Lỗi tải quy tắc tín nhiệm động:', err);
+      });
     return () => {
       mounted = false;
     };
@@ -194,13 +200,14 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     const activeUser = {
       ...currentUser,
       avatar,
+      gender,
       isCccdVerified: currentUser?.isCccdVerified ?? 1,
       isGplxVerified: currentUser?.isGplxVerified ?? 1,
       role: hasCar ? 'driver' : 'passenger'
     };
 
     return computeTrustScore(activeUser, vehicleData, historyData, publicRules);
-  }, [currentUser, avatar, hasCar, brand, model, plate, photos, isVerifiedCar, publicRules]);
+  }, [currentUser, avatar, gender, hasCar, brand, model, plate, photos, isVerifiedCar, publicRules]);
 
   // Upload & Nén ảnh WebP
   const handlePhotoUpload = async (index, event) => {
@@ -307,6 +314,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
       phone: phone.trim() || undefined,
       email: email.trim() || null,
       avatar: avatar || null,
+      gender: gender || null,
       trustScore: trustCalc.score,
       homeAddress: homeAddress.trim(),
       workAddress: workAddress.trim(),
@@ -446,8 +454,8 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     className="w-14 h-14 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/40"
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-[#107c41] text-white font-bold text-xl flex items-center justify-center shadow-xs ring-2 ring-emerald-500/20">
-                    {name ? name[0]?.toUpperCase() : 'T'}
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
+                    <User className="w-7 h-7 text-white" strokeWidth={2.2} />
                   </div>
                 )}
 
@@ -538,6 +546,46 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </p>
             </div>
 
+            {/* Trường 1b: Giới tính (Apple Segmented Control) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-[#1d1d1f] dark:text-slate-200">
+                  {t('profile.gender') || 'Giới tính'}
+                </label>
+                <span className="text-[10.5px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-full">
+                  +3đ Tín nhiệm
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'male', label: t('profile.male') || 'Nam', icon: '👨' },
+                  { id: 'female', label: t('profile.female') || 'Nữ', icon: '👩' },
+                  { id: 'other', label: t('profile.other') || 'Khác', icon: '✨' }
+                ].map((g) => {
+                  const isSelected = gender === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setGender(g.id)}
+                      className={`h-10 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 border select-none ${
+                        isSelected
+                          ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-[0_2px_8px_rgba(0,113,227,0.25)]'
+                          : 'bg-white dark:bg-slate-900 text-[#515154] dark:text-slate-300 border-black/[0.1] dark:border-white/[0.12] hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <span className="text-sm">{g.icon}</span>
+                      <span>{g.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-[#86868b] mt-1">
+                {t('profile.genderDesc') ||
+                  'Chọn giới tính giúp kết nối bạn đồng hành phù hợp và an tâm (+3 điểm tín nhiệm)'}
+              </p>
+            </div>
+
             {/* Trường 1b: Số điện thoại liên hệ */}
             <div>
               <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
@@ -622,6 +670,65 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 placeholder="VD: Đi lại hàng tuần thứ 2 và thứ 6, tính tình vui vẻ, xe gia đình giữ gìn sạch sẽ..."
                 className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.12] text-xs text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:border-[#0071e3] outline-none resize-none"
               />
+            </div>
+
+            {/* ── TÀI KHOẢN ĐỊNH DANH ĐÃ LIÊN KẾT (ACCOUNT LINKING & MERGING) ── */}
+            <div className="pt-2.5 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#1d1d1f] dark:text-slate-200 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3]" />
+                  <span>Tài khoản định danh liên kết</span>
+                </span>
+                <span className="text-[11px] text-[#86868b]">Tự động hợp nhất 1 tài khoản</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Thẻ Google */}
+                <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <GoogleIcon className="w-4 h-4 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-[#1d1d1f] dark:text-white truncate">Google</p>
+                      <p className="text-[10px] text-[#86868b] truncate">
+                        {currentUser?.googleId || currentUser?.email ? (currentUser?.email || 'Đã liên kết') : 'Chưa liên kết'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                    currentUser?.googleId || currentUser?.email
+                      ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40'
+                      : 'bg-black/[0.04] dark:bg-white/[0.06] text-[#86868b]'
+                  }`}>
+                    {currentUser?.googleId || currentUser?.email ? 'Đã liên kết' : 'Trống'}
+                  </span>
+                </div>
+
+                {/* Thẻ Telegram */}
+                <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <TelegramIcon className="w-4 h-4 text-[#229ED9] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-[#1d1d1f] dark:text-white truncate">Telegram</p>
+                      <p className="text-[10px] text-[#86868b] truncate">
+                        {currentUser?.telegramId || currentUser?.username
+                          ? `@${currentUser?.username || currentUser?.telegramId}`
+                          : 'Chưa liên kết'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                    currentUser?.telegramId || currentUser?.username
+                      ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40'
+                      : 'bg-black/[0.04] dark:bg-white/[0.06] text-[#86868b]'
+                  }`}>
+                    {currentUser?.telegramId || currentUser?.username ? 'Đã liên kết' : 'Trống'}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[10.5px] text-[#86868b] leading-relaxed">
+                CarMate tự động đối soát Số điện thoại và Email để hợp nhất tài khoản Google & Telegram làm 1, không tạo 2 tài khoản trùng lặp.
+              </p>
             </div>
           </div>
         )}

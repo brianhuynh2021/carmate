@@ -1,8 +1,7 @@
 #!/bin/sh
 # CarMate pre-push guard
-# Chặn push lên main nếu bộ test E2E chưa xanh.
-# Thay thế cho branch protection (không khả dụng trên private repo + GitHub Free).
-# Bỏ qua 1 lần khi thật sự cần:  git push --no-verify
+# Chặn push trực tiếp lên main từ local.
+# Chỉ cho phép qua quy trình release chính thức (ALLOW_MAIN_RELEASE=1).
 
 REMOTE_REF_PREFIX="refs/heads/"
 PROTECTED="main"
@@ -12,7 +11,27 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
   branch="${remote_ref#$REMOTE_REF_PREFIX}"
   [ "$branch" = "$PROTECTED" ] || continue
 
-  echo "[pre-push] Đích là '$PROTECTED' — chạy bộ test E2E trước khi cho phép push."
+  # 1. Chặn cứng push trực tiếp trừ khi có biến môi trường cho phép
+  if [ "$ALLOW_MAIN_RELEASE" != "1" ]; then
+    echo ""
+    echo "================================================================="
+    echo "🛑 [CHẶN LOCAL] LỆNH PUSH LÊN '$PROTECTED' ĐÃ BỊ TỪ CHỐI!"
+    echo "================================================================="
+    echo "Kỷ luật Git CarMate (AGENTS.md):"
+    echo "  Tuyệt đối KHÔNG push trực tiếp lên '$PROTECTED'."
+    echo ""
+    echo "👉 Hãy làm việc và push lên nhánh: dev"
+    echo "     git checkout dev"
+    echo "     git push origin dev"
+    echo ""
+    echo "👉 Khi nào đã test xong trên 'dev' và muốn release lên production:"
+    echo "     npm run release:main"
+    echo "================================================================="
+    echo ""
+    exit 1
+  fi
+
+  echo "[pre-push] 🚀 Chuẩn bị release lên '$PROTECTED' — Đang chạy kiểm thử E2E..."
 
   ROOT=$(git rev-parse --show-toplevel)
   cd "$ROOT" || exit 1
@@ -58,11 +77,11 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
   if [ $STATUS -ne 0 ]; then
     echo ""
     echo "[pre-push] ❌ Test THẤT BẠI — huỷ push lên '$PROTECTED'."
-    echo "[pre-push]    Sửa lỗi rồi push lại, hoặc dùng 'git push --no-verify' nếu thực sự cần."
+    echo "[pre-push]    Sửa lỗi trên 'dev' trước khi release."
     exit 1
   fi
 
-  echo "[pre-push] ✅ Test xanh — cho phép push lên '$PROTECTED'."
+  echo "[pre-push] ✅ Toàn bộ test XANH — Cho phép release lên '$PROTECTED'."
 done
 
 exit 0

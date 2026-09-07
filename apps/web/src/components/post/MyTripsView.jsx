@@ -360,10 +360,10 @@ export default function MyTripsView({
               <div className="p-3 rounded-2xl bg-[#f5f5f7] dark:bg-[#252528] border border-black/[0.04] dark:border-white/[0.04]">
                 <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 dark:text-white">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3]" />
-                  <span>100% 0đ SMS</span>
+                  <span>Xác Thực Nhanh</span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
-                  Xác thực Zalo 1 chạm không tốn phí viễn thông
+                  Đăng nhập an toàn qua Telegram hoặc Google
                 </p>
               </div>
 
@@ -606,7 +606,7 @@ export default function MyTripsView({
                             title="Kết nối trực tiếp qua Zalo không mất phí viễn thông"
                           >
                             <ShieldCheck className="w-3 h-3 text-blue-600" />
-                            <span>Zalo Direct (0đ SMS)</span>
+                            <span>Kết nối qua Zalo</span>
                           </span>
 
                           {trip.carPhotos && trip.carPhotos.length >= 3 && (

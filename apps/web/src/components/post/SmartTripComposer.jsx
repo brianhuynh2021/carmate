@@ -260,7 +260,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all cursor-pointer active:scale-95 shrink-0"
             >
               <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
-              <span>Đăng chuyến ngay (1 chạm)</span>
+              <span>Đăng chuyến ngay</span>
             </button>
           </div>
 

@@ -1,8 +1,11 @@
+import crypto from 'crypto';
 import { cleanPhoneNumber, isValidVietnamesePhone } from '@carmate/shared';
 import {
   getUserByPhone,
   getUserById,
   getUserByEmail,
+  getUserByTelegramId,
+  getUserByGoogleId,
   saveUser,
   getTripsByPhone,
   deleteUserAccount
@@ -356,8 +359,13 @@ export async function googleLogin(req, res) {
       return res.status(400).json({ success: false, error: 'Không thể trích xuất địa chỉ email từ Token Google.' });
     }
 
+    const cleanPhone = reqPhone ? cleanPhoneNumber(reqPhone) : '';
     const userId = `USR-GG-${verifiedGoogleId}`;
-    let user = getUserById(userId) || getUserByEmail(verifiedEmail);
+    let user =
+      getUserById(userId) ||
+      getUserByGoogleId(verifiedGoogleId) ||
+      getUserByEmail(verifiedEmail) ||
+      (cleanPhone ? getUserByPhone(cleanPhone) : null);
     let isNewUser = false;
 
     if (!user) {
@@ -366,7 +374,7 @@ export async function googleLogin(req, res) {
         id: userId,
         email: verifiedEmail,
         googleId: verifiedGoogleId,
-        phone: reqPhone ? cleanPhoneNumber(reqPhone) : '',
+        phone: cleanPhone || '',
         name: verifiedName || reqName?.trim() || verifiedEmail.split('@')[0] || 'Thành viên Google',
         avatar: verifiedAvatar || '',
         role: 'passenger',
@@ -378,13 +386,30 @@ export async function googleLogin(req, res) {
       };
       await saveUser(user);
     } else {
-      if (verifiedName && (!user.name || user.name.startsWith('Thành viên'))) user.name = verifiedName;
-      if (verifiedAvatar && !user.avatar) user.avatar = verifiedAvatar;
-      if (reqPhone && !user.phone) user.phone = cleanPhoneNumber(reqPhone);
-      user.googleId = verifiedGoogleId;
-      user.email = verifiedEmail;
-      user.provider = user.provider || 'google';
-      await saveUser(user);
+      let changed = false;
+      if (verifiedName && (!user.name || user.name.startsWith('Thành viên'))) {
+        user.name = verifiedName;
+        changed = true;
+      }
+      if (verifiedAvatar && !user.avatar) {
+        user.avatar = verifiedAvatar;
+        changed = true;
+      }
+      if (cleanPhone && !user.phone) {
+        user.phone = cleanPhone;
+        changed = true;
+      }
+      if (!user.googleId || user.googleId !== verifiedGoogleId) {
+        user.googleId = verifiedGoogleId;
+        changed = true;
+      }
+      if (!user.email || user.email !== verifiedEmail) {
+        user.email = verifiedEmail;
+        changed = true;
+      }
+      if (changed) {
+        await saveUser(user);
+      }
     }
 
     const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
@@ -418,12 +443,13 @@ export async function googleLogin(req, res) {
  */
 export async function getMe(req, res) {
   try {
-    if (!req.user || (!req.user.phone && !req.user.userId && !req.user.email)) {
+    if (!req.user || (!req.user.phone && !req.user.userId && !req.user.email && !req.user.telegramId)) {
       return res.status(401).json({ success: false, error: 'Chưa đăng nhập' });
     }
 
     const user =
       (req.user.userId && getUserById(req.user.userId)) ||
+      (req.user.telegramId && getUserByTelegramId(req.user.telegramId)) ||
       (req.user.phone && getUserByPhone(req.user.phone)) ||
       (req.user.email && getUserByEmail(req.user.email));
     if (!user) {
@@ -450,19 +476,20 @@ export async function getMe(req, res) {
  */
 export async function updateProfile(req, res) {
   try {
-    if (!req.user || (!req.user.phone && !req.user.userId && !req.user.email)) {
+    if (!req.user || (!req.user.phone && !req.user.userId && !req.user.email && !req.user.telegramId)) {
       return res.status(401).json({ success: false, error: 'Chưa đăng nhập' });
     }
 
     const existingUser =
       (req.user.userId && getUserById(req.user.userId)) ||
+      (req.user.telegramId && getUserByTelegramId(req.user.telegramId)) ||
       (req.user.phone && getUserByPhone(req.user.phone)) ||
       (req.user.email && getUserByEmail(req.user.email));
     if (!existingUser) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy hồ sơ thành viên' });
     }
 
-    const { name, email, phone, avatar, bio, homeAddress, workAddress, vehicle } = req.body || {};
+    const { name, email, phone, avatar, bio, homeAddress, workAddress, vehicle, gender } = req.body || {};
 
     // 0. Cập nhật số điện thoại nếu người dùng đăng ký qua Google bổ sung số điện thoại
     if (phone !== undefined) {
@@ -556,6 +583,7 @@ export async function updateProfile(req, res) {
       name: name !== undefined ? (name || '').trim() || existingUser.name : existingUser.name,
       email: cleanEmail,
       avatar: avatar !== undefined ? avatar : existingUser.avatar,
+      gender: gender !== undefined ? (gender || '').trim() : existingUser.gender,
       bio: bio !== undefined ? (bio || '').trim() : existingUser.bio,
       homeAddress: homeAddress !== undefined ? (homeAddress || '').trim() : existingUser.homeAddress,
       workAddress: workAddress !== undefined ? (workAddress || '').trim() : existingUser.workAddress,
@@ -614,16 +642,178 @@ export async function deleteAccount(req, res) {
 }
 
 /**
+ * POST /api/auth/telegram-login
+ * Đăng nhập / Đăng ký qua Telegram Login Widget / Telegram WebApp
+ * Xác thực cryptographic chữ ký hash với TELEGRAM_BOT_TOKEN
+ * 100% 0đ chi phí SMS, bảo mật cao chuẩn Telegram
+ */
+export async function telegramLogin(req, res) {
+  try {
+    const { id, first_name, last_name, username, photo_url, auth_date, hash } = req.body || {};
+
+    if (!id || !hash) {
+      return res.status(400).json({
+        success: false,
+        error: 'Thiếu thông tin xác thực Telegram (id và hash là bắt buộc).'
+      });
+    }
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const isDevOrTest = process.env.NODE_ENV !== 'production';
+
+    // Xử lý mock token trong môi trường Test / Development cục bộ
+    if (isDevOrTest && String(hash).startsWith('TEST_TELEGRAM_')) {
+      // Cho phép test dev nhanh
+    } else {
+      if (!botToken) {
+        return res.status(500).json({
+          success: false,
+          error: 'Hệ thống chưa cấu hình TELEGRAM_BOT_TOKEN.'
+        });
+      }
+
+      // Kiểm tra hạn của auth_date (trong vòng 24 giờ chống replay attack)
+      const now = Math.floor(Date.now() / 1000);
+      if (auth_date && Math.abs(now - Number(auth_date)) > 86400) {
+        return res.status(401).json({
+          success: false,
+          error: 'Phiên xác thực Telegram đã hết hạn (quá 24 giờ). Vui lòng đăng nhập lại.'
+        });
+      }
+
+      // Chuẩn thuật toán xác thực Telegram Widget:
+      // 1. Tạo data_check_string từ tất cả keys ngoại trừ 'hash', sắp xếp theo a-z
+      const dataKeys = Object.keys(req.body)
+        .filter((k) => k !== 'hash' && req.body[k] !== undefined && req.body[k] !== null && req.body[k] !== '')
+        .sort();
+
+      const dataCheckString = dataKeys.map((k) => `${k}=${req.body[k]}`).join('\n');
+
+      // 2. secret_key = SHA256(botToken)
+      const secretKey = crypto.createHash('sha256').update(botToken).digest();
+
+      // 3. computedHash = HMAC-SHA256(dataCheckString, secretKey)
+      const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+      // 4. So sánh an toàn thời gian timingSafeEqual
+      const hashBuf = Buffer.from(String(hash), 'hex');
+      const compBuf = Buffer.from(computedHash, 'hex');
+
+      if (hashBuf.length !== compBuf.length || !crypto.timingSafeEqual(hashBuf, compBuf)) {
+        return res.status(401).json({
+          success: false,
+          error: 'Chữ ký xác thực Telegram không hợp lệ hoặc bị can thiệp.'
+        });
+      }
+    }
+
+    const cleanPhone = req.body.phone ? String(req.body.phone).trim().replace(/\D/g, '') : '';
+    const formattedPhone =
+      cleanPhone.startsWith('84') && cleanPhone.length === 11
+        ? '0' + cleanPhone.slice(2)
+        : cleanPhone.length === 9 && !cleanPhone.startsWith('0')
+          ? '0' + cleanPhone
+          : cleanPhone;
+
+    const userId = 'USR-TG-' + id;
+    let user =
+      (formattedPhone ? getUserByPhone(formattedPhone) : null) ||
+      getUserById(userId) ||
+      getUserByTelegramId(String(id));
+    let isNewUser = false;
+
+    const displayName =
+      [first_name, last_name].filter(Boolean).join(' ') ||
+      (username
+        ? `@${username}`
+        : formattedPhone
+          ? `Thành viên ${formattedPhone.slice(0, 4)}***`
+          : `Thành viên Telegram #${id}`);
+
+    if (!user) {
+      isNewUser = true;
+      user = {
+        id: userId,
+        telegramId: String(id),
+        username: username || '',
+        name: displayName,
+        avatar: photo_url || '',
+        phone: formattedPhone || '',
+        role: 'passenger', // Mặc định người dùng tham gia nền tảng là hành khách
+        trustScore: 98,
+        safeTripsCount: 0,
+        provider: 'telegram'
+      };
+      await saveUser(user);
+    } else {
+      // Cập nhật thông tin mới nhất nếu có
+      let changed = false;
+      if (!user.telegramId || user.telegramId !== String(id)) {
+        user.telegramId = String(id);
+        changed = true;
+      }
+      if (formattedPhone && !user.phone) {
+        user.phone = formattedPhone;
+        changed = true;
+      }
+      if (displayName && (!user.name || user.name.startsWith('Thành viên') || user.name.startsWith('Google User'))) {
+        user.name = displayName;
+        changed = true;
+      }
+      if (photo_url && !user.avatar) {
+        user.avatar = photo_url;
+        changed = true;
+      }
+      if (username && user.username !== username) {
+        user.username = username;
+        changed = true;
+      }
+      if (changed) {
+        await saveUser(user);
+      }
+    }
+
+    const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
+    const tripIds = myTrips.map((t) => t.id);
+
+    const jwtToken = generateToken({
+      userId: user.id,
+      phone: user.phone || '',
+      telegramId: user.telegramId || '',
+      role: user.role || 'passenger',
+      name: user.name
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: isNewUser ? 'Kích hoạt tài khoản Telegram mới thành công' : 'Đăng nhập Telegram thành công',
+      user,
+      token: jwtToken,
+      tripIds,
+      isNewUser
+    });
+  } catch (err) {
+    console.error('[Telegram Auth Error]:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
  * GET /api/auth/config
- * Cung cấp cấu hình công khai cho Frontend (Google Client ID)
+ * Cung cấp cấu hình công khai cho Frontend (Google Client ID & Telegram Bot)
  * Cho phép Fly.io cập nhật Client ID tại runtime qua fly secrets mà không cần build lại Frontend
  */
 export function getAuthConfigHandler(req, res) {
   const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || '';
+  const telegramBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'carmate_alert_bot';
+  const hasTelegramAuth = Boolean(process.env.TELEGRAM_BOT_TOKEN);
   return res.status(200).json({
     success: true,
     data: {
-      googleClientId
+      googleClientId,
+      telegramBotUsername,
+      hasTelegramAuth
     }
   });
 }
+

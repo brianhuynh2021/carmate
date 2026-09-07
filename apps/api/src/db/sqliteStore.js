@@ -853,6 +853,38 @@ export function getUserByEmail(email) {
   }
 }
 
+export function getUserByTelegramId(telegramId) {
+  const database = getRawDB();
+  if (!telegramId) return null;
+  const cleanId = String(telegramId).trim();
+  const row =
+    database.prepare('SELECT payload FROM users WHERE id = ?').get(`USR-TG-${cleanId}`) ||
+    database.prepare('SELECT payload FROM users WHERE payload LIKE ?').get(`%"telegramId":"${cleanId}"%`);
+  if (!row) return null;
+
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
+export function getUserByGoogleId(googleId) {
+  const database = getRawDB();
+  if (!googleId) return null;
+  const cleanId = String(googleId).trim();
+  const row =
+    database.prepare('SELECT payload FROM users WHERE id = ?').get(`USR-GG-${cleanId}`) ||
+    database.prepare('SELECT payload FROM users WHERE payload LIKE ?').get(`%"googleId":"${cleanId}"%`);
+  if (!row) return null;
+
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
 export async function saveUser(user) {
   const database = getRawDB();
   const clean = cleanPhoneNumber(user.phone);

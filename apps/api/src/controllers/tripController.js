@@ -155,7 +155,7 @@ export async function createTrip(req, res) {
 
     // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
     sendBusinessAlert({
-      title: newTrip.type === 'driver_offer' ? '🚗 Chủ xe đăng chuyến mới' : '🙋‍♂️ Hành khách tìm xe mới',
+      title: newTrip.type === 'driver_offer' ? '🚗 Chủ xe đăng chuyến mới' : '🙋‍♂️ Người đi cùng tìm xe mới',
       details: {
         'Mã chuyến': newTrip.id,
         'Lộ trình': `${newTrip.from} ➔ ${newTrip.to}`,
@@ -166,7 +166,8 @@ export async function createTrip(req, res) {
           : newTrip.expectedPrice
             ? `${newTrip.expectedPrice.toLocaleString('vi-VN')} đ`
             : 'Thỏa thuận'
-      }
+      },
+      req
     }).catch(() => {});
 
     return res.status(201).json({

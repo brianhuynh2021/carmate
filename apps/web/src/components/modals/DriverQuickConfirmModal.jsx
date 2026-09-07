@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Car, MapPin, ArrowRight, ShieldCheck, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, Car, MapPin, ArrowRight, ShieldCheck, Sparkles, AlertCircle, Loader2, User } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -160,8 +160,8 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs">
-                  {passengerName.charAt(0).toUpperCase()}
+                <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center">
+                  <User className="w-4 h-4" strokeWidth={2.2} />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-900">{passengerName}</p>

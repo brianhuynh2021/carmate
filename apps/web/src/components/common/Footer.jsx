@@ -1,4 +1,5 @@
 import React from 'react';
+import { MessageCircle } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
@@ -18,16 +19,78 @@ export default function Footer({ onNavigate, onOpenTerms }) {
   const year = new Date().getFullYear();
 
   const footerLinks = [
-    { key: 'market', label: 'Khám phá chuyến' },
-    { key: 'post', label: 'Đăng chuyến' },
-    { key: 'benchmark', label: 'Bảng giá tuyến' },
-    { key: 'terms', label: 'Quy chế & Điều khoản', isTerms: true },
-    { key: 'help_zalo', label: 'Hỗ trợ Zalo' },
-    { key: 'help_telegram', label: 'Hỗ trợ Telegram' }
+    { key: 'market', label: lang === 'en' ? 'Explore Trips' : 'Khám phá chuyến' },
+    { key: 'post', label: lang === 'en' ? 'Post Trip' : 'Đăng chuyến' },
+    { key: 'benchmark', label: lang === 'en' ? 'Route Pricing' : 'Bảng giá tuyến' },
+    { key: 'terms', label: lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản', isTerms: true },
+    { key: 'help_zalo', label: lang === 'en' ? 'Zalo Support' : 'Hỗ trợ Zalo' },
+    { key: 'help_telegram', label: lang === 'en' ? 'Telegram Support' : 'Hỗ trợ Telegram' }
   ];
 
   return (
-    <footer className="mt-20 border-t border-black/[0.06] bg-[#f5f5f7] pb-24 md:pb-8 transition-colors">
+    <>
+      {/* ── MOBILE NATIVE SUPPORT CARD (md:hidden) ── */}
+      {/* Thiết kế công thái học Stanford & Liquid Apple: Gọn nhẹ, tải nhận thức = 0, danh xưng 'Hỗ trợ bạn' chuẩn mực cộng đồng */}
+      <section className="md:hidden mt-8 px-4 pb-28 pt-2">
+        <div className="rounded-3xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] p-5 shadow-xs text-center space-y-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-xs font-semibold">
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>{lang === 'en' ? 'Support' : 'Hỗ trợ bạn'}</span>
+            </div>
+            <h3 className="text-sm font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+              {lang === 'en' ? 'Need help with your trip?' : 'Bạn cần hỗ trợ về chuyến đi?'}
+            </h3>
+            <p className="text-xs text-[#86868b] leading-relaxed max-w-xs mx-auto">
+              {lang === 'en'
+                ? 'CarMate is always ready to assist drivers and passengers directly.'
+                : 'CarMate luôn sẵn sàng đồng hành cùng bạn và chủ xe qua kênh trao đổi trực tiếp.'}
+            </p>
+          </div>
+
+          {/* Nút hỗ trợ trực tiếp 1-chạm (Zalo & Telegram) */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <a
+              href={SITE_INFO.zaloOA}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-10 px-3 rounded-2xl bg-[#0068ff]/10 hover:bg-[#0068ff]/15 active:scale-[0.98] border border-[#0068ff]/20 text-[#0068ff] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+            >
+              <ZaloIcon className="w-4 h-4" />
+              <span>{lang === 'en' ? 'Zalo Support' : 'Hỗ trợ Zalo'}</span>
+            </a>
+
+            <a
+              href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-10 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+            >
+              <TelegramIcon className="w-4 h-4" />
+              <span>{lang === 'en' ? 'Telegram Support' : 'Hỗ trợ Telegram'}</span>
+            </a>
+          </div>
+
+          {/* Quy chế, Ngôn ngữ & Bản quyền */}
+          <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[11px] text-[#86868b]">
+            <button
+              type="button"
+              onClick={onOpenTerms}
+              className="hover:text-[#0071e3] transition-colors cursor-pointer"
+            >
+              {lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản'}
+            </button>
+            <div className="flex items-center gap-1.5">
+              <span>© CarMate</span>
+              <span>·</span>
+              <LanguageToggle size="sm" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── DESKTOP FOOTER (hidden md:block) ── */}
+      <footer className="hidden md:block mt-20 border-t border-black/[0.06] bg-[#f5f5f7] pb-8 transition-colors">
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         {/* ── TẦNG 1: TRẠNG THÁI & LIÊN HỆ TRỰC TIẾP ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-black/[0.06]">
@@ -35,14 +98,16 @@ export default function Footer({ onNavigate, onOpenTerms }) {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <LogoMark className="w-6 h-6" />
-              <span className="font-display font-black text-sm tracking-tight text-[#1d1d1f]">
-                Car<span className="text-[#0071e3]">Mate</span>
+              <span className="font-display font-black text-sm tracking-tight text-[#1d1d1f] dark:text-white">
+                Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
               </span>
             </div>
             <span className="text-black/[0.15]">·</span>
             <div className="flex items-center gap-2 text-xs text-[#515154]">
               <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0" />
-              <span className="text-[12px] font-medium text-[#515154]">Tiện chuyến cùng đường · 0đ Phí trung gian</span>
+              <span className="text-[12px] font-medium text-[#515154]">
+                {lang === 'en' ? 'Direct rideshare · 0% fee' : 'Tiện chuyến cùng đường · 0đ Phí trung gian'}
+              </span>
             </div>
           </div>
 
@@ -56,7 +121,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#0068ff]/50 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <ZaloIcon className="w-3.5 h-3.5 text-[#0068ff]" />
-              <span>Hỗ Trợ Zalo</span>
+              <span>{lang === 'en' ? 'Zalo Support' : 'Hỗ Trợ Zalo'}</span>
             </a>
 
             {/* Telegram Support */}
@@ -67,7 +132,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#229ED9]/50 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <TelegramIcon className="w-3.5 h-3.5 text-[#229ED9]" />
-              <span>Hỗ Trợ Telegram</span>
+              <span>{lang === 'en' ? 'Telegram Support' : 'Hỗ Trợ Telegram'}</span>
             </a>
 
             {/* Facebook Fanpage */}
@@ -122,7 +187,10 @@ export default function Footer({ onNavigate, onOpenTerms }) {
         {/* ── TẦNG 3: LEGAL & COPYRIGHT ── */}
         <div className="pt-2 border-t border-black/[0.04] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11.5px] text-[#86868b]">
           <p className="leading-relaxed">
-            {SITE_INFO.legalName[lang]} · Nền tảng chia sẻ chi phí nhiên liệu tự nguyện, 0% chiết khấu.
+            {SITE_INFO.legalName[lang]} ·{' '}
+            {lang === 'en'
+              ? 'Voluntary fuel cost-sharing platform, 0% platform fee.'
+              : 'Nền tảng chia sẻ chi phí nhiên liệu tự nguyện, 0% chiết khấu.'}
           </p>
           <div className="flex items-center gap-3 shrink-0">
             <span>© {year} CarMate.vn</span>
@@ -130,5 +198,6 @@ export default function Footer({ onNavigate, onOpenTerms }) {
         </div>
       </div>
     </footer>
+  </>
   );
 }

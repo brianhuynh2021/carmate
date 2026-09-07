@@ -1001,7 +1001,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     </span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Bảo vệ tính trung thực: Xử lý 1-chạm đổi loại xe sang Biển vàng hoặc khóa tài khoản vi phạm
+                    Bảo vệ tính trung thực: Xử lý đổi loại xe sang Biển vàng hoặc khóa tài khoản vi phạm
                   </p>
                 </div>
               </div>
@@ -1087,7 +1087,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                                   handleConvertCarCategory(report.tripId, report.bookingId, 'convenient_trip')
                                 }
                                 className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5"
-                                title="1-chạm đổi loại xe thành Biển vàng"
+                                title="Đổi loại xe thành Biển vàng"
                               >
                                 <span>⚡ Chuyển thành Biển vàng</span>
                               </button>
@@ -1415,7 +1415,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <p className="text-2xl sm:text-3xl font-mono font-black text-teal-600 dark:text-teal-400 tabular-nums">
                 {analyticsSummary?.funnel?.driver_confirm || 0}
               </p>
-              <p className="text-[10.5px] text-slate-400">Xác nhận 1-chạm Magic Link</p>
+              <p className="text-[10.5px] text-slate-400">Xác nhận qua Magic Link</p>
             </div>
           </div>
 

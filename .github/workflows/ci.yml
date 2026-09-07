@@ -17,6 +17,8 @@ jobs:
       PORT: 5173
       JWT_SECRET: ci_test_jwt_secret_must_be_long_enough_32_chars_ok
       CARMATE_ADMIN_PASSCODE: ci_admin_secure_passcode_2026_x9
+      TELEGRAM_BOT_TOKEN: mock_telegram_bot_token_ci_test
+      TELEGRAM_LOG_CHAT_ID: mock_chat_123
 
     steps:
       - name: Checkout repository

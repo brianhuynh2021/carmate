@@ -448,7 +448,7 @@ export function generateSmartZaloDraft({
   const pickupText = pickupPoint ? `\n• Điểm hẹn đón: ${pickupPoint}` : '';
   const priceText = price ? `\n• Chi phí phụ xăng dự kiến: ${new Intl.NumberFormat('vi-VN').format(price)}đ/ghế` : '';
   const confirmLink = confirmUrl || (bookingCode ? `https://carmate.vn/#confirm-${bookingCode}` : '');
-  const confirmText = confirmLink ? `\n👉 Chủ xe xác nhận 1 chạm: ${confirmLink}` : '';
+  const confirmText = confirmLink ? `\n👉 Chủ xe xác nhận đón: ${confirmLink}` : '';
 
   if (isParcel) {
     return `Chào ${driverName}, em thấy xe mình chạy tuyến ${from} ➔ ${to} lúc ${timeSlot} (${date}).

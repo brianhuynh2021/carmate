@@ -263,7 +263,7 @@ export default function LocationSuggestInput({
               </span>
             ) : (
               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                {value.trim() ? `${displayedSuggestions.length} kết quả` : '1-chạm chọn nhanh'}
+                {value.trim() ? `${displayedSuggestions.length} kết quả` : 'Gợi ý chọn nhanh'}
               </span>
             )}
           </div>

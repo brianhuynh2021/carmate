@@ -59,6 +59,9 @@ export default {
     profile: 'Trust',
     policy: 'Policy',
     postCta: 'Post Trip',
+    aiAssistant: 'AI Assistant',
+    signIn: 'Sign in',
+    signInOrRegister: 'Sign in / Register',
     mobile: {
       market: 'Explore',
       match: 'Match',
@@ -69,11 +72,37 @@ export default {
     }
   },
 
+  userMenu: {
+    verifiedIdentity: 'Verified Identity',
+    adminBadge: 'Administrator',
+    profileGarage: 'My Profile & Garage',
+    noVehicle: 'No vehicle',
+    myTrips: 'My Rides',
+    adminPortal: 'Admin Portal',
+    safetyPolicy: 'Safety & Policies',
+    language: 'Language',
+    support: 'Support',
+    logout: 'Log out',
+    adminAccount: 'Admin Account',
+    protected: 'Protected',
+    deleteAccount: 'Delete Account Permanently'
+  },
+
+  postMenu: {
+    title: 'What is your ride need?',
+    driverTitle: 'Offer empty seats',
+    driverBadge: 'Driver',
+    driverDesc: 'Family vehicle with spare seats, sharing fuel & tolls',
+    passengerTitle: 'Request a ride',
+    passengerBadge: 'Passenger',
+    passengerDesc: 'Rideshare with empty seats, fair cost-sharing'
+  },
+
   hero: {
-    eyebrow: 'Direct Rideshare Network · Nationwide',
+    eyebrow: 'Direct family rideshare & convenient intercity empty-leg network · 0% fee',
     title: 'Intercity Ridesharing & Convenient Empty-Leg Matching',
     subtitle:
-      'Directly connect vehicle owners with empty seats to passengers on the same route — Fair fuel and highway toll sharing with zero intermediary interference.',
+      'Travel comfortably like family, fairly share fuel & tolls. Direct connection between vehicle owners with empty seats and fellow travelers — 0% platform fee.',
     findTripCta: 'Find a ride',
     postTripCta: 'Post empty seats (Family & Empty-leg)',
     stat_members: 'verified members',
@@ -240,6 +269,11 @@ export default {
   },
 
   profile: {
+    gender: 'Gender',
+    genderDesc: 'Specifying gender helps match with comfortable companions (+3 trust points)',
+    male: 'Male',
+    female: 'Female',
+    other: 'Other',
     passport: 'Trust passport',
     memberSince: 'Member since {date}',
     trustScore: 'Trust score',

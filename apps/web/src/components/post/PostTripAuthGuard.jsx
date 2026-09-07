@@ -28,7 +28,7 @@ export default function PostTripAuthGuard({ onOpenAuth, onBackToMarket }) {
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
             CarMate cam kết <strong className="text-slate-800 dark:text-slate-200">100% chuyến xe chính chủ</strong>.
-            Vui lòng đăng nhập bằng Số điện thoại hoặc Zalo để mở chuyến xe, quản lý khách ghép và bảo mật liên hệ.
+            Vui lòng đăng nhập tài khoản chính chủ để mở chuyến xe, quản lý khách ghép và bảo mật liên hệ.
           </p>
         </div>
 
@@ -37,10 +37,10 @@ export default function PostTripAuthGuard({ onOpenAuth, onBackToMarket }) {
           <div className="p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-[#252528] border border-black/[0.04] dark:border-white/[0.04]">
             <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 dark:text-white">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#0071e3]" />
-              <span>100% 0đ SMS</span>
+              <span>Xác Thực Nhanh</span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
-              Xác thực Zalo / Google 1 chạm không tốn phí viễn thông
+              Đăng nhập an toàn qua Google hoặc Telegram
             </p>
           </div>
 
@@ -73,7 +73,7 @@ export default function PostTripAuthGuard({ onOpenAuth, onBackToMarket }) {
             className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-sm transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-95 inline-flex items-center justify-center gap-2.5"
           >
             <LogIn className="w-4 h-4" />
-            <span>Đăng nhập bằng Zalo / Số điện thoại</span>
+            <span>Đăng nhập tài khoản</span>
           </button>
 
           {onBackToMarket && (
@@ -89,7 +89,7 @@ export default function PostTripAuthGuard({ onOpenAuth, onBackToMarket }) {
         </div>
 
         <p className="text-[11px] text-slate-400 dark:text-slate-500 pt-1">
-          💡 Đăng nhập 1 chạm trong 10 giây · Không cần mật khẩu rườm rà.
+          💡 Đăng nhập nhanh trong 10 giây · Không cần mật khẩu rườm rà.
         </p>
       </div>
     </div>

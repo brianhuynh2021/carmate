@@ -405,13 +405,20 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setActiveTab, setShowAiModal]);
 
-  // Guarded Action: Chặn khách chưa đăng nhập vào form tạo xe
-  const handleRequestPostTrip = () => {
+  const [postTripInitialRole, setPostTripInitialRole] = useState('driver');
+
+  // Guarded Action: Hỗ trợ linh hoạt 1-chạm cho cả Người tìm xe & Chủ xe
+  const handleRequestPostTrip = (targetRole = 'driver') => {
+    const validRole = targetRole === 'passenger' ? 'passenger' : 'driver';
+    setPostTripInitialRole(validRole);
     if (!currentUser) {
       openAuthWithContext({
-        title: 'Đăng Nhập Để Tạo Chuyến Xe',
-        subtitle: 'Xác thực tài khoản chính chủ để đăng bài & kết nối khách an toàn',
-        contextNotice: 'Đăng nhập chính chủ để tạo chuyến xe và quản lý khách ghép',
+        title: validRole === 'passenger' ? 'Đăng Nhập Để Tìm Xe Đi Ghép' : 'Đăng Nhập Để Đăng Chuyến Xe',
+        subtitle: 'Xác thực tài khoản chính chủ · 0 phí sàn · An toàn & minh bạch',
+        contextNotice:
+          validRole === 'passenger'
+            ? 'Đăng tin tìm xe để các Chủ xe chạy cùng tuyến liên hệ đón bạn tận nơi'
+            : 'Đăng chuyến xe nhà còn ghế để chia sẻ bớt chi phí xăng xe và cầu đường',
         pendingTab: 'post'
       });
       return;
@@ -457,7 +464,7 @@ export default function App() {
     }
     setAuthModalConfig({
       title: 'Đăng Nhập CarMate',
-      subtitle: 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
+      subtitle: 'Đồng bộ bài đăng · Tiết kiệm chi phí · An toàn & bảo mật',
       contextNotice: null,
       pendingTab: null
     });
@@ -482,6 +489,7 @@ export default function App() {
       api.logout();
     } catch {}
     setMyTripsCount(0);
+    setActiveTab('market');
     showToast('Đã đăng xuất tài khoản.');
   };
 
@@ -583,7 +591,7 @@ export default function App() {
               onPostClick={handleRequestPostTrip}
             />
 
-            <div className={`${container} py-5 sm:py-6 space-y-5 relative z-10`}>
+            <div className={`${container} py-3.5 sm:py-6 space-y-3.5 sm:space-y-5 relative z-10`}>
               <RouteBenchmarkBar
                 searchKeyword={searchKeyword}
                 setSearchKeyword={setSearchKeyword}
@@ -604,7 +612,7 @@ export default function App() {
                         icon: LayoutGrid
                       },
                       { value: 'drivers', label: `Chủ xe (${driverOffers.length})`, icon: Car },
-                      { value: 'passengers', label: `Khách (${passengerRequests.length})`, icon: Users }
+                      { value: 'passengers', label: `Người tìm xe (${passengerRequests.length})`, icon: Users }
                     ]}
                   />
                 </div>
@@ -785,7 +793,7 @@ export default function App() {
                     <EmptyState
                       icon={Car}
                       title="Sàn đang chờ chuyến đầu tiên"
-                      description="CarMate vừa mở tuyến. Hãy đăng chuyến của bạn để những người cùng đường ghép chung — hoàn toàn miễn phí, không thu phí sàn."
+                      description="CarMate vừa mở tuyến. Hãy đăng chuyến của bạn để những người cùng đường ghép chung — 0 phí sàn."
                       action={
                         <Button variant="primary" onClick={() => setActiveTab('post')}>
                           Đăng chuyến đầu tiên
@@ -884,6 +892,7 @@ export default function App() {
                 onSubmit={handlePostTrip}
                 currentUser={currentUser}
                 onOpenAuth={() => openAuthWithContext()}
+                initialRole={postTripInitialRole}
               />
             )}
           </div>

@@ -84,6 +84,30 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
+  // 2b. Minh bạch Giới tính
+  const hasGender = Boolean(user?.gender && ['male', 'female', 'other'].includes(user.gender));
+  const genderRule = applicableRules.find((r) => r.id === 'profile_gender');
+  if (genderRule) {
+    if (hasGender) {
+      rawScore += genderRule.points || 3;
+      earnedCriteria.push({
+        id: genderRule.id,
+        title: genderRule.title,
+        points: genderRule.points,
+        category: genderRule.category
+      });
+    } else {
+      pendingCriteria.push({
+        id: genderRule.id,
+        title: genderRule.title,
+        description: genderRule.description,
+        points: genderRule.points,
+        actionType: 'update_gender',
+        actionLabel: 'Cập nhật giới tính (+3đ)'
+      });
+    }
+  }
+
   // 3. CCCD / VNeID
   const cccdRule = applicableRules.find((r) => r.id === 'cccd_verified');
   if (cccdRule) {

@@ -69,17 +69,17 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
       {/* ── THANH CHỈ BÁO COMPACT TRÊN TRANG CHỦ (Apple Squircle & Cursor High-Definition Telemetry) ── */}
       <div
         onClick={() => setShowDetail(true)}
-        className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-slate-800 hover:border-[#0071e3]/60 shadow-[0_1px_3px_rgba(15,23,42,0.05),0_4px_12px_rgba(15,23,42,0.03)] hover:shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all cursor-pointer group active:scale-[0.99]"
+        className="flex items-center justify-between gap-2 sm:gap-3 px-3.5 sm:px-5 py-2 sm:py-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-slate-800 hover:border-[#0071e3]/60 shadow-[0_1px_3px_rgba(15,23,42,0.05),0_4px_12px_rgba(15,23,42,0.03)] hover:shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all cursor-pointer group active:scale-[0.99]"
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#0071e3] border border-blue-100 dark:border-blue-900/50 inline-flex items-center justify-center shrink-0">
-            <Fuel className="w-4 h-4" />
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#0071e3] border border-blue-100 dark:border-blue-900/50 inline-flex items-center justify-center shrink-0">
+            <Fuel className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </span>
-          <div className="min-w-0 flex items-center gap-2 flex-wrap">
+          <div className="min-w-0 flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <span className="text-xs sm:text-[13px] text-slate-900 dark:text-white font-bold truncate">
               {info.shortName}:
             </span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 font-bold text-xs font-mono border border-blue-200/80 dark:border-blue-800/60 whitespace-nowrap">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 font-bold text-[11px] sm:text-xs font-mono border border-blue-200/80 dark:border-blue-800/60 whitespace-nowrap">
               ~{formatVND(info.suggestedRate)}
               {t('common.perSeat')}
             </span>
@@ -97,10 +97,10 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
             e.stopPropagation();
             setShowDetail(true);
           }}
-          className="text-xs font-bold text-[#0071e3] group-hover:text-[#0077ed] px-3 py-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/30 inline-flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+          className="text-[11.5px] sm:text-xs font-bold text-[#0071e3] group-hover:text-[#0077ed] px-2 sm:px-3 py-1 sm:py-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/30 inline-flex items-center gap-0.5 sm:gap-1 shrink-0 cursor-pointer transition-colors"
         >
           <span>{t('benchmark.basis')}</span>
-          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
 
