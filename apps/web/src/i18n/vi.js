@@ -70,10 +70,10 @@ export default {
   },
 
   hero: {
-    eyebrow: 'Bảng tin kết nối chuyến đi trực tiếp toàn quốc',
-    title: 'Đi chung xe & Ghép xe tiện chuyến liên tỉnh',
+    eyebrow: 'Sáng kiến từ một Chủ xe đi về Sài Gòn mỗi tuần · 100% Không Phí Sàn',
+    title: 'Đi Chung Xe & Ghép Xe Tiện Tuyến Liên Tỉnh',
     subtitle:
-      'Kết nối trực tiếp xe còn ghế trống với hành khách cùng hành trình — Chia sẻ công bằng chi phí xăng xe và cầu đường, liên hệ thẳng không qua trung gian.',
+      'Tạm biệt nỗi ám ảnh chen chúc xe khách và nỗi xót xa khi xe gia đình trống trơn mỗi tuần lên về Sài Gòn. CarMate kết nối trực tiếp Chủ xe còn ghế trống với Bạn đồng hành cùng hướng — Thoải mái như xe nhà, chia sẻ công bằng tiền xăng & cầu đường, kết nối Zalo trực tiếp 0% phí sàn.',
     findTripCta: 'Tìm chuyến ngay',
     postTripCta: 'Đăng ghế trống (Xe nhà & Tiện chuyến)',
     stat_members: 'thành viên xác minh',

@@ -352,6 +352,54 @@ export default function Hero({
               </button>
             </div>
           </div>
+
+          {/* Visual Showcase Card: Ảnh chuyến xe gia đình ấm cúng thực tế */}
+          <div className="pt-3 max-w-4xl mx-auto w-full">
+            <div className="relative rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-black/[0.08] dark:border-white/[0.08] group">
+              <img
+                src="/images/hero_family_ride.jpg"
+                alt="Chuyến xe gia đình tiện chuyến CarMate trên cao tốc"
+                className="w-full h-48 sm:h-64 md:h-72 object-cover object-center group-hover:scale-[1.02] transition-transform duration-700"
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-between p-4 sm:p-6 text-white">
+                {/* Top Badges */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-xs font-semibold">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Không nhồi nhét · Không khói thuốc · Không say xe</span>
+                  </div>
+                  <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600/80 backdrop-blur-md text-xs font-semibold">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>100% Không thu phí sàn</span>
+                  </div>
+                </div>
+
+                {/* Bottom Story Link */}
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-left">
+                  <div className="space-y-1">
+                    <p className="text-base sm:text-lg font-bold tracking-tight">
+                      Mỗi chuyến xe là một hành trình văn minh & ấm áp
+                    </p>
+                    <p className="text-xs sm:text-sm text-white/80 max-w-lg leading-relaxed">
+                      Chủ xe chia sẻ bớt tiền xăng lăn bánh, Bạn đồng hành có chuyến đi êm ái như xe nhà.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById('founder-story-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="self-start sm:self-auto px-4 py-2 rounded-full bg-white/95 hover:bg-white text-[#1d1d1f] text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                  >
+                    <span>Xem tâm thư Founder</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

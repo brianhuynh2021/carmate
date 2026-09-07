@@ -70,10 +70,10 @@ export default {
   },
 
   hero: {
-    eyebrow: 'Direct Rideshare Network · Nationwide',
+    eyebrow: 'Founded by a car owner commuting weekly to Saigon · 0% Platform Fee',
     title: 'Intercity Ridesharing & Convenient Empty-Leg Matching',
     subtitle:
-      'Directly connect vehicle owners with empty seats to passengers on the same route — Fair fuel and highway toll sharing with zero intermediary interference.',
+      'Say goodbye to cramped commercial buses and empty family car seats. CarMate connects car owners with fellow travelers — Travel comfortably like family, fairly share fuel & tolls, direct connection with 0% commission.',
     findTripCta: 'Find a ride',
     postTripCta: 'Post empty seats (Family & Empty-leg)',
     stat_members: 'verified members',
