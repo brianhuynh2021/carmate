@@ -10,7 +10,11 @@ import {
   getAllUsers,
   updateUserStatus,
   getDB,
-  getAiIntelligenceStats
+  getAiIntelligenceStats,
+  getTripById,
+  updateTrip,
+  getBookingById,
+  updateBookingStatus
 } from '../db/sqliteStore.js';
 
 const JWT_SECRET = getJwtSecret();
@@ -440,18 +444,108 @@ export function getAdminReports(req, res) {
     const cancelled = bookings.filter((b) => b.status === 'cancelled');
     const reviewsWithFlags = bookings.filter((b) => Array.isArray(b.reviews) && b.reviews.some((r) => r.rating <= 2));
 
+    // Thu thập các báo cáo sai lệch xe biển vàng / biển trắng
+    const vehicleMismatchReports = bookings
+      .filter((b) => b.vehicleMismatchReport)
+      .map((b) => ({
+        ...b.vehicleMismatchReport,
+        bookingId: b.id || b.escrowId,
+        tripId: b.tripId,
+        from: b.from,
+        to: b.to,
+        timeSlot: b.timeSlot,
+        date: b.date
+      }));
+
     return res.status(200).json({
       success: true,
       data: {
         delayed,
         cancelled,
         reviewsWithFlags,
+        vehicleMismatchReports,
         summary: {
           totalDelays: delayed.length,
           totalCancellations: cancelled.length,
-          lowRatingFlags: reviewsWithFlags.length
+          lowRatingFlags: reviewsWithFlags.length,
+          totalVehicleMismatches: vehicleMismatchReports.length
         }
       }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * PATCH /api/admin/trips/:id/convert-car-category - 1-Chạm chuyển đổi loại xe (Biển vàng / Biển trắng)
+ */
+export async function convertTripCarCategoryHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { carCategory = 'convenient_trip', bookingId = null } = req.body || {};
+
+    const trip = getTripById(id);
+    if (!trip) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy thông tin chuyến xe' });
+    }
+
+    const updatedTrip = await updateTrip(id, {
+      carCategory,
+      carType: carCategory === 'convenient_trip' ? 'Xe tiện chuyến (Biển vàng)' : trip.carType
+    });
+
+    // Nếu có bookingId gắn kèm, cập nhật trạng thái của vehicleMismatchReport thành 'resolved_converted'
+    if (bookingId) {
+      const booking = getBookingById(bookingId);
+      if (booking && booking.vehicleMismatchReport) {
+        await updateBookingStatus(bookingId, booking.status || 'zalo_active', {
+          vehicleMismatchReport: {
+            ...booking.vehicleMismatchReport,
+            status: 'resolved_converted',
+            resolvedAt: new Date().toISOString(),
+            resolvedAction: `Đã chuyển sang ${carCategory === 'convenient_trip' ? 'Biển vàng' : 'Biển trắng'}`
+          }
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Đã chuyển loại xe sang ${carCategory === 'convenient_trip' ? 'Xe tiện chuyến (Biển vàng)' : 'Xe gia đình (Biển trắng)'} thành công!`,
+      data: updatedTrip
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * PATCH /api/admin/bookings/:id/resolve-mismatch - Xử lý hoặc bỏ qua báo cáo sai lệch xe
+ */
+export async function resolveMismatchReportHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { status = 'dismissed', note = '' } = req.body || {};
+
+    const booking = getBookingById(id);
+    if (!booking || !booking.vehicleMismatchReport) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy báo cáo sai lệch của chuyến xe này' });
+    }
+
+    const updated = await updateBookingStatus(id, booking.status || 'zalo_active', {
+      vehicleMismatchReport: {
+        ...booking.vehicleMismatchReport,
+        status,
+        resolvedAt: new Date().toISOString(),
+        adminNote: note
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã cập nhật trạng thái xử lý báo cáo sai lệch',
+      data: updated
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

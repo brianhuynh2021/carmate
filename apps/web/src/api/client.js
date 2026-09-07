@@ -149,6 +149,13 @@ export const api = {
     });
   },
 
+  async reportVehicleMismatch(id, data = {}) {
+    return request(`/bookings/${id}/report-vehicle-mismatch`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
   // Auth & Identity (0đ chi phí / Zalo & OTP)
   async requestOtp(phone) {
     return request('/auth/request-otp', {
@@ -261,6 +268,20 @@ export const api = {
 
   async getAdminReports() {
     return request('/admin/reports');
+  },
+
+  async adminConvertCarCategory(tripId, carCategory = 'convenient_trip', bookingId = null) {
+    return request(`/admin/trips/${tripId}/convert-car-category`, {
+      method: 'PATCH',
+      body: JSON.stringify({ carCategory, bookingId })
+    });
+  },
+
+  async adminResolveMismatch(bookingId, status = 'dismissed', note = '') {
+    return request(`/admin/bookings/${bookingId}/resolve-mismatch`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, note })
+    });
   },
 
   async getAdminAiIntelligence() {

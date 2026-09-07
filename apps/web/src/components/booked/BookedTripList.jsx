@@ -170,7 +170,15 @@ function TripProgressStepper({ status, delayedMinutes }) {
   );
 }
 
-export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, onComplete, onFindTrip, onReview }) {
+export default function BookedTripList({
+  bookedEscrows = [],
+  onCancel,
+  onDelay,
+  onComplete,
+  onFindTrip,
+  onReview,
+  onReportMismatch
+}) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
   const [copiedId, setCopiedId] = useState(null);
@@ -337,6 +345,23 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                 </div>
 
                 <div className="p-5 space-y-4">
+                  {/* Cảnh báo đã báo cáo sai lệch loại xe nếu có */}
+                  {record.vehicleMismatchReport && (
+                    <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-semibold min-w-0">
+                        <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span className="truncate">
+                          Đã báo cáo: {record.vehicleMismatchReport.mismatchTitle || 'Sai lệch loại xe'}
+                        </span>
+                      </div>
+                      <span className="shrink-0 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-200/80 dark:bg-rose-900/80 text-rose-900 dark:text-rose-100">
+                        {record.vehicleMismatchReport.status === 'resolved_converted'
+                          ? '✓ Đã chuyển Biển vàng'
+                          : 'Đang xử lý'}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Quy trình kết nối an toàn 4 bước */}
                   <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} />
 
@@ -492,13 +517,25 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
 
                   {/* Nút hành động trạng thái */}
                   {!isCompleted && !isCancelled && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button variant="warningGhost" size="sm" icon={Timer} onClick={() => onDelay(record)}>
                         Báo trễ
                       </Button>
                       <Button variant="dangerGhost" size="sm" icon={XCircle} onClick={() => onCancel(record)}>
                         Huỷ chuyến
                       </Button>
+                      {onReportMismatch && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={ShieldAlert}
+                          onClick={() => onReportMismatch(record)}
+                          className="text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
+                          title="Báo cáo xe đón thực tế là Biển vàng hoặc sai mô tả"
+                        >
+                          Báo sai loại xe
+                        </Button>
+                      )}
                       <button
                         type="button"
                         onClick={() => onComplete(record.escrowId, record)}
@@ -511,10 +548,23 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                   )}
 
                   {(isCompleted || isCancelled) && (
-                    <div className="flex items-center justify-between w-full text-xs text-slate-500 dark:text-slate-400">
-                      <span>
-                        {isCompleted ? '✓ Chuyến đi đã hoàn tất an toàn' : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
-                      </span>
+                    <div className="flex items-center justify-between w-full text-xs text-slate-500 dark:text-slate-400 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {isCompleted ? '✓ Chuyến đi đã hoàn tất an toàn' : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
+                        </span>
+                        {onReportMismatch && !record.vehicleMismatchReport && (
+                          <button
+                            type="button"
+                            onClick={() => onReportMismatch(record)}
+                            className="text-[11.5px] text-slate-400 hover:text-rose-600 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer ml-1"
+                            title="Báo cáo nếu xe đón không đúng cam kết"
+                          >
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                            <span>Báo sai xe</span>
+                          </button>
+                        )}
+                      </div>
                       {isCompleted && onReview && (
                         <button
                           type="button"

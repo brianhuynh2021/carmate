@@ -42,6 +42,7 @@ import CarPhotosModal from './components/modals/CarPhotosModal.jsx';
 import ZaloReentryModal from './components/modals/ZaloReentryModal.jsx';
 import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal.jsx';
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
+import VehicleMismatchModal from './components/modals/VehicleMismatchModal.jsx';
 
 // Custom Hooks
 import useZaloReentry from './hooks/useZaloReentry.js';
@@ -138,6 +139,8 @@ export default function App() {
     setTicketToShare,
     reviewRecord,
     setReviewRecord,
+    mismatchRecord,
+    setMismatchRecord,
     selectedTripForRoute,
     setSelectedTripForRoute,
     editingTrip,
@@ -222,7 +225,8 @@ export default function App() {
     handleConfirmedFromZaloReentry,
     handleSendDelay,
     handleCompleteTrip,
-    handleSubmitReview
+    handleSubmitReview,
+    handleVehicleMismatchReport
   } = useTripsData({
     currentUser,
     updateMyTripsCount,
@@ -781,6 +785,7 @@ export default function App() {
               onDelay={setDelayRecord}
               onComplete={handleCompleteTrip}
               onReview={setReviewRecord}
+              onReportMismatch={setMismatchRecord}
               onFindTrip={() => setActiveTab('market')}
             />
           </div>
@@ -857,6 +862,13 @@ export default function App() {
           booking={reviewRecord}
           onClose={() => setReviewRecord(null)}
           onSubmitReview={handleSubmitReview}
+        />
+      )}
+      {mismatchRecord && (
+        <VehicleMismatchModal
+          record={mismatchRecord}
+          onClose={() => setMismatchRecord(null)}
+          onSubmitReport={handleVehicleMismatchReport}
         />
       )}
       {selectedTripForRoute && (

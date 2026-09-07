@@ -8,7 +8,7 @@ import {
   removeBooking
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber } from '@carmate/shared';
-import { sendBusinessAlert } from '../utils/telegramAlert.js';
+import { sendBusinessAlert, sendTelegramMessage } from '../utils/telegramAlert.js';
 
 /**
  * GET /api/bookings - Lấy danh sách chuyến đi đã kết nối (Chuyến của tôi)
@@ -335,6 +335,106 @@ export async function driverConfirmBooking(req, res) {
       success: true,
       message: 'Bác tài đã xác nhận đón thành công! Hệ thống đã ghi nhận lịch hẹn.',
       data: updated
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/bookings/:id/report-vehicle-mismatch - Báo cáo xe đón thực tế không đúng cam kết (Biển vàng / Biển trắng)
+ */
+export async function reportVehicleMismatch(req, res) {
+  try {
+    const { id } = req.params;
+    const { mismatchType = 'yellow_plate', actualPlate = '', passengerNote = '' } = req.body || {};
+
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy thông tin chuyến xe để báo cáo'
+      });
+    }
+
+    const trip = booking.tripId ? getTripById(booking.tripId) : null;
+    const declaredCategory = trip?.carCategory || booking.carCategory || 'family_car';
+
+    const mismatchLabels = {
+      yellow_plate: 'Xe đón thực tế là Biển vàng (Dịch vụ kinh doanh)',
+      overcrowded: 'Xe nhồi nhét khách / Ghép xe trái phép',
+      different_car: 'Xe khác hoàn toàn mô tả / Đổi xe giữa đường',
+      other: 'Sai lệch loại xe khác'
+    };
+
+    const mismatchTitle = mismatchLabels[mismatchType] || mismatchType;
+    const reporterName = req.user?.name || booking.passengerName || booking.contactName || 'Hành khách CarMate';
+    const reporterPhone = req.user?.phone || booking.passengerPhone || booking.contactPhone || 'N/A';
+    const driverName = trip?.publicName || booking.driverName || 'Bác tài';
+    const driverPhone = trip?.phoneReal || trip?.phone || booking.driverPhone || booking.contactPhone || 'N/A';
+    const cleanActualPlate = String(actualPlate || '').trim().toUpperCase();
+    const cleanNote = String(passengerNote || '').trim();
+
+    const mismatchReport = {
+      id: `MISMATCH-${Date.now()}`,
+      bookingId: id,
+      tripId: booking.tripId || null,
+      reporterName,
+      reporterPhone,
+      driverName,
+      driverPhone,
+      declaredCategory,
+      mismatchType,
+      mismatchTitle,
+      actualPlate: cleanActualPlate,
+      passengerNote: cleanNote,
+      status: 'pending', // 'pending' | 'resolved_converted' | 'resolved_banned' | 'dismissed'
+      reportedAt: new Date().toISOString()
+    };
+
+    // Cập nhật safetyFlags trong booking
+    const existingFlags = Array.isArray(booking.safetyFlags) ? booking.safetyFlags : [];
+    const updatedFlags = [
+      ...existingFlags.filter((f) => f.reason !== 'vehicle_mismatch'),
+      {
+        targetRole: 'driver',
+        reason: 'vehicle_mismatch',
+        mismatchType,
+        severity: 'high',
+        flaggedAt: new Date().toISOString()
+      }
+    ];
+
+    const updated = await updateBookingStatus(id, booking.status || 'zalo_active', {
+      vehicleMismatchReport: mismatchReport,
+      safetyFlags: updatedFlags
+    });
+
+    // Bắn tin cảnh báo tức thời tới Telegram Founder
+    const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const declaredCatLabel =
+      declaredCategory === 'family_car' ? '🚗 Xe gia đình (Biển trắng)' : '⚡ Xe tiện chuyến (Biển vàng)';
+    const teleMsg =
+      `🚨 <b>[CARMATE CẢNH BÁO GIAN LẬN LOẠI XE]</b>\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `⚠️ <b>Hành khách vừa báo cáo xe đón không đúng mô tả!</b>\n` +
+      `⏰ <b>Thời gian:</b> ${timeStr}\n` +
+      `📋 <b>Mã đặt chuyến:</b> <code>${id}</code>\n` +
+      `🚗 <b>Tài xế:</b> ${driverName} (<code>${driverPhone}</code>)\n` +
+      `🏷️ <b>Loại xe đã đăng ký:</b> ${declaredCatLabel}\n` +
+      `⚡ <b>Vấn đề phản ánh:</b> <b>${mismatchTitle}</b>\n` +
+      (cleanActualPlate ? `🔢 <b>Biển số đón thực tế:</b> <code>${cleanActualPlate}</code>\n` : '') +
+      (cleanNote ? `📝 <b>Ghi chú của khách:</b> <i>&ldquo;${cleanNote}&rdquo;</i>\n` : '') +
+      `👤 <b>Người báo cáo:</b> ${reporterName} (<code>${reporterPhone}</code>)\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `👉 <b>Thao tác:</b> Đăng nhập Cổng Admin để bấm 1-chạm đổi sang Biển vàng hoặc khóa tài xế.`;
+
+    sendTelegramMessage(teleMsg, { parseMode: 'HTML' }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã tiếp nhận báo cáo sai lệch xe. Ban Quản Trị CarMate sẽ xử lý ngay lập tức để bảo vệ bạn!',
+      data: mismatchReport
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

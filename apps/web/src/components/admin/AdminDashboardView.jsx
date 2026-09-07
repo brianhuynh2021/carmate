@@ -234,6 +234,34 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
+  const handleConvertCarCategory = async (tripId, bookingId, targetCategory = 'convenient_trip') => {
+    try {
+      const res = await api.adminConvertCarCategory(tripId, targetCategory, bookingId);
+      if (res?.success) {
+        showNotice(res.message || 'Đã chuyển loại xe sang Biển vàng thành công');
+        loadAllAdminData();
+      } else {
+        alert(res?.error || 'Có lỗi khi chuyển loại xe');
+      }
+    } catch (err) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
+  const handleResolveMismatch = async (bookingId, status, note = '') => {
+    try {
+      const res = await api.adminResolveMismatch(bookingId, status, note);
+      if (res?.success) {
+        showNotice('Đã cập nhật trạng thái báo cáo');
+        loadAllAdminData();
+      } else {
+        alert(res?.error || 'Có lỗi khi cập nhật');
+      }
+    } catch (err) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
   // MÀN HÌNH ĐĂNG NHẬP ADMIN NẾU CHƯA XÁC THỰC
   if (!isAuthenticated) {
     return (
@@ -812,61 +840,192 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
       {/* ── TAB 3: BÁO CÁO & SỰ CỐ ── */}
       {activeTab === 'reports' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Lịch sử báo trễ */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm space-y-3">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span>Ghi nhận Báo trễ chuyến ({reports?.delayed?.length || 0})</span>
-            </h3>
-            {!reports?.delayed || reports.delayed.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Chưa có chuyến xe nào ghi nhận báo trễ.</p>
+        <div className="space-y-6">
+          {/* KHU VỰC ĐẶC BIỆT: BÁO CÁO SAI LỆCH LOẠI XE (BIỂN VÀNG / BIỂN TRẮNG) */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-rose-200/80 dark:border-rose-900/40 shadow-sm space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Báo Cáo Sai Lệch Loại Xe (Biển Vàng / Biển Trắng)</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+                      {reports?.vehicleMismatchReports?.length || 0} phản ánh
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Bảo vệ tính trung thực: Xử lý 1-chạm đổi loại xe sang Biển vàng hoặc khóa tài khoản vi phạm
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {!reports?.vehicleMismatchReports || reports.vehicleMismatchReports.length === 0 ? (
+              <div className="p-6 rounded-xl bg-slate-50/60 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 text-center">
+                <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
+                <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
+                  Tất cả các chuyến xe đều trung thực với loại biển số đã đăng ký!
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Không có phản ánh nào về xe biển vàng núp bóng xe gia đình.
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2">
-                {reports.delayed.map((item) => (
-                  <div
-                    key={item.escrowId}
-                    className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs"
-                  >
-                    <div className="flex items-center justify-between font-bold">
-                      <span className="font-mono text-primary-600">{item.escrowId}</span>
-                      <span className="text-amber-600 font-mono">Trễ ~{item.delayedMinutes || 15} phút</span>
+              <div className="space-y-3">
+                {reports.vehicleMismatchReports.map((report) => {
+                  const isResolved = report.status === 'resolved_converted' || report.status === 'dismissed';
+                  return (
+                    <div
+                      key={report.id || report.bookingId}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        isResolved
+                          ? 'bg-slate-50/60 dark:bg-white/[0.02] border-slate-200 dark:border-white/5 opacity-75'
+                          : 'bg-rose-50/30 dark:bg-rose-950/10 border-rose-200 dark:border-rose-900/50 shadow-2xs'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="space-y-1.5 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap text-xs">
+                            <span className="font-mono font-bold text-slate-900 dark:text-white">
+                              {report.bookingId}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+                              {report.mismatchTitle}
+                            </span>
+                            {report.actualPlate && (
+                              <span className="font-mono font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300/60 text-[10.5px]">
+                                Biển thực tế: {report.actualPlate}
+                              </span>
+                            )}
+                            <span className="text-[10.5px] text-slate-400">
+                              {report.reportedAt ? new Date(report.reportedAt).toLocaleString('vi-VN') : ''}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                            <div>
+                              <span className="text-slate-400">Tài xế: </span>
+                              <span className="font-bold text-slate-800 dark:text-slate-200">
+                                {report.driverName}
+                              </span>
+                              <span className="font-mono text-slate-500 ml-1">({report.driverPhone})</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400">Người báo: </span>
+                              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                {report.reporterName}
+                              </span>
+                              <span className="font-mono text-slate-500 ml-1">({report.reporterPhone})</span>
+                            </div>
+                          </div>
+
+                          {report.passengerNote && (
+                            <p className="text-xs text-rose-900 dark:text-rose-200 italic p-2 rounded-xl bg-rose-100/60 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/40 mt-1">
+                              &ldquo;{report.passengerNote}&rdquo;
+                            </p>
+                          )}
+
+                          {report.resolvedAction && (
+                            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium pt-0.5">
+                              ✓ {report.resolvedAction} ({new Date(report.resolvedAt).toLocaleTimeString('vi-VN')})
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Thao tác 1-chạm */}
+                        <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0 pt-1 sm:pt-0">
+                          {!isResolved ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleConvertCarCategory(report.tripId, report.bookingId, 'convenient_trip')
+                                }
+                                className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                                title="1-chạm đổi loại xe thành Biển vàng"
+                              >
+                                <span>⚡ Chuyển thành Biển vàng</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleResolveMismatch(report.bookingId, 'dismissed', 'Bỏ qua')}
+                                className="px-2.5 py-1 rounded-full text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                              >
+                                Bỏ qua
+                              </button>
+                            </>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                              ✓ Đã xử lý
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-300 mt-1">
-                      Lý do: &ldquo;{item.delayNote || 'Kẹt xe dọc tuyến'}&rdquo;
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* Lịch sử huỷ chuyến văn minh */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm space-y-3">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-500" />
-              <span>Ghi nhận Huỷ chuyến ({reports?.cancelled?.length || 0})</span>
-            </h3>
-            {!reports?.cancelled || reports.cancelled.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Chưa có chuyến xe nào bị huỷ.</p>
-            ) : (
-              <div className="space-y-2">
-                {reports.cancelled.map((item) => (
-                  <div
-                    key={item.escrowId}
-                    className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs"
-                  >
-                    <div className="flex items-center justify-between font-bold">
-                      <span className="font-mono text-primary-600">{item.escrowId}</span>
-                      <span className="text-rose-600">Đã huỷ</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Lịch sử báo trễ */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm space-y-3">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <span>Ghi nhận Báo trễ chuyến ({reports?.delayed?.length || 0})</span>
+              </h3>
+              {!reports?.delayed || reports.delayed.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">Chưa có chuyến xe nào ghi nhận báo trễ.</p>
+              ) : (
+                <div className="space-y-2">
+                  {reports.delayed.map((item) => (
+                    <div
+                      key={item.escrowId}
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs"
+                    >
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="font-mono text-primary-600">{item.escrowId}</span>
+                        <span className="text-amber-600 font-mono">Trễ ~{item.delayedMinutes || 15} phút</span>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-300 mt-1">
+                        Lý do: &ldquo;{item.delayNote || 'Kẹt xe dọc tuyến'}&rdquo;
+                      </p>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-300 mt-1">
-                      Lý do: &ldquo;{item.cancelReason || 'Thay đổi kế hoạch gia đình'}&rdquo;
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Lịch sử huỷ chuyến văn minh */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm space-y-3">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                <span>Ghi nhận Huỷ chuyến ({reports?.cancelled?.length || 0})</span>
+              </h3>
+              {!reports?.cancelled || reports.cancelled.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">Chưa có chuyến xe nào bị huỷ.</p>
+              ) : (
+                <div className="space-y-2">
+                  {reports.cancelled.map((item) => (
+                    <div
+                      key={item.escrowId}
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs"
+                    >
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="font-mono text-primary-600">{item.escrowId}</span>
+                        <span className="text-rose-600">Đã huỷ</span>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-300 mt-1">
+                        Lý do: &ldquo;{item.cancelReason || 'Thay đổi kế hoạch gia đình'}&rdquo;
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

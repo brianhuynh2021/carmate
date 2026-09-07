@@ -13,6 +13,7 @@ export default function useAppModals() {
   const [delayRecord, setDelayRecord] = useState(null);
   const [ticketToShare, setTicketToShare] = useState(null);
   const [reviewRecord, setReviewRecord] = useState(null);
+  const [mismatchRecord, setMismatchRecord] = useState(null);
   const [selectedTripForRoute, setSelectedTripForRoute] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -51,6 +52,7 @@ export default function useAppModals() {
     setDelayRecord(null);
     setTicketToShare(null);
     setReviewRecord(null);
+    setMismatchRecord(null);
     setSelectedTripForRoute(null);
     setEditingTrip(null);
     setShowAuthModal(false);
@@ -77,6 +79,8 @@ export default function useAppModals() {
     setTicketToShare,
     reviewRecord,
     setReviewRecord,
+    mismatchRecord,
+    setMismatchRecord,
     selectedTripForRoute,
     setSelectedTripForRoute,
     editingTrip,

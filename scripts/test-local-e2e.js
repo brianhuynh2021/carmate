@@ -1851,6 +1851,117 @@ async function runTests() {
     assert(false, '27. Kiểm thử Xác Thực 2 Lớp (MFA Telegram Bot)', err.message);
   }
 
+  // 28. Kiểm thử Báo cáo Sai lệch Loại xe (Biển vàng / Biển trắng) & Xử lý 1-Chạm Admin
+  console.log('\n--- 28. Kiểm thử Báo cáo Sai lệch Loại xe (Biển vàng / Biển trắng) & Xử lý 1-Chạm Admin ---');
+  try {
+    // 28.1 Tạo chuyến xe gia đình biển trắng (family_car)
+    const tripPayload = {
+      type: 'driver_offer',
+      from: 'Bình Long, Bình Phước',
+      to: 'Bến xe Miền Đông, TP.HCM',
+      departureTime: '07:00 ngày mai',
+      date: 'Ngày mai',
+      timeSlot: '07:00-08:00',
+      carCategory: 'family_car',
+      carType: 'Toyota Vios (Xe 4 chỗ)',
+      availableSeats: 3,
+      basePricePerSeat: 160000,
+      phoneReal: '0988112233',
+      name: 'Bác tài Vios Gia Đình'
+    };
+
+    const createTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tripPayload)
+    });
+    const createTripData = await createTripRes.json();
+    assert(createTripRes.status === 201 && createTripData.success === true, 'Mismatch 1: Tạo chuyến xe gia đình (family_car) thành công (HTTP 201)');
+    const testTripId = createTripData.data.id;
+    assert(createTripData.data.carCategory === 'family_car', 'Mismatch 2: Chuyến xe có carCategory ban đầu là family_car');
+
+    // 28.2 Hành khách đặt chuyến xe này
+    const bookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tripId: testTripId,
+        from: 'Bình Long',
+        to: 'Sài Gòn',
+        timeSlot: '07:00-08:00',
+        date: 'Ngày mai',
+        seats: 1,
+        totalDeal: 160000,
+        contactName: 'Chị Lan Hành Khách',
+        contactPhone: '0912345678'
+      })
+    });
+    const bookingData = await bookingRes.json();
+    assert(bookingRes.status === 201 && bookingData.success === true, 'Mismatch 3: Đặt chuyến xe thành công (HTTP 201)');
+    const testBookingId = bookingData.data.escrowId || bookingData.data.id;
+
+    // 28.3 Hành khách phát hiện xe đón thực tế là Biển vàng và gửi báo cáo
+    const reportRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mismatchType: 'yellow_plate',
+        actualPlate: '51G-998.88',
+        passengerNote: 'Xe đón thực tế là Innova biển vàng dịch vụ, có gắn mào taxi và ghép thêm khách lạ dọc đường'
+      })
+    });
+    const reportData = await reportRes.json();
+    assert(reportRes.status === 200 && reportData.success === true, 'Mismatch 4: Gửi báo cáo sai lệch loại xe thành công (HTTP 200)');
+    assert(reportData.data.status === 'pending', 'Mismatch 5: Báo cáo có trạng thái pending');
+    assert(reportData.data.actualPlate === '51G-998.88', 'Mismatch 6: Ghi nhận chính xác biển số xe thực tế đón');
+
+    // 28.4 Admin đăng nhập và kiểm tra danh sách báo cáo
+    const adminReportsRes = await fetch(`${BASE_URL}/api/admin/reports`, {
+      headers: {
+        'x-admin-key': adminToken
+      }
+    });
+    const adminReportsData = await adminReportsRes.json();
+    assert(adminReportsRes.status === 200 && adminReportsData.success === true, 'Mismatch 7: Admin lấy danh sách báo cáo sự cố thành công');
+    const foundReport = (adminReportsData.data.vehicleMismatchReports || []).find((r) => r.bookingId === testBookingId);
+    assert(Boolean(foundReport), 'Mismatch 8: Báo cáo sai lệch xe xuất hiện trong danh sách Admin reports');
+    assert(foundReport.mismatchType === 'yellow_plate', 'Mismatch 9: Báo cáo hiển thị đúng lý do xe biển vàng');
+
+    // 28.5 Admin xử lý 1-chạm: Chuyển chuyến xe thành Biển vàng (convenient_trip)
+    const convertRes = await fetch(`${BASE_URL}/api/admin/trips/${testTripId}/convert-car-category`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': adminToken
+      },
+      body: JSON.stringify({
+        carCategory: 'convenient_trip',
+        bookingId: testBookingId
+      })
+    });
+    const convertData = await convertRes.json();
+    assert(convertRes.status === 200 && convertData.success === true, 'Mismatch 10: Admin 1-chạm chuyển chuyến xe sang Biển vàng thành công');
+    assert(convertData.data.carCategory === 'convenient_trip', 'Mismatch 11: Chuyến xe đã đổi carCategory sang convenient_trip');
+
+    // 28.6 Kiểm tra trạng thái báo cáo đã được cập nhật thành resolved_converted
+    const checkReportsRes = await fetch(`${BASE_URL}/api/admin/reports`, {
+      headers: {
+        'x-admin-key': adminToken
+      }
+    });
+    const checkReportsData = await checkReportsRes.json();
+    const resolvedReport = (checkReportsData.data.vehicleMismatchReports || []).find((r) => r.bookingId === testBookingId);
+    assert(resolvedReport && resolvedReport.status === 'resolved_converted', 'Mismatch 12: Báo cáo được tự động đóng cờ và cập nhật resolved_converted');
+
+    // Dọn dẹp dữ liệu test
+    await fetch(`${BASE_URL}/api/admin/trips/${testTripId}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-key': adminToken }
+    }).catch(() => {});
+  } catch (err) {
+    assert(false, '28. Kiểm thử Báo cáo Sai lệch Loại xe & Xử lý 1-Chạm Admin', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

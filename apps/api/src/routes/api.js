@@ -17,7 +17,8 @@ import {
   completeBooking,
   submitReview,
   getBookingPublicSummary,
-  driverConfirmBooking
+  driverConfirmBooking,
+  reportVehicleMismatch
 } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile } from '../controllers/miscController.js';
 import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe, deleteAccount } from '../controllers/authController.js';
@@ -32,6 +33,8 @@ import {
   updateUserStatusHandler,
   getAdminReports,
   getAdminAiIntelligence,
+  convertTripCarCategoryHandler,
+  resolveMismatchReportHandler,
   requireAdmin
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
@@ -87,6 +90,7 @@ router.post('/bookings/:id/delay', optionalAuth, requireBookingParty, reportDela
 router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
 router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitReview);
+router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
 
 router.get('/escrows', optionalAuth, listBookings);
 router.post('/escrows', optionalAuth, createBooking);
@@ -96,6 +100,7 @@ router.post('/escrows/:id/delay', optionalAuth, requireBookingParty, reportDelay
 router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);
 router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitReview);
+router.post('/escrows/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
 
 // --- Admin Management Portal Engine ---
 router.post('/admin/auth', adminAuth);
@@ -103,10 +108,12 @@ router.get('/admin/metrics', requireAdmin, getMetrics);
 router.get('/admin/trips', requireAdmin, listAdminTrips);
 router.patch('/admin/trips/:id/toggle-hide', requireAdmin, toggleHideTripHandler);
 router.delete('/admin/trips/:id', requireAdmin, deleteTripAdminHandler);
+router.patch('/admin/trips/:id/convert-car-category', requireAdmin, convertTripCarCategoryHandler);
 router.get('/admin/users', requireAdmin, listAdminUsers);
 router.patch('/admin/users/:id', requireAdmin, updateUserStatusHandler);
 router.patch('/admin/users/:id/status', requireAdmin, updateUserStatusHandler);
 router.get('/admin/reports', requireAdmin, getAdminReports);
+router.patch('/admin/bookings/:id/resolve-mismatch', requireAdmin, resolveMismatchReportHandler);
 router.get('/admin/ai-intelligence', requireAdmin, getAdminAiIntelligence);
 
 export default router;

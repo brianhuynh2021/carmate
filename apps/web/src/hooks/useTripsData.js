@@ -373,6 +373,35 @@ export default function useTripsData({
     [showToast]
   );
 
+  const handleVehicleMismatchReport = useCallback(
+    async ({ bookingId, mismatchType, actualPlate, passengerNote }) => {
+      try {
+        const res = await api.reportVehicleMismatch(bookingId, { mismatchType, actualPlate, passengerNote });
+        if (res?.success) {
+          setBookedEscrows((prev) =>
+            prev.map((e) => {
+              if (e.escrowId === bookingId || e.id === bookingId) {
+                return {
+                  ...e,
+                  vehicleMismatchReport: res.data
+                };
+              }
+              return e;
+            })
+          );
+          showToast('✓ Đã gửi báo cáo sai lệch xe! Ban Quản Trị sẽ can thiệp ngay.');
+          return res.data;
+        } else {
+          showToast(res?.error || 'Có lỗi xảy ra khi gửi báo cáo');
+        }
+      } catch (err) {
+        console.warn('Vehicle mismatch report error:', err);
+        showToast('Lỗi mạng khi gửi báo cáo, vui lòng thử lại');
+      }
+    },
+    [showToast]
+  );
+
   return {
     driverOffers,
     setDriverOffers,
@@ -394,6 +423,7 @@ export default function useTripsData({
     handleConfirmedFromZaloReentry,
     handleSendDelay,
     handleCompleteTrip,
-    handleSubmitReview
+    handleSubmitReview,
+    handleVehicleMismatchReport
   };
 }
