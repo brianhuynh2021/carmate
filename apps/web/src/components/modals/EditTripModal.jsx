@@ -3,6 +3,7 @@ import {
   Edit3,
   Clock,
   Users,
+  Car,
   DollarSign,
   MapPin,
   FileText,
@@ -14,7 +15,7 @@ import {
   Check,
   CornerDownLeft
 } from 'lucide-react';
-import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot } from '@carmate/shared';
+import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot, VEHICLE_SEAT_CONFIGS } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
@@ -27,7 +28,15 @@ export default function EditTripModal({ trip, onClose, onSave }) {
   const [fromLocation, setFromLocation] = useState(trip?.from || '');
   const [toLocation, setToLocation] = useState(trip?.to || '');
   const [price, setPrice] = useState(trip?.basePricePerSeat || trip?.expectedPrice || 150000);
-  const [seats, setSeats] = useState(trip?.availableSeats || trip?.seatsNeeded || 3);
+  const [vehicleCapacity, setVehicleCapacity] = useState(() => {
+    if (trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4)) return 7;
+    return 5;
+  });
+  const [seats, setSeats] = useState(() => {
+    const raw = trip?.availableSeats || trip?.seatsNeeded || 3;
+    const max = (trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4)) ? 6 : 4;
+    return Math.min(raw, isDriver ? max : 6);
+  });
   const [date, setDate] = useState(trip?.date || 'Hôm nay');
   const [timeSlot, setTimeSlot] = useState(trip?.timeSlot || '07:00-09:00');
   const [exactTime, setExactTime] = useState(trip?.exactTime || '');
@@ -78,6 +87,7 @@ export default function EditTripModal({ trip, onClose, onSave }) {
       to: cleanTo,
       route: derivedRoute,
       routeCategory: derivedRoute,
+      capacity: isDriver ? vehicleCapacity : undefined,
       basePricePerSeat: isDriver ? Number(price) : undefined,
       expectedPrice: !isDriver ? Number(price) : undefined,
       availableSeats: isDriver ? Number(seats) : undefined,
@@ -110,10 +120,11 @@ export default function EditTripModal({ trip, onClose, onSave }) {
     };
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
-  }, [fromLocation, toLocation, price, seats, date, timeSlot, waypointNote, notes, saving]);
+  }, [fromLocation, toLocation, price, seats, vehicleCapacity, date, timeSlot, waypointNote, notes, saving]);
 
   const quickDates = ['Hôm nay', 'Ngày mai', 'Thứ 7', 'Chủ nhật'];
-  const seatOptions = [1, 2, 3, 4, 5, 6, 7];
+  const currentSeatConfig = VEHICLE_SEAT_CONFIGS[vehicleCapacity] || VEHICLE_SEAT_CONFIGS[5];
+  const seatOptions = isDriver ? currentSeatConfig.allowedSeats : [1, 2, 3, 4, 5, 6];
 
   if (!trip) return null;
 
@@ -249,6 +260,52 @@ export default function EditTripModal({ trip, onClose, onSave }) {
           </div>
         </div>
 
+        {/* ── 2.5. QUY MÔ DÒNG XE (CHO BÁC TÀI: 4-5 CHỖ VS 7 CHỖ) ── */}
+        {isDriver && (
+          <div className="space-y-2 p-3 rounded-2xl bg-[#f5f5f7] dark:bg-slate-900 border border-black/[0.04] dark:border-white/[0.06]">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                <Car className="w-3.5 h-3.5 text-[#0071e3]" />
+                <span>Quy mô dòng xe:</span>
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                {vehicleCapacity === 5 ? '🚗 Xe 4–5 chỗ (Tối đa 4 khách)' : '🚙 Xe 7 chỗ (Tối đa 6 khách)'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06]">
+              <button
+                type="button"
+                onClick={() => {
+                  setVehicleCapacity(5);
+                  if (seats > 4) setSeats(4);
+                }}
+                className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none ${
+                  vehicleCapacity === 5
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🚗 Xe 4–5 chỗ</span>
+                <span className="text-[10px] font-normal opacity-70 hidden sm:inline">(Sedan/CUV)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVehicleCapacity(7);
+                }}
+                className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none ${
+                  vehicleCapacity === 7
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🚙 Xe 7 chỗ</span>
+                <span className="text-[10px] font-normal opacity-70 hidden sm:inline">(MPV/SUV)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── 3. GIÁ VÉ & SỐ CHỖ (TACTILE PILLS & STEPPERS) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Giá chia sẻ */}
@@ -275,9 +332,16 @@ export default function EditTripModal({ trip, onClose, onSave }) {
 
           {/* Số ghế trống */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-primary-600" />
-              <span>{isDriver ? 'Số ghế trống nhận:' : 'Số người cần đi:'}</span>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-primary-600" />
+                <span>{isDriver ? 'Số ghế trống nhận khách:' : 'Số người cần đi:'}</span>
+              </span>
+              {isDriver && (
+                <span className="text-[10.5px] font-normal text-slate-400">
+                  (Đã trừ 1 ghế lái)
+                </span>
+              )}
             </label>
             <div className="flex items-center gap-1.5">
               {seatOptions.map((n) => (
@@ -287,7 +351,7 @@ export default function EditTripModal({ trip, onClose, onSave }) {
                   onClick={() => setSeats(n)}
                   className={`flex-1 h-10 rounded-xl text-xs font-bold tabular transition-all cursor-pointer shadow-2xs ${
                     seats === n
-                      ? 'bg-primary-600 text-white shadow-sm'
+                      ? 'bg-primary-600 text-white shadow-sm ring-2 ring-primary-500/20'
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-[#151c2e] dark:hover:bg-white/10 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08]'
                   }`}
                 >
@@ -295,7 +359,22 @@ export default function EditTripModal({ trip, onClose, onSave }) {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-slate-400">{isDriver ? `Còn trống ${seats} ghế` : `Cần ${seats} vé ghép`}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+              <span>
+                {isDriver
+                  ? seats === 3 && vehicleCapacity === 5
+                    ? '✨ Khuyên chọn: Hàng sau ngồi 3 người rất êm ái'
+                    : seats === 4 && vehicleCapacity === 5
+                      ? 'Đầy 4 ghế khách (ghế phụ + 3 ghế sau)'
+                      : `Còn trống ${seats} ghế nhận khách`
+                  : `Cần ${seats} vé ghép`}
+              </span>
+              {isDriver && (
+                <span className="text-slate-400 font-mono text-[10.5px]">
+                  {vehicleCapacity === 5 ? 'Tối đa 4' : 'Tối đa 6'}
+                </span>
+              )}
+            </p>
           </div>
         </div>
 

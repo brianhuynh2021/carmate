@@ -8,7 +8,7 @@ import {
   deleteTrip,
   getDB
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber } from '@carmate/shared';
+import { cleanPhoneNumber, sanitizeVehicleCapacityAndSeats } from '@carmate/shared';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
@@ -143,6 +143,14 @@ export async function createTrip(req, res) {
       body.expectedPrice = Number(body.suggestedContribution);
     }
 
+    // Chuẩn hóa tải trọng xe và số ghế khách hợp lệ (Kháng chở quá tải Nghị định 100/2019)
+    if (body.type === 'driver_offer' || body.availableSeats) {
+      const rawCapacity = body.capacity || body.vehicleSeats || (Number(body.availableSeats) > 4 ? 7 : 5);
+      const { capacity, seats } = sanitizeVehicleCapacityAndSeats(rawCapacity, body.availableSeats);
+      body.capacity = capacity;
+      body.availableSeats = seats;
+    }
+
     const newTrip = await addTrip(body);
 
     // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
@@ -200,7 +208,18 @@ export async function updateStatus(req, res) {
 export async function updateTripHandler(req, res) {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = req.body || {};
+
+    if (updates.capacity || updates.vehicleSeats || updates.availableSeats !== undefined) {
+      const existingTrip = getTripById(id);
+      const rawCap = updates.capacity || updates.vehicleSeats || existingTrip?.capacity || (Number(updates.availableSeats || existingTrip?.availableSeats) > 4 ? 7 : 5);
+      const rawSeats = updates.availableSeats !== undefined ? updates.availableSeats : existingTrip?.availableSeats;
+      const { capacity, seats } = sanitizeVehicleCapacityAndSeats(rawCap, rawSeats);
+      updates.capacity = capacity;
+      if (updates.availableSeats !== undefined) {
+        updates.availableSeats = seats;
+      }
+    }
 
     const updated = await updateTrip(id, updates);
     if (!updated) {

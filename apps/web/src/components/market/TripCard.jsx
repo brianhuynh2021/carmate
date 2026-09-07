@@ -17,7 +17,6 @@ import {
   getTimeSlotLabel,
   isGoogleMapsUrl,
   ROUTE_BENCHMARKS,
-  decodeHtmlEntities,
   formatTripDateDisplay,
   parseLocation,
   getCorridorDisplay
@@ -225,6 +224,11 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider backdrop-blur-md bg-white/15 border border-white/20 text-white shadow-2xs group-hover:bg-white/20 transition-colors">
             <Car className="w-3 h-3 text-white" strokeWidth={2.5} />
             <span>{isConvenient ? 'Xe tiện chuyến' : 'Xe gia đình'}</span>
+            {isDriver && (
+              <span className="text-white/90 font-bold">
+                · {item.capacity === 7 || item.availableSeats > 4 ? '7 chỗ' : '5 chỗ'}
+              </span>
+            )}
             {distanceKm && <span className="text-white/80 font-mono">· ~{distanceKm}km</span>}
           </span>
 

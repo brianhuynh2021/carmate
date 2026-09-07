@@ -15,7 +15,8 @@ import {
   Star,
   Sparkles,
   Lock,
-  Shield
+  Shield,
+  ShieldAlert
 } from 'lucide-react';
 import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';

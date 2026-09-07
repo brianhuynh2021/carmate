@@ -2027,6 +2027,159 @@ async function runTests() {
     assert(false, '29. Kiểm thử Đồng bộ URL Hash & Apple HIG Toolbar', err.message);
   }
 
+  // 30. KIỂM THỬ QUY MÔ DÒNG XE (4-5 CHỖ VS 7 CHỖ) & GIỚI HẠN GHẾ AN TOÀN (MIT INVARIANT & STANFORD AGENTIC)
+  console.log('\n--- 30. Kiểm thử Quy Mô Dòng Xe (4-5 Chỗ vs 7 Chỗ) & Giới Hạn Ghế An Toàn ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const { VEHICLE_SEAT_CONFIGS, sanitizeVehicleCapacityAndSeats } = await import('@carmate/shared');
+
+    // 30.1 Kiểm thử cấu hình quy chuẩn xe theo Nghị định 100/2019/NĐ-CP
+    assert(
+      VEHICLE_SEAT_CONFIGS[5] && VEHICLE_SEAT_CONFIGS[5].maxPassengerSeats === 4,
+      'Vehicle Config 1: Dòng xe 4-5 chỗ giới hạn tối đa 4 ghế khách (trừ 1 ghế lái)'
+    );
+    assert(
+      JSON.stringify(VEHICLE_SEAT_CONFIGS[5].allowedSeats) === JSON.stringify([1, 2, 3, 4]),
+      'Vehicle Config 2: Danh sách số ghế được phép chọn cho xe 5 chỗ là [1, 2, 3, 4]'
+    );
+    assert(
+      VEHICLE_SEAT_CONFIGS[7] && VEHICLE_SEAT_CONFIGS[7].maxPassengerSeats === 6,
+      'Vehicle Config 3: Dòng xe 7 chỗ giới hạn tối đa 6 ghế khách (trừ 1 ghế lái)'
+    );
+    assert(
+      JSON.stringify(VEHICLE_SEAT_CONFIGS[7].allowedSeats) === JSON.stringify([1, 2, 3, 4, 5, 6]),
+      'Vehicle Config 4: Danh sách số ghế được phép chọn cho xe 7 chỗ là [1, 2, 3, 4, 5, 6]'
+    );
+
+    // 30.2 Kiểm thử hàm sanitizeVehicleCapacityAndSeats
+    const sanitized5Over = sanitizeVehicleCapacityAndSeats(5, 6);
+    assert(
+      sanitized5Over.capacity === 5 && sanitized5Over.seats === 4,
+      'MIT Invariant 1: Xe 5 chỗ chọn quá tải (6 ghế) tự động kẹp an toàn về 4 ghế'
+    );
+
+    const sanitized7Over = sanitizeVehicleCapacityAndSeats(7, 8);
+    assert(
+      sanitized7Over.capacity === 7 && sanitized7Over.seats === 6,
+      'MIT Invariant 2: Xe 7 chỗ chọn quá tải (8 ghế) tự động kẹp an toàn về 6 ghế'
+    );
+
+    const sanitizedUnder = sanitizeVehicleCapacityAndSeats(5, 0);
+    assert(
+      sanitizedUnder.seats === 1,
+      'MIT Invariant 3: Chọn số ghế < 1 tự động đưa về mức sàn tối thiểu là 1 ghế'
+    );
+
+    const sanitizedDefault = sanitizeVehicleCapacityAndSeats(5, undefined);
+    assert(
+      sanitizedDefault.seats === 3,
+      'Stanford Ergonomics 1: Xe 5 chỗ không điền số ghế tự động nhận khuyến nghị 3 ghế êm ái'
+    );
+
+    // 30.3 Kiểm thử API POST /api/trips: Backend tự động kẹp chặt số ghế theo capacity
+    const createTripOverloadRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        type: 'driver_offer',
+        from: 'Sài Gòn',
+        to: 'Bù Đốp, Bình Phước',
+        phoneReal: '0984883750',
+        userId: 'USR-0984883750',
+        capacity: 5,
+        availableSeats: 6, // Cố tình gửi 6 ghế cho xe 5 chỗ
+        basePricePerSeat: 150000,
+        routeCategory: 'Tuyến QL13',
+        timeSlot: '07:00-08:00',
+        date: 'Ngày mai'
+      })
+    });
+    const createTripOverloadData = await createTripOverloadRes.json();
+    assert(
+      createTripOverloadRes.status === 201 && createTripOverloadData.success === true,
+      'Backend Guard 1: Đăng chuyến thành công qua API'
+    );
+    const created5SeatTripId = createTripOverloadData.data?.id;
+    assert(
+      createTripOverloadData.data?.capacity === 5,
+      'Backend Guard 2: Backend lưu đúng dung tích xe là 5 chỗ'
+    );
+    assert(
+      createTripOverloadData.data?.availableSeats === 4,
+      'Backend Guard 3: Backend tự động kẹp an toàn từ 6 ghế xuống tối đa 4 ghế cho xe 5 chỗ'
+    );
+
+    // 30.4 Kiểm thử API PUT /api/trips/:id: Cập nhật đổi từ 7 chỗ sang 5 chỗ tự động kẹp lại ghế
+    const updateTripRes = await fetch(`${BASE_URL}/api/trips/${created5SeatTripId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        capacity: 5,
+        availableSeats: 5 // Cố tình cập nhật 5 ghế cho xe 5 chỗ
+      })
+    });
+    const updateTripData = await updateTripRes.json();
+    assert(
+      updateTripRes.status === 200 && updateTripData.success === true,
+      'Backend Guard 4: Cập nhật chuyến qua PUT /api/trips/:id thành công'
+    );
+    assert(
+      updateTripData.data?.capacity === 5 && updateTripData.data?.availableSeats === 4,
+      'Backend Guard 5: Cập nhật 5 ghế trên xe 5 chỗ được backend tự động kẹp về 4 ghế'
+    );
+
+    // 30.5 Kiểm thử cấu trúc UI trong PostTripForm, EditTripModal, và TripCard
+    const postTripFormPath = path.resolve(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx');
+    const postTripFormCode = fs.readFileSync(postTripFormPath, 'utf8');
+    assert(
+      postTripFormCode.includes('vehicleCapacity') && postTripFormCode.includes('setVehicleCapacity'),
+      'UI PostTripForm 1: Khởi tạo state quản lý vehicleCapacity chuẩn Apple'
+    );
+    assert(
+      postTripFormCode.includes('setVehicleCapacity(5)') && postTripFormCode.includes('setVehicleCapacity(7)'),
+      'UI PostTripForm 2: Segmented Control hỗ trợ chuyển đổi 1-chạm giữa 4-5 chỗ và 7 chỗ'
+    );
+    assert(
+      postTripFormCode.includes("vehicleCapacity === 5 ? 'grid-cols-4' : 'grid-cols-6'"),
+      'UI PostTripForm 3: Lưới chọn ghế động co giãn (4 cột cho xe 5 chỗ, 6 cột cho xe 7 chỗ)'
+    );
+
+    const editTripModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/EditTripModal.jsx');
+    const editTripModalCode = fs.readFileSync(editTripModalPath, 'utf8');
+    assert(
+      editTripModalCode.includes('setVehicleCapacity(5)') && editTripModalCode.includes('setVehicleCapacity(7)'),
+      'UI EditTripModal 1: Modal chỉnh sửa tích hợp Apple Segmented Control chọn dòng xe'
+    );
+    assert(
+      editTripModalCode.includes('currentSeatConfig.allowedSeats'),
+      'UI EditTripModal 2: Danh sách nút chọn ghế đồng bộ theo cấu hình xe đã chọn'
+    );
+
+    const tripCardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
+    const tripCardCode = fs.readFileSync(tripCardPath, 'utf8');
+    assert(
+      tripCardCode.includes("item.capacity === 7 || item.availableSeats > 4 ? '7 chỗ' : '5 chỗ'"),
+      'UI TripCard 1: Thẻ chuyến xe hiển thị minh bạch badge phân biệt xe 5 chỗ vs 7 chỗ'
+    );
+
+    // Dọn dẹp bản ghi test
+    if (created5SeatTripId) {
+      await fetch(`${BASE_URL}/api/trips/${created5SeatTripId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${sharedTokenA}` }
+      }).catch(() => {});
+    }
+  } catch (err) {
+    assert(false, '30. Kiểm thử Quy Mô Dòng Xe & Giới Hạn Ghế An Toàn', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

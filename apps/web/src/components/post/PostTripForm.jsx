@@ -24,14 +24,13 @@ import {
 import {
   ROUTE_BENCHMARKS,
   TIME_SLOTS,
-  formatVND,
-  getTimeSlotLabel,
   isGoogleMapsUrl,
   getGoogleMapsUrl,
   mapTimeToSlot,
   isTimeInSlot,
   getUpcomingDays,
-  formatTripDateDisplay
+  formatTripDateDisplay,
+  VEHICLE_SEAT_CONFIGS
 } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
@@ -244,7 +243,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   const [waypointNote, setWaypointNote] = useState('');
   const [timeSlot, setTimeSlot] = useState('07:00-09:00');
   const [exactTime, setExactTime] = useState('');
-  const [carType, setCarType] = useState('Mitsubishi Xpander (Xe 7 chỗ)');
+  const [vehicleCapacity, setVehicleCapacity] = useState(5); // 5 | 7 (Mặc định xe 4-5 chỗ)
+  const [carType, setCarType] = useState('Toyota Vios (Xe 5 chỗ)');
   const [carCategory, setCarCategory] = useState('family_car'); // 'family_car' | 'convenient_trip'
   const [seats, setSeats] = useState(3);
   const [price, setPrice] = useState(150000);
@@ -461,7 +461,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       carType: isDriver ? carType : undefined,
       carPhotos: isDriver && validPhotos.length >= 3 ? validPhotos : undefined,
       hasCarPhotos: isDriver && validPhotos.length >= 3,
-      capacity: isDriver ? Number(seats) + 1 : undefined,
+      capacity: isDriver ? Number(vehicleCapacity) : undefined,
       availableSeats: isDriver ? Number(seats) : undefined,
       seatsNeeded: !isDriver ? Number(seats) : undefined,
       basePricePerSeat: isDriver ? Number(price) : undefined,
@@ -722,15 +722,78 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
               />
             </div>
 
+            {/* QUY MÔ DÒNG XE (CHO BÁC TÀI: 4-5 CHỖ VS 7 CHỖ) */}
+            {isDriver && (
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+                  <span className="flex items-center gap-1.5">
+                    <Car className="w-3.5 h-3.5 text-[#0071e3]" />
+                    <span>Dòng xe & Quy mô chỗ ngồi:</span>
+                  </span>
+                  <span className="text-xs font-normal text-slate-400">
+                    {vehicleCapacity === 5 ? 'Tối đa 4 khách' : 'Tối đa 6 khách'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVehicleCapacity(5);
+                      if (seats > 4) setSeats(4);
+                      if (carType.includes('Xpander') || !carType) {
+                        setCarType('Toyota Vios (Xe 5 chỗ)');
+                      }
+                    }}
+                    className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer select-none whitespace-nowrap ${
+                      vehicleCapacity === 5
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>🚗 Xe 4–5 chỗ</span>
+                    <span className="text-[10.5px] font-normal opacity-70 hidden sm:inline">(Sedan/CUV)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVehicleCapacity(7);
+                      if (carType.includes('Vios') || !carType) {
+                        setCarType('Mitsubishi Xpander (Xe 7 chỗ)');
+                      }
+                    }}
+                    className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer select-none whitespace-nowrap ${
+                      vehicleCapacity === 7
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>🚙 Xe 7 chỗ</span>
+                    <span className="text-[10.5px] font-normal opacity-70 hidden sm:inline">(MPV/SUV)</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                 <span>
-                  {isDriver ? t('post.seatsDriver') : t('post.seatsPassenger')} <span className="text-rose-500">*</span>
+                  {isDriver ? 'Số ghế trống nhận khách' : t('post.seatsPassenger')} <span className="text-rose-500">*</span>
                 </span>
-                <span className="text-xs text-slate-400 font-normal">tối đa 7 chỗ</span>
+                <span className="text-xs text-slate-400 font-normal">
+                  {isDriver
+                    ? vehicleCapacity === 5
+                      ? 'Xe 5 chỗ nhận tối đa 4 khách'
+                      : 'Xe 7 chỗ nhận tối đa 6 khách'
+                    : 'tối đa 6 vé'}
+                </span>
               </label>
-              <div className="grid grid-cols-6 gap-1.5">
-                {[1, 2, 3, 4, 5, 6].map((num) => (
+              <div className={`grid ${isDriver && vehicleCapacity === 5 ? 'grid-cols-4' : 'grid-cols-6'} gap-1.5`}>
+                {(isDriver
+                  ? vehicleCapacity === 5
+                    ? [1, 2, 3, 4]
+                    : [1, 2, 3, 4, 5, 6]
+                  : [1, 2, 3, 4, 5, 6]
+                ).map((num) => (
                   <button
                     key={num}
                     type="button"
@@ -745,6 +808,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                   </button>
                 ))}
               </div>
+              {isDriver && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between pt-0.5">
+                  <span>
+                    {seats === 3 && vehicleCapacity === 5
+                      ? '✨ Khuyên chọn: Hàng ghế sau ngồi 3 người rất rộng rãi'
+                      : seats === 4 && vehicleCapacity === 5
+                        ? 'Đầy 4 ghế khách (1 ghế phụ + 3 ghế sau)'
+                        : `Còn trống ${seats} ghế nhận khách (trừ 1 ghế lái)`}
+                  </span>
+                  <span className="text-slate-400 text-[10.5px]">Đã trừ 1 ghế tài xế</span>
+                </p>
+              )}
             </div>
           </div>
         </FormSection>
