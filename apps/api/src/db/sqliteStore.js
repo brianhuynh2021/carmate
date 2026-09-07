@@ -168,7 +168,7 @@ export async function initDB() {
   // production phải chủ động đặt SEED_DEMO_DATA=true — không thể xảy ra do vô ý.
   const tripCount = db.prepare('SELECT COUNT(*) as count FROM trips').get().count;
   const isProductionEnv = process.env.NODE_ENV === 'production';
-  const demoSeedAllowed = process.env.SEED_DEMO_DATA === 'true' || !isProductionEnv;
+  const demoSeedAllowed = process.env.SEED_DEMO_DATA === 'true' || (!isProductionEnv && process.env.SEED_DEMO_DATA !== 'false');
 
   if (tripCount === 0 && !demoSeedAllowed) {
     console.log(

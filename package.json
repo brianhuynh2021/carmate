@@ -24,7 +24,9 @@
     "hooks:install": "git config core.hooksPath .githooks && echo \"✅ Git hooks đã kích hoạt (.githooks)\"",
     "backup": "node scripts/backup-db.js",
     "backup:setup": "bash scripts/setup-backup-cron.sh",
-    "restore": "node scripts/restore-db.js"
+    "restore": "node scripts/restore-db.js",
+    "db:clear": "node scripts/clear-demo-data.js",
+    "db:seed": "node scripts/seed-local-data.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
