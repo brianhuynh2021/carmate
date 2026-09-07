@@ -41,7 +41,6 @@ import { SectionHeader } from '../ui/EmptyState.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
-import { findSampleCarPhotos, SAMPLE_CAR_PHOTO_SETS } from '../../constants/sampleCarPhotos.js';
 
 import SmartTripComposer from './SmartTripComposer.jsx';
 
@@ -371,11 +370,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       next[slotIndex] = null;
       return next;
     });
-  };
-
-  const handleApplySampleCarPhotos = () => {
-    const samples = findSampleCarPhotos(carType);
-    setCarPhotos(samples);
   };
 
   const handleSwapRoute = () => {
@@ -960,7 +954,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
             )}
           </div>
 
-          {/* HÌNH ẢNH XE THỰC TẾ (TÙY CHỌN TĂNG TÍN NHIỆM: ÍT NHẤT 3 HÌNH & TỐI ĐA 5 HÌNH) */}
+          {/* HÌNH ẢNH XE THỰC TẾ (TÙY CHỌN TĂNG TÍN NHIỆM: CHÍNH CHỦ TỰ CHỤP HOẶC TẢI LÊN 3-5 HÌNH) */}
           {isDriver && (
             <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.08] space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -972,28 +966,24 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm text-slate-900 dark:text-white">Hình ảnh thực tế của xe</span>
                       <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                        Tùy chọn tăng tín nhiệm
+                        Chính chủ tự chụp / tải lên
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Khách an tâm hơn khi thấy hình xe thật.{' '}
+                      Bác tài tự chụp hoặc tải ảnh xe thật để tạo uy tín.{' '}
                       <strong className="text-slate-700 dark:text-slate-300">
-                        Yêu cầu ít nhất 3 hình và tối đa 5 hình
+                        Tối thiểu 3 hình và tối đa 5 hình
                       </strong>{' '}
                       (Góc Trước, Góc Sau, Thân xe). Biển số tự động che bảo mật.
                     </p>
                   </div>
                 </div>
 
-                {/* Nút nạp nhanh ảnh mẫu theo dòng xe */}
-                <button
-                  type="button"
-                  onClick={handleApplySampleCarPhotos}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 hover:bg-primary-100 dark:hover:bg-primary-900/60 border border-primary-200 dark:border-primary-800 transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Dùng ảnh mẫu {carType?.split(' ')[0] || 'xe'}</span>
-                </button>
+                {/* Huy hiệu cam kết ảnh thật */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shrink-0 self-start sm:self-auto">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Xác thực xe chính chủ</span>
+                </div>
               </div>
 
               {/* 5 Slot Grid */}
@@ -1038,7 +1028,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                           </div>
                         </div>
                       ) : (
-                        <label className="relative aspect-[4/3] w-full flex flex-col items-center justify-center p-2 text-center cursor-pointer select-none">
+                        <label className="relative aspect-[4/3] w-full flex flex-col items-center justify-center p-2 text-center cursor-pointer select-none group">
                           <input
                             type="file"
                             accept="image/*"
@@ -1048,14 +1038,17 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                               if (file) handlePhotoUpload(index, file, slot);
                             }}
                           />
-                          <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center mb-1.5 group-hover:text-primary-500 transition-colors">
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center mb-1 group-hover:bg-primary-50 dark:group-hover:bg-primary-950/50 group-hover:text-primary-600 transition-colors">
                             <Upload className="w-3.5 h-3.5" />
                           </div>
                           <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 leading-tight">
                             {index + 1}. {slot.label.split(' ')[0]} {slot.label.split(' ')[1] || ''}
                           </span>
-                          <span className="text-[9.5px] mt-0.5 text-slate-400 leading-none">
-                            {slot.required ? '(Tối thiểu)' : '(Tùy chọn)'}
+                          <span className="text-[9.5px] mt-0.5 text-slate-400 dark:text-slate-500 leading-none">
+                            {slot.required ? '(Bắt buộc nếu tải)' : '(Tùy chọn)'}
+                          </span>
+                          <span className="text-[9px] mt-1 text-primary-600 dark:text-primary-400 font-medium opacity-80 group-hover:opacity-100">
+                            Chạm để chụp / tải
                           </span>
                         </label>
                       )}
@@ -1074,14 +1067,15 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                 </div>
                 <div className="font-mono text-[11.5px] font-semibold text-right">
                   {carPhotos.filter(Boolean).length === 0 ? (
-                    <span className="text-slate-400 dark:text-slate-500">Chưa tải ảnh (Không bắt buộc)</span>
+                    <span className="text-slate-400 dark:text-slate-500">Chưa tải ảnh xe (Không bắt buộc)</span>
                   ) : carPhotos.filter(Boolean).length >= 3 ? (
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      ✓ Đã có {carPhotos.filter(Boolean).length}/5 hình (Đủ điều kiện hiển thị huy hiệu)
+                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 sm:justify-end">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Đã có {carPhotos.filter(Boolean).length}/5 ảnh xe thật (Đủ điều kiện nhận huy hiệu)</span>
                     </span>
                   ) : (
                     <span className="text-amber-600 dark:text-amber-400">
-                      ⚠️ Cần thêm {3 - carPhotos.filter(Boolean).length} hình nữa (Tối thiểu 3 hình)
+                      ⚠️ Cần thêm {3 - carPhotos.filter(Boolean).length} hình nữa (Tối thiểu 3 hình thật: Trước, Sau, Thân xe)
                     </span>
                   )}
                 </div>

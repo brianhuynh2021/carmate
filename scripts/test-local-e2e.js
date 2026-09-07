@@ -2335,6 +2335,48 @@ async function runTests() {
     assert(false, '32. Kiểm thử Xem Trước Bài Đăng & Khóa Chặt Đồng Bộ 5 Chỗ vs 7 Chỗ', err.message);
   }
 
+  // 33. KIỂM THỬ TÍNH MINH BẠCH TÍN NHIỆM ẢNH XE: LOẠI BỎ ẢNH MẪU ẢO, 100% ẢNH THỰC TẾ CHÍNH CHỦ
+  console.log('\n--- 33. Kiểm thử Tính Minh Bạch Tín Nhiệm Ảnh Xe: 100% Ảnh Xe Thật Chính Chủ ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const postFormPath = path.resolve(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx');
+    const postFormCode = fs.readFileSync(postFormPath, 'utf8');
+
+    // 33.1 Không còn nút "Dùng ảnh mẫu" tạo tín nhiệm ảo
+    assert(
+      !postFormCode.includes('handleApplySampleCarPhotos'),
+      'Photo Trust 1: Đã xóa bỏ hoàn toàn hàm handleApplySampleCarPhotos'
+    );
+    assert(
+      !postFormCode.includes('Dùng ảnh mẫu'),
+      'Photo Trust 2: Đã loại bỏ hoàn toàn nút "Dùng ảnh mẫu" ngăn chặn gian lận huy hiệu'
+    );
+    assert(
+      !postFormCode.includes('from \'../../constants/sampleCarPhotos.js\'') &&
+      !postFormCode.includes('from "../../constants/sampleCarPhotos.js"'),
+      'Photo Trust 3: PostTripForm không còn import bộ ảnh mẫu giả lập'
+    );
+
+    // 33.2 Khẳng định xác thực xe chính chủ tự chụp
+    assert(
+      postFormCode.includes('Xác thực xe chính chủ') || postFormCode.includes('Chính chủ tự chụp / tải lên'),
+      'Photo Trust 4: Giao diện nêu rõ nguyên tắc "Xác thực xe chính chủ / Tự chụp tải lên"'
+    );
+    assert(
+      postFormCode.includes('Chạm để chụp / tải'),
+      'Photo Trust 5: Các ô ảnh trống có hướng dẫn thân thiện "Chạm để chụp / tải"'
+    );
+
+    // 33.3 Kiểm tra logic chỉ cấp tín nhiệm khi có >= 3 ảnh thực tế
+    assert(
+      postFormCode.includes('validPhotos.length >= 3'),
+      'Photo Trust 6: Chỉ cấp huy hiệu hasCarPhotos khi chủ xe tải ít nhất 3 ảnh thực tế'
+    );
+  } catch (err) {
+    assert(false, '33. Kiểm thử Tính Minh Bạch Tín Nhiệm Ảnh Xe', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
