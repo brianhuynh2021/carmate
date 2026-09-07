@@ -370,7 +370,13 @@ export function parseNaturalTrip(text) {
   const isDriver = role === 'driver';
   let capacity = undefined;
   if (isDriver) {
-    capacity = /(?:7\s*chỗ|xpander|veloz|innova|carnival|santafe)/i.test(lower) || (seats && seats > 4) ? 7 : 5;
+    if (/(?:5\s*chỗ|4\s*chỗ|vios|city|accent|cerato|k3|mazda\s*3|civic|elantra|morning|i10|fadil)/i.test(lower)) {
+      capacity = 5;
+    } else if (/(?:7\s*chỗ|xpander|veloz|innova|carnival|santafe|fortuner|everest|custin|sorento|crv|cr-v)/i.test(lower) || (seats && seats > 4)) {
+      capacity = 7;
+    } else {
+      capacity = 5;
+    }
   }
 
   return {

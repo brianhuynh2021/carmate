@@ -2292,6 +2292,49 @@ async function runTests() {
     assert(false, '31. Kiểm thử Tối Ưu Hóa Người Cần Tìm Xe & Thư Viện Mẫu Đa Dạng', err.message);
   }
 
+  // 32. KIỂM THỬ XEM TRƯỚC BÀI ĐĂNG (LIVE PREVIEW) & KHÓA CHẶT ĐỒNG BỘ 5 CHỖ VS 7 CHỖ
+  console.log('\n--- 32. Kiểm thử Xem Trước Bài Đăng (Live Preview) & Khóa Chặt Đồng Bộ 5 Chỗ vs 7 Chỗ ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const { parseNaturalTrip } = await import('../apps/web/src/utils/nlpTripParser.js');
+
+    // 32.1 Người dùng gõ/sửa thành xe 5 chỗ (kèm người thân)
+    const text5Seats = 'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 5 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
+    const parsed5 = parseNaturalTrip(text5Seats);
+    assert(parsed5.capacity === 5, 'Capacity Sync 1: NLP nhận diện chính xác capacity = 5 khi văn bản ghi xe 5 chỗ');
+    assert(parsed5.carType.includes('5 chỗ'), 'Capacity Sync 2: Loại xe carType ghi rõ 5 chỗ');
+
+    // 32.2 Người dùng gõ xe 7 chỗ
+    const text7Seats = 'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
+    const parsed7 = parseNaturalTrip(text7Seats);
+    assert(parsed7.capacity === 7, 'Capacity Sync 3: NLP nhận diện chính xác capacity = 7 khi văn bản ghi xe 7 chỗ');
+    assert(parsed7.carType.includes('7 chỗ'), 'Capacity Sync 4: Loại xe carType ghi rõ 7 chỗ');
+
+    // 32.3 Xe Vios 5 chỗ không nói rõ từ "chỗ"
+    const textVios = 'Sáng mai xe Vios tiện chuyến Bình Long Sài Gòn còn 2 ghế';
+    const parsedVios = parseNaturalTrip(textVios);
+    assert(parsedVios.capacity === 5, 'Capacity Sync 5: Nhận diện dòng xe Vios thuộc phân khúc 5 chỗ');
+
+    // 32.4 Kiểm tra PostTripForm tích hợp Live Preview và Pre-flight Modal
+    const postFormPath = path.resolve(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx');
+    const postFormCode = fs.readFileSync(postFormPath, 'utf8');
+    assert(
+      postFormCode.includes('showLivePreview') && postFormCode.includes('Xem trước bài đăng trên sàn'),
+      'Live Preview 1: Form tích hợp thẻ Xem trước bài đăng trên sàn thời gian thực'
+    );
+    assert(
+      postFormCode.includes('showConfirmModal') && postFormCode.includes('pendingPayload'),
+      'Pre-flight Modal 1: Form tích hợp modal xác nhận tóm tắt trước khi gửi bài đăng'
+    );
+    assert(
+      postFormCode.includes('handleConfirmPublish'),
+      'Pre-flight Modal 2: Nút xác nhận cuối cùng đưa bài đăng lên sàn an toàn'
+    );
+  } catch (err) {
+    assert(false, '32. Kiểm thử Xem Trước Bài Đăng & Khóa Chặt Đồng Bộ 5 Chỗ vs 7 Chỗ', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

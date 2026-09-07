@@ -30,7 +30,8 @@ import {
   isTimeInSlot,
   getUpcomingDays,
   formatTripDateDisplay,
-  VEHICLE_SEAT_CONFIGS
+  VEHICLE_SEAT_CONFIGS,
+  formatVND
 } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
@@ -251,6 +252,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   const [phoneReal, setPhoneReal] = useState(() => currentUser?.phone || '');
   const [zaloConfirmed, setZaloConfirmed] = useState(true);
   const [formError, setFormError] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null);
+  const [showLivePreview, setShowLivePreview] = useState(true);
 
   // Ảnh thực tế xe (Tùy chọn - Tối thiểu 3 hình, tối đa 5 hình)
   const [carPhotos, setCarPhotos] = useState([]);
@@ -307,7 +311,13 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
     if (parsed.price) setPrice(parsed.price);
     if (parsed.phoneReal) setPhoneReal(parsed.phoneReal);
     if (parsed.role === 'driver') {
-      if (parsed.capacity) setVehicleCapacity(parsed.capacity);
+      if (parsed.capacity) {
+        const cap = Number(parsed.capacity);
+        setVehicleCapacity(cap);
+        if (cap === 5 && (parsed.seats > 4 || seats > 4)) {
+          setSeats(Math.min(parsed.seats || seats, 4));
+        }
+      }
       if (parsed.carCategory) setCarCategory(parsed.carCategory);
       if (parsed.carType) setCarType(parsed.carType);
     }
@@ -445,7 +455,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
     const validExactTime = isExactTimeValid ? exactTime.trim() : undefined;
     const timeSlotLabel = validExactTime ? `${validExactTime} (${slot.short})` : slot.short;
 
-    onSubmit({
+    const payload = {
       id: `${isDriver ? 'DRV' : 'REQ'}-${Date.now().toString().slice(-4)}`,
       type: isDriver ? 'driver_offer' : 'passenger_request',
       carCategory: isDriver ? carCategory : undefined,
@@ -478,7 +488,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       perks,
       notes: notes.trim(),
       createdAt: Date.now()
-    });
+    };
+
+    setPendingPayload(payload);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmPublish = () => {
+    if (!pendingPayload) return;
+    const finalData = pendingPayload;
+    setShowConfirmModal(false);
+    setPendingPayload(null);
+    onSubmit(finalData);
   };
 
   return (
@@ -1264,10 +1285,225 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
           </div>
         )}
 
+        {/* ── THẺ XEM TRƯỚC BÀI ĐĂNG THỜI GIAN THỰC (APPLE HIG LIVE PREVIEW) ── */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-primary-500" />
+              <span>Xem trước bài đăng trên sàn (Live Preview)</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowLivePreview((prev) => !prev)}
+              className="text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline cursor-pointer"
+            >
+              {showLivePreview ? 'Thu gọn' : 'Mở rộng'}
+            </button>
+          </div>
+
+          {showLivePreview && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-[#111726] dark:to-[#0d121f] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-3">
+              {/* Header của thẻ xem trước */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                      isDriver
+                        ? 'bg-blue-100/80 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60'
+                        : 'bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
+                    }`}
+                  >
+                    {isDriver ? <Car className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+                    <span>
+                      {isDriver
+                        ? `Chủ xe · ${Number(vehicleCapacity) === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
+                        : `Khách cần tìm xe · ${seats} người`}
+                    </span>
+                  </span>
+
+                  {isDriver && (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                      {carCategory === 'convenient_trip' ? 'Biển vàng / Tiện chuyến' : 'Xe gia đình'}
+                    </span>
+                  )}
+                </div>
+
+                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200/60 dark:border-emerald-800/60">
+                  {formatVND(price)}/{isDriver ? 'ghế' : 'người'}
+                </span>
+              </div>
+
+              {/* Lộ trình & Mũi tên */}
+              <div className="p-3 rounded-xl bg-white dark:bg-[#151c2e] border border-slate-200/60 dark:border-white/5 space-y-1.5">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                  <span className="text-emerald-600 dark:text-emerald-400 truncate max-w-[45%]">
+                    {fromLocation.trim() || 'Điểm đón'}
+                  </span>
+                  <ArrowLeftRight className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="text-rose-600 dark:text-rose-400 truncate max-w-[45%]">
+                    {toLocation.trim() || 'Điểm đến'}
+                  </span>
+                </div>
+                {waypointNote.trim() && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-teal-500 shrink-0" />
+                    <span>{waypointNote.trim()}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Lịch trình & Ghế */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                  <span className="text-slate-400 text-[10.5px] block">Khởi hành:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
+                    {exactTime ? `${exactTime} · ` : ''}
+                    {scheduleDay}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                  <span className="text-slate-400 text-[10.5px] block">
+                    {isDriver ? 'Ghế trống nhận khách:' : 'Số vé cần ghép:'}
+                  </span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
+                    {seats} {isDriver ? 'ghế' : 'người'}
+                    {isDriver && (
+                      <span className="font-normal text-slate-400 text-[10px] ml-1">
+                        ({Number(vehicleCapacity) === 5 ? 'Xe 5 chỗ' : 'Xe 7 chỗ'})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Liên hệ Zalo */}
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 pt-1">
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <ZaloIcon className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Zalo: {phoneReal ? formatPhoneDisplay(phoneReal) : 'Chưa nhập SĐT'}</span>
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  {isDriver ? 'Cam kết không bắt khách dọc đường' : 'Cam kết có mặt đúng giờ'}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
         <Button type="submit" size="lg" fullWidth icon={PlusCircle}>
           {t('post.submit')}
         </Button>
       </form>
+
+      {/* ── MODAL XÁC NHẬN & XEM TRƯỚC TRƯỚC KHI ĐĂNG BÀI (PRE-FLIGHT CONFIRMATION) ── */}
+      {showConfirmModal && pendingPayload && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="surface max-w-lg w-full rounded-3xl p-5 sm:p-7 shadow-2xl border border-slate-200 dark:border-white/10 space-y-5 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-primary-500/15 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white leading-tight">
+                    {pendingPayload.type === 'driver_offer' ? 'Xác nhận thông tin chuyến đi' : 'Xác nhận nhu cầu tìm xe'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Vui lòng kiểm tra kỹ trước khi đưa bài lên sàn CarMate
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Chi tiết vé xem trước */}
+            <div className="space-y-3.5 p-4 rounded-2xl bg-slate-50 dark:bg-[#131929] border border-slate-200/80 dark:border-white/5">
+              {/* Huy hiệu vai trò & Loại xe */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                  {pendingPayload.type === 'driver_offer' ? <Car className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+                  <span>
+                    {pendingPayload.type === 'driver_offer'
+                      ? `Chủ xe · ${pendingPayload.capacity === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
+                      : `Hành khách · Cần ${pendingPayload.seatsNeeded} ghế`}
+                  </span>
+                </span>
+                <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatVND(pendingPayload.basePricePerSeat || price)}/ghế
+                </span>
+              </div>
+
+              {/* Lộ trình */}
+              <div className="p-3 rounded-xl bg-white dark:bg-[#1a2238] border border-slate-200/60 dark:border-white/5">
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
+                  <span className="text-emerald-600 dark:text-emerald-400">{pendingPayload.from}</span>
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="text-rose-600 dark:text-rose-400">{pendingPayload.to}</span>
+                </div>
+                {pendingPayload.waypointNote && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-teal-500 shrink-0" />
+                    <span>{pendingPayload.waypointNote}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Thời gian & Số ghế */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-[#1a2238] border border-slate-200/60 dark:border-white/5">
+                  <span className="text-slate-400 text-[10px] block">Khung giờ:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                    {pendingPayload.timeSlotLabel || pendingPayload.timeSlot}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-[#1a2238] border border-slate-200/60 dark:border-white/5">
+                  <span className="text-slate-400 text-[10px] block">Ngày khởi hành:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {pendingPayload.date}
+                  </span>
+                </div>
+              </div>
+
+              {/* Zalo */}
+              <div className="p-2.5 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/30 flex items-center justify-between text-xs">
+                <span className="text-blue-700 dark:text-blue-300 font-semibold flex items-center gap-1.5">
+                  <ZaloIcon className="w-3.5 h-3.5 text-blue-600" />
+                  <span>SĐT Zalo kết nối:</span>
+                </span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  {formatPhoneDisplay(pendingPayload.phoneReal)}
+                </span>
+              </div>
+            </div>
+
+            {/* Hành động */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="py-3 px-4 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 font-bold text-xs text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+              >
+                ✏️ Quay lại chỉnh sửa
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPublish}
+                className="py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs shadow-lg shadow-primary-600/25 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>Xác nhận đăng bài</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
