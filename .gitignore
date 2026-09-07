@@ -47,3 +47,9 @@ apps/api/data/backup.log
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# File ghi chú lệnh deploy / secret cục bộ (KHÔNG BAO GIỜ commit)
+test_Fly.py
+*secrets*.sh
+*secrets*.txt
+deploy-secrets*
