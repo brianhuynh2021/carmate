@@ -275,6 +275,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   const [onTime, setOnTime] = useState(true);
   const [pickupHighway, setPickupHighway] = useState(false);
   const [hasChild, setHasChild] = useState(false);
+  const [frontSeatPreference, setFrontSeatPreference] = useState(false);
   const [customPerk, setCustomPerk] = useState('');
 
   const isDriver = role === 'driver';
@@ -305,8 +306,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
     if (parsed.seats) setSeats(parsed.seats);
     if (parsed.price) setPrice(parsed.price);
     if (parsed.phoneReal) setPhoneReal(parsed.phoneReal);
-    if (parsed.carCategory) setCarCategory(parsed.carCategory);
-    if (parsed.carType) setCarType(parsed.carType);
+    if (parsed.role === 'driver') {
+      if (parsed.capacity) setVehicleCapacity(parsed.capacity);
+      if (parsed.carCategory) setCarCategory(parsed.carCategory);
+      if (parsed.carType) setCarType(parsed.carType);
+    }
     if (parsed.acceptsParcel) setAcceptsParcel(true);
   };
 
@@ -425,6 +429,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       if (pickupHighway) perks.push('Đón dọc Quốc Lộ / Cao tốc');
       if (noPet) perks.push('Không mang thú cưng');
       if (hasChild) perks.push('Có trẻ nhỏ');
+      if (frontSeatPreference) perks.push('Ngồi ghế trước (chống say xe)');
     }
     if (customPerk.trim()) {
       perks.push(customPerk.trim());
@@ -483,6 +488,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       {/* ── ĐĂNG CHUYẾN NHANH: DÁN BÀI ĐĂNG HOẶC GÕ TỰ NHIÊN ĐĂNG TRONG 3 GIÂY ── */}
       <div className="mt-6">
         <SmartTripComposer
+          currentRole={role}
+          onRoleChange={(newRole) => setRole(newRole)}
           onApply={handleApplySmart}
           onInstantSubmit={(parsed) => {
             handleApplySmart(parsed);
@@ -1193,6 +1200,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                     checked={hasChild}
                     onChange={(e) => setHasChild(e.target.checked)}
                     label="Có trẻ nhỏ đi cùng"
+                  />
+                  <Checkbox
+                    checked={frontSeatPreference}
+                    onChange={(e) => setFrontSeatPreference(e.target.checked)}
+                    label="Xin ngồi ghế trước (chống say xe)"
                   />
                 </>
               )}

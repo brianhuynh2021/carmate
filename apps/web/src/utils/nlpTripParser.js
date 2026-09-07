@@ -105,6 +105,85 @@ const KNOWN_LOCATIONS = [
   'An Sương'
 ];
 
+export const SMART_TRIP_TEMPLATES = {
+  driver: [
+    {
+      id: 'drv-family-7',
+      role: 'driver',
+      category: 'driver',
+      badge: 'Gia đình 7 chỗ',
+      title: 'Bù Đốp ➔ Sài Gòn (Chở vợ con)',
+      desc: 'Xe 7 chỗ chở người nhà, còn 1 ghế sau, phụ xăng 120k',
+      text: 'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750'
+    },
+    {
+      id: 'drv-sedan-5',
+      role: 'driver',
+      category: 'driver',
+      badge: 'Xe 4–5 chỗ tiện chuyến',
+      title: 'Bình Long ➔ Sài Gòn (Vios 5 chỗ)',
+      desc: 'Xe 5 chỗ còn 3 ghế êm ái, đón dọc QL13, phụ xăng 150k',
+      text: 'Sáng mai 7h mình từ Bình Long về Sài Gòn xe Vios 5 chỗ còn 3 ghế êm ái đón dọc QL13 phụ xăng 150k sđt 0913889922'
+    },
+    {
+      id: 'drv-suv-7',
+      role: 'driver',
+      category: 'driver',
+      badge: 'MPV 7 chỗ rộng rãi',
+      title: 'Đồng Xoài ➔ Sài Gòn (Xpander 7 chỗ)',
+      desc: 'Xe 7 chỗ còn 4 chỗ rộng rãi, nhận gửi kèm bưu phẩm',
+      text: 'Trưa nay 11h mình chạy Xpander 7 chỗ từ Đồng Xoài về Sài Gòn còn 4 chỗ cốp rộng nhận gửi kèm hàng hoá sđt 0988112233'
+    },
+    {
+      id: 'drv-central',
+      role: 'driver',
+      category: 'driver',
+      badge: 'Tuyến Miền Trung',
+      title: 'Đà Nẵng ➔ Huế (Xe 5 chỗ)',
+      desc: 'Xe 5 chỗ còn 2 ghế, đón Nguyễn Văn Linh, phụ xăng 100k',
+      text: 'Chiều nay 14h xe 5 chỗ chạy Đà Nẵng ra Huế còn 2 ghế đón Nguyễn Văn Linh phụ 100k sđt 0905556677'
+    }
+  ],
+  passenger: [
+    {
+      id: 'pax-single-urgent',
+      role: 'passenger',
+      category: 'passenger',
+      badge: 'Khách đi 1 mình',
+      title: 'Bù Đốp ➔ BV Chợ Rẫy (1 người)',
+      desc: 'Cần 1 ghế sáng mai đi khám bệnh, đón QL13, phụ 120k',
+      text: 'Sáng mai 8h em cần tìm xe ghép 1 người từ Bù Đốp đi Bệnh viện Chợ Rẫy Sài Gòn đón ở ngã tư Bình Phước phụ xăng 120k sđt 0984883750'
+    },
+    {
+      id: 'pax-family-3',
+      role: 'passenger',
+      category: 'passenger',
+      badge: 'Gia đình 2-3 người',
+      title: 'Đồng Xoài ➔ BX Miền Đông (3 ghế)',
+      desc: 'Nhà 2 người lớn 1 bé cần tìm xe chiều nay, phụ 300k',
+      text: 'Chiều nay 16h nhà mình 2 người lớn 1 bé cần tìm xe từ Đồng Xoài về Bến xe Miền Đông đón tận nơi phụ 300k sđt 0912345678'
+    },
+    {
+      id: 'pax-parcel',
+      role: 'passenger',
+      category: 'passenger',
+      badge: 'Gửi hàng / Bưu phẩm',
+      title: 'Lộc Ninh ➔ Thủ Đức (Gửi bưu phẩm)',
+      desc: 'Thùng sầu riêng 10kg gửi kèm xe chiều nay, phụ 80k',
+      text: 'Trưa nay em có thùng trái cây 10kg cần gửi từ Lộc Ninh về Thủ Đức ai tiện xe cho em gửi phụ xăng 80k sđt 0977223344'
+    },
+    {
+      id: 'pax-airport',
+      role: 'passenger',
+      category: 'passenger',
+      badge: 'Đi sân bay',
+      title: 'Biên Hòa ➔ Sân bay Tân Sơn Nhất',
+      desc: 'Cần ghép 1 ghế sáng sớm, hành lý gọn, phụ 150k',
+      text: 'Sáng sớm mai 5h mình cần tìm xe ghép 1 ghế từ Biên Hòa lên sân bay Tân Sơn Nhất phụ 150k sđt 0905112233'
+    }
+  ]
+};
+
 export function parseNaturalTrip(text) {
   if (!text || typeof text !== 'string') return null;
   const raw = text.trim();
@@ -114,7 +193,7 @@ export function parseNaturalTrip(text) {
 
   // 1. Phân loại vai trò (Chủ xe hay Khách)
   const isPassenger =
-    /(tìm xe|cần xe|cần ghép|tìm xe ghép|ai có xe|cần đi|xin ghép|cho em ghép|cho e ghép|khách cần|cần tìm)/i.test(
+    /(tìm xe|cần xe|cần ghép|tìm xe ghép|ai có xe|cần đi|xin ghép|cho em ghép|cho e ghép|khách cần|cần tìm|cần \d+\s*(?:ghế|chỗ|người|vé)|cần 1 ghế|cần 1 chỗ|em cần 1|mình cần 1|nhà mình cần|khách đi|cho mình ké|xin đi nhờ|cần gửi|gửi hàng|gửi bưu phẩm|cho em gửi|cho e gửi|thùng|kiện hàng|gửi đồ)/i.test(
       lower
     );
   const role = isPassenger ? 'passenger' : 'driver';
@@ -128,8 +207,9 @@ export function parseNaturalTrip(text) {
   }
 
   // 3. Giá tiền (VD: 150k, 150.000, 200k, 180 nghìn, 150000, phụ xăng 120k, phụ 100k)
+  // Lưu ý: Dùng k(?!g) để tránh bắt nhầm 10kg hàng hóa thành 10k giá tiền
   let price = null;
-  const priceKMatch = lower.match(/(?:phụ xăng|tiền xăng|phụ|chia sẻ|giá|vé)?\s*(\d{2,3})\s*(?:k|nghìn|ngàn)/i);
+  const priceKMatch = lower.match(/(?:phụ xăng|tiền xăng|phụ|chia sẻ|giá|vé)?\s*(\d{2,3})\s*(?:k(?!g)|nghìn|ngàn)/i);
   if (priceKMatch) {
     price = parseInt(priceKMatch[1], 10) * 1000;
   } else {
@@ -145,13 +225,21 @@ export function parseNaturalTrip(text) {
   }
 
   // 4. Số ghế trống hoặc cần tìm (VD: còn 3 ghế, còn 1 ghế sau, chỉ nhận 1 khách, dư 2 chỗ...)
+  // Stanford NLP: Xử lý tổ hợp gia đình người lớn + trẻ em/bé (VD: 2 người lớn 1 bé -> 3 ghế)
   let seats = null;
-  const seatsMatch =
-    lower.match(
-      /(?:còn|trống|cần|ghép|chỉ nhận|nhận|dư|còn lại|chở thêm|chỉ chở)\s*([1-7])\s*(?:ghế\s*sau|ghế|chỗ|người|vé|khách)/i
-    ) || lower.match(/([1-7])\s*(?:ghế|chỗ|người|khách)\b/);
-  if (seatsMatch) {
-    seats = parseInt(seatsMatch[1], 10);
+  const familyComboMatch = lower.match(
+    /(\d+)\s*(?:người\s*lớn|lớn)\s*(?:và|\+|,)?\s*(\d+)\s*(?:trẻ\s*em|bé|nhỏ|con)/i
+  );
+  if (familyComboMatch) {
+    seats = parseInt(familyComboMatch[1], 10) + parseInt(familyComboMatch[2], 10);
+  } else {
+    const seatsMatch =
+      lower.match(
+        /(?:còn|trống|cần|ghép|chỉ nhận|nhận|dư|còn lại|chở thêm|chỉ chở)\s*([1-7])\s*(?:ghế\s*sau|ghế|chỗ|người|vé|khách)/i
+      ) || lower.match(/([1-7])\s*(?:ghế|chỗ|người|khách)\b/);
+    if (seatsMatch) {
+      seats = parseInt(seatsMatch[1], 10);
+    }
   }
 
   // 5. Loại xe & Phân loại Biển Trắng / Biển Vàng & Xe Gia Đình Có Người Thân
@@ -265,30 +353,41 @@ export function parseNaturalTrip(text) {
     }
   }
 
-  // Tiện đón dọc đường (Waypoints)
+  // Tiện đón dọc đường hoặc điểm hẹn đón cụ thể (Waypoints)
   let waypointNote = '';
-  const waypointMatch = raw.match(/(?:đón dọc|tiện đường|dọc theo|dọc)\s+([^,.\n]+)/i);
+  const waypointMatch = raw.match(
+    /(?:đón tại|đón ở|đón dọc|đón ngã tư|đón cây xăng|đón tận nơi|tiện đường|dọc theo|dọc)\s+([^,.\n]+)/i
+  );
   if (waypointMatch) {
-    waypointNote = `Dọc ${waypointMatch[1].trim()}`;
+    let rawWp = waypointMatch[1].trim();
+    rawWp = rawWp.replace(/\s+(?:phụ|giá|sđt|zalo|tiền|còn).*/i, '').trim();
+    waypointNote = rawWp.toLowerCase().startsWith('dọc') ? rawWp : `Đón tại ${rawWp}`;
   }
 
   // 8. Nhận gửi kèm hàng hóa / bưu phẩm tiện chuyến
-  const acceptsParcel = /(gửi hàng|gửi đồ|chuyển đồ|nhận đồ|nhận hàng|chở đồ|kèm hàng|bưu phẩm|kiện hàng)/i.test(lower);
+  const acceptsParcel = /(gửi hàng|gửi đồ|chuyển đồ|nhận đồ|nhận hàng|chở đồ|kèm hàng|bưu phẩm|kiện hàng|thùng|cần gửi)/i.test(lower);
+
+  const isDriver = role === 'driver';
+  let capacity = undefined;
+  if (isDriver) {
+    capacity = /(?:7\s*chỗ|xpander|veloz|innova|carnival|santafe)/i.test(lower) || (seats && seats > 4) ? 7 : 5;
+  }
 
   return {
     role,
     fromLocation: fromLocation.replace(/^(mình|tôi|em|anh|chúng tôi)\s+/i, '').trim(),
-    toLocation: toLocation.replace(/\s+(xe|còn|giá|sđt|zalo|lúc|khoảng).*/i, '').trim(),
+    toLocation: toLocation.replace(/\s+(?:xe\s*(?:\d|vios|xpander|innova|veloz|nhà|oto|ô tô|hơi|ghép|gia đình)|còn|giá|sđt|zalo|lúc|khoảng|đón|phụ|ai tiện|ai có).*/i, '').trim(),
     waypointNote,
     scheduleDay,
     timeSlot,
     exactTime,
-    seats: seats || (role === 'driver' ? (hasRelatives ? 1 : 3) : 1),
-    price: price || 150000,
+    seats: seats || (isDriver ? (hasRelatives ? 1 : 3) : 1),
+    price: price || (isDriver ? 150000 : 120000),
     phoneReal,
-    carCategory,
-    carType,
-    hasRelatives,
+    capacity,
+    carCategory: isDriver ? carCategory : undefined,
+    carType: isDriver ? carType : undefined,
+    hasRelatives: isDriver ? hasRelatives : false,
     acceptsParcel,
     rawText: raw
   };

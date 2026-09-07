@@ -2180,6 +2180,118 @@ async function runTests() {
     assert(false, '30. Kiểm thử Quy Mô Dòng Xe & Giới Hạn Ghế An Toàn', err.message);
   }
 
+  // 31. KIỂM THỬ TỐI ƯU HÓA NGƯỜI CẦN TÌM XE & THƯ VIỆN MẪU ĐA DẠNG (ALWAYS-ACCESSIBLE APPLE RIBBON)
+  console.log('\n--- 31. Kiểm thử Tối Ưu Hóa Người Cần Tìm Xe & Thư Viện Mẫu Đa Dạng ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const { parseNaturalTrip, SMART_TRIP_TEMPLATES } = await import('../apps/web/src/utils/nlpTripParser.js');
+
+    // 31.1 Kiểm thử cấu trúc thư viện mẫu SMART_TRIP_TEMPLATES
+    assert(
+      SMART_TRIP_TEMPLATES && Array.isArray(SMART_TRIP_TEMPLATES.driver) && SMART_TRIP_TEMPLATES.driver.length >= 4,
+      'Template Library 1: Thư viện có ít nhất 4 mẫu thực tế cho Bác tài (Gia đình 7 chỗ, Vios 5 chỗ, MPV, Miền Trung)'
+    );
+    assert(
+      Array.isArray(SMART_TRIP_TEMPLATES.passenger) && SMART_TRIP_TEMPLATES.passenger.length >= 4,
+      'Template Library 2: Thư viện có ít nhất 4 mẫu thực tế cho Khách (Đi 1 mình, Gia đình 3 người, Gửi hàng, Đi sân bay)'
+    );
+
+    // 31.2 Kiểm thử NLP nhận diện Khách đi 1 mình gấp khám bệnh
+    const singlePaxText = SMART_TRIP_TEMPLATES.passenger[0].text;
+    const parsedSinglePax = parseNaturalTrip(singlePaxText);
+    assert(parsedSinglePax.role === 'passenger', 'Passenger NLP 1: Nhận diện chính xác vai trò Người cần tìm xe (passenger)');
+    assert(parsedSinglePax.seats === 1, 'Passenger NLP 2: Trích xuất đúng số ghế cần tìm là 1');
+    assert(parsedSinglePax.price === 120000, 'Passenger NLP 3: Trích xuất đúng mức phụ xăng 120.000đ');
+    assert(parsedSinglePax.phoneReal === '0984883750', 'Passenger NLP 4: Trích xuất đúng số điện thoại Zalo của khách');
+    assert(
+      parsedSinglePax.waypointNote.includes('Bình Phước'),
+      'Passenger NLP 5: Bắt chuẩn điểm hẹn đón mong muốn (Đón tại ngã tư Bình Phước)'
+    );
+    assert(
+      parsedSinglePax.carCategory === undefined && parsedSinglePax.carType === undefined,
+      'Passenger NLP 6: Không gán sai thông tin xe gia đình hay loại xe của tài xế cho hành khách'
+    );
+
+    // 31.3 Kiểm thử NLP nhận diện Gia đình 3 người
+    const familyPaxText = SMART_TRIP_TEMPLATES.passenger[1].text;
+    const parsedFamilyPax = parseNaturalTrip(familyPaxText);
+    assert(parsedFamilyPax.role === 'passenger', 'Passenger NLP 7: Nhận diện khách đi gia đình là passenger');
+    assert(parsedFamilyPax.seats === 3, 'Passenger NLP 8: Nhận diện 2 người lớn 1 bé tương ứng 3 ghế');
+    assert(parsedFamilyPax.price === 300000, 'Passenger NLP 9: Nhận diện ngân sách phụ 300k');
+
+    // 31.4 Kiểm thử NLP nhận diện Khách gửi hàng bưu phẩm
+    const parcelPaxText = SMART_TRIP_TEMPLATES.passenger[2].text;
+    const parsedParcelPax = parseNaturalTrip(parcelPaxText);
+    assert(parsedParcelPax.role === 'passenger', 'Passenger NLP 10: Khách gửi hàng nhận diện đúng vai trò');
+    assert(parsedParcelPax.acceptsParcel === true, 'Passenger NLP 11: Bật cờ gửi kèm hàng hoá/bưu phẩm (acceptsParcel: true)');
+    assert(parsedParcelPax.price === 80000, 'Passenger NLP 12: Nhận diện chi phí phụ gửi hàng 80k');
+
+    // 31.5 Kiểm thử đăng chuyến xe thực tế qua API cho hành khách (type: passenger_request)
+    const paxTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sharedTokenA}`
+      },
+      body: JSON.stringify({
+        type: 'passenger_request',
+        from: 'Bù Đốp',
+        to: 'Bệnh viện Chợ Rẫy, Sài Gòn',
+        seatsNeeded: 1,
+        expectedPrice: 120000,
+        phoneReal: '0984883750',
+        userId: 'USR-0984883750',
+        routeCategory: 'Tuyến QL13',
+        timeSlot: '07:00-09:00',
+        waypointNote: 'Đón tại ngã tư Bình Phước',
+        date: 'Ngày mai'
+      })
+    });
+    const paxTripData = await paxTripRes.json();
+    assert(paxTripRes.status === 201 && paxTripData.success === true, 'API Passenger 1: Đăng nhu cầu tìm xe thành công (HTTP 201)');
+    const createdPaxTripId = paxTripData.data?.id;
+    assert(paxTripData.data?.type === 'passenger_request', 'API Passenger 2: Phân loại đúng loại bài đăng passenger_request');
+    assert(paxTripData.data?.seatsNeeded === 1, 'API Passenger 3: Lưu trữ đúng số ghế khách cần');
+
+    // 31.6 Kiểm thử UI Static Code Inspection
+    const composerPath = path.resolve(process.cwd(), 'apps/web/src/components/post/SmartTripComposer.jsx');
+    const composerCode = fs.readFileSync(composerPath, 'utf8');
+    assert(
+      composerCode.includes('currentRole') && composerCode.includes('onRoleChange'),
+      'UI Composer 1: Nhận props currentRole và onRoleChange hỗ trợ đồng bộ 2 chiều'
+    );
+    assert(
+      composerCode.includes('SMART_TRIP_TEMPLATES') && composerCode.includes('activeCategory'),
+      'UI Composer 2: Thanh thư viện mẫu quản lý danh mục và luôn luôn hiển thị'
+    );
+    assert(
+      composerCode.includes('handleCycleNextSample') || composerCode.includes('Đổi mẫu khác'),
+      'UI Composer 3: Tích hợp nút Đổi mẫu khác cho phép người dùng quay lại xem các mẫu khác 1-chạm'
+    );
+
+    const postFormPath = path.resolve(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx');
+    const postFormCode = fs.readFileSync(postFormPath, 'utf8');
+    assert(
+      postFormCode.includes('currentRole={role}') && postFormCode.includes('onRoleChange='),
+      'UI PostTripForm 1: Form cha đồng bộ 2 chiều chặt chẽ với SmartTripComposer'
+    );
+    assert(
+      postFormCode.includes('frontSeatPreference') && postFormCode.includes('Xin ngồi ghế trước (chống say xe)'),
+      'UI PostTripForm 2: Bổ sung tiện ích chuyên biệt cho khách đi xe (Ngồi ghế trước chống say)'
+    );
+
+    // Dọn dẹp bản ghi test
+    if (createdPaxTripId) {
+      await fetch(`${BASE_URL}/api/trips/${createdPaxTripId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${sharedTokenA}` }
+      }).catch(() => {});
+    }
+  } catch (err) {
+    assert(false, '31. Kiểm thử Tối Ưu Hóa Người Cần Tìm Xe & Thư Viện Mẫu Đa Dạng', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
