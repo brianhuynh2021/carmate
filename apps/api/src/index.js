@@ -15,6 +15,22 @@ const __dirname = path.dirname(__filename);
 const webDir = path.resolve(__dirname, '../../web');
 const webDistDir = path.resolve(webDir, 'dist');
 
+// Tự động nạp file .env từ thư mục gốc hoặc apps/api (thuận tiện cho dev, không cần nhớ vị trí)
+const candidateEnvPaths = [
+  path.resolve(__dirname, '../../../.env'), // Thư mục gốc /carmate/.env
+  path.resolve(__dirname, '../.env'), // apps/api/.env
+  path.resolve(process.cwd(), '.env') // CWD .env
+];
+for (const envPath of candidateEnvPaths) {
+  if (fs.existsSync(envPath) && typeof process.loadEnvFile === 'function') {
+    try {
+      process.loadEnvFile(envPath);
+    } catch {
+      // Bỏ qua nếu đã nạp hoặc file rỗng
+    }
+  }
+}
+
 const app = express();
 const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 5173; // Khởi động duy nhất 1 cổng 5173
