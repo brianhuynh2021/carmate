@@ -260,6 +260,10 @@ export const api = {
     return request('/admin/ai-intelligence');
   },
 
+  async getAdminAnalyticsSummary() {
+    return request('/admin/analytics/summary');
+  },
+
   // Agentic AI Concierge & Dispatcher (Stanford Inner Loop)
   async agentChat(message, history = []) {
     return request('/agent/chat', {

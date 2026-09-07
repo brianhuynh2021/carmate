@@ -20,7 +20,10 @@ import {
   RefreshCw,
   ExternalLink,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  BarChart3,
+  TrendingUp,
+  Compass
 } from 'lucide-react';
 import api from '../../api/client.js';
 import Button from '../ui/Button.jsx';
@@ -37,7 +40,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [mfaCode, setMfaCode] = useState('');
   const [requireMfa, setRequireMfa] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'users' | 'reports' | 'ai'
+  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'users' | 'reports' | 'ai' | 'analytics'
 
   // Data states
   const [metrics, setMetrics] = useState(null);
@@ -45,6 +48,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState(null);
   const [aiIntelligence, setAiIntelligence] = useState(null);
+  const [analyticsSummary, setAnalyticsSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusNotice, setStatusNotice] = useState(null);
@@ -91,12 +95,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const loadAllAdminData = async () => {
     setIsLoading(true);
     try {
-      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes] = await Promise.allSettled([
+      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes] = await Promise.allSettled([
         api.getAdminMetrics(),
         api.getAdminTrips(),
         api.getAdminUsers(),
         api.getAdminReports(),
-        api.getAdminAiIntelligence()
+        api.getAdminAiIntelligence(),
+        api.getAdminAnalyticsSummary()
       ]);
 
       if (metricsRes.status === 'fulfilled' && metricsRes.value?.success) {
@@ -113,6 +118,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
       }
       if (aiRes.status === 'fulfilled' && aiRes.value?.success) {
         setAiIntelligence(aiRes.value.data || null);
+      }
+      if (analyticsRes.status === 'fulfilled' && analyticsRes.value?.success) {
+        setAnalyticsSummary(analyticsRes.value.data || null);
       }
     } catch (err) {
       console.warn('[Admin] Lỗi nạp dữ liệu:', err);
@@ -480,6 +488,23 @@ export default function AdminDashboardView({ onExitAdmin }) {
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>AI Trajectories ({aiIntelligence?.summary?.totalQueries || 0})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('analytics')}
+            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+              activeTab === 'analytics'
+                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Phễu & Analytics</span>
+            {analyticsSummary?.totalEvents > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                {analyticsSummary.totalEvents}
+              </span>
+            )}
           </button>
         </div>
 
@@ -965,6 +990,228 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 5: PHỄU & ANALYTICS CHUYỂN ĐỔI (ZERO-COST FUNNEL STORE) ── */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-6">
+          {/* 4 Thẻ KPI Phễu */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
+              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Tổng Sự Kiện Đã Lưu</p>
+              <p className="text-2xl sm:text-3xl font-mono font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                {analyticsSummary?.totalEvents || 0}
+              </p>
+              <p className="text-[10.5px] text-slate-400">SQLite In-Memory + Persistent Disk (0đ)</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
+              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Lượt Xem Chuyến Đi</p>
+              <p className="text-2xl sm:text-3xl font-mono font-black text-blue-600 dark:text-blue-400 tabular-nums">
+                {analyticsSummary?.funnel?.view_trip || 0}
+              </p>
+              <p className="text-[10.5px] text-slate-400">Khách xem chi tiết bài đăng ghép xe</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
+              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Lượt Chốt Qua Zalo</p>
+              <p className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                {analyticsSummary?.funnel?.open_zalo_chat || 0}
+              </p>
+              <p className="text-[10.5px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                Tỷ lệ mở Zalo: {analyticsSummary?.funnel?.page_view ? ((analyticsSummary.funnel.open_zalo_chat / analyticsSummary.funnel.page_view) * 100).toFixed(1) : 0}%
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
+              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Bác Tài Đã Nhận Đón</p>
+              <p className="text-2xl sm:text-3xl font-mono font-black text-teal-600 dark:text-teal-400 tabular-nums">
+                {analyticsSummary?.funnel?.driver_confirm || 0}
+              </p>
+              <p className="text-[10.5px] text-slate-400">Xác nhận 1-chạm Magic Link</p>
+            </div>
+          </div>
+
+          {/* Sơ Đồ Phễu Chuyển Đổi Tuyến Đi (Ridesharing Conversion Funnel) */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-black/[0.06]">
+              <div>
+                <h3 className="font-bold text-base text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-indigo-500" />
+                  <span>Phễu Chuyển Đổi Hành Khách (6 Tầng Vận Hành)</span>
+                </h3>
+                <p className="text-xs text-[#86868b] mt-0.5">
+                  Đo lường từng điểm rơi (drop-off) từ lúc khách vào web đến khi bác tài bấm nhận đón trên Zalo
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 self-start sm:self-auto">
+                Tự động lưu SQLite 0đ
+              </span>
+            </div>
+
+            {/* Các bước trong phễu */}
+            {(() => {
+              const funnel = analyticsSummary?.funnel || {};
+              const stages = [
+                { key: 'page_view', name: '1. Xem Trang (Page View)', count: funnel.page_view || 0, desc: 'Khách truy cập website CarMate' },
+                { key: 'search_route', name: '2. Tìm Tuyến Xe (Search Route)', count: funnel.search_route || 0, desc: 'Khách gõ điểm đi / điểm đến tìm chuyến' },
+                { key: 'view_trip', name: '3. Xem Chi Tiết Vé (View Trip)', count: funnel.view_trip || 0, desc: 'Khách bấm xem chi tiết giá & thông tin bác tài' },
+                { key: 'initiate_booking', name: '4. Bấm Đặt Chỗ (Initiate Booking)', count: funnel.initiate_booking || 0, desc: 'Khách chọn số ghế & bấm tiếp tục' },
+                { key: 'open_zalo_chat', name: '5. Mở Chat Zalo (Open Zalo Chat)', count: funnel.open_zalo_chat || 0, desc: 'Khách chuyển sang app Zalo nhắn tin cho bác tài' },
+                { key: 'driver_confirm', name: '6. Bác Tài Nhận Đón (Driver Confirmed)', count: funnel.driver_confirm || 0, desc: 'Bác tài bấm xác nhận nhận cuốc qua Magic Link' }
+              ];
+              const baseCount = Math.max(stages[0].count, 1);
+
+              return (
+                <div className="space-y-4">
+                  {stages.map((stg, sIdx) => {
+                    const pctOfBase = Math.min(100, Math.round((stg.count / baseCount) * 100));
+                    const prevCount = sIdx === 0 ? stg.count : stages[sIdx - 1].count;
+                    const stepConversion = prevCount > 0 ? Math.round((stg.count / prevCount) * 100) : 0;
+
+                    return (
+                      <div key={stg.key} className="space-y-1.5 p-3 sm:p-4 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06]">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white text-xs font-bold flex items-center justify-center border border-black/[0.08] dark:border-white/[0.1] shadow-xs">
+                              {sIdx + 1}
+                            </span>
+                            <div>
+                              <p className="text-xs font-bold text-[#1d1d1f] dark:text-white">{stg.name}</p>
+                              <p className="text-[11px] text-[#86868b]">{stg.desc}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="text-right">
+                              <span className="text-sm sm:text-base font-mono font-bold text-[#1d1d1f] dark:text-white tabular">
+                                {stg.count}
+                              </span>
+                              <span className="text-xs text-[#86868b] ml-1">lượt</span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-white dark:bg-slate-800 border border-black/[0.08] dark:border-white/[0.1] text-indigo-600 dark:text-indigo-400 min-w-[52px] text-center">
+                              {pctOfBase}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="w-full h-2 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-500"
+                            style={{ width: `${Math.max(pctOfBase, stg.count > 0 ? 3 : 0)}%` }}
+                          />
+                        </div>
+
+                        {sIdx > 0 && prevCount > 0 && (
+                          <div className="text-right">
+                            <span className="text-[10.5px] text-[#86868b]">
+                              Chuyển đổi từ bước trước: <strong className="text-[#1d1d1f] dark:text-white">{stepConversion}%</strong>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Hai Khối Song Song: Top Tuyến Được Tìm Kiếm & Nhật Ký Sự Kiện Trực Tiếp */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Top Tuyến Đường Tìm Kiếm */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
+              <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                <Compass className="w-4 h-4 text-blue-500" />
+                <span>Top Tuyến Đường Tìm Kiếm Nhiều Nhất</span>
+              </h3>
+
+              {!analyticsSummary?.topSearchedRoutes || analyticsSummary.topSearchedRoutes.length === 0 ? (
+                <div className="p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-xs text-[#86868b]">
+                  Chưa có dữ liệu tìm kiếm tuyến. Khi khách gõ tìm xe trên trang chủ, dữ liệu sẽ tự động tổng hợp tại đây.
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {analyticsSummary.topSearchedRoutes.map((rt, rIdx) => (
+                    <div
+                      key={rIdx}
+                      className="p-3 rounded-xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[11px] font-bold flex items-center justify-center">
+                          {rIdx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-[#1d1d1f] dark:text-white">{rt.route}</span>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+                        {rt.count} lượt
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Dòng Sự Kiện Thời Gian Thực (Live Event Stream) */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-500" />
+                  <span>Dòng Sự Kiện Trực Tiếp (Live Event Log)</span>
+                </h3>
+                <span className="text-xs text-[#86868b]">
+                  {analyticsSummary?.recentEvents?.length || 0} sự kiện gần nhất
+                </span>
+              </div>
+
+              {!analyticsSummary?.recentEvents || analyticsSummary.recentEvents.length === 0 ? (
+                <div className="p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-xs text-[#86868b]">
+                  Chưa có sự kiện nào được ghi nhận.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                  {analyticsSummary.recentEvents.map((ev) => {
+                    const isError = ev.event_name.startsWith('error');
+                    const isBooking = ev.event_name.includes('booking') || ev.event_name.includes('zalo');
+                    const isSearch = ev.event_name.includes('search');
+
+                    return (
+                      <div
+                        key={ev.id}
+                        className="p-2.5 rounded-xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] text-xs space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-md font-mono text-[10.5px] font-bold ${
+                              isError
+                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                : isBooking
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : isSearch
+                                    ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
+                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            {ev.event_name}
+                          </span>
+                          <span className="text-[10.5px] text-slate-400 font-mono">
+                            {new Date(ev.created_at).toLocaleTimeString('vi-VN')}
+                          </span>
+                        </div>
+                        {ev.properties && (
+                          <p className="text-[11px] text-[#86868b] font-mono truncate">
+                            {JSON.stringify(ev.properties)}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
