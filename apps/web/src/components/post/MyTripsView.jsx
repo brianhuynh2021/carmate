@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Lock,
   Unlock,
+  Plus,
   PlusCircle,
   ExternalLink,
   Users,
@@ -157,7 +158,7 @@ export default function MyTripsView({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* ── 1. HEADER & APPLE CAPSULE SEGMENTED FILTER ── */}
+      {/* ── 1. HEADER ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <SectionHeader
           icon={Car}
@@ -168,76 +169,127 @@ export default function MyTripsView({
               : 'Quản lý, cập nhật giờ khởi hành, giá vé hoặc tái đăng bài khi hết hạn.'
           }
         />
-
-        {myTrips.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
-            {/* Primary Apple Capsule: Đang tìm khách vs Lịch sử đã kết thúc */}
-            <div className="inline-flex items-center p-1 rounded-full bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06] text-xs shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setMainTab('active')}
-                className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                  mainTab === 'active'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Đang tìm khách ({activeTrips.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setMainTab('history')}
-                className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                  mainTab === 'history'
-                    ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Lịch sử ({historyTrips.length})
-              </button>
-            </div>
-
-            {/* Sub-pill: Chỉ hiển thị khi ở tab Đang tìm khách */}
-            {mainTab === 'active' && activeTrips.length > 0 && (
-              <div className="inline-flex items-center p-1 rounded-full bg-[#f2f2f5] dark:bg-slate-850 border border-black/[0.03] dark:border-white/[0.04] text-[11px] shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('all')}
-                  className={`px-2.5 py-1 rounded-full font-semibold transition-all cursor-pointer ${
-                    statusFilter === 'all'
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Tất cả
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('open')}
-                  className={`px-2.5 py-1 rounded-full font-semibold transition-all cursor-pointer ${
-                    statusFilter === 'open'
-                      ? 'bg-white dark:bg-slate-900 text-[#107c41] dark:text-emerald-400 shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Còn chỗ ({activeOpenCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('full')}
-                  className={`px-2.5 py-1 rounded-full font-semibold transition-all cursor-pointer ${
-                    statusFilter === 'full'
-                      ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Đã đủ ({activeFullCount})
-                </button>
-              </div>
-            )}
+        {onPostNew && (
+          <div className="shrink-0">
+            <button
+              type="button"
+              onClick={onPostNew}
+              className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Đăng Chuyến Mới</span>
+            </button>
           </div>
         )}
       </div>
+
+      {/* ── 1.1. APPLE HIG SEGMENTED FILTER TOOLBAR ── */}
+      {myTrips.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-900 border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
+          {/* Cụm chính: Đang tìm khách vs Lịch sử chuyến */}
+          <div className="inline-flex items-center p-1 rounded-full bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06] text-xs shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setMainTab('active')}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all cursor-pointer select-none ${
+                mainTab === 'active'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Đang tìm khách</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-bold tabular transition-colors ${
+                  mainTab === 'active'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
+                    : 'bg-black/[0.06] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                {activeTrips.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMainTab('history')}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all cursor-pointer select-none ${
+                mainTab === 'history'
+                  ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Lịch sử chuyến</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-bold tabular transition-colors ${
+                  mainTab === 'history'
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                    : 'bg-black/[0.06] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                {historyTrips.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Cụm lọc con (Filter chips): Chỉ hiển thị khi ở tab Đang tìm khách */}
+          {mainTab === 'active' && activeTrips.length > 0 && (
+            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed]/60 dark:bg-slate-800/60 border border-black/[0.03] dark:border-white/[0.04] text-[11px] shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className={`inline-flex items-center px-3 py-1 rounded-full font-semibold whitespace-nowrap transition-all cursor-pointer select-none ${
+                  statusFilter === 'all'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Tất cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('open')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold whitespace-nowrap transition-all cursor-pointer select-none ${
+                  statusFilter === 'open'
+                    ? 'bg-white dark:bg-slate-900 text-[#107c41] dark:text-emerald-400 shadow-2xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#107c41] dark:bg-emerald-400 shrink-0" />
+                <span>Còn chỗ</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular ${
+                    statusFilter === 'open'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-[#107c41] dark:text-emerald-400'
+                      : 'bg-black/[0.05] dark:bg-white/[0.06] text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  {activeOpenCount}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('full')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold whitespace-nowrap transition-all cursor-pointer select-none ${
+                  statusFilter === 'full'
+                    ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-2xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                <span>Đã đủ</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular ${
+                    statusFilter === 'full'
+                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
+                      : 'bg-black/[0.05] dark:bg-white/[0.06] text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  {activeFullCount}
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── 2. CẢNH BÁO / HƯỚNG DẪN ĐỒNG BỘ DÀNH CHO KHÁCH (NẾU CÓ CHUYẾN TẠO TẠM) ── */}
       {!currentUser && myTrips.length > 0 && (

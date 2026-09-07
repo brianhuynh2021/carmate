@@ -80,8 +80,12 @@ export default function App() {
       window.location.hostname.startsWith('admin.') ||
       window.location.search.includes('portal=ops'));
 
+  // Danh mục Tab hợp lệ trên toàn hệ sinh thái CarMate
+  const VALID_TABS = ['market', 'match', 'post', 'my-trips', 'booked', 'admin'];
+
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
+      // 1. Nhận diện Admin Portal chuyên dụng
       if (
         window.location.hostname.startsWith('ops.') ||
         window.location.hostname.startsWith('admin.') ||
@@ -92,6 +96,33 @@ export default function App() {
       ) {
         return 'admin';
       }
+
+      // 2. Nhận diện URL Hash (#my-trips, #booked, #post, #match, #market)
+      const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
+      if (VALID_TABS.includes(rawHash)) {
+        return rawHash;
+      }
+      if (rawHash === 'my_trips' || rawHash === 'mytrips') {
+        return 'my-trips';
+      }
+
+      // 3. Nhận diện Search Query parameter (?tab=...)
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const queryTab = params.get('tab');
+        if (queryTab && VALID_TABS.includes(queryTab)) {
+          return queryTab;
+        }
+        if (queryTab === 'my_trips') return 'my-trips';
+      } catch {}
+
+      // 4. Khôi phục tab trước đó từ sessionStorage (Kháng văng trang chủ khi F5 / Reload)
+      try {
+        const savedTab = sessionStorage.getItem('carmate_active_tab');
+        if (savedTab && VALID_TABS.includes(savedTab) && savedTab !== 'admin') {
+          return savedTab;
+        }
+      } catch {}
     }
     return 'market';
   });
@@ -99,6 +130,52 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     trackPageView(activeTab);
+
+    // Đồng bộ URL Hash & SessionStorage 2 chiều để F5 / Reload không bao giờ mất tab
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('carmate_active_tab', activeTab);
+        if (activeTab === 'market') {
+          if (window.location.hash && window.location.hash !== '#market') {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        } else if (activeTab === 'admin') {
+          if (window.location.hash !== '#admin' && !window.location.pathname.startsWith('/admin')) {
+            window.history.replaceState(null, '', '#admin');
+          }
+        } else {
+          const targetHash = '#' + activeTab;
+          if (window.location.hash !== targetHash) {
+            window.history.replaceState(null, '', targetHash);
+          }
+        }
+      } catch (err) {
+        console.warn('URL state sync error:', err);
+      }
+    }
+  }, [activeTab]);
+
+  // Lắng nghe sự kiện Back/Forward trình duyệt hoặc thay đổi URL Hash
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleHashOrPopState = () => {
+      const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
+      if (VALID_TABS.includes(rawHash) && rawHash !== activeTab) {
+        setActiveTab(rawHash);
+      } else if (rawHash === 'my_trips' && activeTab !== 'my-trips') {
+        setActiveTab('my-trips');
+      } else if (!rawHash && activeTab !== 'market' && activeTab !== 'admin') {
+        setActiveTab('market');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashOrPopState);
+    window.addEventListener('popstate', handleHashOrPopState);
+    return () => {
+      window.removeEventListener('hashchange', handleHashOrPopState);
+      window.removeEventListener('popstate', handleHashOrPopState);
+    };
   }, [activeTab]);
 
   // Magic Link 1-Chạm Bác tài & Apple Re-entry Card Khách quay lại web

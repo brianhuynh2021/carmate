@@ -1962,6 +1962,71 @@ async function runTests() {
     assert(false, '28. Kiểm thử Báo cáo Sai lệch Loại xe & Xử lý 1-Chạm Admin', err.message);
   }
 
+  // 29. KIỂM THỬ ĐỒNG BỘ URL HASH (KHÁNG RELOAD VỀ TRANG CHỦ) & THIẾT KẾ APPLE HIG TOOLBAR
+  console.log('\n--- 29. Kiểm thử Đồng bộ URL Hash (Kháng Reload Về Trang Chủ) & Thiết Kế Apple HIG Toolbar ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 29.1 Kiểm tra logic URL Hash và Tab Persistence trong App.jsx
+    const appJsxPath = path.resolve(process.cwd(), 'apps/web/src/App.jsx');
+    const appJsxCode = fs.readFileSync(appJsxPath, 'utf8');
+
+    assert(
+      appJsxCode.includes("const VALID_TABS = ['market', 'match', 'post', 'my-trips', 'booked', 'admin'];"),
+      'Hash Sync 1: Khai báo đầy đủ danh mục VALID_TABS chuẩn trên toàn hệ thống'
+    );
+    assert(
+      appJsxCode.includes("rawHash === 'my_trips' || rawHash === 'mytrips'"),
+      'Hash Sync 2: Tự động chuẩn hóa alias #my_trips về #my-trips chuẩn'
+    );
+    assert(
+      appJsxCode.includes("sessionStorage.setItem('carmate_active_tab', activeTab);"),
+      'Hash Sync 3: Lưu trữ tab vào sessionStorage bảo vệ phiên làm việc khi F5 / Reload'
+    );
+    assert(
+      appJsxCode.includes("window.history.replaceState(null, '', targetHash);"),
+      'Hash Sync 4: Đồng bộ êm dịu URL Hash qua replaceState không gây giật lag'
+    );
+    assert(
+      appJsxCode.includes("window.addEventListener('hashchange', handleHashOrPopState);") &&
+        appJsxCode.includes("window.addEventListener('popstate', handleHashOrPopState);"),
+      'Hash Sync 5: Lắng nghe sự kiện hashchange & popstate hỗ trợ nút Back/Forward trình duyệt'
+    );
+
+    // 29.2 Kiểm tra thiết kế Apple HIG Toolbar trong MyTripsView.jsx
+    const myTripsPath = path.resolve(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx');
+    const myTripsCode = fs.readFileSync(myTripsPath, 'utf8');
+
+    assert(
+      myTripsCode.includes('APPLE HIG SEGMENTED FILTER TOOLBAR'),
+      'Apple UI 1: Toolbar bộ lọc được tách riêng biệt thành khối chuyên dụng'
+    );
+    assert(
+      myTripsCode.includes('whitespace-nowrap'),
+      'Apple UI 2: Khóa cứng thuộc tính whitespace-nowrap chống bẻ đôi dòng chữ'
+    );
+    assert(
+      myTripsCode.includes('<span>Đang tìm khách</span>') && myTripsCode.includes('<span>Lịch sử chuyến</span>'),
+      'Apple UI 3: Tách bạch nhãn chữ và số lượng đếm chuyến'
+    );
+    assert(
+      myTripsCode.includes('rounded-full text-[10.5px] font-bold tabular') ||
+        myTripsCode.includes('rounded-full text-[10px] font-bold tabular'),
+      'Apple UI 4: Số lượng được đóng gói trong Apple Badge Pill tinh xảo'
+    );
+    assert(
+      myTripsCode.includes('bg-[#107c41]') && myTripsCode.includes('Còn chỗ'),
+      'Apple UI 5: Chấm tròn trạng thái màu xanh lá sống động cho mục Còn chỗ'
+    );
+    assert(
+      myTripsCode.includes('bg-slate-400') && myTripsCode.includes('Đã đủ'),
+      'Apple UI 6: Chấm tròn trạng thái màu xám tinh tế cho mục Đã đủ'
+    );
+  } catch (err) {
+    assert(false, '29. Kiểm thử Đồng bộ URL Hash & Apple HIG Toolbar', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
