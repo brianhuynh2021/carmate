@@ -585,8 +585,10 @@ Nhiệm vụ của bạn:
    - 'draftZaloMessage': tạo tin nhắn mẫu chốt cuốc Zalo.
 3. Luôn trả lời lịch sự, thân thiện, súc tích, mang phong thái văn minh, hỗ trợ kết nối trực tiếp không thu phí sàn.`;
 
+    const targetModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: targetModel,
       contents: message,
       config: {
         systemInstruction,
@@ -631,7 +633,7 @@ Nhiệm vụ của bạn:
       reply: response.text || 'Dạ chào bạn, mình đã tìm thấy các chuyến xe phù hợp với lộ trình của bạn bên dưới:',
       reasoningSteps,
       suggestedTrips,
-      engine: 'gemini-2.5-flash'
+      engine: targetModel
     };
   } catch (err) {
     console.warn('[CarMate Agent] Lỗi gọi Gemini API, tự động kích hoạt Heuristic Fallback:', err.message);
