@@ -21,7 +21,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "hooks:install": "git config core.hooksPath .githooks && echo \"✅ Git hooks đã kích hoạt (.githooks)\"",
+    "hooks:install": "cp .githooks/pre-* .git/hooks/ && chmod +x .git/hooks/* && git config core.hooksPath .git/hooks && echo \"✅ Git hooks bảo vệ Local đã kích hoạt\"",
     "release:main": "bash scripts/release-to-main.sh",
     "backup": "node scripts/backup-db.js",
     "backup:setup": "bash scripts/setup-backup-cron.sh",
