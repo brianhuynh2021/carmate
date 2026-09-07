@@ -328,16 +328,18 @@ export default function AuthModal({
                   )}
                 </div>
 
-                {/* Tuỳ chọn đăng nhập kiểm thử offline */}
-                <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowGoogleForm(true)}
-                    className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#0071e3] dark:hover:text-[#2997ff] font-medium transition-colors cursor-pointer"
-                  >
-                    Dùng form đăng nhập nhanh (Dev Test)
-                  </button>
-                </div>
+                {/* Tuỳ chọn đăng nhập kiểm thử offline (chỉ hiện ở dev local) */}
+                {import.meta.env.DEV && (
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowGoogleForm(true)}
+                      className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#0071e3] dark:hover:text-[#2997ff] font-medium transition-colors cursor-pointer"
+                    >
+                      Dùng form đăng nhập nhanh (Dev Test)
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <form onSubmit={handleGoogleSubmit} className="space-y-3">
@@ -470,16 +472,18 @@ export default function AuthModal({
                   <div ref={telegramBtnRef} className="flex justify-center w-full min-h-[44px]" />
                 </div>
 
-                {/* Tuỳ chọn đăng nhập nhanh Telegram (Dự phòng) */}
-                <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowTelegramForm(true)}
-                    className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#229ED9] font-medium transition-colors cursor-pointer"
-                  >
-                    Dùng form đăng nhập nhanh @username (Dev Test)
-                  </button>
-                </div>
+                {/* Tuỳ chọn đăng nhập nhanh Telegram (chỉ hiện ở dev local) */}
+                {import.meta.env.DEV && (
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowTelegramForm(true)}
+                      className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#229ED9] font-medium transition-colors cursor-pointer"
+                    >
+                      Dùng form đăng nhập nhanh @username (Dev Test)
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <form onSubmit={handleTelegramDevSubmit} className="space-y-3">
