@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
-import Logo from '../ui/Logo.jsx';
+import { LogoMark } from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
 
 export function LanguageToggle({ size = 'sm' }) {
@@ -112,7 +112,7 @@ export default function Header({
             className="flex items-center gap-2 cursor-pointer select-none text-left group"
             aria-label="CarMate Home"
           >
-            <Logo className="w-7 h-7 sm:w-8 sm:h-8 group-hover:scale-105 transition-transform" />
+            <LogoMark className="w-7 h-7 sm:w-8 sm:h-8 group-hover:scale-105 transition-transform" />
             <div className="flex flex-col">
               <span className="font-display font-black text-lg sm:text-xl tracking-tight leading-none text-[#1d1d1f] dark:text-white">
                 Car<span className="text-[#0071e3]">Mate</span>

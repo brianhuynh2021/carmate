@@ -79,7 +79,7 @@ export default function Hero({
   const activeRouteHint = POPULAR_ROTATING_ROUTES[routeCycleIndex];
 
   const pills = [
-    { icon: BadgePercent, label: '100% không thu phí sàn' },
+    { icon: BadgePercent, label: '0% phí trung gian' },
     { icon: Zap, label: 'Xe gia đình & Tiện chuyến' },
     { icon: MessageCircle, label: 'Zalo 1 chạm kết nối' },
     { icon: ShieldCheck, label: 'Xác minh SĐT thật' }
@@ -124,7 +124,7 @@ export default function Hero({
           {t('hero.subtitle')}
         </p>
         <p className="sm:hidden text-xs text-[#6e6e73] font-medium">
-          Xe gia đình · 100% không phí sàn · Đón trả linh hoạt
+          Xe gia đình · 0% phí trung gian · Đón trả linh hoạt
         </p>
 
         {/* Core Value Pillars - Single definitive statement on fee */}
