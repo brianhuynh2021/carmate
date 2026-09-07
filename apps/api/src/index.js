@@ -48,6 +48,28 @@ for (const envPath of candidateEnvPaths) {
   }
 }
 
+// ── Kiểm tra cấu hình bảo mật bắt buộc trước khi mở cổng (Fail-Closed) ──
+// Thà không khởi động còn hơn chạy production với cấu hình thiếu an toàn.
+// JWT_SECRET đã được token.js kiểm và ném lỗi khi thiếu; ở đây chốt thêm
+// CARMATE_ADMIN_PASSCODE để tránh deploy xong mới phát hiện không vào được
+// Cổng Quản Trị (khi thiếu, mọi mật mã đều bị từ chối).
+if (process.env.NODE_ENV === 'production') {
+  const adminPasscode = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY || '';
+  if (adminPasscode.trim() === '') {
+    console.error(
+      'FATAL SECURITY ERROR: CARMATE_ADMIN_PASSCODE environment variable is missing in production mode!'
+    );
+    console.error('Cổng Quản Trị sẽ không thể đăng nhập. Hãy cấu hình biến này trước khi khởi động.');
+    process.exit(1);
+  }
+  if (adminPasscode.trim().length < 16) {
+    console.error(
+      'FATAL SECURITY ERROR: CARMATE_ADMIN_PASSCODE quá ngắn (yêu cầu tối thiểu 16 ký tự trong production)!'
+    );
+    process.exit(1);
+  }
+}
+
 const app = express();
 const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 5173; // Khởi động duy nhất 1 cổng 5173

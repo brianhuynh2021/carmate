@@ -72,22 +72,41 @@ jobs:
 
       - name: Verify Production Fail-Closed (Security Assurance)
         run: |
-          echo "Verifying server refuses to start in production without CARMATE_ADMIN_PASSCODE or JWT_SECRET..."
-          # Case 1: Thiếu CARMATE_ADMIN_PASSCODE trong production -> Phải fail-closed
-          if PORT=5993 NODE_ENV=production JWT_SECRET=test_secret_32_chars_long_ci_ok CARMATE_ADMIN_PASSCODE="" node apps/api/src/index.js 2>&1 | grep -q "FATAL SECURITY ERROR"; then
-            echo "PASS: Server correctly failed-closed when CARMATE_ADMIN_PASSCODE was missing."
-          else
-            echo "FAIL: Server did not fail-closed when CARMATE_ADMIN_PASSCODE was missing!"
-            exit 1
-          fi
+          set -u
+          # Bọc `timeout` quanh mỗi lần thử: nếu server KHÔNG fail-closed nó sẽ
+          # khởi động và chạy mãi, khiến step treo tới hết timeout của job.
+          # Dùng .env.ci rỗng để chặn cơ chế tự nạp .env của index.js làm nhiễu
+          # phép thử (nó điền lại biến bị bỏ trống từ file .env nếu có).
+          check_fail_closed() {
+            local label="$1"; shift
+            local out
+            out=$(timeout 20s env "$@" node apps/api/src/index.js 2>&1 || true)
+            if printf '%s' "$out" | grep -q "FATAL SECURITY ERROR"; then
+              echo "PASS: $label"
+            else
+              echo "::error::FAIL: $label — server không fail-closed."
+              printf '%s\n' "$out" | head -20
+              exit 1
+            fi
+          }
 
-          # Case 2: Thiếu JWT_SECRET trong production -> Phải fail-closed
-          if PORT=5994 NODE_ENV=production JWT_SECRET="" CARMATE_ADMIN_PASSCODE=prod_pass_123 node apps/api/src/index.js 2>&1 | grep -q "FATAL SECURITY ERROR"; then
-            echo "PASS: Server correctly failed-closed when JWT_SECRET was missing."
-          else
-            echo "FAIL: Server did not fail-closed when JWT_SECRET was missing!"
-            exit 1
-          fi
+          # Case 1: Thiếu CARMATE_ADMIN_PASSCODE trong production -> phải fail-closed
+          check_fail_closed "Chặn khởi động khi thiếu CARMATE_ADMIN_PASSCODE" \
+            PORT=5993 NODE_ENV=production \
+            JWT_SECRET=test_secret_32_chars_long_ci_ok \
+            CARMATE_ADMIN_PASSCODE=
+
+          # Case 2: Thiếu JWT_SECRET trong production -> phải fail-closed
+          check_fail_closed "Chặn khởi động khi thiếu JWT_SECRET" \
+            PORT=5994 NODE_ENV=production \
+            JWT_SECRET= \
+            CARMATE_ADMIN_PASSCODE=ci_prod_passcode_min_16_chars
+
+          # Case 3: Passcode production quá ngắn -> phải fail-closed
+          check_fail_closed "Chặn khởi động khi CARMATE_ADMIN_PASSCODE quá ngắn" \
+            PORT=5995 NODE_ENV=production \
+            JWT_SECRET=test_secret_32_chars_long_ci_ok \
+            CARMATE_ADMIN_PASSCODE=short123
 
       - name: Stop Server
         if: always()
