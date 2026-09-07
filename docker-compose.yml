@@ -12,6 +12,9 @@ services:
       - PORT=8080
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in environment}
       - CARMATE_ADMIN_PASSCODE=${CARMATE_ADMIN_PASSCODE:?CARMATE_ADMIN_PASSCODE must be set in environment}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_LOG_CHAT_ID=${TELEGRAM_LOG_CHAT_ID:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     volumes:
       - carmate-data:/app/apps/api/data
 
