@@ -1,0 +1,26 @@
+#!/bin/sh
+# CarMate pre-commit guard
+# Chặn commit trực tiếp trên nhánh 'main' ở môi trường local.
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$BRANCH" = "main" ]; then
+  if [ "$ALLOW_MAIN_COMMIT" != "1" ] && [ ! -f .git/MERGE_HEAD ]; then
+    echo ""
+    echo "================================================================="
+    echo "🛑 [CHẶN LOCAL] BẠN ĐANG THỰC HIỆN COMMIT TRỰC TIẾP TRÊN 'main'!"
+    echo "================================================================="
+    echo "Theo quy tắc kỹ thuật CarMate (AGENTS.md):"
+    echo "  - Tuyệt đối không làm việc hoặc commit trực tiếp trên 'main'."
+    echo "  - Vui lòng chuyển sang nhánh 'dev' để phát triển:"
+    echo "      git checkout dev"
+    echo ""
+    echo "Nếu đây là thao tác quản trị đặc biệt, sử dụng:"
+    echo "  ALLOW_MAIN_COMMIT=1 git commit"
+    echo "================================================================="
+    echo ""
+    exit 1
+  fi
+fi
+
+exit 0

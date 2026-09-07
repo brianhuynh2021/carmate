@@ -22,6 +22,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "hooks:install": "git config core.hooksPath .githooks && echo \"✅ Git hooks đã kích hoạt (.githooks)\"",
+    "release:main": "bash scripts/release-to-main.sh",
     "backup": "node scripts/backup-db.js",
     "backup:setup": "bash scripts/setup-backup-cron.sh",
     "restore": "node scripts/restore-db.js",
