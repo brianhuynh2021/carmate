@@ -31,3 +31,9 @@ CarMate tuân thủ triệt để 4 trụ cột triết lý kỹ thuật và thi
 
 - Luôn luôn dùng **"Chủ xe"** và **"Người đi cùng"** / **"Khách đi cùng"**.
 - Tuyệt đối **KHÔNG dùng "Bác tài"** hay **"Tài xế"** để bảo toàn bản chất đi ghép xe tiện chuyến / chia sẻ chi phí lăn bánh văn minh, không phải dịch vụ taxi thương mại.
+
+## 6. Kỷ luật Git & Quy trình Phát triển (Git Workflow Discipline)
+
+- **Tuyệt đối KHÔNG commit hoặc push thẳng lên nhánh `main`**.
+- Mọi công việc (tính năng mới, sửa lỗi, tối ưu giao diện) 100% phải được thực hiện và kiểm thử trên nhánh **`dev`**.
+- Chỉ thực hiện merge từ `dev` vào `main` khi có sự xác nhận/yêu cầu trực tiếp từ người dùng.
