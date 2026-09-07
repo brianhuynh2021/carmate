@@ -59,6 +59,9 @@ export default {
     profile: 'Tín nhiệm',
     policy: 'Quy chế',
     postCta: 'Đăng chuyến',
+    aiAssistant: 'Trợ lý AI',
+    signIn: 'Đăng nhập',
+    signInOrRegister: 'Đăng nhập / Đăng ký',
     mobile: {
       market: 'Khám phá',
       match: 'Ghép chuyến',
@@ -67,6 +70,32 @@ export default {
       booked: 'Đã hẹn',
       profile: 'Tín nhiệm'
     }
+  },
+
+  userMenu: {
+    verifiedIdentity: 'Đã xác thực danh tính',
+    adminBadge: 'Quản trị viên',
+    profileGarage: 'Hồ sơ & Garage của tôi',
+    noVehicle: 'Chưa có xe',
+    myTrips: 'Chuyến xe của tôi',
+    adminPortal: 'Cổng Quản Trị Hệ Thống',
+    safetyPolicy: 'Quy chế an toàn 100%',
+    language: 'Ngôn ngữ',
+    support: 'Hỗ trợ bạn',
+    logout: 'Đăng xuất',
+    adminAccount: 'Tài khoản Quản trị',
+    protected: 'Bảo vệ',
+    deleteAccount: 'Xóa tài khoản vĩnh viễn'
+  },
+
+  postMenu: {
+    title: 'Bạn muốn đăng nhu cầu nào?',
+    driverTitle: 'Đăng xe trống',
+    driverBadge: 'Chủ xe',
+    driverDesc: 'Xe gia đình còn ghế trống, san sẻ bớt tiền xăng & cầu đường',
+    passengerTitle: 'Tôi cần tìm xe',
+    passengerBadge: 'Người tìm xe',
+    passengerDesc: 'Ghép ghế tiện chuyến tiết kiệm chi phí, đón trả tiện đường'
   },
 
   hero: {
@@ -240,6 +269,11 @@ export default {
   },
 
   profile: {
+    gender: 'Giới tính',
+    genderDesc: 'Chọn giới tính giúp kết nối bạn đồng hành phù hợp và an tâm (+3 điểm tín nhiệm)',
+    male: 'Nam',
+    female: 'Nữ',
+    other: 'Khác',
     passport: 'Hộ chiếu tín nhiệm',
     memberSince: 'Thành viên từ {date}',
     trustScore: 'Điểm tín nhiệm',

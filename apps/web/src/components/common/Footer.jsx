@@ -19,12 +19,12 @@ export default function Footer({ onNavigate, onOpenTerms }) {
   const year = new Date().getFullYear();
 
   const footerLinks = [
-    { key: 'market', label: 'Khám phá chuyến' },
-    { key: 'post', label: 'Đăng chuyến' },
-    { key: 'benchmark', label: 'Bảng giá tuyến' },
-    { key: 'terms', label: 'Quy chế & Điều khoản', isTerms: true },
-    { key: 'help_zalo', label: 'Hỗ trợ Zalo' },
-    { key: 'help_telegram', label: 'Hỗ trợ Telegram' }
+    { key: 'market', label: lang === 'en' ? 'Explore Trips' : 'Khám phá chuyến' },
+    { key: 'post', label: lang === 'en' ? 'Post Trip' : 'Đăng chuyến' },
+    { key: 'benchmark', label: lang === 'en' ? 'Route Pricing' : 'Bảng giá tuyến' },
+    { key: 'terms', label: lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản', isTerms: true },
+    { key: 'help_zalo', label: lang === 'en' ? 'Zalo Support' : 'Hỗ trợ Zalo' },
+    { key: 'help_telegram', label: lang === 'en' ? 'Telegram Support' : 'Hỗ trợ Telegram' }
   ];
 
   return (
@@ -36,13 +36,15 @@ export default function Footer({ onNavigate, onOpenTerms }) {
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-xs font-semibold">
               <MessageCircle className="w-3.5 h-3.5" />
-              <span>Hỗ trợ bạn</span>
+              <span>{lang === 'en' ? 'Support' : 'Hỗ trợ bạn'}</span>
             </div>
             <h3 className="text-sm font-bold text-[#1d1d1f] dark:text-white tracking-tight">
-              Bạn cần hỗ trợ về chuyến đi?
+              {lang === 'en' ? 'Need help with your trip?' : 'Bạn cần hỗ trợ về chuyến đi?'}
             </h3>
             <p className="text-xs text-[#86868b] leading-relaxed max-w-xs mx-auto">
-              CarMate luôn sẵn sàng đồng hành cùng bạn và chủ xe qua kênh trao đổi trực tiếp.
+              {lang === 'en'
+                ? 'CarMate is always ready to assist drivers and passengers directly.'
+                : 'CarMate luôn sẵn sàng đồng hành cùng bạn và chủ xe qua kênh trao đổi trực tiếp.'}
             </p>
           </div>
 
@@ -55,7 +57,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               className="h-10 px-3 rounded-2xl bg-[#0068ff]/10 hover:bg-[#0068ff]/15 active:scale-[0.98] border border-[#0068ff]/20 text-[#0068ff] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <ZaloIcon className="w-4 h-4" />
-              <span>Hỗ trợ Zalo</span>
+              <span>{lang === 'en' ? 'Zalo Support' : 'Hỗ trợ Zalo'}</span>
             </a>
 
             <a
@@ -65,7 +67,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               className="h-10 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <TelegramIcon className="w-4 h-4" />
-              <span>Hỗ trợ Telegram</span>
+              <span>{lang === 'en' ? 'Telegram Support' : 'Hỗ trợ Telegram'}</span>
             </a>
           </div>
 
@@ -76,7 +78,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               onClick={onOpenTerms}
               className="hover:text-[#0071e3] transition-colors cursor-pointer"
             >
-              Quy chế & Điều khoản
+              {lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản'}
             </button>
             <div className="flex items-center gap-1.5">
               <span>© CarMate</span>
@@ -103,7 +105,9 @@ export default function Footer({ onNavigate, onOpenTerms }) {
             <span className="text-black/[0.15]">·</span>
             <div className="flex items-center gap-2 text-xs text-[#515154]">
               <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0" />
-              <span className="text-[12px] font-medium text-[#515154]">Tiện chuyến cùng đường · 0đ Phí trung gian</span>
+              <span className="text-[12px] font-medium text-[#515154]">
+                {lang === 'en' ? 'Direct rideshare · 0% fee' : 'Tiện chuyến cùng đường · 0đ Phí trung gian'}
+              </span>
             </div>
           </div>
 
@@ -117,7 +121,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#0068ff]/50 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <ZaloIcon className="w-3.5 h-3.5 text-[#0068ff]" />
-              <span>Hỗ Trợ Zalo</span>
+              <span>{lang === 'en' ? 'Zalo Support' : 'Hỗ Trợ Zalo'}</span>
             </a>
 
             {/* Telegram Support */}
@@ -128,7 +132,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#229ED9]/50 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <TelegramIcon className="w-3.5 h-3.5 text-[#229ED9]" />
-              <span>Hỗ Trợ Telegram</span>
+              <span>{lang === 'en' ? 'Telegram Support' : 'Hỗ Trợ Telegram'}</span>
             </a>
 
             {/* Facebook Fanpage */}
@@ -183,7 +187,10 @@ export default function Footer({ onNavigate, onOpenTerms }) {
         {/* ── TẦNG 3: LEGAL & COPYRIGHT ── */}
         <div className="pt-2 border-t border-black/[0.04] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11.5px] text-[#86868b]">
           <p className="leading-relaxed">
-            {SITE_INFO.legalName[lang]} · Nền tảng chia sẻ chi phí nhiên liệu tự nguyện, 0% chiết khấu.
+            {SITE_INFO.legalName[lang]} ·{' '}
+            {lang === 'en'
+              ? 'Voluntary fuel cost-sharing platform, 0% platform fee.'
+              : 'Nền tảng chia sẻ chi phí nhiên liệu tự nguyện, 0% chiết khấu.'}
           </p>
           <div className="flex items-center gap-3 shrink-0">
             <span>© {year} CarMate.vn</span>

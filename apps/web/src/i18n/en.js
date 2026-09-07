@@ -59,6 +59,9 @@ export default {
     profile: 'Trust',
     policy: 'Policy',
     postCta: 'Post Trip',
+    aiAssistant: 'AI Assistant',
+    signIn: 'Sign in',
+    signInOrRegister: 'Sign in / Register',
     mobile: {
       market: 'Explore',
       match: 'Match',
@@ -67,6 +70,32 @@ export default {
       booked: 'Bookings',
       profile: 'Trust'
     }
+  },
+
+  userMenu: {
+    verifiedIdentity: 'Verified Identity',
+    adminBadge: 'Administrator',
+    profileGarage: 'My Profile & Garage',
+    noVehicle: 'No vehicle',
+    myTrips: 'My Rides',
+    adminPortal: 'Admin Portal',
+    safetyPolicy: 'Safety & Policies',
+    language: 'Language',
+    support: 'Support',
+    logout: 'Log out',
+    adminAccount: 'Admin Account',
+    protected: 'Protected',
+    deleteAccount: 'Delete Account Permanently'
+  },
+
+  postMenu: {
+    title: 'What is your ride need?',
+    driverTitle: 'Offer empty seats',
+    driverBadge: 'Driver',
+    driverDesc: 'Family vehicle with spare seats, sharing fuel & tolls',
+    passengerTitle: 'Request a ride',
+    passengerBadge: 'Passenger',
+    passengerDesc: 'Rideshare with empty seats, fair cost-sharing'
   },
 
   hero: {
@@ -240,6 +269,11 @@ export default {
   },
 
   profile: {
+    gender: 'Gender',
+    genderDesc: 'Specifying gender helps match with comfortable companions (+3 trust points)',
+    male: 'Male',
+    female: 'Female',
+    other: 'Other',
     passport: 'Trust passport',
     memberSince: 'Member since {date}',
     trustScore: 'Trust score',

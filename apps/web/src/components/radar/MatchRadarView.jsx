@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Car, Users, Sparkles, CheckCircle2, MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap } from 'lucide-react';
+import { Car, Users, Sparkles, CheckCircle2, MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap, User } from 'lucide-react';
 import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, cleanPhoneNumber, isTripExpired } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { Segmented } from '../ui/Chip.jsx';
@@ -491,8 +491,8 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                   {/* Thông tin đối tác */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-[#0071e3]/10 text-[#0071e3] font-bold text-xs flex items-center justify-center border border-[#0071e3]/20 shrink-0">
-                        {(item.publicName || 'T')[0]?.toUpperCase()}
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-2xs ring-1 ring-[#0071e3]/20 shrink-0">
+                        <User className="w-4 h-4 text-white" strokeWidth={2.2} />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">

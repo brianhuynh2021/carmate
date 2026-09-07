@@ -22,10 +22,9 @@ import { useI18n } from '../../i18n/index.jsx';
 import Logo from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
 
-export function LanguageToggle({ size = 'md' }) {
+export function LanguageToggle({ size = 'sm' }) {
   const { lang, setLang } = useI18n();
   const next = lang === 'vi' ? 'en' : 'vi';
-  const dims = size === 'sm' ? 'h-9 px-2.5 text-xs' : 'h-11 px-3 text-[13px]';
   const label = lang === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt';
 
   return (
@@ -34,10 +33,10 @@ export function LanguageToggle({ size = 'md' }) {
       onClick={() => setLang(next)}
       title={label}
       aria-label={label}
-      className={`inline-flex items-center gap-1.5 rounded-full font-semibold text-slate-300 hover:bg-white/5 hover:text-white cursor-pointer transition-colors ${dims}`}
+      className="h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0"
     >
-      <Globe className="w-4 h-4" strokeWidth={2} />
-      <span className="uppercase tracking-wide font-mono text-xs">{lang}</span>
+      <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
+      <span className="font-mono text-xs font-bold uppercase">{lang === 'vi' ? 'EN' : 'VI'}</span>
     </button>
   );
 }
@@ -84,7 +83,6 @@ export default function Header({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Đóng menu người dùng & menu đăng chuyến khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
@@ -100,20 +98,35 @@ export default function Header({
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-all duration-200 border-b backdrop-blur-xl ${
+      className={`sticky top-0 z-40 transition-all duration-300 ${
         isScrolled
-          ? 'bg-white/90 dark:bg-[#151c28]/90 border-black/[0.08] dark:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.06)]'
-          : 'bg-white/80 dark:bg-[#151c28]/80 border-black/[0.05] dark:border-white/[0.06]'
+          ? 'bg-white/85 dark:bg-[#1c1c1e]/85 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+          : 'bg-white/60 dark:bg-[#1c1c1e]/60 backdrop-blur-md border-b border-transparent'
       }`}
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
-      <div className="max-w-[1320px] mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
-        <Logo size="sm" onClick={() => setActiveTab('market')} tagline="Ghép xe tiện chuyến" />
+      <div className="max-w-[1320px] mx-auto px-3 sm:px-6 lg:px-8 h-15 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('market')}
+            className="flex items-center gap-2 cursor-pointer select-none text-left group"
+            aria-label="CarMate Home"
+          >
+            <Logo className="w-7 h-7 sm:w-8 sm:h-8 group-hover:scale-105 transition-transform" />
+            <div className="flex flex-col">
+              <span className="font-display font-black text-lg sm:text-xl tracking-tight leading-none text-[#1d1d1f] dark:text-white">
+                Car<span className="text-[#0071e3]">Mate</span>
+              </span>
+              <span className="text-[9.5px] sm:text-[10px] font-medium tracking-wide text-[#86868b] uppercase mt-0.5 hidden xs:inline">
+                Rideshare
+              </span>
+            </div>
+          </button>
+        </div>
 
-        {/* Điều hướng phong cách Apple Segmented Capsule Navigation */}
         <nav
-          className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed]/80 dark:bg-slate-800/80 backdrop-blur-md border border-black/[0.05] dark:border-white/[0.08] shrink-0 shadow-2xs"
-          aria-label="Primary"
+          aria-label="Desktop navigation"
+          className="hidden md:flex items-center p-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06]"
         >
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
@@ -123,20 +136,17 @@ export default function Header({
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 aria-current={active ? 'page' : undefined}
-                className={`h-9 px-4 rounded-full inline-flex items-center gap-2 text-[13px] font-semibold whitespace-nowrap cursor-pointer transition-all duration-150 select-none outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3]/40 ${
+                className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none flex items-center gap-1.5 ${
                   active
-                    ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)]'
-                    : 'text-[#515154] hover:text-[#1d1d1f] hover:bg-white/60'
+                    ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                    : 'text-[#515154] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
                 }`}
               >
-                <tab.icon
-                  className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-[#0071e3]' : 'text-[#86868b]'}`}
-                  strokeWidth={active ? 2.2 : 2}
-                />
-                <span className="whitespace-nowrap">{tab.label}</span>
+                <tab.icon className="w-3.5 h-3.5" strokeWidth={active ? 2.4 : 2} />
+                <span>{tab.label}</span>
                 {tab.badge > 0 && (
                   <span
-                    className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono font-bold inline-flex items-center justify-center tabular-nums shrink-0 transition-colors ${
+                    className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
                       active ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
                     }`}
                   >
@@ -149,7 +159,6 @@ export default function Header({
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Trợ lý CarMate AI Button (Apple Command Capsule) */}
           <button
             type="button"
             onClick={onOpenAi}
@@ -158,13 +167,16 @@ export default function Header({
             className="inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
-            <span className="hidden sm:inline font-medium">Trợ lý AI</span>
+            <span className="hidden sm:inline font-medium">{t('nav.aiAssistant') || 'Trợ lý AI'}</span>
             <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-md bg-black/[0.05] text-[#515154] border border-black/[0.06] ml-0.5">
               {isMac ? '⌘K' : 'Ctrl K'}
             </kbd>
           </button>
 
-          {/* Tài khoản Người dùng / Quản trị viên (Apple Profile Capsule & Dropdown) */}
+          <div className="hidden sm:inline-flex items-center">
+            <LanguageToggle size="sm" />
+          </div>
+
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>
               <button
@@ -172,7 +184,6 @@ export default function Header({
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="true"
-                title={`Tài khoản: ${currentUser.name} (${currentUser.phone || ''})`}
                 className="h-8.5 sm:h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               >
                 <span className="relative flex items-center justify-center shrink-0">
@@ -183,8 +194,8 @@ export default function Header({
                       className="w-5 h-5 rounded-full object-cover shadow-2xs ring-1 ring-emerald-500/30"
                     />
                   ) : (
-                    <span className="w-5 h-5 rounded-full bg-[#107c41] text-white inline-flex items-center justify-center text-[10px] font-bold">
-                      {currentUser.name?.[0]?.toUpperCase() || 'T'}
+                    <span className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white inline-flex items-center justify-center shadow-2xs">
+                      <User className="w-3 h-3 text-white" />
                     </span>
                   )}
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
@@ -207,26 +218,25 @@ export default function Header({
                         className="w-9 h-9 rounded-full object-cover shadow-xs ring-1 ring-emerald-500/30 shrink-0"
                       />
                     ) : (
-                      <span className="w-9 h-9 rounded-full bg-[#107c41] text-white inline-flex items-center justify-center text-xs font-bold shadow-xs shrink-0">
-                        {currentUser.name?.[0]?.toUpperCase() || 'T'}
+                      <span className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white inline-flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20 shrink-0">
+                        <User className="w-4.5 h-4.5 text-white" strokeWidth={2.2} />
                       </span>
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-[#1d1d1f] dark:text-white truncate">{currentUser.name}</p>
                       <p className="text-[11px] text-[#86868b] font-mono truncate">
-                        {currentUser.phone || 'Đã xác thực danh tính'}
+                        {currentUser.phone || t('userMenu.verifiedIdentity')}
                       </p>
                       {(currentUser.role === 'admin' ||
                         currentUser.phone?.includes('0984883750') ||
                         currentUser.phone?.includes('0984 883 750')) && (
                         <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
-                          <ShieldCheck className="w-3 h-3" /> Quản trị viên
+                          <ShieldCheck className="w-3 h-3" /> {t('userMenu.adminBadge')}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Mục 0: Hồ sơ & Garage của tôi */}
                   <button
                     type="button"
                     onClick={() => {
@@ -237,18 +247,18 @@ export default function Header({
                   >
                     <div className="inline-flex items-center gap-2">
                       <User className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
-                      <span>Hồ sơ & Garage của tôi</span>
+                      {/* Hồ sơ & Garage của tôi */}
+                      <span>{t('userMenu.profileGarage')}</span>
                     </div>
                     {currentUser?.vehicle?.brand ? (
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
                         {currentUser.vehicle.brand}
                       </span>
                     ) : (
-                      <span className="text-[10px] text-[#86868b] font-normal">Chưa có xe</span>
+                      <span className="text-[10px] text-[#86868b] font-normal">{t('userMenu.noVehicle')}</span>
                     )}
                   </button>
 
-                  {/* Mục 1: Chuyến xe của tôi */}
                   <button
                     type="button"
                     onClick={() => {
@@ -258,10 +268,9 @@ export default function Header({
                     className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
                     <Car className="w-3.5 h-3.5 text-[#0071e3]" />
-                    <span>Chuyến xe của tôi</span>
+                    <span>{t('userMenu.myTrips')}</span>
                   </button>
 
-                  {/* Mục 2: Cổng Quản Trị Hệ Thống (CHỈ HIỂN THỊ NẾU LÀ ADMIN) */}
                   {(currentUser.role === 'admin' ||
                     currentUser.phone?.includes('0984883750') ||
                     currentUser.phone?.includes('0984 883 750')) && (
@@ -274,11 +283,10 @@ export default function Header({
                       className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                     >
                       <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Cổng Quản Trị Hệ Thống</span>
+                      <span>{t('userMenu.adminPortal')}</span>
                     </button>
                   )}
 
-                  {/* Mục 3: Chính sách & An toàn */}
                   <button
                     type="button"
                     onClick={() => {
@@ -288,23 +296,20 @@ export default function Header({
                     className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-[#515154] dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
                     <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Quy chế an toàn 100%</span>
+                    <span>{t('userMenu.safetyPolicy')}</span>
                   </button>
 
-                  {/* Mục 4: Ngôn ngữ hiển thị (Apple Segmented Capsule) */}
-                  <div className="w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
+                  <div className="sm:hidden w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
                     <div className="inline-flex items-center gap-2 font-medium">
                       <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
-                      <span>Ngôn ngữ</span>
+                      <span>{t('userMenu.language')}</span>
                     </div>
                     <div className="inline-flex items-center p-0.5 rounded-lg bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.06]">
                       <button
                         type="button"
                         onClick={() => setLang('vi')}
                         className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                          lang === 'vi'
-                            ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs'
-                            : 'text-[#86868b] hover:text-[#1d1d1f]'
+                          lang === 'vi' ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
                         }`}
                       >
                         VI
@@ -313,9 +318,7 @@ export default function Header({
                         type="button"
                         onClick={() => setLang('en')}
                         className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                          lang === 'en'
-                            ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs'
-                            : 'text-[#86868b] hover:text-[#1d1d1f]'
+                          lang === 'en' ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
                         }`}
                       >
                         EN
@@ -323,26 +326,25 @@ export default function Header({
                     </div>
                   </div>
 
-                  {/* Mục 5: Hỗ trợ bạn (Zalo OA chính chủ) */}
+                  {/* Mục 5: Hỗ trợ bạn qua Telegram trực tiếp */}
                   <a
-                    href={SITE_INFO.zaloOA}
+                    href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setIsUserMenuOpen(false)}
                     className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
                     <div className="inline-flex items-center gap-2">
-                      <MessageCircle className="w-3.5 h-3.5 text-[#0068ff]" />
-                      <span>Hỗ trợ bạn</span>
+                      <MessageCircle className="w-3.5 h-3.5 text-[#229ED9]" />
+                      <span>{t('userMenu.support')}</span>
                     </div>
-                    <span className="text-[10.5px] font-bold text-[#0068ff] bg-[#0068ff]/10 px-1.5 py-0.5 rounded">
-                      Zalo OA
+                    <span className="text-[10.5px] font-bold text-[#229ED9] bg-[#229ED9]/10 px-1.5 py-0.5 rounded">
+                      Telegram
                     </span>
                   </a>
 
                   <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
 
-                  {/* Mục 6: Đăng xuất */}
                   <button
                     type="button"
                     onClick={() => {
@@ -352,22 +354,23 @@ export default function Header({
                     className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Đăng xuất</span>
+                    <span>{t('userMenu.logout')}</span>
                   </button>
 
                   <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
 
-                  {/* Mục 5: Xóa tài khoản vĩnh viễn (Chỉ hiển thị cho người dùng thường - MIT Invariant: Admin không thể tự xoá) */}
                   {currentUser.role === 'admin' ||
                   currentUser.phone?.includes('0984883750') ||
                   currentUser.phone?.includes('0984 883 750') ? (
                     <div className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                       <span className="inline-flex items-center gap-1.5 font-medium">
                         <Lock className="w-3 h-3 text-slate-400" />
-                        <span>Tài khoản Quản trị</span>
+                        {/* Tài khoản Quản trị */}
+                        <span>{t('userMenu.adminAccount')}</span>
                       </span>
+                      {/* Bảo vệ */}
                       <span className="text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/40">
-                        Bảo vệ
+                        {t('userMenu.protected')}
                       </span>
                     </div>
                   ) : (
@@ -380,7 +383,8 @@ export default function Header({
                       className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Xóa tài khoản vĩnh viễn</span>
+                      {/* Xóa tài khoản vĩnh viễn */}
+                      <span>{t('userMenu.deleteAccount')}</span>
                     </button>
                   )}
                 </div>
@@ -393,12 +397,11 @@ export default function Header({
               className="h-8.5 sm:h-9 px-2.5 sm:px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all shrink-0"
             >
               <User className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
-              <span className="hidden sm:inline">Đăng nhập / Đăng ký</span>
-              <span className="sm:hidden">Đăng nhập</span>
+              <span className="hidden sm:inline">{t('nav.signInOrRegister')}</span>
+              <span className="sm:hidden">{t('nav.signIn')}</span>
             </button>
           )}
 
-          {/* Cụm nút Hành Động Chính (Apple Single Primary Action) - Ẩn trên Mobile vì BottomNavBar đã có FAB Đăng chuyến trung tâm */}
           <div className="hidden sm:block relative ml-1" ref={postMenuRef}>
             <button
               type="button"
@@ -408,20 +411,18 @@ export default function Header({
               className="h-9 pl-3.5 pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white shadow-[0_2px_8px_rgba(0,113,227,0.28)] hover:shadow-[0_4px_16px_rgba(0,113,227,0.38)] active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 group"
             >
               <PlusCircle className="w-3.5 h-3.5 text-white/90 group-hover:rotate-90 transition-transform duration-200" strokeWidth={2.4} />
-              <span>Đăng chuyến</span>
+              <span>{t('nav.post')}</span>
               <ChevronDown
                 className={`w-3 h-3 text-white/80 transition-transform duration-200 ${isPostMenuOpen ? 'rotate-180' : ''}`}
               />
             </button>
 
-            {/* Apple Action Sheet Popover: Phân nhánh 2 vai trò 1-chạm rõ ràng, tải nhận thức = 0 */}
             {isPostMenuOpen && (
               <div className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.16)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
                 <div className="px-2.5 py-1 mb-1">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#86868b]">Bạn muốn đăng nhu cầu nào?</p>
+                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#86868b]">{t('postMenu.title')}</p>
                 </div>
 
-                {/* Lựa chọn 1: Chủ xe có xe trống */}
                 <button
                   type="button"
                   onClick={() => {
@@ -440,17 +441,18 @@ export default function Header({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-[#0071e3] transition-colors">
-                        Đăng xe trống
+                        {t('postMenu.driverTitle')}
                       </span>
-                      <span className="text-[10px] font-semibold text-[#0071e3] bg-[#0071e3]/10 px-1.5 py-0.5 rounded-full">Chủ xe</span>
+                      <span className="text-[10px] font-semibold text-[#0071e3] bg-[#0071e3]/10 px-1.5 py-0.5 rounded-full">
+                        {t('postMenu.driverBadge')}
+                      </span>
                     </div>
                     <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                      Xe gia đình còn ghế trống, san sẻ bớt tiền xăng & cầu đường
+                      {t('postMenu.driverDesc')}
                     </p>
                   </div>
                 </button>
 
-                {/* Lựa chọn 2: Người tìm xe (Khách đi cùng) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -469,12 +471,14 @@ export default function Header({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-emerald-600 transition-colors">
-                        Cần tìm xe
+                        {t('postMenu.passengerTitle')}
                       </span>
-                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">Người tìm xe</span>
+                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                        {t('postMenu.passengerBadge')}
+                      </span>
                     </div>
                     <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                      Báo lộ trình, tìm chủ xe cùng chuyến đón trả tận nơi
+                      {t('postMenu.passengerDesc')}
                     </p>
                   </div>
                 </button>

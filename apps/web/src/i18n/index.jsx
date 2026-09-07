@@ -70,6 +70,7 @@ export function I18nProvider({ children }) {
 }
 
 export const useI18n = () => useContext(I18nContext);
+export const useTranslation = useI18n;
 
 /** Dịch các giá trị dữ liệu quen thuộc (ngày, chiều đi) nếu có trong dictionary, ngược lại trả về nguyên bản. */
 export const useDataLabel = () => {

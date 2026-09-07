@@ -9,10 +9,14 @@ import path from 'path';
 const BASE_URL = process.env.CARMATE_API_URL || process.env.BASE_URL || 'http://localhost:5173';
 const ADMIN_PASSCODE = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY || 'admin123';
 
-// Không sử dụng header backdoor x-carmate-test
+// Gắn cờ x-carmate-testing để ngăn máy chủ gửi tin nhắn rác vào Telegram của Founder trong quá trình kiểm thử tự động
 const _rawFetch = globalThis.fetch;
 globalThis.fetch = async (url, opts = {}) => {
-  return _rawFetch(url, opts);
+  const headers = {
+    'x-carmate-testing': 'true',
+    ...(opts.headers || {})
+  };
+  return _rawFetch(url, { ...opts, headers });
 };
 
 const results = [];
@@ -3254,7 +3258,11 @@ async function runTests() {
 
     // 5. Kiểm tra tính công bằng hai vai trò (Dual-role Ergonomics) trong code giao diện
     const headerCode = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx'), 'utf8');
-    assert(headerCode.includes('Cần tìm xe') && headerCode.includes('Đăng xe trống'), 'Stanford Dual-Role 1: Header có đủ 2 nút Cần tìm xe & Đăng xe trống');
+    assert(
+      (headerCode.includes('Cần tìm xe') || headerCode.includes('postMenu.passengerTitle')) &&
+      (headerCode.includes('Đăng xe trống') || headerCode.includes('postMenu.driverTitle')),
+      'Stanford Dual-Role 1: Header có đủ 2 nút Cần tìm xe & Đăng xe trống'
+    );
 
     const heroCode = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/market/Hero.jsx'), 'utf8');
     assert(heroCode.includes('hero_family_ride.jpg'), 'Apple Hero Background: Hero sử dụng hình ảnh chuyến đi gia đình làm nền');
@@ -3358,6 +3366,83 @@ async function runTests() {
     );
   } catch (err) {
     assert(false, '42. Kiểm thử Trí tuệ Ambient Nhận diện Ngôn ngữ & Bộ chọn Cài đặt', err.message);
+  }
+
+  // 43. KIỂM THỬ AVATAR BIỂU TƯỢNG APPLE SILHOUETTE & MINH BẠCH GIỚI TÍNH (+3Đ TÍN NHIỆM)
+  try {
+    console.log('\n👤 43. Kiểm thử Avatar Biểu tượng Apple Silhouette & Minh bạch Giới tính...');
+    const { computeTrustScore } = await import('../packages/shared/src/index.js');
+
+    // 1. Kiểm tra Header không còn avatar chữ cái thô sơ, mà dùng Apple Silhouette User Icon trên nền sapphire gradient
+    const headerPath = path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx');
+    const headerContent = fs.readFileSync(headerPath, 'utf8');
+    assert(
+      headerContent.includes('bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa]') &&
+        headerContent.includes('<User className="w-4.5 h-4.5 text-white"') &&
+        !headerContent.includes('bg-[#107c41]'),
+      'Apple Avatar 1: Header sử dụng Apple Silhouette User icon trên nền Sapphire Gradient, không dùng chữ cái thô sơ'
+    );
+
+    // 2. Kiểm tra UserProfileModal
+    const profileModalPath = path.resolve(process.cwd(), 'apps/web/src/components/profile/UserProfileModal.jsx');
+    const profileModalContent = fs.readFileSync(profileModalPath, 'utf8');
+    assert(
+      profileModalContent.includes('bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa]') &&
+        profileModalContent.includes('<User className="w-7 h-7 text-white"'),
+      'Apple Avatar 2: UserProfileModal khung xem trước avatar sử dụng Apple Silhouette User icon sang trọng'
+    );
+
+    // 3. Kiểm tra trường Giới tính (Segmented Control)
+    assert(
+      profileModalContent.includes('gender') &&
+        profileModalContent.includes('setGender') &&
+        profileModalContent.includes('male') &&
+        profileModalContent.includes('female'),
+      'Profile Gender 1: UserProfileModal có bộ chọn Giới tính chuẩn Apple Segmented Control'
+    );
+
+    // 4. Kiểm tra Bộ máy Tín nhiệm Động: +3 điểm khi có Giới tính
+    const testUserNoGender = { name: 'Người Dùng Test', avatar: '' };
+    const scoreNoGender = computeTrustScore(testUserNoGender, null, {});
+    const testUserWithGender = { name: 'Người Dùng Test', avatar: '', gender: 'female' };
+    const scoreWithGender = computeTrustScore(testUserWithGender, null, {});
+    assert(
+      scoreWithGender.score === scoreNoGender.score + 3,
+      `Trust Score Gender: Có giới tính được cộng đúng +3 điểm (từ ${scoreNoGender.score}đ lên ${scoreWithGender.score}đ)`
+    );
+
+    // 5. Kiểm tra API Backend: Lưu và Đọc trường gender qua /api/auth/profile
+    const otpUserPhone = '0984883750';
+    const loginRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: otpUserPhone, otp: '123456' })
+    });
+    const loginData = await loginRes.json();
+    const token = loginData.token;
+
+    const updateProfileRes = await fetch(`${BASE_URL}/api/auth/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        gender: 'male',
+        name: 'Minh CarMate Test'
+      })
+    });
+    const updateProfileData = await updateProfileRes.json();
+    assert(updateProfileRes.status === 200, 'API Profile 1: PUT /api/auth/profile trả về HTTP 200');
+    assert(updateProfileData.user?.gender === 'male', 'API Profile 2: Backend lưu trữ chính xác gender = male');
+
+    const meRes = await fetch(`${BASE_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const meData = await meRes.json();
+    assert(meData.user?.gender === 'male', 'API Profile 3: GET /api/auth/me trả về đầy đủ thuộc tính gender đã lưu');
+  } catch (err) {
+    assert(false, '43. Kiểm thử Avatar Biểu tượng Apple Silhouette & Minh bạch Giới tính', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

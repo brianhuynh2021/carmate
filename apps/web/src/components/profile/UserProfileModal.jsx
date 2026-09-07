@@ -22,6 +22,7 @@ import {
 import Modal from '../ui/Modal.jsx';
 import { GoogleIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import api from '../../api/client.js';
+import { useTranslation } from '../../i18n/index.jsx';
 import { computeTrustScore, getTrustLevel, DEFAULT_TRUST_RULES } from '@carmate/shared';
 
 // Danh sách hãng xe phổ biến tại Việt Nam
@@ -108,6 +109,7 @@ function compressImageToWebP(file, maxDimension = 1200, quality = 0.82) {
 }
 
 export default function UserProfileModal({ currentUser, onClose, onSave, onShowToast }) {
+  const { t, lang } = useTranslation();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'garage' | 'trust'
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -117,6 +119,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
   const [phone, setPhone] = useState(() => currentUser?.phone || '');
   const [email, setEmail] = useState(() => currentUser?.email || '');
   const [avatar, setAvatar] = useState(() => currentUser?.avatar || '');
+  const [gender, setGender] = useState(() => currentUser?.gender || '');
   const [homeAddress, setHomeAddress] = useState(() => currentUser?.homeAddress || '');
   const [workAddress, setWorkAddress] = useState(() => currentUser?.workAddress || '');
   const [bio, setBio] = useState(() => currentUser?.bio || '');
@@ -166,7 +169,9 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           setPublicRules(res.data);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn('[ProfileModal] Lỗi tải quy tắc tín nhiệm động:', err);
+      });
     return () => {
       mounted = false;
     };
@@ -195,13 +200,14 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     const activeUser = {
       ...currentUser,
       avatar,
+      gender,
       isCccdVerified: currentUser?.isCccdVerified ?? 1,
       isGplxVerified: currentUser?.isGplxVerified ?? 1,
       role: hasCar ? 'driver' : 'passenger'
     };
 
     return computeTrustScore(activeUser, vehicleData, historyData, publicRules);
-  }, [currentUser, avatar, hasCar, brand, model, plate, photos, isVerifiedCar, publicRules]);
+  }, [currentUser, avatar, gender, hasCar, brand, model, plate, photos, isVerifiedCar, publicRules]);
 
   // Upload & Nén ảnh WebP
   const handlePhotoUpload = async (index, event) => {
@@ -308,6 +314,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
       phone: phone.trim() || undefined,
       email: email.trim() || null,
       avatar: avatar || null,
+      gender: gender || null,
       trustScore: trustCalc.score,
       homeAddress: homeAddress.trim(),
       workAddress: workAddress.trim(),
@@ -447,8 +454,8 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     className="w-14 h-14 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/40"
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-[#107c41] text-white font-bold text-xl flex items-center justify-center shadow-xs ring-2 ring-emerald-500/20">
-                    {name ? name[0]?.toUpperCase() : 'T'}
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
+                    <User className="w-7 h-7 text-white" strokeWidth={2.2} />
                   </div>
                 )}
 
@@ -536,6 +543,46 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
               <p className="text-[11px] text-[#86868b] mt-1">
                 Tên hiển thị giúp Người đi cùng hoặc Chủ xe nhận diện trên danh sách và vé xác nhận.
+              </p>
+            </div>
+
+            {/* Trường 1b: Giới tính (Apple Segmented Control) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-[#1d1d1f] dark:text-slate-200">
+                  {t('profile.gender') || 'Giới tính'}
+                </label>
+                <span className="text-[10.5px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-full">
+                  +3đ Tín nhiệm
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'male', label: t('profile.male') || 'Nam', icon: '👨' },
+                  { id: 'female', label: t('profile.female') || 'Nữ', icon: '👩' },
+                  { id: 'other', label: t('profile.other') || 'Khác', icon: '✨' }
+                ].map((g) => {
+                  const isSelected = gender === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setGender(g.id)}
+                      className={`h-10 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 border select-none ${
+                        isSelected
+                          ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-[0_2px_8px_rgba(0,113,227,0.25)]'
+                          : 'bg-white dark:bg-slate-900 text-[#515154] dark:text-slate-300 border-black/[0.1] dark:border-white/[0.12] hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <span className="text-sm">{g.icon}</span>
+                      <span>{g.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-[#86868b] mt-1">
+                {t('profile.genderDesc') ||
+                  'Chọn giới tính giúp kết nối bạn đồng hành phù hợp và an tâm (+3 điểm tín nhiệm)'}
               </p>
             </div>
 

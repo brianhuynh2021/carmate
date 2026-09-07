@@ -131,14 +131,15 @@ export async function createBooking(req, res) {
 
     // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
     sendBusinessAlert({
-      title: '🎟️ Hành khách kết nối giữ chỗ mới',
+      title: '🎟️ Người đi cùng kết nối giữ chỗ mới',
       details: {
         'Mã booking': booking.id,
         'Lộ trình': `${booking.from} ➔ ${booking.to}`,
         'Khởi hành': `${booking.date || 'Hôm nay'} ${booking.time || ''}`.trim(),
         'Chuyến liên kết': targetTripId || 'Tự do',
         'Số ghế': booking.seatsBooked || 1
-      }
+      },
+      req
     }).catch(() => {});
 
     return res.status(201).json({
@@ -481,7 +482,7 @@ export async function reportVehicleMismatch(req, res) {
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `👉 <b>Thao tác:</b> Đăng nhập Cổng Admin để bấm 1-chạm đổi sang Biển vàng hoặc khóa tài khoản vi phạm.`;
 
-    sendTelegramMessage(teleMsg, { parseMode: 'HTML' }).catch(() => {});
+    sendTelegramMessage(teleMsg, { parseMode: 'HTML', req }).catch(() => {});
 
     return res.status(200).json({
       success: true,

@@ -489,7 +489,7 @@ export async function updateProfile(req, res) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy hồ sơ thành viên' });
     }
 
-    const { name, email, phone, avatar, bio, homeAddress, workAddress, vehicle } = req.body || {};
+    const { name, email, phone, avatar, bio, homeAddress, workAddress, vehicle, gender } = req.body || {};
 
     // 0. Cập nhật số điện thoại nếu người dùng đăng ký qua Google bổ sung số điện thoại
     if (phone !== undefined) {
@@ -583,6 +583,7 @@ export async function updateProfile(req, res) {
       name: name !== undefined ? (name || '').trim() || existingUser.name : existingUser.name,
       email: cleanEmail,
       avatar: avatar !== undefined ? avatar : existingUser.avatar,
+      gender: gender !== undefined ? (gender || '').trim() : existingUser.gender,
       bio: bio !== undefined ? (bio || '').trim() : existingUser.bio,
       homeAddress: homeAddress !== undefined ? (homeAddress || '').trim() : existingUser.homeAddress,
       workAddress: workAddress !== undefined ? (workAddress || '').trim() : existingUser.workAddress,

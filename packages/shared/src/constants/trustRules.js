@@ -25,6 +25,17 @@ export const DEFAULT_TRUST_RULES = [
     isLocked: false
   },
   {
+    id: 'profile_gender',
+    title: 'Minh bạch thông tin Giới tính',
+    description: 'Cập nhật rõ ràng giới tính, giúp chủ xe & người đi cùng dễ dàng ghép chuyến an tâm',
+    points: 3,
+    type: 'add',
+    role: 'all',
+    category: 'identity',
+    enabled: true,
+    isLocked: false
+  },
+  {
     id: 'no_avatar_cap',
     title: 'Khóa trần điểm khi thiếu ảnh đại diện',
     description: 'Chưa có ảnh đại diện thì điểm tín nhiệm tối đa bị giới hạn, triệt tiêu tài khoản ẩn danh',
