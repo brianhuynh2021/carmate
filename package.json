@@ -22,7 +22,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "hooks:install": "cp .githooks/pre-* .git/hooks/ && chmod +x .git/hooks/* && git config core.hooksPath .git/hooks && echo \"✅ Git hooks bảo vệ Local đã kích hoạt\"",
-    "release:main": "bash scripts/release-to-main.sh",
+    "pr": "gh pr create --base main --head dev --fill || gh pr view --web",
     "backup": "node scripts/backup-db.js",
     "backup:setup": "bash scripts/setup-backup-cron.sh",
     "restore": "node scripts/restore-db.js",
