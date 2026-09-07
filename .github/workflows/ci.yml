@@ -95,3 +95,69 @@ jobs:
           if [ -f server.pid ]; then
             kill $(cat server.pid) 2>/dev/null || true
           fi
+
+  deploy:
+    name: Deploy to Fly.io (Production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Chỉ deploy khi đẩy trực tiếp lên main (không deploy từ pull_request,
+    # vì PR từ fork không có quyền đọc secret và code chưa được review xong).
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    # Cổng an toàn: job test phải xanh hoàn toàn mới được deploy production.
+    needs: test
+
+    # Chặn hai lần deploy chạy song song — app dùng SQLite trên một volume,
+    # hai tiến trình deploy đồng thời có thể làm hỏng dữ liệu.
+    concurrency:
+      group: fly-deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Verify Production Health
+        run: |
+          set -e
+          echo "Chờ ứng dụng phục vụ trở lại sau khi deploy..."
+          for i in $(seq 1 30); do
+            if curl -sf https://carmate.fly.dev/api/health > /dev/null; then
+              echo "Production đã sẵn sàng."
+              curl -s https://carmate.fly.dev/api/health
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Production không phản hồi /api/health sau 150 giây."
+          exit 1
+
+      - name: Verify PII Masking on Production (Nghị định 13/2023)
+        run: |
+          set -e
+          # Chốt chặn hồi quy: sàn công khai và AI concierge tuyệt đối không
+          # được trả về số điện thoại thật của thành viên.
+          echo "Kiểm tra sàn công khai /api/trips..."
+          if curl -s "https://carmate.fly.dev/api/trips?limit=20" | grep -q '"phoneReal"'; then
+            echo "::error::PII LEAK — /api/trips trả về phoneReal trên production!"
+            exit 1
+          fi
+
+          echo "Kiểm tra AI concierge /api/agent/chat..."
+          if curl -s -X POST https://carmate.fly.dev/api/agent/chat \
+               -H 'Content-Type: application/json' \
+               -d '{"message":"tìm xe từ Bình Phước về Sài Gòn"}' | grep -q '"phoneReal"'; then
+            echo "::error::PII LEAK — /api/agent/chat trả về phoneReal trên production!"
+            exit 1
+          fi
+
+          echo "PASS: Không phát hiện rò rỉ số điện thoại thật trên production."
