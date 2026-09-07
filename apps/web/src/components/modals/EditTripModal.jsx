@@ -34,7 +34,7 @@ export default function EditTripModal({ trip, onClose, onSave }) {
   });
   const [seats, setSeats] = useState(() => {
     const raw = trip?.availableSeats || trip?.seatsNeeded || 3;
-    const max = (trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4)) ? 6 : 4;
+    const max = trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4) ? 6 : 4;
     return Math.min(raw, isDriver ? max : 6);
   });
   const [date, setDate] = useState(trip?.date || 'Hôm nay');
@@ -260,7 +260,7 @@ export default function EditTripModal({ trip, onClose, onSave }) {
           </div>
         </div>
 
-        {/* ── 2.5. QUY MÔ DÒNG XE (CHO BÁC TÀI: 4-5 CHỖ VS 7 CHỖ) ── */}
+        {/* ── 2.5. QUY MÔ DÒNG XE (CHO CHỦ XE: 4-5 CHỖ VS 7 CHỖ) ── */}
         {isDriver && (
           <div className="space-y-2 p-3 rounded-2xl bg-[#f5f5f7] dark:bg-slate-900 border border-black/[0.04] dark:border-white/[0.06]">
             <div className="flex items-center justify-between text-xs">
@@ -337,11 +337,7 @@ export default function EditTripModal({ trip, onClose, onSave }) {
                 <Users className="w-3.5 h-3.5 text-primary-600" />
                 <span>{isDriver ? 'Số ghế trống nhận khách:' : 'Số người cần đi:'}</span>
               </span>
-              {isDriver && (
-                <span className="text-[10.5px] font-normal text-slate-400">
-                  (Đã trừ 1 ghế lái)
-                </span>
-              )}
+              {isDriver && <span className="text-[10.5px] font-normal text-slate-400">(Đã trừ 1 ghế lái)</span>}
             </label>
             <div className="flex items-center gap-1.5">
               {seatOptions.map((n) => (

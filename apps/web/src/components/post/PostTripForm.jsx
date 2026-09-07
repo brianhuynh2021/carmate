@@ -41,6 +41,13 @@ import { SectionHeader } from '../ui/EmptyState.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
+import {
+  recordTripPattern,
+  getTopPredictedTrip,
+  getLastUsedCarProfile,
+  getDynamicRoutePriceBenchmark,
+  computePredictedReturnTrip
+} from '../../utils/personaMemory.js';
 
 import SmartTripComposer from './SmartTripComposer.jsx';
 
@@ -258,6 +265,55 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   // Ảnh thực tế xe (Tùy chọn - Tối thiểu 3 hình, tối đa 5 hình)
   const [carPhotos, setCarPhotos] = useState([]);
 
+  // Trí nhớ thói quen cá nhân hóa (Local Persona Memory - Zero LLM)
+  const savedCarProfile = useMemo(() => getLastUsedCarProfile(), []);
+  const [predictedTrip, setPredictedTrip] = useState(() => getTopPredictedTrip('driver'));
+
+  useEffect(() => {
+    setPredictedTrip(getTopPredictedTrip(role));
+  }, [role]);
+
+  // Tự động nạp cấu hình xe & ảnh xe thật đã xác thực của Chủ xe nếu có
+  useEffect(() => {
+    if (role === 'driver' && savedCarProfile) {
+      if (savedCarProfile.vehicleCapacity) setVehicleCapacity(savedCarProfile.vehicleCapacity);
+      if (savedCarProfile.carType) setCarType(savedCarProfile.carType);
+      if (savedCarProfile.carCategory) setCarCategory(savedCarProfile.carCategory);
+      if (savedCarProfile.hasVerifiedPhotos && carPhotos.length === 0) {
+        setCarPhotos(savedCarProfile.carPhotos);
+      }
+    }
+  }, [role]);
+
+  // Định giá phụ xăng thông minh dựa trên cự ly km thực tế
+  const routePriceBenchmark = useMemo(() => {
+    return getDynamicRoutePriceBenchmark(fromLocation, toLocation);
+  }, [fromLocation, toLocation]);
+
+  const [hasManuallyEditedPrice, setHasManuallyEditedPrice] = useState(false);
+  useEffect(() => {
+    if (!hasManuallyEditedPrice && routePriceBenchmark?.suggestedPrice && fromLocation && toLocation) {
+      setPrice(routePriceBenchmark.suggestedPrice);
+    }
+  }, [fromLocation, toLocation, routePriceBenchmark, hasManuallyEditedPrice]);
+
+  const handleApplyPredictedTrip = (pred) => {
+    if (!pred) return;
+    if (pred.from) setFromLocation(pred.from);
+    if (pred.to) setToLocation(pred.to);
+    if (pred.timeSlot) setTimeSlot(pred.timeSlot);
+    if (pred.exactTime) setExactTime(pred.exactTime);
+    if (pred.price) {
+      setPrice(pred.price);
+      setHasManuallyEditedPrice(true);
+    }
+    if (pred.seats) setSeats(pred.seats);
+    if (pred.waypointNote) setWaypointNote(pred.waypointNote);
+    if (pred.vehicleCapacity) setVehicleCapacity(pred.vehicleCapacity);
+    if (pred.carType) setCarType(pred.carType);
+    if (pred.carCategory) setCarCategory(pred.carCategory);
+  };
+
   useEffect(() => {
     if (currentUser?.phone) {
       setPhoneReal(currentUser.phone);
@@ -307,7 +363,10 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
     if (parsed.timeSlot) setTimeSlot(parsed.timeSlot);
     if (parsed.exactTime) setExactTime(parsed.exactTime);
     if (parsed.seats) setSeats(parsed.seats);
-    if (parsed.price) setPrice(parsed.price);
+    if (parsed.price) {
+      setPrice(parsed.price);
+      setHasManuallyEditedPrice(true);
+    }
     if (parsed.phoneReal) setPhoneReal(parsed.phoneReal);
     if (parsed.role === 'driver') {
       if (parsed.capacity) {
@@ -320,7 +379,20 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
       if (parsed.carCategory) setCarCategory(parsed.carCategory);
       if (parsed.carType) setCarType(parsed.carType);
     }
-    if (parsed.acceptsParcel) setAcceptsParcel(true);
+    if (parsed.detectedPerks) {
+      const dp = parsed.detectedPerks;
+      if (dp.noSmoking) setNoSmoking(true);
+      if (dp.acOn) setAcOn(true);
+      if (dp.largeTrunk) setLargeTrunk(true);
+      if (dp.botIncluded) setBotIncluded(true);
+      if (dp.pickupHighway) setPickupHighway(true);
+      if (dp.hasChild) setHasChild(true);
+      if (dp.frontSeatPreference) setFrontSeatPreference(true);
+      if (dp.compactLuggage) setCompactLuggage(true);
+      if (dp.acceptsParcel) setAcceptsParcel(true);
+    } else if (parsed.acceptsParcel) {
+      setAcceptsParcel(true);
+    }
   };
 
   const handlePhotoUpload = (slotIndex, file, slotDef) => {
@@ -491,9 +563,31 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
   const handleConfirmPublish = () => {
     if (!pendingPayload) return;
     const finalData = pendingPayload;
+    // Ghi nhận thói quen vào Local Persona Memory (Càng dùng càng hiểu - Zero LLM)
+    recordTripPattern(finalData);
     setShowConfirmModal(false);
     setPendingPayload(null);
     onSubmit(finalData);
+  };
+
+  const handleCreateRoundtrip = () => {
+    if (!pendingPayload) return;
+    const finalData = pendingPayload;
+    recordTripPattern(finalData);
+    onSubmit(finalData);
+
+    const roundtrip = computePredictedReturnTrip(finalData);
+    if (roundtrip) {
+      setFromLocation(roundtrip.from);
+      setToLocation(roundtrip.to);
+      setTimeSlot(roundtrip.timeSlot);
+      setExactTime(roundtrip.exactTime);
+      setPrice(roundtrip.price);
+      setSeats(roundtrip.seats);
+      setHasManuallyEditedPrice(true);
+    }
+    setShowConfirmModal(false);
+    setPendingPayload(null);
   };
 
   return (
@@ -515,6 +609,37 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
           }}
         />
       </div>
+
+      {/* ── BANNER DỰ ĐOÁN THÓI QUEN (CURSOR PREDICTIVE AMBIENT UX) ── */}
+      {predictedTrip && (
+        <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-primary-500/10 via-emerald-500/10 to-transparent border border-primary-300/40 dark:border-primary-700/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <div>
+              <p className="text-xs text-slate-800 dark:text-slate-200">
+                <span className="font-bold text-primary-600 dark:text-primary-400">
+                  {isDriver ? 'Chuyến quen thuộc của Chủ xe:' : 'Nhu cầu quen thuộc của bạn:'}
+                </span>{' '}
+                <span className="font-semibold">
+                  {predictedTrip.from} ➔ {predictedTrip.to}
+                </span>{' '}
+                <span className="text-slate-500 dark:text-slate-400">({predictedTrip.timeSlot})</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {formatVND(predictedTrip.price)}/ghế · {predictedTrip.seats} ghế · Đã đi {predictedTrip.count} lần
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleApplyPredictedTrip(predictedTrip)}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 transition-all shadow-xs shrink-0 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Áp dụng 1-chạm (0.1s)</span>
+          </button>
+        </div>
+      )}
 
       <form id="post-trip-form" onSubmit={handleSubmit} className="surface p-5 sm:p-7 space-y-6">
         {/* Role */}
@@ -651,7 +776,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
             </button>
           </div>
 
-          {/* TIỆN ĐÓN TRẢ DỌC ĐƯỜNG (TÙY CHỌN - TỰ DO CHO BÁC TÀI) */}
+          {/* TIỆN ĐÓN TRẢ DỌC ĐƯỜNG (TÙY CHỌN - TỰ DO CHO CHỦ XE) */}
           <div className="pt-2 space-y-2">
             <Field
               label="Trục đường tiện đón trả dọc tuyến"
@@ -744,7 +869,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
               />
             </div>
 
-            {/* QUY MÔ DÒNG XE (CHO BÁC TÀI: 4-5 CHỖ VS 7 CHỖ) */}
+            {/* QUY MÔ DÒNG XE (CHO CHỦ XE: 4-5 CHỖ VS 7 CHỖ) */}
             {isDriver && (
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-slate-700 dark:text-slate-300">
@@ -799,7 +924,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
             <div className="space-y-1.5">
               <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                 <span>
-                  {isDriver ? 'Số ghế trống nhận khách' : t('post.seatsPassenger')} <span className="text-rose-500">*</span>
+                  {isDriver ? 'Số ghế trống nhận khách' : t('post.seatsPassenger')}{' '}
+                  <span className="text-rose-500">*</span>
                 </span>
                 <span className="text-xs text-slate-400 font-normal">
                   {isDriver
@@ -810,25 +936,22 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                 </span>
               </label>
               <div className={`grid ${isDriver && vehicleCapacity === 5 ? 'grid-cols-4' : 'grid-cols-6'} gap-1.5`}>
-                {(isDriver
-                  ? vehicleCapacity === 5
-                    ? [1, 2, 3, 4]
-                    : [1, 2, 3, 4, 5, 6]
-                  : [1, 2, 3, 4, 5, 6]
-                ).map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => setSeats(num)}
-                    className={`h-12 rounded-xl border font-mono text-sm font-bold transition-all cursor-pointer flex items-center justify-center ${
-                      Number(seats) === num
-                        ? 'border-primary-600 bg-primary-50 text-primary-700 dark:bg-primary-950/60 dark:border-primary-500 dark:text-primary-300 ring-2 ring-primary-500/20 shadow-2xs'
-                        : 'border-slate-200/90 hover:border-slate-300 bg-white text-slate-700 dark:bg-[#151c2e] dark:border-white/[0.08] dark:hover:border-white/[0.16] dark:text-slate-300'
-                    }`}
-                  >
-                    {num}
-                  </button>
-                ))}
+                {(isDriver ? (vehicleCapacity === 5 ? [1, 2, 3, 4] : [1, 2, 3, 4, 5, 6]) : [1, 2, 3, 4, 5, 6]).map(
+                  (num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setSeats(num)}
+                      className={`h-12 rounded-xl border font-mono text-sm font-bold transition-all cursor-pointer flex items-center justify-center ${
+                        Number(seats) === num
+                          ? 'border-primary-600 bg-primary-50 text-primary-700 dark:bg-primary-950/60 dark:border-primary-500 dark:text-primary-300 ring-2 ring-primary-500/20 shadow-2xs'
+                          : 'border-slate-200/90 hover:border-slate-300 bg-white text-slate-700 dark:bg-[#151c2e] dark:border-white/[0.08] dark:hover:border-white/[0.16] dark:text-slate-300'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  )
+                )}
               </div>
               {isDriver && (
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between pt-0.5">
@@ -917,14 +1040,17 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                 </span>
               </div>
 
-              {/* Quick Price Preset Chips */}
+              {/* Quick Price Preset Chips - Được tính toán thông minh bởi AI Cục Bộ (Route Price Intelligence) */}
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] text-slate-400 mr-0.5">Gợi ý nhanh:</span>
-                {[100000, 150000, 200000, 250000].map((p) => (
+                <span className="text-[11px] text-slate-400 mr-0.5">Gợi ý cự ly:</span>
+                {(routePriceBenchmark?.quickPresets || [100000, 140000, 150000, 180000]).map((p) => (
                   <button
                     key={p}
                     type="button"
-                    onClick={() => setPrice(p)}
+                    onClick={() => {
+                      setPrice(p);
+                      setHasManuallyEditedPrice(true);
+                    }}
                     className={`px-2 py-0.5 rounded-lg text-[11px] font-mono transition-all cursor-pointer ${
                       Number(price) === p
                         ? 'bg-emerald-600 text-white font-bold shadow-2xs'
@@ -934,7 +1060,16 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                     {(p / 1000).toLocaleString('vi-VN')}k
                   </button>
                 ))}
+                {routePriceBenchmark?.note && (
+                  <span className="text-[10.5px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    · {routePriceBenchmark.note}
+                  </span>
+                )}
               </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">
+                * Định giá tham khảo theo hao phí lăn bánh. Mức chia sẻ thực tế do Chủ xe và Người đi cùng tự do thoả
+                thuận.
+              </p>
             </div>
 
             {isDriver ? (
@@ -970,20 +1105,30 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Bác tài tự chụp hoặc tải ảnh xe thật để tạo uy tín.{' '}
-                      <strong className="text-slate-700 dark:text-slate-300">
-                        Tối thiểu 3 hình và tối đa 5 hình
-                      </strong>{' '}
+                      Chủ xe tự chụp hoặc tải ảnh xe thật để tạo uy tín.{' '}
+                      <strong className="text-slate-700 dark:text-slate-300">Tối thiểu 3 hình và tối đa 5 hình</strong>{' '}
                       (Góc Trước, Góc Sau, Thân xe). Biển số tự động che bảo mật.
                     </p>
                   </div>
                 </div>
 
-                {/* Huy hiệu cam kết ảnh thật */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shrink-0 self-start sm:self-auto">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Xác thực xe chính chủ</span>
-                </div>
+                {/* Huy hiệu cam kết ảnh thật hoặc nút dùng lại ảnh thật đã lưu */}
+                {savedCarProfile?.hasVerifiedPhotos && carPhotos.filter(Boolean).length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setCarPhotos(savedCarProfile.carPhotos)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
+                    title="Tái sử dụng ảnh xe thật chính chủ của bạn"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Dùng lại {savedCarProfile.carPhotos.length} ảnh xe đã lưu</span>
+                  </button>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shrink-0 self-start sm:self-auto">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Xác thực xe chính chủ</span>
+                  </div>
+                )}
               </div>
 
               {/* 5 Slot Grid */}
@@ -1075,7 +1220,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                     </span>
                   ) : (
                     <span className="text-amber-600 dark:text-amber-400">
-                      ⚠️ Cần thêm {3 - carPhotos.filter(Boolean).length} hình nữa (Tối thiểu 3 hình thật: Trước, Sau, Thân xe)
+                      ⚠️ Cần thêm {3 - carPhotos.filter(Boolean).length} hình nữa (Tối thiểu 3 hình thật: Trước, Sau,
+                      Thân xe)
                     </span>
                   )}
                 </div>
@@ -1401,7 +1547,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-slate-900 dark:text-white leading-tight">
-                    {pendingPayload.type === 'driver_offer' ? 'Xác nhận thông tin chuyến đi' : 'Xác nhận nhu cầu tìm xe'}
+                    {pendingPayload.type === 'driver_offer'
+                      ? 'Xác nhận thông tin chuyến đi'
+                      : 'Xác nhận nhu cầu tìm xe'}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Vui lòng kiểm tra kỹ trước khi đưa bài lên sàn CarMate
@@ -1422,7 +1570,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
               {/* Huy hiệu vai trò & Loại xe */}
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                  {pendingPayload.type === 'driver_offer' ? <Car className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+                  {pendingPayload.type === 'driver_offer' ? (
+                    <Car className="w-3.5 h-3.5" />
+                  ) : (
+                    <Users className="w-3.5 h-3.5" />
+                  )}
                   <span>
                     {pendingPayload.type === 'driver_offer'
                       ? `Chủ xe · ${pendingPayload.capacity === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
@@ -1459,9 +1611,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                 </div>
                 <div className="p-2.5 rounded-xl bg-white dark:bg-[#1a2238] border border-slate-200/60 dark:border-white/5">
                   <span className="text-slate-400 text-[10px] block">Ngày khởi hành:</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    {pendingPayload.date}
-                  </span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{pendingPayload.date}</span>
                 </div>
               </div>
 
@@ -1478,21 +1628,35 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
             </div>
 
             {/* Hành động */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="space-y-2 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="py-3 px-4 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 font-bold text-xs text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                >
+                  ✏️ Chỉnh sửa lại
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPublish}
+                  className="py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs shadow-lg shadow-primary-600/25 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Xác nhận đăng bài</span>
+                </button>
+              </div>
+
+              {/* Nút đăng bài & Tạo luôn chuyến về (Khứ hồi) 1-chạm */}
               <button
                 type="button"
-                onClick={() => setShowConfirmModal(false)}
-                className="py-3 px-4 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 font-bold text-xs text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                onClick={handleCreateRoundtrip}
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-bold text-xs border border-emerald-300/60 dark:border-emerald-800/60 transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                ✏️ Quay lại chỉnh sửa
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmPublish}
-                className="py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs shadow-lg shadow-primary-600/25 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
-              >
-                <Check className="w-4 h-4" />
-                <span>Xác nhận đăng bài</span>
+                <ArrowLeftRight className="w-3.5 h-3.5 text-emerald-600" />
+                <span>
+                  Đăng bài & Chuẩn bị chuyến về ({pendingPayload.to} ➔ {pendingPayload.from})
+                </span>
               </button>
             </div>
           </div>

@@ -108,9 +108,16 @@ export default {
   benchmark: {
     label: 'Suggested share on {route}',
     inclusive: 'Fuel + tolls included',
-    basis: 'See how it is calculated',
-    modalTitle: 'How we calculate the suggested share',
-    modalSub: 'Transparent, based on real fuel consumption and toll fees per route',
+    basis: 'Reference pricing',
+    modalTitle: 'Route reference pricing',
+    modalSub: 'Technical estimation based on distance, actual fuel consumption, and highway tolls',
+    disclaimerTitle: 'Reference information only · Final price mutually agreed',
+    disclaimerBody:
+      'The suggested rate is purely a technical benchmark based on average RON 95 fuel consumption and highway tolls for fair vehicle cost-sharing, not a fixed tariff or commercial taxi fare. The final agreed contribution depends 100% on direct agreement between the Car Owner and Passenger (varying by doorstep pickup/drop-off, luggage, or route detour). Neither party should use this reference figure to make claims against each other or the CarMate platform.',
+    disclaimerShort: 'Reference rate · Mutually agreed',
+    heroLabel: 'Reference pricing for this route',
+    heroDesc:
+      'Calculated per empty seat for fair cost sharing. The final rate is mutually agreed upon directly between Car Owner and Passenger.',
     chooseRoute: 'Route',
     technicalTitle: 'Actual operating cost',
     distance: 'Distance',
@@ -121,7 +128,7 @@ export default {
     limo: '9-seat limousine',
     bus: 'Sleeper bus',
     carmate: 'CarMate share (5–7 seat car)',
-    benefit1: 'The whole amount goes directly from passenger to driver.',
+    benefit1: 'The entire cost is shared directly between Car Owner and Passenger.',
     benefit2: 'Clean family cars, convenient pickups, no overcrowding.'
   },
 

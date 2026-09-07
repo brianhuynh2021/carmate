@@ -8,7 +8,7 @@ import api from '../../api/client.js';
 
 /**
  * ZaloReentryModal — Apple-grade Re-entry Action Card
- * Tự động bật lên khi hành khách quay lại tab CarMate sau khi mở app Zalo để nhắn bác tài.
+ * Tự động bật lên khi hành khách quay lại tab CarMate sau khi mở app Zalo để nhắn chủ xe.
  * Giải quyết triệt để vấn đề "Gãy luồng trạng thái (State Decoupling)"
  */
 export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule, onCancelBooking, onShowToast }) {
@@ -17,7 +17,7 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
 
   if (!booking) return null;
 
-  const driverName = booking.driverName || 'Bác tài';
+  const driverName = booking.driverName || 'Chủ xe';
   const driverPhone = booking.driverPhone || '';
   const cleanPhone = driverPhone.replace(/\D/g, '');
 
@@ -121,11 +121,11 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold leading-snug">✓ Đã hẹn đón thành công</p>
-              <p className="text-xs text-emerald-100 leading-tight">Bác tài đã đồng ý, lưu vào Chuyến của tôi</p>
+              <p className="text-xs text-emerald-100 leading-tight">Chủ xe đã đồng ý, lưu vào Chuyến của tôi</p>
             </div>
           </button>
 
-          {/* 2. Đang đợi bác tài phản hồi */}
+          {/* 2. Đang đợi chủ xe phản hồi */}
           <button
             type="button"
             disabled={confirming || cancelling}
@@ -153,7 +153,7 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
                 <PhoneCall className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 leading-snug">📞 Bác tài chưa rep? Gọi trực tiếp</p>
+                <p className="text-sm font-bold text-slate-900 leading-snug">📞 Chủ xe chưa rep? Gọi trực tiếp</p>
                 <p className="text-xs text-slate-500 leading-tight">Bấm để gọi SĐT {driverPhone} ngay</p>
               </div>
             </button>
@@ -167,7 +167,7 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
             className="w-full p-3 rounded-xl hover:bg-rose-50 text-rose-600 active:scale-[0.99] flex items-center justify-center gap-2 transition-all cursor-pointer text-xs font-semibold"
           >
             <XCircle className="w-4 h-4" />
-            <span>{cancelling ? 'Đang nhả chỗ...' : 'Bác tài từ chối / Tôi muốn đổi xe khác'}</span>
+            <span>{cancelling ? 'Đang nhả chỗ...' : 'Chủ xe từ chối / Tôi muốn đổi xe khác'}</span>
           </button>
         </div>
 

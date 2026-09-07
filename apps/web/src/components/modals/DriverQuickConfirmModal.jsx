@@ -6,8 +6,8 @@ import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
 
 /**
- * DriverQuickConfirmModal — Magic Link 1-Chạm cho Bác tài
- * Mở trực tiếp khi Bác tài bấm link trong tin nhắn Zalo (#confirm-CX-XXXX)
+ * DriverQuickConfirmModal — Magic Link 1-Chạm cho Chủ xe
+ * Mở trực tiếp khi Chủ xe bấm link trong tin nhắn Zalo (#confirm-CX-XXXX)
  * Không cần đăng nhập, bảo vệ thông tin PII, xác nhận 1 chạm tức thì.
  */
 export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowToast }) {
@@ -64,7 +64,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
       const res = await api.driverConfirmBooking(bookingCode, { driverNote: driverNote.trim() });
       if (res?.success) {
         setConfirmedSuccess(true);
-        onShowToast?.('Bác tài đã xác nhận đón thành công! Chúc chuyến đi thuận buồm xuôi gió.', 'success');
+        onShowToast?.('Chủ xe đã xác nhận đón thành công! Chúc chuyến đi thuận buồm xuôi gió.', 'success');
       } else {
         onShowToast?.(res?.error || 'Có lỗi xảy ra khi xác nhận.', 'danger');
       }
@@ -197,7 +197,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             </div>
           </div>
 
-          {/* Lời nhắn kèm theo của bác tài (Tùy chọn) */}
+          {/* Lời nhắn kèm theo của chủ xe (Tùy chọn) */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -222,7 +222,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base py-3 cursor-pointer shadow-sm active:scale-[0.99]"
             >
               <CheckCircle2 className="w-5 h-5 mr-2" />
-              {submitting ? 'Đang xác nhận...' : '✓ Bác tài đồng ý nhận đón'}
+              {submitting ? 'Đang xác nhận...' : '✓ Chủ xe đồng ý nhận đón'}
             </Button>
 
             <Button fullWidth variant="secondary" onClick={onClose} className="text-xs py-2 text-slate-600">

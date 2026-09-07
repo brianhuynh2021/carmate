@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 const SIZES = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl' };
@@ -22,9 +23,12 @@ export default function Modal({
   footer,
   children,
   bodyClassName = '',
-  zIndex = 'z-50'
+  zIndex = 'z-[9999]'
 }) {
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     const onKey = (e) => {
       if (e.key === 'Escape') onClose?.();
     };
@@ -37,9 +41,9 @@ export default function Modal({
     };
   }, [onClose]);
 
-  return (
+  const modalNode = (
     <div
-      className={`fixed inset-0 ${zIndex} flex items-end sm:items-center justify-center bg-black/25 backdrop-blur-md p-0 sm:p-4 anim-fade-in`}
+      className={`fixed inset-0 ${zIndex} flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-md p-0 sm:p-4 anim-fade-in`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
@@ -48,11 +52,11 @@ export default function Modal({
       aria-label={typeof title === 'string' ? title : undefined}
     >
       <div
-        className={`w-full ${SIZES[size]} max-h-[92vh] sm:max-h-[90vh] flex flex-col bg-white text-[#1d1d1f] rounded-t-[32px] sm:rounded-3xl border-t sm:border border-black/[0.08] anim-slide-up sm:anim-scale-in overflow-hidden shadow-[0_20px_48px_-12px_rgba(0,0,0,0.18)]`}
+        className={`w-full ${SIZES[size]} max-h-[92vh] sm:max-h-[90vh] flex flex-col bg-white dark:bg-[#1c1c1e] text-[#1d1d1f] dark:text-slate-100 rounded-t-[32px] sm:rounded-3xl border-t sm:border border-black/[0.08] dark:border-white/[0.08] anim-slide-up sm:anim-scale-in overflow-hidden shadow-[0_24px_64px_-12px_rgba(0,0,0,0.28)]`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         {/* Header */}
-        <div className="flex items-start gap-3 px-6 pt-6 pb-4 border-b border-black/[0.06]">
+        <div className="flex items-start gap-3 px-6 pt-6 pb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
           {Icon && (
             <div
               className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${ICON_TONES[iconTone] || ICON_TONES.primary}`}
@@ -61,14 +65,16 @@ export default function Modal({
             </div>
           )}
           <div className="flex-1 min-w-0 pt-0.5">
-            <h3 className="font-display text-lg font-bold text-[#1d1d1f] leading-snug">{title}</h3>
-            {subtitle && <div className="text-[13px] text-[#86868b] mt-0.5 leading-snug">{subtitle}</div>}
+            <h3 className="font-display text-lg font-bold text-[#1d1d1f] dark:text-white leading-snug">{title}</h3>
+            {subtitle && (
+              <div className="text-[13px] text-[#86868b] dark:text-slate-400 mt-0.5 leading-snug">{subtitle}</div>
+            )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-8 h-8 -mr-1 -mt-1 rounded-full inline-flex items-center justify-center text-[#86868b] hover:bg-black/[0.05] hover:text-[#1d1d1f] cursor-pointer transition-colors active:scale-95"
+            className="w-8 h-8 -mr-1 -mt-1 rounded-full inline-flex items-center justify-center text-[#86868b] hover:bg-black/[0.05] dark:hover:bg-white/[0.1] hover:text-[#1d1d1f] dark:hover:text-white cursor-pointer transition-colors active:scale-95"
           >
             <X className="w-4 h-4" />
           </button>
@@ -78,8 +84,18 @@ export default function Modal({
         <div className={`px-6 py-5 overflow-y-auto overscroll-contain flex-1 ${bodyClassName}`}>{children}</div>
 
         {/* Footer */}
-        {footer && <div className="px-6 py-4 border-t border-black/[0.06] bg-[#f5f5f7]">{footer}</div>}
+        {footer && (
+          <div className="px-6 py-4 border-t border-black/[0.06] dark:border-white/[0.06] bg-[#f5f5f7] dark:bg-[#15171e]">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
+
+  if (mounted && typeof document !== 'undefined') {
+    return createPortal(modalNode, document.body);
+  }
+
+  return modalNode;
 }

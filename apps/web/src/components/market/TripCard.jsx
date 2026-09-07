@@ -160,10 +160,10 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
   const driverDisplayName =
     item.publicName && !item.publicName.includes('Test E2E')
       ? item.publicName
-      : item.author || (isDriver ? `Bác tài ${item.maskedCode || ''}` : `Khách tìm xe ${item.maskedCode || ''}`);
+      : item.author || (isDriver ? `Chủ xe ${item.maskedCode || ''}` : `Khách tìm xe ${item.maskedCode || ''}`);
 
   const avatarLetter = (
-    driverDisplayName.replace(/^(Chủ xe|Bác tài|Khách|Anh|Chị)\s*/i, '').trim()[0] || (isDriver ? 'T' : 'K')
+    driverDisplayName.replace(/^(Chủ xe|Bác tài|Khách|Anh|Chị)\s*/i, '').trim()[0] || (isDriver ? 'C' : 'K')
   ).toUpperCase();
 
   const fromParsed = parseLocation(item.from);

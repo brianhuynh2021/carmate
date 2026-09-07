@@ -3,6 +3,9 @@
  * Kiểm thử toàn diện toàn bộ các chức năng Web & API chạy tại http://localhost:5173
  */
 
+import fs from 'fs';
+import path from 'path';
+
 const BASE_URL = process.env.CARMATE_API_URL || process.env.BASE_URL || 'http://localhost:5173';
 const ADMIN_PASSCODE = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY || 'admin123';
 
@@ -263,7 +266,7 @@ async function runTests() {
         reviewerRole: 'passenger',
         rating: 5,
         tags: ['Lái xe an toàn', 'Xe sạch êm', 'Không khói thuốc'],
-        comment: 'Bác tài lái êm ái, xe không mùi thuốc lá.'
+        comment: 'Chủ xe lái êm ái, xe không mùi thuốc lá.'
       })
     });
     const passengerReviewData = await passengerReviewRes.json();
@@ -412,7 +415,10 @@ async function runTests() {
       body: JSON.stringify({ passcode: ADMIN_PASSCODE })
     });
     let okAuthData = await okAuthRes.json();
-    assert(okAuthRes.status === 200 && okAuthData.success === true, 'Đăng nhập Cổng Quản Trị bước 1 thành công với mã bí mật');
+    assert(
+      okAuthRes.status === 200 && okAuthData.success === true,
+      'Đăng nhập Cổng Quản Trị bước 1 thành công với mã bí mật'
+    );
     if (okAuthData.requireMfa && okAuthData.mfaSessionId) {
       const mfaRes = await fetch(`${BASE_URL}/api/admin/auth`, {
         method: 'POST',
@@ -760,7 +766,7 @@ async function runTests() {
 
     const mockTrips = [
       { id: 'TRIP-FAM-1', publicName: 'Anh Huỳnh', seats: 4, hasRelatives: true, price: 120000, note: 'chở vợ con' },
-      { id: 'TRIP-CONV-2', publicName: 'Bác Tài 7 chỗ', seats: 3, hasRelatives: false, price: 140000 }
+      { id: 'TRIP-CONV-2', publicName: 'Chủ Xe 7 chỗ', seats: 3, hasRelatives: false, price: 140000 }
     ];
 
     // 15.1 Verify: Loại trừ xe gia đình khi khách cần >= 2 ghế
@@ -772,7 +778,7 @@ async function runTests() {
       benchmark: { suggestedRate: 140000 }
     });
     assert(loop2Seats.finalTrips.length === 1, 'Verify: Tự động loại trừ xe gia đình chở vợ con khi khách cần 2 ghế');
-    assert(loop2Seats.finalTrips[0].publicName === 'Bác Tài 7 chỗ', 'Verify: Giữ lại chuyến xe có đủ 2 ghế trống');
+    assert(loop2Seats.finalTrips[0].publicName === 'Chủ Xe 7 chỗ', 'Verify: Giữ lại chuyến xe có đủ 2 ghế trống');
     assert(
       loop2Seats.innerLoopLog.some((l) => l.includes('[VERIFY]')),
       'Verify: Ghi nhận nhật ký thẩm tra số ghế'
@@ -1317,7 +1323,7 @@ async function runTests() {
 
     assert(
       magicDraft.includes(`#confirm-${testCode}`),
-      'Magic Link 1-Chạm: Tin nhắn Zalo tự động gắn kèm link xác nhận cho Bác tài'
+      'Magic Link 1-Chạm: Tin nhắn Zalo tự động gắn kèm link xác nhận cho Chủ xe'
     );
 
     // Tạo booking test trong SQLite
@@ -1342,12 +1348,12 @@ async function runTests() {
       'Tạo booking phục vụ kiểm thử Magic Link thành công'
     );
 
-    // Bác tài mở Magic Link: Gọi GET /api/bookings/:id/public-summary không cần đăng nhập
+    // Chủ xe mở Magic Link: Gọi GET /api/bookings/:id/public-summary không cần đăng nhập
     const summaryRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`);
     const summaryData = await summaryRes.json();
     assert(
       summaryRes.status === 200 && summaryData.success === true,
-      'Public Summary: Bác tài truy cập tóm tắt chuyến không cần đăng nhập (HTTP 200)'
+      'Public Summary: Chủ xe truy cập tóm tắt chuyến không cần đăng nhập (HTTP 200)'
     );
     assert(
       summaryData.data.from === 'Bù Đốp' && summaryData.data.to === 'Sài Gòn',
@@ -1358,9 +1364,9 @@ async function runTests() {
       !summaryData.data.phoneReal && !summaryData.data.contactPhone,
       'PII Protection: Public Summary tuyệt đối không để lộ số điện thoại thô'
     );
-    assert(summaryData.data.driverConfirmed === false, 'Khởi tạo: Bác tài chưa xác nhận đón');
+    assert(summaryData.data.driverConfirmed === false, 'Khởi tạo: Chủ xe chưa xác nhận đón');
 
-    // Bác tài bấm 1 chạm "Đồng ý đón": Gọi POST /api/bookings/:id/driver-confirm
+    // Chủ xe bấm 1 chạm "Đồng ý đón": Gọi POST /api/bookings/:id/driver-confirm
     const confirmRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/driver-confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1371,7 +1377,7 @@ async function runTests() {
     const confirmData = await confirmRes.json();
     assert(
       confirmRes.status === 200 && confirmData.success === true,
-      'Driver 1-Tap: Bác tài xác nhận đón 1 chạm thành công (HTTP 200)'
+      'Driver 1-Tap: Chủ xe xác nhận đón 1 chạm thành công (HTTP 200)'
     );
     assert(
       confirmData.data.status === 'driver_confirmed',
@@ -1385,7 +1391,7 @@ async function runTests() {
     );
     assert(
       summaryAfterConfirm.data.driverConfirmed === true,
-      'Đồng bộ: Hành khách và Bác tài đều thấy trạng thái đã xác nhận đón'
+      'Đồng bộ: Hành khách và Chủ xe đều thấy trạng thái đã xác nhận đón'
     );
 
     // Dọn dẹp booking test
@@ -1653,6 +1659,29 @@ async function runTests() {
     // 6. Kiểm tra chuyến xe của user đã bị gỡ sạch khỏi sàn
     const tripCheckRes = await fetch(`${BASE_URL}/api/trips/${createdTripId}`);
     assert(tripCheckRes.status === 404, 'Delete Account 6: Toàn bộ bài đăng của tài khoản đã bị xóa sạch (HTTP 404)');
+
+    // 7. MIT Invariant: Admin không thể tự xóa tài khoản vĩnh viễn (HTTP 403)
+    const adminDelRes = await fetch(`${BASE_URL}/api/auth/me`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${sharedTokenA}`
+      }
+    });
+    const adminDelData = await adminDelRes.json();
+    assert(
+      adminDelRes.status === 403 && adminDelData.success === false,
+      'MIT Invariant Admin 1: Chặn đứng hành vi Admin tự xóa tài khoản (HTTP 403 Forbidden)'
+    );
+    assert(
+      adminDelData.error?.includes('luật bất biến MIT') && adminDelData.error?.includes('Admin'),
+      'MIT Invariant Admin 2: Phản hồi thông điệp bảo vệ bất biến hệ thống chuẩn xác'
+    );
+
+    // 8. Đảm bảo tài khoản Admin sau đó vẫn sống nguyên vẹn
+    const adminStillAliveRes = await fetch(`${BASE_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${sharedTokenA}` }
+    });
+    assert(adminStillAliveRes.status === 200, 'MIT Invariant Admin 3: Tài khoản Admin được bảo toàn nguyên vẹn 100%');
   } catch (err) {
     assert(false, '24. Kiểm thử Xóa Tài Khoản Vĩnh Viễn', err.message);
   }
@@ -1773,7 +1802,7 @@ async function runTests() {
 
     // Test 12-14: Thông báo nghiệp vụ mới
     const bizDispatch = await sendBusinessAlert({
-      title: 'Bác tài đăng chuyến mới',
+      title: 'Chủ xe đăng chuyến mới',
       details: {
         Mã: 'TRIP-TEST-999',
         'Lộ trình': 'Sài Gòn -> Bình Phước'
@@ -1782,7 +1811,7 @@ async function runTests() {
     assert(bizDispatch === true, 'Telegram 12: Gửi thông báo nghiệp vụ thành công');
     assert(dispatchedMessages.length === 3, 'Telegram 13: Tin nhắn nghiệp vụ được chuyển tới Telegram');
     assert(
-      dispatchedMessages[2].text.includes('Bác tài đăng chuyến mới'),
+      dispatchedMessages[2].text.includes('Chủ xe đăng chuyến mới'),
       'Telegram 14: Tiêu đề nghiệp vụ hiển thị chính xác'
     );
 
@@ -1807,9 +1836,15 @@ async function runTests() {
       body: JSON.stringify({ passcode: ADMIN_PASSCODE })
     });
     const initMfaData = await initMfaRes.json();
-    assert(initMfaRes.status === 200 && initMfaData.success === true, 'MFA 1: Nhập đúng mật mã khởi tạo phiên MFA thành công (HTTP 200)');
+    assert(
+      initMfaRes.status === 200 && initMfaData.success === true,
+      'MFA 1: Nhập đúng mật mã khởi tạo phiên MFA thành công (HTTP 200)'
+    );
     assert(initMfaData.requireMfa === true, 'MFA 2: Phản hồi cờ requireMfa = true kích hoạt giao diện nhập OTP');
-    assert(typeof initMfaData.mfaSessionId === 'string' && initMfaData.mfaSessionId.startsWith('mfa_'), 'MFA 3: Hệ thống cấp mã mfaSessionId bảo mật');
+    assert(
+      typeof initMfaData.mfaSessionId === 'string' && initMfaData.mfaSessionId.startsWith('mfa_'),
+      'MFA 3: Hệ thống cấp mã mfaSessionId bảo mật'
+    );
 
     // 27.2 Bước 2: Nhập sai mã OTP
     const wrongOtpRes = await fetch(`${BASE_URL}/api/admin/auth`, {
@@ -1818,7 +1853,10 @@ async function runTests() {
       body: JSON.stringify({ mfaSessionId: initMfaData.mfaSessionId, mfaCode: '000000' })
     });
     const wrongOtpData = await wrongOtpRes.json();
-    assert(wrongOtpRes.status === 401 && wrongOtpData.success === false, 'MFA 4: Nhập sai mã OTP bị từ chối chính xác (HTTP 401)');
+    assert(
+      wrongOtpRes.status === 401 && wrongOtpData.success === false,
+      'MFA 4: Nhập sai mã OTP bị từ chối chính xác (HTTP 401)'
+    );
     assert(wrongOtpData.error.includes('lần thử'), 'MFA 5: Thông báo số lần thử còn lại');
 
     // 27.3 Bước 3: Gửi lại mã OTP (Resend OTP)
@@ -1828,7 +1866,10 @@ async function runTests() {
       body: JSON.stringify({ mfaSessionId: initMfaData.mfaSessionId, action: 'resend' })
     });
     const resendData = await resendRes.json();
-    assert(resendRes.status === 200 && resendData.success === true, 'MFA 6: Gửi lại mã OTP mới (Resend OTP) thành công');
+    assert(
+      resendRes.status === 200 && resendData.success === true,
+      'MFA 6: Gửi lại mã OTP mới (Resend OTP) thành công'
+    );
 
     // 27.4 Bước 4: Nhập đúng mã OTP qua cơ chế dev fallback 123456
     const okMfaRes = await fetch(`${BASE_URL}/api/admin/auth`, {
@@ -1837,7 +1878,10 @@ async function runTests() {
       body: JSON.stringify({ mfaSessionId: initMfaData.mfaSessionId, mfaCode: '123456' })
     });
     const okMfaData = await okMfaRes.json();
-    assert(okMfaRes.status === 200 && okMfaData.success === true, 'MFA 7: Xác thực OTP thành công cấp JWT Token Quản trị');
+    assert(
+      okMfaRes.status === 200 && okMfaData.success === true,
+      'MFA 7: Xác thực OTP thành công cấp JWT Token Quản trị'
+    );
     assert(typeof okMfaData.token === 'string' && okMfaData.token.length > 20, 'MFA 8: Token Quản trị viên hợp lệ');
 
     // 27.5 Bước 5: Chống Replay Attack (Dùng lại session cũ phải bị từ chối)
@@ -1867,7 +1911,7 @@ async function runTests() {
       availableSeats: 3,
       basePricePerSeat: 160000,
       phoneReal: '0988112233',
-      name: 'Bác tài Vios Gia Đình'
+      name: 'Chủ xe Vios Gia Đình'
     };
 
     const createTripRes = await fetch(`${BASE_URL}/api/trips`, {
@@ -1876,9 +1920,15 @@ async function runTests() {
       body: JSON.stringify(tripPayload)
     });
     const createTripData = await createTripRes.json();
-    assert(createTripRes.status === 201 && createTripData.success === true, 'Mismatch 1: Tạo chuyến xe gia đình (family_car) thành công (HTTP 201)');
+    assert(
+      createTripRes.status === 201 && createTripData.success === true,
+      'Mismatch 1: Tạo chuyến xe gia đình (family_car) thành công (HTTP 201)'
+    );
     const testTripId = createTripData.data.id;
-    assert(createTripData.data.carCategory === 'family_car', 'Mismatch 2: Chuyến xe có carCategory ban đầu là family_car');
+    assert(
+      createTripData.data.carCategory === 'family_car',
+      'Mismatch 2: Chuyến xe có carCategory ban đầu là family_car'
+    );
 
     // 28.2 Hành khách đặt chuyến xe này
     const bookingRes = await fetch(`${BASE_URL}/api/bookings`, {
@@ -1897,7 +1947,10 @@ async function runTests() {
       })
     });
     const bookingData = await bookingRes.json();
-    assert(bookingRes.status === 201 && bookingData.success === true, 'Mismatch 3: Đặt chuyến xe thành công (HTTP 201)');
+    assert(
+      bookingRes.status === 201 && bookingData.success === true,
+      'Mismatch 3: Đặt chuyến xe thành công (HTTP 201)'
+    );
     const testBookingId = bookingData.data.escrowId || bookingData.data.id;
 
     // 28.3 Hành khách phát hiện xe đón thực tế là Biển vàng và gửi báo cáo
@@ -1911,7 +1964,10 @@ async function runTests() {
       })
     });
     const reportData = await reportRes.json();
-    assert(reportRes.status === 200 && reportData.success === true, 'Mismatch 4: Gửi báo cáo sai lệch loại xe thành công (HTTP 200)');
+    assert(
+      reportRes.status === 200 && reportData.success === true,
+      'Mismatch 4: Gửi báo cáo sai lệch loại xe thành công (HTTP 200)'
+    );
     assert(reportData.data.status === 'pending', 'Mismatch 5: Báo cáo có trạng thái pending');
     assert(reportData.data.actualPlate === '51G-998.88', 'Mismatch 6: Ghi nhận chính xác biển số xe thực tế đón');
 
@@ -1922,7 +1978,10 @@ async function runTests() {
       }
     });
     const adminReportsData = await adminReportsRes.json();
-    assert(adminReportsRes.status === 200 && adminReportsData.success === true, 'Mismatch 7: Admin lấy danh sách báo cáo sự cố thành công');
+    assert(
+      adminReportsRes.status === 200 && adminReportsData.success === true,
+      'Mismatch 7: Admin lấy danh sách báo cáo sự cố thành công'
+    );
     const foundReport = (adminReportsData.data.vehicleMismatchReports || []).find((r) => r.bookingId === testBookingId);
     assert(Boolean(foundReport), 'Mismatch 8: Báo cáo sai lệch xe xuất hiện trong danh sách Admin reports');
     assert(foundReport.mismatchType === 'yellow_plate', 'Mismatch 9: Báo cáo hiển thị đúng lý do xe biển vàng');
@@ -1940,8 +1999,14 @@ async function runTests() {
       })
     });
     const convertData = await convertRes.json();
-    assert(convertRes.status === 200 && convertData.success === true, 'Mismatch 10: Admin 1-chạm chuyển chuyến xe sang Biển vàng thành công');
-    assert(convertData.data.carCategory === 'convenient_trip', 'Mismatch 11: Chuyến xe đã đổi carCategory sang convenient_trip');
+    assert(
+      convertRes.status === 200 && convertData.success === true,
+      'Mismatch 10: Admin 1-chạm chuyển chuyến xe sang Biển vàng thành công'
+    );
+    assert(
+      convertData.data.carCategory === 'convenient_trip',
+      'Mismatch 11: Chuyến xe đã đổi carCategory sang convenient_trip'
+    );
 
     // 28.6 Kiểm tra trạng thái báo cáo đã được cập nhật thành resolved_converted
     const checkReportsRes = await fetch(`${BASE_URL}/api/admin/reports`, {
@@ -1950,8 +2015,13 @@ async function runTests() {
       }
     });
     const checkReportsData = await checkReportsRes.json();
-    const resolvedReport = (checkReportsData.data.vehicleMismatchReports || []).find((r) => r.bookingId === testBookingId);
-    assert(resolvedReport && resolvedReport.status === 'resolved_converted', 'Mismatch 12: Báo cáo được tự động đóng cờ và cập nhật resolved_converted');
+    const resolvedReport = (checkReportsData.data.vehicleMismatchReports || []).find(
+      (r) => r.bookingId === testBookingId
+    );
+    assert(
+      resolvedReport && resolvedReport.status === 'resolved_converted',
+      'Mismatch 12: Báo cáo được tự động đóng cờ và cập nhật resolved_converted'
+    );
 
     // Dọn dẹp dữ liệu test
     await fetch(`${BASE_URL}/api/admin/trips/${testTripId}`, {
@@ -2066,10 +2136,7 @@ async function runTests() {
     );
 
     const sanitizedUnder = sanitizeVehicleCapacityAndSeats(5, 0);
-    assert(
-      sanitizedUnder.seats === 1,
-      'MIT Invariant 3: Chọn số ghế < 1 tự động đưa về mức sàn tối thiểu là 1 ghế'
-    );
+    assert(sanitizedUnder.seats === 1, 'MIT Invariant 3: Chọn số ghế < 1 tự động đưa về mức sàn tối thiểu là 1 ghế');
 
     const sanitizedDefault = sanitizeVehicleCapacityAndSeats(5, undefined);
     assert(
@@ -2104,10 +2171,7 @@ async function runTests() {
       'Backend Guard 1: Đăng chuyến thành công qua API'
     );
     const created5SeatTripId = createTripOverloadData.data?.id;
-    assert(
-      createTripOverloadData.data?.capacity === 5,
-      'Backend Guard 2: Backend lưu đúng dung tích xe là 5 chỗ'
-    );
+    assert(createTripOverloadData.data?.capacity === 5, 'Backend Guard 2: Backend lưu đúng dung tích xe là 5 chỗ');
     assert(
       createTripOverloadData.data?.availableSeats === 4,
       'Backend Guard 3: Backend tự động kẹp an toàn từ 6 ghế xuống tối đa 4 ghế cho xe 5 chỗ'
@@ -2190,7 +2254,7 @@ async function runTests() {
     // 31.1 Kiểm thử cấu trúc thư viện mẫu SMART_TRIP_TEMPLATES
     assert(
       SMART_TRIP_TEMPLATES && Array.isArray(SMART_TRIP_TEMPLATES.driver) && SMART_TRIP_TEMPLATES.driver.length >= 4,
-      'Template Library 1: Thư viện có ít nhất 4 mẫu thực tế cho Bác tài (Gia đình 7 chỗ, Vios 5 chỗ, MPV, Miền Trung)'
+      'Template Library 1: Thư viện có ít nhất 4 mẫu thực tế cho Chủ xe (Gia đình 7 chỗ, Vios 5 chỗ, MPV, Miền Trung)'
     );
     assert(
       Array.isArray(SMART_TRIP_TEMPLATES.passenger) && SMART_TRIP_TEMPLATES.passenger.length >= 4,
@@ -2200,7 +2264,10 @@ async function runTests() {
     // 31.2 Kiểm thử NLP nhận diện Khách đi 1 mình gấp khám bệnh
     const singlePaxText = SMART_TRIP_TEMPLATES.passenger[0].text;
     const parsedSinglePax = parseNaturalTrip(singlePaxText);
-    assert(parsedSinglePax.role === 'passenger', 'Passenger NLP 1: Nhận diện chính xác vai trò Người cần tìm xe (passenger)');
+    assert(
+      parsedSinglePax.role === 'passenger',
+      'Passenger NLP 1: Nhận diện chính xác vai trò Người cần tìm xe (passenger)'
+    );
     assert(parsedSinglePax.seats === 1, 'Passenger NLP 2: Trích xuất đúng số ghế cần tìm là 1');
     assert(parsedSinglePax.price === 120000, 'Passenger NLP 3: Trích xuất đúng mức phụ xăng 120.000đ');
     assert(parsedSinglePax.phoneReal === '0984883750', 'Passenger NLP 4: Trích xuất đúng số điện thoại Zalo của khách');
@@ -2224,7 +2291,10 @@ async function runTests() {
     const parcelPaxText = SMART_TRIP_TEMPLATES.passenger[2].text;
     const parsedParcelPax = parseNaturalTrip(parcelPaxText);
     assert(parsedParcelPax.role === 'passenger', 'Passenger NLP 10: Khách gửi hàng nhận diện đúng vai trò');
-    assert(parsedParcelPax.acceptsParcel === true, 'Passenger NLP 11: Bật cờ gửi kèm hàng hoá/bưu phẩm (acceptsParcel: true)');
+    assert(
+      parsedParcelPax.acceptsParcel === true,
+      'Passenger NLP 11: Bật cờ gửi kèm hàng hoá/bưu phẩm (acceptsParcel: true)'
+    );
     assert(parsedParcelPax.price === 80000, 'Passenger NLP 12: Nhận diện chi phí phụ gửi hàng 80k');
 
     // 31.5 Kiểm thử đăng chuyến xe thực tế qua API cho hành khách (type: passenger_request)
@@ -2249,9 +2319,15 @@ async function runTests() {
       })
     });
     const paxTripData = await paxTripRes.json();
-    assert(paxTripRes.status === 201 && paxTripData.success === true, 'API Passenger 1: Đăng nhu cầu tìm xe thành công (HTTP 201)');
+    assert(
+      paxTripRes.status === 201 && paxTripData.success === true,
+      'API Passenger 1: Đăng nhu cầu tìm xe thành công (HTTP 201)'
+    );
     const createdPaxTripId = paxTripData.data?.id;
-    assert(paxTripData.data?.type === 'passenger_request', 'API Passenger 2: Phân loại đúng loại bài đăng passenger_request');
+    assert(
+      paxTripData.data?.type === 'passenger_request',
+      'API Passenger 2: Phân loại đúng loại bài đăng passenger_request'
+    );
     assert(paxTripData.data?.seatsNeeded === 1, 'API Passenger 3: Lưu trữ đúng số ghế khách cần');
 
     // 31.6 Kiểm thử UI Static Code Inspection
@@ -2300,13 +2376,15 @@ async function runTests() {
     const { parseNaturalTrip } = await import('../apps/web/src/utils/nlpTripParser.js');
 
     // 32.1 Người dùng gõ/sửa thành xe 5 chỗ (kèm người thân)
-    const text5Seats = 'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 5 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
+    const text5Seats =
+      'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 5 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
     const parsed5 = parseNaturalTrip(text5Seats);
     assert(parsed5.capacity === 5, 'Capacity Sync 1: NLP nhận diện chính xác capacity = 5 khi văn bản ghi xe 5 chỗ');
     assert(parsed5.carType.includes('5 chỗ'), 'Capacity Sync 2: Loại xe carType ghi rõ 5 chỗ');
 
     // 32.2 Người dùng gõ xe 7 chỗ
-    const text7Seats = 'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
+    const text7Seats =
+      'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
     const parsed7 = parseNaturalTrip(text7Seats);
     assert(parsed7.capacity === 7, 'Capacity Sync 3: NLP nhận diện chính xác capacity = 7 khi văn bản ghi xe 7 chỗ');
     assert(parsed7.carType.includes('7 chỗ'), 'Capacity Sync 4: Loại xe carType ghi rõ 7 chỗ');
@@ -2353,8 +2431,8 @@ async function runTests() {
       'Photo Trust 2: Đã loại bỏ hoàn toàn nút "Dùng ảnh mẫu" ngăn chặn gian lận huy hiệu'
     );
     assert(
-      !postFormCode.includes('from \'../../constants/sampleCarPhotos.js\'') &&
-      !postFormCode.includes('from "../../constants/sampleCarPhotos.js"'),
+      !postFormCode.includes("from '../../constants/sampleCarPhotos.js'") &&
+        !postFormCode.includes('from "../../constants/sampleCarPhotos.js"'),
       'Photo Trust 3: PostTripForm không còn import bộ ảnh mẫu giả lập'
     );
 
@@ -2375,6 +2453,241 @@ async function runTests() {
     );
   } catch (err) {
     assert(false, '33. Kiểm thử Tính Minh Bạch Tín Nhiệm Ảnh Xe', err.message);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 34. KIỂM THỬ TRÍ TUỆ BẢN ĐỊA (EDGE AI) ĐĂNG CHUYẾN & BỘ NHỚ THÓI QUEN (ZERO-LLM)
+  // ──────────────────────────────────────────────────────────────────────────
+  console.log('\n🧠 34. Kiểm thử Trí Tuệ Bản Địa (Edge AI) Đăng Chuyến & Bộ Nhớ Thói Quen (Zero-LLM)...');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // Polyfill localStorage an toàn cho môi trường kiểm thử Node.js
+    const memoryStore = {};
+    globalThis.localStorage = {
+      getItem: (key) => memoryStore[key] || null,
+      setItem: (key, val) => {
+        memoryStore[key] = String(val);
+      },
+      removeItem: (key) => {
+        delete memoryStore[key];
+      },
+      clear: () => {
+        for (const k in memoryStore) delete memoryStore[k];
+      }
+    };
+
+    const {
+      recordTripPattern,
+      getPersonaMemory,
+      getTopPredictedTrip,
+      getLastUsedCarProfile,
+      getDynamicRoutePriceBenchmark,
+      computePredictedReturnTrip,
+      clearPersonaMemory
+    } = await import('../apps/web/src/utils/personaMemory.js');
+
+    const { parseNaturalTrip } = await import('../apps/web/src/utils/nlpTripParser.js');
+
+    // 34.1 Kiểm thử khởi tạo bộ nhớ rỗng an toàn
+    clearPersonaMemory();
+    const emptyMem = getPersonaMemory();
+    assert(
+      emptyMem && Array.isArray(emptyMem.driver?.routes) && Array.isArray(emptyMem.passenger?.routes),
+      'Edge AI 1: Khởi tạo bộ nhớ thói quen rỗng an toàn'
+    );
+    assert(getTopPredictedTrip('driver') === null, 'Edge AI 2: Trả về null khi chưa có lịch sử chuyến đi');
+
+    // 34.2 Kiểm thử thuật toán ghi nhận & chấm điểm thói quen (MIT Invariant: Recency & Frequency Scoring)
+    recordTripPattern({
+      type: 'driver_offer',
+      from: 'Bù Đốp, Bình Phước',
+      to: 'Bến xe Miền Đông Mới, TP.HCM',
+      timeSlot: '05:00-07:00',
+      price: 150000,
+      seats: 3,
+      capacity: 5,
+      carType: 'Toyota Vios (Xe 5 chỗ)',
+      carCategory: 'family_car',
+      carPhotos: ['data:image/jpeg;base64,mock1', 'data:image/jpeg;base64,mock2', 'data:image/jpeg;base64,mock3'],
+      hasCarPhotos: true,
+      phoneReal: '0984883750'
+    });
+
+    // Ghi nhận lần 2 để tăng tần suất (Frequency)
+    recordTripPattern({
+      type: 'driver_offer',
+      from: 'Bù Đốp, Bình Phước',
+      to: 'Bến xe Miền Đông Mới, TP.HCM',
+      timeSlot: '05:00-07:00',
+      price: 150000,
+      seats: 3,
+      capacity: 5,
+      carType: 'Toyota Vios (Xe 5 chỗ)',
+      carCategory: 'family_car',
+      carPhotos: ['data:image/jpeg;base64,mock1', 'data:image/jpeg;base64,mock2', 'data:image/jpeg;base64,mock3'],
+      hasCarPhotos: true,
+      phoneReal: '0984883750'
+    });
+
+    // Thêm 1 lộ trình phụ với tần suất thấp hơn
+    recordTripPattern({
+      type: 'driver_offer',
+      from: 'Đồng Xoài, Bình Phước',
+      to: 'Vũng Tàu',
+      timeSlot: '13:00-15:00',
+      price: 200000,
+      seats: 4
+    });
+
+    const memAfter = getPersonaMemory();
+    assert(memAfter.driver.routes.length === 2, 'Edge AI 3: Lưu trữ đúng 2 lộ trình thói quen của Chủ xe');
+
+    // Tuyến Bù Đốp -> TP.HCM phải có score cao hơn tuyến Đồng Xoài -> Vũng Tàu
+    const topPredicted = getTopPredictedTrip('driver');
+    assert(topPredicted !== null, 'Edge AI 4: Tìm ra chuyến đi quen thuộc dự đoán tiếp theo');
+    assert(
+      topPredicted.from.includes('Bù Đốp') && topPredicted.to.includes('Bến xe Miền Đông'),
+      'Edge AI 5: Tuyến lặp lại nhiều lần được ưu tiên xếp hạng số 1 (MIT Invariant Ranking)'
+    );
+    assert(topPredicted.price === 150000, 'Edge AI 6: Tự động điền giá tiền thói quen chuẩn xác');
+    assert(topPredicted.seats === 3, 'Edge AI 7: Tự động ghi nhớ cấu hình số ghế trống quen thuộc');
+
+    // 34.3 Tự động lưu hồ sơ xe & ảnh xe thật chính chủ để tái sử dụng
+    const savedCar = getLastUsedCarProfile();
+    assert(savedCar !== null, 'Edge AI 8: Trích xuất thành công hồ sơ xe đã xác thực');
+    assert(savedCar.carType === 'Toyota Vios (Xe 5 chỗ)', 'Edge AI 9: Tự động nhớ dòng xe Vios');
+    assert(savedCar.carPhotos?.length === 3, 'Edge AI 10: Tự động lưu giữ 3 ảnh xe thật để tái sử dụng 1 chạm');
+
+    // 34.4 Tính toán chuyến về khứ hồi (Roundtrip AI Predictor)
+    const returnTrip = computePredictedReturnTrip({
+      type: 'driver_offer',
+      from: 'Bù Đốp, Bình Phước',
+      to: 'Sài Gòn',
+      timeSlot: '05:00-07:00',
+      price: 150000,
+      seats: 3
+    });
+    assert(
+      returnTrip.from === 'Sài Gòn' && returnTrip.to === 'Bù Đốp, Bình Phước',
+      'Edge AI 11: Đảo chiều lộ trình khứ hồi chuẩn xác (Sài Gòn ➔ Bù Đốp)'
+    );
+    assert(returnTrip.timeSlot === '17:00-19:00', 'Edge AI 12: Dự đoán khung giờ về chiều tối hợp lý khi đi sáng sớm');
+
+    // 34.5 Định giá chia sẻ xăng thông minh theo cự ly thực tế & trạm thu phí BOT
+    const benchmarkBinhPhuoc = getDynamicRoutePriceBenchmark('TP.HCM', 'Bù Đốp, Bình Phước');
+    assert(
+      benchmarkBinhPhuoc.suggestedPrice >= 120000 && benchmarkBinhPhuoc.suggestedPrice <= 200000,
+      'Edge AI 13: Định mức phụ xăng thông minh tuyến Sài Gòn - Bình Phước nằm trong dải chuẩn 120k-200k/ghế'
+    );
+    assert(
+      Array.isArray(benchmarkBinhPhuoc.quickPresets) && benchmarkBinhPhuoc.quickPresets.length === 4,
+      'Edge AI 14: Sinh ra 4 chip chọn giá nhanh 1-chạm không cần gõ bàn phím'
+    );
+
+    // 34.6 Trích xuất tiện ích xe tự động bằng Regex NLP (Zero-LLM, 0ms, 100% Privacy)
+    const smartText =
+      'Xe Vios 5 chỗ, không hút thuốc, bật máy lạnh suốt tuyến, cốp rộng chứa vali thoải mái, bao phí cầu đường BOT cao tốc, nhận gửi đồ bà con';
+    const parsedTrip = parseNaturalTrip(smartText);
+    assert(
+      parsedTrip.detectedPerks && parsedTrip.detectedPerks.noSmoking === true,
+      'Edge AI 15: NLP tự động bật tiện ích "Không hút thuốc"'
+    );
+    assert(parsedTrip.detectedPerks.acOn === true, 'Edge AI 16: NLP tự động bật tiện ích "Máy lạnh"');
+    assert(parsedTrip.detectedPerks.largeTrunk === true, 'Edge AI 17: NLP tự động bật tiện ích "Cốp rộng"');
+    assert(
+      parsedTrip.detectedPerks.botIncluded === true,
+      'Edge AI 18: NLP tự động bật tiện ích "Bao vé cầu đường / BOT"'
+    );
+    assert(parsedTrip.detectedPerks.acceptsParcel === true, 'Edge AI 19: NLP tự động nhận diện "Nhận gửi hàng"');
+
+    // 34.7 Thẩm định ngôn ngữ chuẩn văn hoá: Tuyệt đối không dùng "Bác tài", phải dùng "Chủ xe"
+    const filesToCheck = [
+      'apps/web/src/components/post/SmartTripComposer.jsx',
+      'apps/web/src/components/post/PostTripForm.jsx',
+      'apps/web/src/components/market/TripCard.jsx',
+      'apps/web/src/components/modals/DriverQuickConfirmModal.jsx',
+      'apps/web/src/components/modals/ZaloReentryModal.jsx',
+      'apps/web/src/components/modals/EscrowBookingModal.jsx',
+      'apps/web/src/utils/personaMemory.js',
+      'apps/web/src/utils/nlpTripParser.js'
+    ];
+
+    let foundBactai = false;
+    for (const relPath of filesToCheck) {
+      const fullPath = path.resolve(process.cwd(), relPath);
+      const content = fs.readFileSync(fullPath, 'utf8');
+      // Cho phép regex avatar letter /^(Chủ xe|Bác tài|...)/ để tránh phá vỡ tương thích dữ liệu cũ
+      const stripped = content.replace(/driverDisplayName\.replace\(\/\^\(Chủ xe\|Bác tài\|/g, '');
+      if (/bác tài/i.test(stripped)) {
+        foundBactai = true;
+        console.error(`Phát hiện từ "Bác tài" trong file: ${relPath}`);
+      }
+    }
+    assert(
+      foundBactai === false,
+      'Terminology 1: Toàn bộ các module cốt lõi tuyệt đối tuân thủ xưng hô "Chủ xe", không dùng "Bác tài"'
+    );
+  } catch (err) {
+    assert(false, '34. Kiểm thử Trí Tuệ Bản Địa Đăng Chuyến & Bộ Nhớ Thói Quen (Zero-LLM)', err.message);
+  }
+
+  // 35. Kiểm thử Bảo Vệ Bất Biến MIT & Công Thái Học Stanford Cho Tài Khoản Quản Trị
+  console.log('\n🔒 35. Kiểm thử Bảo Vệ Bất Biến MIT & Công Thái Học Stanford Cho Tài Khoản Quản Trị...');
+  try {
+    // 1. Kiểm tra Header UI: Khi user là admin, ẩn nút Xóa tài khoản vĩnh viễn và hiển thị badge bảo vệ
+    const headerPath = path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx');
+    const headerContent = fs.readFileSync(headerPath, 'utf8');
+    assert(
+      headerContent.includes("currentUser.role === 'admin'") &&
+        headerContent.includes("currentUser.phone?.includes('0984883750')"),
+      'Admin Safeguard UI 1: Header có điều kiện lọc role admin và số điện thoại root admin'
+    );
+    assert(
+      headerContent.includes('Tài khoản Quản trị') && headerContent.includes('Bảo vệ'),
+      'Admin Safeguard UI 2: Header hiển thị trạng thái Tài khoản Quản trị [Bảo vệ] phong cách Apple'
+    );
+    assert(
+      headerContent.includes('Xóa tài khoản vĩnh viễn') &&
+        headerContent.includes(': (') &&
+        headerContent.includes('<Trash2'),
+      'Admin Safeguard UI 3: Nút xóa tài khoản chỉ dành riêng cho người dùng thông thường'
+    );
+
+    // 2. Kiểm tra Modal UI: DeleteAccountModal khóa chặt thao tác nếu là Admin
+    const modalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/DeleteAccountModal.jsx');
+    const modalContent = fs.readFileSync(modalPath, 'utf8');
+    assert(
+      modalContent.includes('isAdmin') && modalContent.includes('Bảo vệ bất biến MIT: Tài khoản Quản trị viên'),
+      'Admin Safeguard UI 4: DeleteAccountModal tích hợp cảnh báo luật bất biến MIT'
+    );
+    assert(
+      modalContent.includes('disabled={isAdmin || !confirmed || isDeleting}'),
+      'Admin Safeguard UI 5: Nút xác nhận xóa bị vô hiệu hóa (disabled) 100% đối với Admin'
+    );
+
+    // 3. Kiểm tra DB Store: sqliteStore.deleteUserAccount từ chối xóa admin
+    const dbStorePath = path.resolve(process.cwd(), 'apps/api/src/db/sqliteStore.js');
+    const dbStoreContent = fs.readFileSync(dbStorePath, 'utf8');
+    assert(
+      dbStoreContent.includes("user?.role === 'admin'") &&
+        dbStoreContent.includes('0984883750') &&
+        dbStoreContent.includes('luật bất biến MIT'),
+      'Admin Safeguard DB 1: sqliteStore ném lỗi từ chối xóa tài khoản Admin ở mức hạ tầng dữ liệu'
+    );
+
+    // 4. Kiểm tra Controller API: authController từ chối xóa và trả về HTTP 403
+    const authCtrlPath = path.resolve(process.cwd(), 'apps/api/src/controllers/authController.js');
+    const authCtrlContent = fs.readFileSync(authCtrlPath, 'utf8');
+    assert(
+      authCtrlContent.includes('isAdmin') &&
+        authCtrlContent.includes('res.status(403)') &&
+        authCtrlContent.includes('luật bất biến MIT'),
+      'Admin Safeguard Controller 1: authController trả về HTTP 403 Forbidden chặn đứng tự xóa tài khoản Admin'
+    );
+  } catch (err) {
+    assert(false, '35. Kiểm thử Bảo Vệ Bất Biến MIT & Công Thái Học Stanford', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

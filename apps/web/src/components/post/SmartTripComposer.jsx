@@ -20,12 +20,7 @@ import {
 import { parseNaturalTrip, SMART_TRIP_TEMPLATES } from '../../utils/nlpTripParser.js';
 import { formatVND } from '@carmate/shared';
 
-export default function SmartTripComposer({
-  onApply,
-  onInstantSubmit,
-  currentRole = 'driver',
-  onRoleChange
-}) {
+export default function SmartTripComposer({ onApply, onInstantSubmit, currentRole = 'driver', onRoleChange }) {
   const [inputText, setInputText] = useState('');
   const [parsedResult, setParsedResult] = useState(null);
   const [activeCategory, setActiveCategory] = useState(currentRole === 'passenger' ? 'passenger' : 'driver');
@@ -159,8 +154,8 @@ export default function SmartTripComposer({
       {/* ── THƯ VIỆN MẪU ĐA DẠNG: LUÔN HIỂN THỊ ĐỂ ĐỔI MẪU 1-CHẠM (APPLE HIG RIBBON) ── */}
       <div className="mt-2.5 pt-2.5 border-t border-slate-800/60 relative z-10 space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          {/* Segmented Controller chuyển tab Mẫu Bác tài / Mẫu Khách */}
-          <div className="inline-flex items-center p-0.5 rounded-lg bg-black/40 border border-slate-800 text-[11px]">
+          {/* Segmented Controller chuyển tab Mẫu Chủ xe / Mẫu Khách */}
+          <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/[0.08] w-full sm:w-auto">
             <button
               type="button"
               onClick={() => {
@@ -174,7 +169,7 @@ export default function SmartTripComposer({
               }`}
             >
               <Car className="w-3 h-3" />
-              <span>Mẫu Bác tài ({SMART_TRIP_TEMPLATES.driver.length})</span>
+              <span>Mẫu Chủ xe ({SMART_TRIP_TEMPLATES.driver.length})</span>
             </button>
             <button
               type="button"
@@ -351,9 +346,7 @@ export default function SmartTripComposer({
             {parsedResult.acceptsParcel && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
                 <Package className="w-3.5 h-3.5 text-amber-400" />
-                <span>
-                  {parsedResult.role === 'driver' ? 'Nhận kèm bưu phẩm' : 'Gửi bưu phẩm/hàng'}
-                </span>
+                <span>{parsedResult.role === 'driver' ? 'Nhận kèm bưu phẩm' : 'Gửi bưu phẩm/hàng'}</span>
               </span>
             )}
           </div>

@@ -269,7 +269,7 @@ export default function Hero({
               <span className="text-amber-500 font-bold shrink-0">💡 Mẹo ghép xe:</span>
               <span>
                 Nên chọn <strong>Tỉnh thành, Bến xe hoặc Quận/Huyện</strong> để tìm thấy nhiều xe nhất. Chi tiết ngõ
-                ngách sẽ chốt linh hoạt cùng tài xế qua Zalo!
+                ngách sẽ chốt linh hoạt cùng Chủ xe qua Zalo!
               </span>
             </div>
           </div>

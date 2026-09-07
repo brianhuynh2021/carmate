@@ -155,7 +155,7 @@ export async function createTrip(req, res) {
 
     // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
     sendBusinessAlert({
-      title: newTrip.type === 'driver_offer' ? '🚗 Bác tài đăng chuyến mới' : '🙋‍♂️ Hành khách tìm xe mới',
+      title: newTrip.type === 'driver_offer' ? '🚗 Chủ xe đăng chuyến mới' : '🙋‍♂️ Hành khách tìm xe mới',
       details: {
         'Mã chuyến': newTrip.id,
         'Lộ trình': `${newTrip.from} ➔ ${newTrip.to}`,
@@ -212,7 +212,11 @@ export async function updateTripHandler(req, res) {
 
     if (updates.capacity || updates.vehicleSeats || updates.availableSeats !== undefined) {
       const existingTrip = getTripById(id);
-      const rawCap = updates.capacity || updates.vehicleSeats || existingTrip?.capacity || (Number(updates.availableSeats || existingTrip?.availableSeats) > 4 ? 7 : 5);
+      const rawCap =
+        updates.capacity ||
+        updates.vehicleSeats ||
+        existingTrip?.capacity ||
+        (Number(updates.availableSeats || existingTrip?.availableSeats) > 4 ? 7 : 5);
       const rawSeats = updates.availableSeats !== undefined ? updates.availableSeats : existingTrip?.availableSeats;
       const { capacity, seats } = sanitizeVehicleCapacityAndSeats(rawCap, rawSeats);
       updates.capacity = capacity;

@@ -270,7 +270,7 @@ export async function submitReview(req, res) {
 
 /**
  * GET /api/bookings/:id/public-summary - Tóm tắt thông tin công khai không nhạy cảm
- * Dùng cho Bác tài mở Magic Link từ Zalo (Không cần đăng nhập, bảo vệ PII)
+ * Dùng cho Chủ xe mở Magic Link từ Zalo (Không cần đăng nhập, bảo vệ PII)
  */
 export function getBookingPublicSummary(req, res) {
   try {
@@ -300,7 +300,7 @@ export function getBookingPublicSummary(req, res) {
         seats: booking.seats || 1,
         totalDeal: booking.totalDeal || booking.price || 0,
         passengerName: booking.passengerName || booking.contactName || 'Khách CarMate',
-        driverName: booking.driverName || 'Bác tài',
+        driverName: booking.driverName || 'Chủ xe',
         createdAt: booking.createdAt
       }
     });
@@ -310,7 +310,7 @@ export function getBookingPublicSummary(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/driver-confirm - Bác tài xác nhận đón 1 chạm từ Magic link Zalo (Không cần đăng nhập)
+ * POST /api/bookings/:id/driver-confirm - Chủ xe xác nhận đón 1 chạm từ Magic link Zalo (Không cần đăng nhập)
  */
 export async function driverConfirmBooking(req, res) {
   try {
@@ -328,12 +328,12 @@ export async function driverConfirmBooking(req, res) {
     const updated = await updateBookingStatus(id, 'driver_confirmed', {
       driverConfirmed: true,
       driverConfirmedAt: new Date().toISOString(),
-      driverNote: driverNote || 'Bác tài đã bấm nhận đón qua Magic Link Zalo'
+      driverNote: driverNote || 'Chủ xe đã bấm nhận đón qua Magic Link Zalo'
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Bác tài đã xác nhận đón thành công! Hệ thống đã ghi nhận lịch hẹn.',
+      message: 'Chủ xe đã xác nhận đón thành công! Hệ thống đã ghi nhận lịch hẹn.',
       data: updated
     });
   } catch (err) {
@@ -370,9 +370,11 @@ export async function reportVehicleMismatch(req, res) {
     const mismatchTitle = mismatchLabels[mismatchType] || mismatchType;
     const reporterName = req.user?.name || booking.passengerName || booking.contactName || 'Hành khách CarMate';
     const reporterPhone = req.user?.phone || booking.passengerPhone || booking.contactPhone || 'N/A';
-    const driverName = trip?.publicName || booking.driverName || 'Bác tài';
+    const driverName = trip?.publicName || booking.driverName || 'Chủ xe';
     const driverPhone = trip?.phoneReal || trip?.phone || booking.driverPhone || booking.contactPhone || 'N/A';
-    const cleanActualPlate = String(actualPlate || '').trim().toUpperCase();
+    const cleanActualPlate = String(actualPlate || '')
+      .trim()
+      .toUpperCase();
     const cleanNote = String(passengerNote || '').trim();
 
     const mismatchReport = {

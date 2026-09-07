@@ -104,7 +104,7 @@ export async function sendSystemErrorAlert({ error, req = null, source = 'API Se
 }
 
 /**
- * Bắn thông báo nghiệp vụ kinh doanh (Có Bác tài tạo chuyến, hoặc có Khách đặt xe)
+ * Bắn thông báo nghiệp vụ kinh doanh (Có Chủ xe tạo chuyến, hoặc có Khách đặt xe)
  * @param {object} params - { title, details }
  */
 export async function sendBusinessAlert({ title, details = {} }) {

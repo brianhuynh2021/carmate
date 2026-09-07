@@ -126,13 +126,13 @@ export async function adminAuth(req, res) {
       if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_LOG_CHAT_ID) {
         await sendTelegramMessage(
           `🔄 <b>[CARMATE ADMIN MFA - GỬI LẠI MÃ]</b>\n` +
-          `━━━━━━━━━━━━━━━━━━━━\n` +
-          `Mã OTP xác thực đăng nhập Cổng Quản Trị MỚI của bạn là:\n\n` +
-          `👉 <b><code>${newOtp}</code></b> 👈\n\n` +
-          `⏳ <i>Mã có hiệu lực trong 3 phút.</i>\n` +
-          `🌐 <b>Yêu cầu từ IP:</b> <code>${clientIp}</code>\n` +
-          `⏰ <b>Thời điểm:</b> ${timeStr}\n` +
-          `━━━━━━━━━━━━━━━━━━━━`,
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `Mã OTP xác thực đăng nhập Cổng Quản Trị MỚI của bạn là:\n\n` +
+            `👉 <b><code>${newOtp}</code></b> 👈\n\n` +
+            `⏳ <i>Mã có hiệu lực trong 3 phút.</i>\n` +
+            `🌐 <b>Yêu cầu từ IP:</b> <code>${clientIp}</code>\n` +
+            `⏰ <b>Thời điểm:</b> ${timeStr}\n` +
+            `━━━━━━━━━━━━━━━━━━━━`,
           { parseMode: 'HTML' }
         ).catch(() => {});
       }
@@ -199,22 +199,20 @@ export async function adminAuth(req, res) {
       pendingMfaSessions.delete(mfaSessionId);
       failedAttemptsMap.delete(clientIp);
 
-      const adminToken = jwt.sign(
-        { role: 'super_admin', sessionType: 'admin_portal', issuedAt: now },
-        JWT_SECRET,
-        { expiresIn: '2h' }
-      );
+      const adminToken = jwt.sign({ role: 'super_admin', sessionType: 'admin_portal', issuedAt: now }, JWT_SECRET, {
+        expiresIn: '2h'
+      });
 
       // Bắn thông báo an ninh vào Telegram
       const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       sendTelegramMessage(
         `🛡️ <b>[CARMATE SECURITY]</b>\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `✅ <b>Quản trị viên đã đăng nhập thành công!</b>\n` +
-        `⏰ <b>Thời gian:</b> ${timeStr}\n` +
-        `🌐 <b>Client IP:</b> <code>${clientIp}</code>\n` +
-        `🔑 <b>Phương thức:</b> Mật mã + MFA Telegram (2 Bước)\n` +
-        `━━━━━━━━━━━━━━━━━━━━`,
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `✅ <b>Quản trị viên đã đăng nhập thành công!</b>\n` +
+          `⏰ <b>Thời gian:</b> ${timeStr}\n` +
+          `🌐 <b>Client IP:</b> <code>${clientIp}</code>\n` +
+          `🔑 <b>Phương thức:</b> Mật mã + MFA Telegram (2 Bước)\n` +
+          `━━━━━━━━━━━━━━━━━━━━`,
         { parseMode: 'HTML' }
       ).catch(() => {});
 
@@ -252,11 +250,9 @@ export async function adminAuth(req, res) {
     const staticMfa = process.env.CARMATE_ADMIN_MFA_CODE || '';
     if (inputDirectMfa && (inputDirectMfa === staticMfa || (!isProduction && inputDirectMfa === '123456'))) {
       failedAttemptsMap.delete(clientIp);
-      const adminToken = jwt.sign(
-        { role: 'super_admin', sessionType: 'admin_portal', issuedAt: now },
-        JWT_SECRET,
-        { expiresIn: '2h' }
-      );
+      const adminToken = jwt.sign({ role: 'super_admin', sessionType: 'admin_portal', issuedAt: now }, JWT_SECRET, {
+        expiresIn: '2h'
+      });
       return res.status(200).json({
         success: true,
         token: adminToken,
@@ -292,14 +288,14 @@ export async function adminAuth(req, res) {
     if (hasTelegram) {
       await sendTelegramMessage(
         `🔐 <b>[CARMATE ADMIN MFA]</b>\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `Mã OTP xác thực đăng nhập Cổng Quản Trị của bạn là:\n\n` +
-        `👉 <b><code>${otp}</code></b> 👈\n\n` +
-        `⏳ <i>Mã có hiệu lực trong 3 phút.</i>\n` +
-        `🌐 <b>Yêu cầu từ IP:</b> <code>${clientIp}</code>\n` +
-        `⏰ <b>Thời điểm:</b> ${timeStr}\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `⚠️ <i>Nếu không phải bạn yêu cầu, hãy đổi mật mã Admin ngay!</i>`,
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `Mã OTP xác thực đăng nhập Cổng Quản Trị của bạn là:\n\n` +
+          `👉 <b><code>${otp}</code></b> 👈\n\n` +
+          `⏳ <i>Mã có hiệu lực trong 3 phút.</i>\n` +
+          `🌐 <b>Yêu cầu từ IP:</b> <code>${clientIp}</code>\n` +
+          `⏰ <b>Thời điểm:</b> ${timeStr}\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `⚠️ <i>Nếu không phải bạn yêu cầu, hãy đổi mật mã Admin ngay!</i>`,
         { parseMode: 'HTML' }
       ).catch((err) => {
         console.warn('[Admin Auth] Lỗi gửi OTP qua Telegram:', err.message);
@@ -307,7 +303,9 @@ export async function adminAuth(req, res) {
     }
 
     if (!isProduction) {
-      console.log(`\n🔔 [MFA DEV LOCAL] Mã OTP đăng nhập Admin CarMate là: \x1b[32m\x1b[1m${otp}\x1b[0m (Hạn 3 phút) | Session: ${newSessionId}`);
+      console.log(
+        `\n🔔 [MFA DEV LOCAL] Mã OTP đăng nhập Admin CarMate là: \x1b[32m\x1b[1m${otp}\x1b[0m (Hạn 3 phút) | Session: ${newSessionId}`
+      );
     }
 
     return res.status(200).json({
@@ -576,4 +574,3 @@ export function _getPendingMfaSession(sessionId) {
 export function _clearPendingMfaSessions() {
   pendingMfaSessions.clear();
 }
-

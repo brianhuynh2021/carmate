@@ -178,7 +178,7 @@ export default function App() {
     };
   }, [activeTab]);
 
-  // Magic Link 1-Chạm Bác tài & Apple Re-entry Card Khách quay lại web
+  // Magic Link 1-Chạm Chủ xe & Apple Re-entry Card Khách quay lại web
   const { driverConfirmCode, setDriverConfirmCode, pendingZaloBooking, setPendingZaloBooking } = useZaloReentry({
     isOpsPortal,
     onNavigateTab: setActiveTab

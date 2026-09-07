@@ -35,11 +35,9 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
 
   if (!record) return null;
 
-  const targetName = record.contactName || record.driverName || 'Bác tài';
+  const targetName = record.contactName || record.driverName || 'Chủ xe';
   const declaredLabel =
-    record.carCategory === 'convenient_trip'
-      ? '⚡ Xe tiện chuyến (Biển vàng)'
-      : '🚗 Xe gia đình (Biển trắng)';
+    record.carCategory === 'convenient_trip' ? '⚡ Xe tiện chuyến (Biển vàng)' : '🚗 Xe gia đình (Biển trắng)';
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -122,17 +120,13 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
                     <span className="font-bold text-xs">{opt.label}</span>
                     <span
                       className={`w-4 h-4 rounded-full border flex items-center justify-center text-[10px] font-bold ${
-                        isSelected
-                          ? 'border-rose-600 bg-rose-600 text-white'
-                          : 'border-slate-300 text-transparent'
+                        isSelected ? 'border-rose-600 bg-rose-600 text-white' : 'border-slate-300 text-transparent'
                       }`}
                     >
                       ✓
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
-                    {opt.desc}
-                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">{opt.desc}</p>
                 </button>
               );
             })}
@@ -157,7 +151,7 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
         <Field
           label="Chi tiết phản ánh của bạn"
           optional="Khuyên dùng"
-          hint="Mô tả cụ thể sự việc để Ban Quản Trị đối soát với Bác tài"
+          hint="Mô tả cụ thể sự việc để Ban Quản Trị đối soát với Chủ xe"
         >
           <textarea
             rows={3}
@@ -172,7 +166,8 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
         <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-xs">
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed text-[11.5px]">
-            <b>CarMate cam kết bảo mật tuyệt đối:</b> Báo cáo này sẽ được chuyển thẳng đến điện thoại của Ban Quản Trị qua Telegram để can thiệp và đổi loại xe hoặc khóa tài xế vi phạm.
+            <b>CarMate cam kết bảo mật tuyệt đối:</b> Báo cáo này sẽ được chuyển thẳng đến điện thoại của Ban Quản Trị
+            qua Telegram để can thiệp và đổi loại xe hoặc khóa tài xế vi phạm.
           </p>
         </div>
       </div>

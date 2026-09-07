@@ -429,6 +429,18 @@ export async function deleteAccount(req, res) {
       return res.status(401).json({ success: false, error: 'Chưa đăng nhập hoặc phiên làm việc không hợp lệ' });
     }
 
+    // MIT Invariant Guard: Tài khoản Quản trị viên (Admin) không thể tự xoá (bảo toàn hệ thống luôn có chủ quản)
+    const isAdmin =
+      req.user.role === 'admin' || req.user.phone?.includes('0984883750') || req.user.phone?.includes('0984 883 750');
+
+    if (isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error:
+          'Tài khoản Quản trị viên (Admin) được bảo vệ bởi luật bất biến MIT, không thể tự xoá vĩnh viễn để tránh làm hệ thống mất chủ quyền vận hành. Vui lòng chuyển giao quyền Admin trước.'
+      });
+    }
+
     const result = await deleteUserAccount(req.user.id, req.user.phone);
 
     return res.status(200).json({

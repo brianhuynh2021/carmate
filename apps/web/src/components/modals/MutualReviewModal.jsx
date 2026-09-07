@@ -185,7 +185,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="font-bold">
-                {isDriverReviewing ? 'Gắn cờ bảo vệ các bác tài khác:' : 'Góp ý kiểm duyệt tài xế:'}
+                {isDriverReviewing ? 'Gắn cờ bảo vệ các chủ xe khác:' : 'Góp ý kiểm duyệt chủ xe:'}
               </p>
               <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
                 Đánh giá này sẽ lưu vào lịch sử tín nhiệm để các thành viên khác cảnh giác, đảm bảo cộng đồng không bị
@@ -255,7 +255,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
             placeholder={
               isDriverReviewing
                 ? 'Ví dụ: Bạn Nam đón đúng giờ, lên xe chào hỏi vui vẻ...'
-                : 'Ví dụ: Bác tài lái rất an toàn, xe thơm mát...'
+                : 'Ví dụ: Chủ xe lái rất an toàn, xe thơm mát...'
             }
             className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />

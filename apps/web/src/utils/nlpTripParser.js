@@ -227,9 +227,7 @@ export function parseNaturalTrip(text) {
   // 4. Số ghế trống hoặc cần tìm (VD: còn 3 ghế, còn 1 ghế sau, chỉ nhận 1 khách, dư 2 chỗ...)
   // Stanford NLP: Xử lý tổ hợp gia đình người lớn + trẻ em/bé (VD: 2 người lớn 1 bé -> 3 ghế)
   let seats = null;
-  const familyComboMatch = lower.match(
-    /(\d+)\s*(?:người\s*lớn|lớn)\s*(?:và|\+|,)?\s*(\d+)\s*(?:trẻ\s*em|bé|nhỏ|con)/i
-  );
+  const familyComboMatch = lower.match(/(\d+)\s*(?:người\s*lớn|lớn)\s*(?:và|\+|,)?\s*(\d+)\s*(?:trẻ\s*em|bé|nhỏ|con)/i);
   if (familyComboMatch) {
     seats = parseInt(familyComboMatch[1], 10) + parseInt(familyComboMatch[2], 10);
   } else {
@@ -364,15 +362,29 @@ export function parseNaturalTrip(text) {
     waypointNote = rawWp.toLowerCase().startsWith('dọc') ? rawWp : `Đón tại ${rawWp}`;
   }
 
-  // 8. Nhận gửi kèm hàng hóa / bưu phẩm tiện chuyến
-  const acceptsParcel = /(gửi hàng|gửi đồ|chuyển đồ|nhận đồ|nhận hàng|chở đồ|kèm hàng|bưu phẩm|kiện hàng|thùng|cần gửi)/i.test(lower);
+  // 8. Tiện ích & Nhu cầu đặc thù do chủ xe / hành khách nêu trong câu
+  const acceptsParcel =
+    /(gửi hàng|gửi đồ|chuyển đồ|nhận đồ|nhận hàng|chở đồ|kèm hàng|bưu phẩm|kiện hàng|thùng|cần gửi)/i.test(lower);
+  const noSmoking = /(không khói thuốc|không hút thuốc|cấm hút thuốc|ko thuốc|ko hút thuốc|không thuốc)/i.test(lower);
+  const acOn = /(máy lạnh|bật điều hòa|điều hòa|mát rượi|mát mẻ)/i.test(lower);
+  const largeTrunk = /(cốp rộng|khoang đồ rộng|để nhiều đồ|vali to|nhiều hành lý|chở nhiều đồ)/i.test(lower);
+  const botIncluded = /(bao vé|bao phí|bao cầu đường|trọn gói vé|đã gồm phí cầu đường|đã gồm vé|miễn phí bot)/i.test(
+    lower
+  );
+  const pickupHighway = /(đón dọc ql|đón dọc đường|đón cao tốc|đón ql13|đón ngã tư|đón cây xăng)/i.test(lower);
+  const hasChild = /(trẻ nhỏ|con nhỏ|bé nhỏ|có bé|có con)/i.test(lower);
+  const frontSeatPreference = /(ngồi ghế trước|chống say xe|say xe|ghế phụ|say tàu xe)/i.test(lower);
+  const compactLuggage = /(hành lý gọn|đồ gọn gàng|chỉ có balo|vali nhỏ)/i.test(lower);
 
   const isDriver = role === 'driver';
   let capacity = undefined;
   if (isDriver) {
     if (/(?:5\s*chỗ|4\s*chỗ|vios|city|accent|cerato|k3|mazda\s*3|civic|elantra|morning|i10|fadil)/i.test(lower)) {
       capacity = 5;
-    } else if (/(?:7\s*chỗ|xpander|veloz|innova|carnival|santafe|fortuner|everest|custin|sorento|crv|cr-v)/i.test(lower) || (seats && seats > 4)) {
+    } else if (
+      /(?:7\s*chỗ|xpander|veloz|innova|carnival|santafe|fortuner|everest|custin|sorento|crv|cr-v)/i.test(lower) ||
+      (seats && seats > 4)
+    ) {
       capacity = 7;
     } else {
       capacity = 5;
@@ -382,7 +394,12 @@ export function parseNaturalTrip(text) {
   return {
     role,
     fromLocation: fromLocation.replace(/^(mình|tôi|em|anh|chúng tôi)\s+/i, '').trim(),
-    toLocation: toLocation.replace(/\s+(?:xe\s*(?:\d|vios|xpander|innova|veloz|nhà|oto|ô tô|hơi|ghép|gia đình)|còn|giá|sđt|zalo|lúc|khoảng|đón|phụ|ai tiện|ai có).*/i, '').trim(),
+    toLocation: toLocation
+      .replace(
+        /\s+(?:xe\s*(?:\d|vios|xpander|innova|veloz|nhà|oto|ô tô|hơi|ghép|gia đình)|còn|giá|sđt|zalo|lúc|khoảng|đón|phụ|ai tiện|ai có).*/i,
+        ''
+      )
+      .trim(),
     waypointNote,
     scheduleDay,
     timeSlot,
@@ -395,6 +412,17 @@ export function parseNaturalTrip(text) {
     carType: isDriver ? carType : undefined,
     hasRelatives: isDriver ? hasRelatives : false,
     acceptsParcel,
+    detectedPerks: {
+      noSmoking,
+      acOn,
+      largeTrunk,
+      botIncluded,
+      pickupHighway,
+      hasChild,
+      frontSeatPreference,
+      compactLuggage,
+      acceptsParcel
+    },
     rawText: raw
   };
 }
@@ -404,7 +432,7 @@ export function parseNaturalTrip(text) {
  * Hỗ trợ 2 chiều: Khách ghép ghế hoặc Người gửi bưu phẩm kiện hàng
  */
 export function generateSmartZaloDraft({
-  driverName = 'anh/chị',
+  driverName = 'Chủ xe',
   from = '',
   to = '',
   timeSlot = '',
@@ -420,7 +448,7 @@ export function generateSmartZaloDraft({
   const pickupText = pickupPoint ? `\n• Điểm hẹn đón: ${pickupPoint}` : '';
   const priceText = price ? `\n• Chi phí phụ xăng dự kiến: ${new Intl.NumberFormat('vi-VN').format(price)}đ/ghế` : '';
   const confirmLink = confirmUrl || (bookingCode ? `https://carmate.vn/#confirm-${bookingCode}` : '');
-  const confirmText = confirmLink ? `\n👉 Bác tài xác nhận 1 chạm: ${confirmLink}` : '';
+  const confirmText = confirmLink ? `\n👉 Chủ xe xác nhận 1 chạm: ${confirmLink}` : '';
 
   if (isParcel) {
     return `Chào ${driverName}, em thấy xe mình chạy tuyến ${from} ➔ ${to} lúc ${timeSlot} (${date}).

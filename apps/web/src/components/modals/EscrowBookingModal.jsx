@@ -84,7 +84,7 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://carmate.vn';
   const confirmUrl = `${origin}/#confirm-${bookingCode}`;
 
-  // Soạn sẵn tin nhắn Zalo chuẩn văn hóa Việt Nam kèm Magic Link 1 chạm cho Bác tài
+  // Soạn sẵn tin nhắn Zalo chuẩn văn hóa Việt Nam kèm Magic Link 1 chạm cho Chủ xe
   const zaloMessage = generateSmartZaloDraft({
     driverName: item.publicName || 'anh/chị',
     from: item.from,
@@ -176,7 +176,7 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
           JSON.stringify({
             escrowId: bookingCode,
             tripId: item.id,
-            driverName: item.publicName || 'Bác tài',
+            driverName: item.publicName || 'Chủ xe',
             driverPhone: targetPhoneForZalo,
             from: item.from,
             to: item.to,

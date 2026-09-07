@@ -126,12 +126,12 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium truncate pt-0.5">
-                Tìm Bác tài có ghế trống cùng lộ trình
+                Tìm Chủ xe có ghế trống cùng lộ trình
               </p>
             </div>
           </button>
 
-          {/* TAB 2: TÔI CÓ XE TRỐNG (CHỦ XE / BÁC TÀI) */}
+          {/* TAB 2: TÔI CÓ XE TRỐNG (CHỦ XE) */}
           <button
             type="button"
             onClick={() => setUserRole('driver')}
@@ -234,7 +234,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-base font-bold text-[#1d1d1f] flex items-center gap-2">
               <span>
-                {userRole === 'passenger' ? 'Các Chuyến Xe Bác Tài Phù Hợp Nhất' : 'Các Hành Khách Cần Đi Cùng Tuyến'}
+                {userRole === 'passenger' ? 'Các Chuyến Xe Chủ Xe Phù Hợp Nhất' : 'Các Hành Khách Cần Đi Cùng Tuyến'}
               </span>
               <span className="px-2 py-0.5 rounded-full text-xs bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 font-bold tabular">
                 {validMatches.length}
@@ -301,7 +301,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
                     {/* NỘI DUNG THẺ THEO VAI TRÒ NGƯỜI XEM (FIRST-PERSON VIEW) */}
                     {userRole === 'passenger' ? (
-                      /* KHI BẠN LÀ HÀNH KHÁCH -> HIỂN THỊ NỔI BẬT CHUYẾN CỦA BÁC TÀI */
+                      /* KHI BẠN LÀ HÀNH KHÁCH -> HIỂN THỊ NỔI BẬT CHUYẾN CỦA CHỦ XE */
                       <div className="space-y-3">
                         <div className="p-4 sm:p-5 rounded-2xl bg-[#0071e3]/[0.03] border border-[#0071e3]/15 space-y-3">
                           <div className="flex items-center justify-between">
@@ -369,7 +369,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                             onClick={() => onBook(driver)}
                             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0071e3] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
                           >
-                            <span>Ghép Chuyến Với Bác Tài (1 chạm)</span>
+                            <span>Ghép Chuyến Với Chủ Xe (1 chạm)</span>
                             <ArrowRight className="w-4 h-4" />
                           </button>
                         </div>
@@ -419,12 +419,12 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                           </span>
                         </div>
 
-                        {/* DUY NHẤT 1 NÚT HÀNH ĐỘNG RÕ RÀNG CHO BÁC TÀI */}
+                        {/* DUY NHẤT 1 NÚT HÀNH ĐỘNG RÕ RÀNG CHO CHỦ XE */}
                         <div className="pt-2 flex items-center justify-end">
                           <a
                             href={getZaloChatUrl(
                               passenger.phoneReal,
-                              `Chào bạn ${passenger.publicName}, mình là tài xế CarMate có chuyến tiện đường qua ${passenger.from} đi ${passenger.to} lúc ${passenger.timeSlot || 'sáng mai'}. Mình còn ghế trống, bạn có muốn đi cùng xe không?`
+                              `Chào bạn ${passenger.publicName}, mình là chủ xe CarMate có chuyến tiện đường qua ${passenger.from} đi ${passenger.to} lúc ${passenger.timeSlot || 'sáng mai'}. Mình còn ghế trống, bạn có muốn đi cùng xe không?`
                             )}
                             target="_blank"
                             rel="noopener noreferrer"

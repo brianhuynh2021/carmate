@@ -97,7 +97,11 @@ export default function Footer({ onNavigate, onOpenTerms }) {
                   } else if (l.key === 'help_zalo') {
                     window.open(SITE_INFO.zaloOA, '_blank', 'noopener,noreferrer');
                   } else if (l.key === 'help_telegram') {
-                    window.open(SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91', '_blank', 'noopener,noreferrer');
+                    window.open(
+                      SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91',
+                      '_blank',
+                      'noopener,noreferrer'
+                    );
                   } else {
                     onNavigate?.(l.key);
                   }

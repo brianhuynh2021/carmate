@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 /**
  * Custom Hook: useZaloReentry
- * Quản lý vòng đời Zalo Re-entry & Magic Link Bác tài xác nhận 1-chạm
+ * Quản lý vòng đời Zalo Re-entry & Magic Link Chủ xe xác nhận 1-chạm
  * Sử dụng chuẩn Page Visibility API hiện đại của trình duyệt.
  */
 export function useZaloReentry({ isOpsPortal, onNavigateTab } = {}) {

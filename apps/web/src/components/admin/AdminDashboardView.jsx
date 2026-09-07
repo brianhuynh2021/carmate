@@ -29,6 +29,7 @@ import {
 import api from '../../api/client.js';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
+import Modal from '../ui/Modal.jsx';
 import { formatVND } from '@carmate/shared';
 
 const ADMIN_TOKEN_KEY = 'carmate_admin_token';
@@ -58,6 +59,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusNotice, setStatusNotice] = useState(null);
+  const [noticeType, setNoticeType] = useState('success'); // 'success' | 'error'
+  const [adminTripToDelete, setAdminTripToDelete] = useState(null);
+  const [adminUserToBan, setAdminUserToBan] = useState(null);
 
   // Đếm ngược thời gian hết hạn OTP 3 phút
   useEffect(() => {
@@ -70,9 +74,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
     return () => clearInterval(timer);
   }, [requireMfa, mfaCountdown]);
 
-  const showNotice = (msg) => {
+  const showNotice = (msg, type = 'success') => {
     setStatusNotice(msg);
-    setTimeout(() => setStatusNotice(null), 3500);
+    setNoticeType(type);
+    setTimeout(() => setStatusNotice(null), 4000);
   };
 
   // 1. Xác thực đăng nhập Admin (Hỗ trợ MFA 2 lớp qua Telegram)
@@ -187,21 +192,21 @@ export default function AdminDashboardView({ onExitAdmin }) {
       // Tải lại metrics
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
-      alert('Lỗi thao tác: ' + err.message);
+      showNotice('Lỗi thao tác: ' + err.message, 'error');
     }
   };
 
-  const handleDeleteTrip = async (tripId) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xoá vĩnh viễn bài đăng ${tripId}? Thao tác này không thể hoàn tác.`)) {
-      return;
-    }
+  const handleExecuteDeleteTrip = async () => {
+    if (!adminTripToDelete) return;
+    const trip = adminTripToDelete;
+    setAdminTripToDelete(null);
     try {
-      await api.deleteAdminTrip(tripId);
-      setTrips((prev) => prev.filter((t) => t.id !== tripId));
-      showNotice('Đã xoá vĩnh viễn bài đăng chuyến xe');
+      await api.deleteAdminTrip(trip.id);
+      setTrips((prev) => prev.filter((t) => t.id !== trip.id));
+      showNotice(`Đã xoá vĩnh viễn bài đăng ${trip.id}`);
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
-      alert('Lỗi xoá: ' + err.message);
+      showNotice('Lỗi xoá: ' + err.message, 'error');
     }
   };
 
@@ -213,24 +218,24 @@ export default function AdminDashboardView({ onExitAdmin }) {
       showNotice(`Đã cập nhật xác minh ${field === 'isCccdVerified' ? 'CCCD' : 'GPLX'} thành công`);
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
-      alert('Lỗi cập nhật: ' + err.message);
+      showNotice('Lỗi cập nhật: ' + err.message, 'error');
     }
   };
 
-  const handleToggleBan = async (user) => {
+  const handleExecuteToggleBan = async () => {
+    if (!adminUserToBan) return;
+    const user = adminUserToBan;
     const nextBan = !user.isBanned;
-    const actionText = nextBan ? 'CẤM (Khoá)' : 'MỞ KHOÁ';
-    if (!window.confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản ${user.name} (${user.phone})?`)) {
-      return;
-    }
+    const actionText = nextBan ? 'khoá cấm' : 'mở khoá';
+    setAdminUserToBan(null);
 
     try {
       await api.updateUserStatus(user.id, { isBanned: nextBan });
       setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isBanned: nextBan } : u)));
-      showNotice(`Đã ${actionText.toLowerCase()} tài khoản thành công`);
+      showNotice(`Đã ${actionText} tài khoản ${user.name} thành công`);
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
-      alert('Lỗi cập nhật: ' + err.message);
+      showNotice('Lỗi cập nhật: ' + err.message, 'error');
     }
   };
 
@@ -241,10 +246,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
         showNotice(res.message || 'Đã chuyển loại xe sang Biển vàng thành công');
         loadAllAdminData();
       } else {
-        alert(res?.error || 'Có lỗi khi chuyển loại xe');
+        showNotice(res?.error || 'Có lỗi khi chuyển loại xe', 'error');
       }
     } catch (err) {
-      alert('Lỗi: ' + err.message);
+      showNotice('Lỗi: ' + err.message, 'error');
     }
   };
 
@@ -255,10 +260,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
         showNotice('Đã cập nhật trạng thái báo cáo');
         loadAllAdminData();
       } else {
-        alert(res?.error || 'Có lỗi khi cập nhật');
+        showNotice(res?.error || 'Có lỗi khi cập nhật', 'error');
       }
     } catch (err) {
-      alert('Lỗi: ' + err.message);
+      showNotice('Lỗi: ' + err.message, 'error');
     }
   };
 
@@ -292,7 +297,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   </p>
                   <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                     <span>Thời hạn mã:</span>
-                    <span className={`font-bold ${mfaCountdown < 30 ? 'text-rose-500 animate-pulse' : 'text-sky-600 dark:text-sky-400'}`}>
+                    <span
+                      className={`font-bold ${mfaCountdown < 30 ? 'text-rose-500 animate-pulse' : 'text-sky-600 dark:text-sky-400'}`}
+                    >
                       {Math.floor(mfaCountdown / 60)}:{(mfaCountdown % 60).toString().padStart(2, '0')}
                     </span>
                   </div>
@@ -481,8 +488,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
       </div>
 
       {statusNotice && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2 anim-fade-in">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <div
+          className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 anim-fade-in ${
+            noticeType === 'error'
+              ? 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
+              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+          }`}
+        >
+          {noticeType === 'error' ? (
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+          )}
           <span>{statusNotice}</span>
         </div>
       )}
@@ -715,7 +732,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
                       <button
                         type="button"
-                        onClick={() => handleDeleteTrip(t.id)}
+                        onClick={() => setAdminTripToDelete(t)}
                         title="Xoá vĩnh viễn"
                         className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 text-[11px] font-semibold"
                       >
@@ -819,7 +836,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     <td className="py-3 px-4 text-right">
                       <button
                         type="button"
-                        onClick={() => handleToggleBan(u)}
+                        onClick={() => setAdminUserToBan(u)}
                         className={`px-3 py-1 rounded-full text-[11px] font-bold border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
                           u.isBanned
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
@@ -907,9 +924,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
                             <div>
                               <span className="text-slate-400">Tài xế: </span>
-                              <span className="font-bold text-slate-800 dark:text-slate-200">
-                                {report.driverName}
-                              </span>
+                              <span className="font-bold text-slate-800 dark:text-slate-200">{report.driverName}</span>
                               <span className="font-mono text-slate-500 ml-1">({report.driverPhone})</span>
                             </div>
                             <div>
@@ -1256,16 +1271,19 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 {analyticsSummary?.funnel?.open_zalo ?? analyticsSummary?.funnel?.open_zalo_chat ?? 0}
               </p>
               <p className="text-[10.5px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                Tỷ lệ mở Zalo: {(() => {
-                  const zaloCount = analyticsSummary?.funnel?.open_zalo ?? analyticsSummary?.funnel?.open_zalo_chat ?? 0;
+                Tỷ lệ mở Zalo:{' '}
+                {(() => {
+                  const zaloCount =
+                    analyticsSummary?.funnel?.open_zalo ?? analyticsSummary?.funnel?.open_zalo_chat ?? 0;
                   const pageViews = analyticsSummary?.funnel?.page_view || 0;
                   return pageViews > 0 ? ((zaloCount / pageViews) * 100).toFixed(1) : '0';
-                })()}%
+                })()}
+                %
               </p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Bác Tài Đã Nhận Đón</p>
+              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Chủ Xe Đã Nhận Đón</p>
               <p className="text-2xl sm:text-3xl font-mono font-black text-teal-600 dark:text-teal-400 tabular-nums">
                 {analyticsSummary?.funnel?.driver_confirm || 0}
               </p>
@@ -1282,7 +1300,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   <span>Phễu Chuyển Đổi Hành Khách (6 Tầng Vận Hành)</span>
                 </h3>
                 <p className="text-xs text-[#86868b] mt-0.5">
-                  Đo lường từng điểm rơi (drop-off) từ lúc khách vào web đến khi bác tài bấm nhận đón trên Zalo
+                  Đo lường từng điểm rơi (drop-off) từ lúc khách vào web đến khi chủ xe bấm nhận đón trên Zalo
                 </p>
               </div>
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 self-start sm:self-auto">
@@ -1294,12 +1312,42 @@ export default function AdminDashboardView({ onExitAdmin }) {
             {(() => {
               const funnel = analyticsSummary?.funnel || {};
               const stages = [
-                { key: 'page_view', name: '1. Xem Trang (Page View)', count: funnel.page_view || 0, desc: 'Khách truy cập website CarMate' },
-                { key: 'search_route', name: '2. Tìm Tuyến Xe (Search Route)', count: funnel.search_route || 0, desc: 'Khách gõ điểm đi / điểm đến tìm chuyến' },
-                { key: 'view_trip', name: '3. Xem Chi Tiết Vé (View Trip)', count: funnel.view_trip || 0, desc: 'Khách bấm xem chi tiết giá & thông tin bác tài' },
-                { key: 'initiate_booking', name: '4. Bấm Đặt Chỗ (Initiate Booking)', count: funnel.initiate_booking || 0, desc: 'Khách chọn số ghế & bấm tiếp tục' },
-                { key: 'open_zalo', name: '5. Mở Chat Zalo (Open Zalo Chat)', count: (funnel.open_zalo ?? funnel.open_zalo_chat ?? 0), desc: 'Khách chuyển sang app Zalo nhắn tin cho bác tài' },
-                { key: 'driver_confirm', name: '6. Bác Tài Nhận Đón (Driver Confirmed)', count: funnel.driver_confirm || 0, desc: 'Bác tài bấm xác nhận nhận cuốc qua Magic Link' }
+                {
+                  key: 'page_view',
+                  name: '1. Xem Trang (Page View)',
+                  count: funnel.page_view || 0,
+                  desc: 'Khách truy cập website CarMate'
+                },
+                {
+                  key: 'search_route',
+                  name: '2. Tìm Tuyến Xe (Search Route)',
+                  count: funnel.search_route || 0,
+                  desc: 'Khách gõ điểm đi / điểm đến tìm chuyến'
+                },
+                {
+                  key: 'view_trip',
+                  name: '3. Xem Chi Tiết Vé (View Trip)',
+                  count: funnel.view_trip || 0,
+                  desc: 'Khách bấm xem chi tiết giá & thông tin chủ xe'
+                },
+                {
+                  key: 'initiate_booking',
+                  name: '4. Bấm Đặt Chỗ (Initiate Booking)',
+                  count: funnel.initiate_booking || 0,
+                  desc: 'Khách chọn số ghế & bấm tiếp tục'
+                },
+                {
+                  key: 'open_zalo',
+                  name: '5. Mở Chat Zalo (Open Zalo Chat)',
+                  count: funnel.open_zalo ?? funnel.open_zalo_chat ?? 0,
+                  desc: 'Khách chuyển sang app Zalo nhắn tin cho chủ xe'
+                },
+                {
+                  key: 'driver_confirm',
+                  name: '6. Chủ Xe Nhận Đón (Driver Confirmed)',
+                  count: funnel.driver_confirm || 0,
+                  desc: 'Chủ xe bấm xác nhận nhận cuốc qua Magic Link'
+                }
               ];
               const baseCount = Math.max(stages[0].count, 1);
 
@@ -1311,7 +1359,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     const stepConversion = prevCount > 0 ? Math.round((stg.count / prevCount) * 100) : 0;
 
                     return (
-                      <div key={stg.key} className="space-y-1.5 p-3 sm:p-4 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06]">
+                      <div
+                        key={stg.key}
+                        className="space-y-1.5 p-3 sm:p-4 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06]"
+                      >
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <div className="flex items-center gap-2">
                             <span className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white text-xs font-bold flex items-center justify-center border border-black/[0.08] dark:border-white/[0.1] shadow-xs">
@@ -1347,7 +1398,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         {sIdx > 0 && prevCount > 0 && (
                           <div className="text-right">
                             <span className="text-[10.5px] text-[#86868b]">
-                              Chuyển đổi từ bước trước: <strong className="text-[#1d1d1f] dark:text-white">{stepConversion}%</strong>
+                              Chuyển đổi từ bước trước:{' '}
+                              <strong className="text-[#1d1d1f] dark:text-white">{stepConversion}%</strong>
                             </span>
                           </div>
                         )}
@@ -1373,7 +1425,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 if (!routesList || routesList.length === 0) {
                   return (
                     <div className="p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-xs text-[#86868b]">
-                      Chưa có dữ liệu tìm kiếm tuyến. Khi khách gõ tìm xe trên trang chủ, dữ liệu sẽ tự động tổng hợp tại đây.
+                      Chưa có dữ liệu tìm kiếm tuyến. Khi khách gõ tìm xe trên trang chủ, dữ liệu sẽ tự động tổng hợp
+                      tại đây.
                     </div>
                   );
                 }
@@ -1459,6 +1512,120 @@ export default function AdminDashboardView({ onExitAdmin }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── MODAL XOÁ BÀI ĐĂNG ADMIN CHUẨN APPLE / HIG ── */}
+      {adminTripToDelete && (
+        <Modal
+          onClose={() => setAdminTripToDelete(null)}
+          size="sm"
+          icon={Trash2}
+          iconTone="danger"
+          title="Xoá vĩnh viễn chuyến xe"
+          subtitle="Quyền quản trị viên hệ thống"
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdminTripToDelete(null)}
+                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Huỷ bỏ
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleExecuteDeleteTrip}
+                className="px-5 font-bold rounded-full shadow-sm"
+              >
+                Xác nhận xoá vĩnh viễn
+              </Button>
+            </div>
+          }
+        >
+          <div className="p-1 space-y-3 text-left">
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase text-slate-500">{adminTripToDelete.id}</span>
+                <span className="text-xs font-bold font-mono text-emerald-600">
+                  {formatVND(adminTripToDelete.price)}đ/ghế
+                </span>
+              </div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">
+                {adminTripToDelete.from} ➔ {adminTripToDelete.to}
+              </div>
+              <div className="text-[11.5px] text-slate-500">
+                Chủ xe / Người đăng:{' '}
+                <strong>{adminTripToDelete.driverName || adminTripToDelete.contactName || 'Chưa rõ'}</strong> (
+                {adminTripToDelete.driverPhone || adminTripToDelete.phone || 'N/A'})
+              </div>
+            </div>
+            <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+              ⚠️ Cảnh báo: Bài đăng sẽ bị xoá hoàn toàn khỏi cơ sở dữ liệu và không thể hoàn tác.
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── MODAL KHOÁ / MỞ KHOÁ TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
+      {adminUserToBan && (
+        <Modal
+          onClose={() => setAdminUserToBan(null)}
+          size="sm"
+          icon={Ban}
+          iconTone={adminUserToBan.isBanned ? 'success' : 'danger'}
+          title={adminUserToBan.isBanned ? 'Mở khoá tài khoản' : 'Khoá cấm tài khoản'}
+          subtitle={`Người dùng: ${adminUserToBan.name} (${adminUserToBan.phone || 'N/A'})`}
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdminUserToBan(null)}
+                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Quay lại
+              </Button>
+              <Button
+                variant={adminUserToBan.isBanned ? 'success' : 'danger'}
+                size="sm"
+                onClick={handleExecuteToggleBan}
+                className="px-5 font-bold rounded-full shadow-sm"
+              >
+                {adminUserToBan.isBanned ? 'Xác nhận mở khoá' : 'Xác nhận khoá tài khoản'}
+              </Button>
+            </div>
+          }
+        >
+          <div className="p-1 space-y-3 text-left">
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5 text-xs">
+              <p className="text-slate-500 font-medium">
+                Họ tên: <strong className="text-slate-900 dark:text-white">{adminUserToBan.name}</strong>
+              </p>
+              <p className="text-slate-500 font-medium">
+                Số điện thoại:{' '}
+                <strong className="text-slate-900 dark:text-white font-mono">{adminUserToBan.phone || 'N/A'}</strong>
+              </p>
+              <p className="text-slate-500 font-medium">
+                Vai trò:{' '}
+                <strong className="text-slate-900 dark:text-white">
+                  {adminUserToBan.role === 'driver'
+                    ? 'Chủ xe'
+                    : adminUserToBan.role === 'admin'
+                      ? 'Quản trị viên'
+                      : 'Khách đi cùng'}
+                </strong>
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {adminUserToBan.isBanned
+                ? 'Tài khoản này sẽ được khôi phục quyền truy cập, có thể đăng bài và ghép chuyến bình thường trên hệ thống CarMate.'
+                : 'Tài khoản này sẽ bị cấm ngay lập tức: không thể đăng nhập, không thể đăng bài và không thể kết nối ghép chuyến trên toàn hệ thống.'}
+            </p>
+          </div>
+        </Modal>
       )}
     </div>
   );

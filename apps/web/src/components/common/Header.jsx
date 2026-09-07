@@ -12,7 +12,8 @@ import {
   LogOut,
   ChevronDown,
   HelpCircle,
-  Trash2
+  Trash2,
+  Lock
 } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Logo from '../ui/Logo.jsx';
@@ -255,18 +256,32 @@ export default function Header({
 
                   <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
 
-                  {/* Mục 5: Xóa tài khoản vĩnh viễn (Apple Guideline 5.1.1 v & NĐ 13/2023) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      onOpenDeleteAccount?.();
-                    }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                    <span>Xóa tài khoản vĩnh viễn</span>
-                  </button>
+                  {/* Mục 5: Xóa tài khoản vĩnh viễn (Chỉ hiển thị cho người dùng thường - MIT Invariant: Admin không thể tự xoá) */}
+                  {currentUser.role === 'admin' ||
+                  currentUser.phone?.includes('0984883750') ||
+                  currentUser.phone?.includes('0984 883 750') ? (
+                    <div className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-1.5 font-medium">
+                        <Lock className="w-3 h-3 text-slate-400" />
+                        <span>Tài khoản Quản trị</span>
+                      </span>
+                      <span className="text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/40">
+                        Bảo vệ
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onOpenDeleteAccount?.();
+                      }}
+                      className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Xóa tài khoản vĩnh viễn</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>

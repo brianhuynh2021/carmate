@@ -82,10 +82,10 @@ export function createRateLimiter({
   };
 }
 
-// 1. Rate Limiter cho các API chung: tối đa 300 request / phút / IP
+// 1. Rate Limiter cho các API chung: tối đa 300 request / phút / IP (production) hoặc 3000 (dev / local test)
 export const globalApiLimiter = createRateLimiter({
   windowMs: 60 * 1000,
-  max: 300,
+  max: process.env.NODE_ENV === 'production' ? 300 : 3000,
   message: 'Hệ thống phát hiện tần suất yêu cầu cao bất thường. Vui lòng thử lại sau 1 phút.'
 });
 

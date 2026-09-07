@@ -179,7 +179,7 @@ export const INITIAL_DRIVER_OFFERS = [
     id: 'DRV-111',
     type: 'driver_offer',
     maskedCode: 'CX-DN111',
-    publicName: 'Bác tài Đà Nẵng #111',
+    publicName: 'Chủ xe Đà Nẵng #111',
     phoneReal: '0912.334.556',
     direction: 'both',
     from: 'Đà Nẵng (Cầu Rồng / Bến xe Trung tâm)',

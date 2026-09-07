@@ -10,7 +10,16 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
 
   if (!currentUser) return null;
 
+  const isAdmin =
+    currentUser?.role === 'admin' ||
+    currentUser?.phone?.includes('0984883750') ||
+    currentUser?.phone?.includes('0984 883 750');
+
   const handleDelete = async () => {
+    if (isAdmin) {
+      onShowToast?.('Tài khoản Quản trị viên được bảo vệ bởi luật bất biến MIT, không thể tự xoá.');
+      return;
+    }
     if (!confirmed || isDeleting) return;
     setIsDeleting(true);
     try {
@@ -36,15 +45,32 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
       footer={
         <div className="grid grid-cols-2 gap-3 w-full">
           <Button variant="outline" onClick={onClose} disabled={isDeleting}>
-            Giữ lại tài khoản
+            {isAdmin ? 'Đóng' : 'Giữ lại tài khoản'}
           </Button>
-          <Button variant="danger" onClick={handleDelete} disabled={!confirmed || isDeleting} className="font-semibold">
-            {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
+          <Button
+            variant="danger"
+            onClick={handleDelete}
+            disabled={isAdmin || !confirmed || isDeleting}
+            className="font-semibold"
+          >
+            {isAdmin ? 'Tài khoản được bảo vệ' : isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
           </Button>
         </div>
       }
     >
       <div className="space-y-4">
+        {isAdmin && (
+          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-1 text-left">
+            <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Bảo vệ bất biến MIT: Tài khoản Quản trị viên</span>
+            </div>
+            <p className="leading-relaxed">
+              Tài khoản này có quyền Quản trị viên tối cao của CarMate. Theo luật bất biến hệ thống MIT, tài khoản Admin
+              không thể tự xoá vĩnh viễn để tránh làm hệ thống mất chủ quyền vận hành.
+            </p>
+          </div>
+        )}
         {/* Hộp thông tin tài khoản hiện tại */}
         <div className="p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/60 border border-black/[0.06] text-xs space-y-1">
           <p className="text-slate-500 font-medium">Tài khoản chuẩn bị xóa:</p>

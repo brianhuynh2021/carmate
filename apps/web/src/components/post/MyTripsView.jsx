@@ -30,6 +30,7 @@ import {
 } from '@carmate/shared';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
+import Modal from '../ui/Modal.jsx';
 import { SectionHeader } from '../ui/EmptyState.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
 import { useI18n } from '../../i18n/index.jsx';
@@ -131,20 +132,26 @@ export default function MyTripsView({
           return true;
         });
 
-  const handleConfirmDelete = (trip) => {
-    const codeStr = trip.maskedCode ? `(${trip.maskedCode})` : '';
-    if (window.confirm(`Bạn có chắc chắn muốn xóa chuyến đi "${trip.from} ➔ ${trip.to}" ${codeStr} không?`)) {
-      onDeleteTrip?.(trip.id);
-      const updated = myTripIds.filter((id) => id !== trip.id);
-      setMyTripIds(updated);
-      try {
-        const storageKey = currentUser
-          ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}`
-          : 'carmate_guest_trip_ids';
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-        localStorage.removeItem('carmate_my_trip_ids');
-      } catch {}
-    }
+  const [tripToDelete, setTripToDelete] = useState(null);
+
+  const handleOpenDeleteModal = (trip) => {
+    setTripToDelete(trip);
+  };
+
+  const handleExecuteDelete = () => {
+    if (!tripToDelete) return;
+    const trip = tripToDelete;
+    setTripToDelete(null);
+    onDeleteTrip?.(trip.id);
+    const updated = myTripIds.filter((id) => id !== trip.id);
+    setMyTripIds(updated);
+    try {
+      const storageKey = currentUser
+        ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}`
+        : 'carmate_guest_trip_ids';
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      localStorage.removeItem('carmate_my_trip_ids');
+    } catch {}
   };
 
   const handleClearGuestStorage = () => {
@@ -677,7 +684,7 @@ export default function MyTripsView({
 
                         <button
                           type="button"
-                          onClick={() => handleConfirmDelete(trip)}
+                          onClick={() => handleOpenDeleteModal(trip)}
                           className="h-8.5 px-2.5 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 font-semibold text-xs active:scale-95 transition-all inline-flex items-center gap-1 cursor-pointer"
                           title="Xóa bài đăng này"
                         >
@@ -692,6 +699,63 @@ export default function MyTripsView({
             </div>
           )}
         </div>
+      )}
+
+      {/* ── MODAL XÁC NHẬN XOÁ BÀI ĐĂNG CHUẨN APPLE HIG ── */}
+      {tripToDelete && (
+        <Modal
+          onClose={() => setTripToDelete(null)}
+          size="sm"
+          icon={Trash2}
+          iconTone="danger"
+          title="Xác nhận xoá chuyến đi"
+          subtitle="Thao tác này sẽ gỡ bài khỏi sàn ghép xe"
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTripToDelete(null)}
+                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Giữ lại chuyến
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleExecuteDelete}
+                className="px-5 font-bold rounded-full shadow-sm"
+              >
+                Xác nhận xoá
+              </Button>
+            </div>
+          }
+        >
+          <div className="p-1 space-y-3.5 text-left">
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  {tripToDelete.maskedCode || 'Mã chuyến'}
+                </span>
+                <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                  {formatVND(tripToDelete.price)}đ/ghế
+                </span>
+              </div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                {tripToDelete.from} ➔ {tripToDelete.to}
+              </div>
+              <div className="text-[11.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Giờ khởi hành: {getTimeSlotLabel(tripToDelete.timeSlot)}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Bài đăng chuyến đi này sẽ được gỡ khỏi danh sách tìm kiếm trên toàn hệ thống và không thể hoàn tác. Nếu đã
+              có người đi cùng hẹn trước qua Zalo, bạn vui lòng chủ động thông báo cho họ biết nhé.
+            </p>
+          </div>
+        </Modal>
       )}
     </div>
   );

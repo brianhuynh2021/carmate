@@ -108,9 +108,16 @@ export default {
   benchmark: {
     label: 'Định mức chia sẻ tuyến {route}',
     inclusive: 'Đã gồm xăng & cầu đường',
-    basis: 'Xem cơ sở tính',
-    modalTitle: 'Cơ sở tính định mức chi phí',
-    modalSub: 'Minh bạch theo tiêu hao nhiên liệu thực tế và phí cầu đường từng tuyến',
+    basis: 'Định giá tham khảo',
+    modalTitle: 'Định giá tham khảo theo tuyến',
+    modalSub: 'Cơ sở tính toán kỹ thuật dựa trên cự ly, hao phí nhiên liệu và vé cầu đường thực tế',
+    disclaimerTitle: 'Thông tin tham khảo · Giá cả do hai bên tự do thoả thuận',
+    disclaimerBody:
+      'Mức giá gợi ý chỉ mang tính chất tham khảo kỹ thuật (dựa trên hao phí xăng RON 95 và vé trạm BOT trung bình để chia sẻ công bằng chi phí lăn bánh, không phải cước taxi hay giá niêm yết cố định). Mức giá chốt sau cùng hoàn toàn phụ thuộc vào sự thống nhất trực tiếp giữa Chủ xe và Người đi cùng (tùy theo điểm đón trả tận nơi, mang nhiều đồ đạc, hoặc đón lệch tuyến). Hai bên vui lòng không vin vào con số này để khiếu nại đối phương hoặc nền tảng CarMate.',
+    disclaimerShort: 'Giá tham khảo · Tự do thoả thuận',
+    heroLabel: 'Định giá tham khảo cho tuyến này',
+    heroDesc:
+      'Áp dụng tính trên từng ghế trống thực tế để chia sẻ công bằng chi phí lăn bánh. Mức đóng góp cuối cùng do Chủ xe và Người đi cùng trực tiếp thống nhất khi liên hệ.',
     chooseRoute: 'Chọn tuyến',
     technicalTitle: 'Chi phí vận hành thực tế',
     distance: 'Quãng đường',
@@ -121,7 +128,7 @@ export default {
     limo: 'Limousine 9 chỗ',
     bus: 'Xe khách giường nằm',
     carmate: 'Định mức CarMate (xe 5–7 chỗ)',
-    benefit1: 'Toàn bộ chi phí chia sẻ trực tiếp giữa chủ xe và người đi cùng.',
+    benefit1: 'Toàn bộ chi phí chia sẻ trực tiếp giữa Chủ xe và Người đi cùng.',
     benefit2: 'Xe gia đình sạch, đón trả thuận tiện, không nhồi ghế.'
   },
 

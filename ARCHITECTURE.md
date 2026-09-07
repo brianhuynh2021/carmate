@@ -188,7 +188,7 @@ carmate/
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Driver as Bác Tài / Chủ Xe<br>(Xe cá nhân tiện chuyến / Tài riêng)
+    actor Driver as Chủ Xe<br>(Xe cá nhân tiện chuyến / Xe gia đình)
     participant Platform as CarMate Platform<br>(PWA Siêu Nhẹ < 85KB)
     actor Passenger as Hành Khách<br>(Người cùng đường / Tiện chuyến)
     participant Zalo as Zalo App (Native)<br>(zalo.me/sdt - 0đ Chi Phí)
@@ -200,11 +200,11 @@ sequenceDiagram
 
     Passenger->>Platform: Tìm chuyến hoặc bấm link vé đồng hương
     Passenger->>Platform: Bấm "Đặt Chỗ" (Kết nối trực tiếp, không phí sàn)
-    Platform-->>Passenger: Bật đếm ngược 15 phút + Nút "Nhắn Zalo Bác Tài"
+    Platform-->>Passenger: Bật đếm ngược 15 phút + Nút "Nhắn Zalo Chủ Xe"
 
-    Passenger->>Zalo: Bấm nút -> Nhảy thẳng khung chat Zalo với Bác Tài
-    Note over Passenger,Zalo: Tin nhắn soạn sẵn kèm Magic Link 1-chạm: "👉 Bác tài xác nhận 1 chạm: carmate.vn/#confirm-CX..."
-    Driver->>Platform: Bác tài bấm link -> Xác nhận đón 1 chạm tức thì (Không cần đăng nhập)
+    Passenger->>Zalo: Bấm nút -> Nhảy thẳng khung chat Zalo với Chủ Xe
+    Note over Passenger,Zalo: Tin nhắn soạn sẵn kèm Magic Link 1-chạm: "👉 Chủ xe xác nhận 1 chạm: carmate.vn/#confirm-CX..."
+    Driver->>Platform: Chủ xe bấm link -> Xác nhận đón 1 chạm tức thì (Không cần đăng nhập)
     Passenger->>Platform: Khách quay lại Web -> Apple Re-entry Card tự động hỏi trạng thái phản hồi
 
     alt Không nhắn Zalo trong 15 phút
@@ -221,12 +221,12 @@ sequenceDiagram
 
 ### 7.1. Bảng Tổng Quan 4 Giai Đoạn (Evolution Matrix)
 
-| Giai Đoạn                                           | Trọng Tâm & Quy Mô                                                                                                | Cơ Chế Giữ Chỗ & Thanh Toán                                                                           | Mô Hình Doanh Thu (Monetization)                                                                                                               | Hạ Tầng Pháp Lý & Kỹ Thuật                                                                        |
-| :-------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ |
-| **Pha 1: Khởi Động Lean (0 - 6 tháng)**             | • 1-2 hành lang (QL13, QL51)<br>• 100 - 500 thành viên đầu tiên<br>• Tập trung vào độ sướng & tiện đường đi chung | • **Kết nối trực tiếp**<br>• Chốt Zalo trong 15 phút<br>• Thanh toán tiền mặt/chuyển khoản khi lên xe | • **0% Chiết khấu cước xe** (Xây dựng cộng đồng tiện chuyến)<br>• Tối đa hoá tính lan toả (Viral Loop)                                         | • Solo founder (chưa cần GPKD)<br>• Zero-cost stack: Cloudflare Pages, Node.js + PWA              |
-| **Pha 2: Mật Độ Hành Lang (6 - 18 tháng)**          | • Phủ kín các trục chính: QL1A, Cao tốc Trung Lương, QL20 Đà Lạt<br>• 5.000+ chuyến/tháng                         | • 0% phí sàn · Kết nối trực tiếp qua Zalo / Số điện thoại thật                                        | • **Mô hình Chợ Tốt / Freemium:**<br> - Phí "Đẩy bài hỏa tốc" (5k - 10k/lần)<br> - Gói Bác tài Uy tín (49k/tháng)<br>• KHÔNG cắt phế % cuốc xe | • Đăng ký Hộ kinh doanh cá thể<br>• Postgres + Redis Redlock<br>• Zalo Mini App chính thức        |
-| **Pha 3: Dịch Vụ Giá Trị Gia Tăng (18 - 36 tháng)** | • Mở rộng toàn quốc (Bắc - Trung - Nam)<br>• Bổ sung tuyến liên tỉnh cố định                                      | • Ví điện tử liên kết (MoMo, ZaloPay) + Trực tiếp                                                     | • **Bảo hiểm vi mô (Micro-insurance):** 5.000đ/vé (hoa hồng 30%)<br>• Bán chéo Voucher cây xăng (Petrolimex), gara, trạm dừng chân             | • Thành lập Công ty TNHH / Cổ phần<br>• Matching Engine bằng Golang đa luồng                      |
-| **Pha 4: Mở Rộng Khu Vực & Toàn Cầu (3+ năm)**      | • Đông Nam Á (Thái Lan, Indo, Philippines)<br>• Châu Âu & Quốc tế                                                 | • Thẻ Quốc tế (Stripe, Apple Pay), E-Wallets địa phương                                               | • Phí dịch vụ nền tảng (Booking fee 10-12% từ hành khách theo chuẩn chia sẻ xe quốc tế)                                                        | • Global Multi-region Cloud (AWS/GCP)<br>• Đa ngôn ngữ, Đa tiền tệ, Đa cổng chat (LINE, WhatsApp) |
+| Giai Đoạn                                           | Trọng Tâm & Quy Mô                                                                                                | Cơ Chế Giữ Chỗ & Thanh Toán                                                                           | Mô Hình Doanh Thu (Monetization)                                                                                                              | Hạ Tầng Pháp Lý & Kỹ Thuật                                                                        |
+| :-------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ |
+| **Pha 1: Khởi Động Lean (0 - 6 tháng)**             | • 1-2 hành lang (QL13, QL51)<br>• 100 - 500 thành viên đầu tiên<br>• Tập trung vào độ sướng & tiện đường đi chung | • **Kết nối trực tiếp**<br>• Chốt Zalo trong 15 phút<br>• Thanh toán tiền mặt/chuyển khoản khi lên xe | • **0% Chiết khấu cước xe** (Xây dựng cộng đồng tiện chuyến)<br>• Tối đa hoá tính lan toả (Viral Loop)                                        | • Solo founder (chưa cần GPKD)<br>• Zero-cost stack: Cloudflare Pages, Node.js + PWA              |
+| **Pha 2: Mật Độ Hành Lang (6 - 18 tháng)**          | • Phủ kín các trục chính: QL1A, Cao tốc Trung Lương, QL20 Đà Lạt<br>• 5.000+ chuyến/tháng                         | • 0% phí sàn · Kết nối trực tiếp qua Zalo / Số điện thoại thật                                        | • **Mô hình Chợ Tốt / Freemium:**<br> - Phí "Đẩy bài hỏa tốc" (5k - 10k/lần)<br> - Gói Chủ Xe Uy tín (49k/tháng)<br>• KHÔNG cắt phế % cuốc xe | • Đăng ký Hộ kinh doanh cá thể<br>• Postgres + Redis Redlock<br>• Zalo Mini App chính thức        |
+| **Pha 3: Dịch Vụ Giá Trị Gia Tăng (18 - 36 tháng)** | • Mở rộng toàn quốc (Bắc - Trung - Nam)<br>• Bổ sung tuyến liên tỉnh cố định                                      | • Ví điện tử liên kết (MoMo, ZaloPay) + Trực tiếp                                                     | • **Bảo hiểm vi mô (Micro-insurance):** 5.000đ/vé (hoa hồng 30%)<br>• Bán chéo Voucher cây xăng (Petrolimex), gara, trạm dừng chân            | • Thành lập Công ty TNHH / Cổ phần<br>• Matching Engine bằng Golang đa luồng                      |
+| **Pha 4: Mở Rộng Khu Vực & Toàn Cầu (3+ năm)**      | • Đông Nam Á (Thái Lan, Indo, Philippines)<br>• Châu Âu & Quốc tế                                                 | • Thẻ Quốc tế (Stripe, Apple Pay), E-Wallets địa phương                                               | • Phí dịch vụ nền tảng (Booking fee 10-12% từ hành khách theo chuẩn chia sẻ xe quốc tế)                                                       | • Global Multi-region Cloud (AWS/GCP)<br>• Đa ngôn ngữ, Đa tiền tệ, Đa cổng chat (LINE, WhatsApp) |
 
 ---
 

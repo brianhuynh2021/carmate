@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ROUTE_BENCHMARKS, formatVND } from '@carmate/shared';
-import { Fuel, Scale, ChevronRight, Check, TrendingDown, Route, Sparkles, Milestone } from 'lucide-react';
+import { Fuel, Scale, ChevronRight, Check, TrendingDown, Route, Sparkles, Milestone, ShieldAlert } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -77,6 +77,9 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
             <span className="text-[12px] text-slate-600 dark:text-slate-400 font-medium hidden sm:inline truncate">
               · {t('benchmark.inclusive')}
             </span>
+            <span className="text-[11.5px] text-amber-600 dark:text-amber-400 font-medium hidden md:inline truncate">
+              · {t('benchmark.disclaimerShort')}
+            </span>
           </div>
         </div>
         <button
@@ -92,14 +95,14 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
         </button>
       </div>
 
-      {/* ── MODAL ĐỊNH MỨC XĂNG & CẦU ĐƯỜNG ĐẲNG CẤP APPLE & CURSOR ── */}
+      {/* ── MODAL ĐỊNH GIÁ THAM KHẢO ĐẲNG CẤP APPLE & CURSOR ── */}
       {open && (
         <Modal
           onClose={close}
           size="lg"
           icon={Scale}
           title={t('benchmark.modalTitle')}
-          subtitle="Minh bạch theo cự ly, tiêu hao nhiên liệu thực tế và vé trạm BOT từng tuyến"
+          subtitle={t('benchmark.modalSub')}
           footer={
             <div className="flex items-center justify-end w-full">
               <Button onClick={close} variant="primary" size="sm" className="px-6 font-bold rounded-full">
@@ -158,13 +161,13 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
               </div>
             </div>
 
-            {/* 2. HERO RESULT CARD: "Mức chia sẻ đề xuất cho tuyến này" (ĐỈNH CAO APPLE & CON NGƯỜI VN) */}
+            {/* 2. HERO RESULT CARD: "Định giá tham khảo cho tuyến này" (ĐỈNH CAO APPLE & CON NGƯỜI VN) */}
             <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-slate-50/90 dark:from-slate-900 dark:to-slate-800/90 border border-slate-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(15,23,42,0.04)] text-center relative overflow-hidden">
               {/* Background ambient glow */}
               <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-24 bg-[#0071e3]/10 dark:bg-[#0071e3]/20 blur-2xl pointer-events-none rounded-full" />
 
               <p className="text-xs sm:text-[13px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider font-mono">
-                Mức chia sẻ đề xuất cho tuyến này
+                {t('benchmark.heroLabel')}
               </p>
 
               <div className="mt-2.5 flex items-baseline justify-center gap-1.5">
@@ -172,13 +175,25 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                   ~{formatVND(info.suggestedRate)}
                 </span>
                 <span className="text-sm sm:text-base font-bold text-slate-600 dark:text-slate-400 font-mono">
-                  /ghế
+                  {t('common.perSeat')}
                 </span>
               </div>
 
               <p className="mt-2.5 text-xs text-slate-600 dark:text-slate-300 font-medium max-w-md mx-auto leading-relaxed">
-                Áp dụng tính trên <strong>từng ghế trống thực tế</strong> (phù hợp cho cả xe gia đình có người thân hoặc
-                xe đi công việc). Trọn gói xăng & vé BOT, thanh toán trực tiếp khi lên xe.
+                {t('benchmark.heroDesc')}
+              </p>
+            </div>
+
+            {/* 2.1 THÔNG TIN THAM KHẢO & QUYỀN TỰ DO THỎA THUẬN (BẢO VỆ CHỦ XE, NGƯỜI ĐI CÙNG & NỀN TẢNG) */}
+            <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/60 text-left space-y-2 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                  {t('benchmark.disclaimerTitle')}
+                </h4>
+              </div>
+              <p className="text-xs text-amber-900/90 dark:text-amber-300/90 leading-relaxed">
+                {t('benchmark.disclaimerBody')}
               </p>
             </div>
 
@@ -269,15 +284,14 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
               <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span className="text-slate-700 dark:text-slate-300 font-medium">
-                  <strong>Thỏa thuận tự do:</strong> Hai bên tự do nhắn Zalo hẹn điểm đón trả và chốt chi phí phù hợp
-                  nhất.
+                  <strong>Thỏa thuận tự do:</strong> Hai bên tự do trao đổi qua Zalo để hẹn điểm đón trả và chốt mức chi
+                  phí phù hợp nhất.
                 </span>
               </div>
               <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span className="text-slate-700 dark:text-slate-300 font-medium">
-                  <strong>0đ Phí sàn trung gian:</strong> Toàn bộ chi phí chia sẻ trực tiếp khi lên xe, tuyệt đối không
-                  giữ tiền.
+                  <strong>0đ Phí sàn trung gian:</strong> {t('benchmark.benefit1')}
                 </span>
               </div>
             </div>

@@ -552,7 +552,9 @@ export default function BookedTripList({
                     <div className="flex items-center justify-between w-full text-xs text-slate-500 dark:text-slate-400 flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <span>
-                          {isCompleted ? '✓ Chuyến đi đã hoàn tất an toàn' : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
+                          {isCompleted
+                            ? '✓ Chuyến đi đã hoàn tất an toàn'
+                            : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
                         </span>
                         {onReportMismatch && !record.vehicleMismatchReport && (
                           <button

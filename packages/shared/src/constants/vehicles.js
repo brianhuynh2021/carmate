@@ -40,7 +40,12 @@ export function sanitizeVehicleCapacityAndSeats(capacity, requestedSeats) {
   const cap = Number(capacity) === 7 ? 7 : 5;
   const config = VEHICLE_SEAT_CONFIGS[cap];
   let seats;
-  if (requestedSeats !== undefined && requestedSeats !== null && requestedSeats !== '' && !isNaN(Number(requestedSeats))) {
+  if (
+    requestedSeats !== undefined &&
+    requestedSeats !== null &&
+    requestedSeats !== '' &&
+    !isNaN(Number(requestedSeats))
+  ) {
     seats = Number(requestedSeats);
   } else {
     seats = config.recommendedSeats;

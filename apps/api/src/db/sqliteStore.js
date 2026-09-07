@@ -850,6 +850,14 @@ export async function deleteUserAccount(userId, phone) {
   const effectiveUserId = user?.id || userId;
   const effectivePhone = user?.phone || (phone ? cleanPhoneNumber(phone) : null);
 
+  // MIT Invariant Guard: Không bao giờ xoá tài khoản Admin (bảo toàn hệ thống luôn có chủ quản)
+  if (
+    user?.role === 'admin' ||
+    (effectivePhone && (effectivePhone.includes('0984883750') || effectivePhone.includes('0984 883 750')))
+  ) {
+    throw new Error('Tài khoản Quản trị viên (Admin) được bảo vệ bởi luật bất biến MIT, không thể tự xoá vĩnh viễn.');
+  }
+
   // 1. Xóa các bài đăng của người dùng này (để không còn xuất hiện trên sàn)
   if (effectiveUserId) {
     database.prepare('DELETE FROM trips WHERE userId = ?').run(effectiveUserId);
