@@ -3,7 +3,7 @@ import { Phone, Mail, MapPin, ExternalLink, Activity, Terminal } from 'lucide-re
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
-import { ZaloIcon } from '../ui/SocialIcons.jsx';
+import { ZaloIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import { LanguageToggle } from './Header.jsx';
 
 function FacebookIcon({ className = 'w-3.5 h-3.5' }) {
@@ -23,7 +23,8 @@ export default function Footer({ onNavigate, onOpenTerms }) {
     { key: 'post', label: 'Đăng chuyến' },
     { key: 'benchmark', label: 'Bảng giá tuyến' },
     { key: 'terms', label: 'Quy chế & Điều khoản', isTerms: true },
-    { key: 'help', label: 'Hỗ trợ Zalo' }
+    { key: 'help_zalo', label: 'Hỗ trợ Zalo' },
+    { key: 'help_telegram', label: 'Hỗ trợ Telegram' }
   ];
 
   return (
@@ -48,27 +49,29 @@ export default function Footer({ onNavigate, onOpenTerms }) {
 
           {/* Contact Capsule */}
           <div className="flex items-center gap-2 flex-wrap">
-            <a
-              href={`tel:${SITE_INFO.phoneRaw || '0984883750'}`}
-              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-mono font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
-            >
-              <Phone className="w-3.5 h-3.5 text-[#107c41]" />
-              <span>{SITE_INFO.hotline}</span>
-              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-sans font-medium">
-                ({SITE_INFO.contactPerson})
-              </span>
-            </a>
-
+            {/* Zalo Direct */}
             <a
               href={SITE_INFO.zaloOA}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#0068ff]/50 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <ZaloIcon className="w-3.5 h-3.5 text-[#0068ff]" />
-              <span>Zalo Trực Tiếp</span>
+              <span>Hỗ Trợ Zalo</span>
             </a>
 
+            {/* Telegram Support */}
+            <a
+              href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#229ED9]/50 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+            >
+              <TelegramIcon className="w-3.5 h-3.5 text-[#229ED9]" />
+              <span>Hỗ Trợ Telegram</span>
+            </a>
+
+            {/* Facebook Fanpage */}
             <a
               href={SITE_INFO.facebook}
               target="_blank"
@@ -76,7 +79,17 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <FacebookIcon className="w-3.5 h-3.5 text-[#1877F2]" />
-              <span>Fanpage Facebook</span>
+              <span>Fanpage</span>
+            </a>
+
+            {/* Hotline (Ẩn tên cá nhân Mr. Huỳnh Nguyễn để bảo vệ riêng tư & chống spam) */}
+            <a
+              href={`tel:${SITE_INFO.phoneRaw || '0984883750'}`}
+              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-mono font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              title="Hotline hỗ trợ kỹ thuật"
+            >
+              <Phone className="w-3.5 h-3.5 text-[#107c41]" />
+              <span>Hotline: {SITE_INFO.hotline}</span>
             </a>
           </div>
         </div>
@@ -92,8 +105,10 @@ export default function Footer({ onNavigate, onOpenTerms }) {
                 onClick={() => {
                   if (l.isTerms) {
                     onOpenTerms?.();
-                  } else if (l.key === 'help') {
+                  } else if (l.key === 'help_zalo') {
                     window.open(SITE_INFO.zaloOA, '_blank', 'noopener,noreferrer');
+                  } else if (l.key === 'help_telegram') {
+                    window.open(SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91', '_blank', 'noopener,noreferrer');
                   } else {
                     onNavigate?.(l.key);
                   }

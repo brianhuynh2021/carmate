@@ -12,13 +12,15 @@ export const SITE_INFO = {
     vi: 'Tầng 5, Toà nhà Innovation Hub, 12 Nguyễn Văn Bảo, Phường 4, Quận Gò Vấp, TP. Hồ Chí Minh',
     en: '5F Innovation Hub, 12 Nguyen Van Bao, Ward 4, Go Vap District, Ho Chi Minh City, Vietnam'
   },
-  contactPerson: 'Mr. Huỳnh Nguyễn',
+  contactPerson: 'Đội ngũ Hỗ trợ CarMate',
   hotline: '0984 883 750',
   phoneRaw: '0984883750',
   hotlineHours: {
-    vi: 'Hỗ trợ Tel/Zalo: 0984 883 750 - Mr. Huỳnh Nguyễn',
-    en: 'Tel/Zalo: 0984 883 750 - Mr. Huynh Nguyen'
+    vi: 'Hỗ trợ trực tuyến Zalo & Telegram 24/7',
+    en: 'Online Support via Zalo & Telegram 24/7'
   },
+  telegram: 'https://t.me/brianhuynh91',
+  telegramSupport: 'https://t.me/brianhuynh91',
   email: 'hotro@carmate.vn',
   zaloOA: 'https://zalo.me/0984883750',
   facebook: 'https://www.facebook.com/profile.php?id=61593891160413',
