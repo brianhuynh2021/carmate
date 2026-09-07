@@ -1549,7 +1549,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono font-bold uppercase text-slate-500">{adminTripToDelete.id}</span>
                 <span className="text-xs font-bold font-mono text-emerald-600">
-                  {formatVND(adminTripToDelete.price)}đ/ghế
+                  {formatVND(
+                    adminTripToDelete.basePricePerSeat ||
+                      adminTripToDelete.price ||
+                      adminTripToDelete.expectedPrice ||
+                      adminTripToDelete.suggestedContribution ||
+                      0
+                  )}
+                  /{adminTripToDelete.type === 'passenger_request' ? 'người' : 'ghế'}
                 </span>
               </div>
               <div className="text-xs font-bold text-slate-900 dark:text-white">

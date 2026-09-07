@@ -184,7 +184,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                                 </span>
                               </div>
                               <span className="font-mono font-black text-xs text-[#0071e3]">
-                                {formatVND(trip.price)}/ghế
+                                {formatVND(trip.basePricePerSeat || trip.price || trip.expectedPrice || 180000)}/ghế
                               </span>
                             </div>
 

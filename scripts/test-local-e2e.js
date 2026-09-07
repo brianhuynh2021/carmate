@@ -2686,6 +2686,22 @@ async function runTests() {
         authCtrlContent.includes('luật bất biến MIT'),
       'Admin Safeguard Controller 1: authController trả về HTTP 403 Forbidden chặn đứng tự xóa tài khoản Admin'
     );
+
+    // 5. Kiểm tra Giá hiển thị trong Modal Xóa chuyến đi không bị lỗi "0 đ" hay trùng "đđ/ghế"
+    const myTripsPath = path.resolve(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx');
+    const myTripsContent = fs.readFileSync(myTripsPath, 'utf8');
+    assert(
+      myTripsContent.includes('tripToDelete.basePricePerSeat') &&
+        !myTripsContent.includes('{formatVND(tripToDelete.price)}đ/ghế'),
+      'Delete Modal Pricing 1: MyTripsView xử lý đúng basePricePerSeat và triệt tiêu lỗi trùng đđ/ghế'
+    );
+    const adminDashPath = path.resolve(process.cwd(), 'apps/web/src/components/admin/AdminDashboardView.jsx');
+    const adminDashContent = fs.readFileSync(adminDashPath, 'utf8');
+    assert(
+      adminDashContent.includes('adminTripToDelete.basePricePerSeat') &&
+        !adminDashContent.includes('{formatVND(adminTripToDelete.price)}đ/ghế'),
+      'Delete Modal Pricing 2: AdminDashboardView xử lý đúng basePricePerSeat và triệt tiêu lỗi trùng đđ/ghế'
+    );
   } catch (err) {
     assert(false, '35. Kiểm thử Bảo Vệ Bất Biến MIT & Công Thái Học Stanford', err.message);
   }

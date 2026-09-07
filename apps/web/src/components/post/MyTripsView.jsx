@@ -738,7 +738,14 @@ export default function MyTripsView({
                   {tripToDelete.maskedCode || 'Mã chuyến'}
                 </span>
                 <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                  {formatVND(tripToDelete.price)}đ/ghế
+                  {formatVND(
+                    tripToDelete.basePricePerSeat ||
+                      tripToDelete.price ||
+                      tripToDelete.expectedPrice ||
+                      tripToDelete.suggestedContribution ||
+                      0
+                  )}
+                  /{tripToDelete.type === 'passenger_request' ? 'người' : 'ghế'}
                 </span>
               </div>
               <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
