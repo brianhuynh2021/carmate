@@ -23,9 +23,12 @@ export function useZaloReentry({ isOpsPortal, onNavigateTab } = {}) {
       ) {
         onNavigateTab?.('admin');
       } else if (hash.startsWith('#confirm-')) {
-        const code = hash.replace('#confirm-', '').trim();
+        // Định dạng Magic Link: #confirm-<escrowId>~<accessToken>
+        // Token là bí mật do server cấp, dùng để chống IDOR khi xác nhận không cần đăng nhập.
+        const raw = hash.replace('#confirm-', '').trim();
+        const [code, token] = raw.split('~');
         if (code) {
-          setDriverConfirmCode(code);
+          setDriverConfirmCode({ code: code.trim(), token: (token || '').trim() });
         }
       }
     };

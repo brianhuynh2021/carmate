@@ -8,7 +8,39 @@ import {
   removeBooking
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber } from '@carmate/shared';
+import crypto from 'crypto';
 import { sendBusinessAlert, sendTelegramMessage } from '../utils/telegramAlert.js';
+
+/**
+ * So khớp access token thời gian hằng định (chống timing attack).
+ */
+function tokenMatches(provided, expected) {
+  if (!provided || !expected || typeof provided !== 'string' || typeof expected !== 'string') return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * Kiểm quyền truy cập booking cho các endpoint Magic Link (không đăng nhập).
+ * Cho phép khi: (1) access token khớp, HOẶC (2) người dùng đã đăng nhập là thành viên chuyến,
+ * HOẶC (3) là Quản trị viên. Ngăn IDOR enumerate booking bằng cách đoán escrowId (CX-xxxx).
+ */
+function canAccessBooking(req, booking) {
+  const provided = req.query.t || req.query.token || req.body?.accessToken || req.headers['x-booking-token'] || '';
+  if (booking.accessToken && tokenMatches(String(provided), booking.accessToken)) return true;
+
+  if (req.user) {
+    if (req.user.role === 'admin' || req.user.role === 'super_admin') return true;
+    const userPhone = cleanPhoneNumber(req.user.phone || '');
+    const parties = [booking.contactPhone, booking.userPhone, booking.creatorPhone, booking.targetPhone, booking.driverPhone, booking.passengerPhone]
+      .map((p) => cleanPhoneNumber(p || ''))
+      .filter(Boolean);
+    if (userPhone && parties.includes(userPhone)) return true;
+  }
+  return false;
+}
 
 /**
  * GET /api/bookings - Lấy danh sách chuyến đi đã kết nối (Chuyến của tôi)
@@ -283,6 +315,15 @@ export function getBookingPublicSummary(req, res) {
       });
     }
 
+    // Chống IDOR: chỉ trả tóm tắt (chứa tên khách/tài xế, lộ trình, số tiền) cho ai có
+    // access token hợp lệ hoặc là thành viên chuyến/Admin. escrowId (CX-xxxx) dễ đoán.
+    if (!canAccessBooking(req, booking)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Liên kết không hợp lệ hoặc bạn không có quyền xem chuyến đi này'
+      });
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -322,6 +363,15 @@ export async function driverConfirmBooking(req, res) {
       return res.status(404).json({
         success: false,
         error: 'Không tìm thấy thông tin chuyến đi để xác nhận'
+      });
+    }
+
+    // Chống IDOR: chỉ chủ xe cầm Magic Link hợp lệ (token) hoặc thành viên chuyến/Admin
+    // mới được xác nhận đón. Trước đây bất kỳ ai đoán được escrowId đều xác nhận hộ được.
+    if (!canAccessBooking(req, existing)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Liên kết xác nhận không hợp lệ hoặc bạn không có quyền thao tác chuyến đi này'
       });
     }
 

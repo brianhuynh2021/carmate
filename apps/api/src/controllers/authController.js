@@ -8,6 +8,7 @@ import {
   deleteUserAccount
 } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
+import { isAdminPhone } from '../utils/adminIdentity.js';
 
 // Bộ nhớ đệm OTP tạm thời trong RAM (5 phút hết hạn, 0đ chi phí SMS)
 const otpMap = new Map();
@@ -318,6 +319,27 @@ export async function googleLogin(req, res) {
             error: 'Email Google chưa được xác thực (unverified email).'
           });
         }
+        // Chống Audience Confusion: chỉ chấp nhận ID token phát cho chính app CarMate.
+        // Nếu không kiểm aud, token Google hợp lệ phát cho ứng dụng khác cũng đăng nhập được.
+        const expectedAud = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || '';
+        if (expectedAud) {
+          const allowedAud = expectedAud
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (!allowedAud.includes(ggData.aud)) {
+            return res.status(401).json({
+              success: false,
+              error: 'Token Google không dành cho ứng dụng này (audience mismatch).'
+            });
+          }
+        } else if (!isDevOrTest) {
+          // Ở production bắt buộc phải cấu hình GOOGLE_CLIENT_ID để kiểm aud.
+          return res.status(500).json({
+            success: false,
+            error: 'Máy chủ chưa cấu hình GOOGLE_CLIENT_ID để xác thực Google an toàn.'
+          });
+        }
         verifiedEmail = ggData.email.trim().toLowerCase();
         verifiedGoogleId = ggData.sub;
         verifiedName = ggData.name || '';
@@ -549,8 +571,7 @@ export async function deleteAccount(req, res) {
     }
 
     // MIT Invariant Guard: Tài khoản Quản trị viên (Admin) không thể tự xoá (bảo toàn hệ thống luôn có chủ quản)
-    const isAdmin =
-      req.user.role === 'admin' || req.user.phone?.includes('0984883750') || req.user.phone?.includes('0984 883 750');
+    const isAdmin = req.user.role === 'admin' || isAdminPhone(req.user.phone);
 
     if (isAdmin) {
       return res.status(403).json({

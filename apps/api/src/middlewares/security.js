@@ -130,19 +130,41 @@ export function escapeHtml(str) {
 }
 
 /**
- * Lọc bỏ và mã hóa các chuỗi ký tự nguy hiểm trong body (Chống XSS / Injection)
+ * Bóc tách các vector XSS nguy hiểm khỏi chuỗi đầu vào (Defense-in-Depth).
+ *
+ * Chọn cách STRIP thay vì HTML-escape dấu nháy: frontend React render text thô và
+ * KHÔNG giải mã HTML entity, nên nếu escape " thành &quot; thì tên/ghi chú tiếng Việt
+ * của người dùng sẽ hiển thị literal "&quot;" — phá trải nghiệm. Strip vector độc hại
+ * vừa mạnh hơn (chặn cả `onerror=`, `<script>` mà escape quote không xử lý được) vừa
+ * giữ nguyên dấu nháy hiển thị bình thường.
+ */
+export function stripXssVectors(str) {
+  if (typeof str !== 'string') return str;
+  return (
+    str
+      // 1. Loại bỏ toàn bộ thẻ <script>...</script> (kể cả khi thiếu thẻ đóng)
+      .replace(/<script\b[^>]*>[\s\S]*?(?:<\/script>|$)/gi, '')
+      // 2. Loại bỏ các thẻ nhúng nội dung động thường bị lạm dụng
+      .replace(/<\/?(?:iframe|object|embed|svg|math|link|meta|base)\b[^>]*>/gi, '')
+      // 3. Loại bỏ event handler nội tuyến: onerror=, onload=, onmouseover=, onclick=...
+      .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      // 4. Loại bỏ scheme nguy hiểm dù có chèn khoảng trắng/tab: javascript:, vbscript:, data:
+      .replace(/(?:javascript|vbscript|data)\s*:/gi, '')
+  );
+}
+
+/**
+ * Lọc bỏ các chuỗi ký tự nguy hiểm trong body (Chống Stored/Reflected XSS).
+ * Vẫn escape < > (giữ tương thích hành vi cũ), đồng thời strip vector XSS ở trên.
  */
 export function sanitizeInput(req, res, next) {
   if (req.body && typeof req.body === 'object') {
     const cleanObject = (obj) => {
       for (const key of Object.keys(obj)) {
         if (typeof obj[key] === 'string') {
-          // Loại bỏ scheme nguy hiểm và escape HTML entities
-          let val = obj[key]
-            .replace(/javascript:/gi, '')
-            .replace(/vbscript:/gi, '')
-            .trim();
-          obj[key] = escapeHtml(val);
+          // Strip vector độc hại trước, sau đó escape < > còn sót và cắt khoảng trắng.
+          const stripped = stripXssVectors(obj[key]).trim();
+          obj[key] = escapeHtml(stripped);
         } else if (typeof obj[key] === 'object' && obj[key] !== null) {
           cleanObject(obj[key]);
         }

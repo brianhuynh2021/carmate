@@ -11,6 +11,9 @@ import api from '../../api/client.js';
  * Không cần đăng nhập, bảo vệ thông tin PII, xác nhận 1 chạm tức thì.
  */
 export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowToast }) {
+  // bookingCode có thể là object { code, token } (Magic Link mới) hoặc string (tương thích cũ)
+  const codeId = typeof bookingCode === 'object' && bookingCode ? bookingCode.code : bookingCode;
+  const accessToken = typeof bookingCode === 'object' && bookingCode ? bookingCode.token || '' : '';
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState('');
@@ -21,7 +24,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
   useEffect(() => {
     let active = true;
     async function fetchSummary() {
-      if (!bookingCode) {
+      if (!codeId) {
         setError('Mã xác nhận không hợp lệ.');
         setLoading(false);
         return;
@@ -30,7 +33,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
       try {
         setLoading(true);
         setError('');
-        const res = await api.getBookingPublicSummary(bookingCode);
+        const res = await api.getBookingPublicSummary(codeId, accessToken);
         if (active) {
           if (res?.success && res.data) {
             setBooking(res.data);
@@ -54,14 +57,14 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
     return () => {
       active = false;
     };
-  }, [bookingCode]);
+  }, [codeId, accessToken]);
 
   const handleConfirm = async () => {
-    if (submitting || !bookingCode) return;
+    if (submitting || !codeId) return;
     setSubmitting(true);
 
     try {
-      const res = await api.driverConfirmBooking(bookingCode, { driverNote: driverNote.trim() });
+      const res = await api.driverConfirmBooking(codeId, { driverNote: driverNote.trim() }, accessToken);
       if (res?.success) {
         setConfirmedSuccess(true);
         onShowToast?.('Chủ xe đã xác nhận đón thành công! Chúc chuyến đi thuận buồm xuôi gió.', 'success');
@@ -84,7 +87,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
       icon={Car}
       iconTone="brand"
       title="Xác nhận đón hành khách"
-      subtitle={`Mã giữ chỗ: ${bookingCode}`}
+      subtitle={`Mã giữ chỗ: ${codeId}`}
     >
       {loading ? (
         <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">

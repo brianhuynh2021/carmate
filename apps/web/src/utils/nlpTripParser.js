@@ -123,7 +123,7 @@ export const SMART_TRIP_TEMPLATES = {
       badge: 'Xe 4–5 chỗ tiện chuyến',
       title: 'Bình Long ➔ Sài Gòn (Vios 5 chỗ)',
       desc: 'Xe 5 chỗ còn 3 ghế êm ái, đón dọc QL13, phụ xăng 150k',
-      text: 'Sáng mai 7h mình từ Bình Long về Sài Gòn xe Vios 5 chỗ còn 3 ghế êm ái đón dọc QL13 phụ xăng 150k sđt 0913889922'
+      text: 'Sáng mai 7h mình từ Bình Long về Sài Gòn xe Vios 5 chỗ còn 3 ghế êm ái đón dọc QL13 phụ xăng 150k sđt 0900000013'
     },
     {
       id: 'drv-suv-7',

@@ -1,7 +1,9 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { isAdminPhone, getPrimaryAdminPhone } from '../utils/adminIdentity.js';
 import {
   INITIAL_DRIVER_OFFERS,
   INITIAL_PASSENGER_REQUESTS,
@@ -588,11 +590,44 @@ export async function addTrip(tripData) {
   return completeTrip;
 }
 
+// Các trường định danh / quyền sở hữu KHÔNG bao giờ được nhận từ client qua updateTrip.
+// Ngăn Mass-Assignment: chủ bài đổi phoneReal sang số người khác, chiếm userId, tự nâng trustScore...
+const IMMUTABLE_TRIP_FIELDS = new Set([
+  'id',
+  'phoneReal',
+  'phone',
+  'userId',
+  'creatorId',
+  'trustScore',
+  'isCccdVerified',
+  'isGplxVerified',
+  'createdAt'
+]);
+
 export async function updateTrip(id, updates) {
   const existing = getTripById(id);
   if (!existing) return null;
 
-  const merged = { ...existing, ...updates, updatedAt: Date.now() };
+  // Lọc bỏ mọi trường bất biến khỏi payload client trước khi hợp nhất.
+  const safeUpdates = {};
+  for (const key of Object.keys(updates || {})) {
+    if (!IMMUTABLE_TRIP_FIELDS.has(key)) {
+      safeUpdates[key] = updates[key];
+    }
+  }
+
+  const merged = {
+    ...existing,
+    ...safeUpdates,
+    // Quyền sở hữu & định danh luôn kế thừa từ bản ghi gốc trong DB.
+    id: existing.id,
+    phoneReal: existing.phoneReal,
+    phone: existing.phone,
+    userId: existing.userId,
+    creatorId: existing.creatorId,
+    createdAt: existing.createdAt,
+    updatedAt: Date.now()
+  };
   await addTrip(merged);
   return merged;
 }
@@ -678,9 +713,17 @@ export function getBookings() {
 export async function addBooking(bookingData) {
   const database = getRawDB();
   const escrowId = bookingData.escrowId || bookingData.id || `ESC-${Date.now()}`;
+
+  // Access token bí mật (128-bit) cho Magic Link chủ xe xác nhận / xem tóm tắt mà không cần đăng nhập.
+  // escrowId (CX-xxxx) dễ đoán -> token này ngăn IDOR enumerate booking người khác.
+  // Giữ nguyên token nếu booking đã tồn tại (tránh vô hiệu hoá link cũ khi cập nhật).
+  const existing = getBookingById(escrowId);
+  const accessToken = bookingData.accessToken || existing?.accessToken || crypto.randomBytes(16).toString('hex');
+
   const full = {
     ...bookingData,
     escrowId,
+    accessToken,
     status: bookingData.status || 'zalo_active',
     commitmentType: bookingData.commitmentType || 'zalo_direct',
     createdAt: bookingData.createdAt || Date.now()
@@ -852,10 +895,7 @@ export async function deleteUserAccount(userId, phone) {
   const effectivePhone = user?.phone || (phone ? cleanPhoneNumber(phone) : null);
 
   // MIT Invariant Guard: Không bao giờ xoá tài khoản Admin (bảo toàn hệ thống luôn có chủ quản)
-  if (
-    user?.role === 'admin' ||
-    (effectivePhone && (effectivePhone.includes('0984883750') || effectivePhone.includes('0984 883 750')))
-  ) {
+  if (user?.role === 'admin' || (effectivePhone && isAdminPhone(effectivePhone))) {
     throw new Error('Tài khoản Quản trị viên (Admin) được bảo vệ bởi luật bất biến MIT, không thể tự xoá vĩnh viễn.');
   }
 
@@ -938,7 +978,7 @@ export function getAllUsers() {
         userMap.set(key, {
           id: key,
           name: t.publicName || t.driverName || 'Chủ xe ' + (t.maskedCode || 'CX-000'),
-          phone: t.phoneReal || t.phone || '0984883750',
+          phone: t.phoneReal || t.phone || getPrimaryAdminPhone(),
           role: 'driver',
           hometown: t.hometown || 'Bình Phước',
           carModel: t.carType || 'Mitsubishi Xpander',

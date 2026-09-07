@@ -138,14 +138,15 @@ export const api = {
     });
   },
 
-  async getBookingPublicSummary(id) {
-    return request(`/bookings/${id}/public-summary`);
+  async getBookingPublicSummary(id, token = '') {
+    const qs = token ? `?t=${encodeURIComponent(token)}` : '';
+    return request(`/bookings/${id}/public-summary${qs}`);
   },
 
-  async driverConfirmBooking(id, payload = {}) {
+  async driverConfirmBooking(id, payload = {}, token = '') {
     return request(`/bookings/${id}/driver-confirm`, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ ...payload, accessToken: token || payload.accessToken })
     });
   },
 

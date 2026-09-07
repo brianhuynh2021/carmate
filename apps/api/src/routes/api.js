@@ -90,8 +90,8 @@ router.get('/matches', optionalAuth, getMatches);
 // --- Bookings / Zalo Connections (Aliases for /escrows) ---
 router.get('/bookings', optionalAuth, listBookings);
 router.post('/bookings', optionalAuth, createBooking);
-router.get('/bookings/:id/public-summary', getBookingPublicSummary);
-router.post('/bookings/:id/driver-confirm', driverConfirmBooking);
+router.get('/bookings/:id/public-summary', optionalAuth, getBookingPublicSummary);
+router.post('/bookings/:id/driver-confirm', optionalAuth, driverConfirmBooking);
 router.post('/bookings/:id/delay', optionalAuth, requireBookingParty, reportDelay);
 router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
@@ -100,8 +100,8 @@ router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, reportVehicle
 
 router.get('/escrows', optionalAuth, listBookings);
 router.post('/escrows', optionalAuth, createBooking);
-router.get('/escrows/:id/public-summary', getBookingPublicSummary);
-router.post('/escrows/:id/driver-confirm', driverConfirmBooking);
+router.get('/escrows/:id/public-summary', optionalAuth, getBookingPublicSummary);
+router.post('/escrows/:id/driver-confirm', optionalAuth, driverConfirmBooking);
 router.post('/escrows/:id/delay', optionalAuth, requireBookingParty, reportDelay);
 router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);

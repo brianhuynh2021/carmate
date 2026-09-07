@@ -135,6 +135,8 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
     try {
       // Gọi API tạo booking để ghi nhận giao dịch và nhận SĐT thật từ DB
       let realPhone = item.phoneReal || '';
+      let secureConfirmUrl = confirmUrl;
+      let secureBookingMessage = zaloMessage;
       try {
         const res = await api.createBooking({
           escrowId: bookingCode,
@@ -154,6 +156,12 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
           if (fetchedPhone) {
             realPhone = fetchedPhone;
             setUnmaskedPhone(fetchedPhone);
+          }
+          // Magic Link an toàn: kèm access token bí mật do server cấp để chống IDOR.
+          // Không có token này, chủ xe khác không thể mở/xác nhận nhầm chuyến.
+          if (res.data.accessToken) {
+            secureConfirmUrl = `${origin}/#confirm-${res.data.escrowId || bookingCode}~${res.data.accessToken}`;
+            secureBookingMessage = zaloMessage.replace(confirmUrl, secureConfirmUrl);
           }
         }
       } catch (err) {
@@ -183,9 +191,9 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
         createdAt: 'Vừa xong'
       });
 
-      // Mở liên kết Zalo trực tiếp với số điện thoại thật
+      // Mở liên kết Zalo trực tiếp với số điện thoại thật (kèm Magic Link có token)
       const targetPhoneForZalo = realPhone || item.phoneReal || '0984883750';
-      const zaloUrl = getZaloChatUrl(targetPhoneForZalo, zaloMessage);
+      const zaloUrl = getZaloChatUrl(targetPhoneForZalo, secureBookingMessage);
 
       // Lưu trạng thái Zalo Re-entry vào localStorage để khi khách quay lại web hiển thị Apple Action Sheet
       if (typeof localStorage !== 'undefined') {

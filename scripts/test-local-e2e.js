@@ -542,7 +542,7 @@ async function runTests() {
     const loginBRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0913889922', phone: '0913889922', name: 'Tài xế Trần Văn B' })
+      body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0900000013', phone: '0900000013', name: 'Tài xế Trần Văn B' })
     });
     const loginBData = await loginBRes.json();
     assert(
@@ -692,8 +692,9 @@ async function runTests() {
         Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({
-        from: '<img src=x onerror=alert(1)>',
-        to: '<svg onload=alert(2)>',
+        from: 'Bình Phước <img src=x onerror=alert(1)>',
+        to: 'Sài Gòn <svg onload=alert(2)>',
+        notes: '<script>document.cookie</script> đón đúng giờ nhé',
         phoneReal: '0984883750',
         userId: 'USR-0984883750',
         routeCategory: 'Tuyến QL13',
@@ -701,9 +702,18 @@ async function runTests() {
       })
     });
     const xssTripData = await xssTripRes.json();
+    // Cơ chế mới: STRIP vector XSS (event handler, thẻ script/svg, scheme) + escape < >.
+    // Kết quả tuyệt đối không còn thẻ thực thi hoặc handler chạy được.
+    const xf = xssTripData.data?.from || '';
+    const xt = xssTripData.data?.to || '';
+    const xn = xssTripData.data?.notes || '';
     assert(
-      xssTripRes.status === 201 && !xssTripData.data.from.includes('<img'),
-      'Chống Stored XSS: Ký tự HTML độc hại được mã hóa thực thể an toàn'
+      xssTripRes.status === 201 &&
+        !/onerror\s*=/i.test(xf) &&
+        !/onload\s*=/i.test(xt) &&
+        !/<script/i.test(xn) &&
+        !xn.includes('&lt;script'),
+      'Chống Stored XSS: Vector độc hại (onerror/onload/script) bị bóc tách triệt để'
     );
     if (xssTripData?.data?.id && sharedTokenA) {
       await fetch(`${BASE_URL}/api/trips/${xssTripData.data.id}`, {
@@ -1348,12 +1358,28 @@ async function runTests() {
       'Tạo booking phục vụ kiểm thử Magic Link thành công'
     );
 
-    // Chủ xe mở Magic Link: Gọi GET /api/bookings/:id/public-summary không cần đăng nhập
-    const summaryRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`);
+    // Access token bí mật do server cấp cho Magic Link (chống IDOR enumerate booking)
+    const magicToken = createTestBookingData.data.accessToken;
+    assert(
+      typeof magicToken === 'string' && magicToken.length >= 16,
+      'Magic Link Security: createBooking cấp accessToken bí mật cho Chủ xe'
+    );
+
+    // Anti-IDOR: truy cập tóm tắt KHÔNG kèm token phải bị từ chối (403)
+    const noTokenRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`);
+    assert(
+      noTokenRes.status === 403,
+      'Anti-IDOR: Public Summary từ chối truy cập khi thiếu token hợp lệ (HTTP 403)'
+    );
+
+    // Chủ xe mở Magic Link hợp lệ (kèm access token) không cần đăng nhập
+    const summaryRes = await fetch(
+      `${BASE_URL}/api/bookings/${testCode}/public-summary?t=${encodeURIComponent(magicToken)}`
+    );
     const summaryData = await summaryRes.json();
     assert(
       summaryRes.status === 200 && summaryData.success === true,
-      'Public Summary: Chủ xe truy cập tóm tắt chuyến không cần đăng nhập (HTTP 200)'
+      'Public Summary: Chủ xe truy cập tóm tắt chuyến qua Magic Link có token (HTTP 200)'
     );
     assert(
       summaryData.data.from === 'Bù Đốp' && summaryData.data.to === 'Sài Gòn',
@@ -1366,12 +1392,24 @@ async function runTests() {
     );
     assert(summaryData.data.driverConfirmed === false, 'Khởi tạo: Chủ xe chưa xác nhận đón');
 
-    // Chủ xe bấm 1 chạm "Đồng ý đón": Gọi POST /api/bookings/:id/driver-confirm
+    // Anti-IDOR: xác nhận đón KHÔNG kèm token phải bị từ chối (403)
+    const confirmNoTokenRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/driver-confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverNote: 'hack không token' })
+    });
+    assert(
+      confirmNoTokenRes.status === 403,
+      'Anti-IDOR: Driver Confirm từ chối khi thiếu token hợp lệ (HTTP 403)'
+    );
+
+    // Chủ xe bấm 1 chạm "Đồng ý đón": Gọi POST /api/bookings/:id/driver-confirm (kèm token)
     const confirmRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/driver-confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        driverNote: 'Đón đúng giờ ở cây xăng nhé bạn'
+        driverNote: 'Đón đúng giờ ở cây xăng nhé bạn',
+        accessToken: magicToken
       })
     });
     const confirmData = await confirmRes.json();
@@ -1385,10 +1423,10 @@ async function runTests() {
     );
     assert(confirmData.data.driverConfirmed === true, 'Driver 1-Tap: Cờ driverConfirmed được bật true');
 
-    // Kiểm tra lại qua public-summary
-    const summaryAfterConfirm = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`).then((r) =>
-      r.json()
-    );
+    // Kiểm tra lại qua public-summary (kèm token Magic Link)
+    const summaryAfterConfirm = await fetch(
+      `${BASE_URL}/api/bookings/${testCode}/public-summary?t=${encodeURIComponent(magicToken)}`
+    ).then((r) => r.json());
     assert(
       summaryAfterConfirm.data.driverConfirmed === true,
       'Đồng bộ: Hành khách và Chủ xe đều thấy trạng thái đã xác nhận đón'
@@ -2672,9 +2710,9 @@ async function runTests() {
     const dbStoreContent = fs.readFileSync(dbStorePath, 'utf8');
     assert(
       dbStoreContent.includes("user?.role === 'admin'") &&
-        dbStoreContent.includes('0984883750') &&
+        dbStoreContent.includes('isAdminPhone') &&
         dbStoreContent.includes('luật bất biến MIT'),
-      'Admin Safeguard DB 1: sqliteStore ném lỗi từ chối xóa tài khoản Admin ở mức hạ tầng dữ liệu'
+      'Admin Safeguard DB 1: sqliteStore ném lỗi từ chối xóa tài khoản Admin (dùng isAdminPhone từ env)'
     );
 
     // 4. Kiểm tra Controller API: authController từ chối xóa và trả về HTTP 403

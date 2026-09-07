@@ -1,5 +1,5 @@
 /**
- * Xử lý số điện thoại sang định dạng chuẩn Zalo (ví dụ: 0988234567)
+ * Xử lý số điện thoại sang định dạng chuẩn Zalo (ví dụ: 0900000019)
  */
 export const cleanPhoneNumber = (phone = '') => {
   return phone.replace(/[^0-9]/g, '');

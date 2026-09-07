@@ -139,9 +139,20 @@ export function executeSearchTrips(args = {}) {
       hasRelatives: Boolean(t.hasRelatives),
       note: t.note || '',
       perks: t.perks || [],
-      phoneReal: t.phoneReal
+      // PII Guard (Nghị định 13/2023): TUYỆT ĐỐI không trả số điện thoại thật ra client.
+      // Kết nối Zalo được cấp qua POST /bookings với tripId — server tự tra phoneReal từ DB.
+      phoneMasked: maskPhoneForPublic(t.phoneReal)
     }))
   };
+}
+
+/**
+ * Che số điện thoại thật thành dạng công khai an toàn: 098***2233
+ */
+function maskPhoneForPublic(raw) {
+  const cleaned = cleanPhoneNumber(raw || '');
+  if (!cleaned || cleaned.length < 7) return '';
+  return `${cleaned.slice(0, 3)}***${cleaned.slice(-4)}`;
 }
 
 export function executeGetRouteBenchmarks(args = {}) {
@@ -368,7 +379,8 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
         carCategory: t.carCategory,
         hasRelatives: Boolean(t.hasRelatives),
         perks: t.perks || [],
-        phoneReal: t.phoneReal,
+        // PII Guard: che số điện thoại thật, kết nối cấp qua tripId ở server.
+        phoneMasked: maskPhoneForPublic(t.phoneReal),
         isCorridorFallback: true
       }));
     } else {
