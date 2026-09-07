@@ -593,3 +593,18 @@ export async function deleteAccount(req, res) {
     return res.status(500).json({ success: false, error: 'Không thể xóa tài khoản. Vui lòng thử lại sau.' });
   }
 }
+
+/**
+ * GET /api/auth/config
+ * Cung cấp cấu hình công khai cho Frontend (Google Client ID)
+ * Cho phép Fly.io cập nhật Client ID tại runtime qua fly secrets mà không cần build lại Frontend
+ */
+export function getAuthConfigHandler(req, res) {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || '';
+  return res.status(200).json({
+    success: true,
+    data: {
+      googleClientId
+    }
+  });
+}

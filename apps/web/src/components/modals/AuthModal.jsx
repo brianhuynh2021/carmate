@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone, ShieldCheck, User, AlertCircle, Mail, ArrowRight, Sparkles } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -15,7 +15,7 @@ export default function AuthModal({
   subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
   contextNotice
 }) {
-  const [authTab, setAuthTab] = useState('phone'); // 'phone' | 'google'
+  const [authTab, setAuthTab] = useState('google'); // 'google' | 'phone' - Ưu tiên Google 1-chạm không tốn phí SMS
   const [phoneStep, setPhoneStep] = useState('input'); // 'input' | 'otp'
   const [phone, setPhone] = useState(initialPhone);
   const [name, setName] = useState('');
@@ -26,8 +26,100 @@ export default function AuthModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeLegalModal, setActiveLegalModal] = useState(null); // 'terms' | 'policy' | null
+  const [clientId, setClientId] = useState(import.meta.env.VITE_GOOGLE_CLIENT_ID || '');
+  const googleBtnRef = useRef(null);
 
-  // 1. Luồng đăng nhập Google an toàn
+  // Tải cấu hình Google Client ID từ máy chủ (Hỗ trợ cấu hình động trên Fly.io không cần rebuild)
+  useEffect(() => {
+    let mounted = true;
+    api.getAuthConfig().then((cfg) => {
+      if (mounted && cfg?.googleClientId) {
+        setClientId(cfg.googleClientId);
+      }
+    }).catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Xử lý xác thực Google Identity Services chính thức (Nhận JWT credential từ Google)
+  const handleGoogleCredential = async (response) => {
+    if (!response?.credential) {
+      setError('Không nhận được thông tin xác thực từ Google');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await api.googleLogin({
+        idToken: response.credential
+      });
+
+      if (res?.success && res?.user) {
+        onSuccess?.(res.user, res.tripIds || []);
+        onClose();
+      } else {
+        setError(res?.error || 'Đăng nhập Google không thành công');
+      }
+    } catch (err) {
+      setError(err.message || 'Lỗi kết nối máy chủ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Khởi tạo Google Identity Services Button khi tab Google hoạt động
+  useEffect(() => {
+    if (authTab !== 'google' || showGoogleForm) return;
+
+    let retryTimer = null;
+    const initAndRender = () => {
+      if (!clientId || !googleBtnRef.current) return false;
+      if (window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleGoogleCredential,
+            auto_select: false,
+            cancel_on_tap_outside: true
+          });
+          googleBtnRef.current.innerHTML = '';
+          window.google.accounts.id.renderButton(googleBtnRef.current, {
+            type: 'standard',
+            theme: 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'pill',
+            width: 280,
+            logo_alignment: 'left'
+          });
+          return true;
+        } catch (e) {
+          console.error('[GIS] Render error:', e);
+          return false;
+        }
+      }
+      return false;
+    };
+
+    if (!initAndRender()) {
+      let attempts = 0;
+      retryTimer = setInterval(() => {
+        attempts++;
+        if (initAndRender() || attempts > 15) {
+          clearInterval(retryTimer);
+        }
+      }, 250);
+    }
+
+    return () => {
+      if (retryTimer) clearInterval(retryTimer);
+    };
+  }, [authTab, clientId, showGoogleForm]);
+
+  // 1. Luồng đăng nhập Google thủ công (Dùng cho kiểm thử offline / dev fallback)
   const handleGoogleSubmit = async (e) => {
     e?.preventDefault();
     if (!email.trim() || !email.includes('@')) {
@@ -292,15 +384,33 @@ export default function AuthModal({
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowGoogleForm(true)}
-                  disabled={loading}
-                  className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-black/[0.14] dark:border-slate-600 hover:border-black/[0.3] hover:bg-black/[0.02] text-[#1d1d1f] dark:text-white text-sm font-semibold flex items-center justify-center gap-3 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer"
-                >
-                  <GoogleIcon className="w-5 h-5 shrink-0" />
-                  <span>Tiếp tục với Google</span>
-                </button>
+                {/* Khối nút Google Identity Services chính thức */}
+                <div className="flex flex-col items-center justify-center min-h-[44px] py-1">
+                  {clientId ? (
+                    <div ref={googleBtnRef} className="flex justify-center w-full min-h-[44px]" />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowGoogleForm(true)}
+                      disabled={loading}
+                      className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-black/[0.14] dark:border-slate-600 hover:border-black/[0.3] hover:bg-black/[0.02] text-[#1d1d1f] dark:text-white text-sm font-semibold flex items-center justify-center gap-3 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer"
+                    >
+                      <GoogleIcon className="w-5 h-5 shrink-0" />
+                      <span>Tiếp tục với Google</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Tuỳ chọn đăng nhập kiểm thử offline */}
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleForm(true)}
+                    className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#0071e3] dark:hover:text-[#2997ff] font-medium transition-colors cursor-pointer"
+                  >
+                    Dùng form đăng nhập nhanh (Dev Test)
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleGoogleSubmit} className="space-y-3">

@@ -176,6 +176,15 @@ export const api = {
     return res;
   },
 
+  async getAuthConfig() {
+    try {
+      const res = await request('/auth/config');
+      return res?.data || res || {};
+    } catch {
+      return { googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '' };
+    }
+  },
+
   async googleLogin(payload) {
     const res = await request('/auth/google-login', {
       method: 'POST',

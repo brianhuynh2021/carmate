@@ -1509,6 +1509,18 @@ async function runTests() {
       'Google Login: Email người dùng được trích xuất an toàn từ token'
     );
 
+    // 22.5b Kiểm tra Endpoint cấu hình công khai Google Client ID (/api/auth/config)
+    const authConfigRes = await fetch(`${BASE_URL}/api/auth/config`);
+    const authConfigData = await authConfigRes.json();
+    assert(
+      authConfigRes.status === 200 && authConfigData.success === true,
+      'Auth Config: Tải cấu hình xác thực công khai thành công (HTTP 200)'
+    );
+    assert(
+      typeof authConfigData.data?.googleClientId === 'string',
+      'Auth Config: Trả về googleClientId định dạng chuỗi an toàn'
+    );
+
     // 22.6 Kiểm tra Request ID Correlation Header (Observability & Easy to Debug)
     const traceRes = await fetch(`${BASE_URL}/api/health`, {
       headers: { 'x-request-id': 'test-trace-uuid-123456' }
