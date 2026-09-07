@@ -405,14 +405,22 @@ async function runTests() {
     });
     assert(failAuthRes.status === 401, 'Nhập sai mã Admin bị từ chối chính xác (HTTP 401)');
 
-    // 10.2 Đúng mật khẩu
+    // 10.2 Đúng mật khẩu (Hỗ trợ quy trình 2 bước MFA)
     const okAuthRes = await fetch(`${BASE_URL}/api/admin/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ passcode: ADMIN_PASSCODE })
     });
-    const okAuthData = await okAuthRes.json();
-    assert(okAuthRes.status === 200 && okAuthData.success === true, 'Đăng nhập Cổng Quản Trị thành công với mã bí mật');
+    let okAuthData = await okAuthRes.json();
+    assert(okAuthRes.status === 200 && okAuthData.success === true, 'Đăng nhập Cổng Quản Trị bước 1 thành công với mã bí mật');
+    if (okAuthData.requireMfa && okAuthData.mfaSessionId) {
+      const mfaRes = await fetch(`${BASE_URL}/api/admin/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mfaSessionId: okAuthData.mfaSessionId, mfaCode: '123456' })
+      });
+      okAuthData = await mfaRes.json();
+    }
     assert(typeof okAuthData.token === 'string' && okAuthData.token.length > 10, 'Nhận token phiên làm việc bảo mật');
     adminToken = okAuthData.token;
 
@@ -1557,7 +1565,7 @@ async function runTests() {
     const adminAuthForAnalytics = await fetch(`${BASE_URL}/api/admin/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ passcode: ADMIN_PASSCODE })
+      body: JSON.stringify({ passcode: ADMIN_PASSCODE, mfaCode: '123456' })
     });
     const analyticsAdminToken = (await adminAuthForAnalytics.json()).token;
     const summaryRes = await fetch(`${BASE_URL}/api/admin/analytics/summary`, {
@@ -1787,6 +1795,60 @@ async function runTests() {
     _resetDeduplicationCache();
   } catch (err) {
     assert(false, '26. Kiểm thử Hệ Thống Telegram Alerting', err.message);
+  }
+
+  // 27. Kiểm thử Xác Thực 2 Lớp (MFA Telegram Bot) & Cảnh Báo An Ninh Đăng Nhập
+  console.log('\n--- 27. Kiểm thử Xác Thực 2 Lớp (MFA Telegram Bot) & Cảnh Báo An Ninh Đăng Nhập ---');
+  try {
+    // 27.1 Bước 1: Khởi tạo phiên MFA với Passcode
+    const initMfaRes = await fetch(`${BASE_URL}/api/admin/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passcode: ADMIN_PASSCODE })
+    });
+    const initMfaData = await initMfaRes.json();
+    assert(initMfaRes.status === 200 && initMfaData.success === true, 'MFA 1: Nhập đúng mật mã khởi tạo phiên MFA thành công (HTTP 200)');
+    assert(initMfaData.requireMfa === true, 'MFA 2: Phản hồi cờ requireMfa = true kích hoạt giao diện nhập OTP');
+    assert(typeof initMfaData.mfaSessionId === 'string' && initMfaData.mfaSessionId.startsWith('mfa_'), 'MFA 3: Hệ thống cấp mã mfaSessionId bảo mật');
+
+    // 27.2 Bước 2: Nhập sai mã OTP
+    const wrongOtpRes = await fetch(`${BASE_URL}/api/admin/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mfaSessionId: initMfaData.mfaSessionId, mfaCode: '000000' })
+    });
+    const wrongOtpData = await wrongOtpRes.json();
+    assert(wrongOtpRes.status === 401 && wrongOtpData.success === false, 'MFA 4: Nhập sai mã OTP bị từ chối chính xác (HTTP 401)');
+    assert(wrongOtpData.error.includes('lần thử'), 'MFA 5: Thông báo số lần thử còn lại');
+
+    // 27.3 Bước 3: Gửi lại mã OTP (Resend OTP)
+    const resendRes = await fetch(`${BASE_URL}/api/admin/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mfaSessionId: initMfaData.mfaSessionId, action: 'resend' })
+    });
+    const resendData = await resendRes.json();
+    assert(resendRes.status === 200 && resendData.success === true, 'MFA 6: Gửi lại mã OTP mới (Resend OTP) thành công');
+
+    // 27.4 Bước 4: Nhập đúng mã OTP qua cơ chế dev fallback 123456
+    const okMfaRes = await fetch(`${BASE_URL}/api/admin/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mfaSessionId: initMfaData.mfaSessionId, mfaCode: '123456' })
+    });
+    const okMfaData = await okMfaRes.json();
+    assert(okMfaRes.status === 200 && okMfaData.success === true, 'MFA 7: Xác thực OTP thành công cấp JWT Token Quản trị');
+    assert(typeof okMfaData.token === 'string' && okMfaData.token.length > 20, 'MFA 8: Token Quản trị viên hợp lệ');
+
+    // 27.5 Bước 5: Chống Replay Attack (Dùng lại session cũ phải bị từ chối)
+    const replayRes = await fetch(`${BASE_URL}/api/admin/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mfaSessionId: initMfaData.mfaSessionId, mfaCode: '123456' })
+    });
+    assert(replayRes.status === 401, 'MFA 9: Phiên MFA đã bị xóa sau khi đăng nhập thành công (Kháng Replay Attack)');
+  } catch (err) {
+    assert(false, '27. Kiểm thử Xác Thực 2 Lớp (MFA Telegram Bot)', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { getJwtSecret } from '../utils/token.js';
+import { sendTelegramMessage } from '../utils/telegramAlert.js';
 import {
   getAdminMetrics,
   getAllTripsAdmin,
@@ -52,6 +53,11 @@ function verifyAdminPasscode(inputPasscode) {
 // Bộ nhớ đệm giới hạn tần suất đăng nhập (Chống Brute-Force mật mã Admin)
 const failedAttemptsMap = new Map(); // ip -> { count, lockedUntil }
 
+// Bộ nhớ đệm quản lý các phiên OTP xác thực 2 lớp (MFA Telegram)
+// sessionId -> { otp, expiresAt, attempts, clientIp }
+const pendingMfaSessions = new Map();
+const MFA_TTL_MS = 3 * 60 * 1000; // 3 phút
+
 /**
  * Middleware kiểm tra quyền Quản trị viên (Strict Cryptographic JWT Verification)
  * Không chấp nhận passcode làm bearer token, bắt buộc token ký bởi secret
@@ -81,9 +87,9 @@ export function requireAdmin(req, res, next) {
 /**
  * POST /api/admin/auth - Đăng nhập quản trị viên với Brute-force Shield & MFA Support
  */
-export function adminAuth(req, res) {
+export async function adminAuth(req, res) {
   try {
-    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
     const now = Date.now();
     const tracker = failedAttemptsMap.get(clientIp);
 
@@ -96,9 +102,127 @@ export function adminAuth(req, res) {
       });
     }
 
-    const { passcode, mfaCode } = req.body || {};
+    const { passcode, mfaCode, mfaSessionId, action } = req.body || {};
 
-    // 2. Kiểm tra mật mã chính bằng crypto.timingSafeEqual chống Timing Attack
+    // ── HÀNH ĐỘNG GỬI LẠI MÃ OTP (RESEND OTP) ──
+    if (action === 'resend' && mfaSessionId) {
+      const session = pendingMfaSessions.get(mfaSessionId);
+      if (!session) {
+        return res.status(401).json({
+          success: false,
+          error: 'Phiên xác thực không tồn tại hoặc đã hết hạn. Vui lòng bắt đầu lại.'
+        });
+      }
+      const newOtp = crypto.randomInt(100000, 999999).toString();
+      session.otp = newOtp;
+      session.expiresAt = now + MFA_TTL_MS;
+      session.attempts = 0;
+
+      const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_LOG_CHAT_ID) {
+        await sendTelegramMessage(
+          `🔄 <b>[CARMATE ADMIN MFA - GỬI LẠI MÃ]</b>\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `Mã OTP xác thực đăng nhập Cổng Quản Trị MỚI của bạn là:\n\n` +
+          `👉 <b><code>${newOtp}</code></b> 👈\n\n` +
+          `⏳ <i>Mã có hiệu lực trong 3 phút.</i>\n` +
+          `🌐 <b>Yêu cầu từ IP:</b> <code>${clientIp}</code>\n` +
+          `⏰ <b>Thời điểm:</b> ${timeStr}\n` +
+          `━━━━━━━━━━━━━━━━━━━━`,
+          { parseMode: 'HTML' }
+        ).catch(() => {});
+      }
+      if (!isProduction) {
+        console.log(`\n🔔 [MFA RESEND LOCAL] Mã OTP mới là: \x1b[32m\x1b[1m${newOtp}\x1b[0m`);
+      }
+      return res.status(200).json({
+        success: true,
+        message: 'Đã gửi lại mã OTP mới qua Telegram.'
+      });
+    }
+
+    // ── BƯỚC 2: XÁC THỰC MÃ OTP (NẾU CÓ mfaSessionId) ──
+    if (mfaSessionId) {
+      const session = pendingMfaSessions.get(mfaSessionId);
+      if (!session) {
+        return res.status(401).json({
+          success: false,
+          error: 'Phiên xác thực MFA không tồn tại hoặc đã hết hạn. Vui lòng đăng nhập lại.'
+        });
+      }
+
+      if (now > session.expiresAt) {
+        pendingMfaSessions.delete(mfaSessionId);
+        return res.status(401).json({
+          success: false,
+          error: 'Mã xác thực OTP đã hết hạn (quá 3 phút). Vui lòng đăng nhập lại để lấy mã mới.'
+        });
+      }
+
+      session.attempts = (session.attempts || 0) + 1;
+      const inputMfa = typeof mfaCode === 'string' ? mfaCode.trim() : '';
+
+      let isValidMfa = false;
+      // 1) Khớp mã OTP Telegram động
+      if (inputMfa && session.otp && inputMfa === session.otp) {
+        isValidMfa = true;
+      }
+      // 2) Khớp mã PIN tĩnh env (nếu có cấu hình)
+      const staticMfa = process.env.CARMATE_ADMIN_MFA_CODE || '';
+      if (staticMfa && inputMfa === staticMfa.trim()) {
+        isValidMfa = true;
+      }
+      // 3) Chế độ test/dev local fallback
+      if (!isProduction && inputMfa === '123456') {
+        isValidMfa = true;
+      }
+
+      if (!isValidMfa) {
+        if (session.attempts >= 3) {
+          pendingMfaSessions.delete(mfaSessionId);
+          return res.status(401).json({
+            success: false,
+            error: 'Nhập sai mã OTP quá 3 lần! Phiên xác thực đã bị hủy vì lý do an toàn.'
+          });
+        }
+        return res.status(401).json({
+          success: false,
+          error: `Mã OTP không chính xác. Bạn còn ${3 - session.attempts} lần thử.`
+        });
+      }
+
+      // MFA HỢP LỆ -> Hủy session MFA
+      pendingMfaSessions.delete(mfaSessionId);
+      failedAttemptsMap.delete(clientIp);
+
+      const adminToken = jwt.sign(
+        { role: 'super_admin', sessionType: 'admin_portal', issuedAt: now },
+        JWT_SECRET,
+        { expiresIn: '2h' }
+      );
+
+      // Bắn thông báo an ninh vào Telegram
+      const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      sendTelegramMessage(
+        `🛡️ <b>[CARMATE SECURITY]</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `✅ <b>Quản trị viên đã đăng nhập thành công!</b>\n` +
+        `⏰ <b>Thời gian:</b> ${timeStr}\n` +
+        `🌐 <b>Client IP:</b> <code>${clientIp}</code>\n` +
+        `🔑 <b>Phương thức:</b> Mật mã + MFA Telegram (2 Bước)\n` +
+        `━━━━━━━━━━━━━━━━━━━━`,
+        { parseMode: 'HTML' }
+      ).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        token: adminToken,
+        role: 'super_admin',
+        message: 'Đăng nhập trang quản trị bảo mật thành công (JWT 2h)'
+      });
+    }
+
+    // ── BƯỚC 1: KIỂM TRA MẬT MÃ CHÍNH ──
     const isPasscodeValid = verifyAdminPasscode(passcode);
 
     if (!isPasscodeValid) {
@@ -118,37 +242,76 @@ export function adminAuth(req, res) {
       }
     }
 
-    // 3. Kiểm tra MFA nếu được kích hoạt
-    const adminMfa = process.env.CARMATE_ADMIN_MFA_CODE || '';
-    if (adminMfa) {
-      if (!mfaCode) {
-        return res.status(200).json({
-          success: true,
-          requireMfa: true,
-          message: 'Mật mã chính xác. Vui lòng nhập mã xác thực bảo vệ 2 lớp (MFA/OTP).'
-        });
-      }
-      if (mfaCode.trim() !== adminMfa.trim()) {
-        return res.status(401).json({
-          success: false,
-          error: 'Mã xác thực 2 lớp (MFA) không chính xác.'
-        });
+    // Mật mã ĐÚNG!
+    // Nếu client truyền sẵn mfaCode hợp lệ cùng lúc (Single-call flow cho automated test / scripts):
+    const inputDirectMfa = typeof mfaCode === 'string' ? mfaCode.trim() : '';
+    const staticMfa = process.env.CARMATE_ADMIN_MFA_CODE || '';
+    if (inputDirectMfa && (inputDirectMfa === staticMfa || (!isProduction && inputDirectMfa === '123456'))) {
+      failedAttemptsMap.delete(clientIp);
+      const adminToken = jwt.sign(
+        { role: 'super_admin', sessionType: 'admin_portal', issuedAt: now },
+        JWT_SECRET,
+        { expiresIn: '2h' }
+      );
+      return res.status(200).json({
+        success: true,
+        token: adminToken,
+        role: 'super_admin',
+        message: 'Đăng nhập trang quản trị bảo mật thành công (JWT 2h)'
+      });
+    }
+
+    // Khởi tạo phiên MFA 2 bước
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const newSessionId = `mfa_${crypto.randomBytes(16).toString('hex')}`;
+
+    pendingMfaSessions.set(newSessionId, {
+      otp,
+      expiresAt: now + MFA_TTL_MS,
+      attempts: 0,
+      clientIp
+    });
+
+    // Dọn dẹp cache quá hạn nếu kích thước lớn
+    if (pendingMfaSessions.size > 100) {
+      for (const [sId, sData] of pendingMfaSessions.entries()) {
+        if (now > sData.expiresAt) {
+          pendingMfaSessions.delete(sId);
+        }
       }
     }
 
-    // Đăng nhập thành công -> Xóa bộ đếm lỗi
-    failedAttemptsMap.delete(clientIp);
+    // Gửi tin nhắn chứa mã OTP qua Telegram
+    const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const hasTelegram = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_LOG_CHAT_ID);
 
-    // 4. Ký mã JWT Token thật có chữ ký mật mã (Cryptographic Signature, hạn 2 tiếng)
-    const adminToken = jwt.sign({ role: 'super_admin', sessionType: 'admin_portal', issuedAt: now }, JWT_SECRET, {
-      expiresIn: '2h'
-    });
+    if (hasTelegram) {
+      sendTelegramMessage(
+        `🔐 <b>[CARMATE ADMIN MFA]</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `Mã OTP xác thực đăng nhập Cổng Quản Trị của bạn là:\n\n` +
+        `👉 <b><code>${otp}</code></b> 👈\n\n` +
+        `⏳ <i>Mã có hiệu lực trong 3 phút.</i>\n` +
+        `🌐 <b>Yêu cầu từ IP:</b> <code>${clientIp}</code>\n` +
+        `⏰ <b>Thời điểm:</b> ${timeStr}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `⚠️ <i>Nếu không phải bạn yêu cầu, hãy đổi mật mã Admin ngay!</i>`,
+        { parseMode: 'HTML' }
+      ).catch(() => {});
+    }
+
+    if (!isProduction) {
+      console.log(`\n🔔 [MFA DEV LOCAL] Mã OTP đăng nhập Admin CarMate là: \x1b[32m\x1b[1m${otp}\x1b[0m (Hạn 3 phút) | Session: ${newSessionId}`);
+    }
 
     return res.status(200).json({
       success: true,
-      token: adminToken,
-      role: 'super_admin',
-      message: 'Đăng nhập trang quản trị bảo mật thành công (JWT 2h)'
+      requireMfa: true,
+      mfaSessionId: newSessionId,
+      viaTelegram: hasTelegram,
+      message: hasTelegram
+        ? 'Mật mã chính xác. Mã OTP 6 số đã được gửi trực tiếp tới Telegram của bạn.'
+        : 'Mật mã chính xác. Vui lòng nhập mã OTP để hoàn tất đăng nhập.'
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -307,3 +470,14 @@ export function getAdminAiIntelligence(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
+
+/**
+ * Hỗ trợ Test Suite kiểm tra MFA
+ */
+export function _getPendingMfaSession(sessionId) {
+  return pendingMfaSessions.get(sessionId);
+}
+export function _clearPendingMfaSessions() {
+  pendingMfaSessions.clear();
+}
+

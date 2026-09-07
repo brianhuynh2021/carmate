@@ -213,10 +213,17 @@ export const api = {
   },
 
   // --- Admin Engine Calls ---
-  async adminAuth(passcode, mfaCode) {
+  async adminAuth(passcode, mfaCode, mfaSessionId) {
     return request('/admin/auth', {
       method: 'POST',
-      body: JSON.stringify({ passcode, mfaCode })
+      body: JSON.stringify({ passcode, mfaCode, mfaSessionId })
+    });
+  },
+
+  async resendAdminMfa(mfaSessionId) {
+    return request('/admin/auth', {
+      method: 'POST',
+      body: JSON.stringify({ mfaSessionId, action: 'resend' })
     });
   },
 

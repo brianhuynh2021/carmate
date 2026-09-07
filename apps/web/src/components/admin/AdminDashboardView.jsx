@@ -23,7 +23,8 @@ import {
   Sparkles,
   BarChart3,
   TrendingUp,
-  Compass
+  Compass,
+  Send
 } from 'lucide-react';
 import api from '../../api/client.js';
 import Button from '../ui/Button.jsx';
@@ -38,8 +39,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
   });
   const [passcode, setPasscode] = useState('');
   const [mfaCode, setMfaCode] = useState('');
+  const [mfaSessionId, setMfaSessionId] = useState('');
   const [requireMfa, setRequireMfa] = useState(false);
+  const [mfaViaTelegram, setMfaViaTelegram] = useState(false);
+  const [mfaCountdown, setMfaCountdown] = useState(180); // 3 phút
+  const [isResendingMfa, setIsResendingMfa] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [authNotice, setAuthNotice] = useState('');
   const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'users' | 'reports' | 'ai' | 'analytics'
 
   // Data states
@@ -53,21 +59,36 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusNotice, setStatusNotice] = useState(null);
 
+  // Đếm ngược thời gian hết hạn OTP 3 phút
+  useEffect(() => {
+    let timer;
+    if (requireMfa && mfaCountdown > 0) {
+      timer = setInterval(() => {
+        setMfaCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [requireMfa, mfaCountdown]);
+
   const showNotice = (msg) => {
     setStatusNotice(msg);
     setTimeout(() => setStatusNotice(null), 3500);
   };
 
-  // 1. Xác thực đăng nhập Admin (Hỗ trợ MFA 2 lớp)
+  // 1. Xác thực đăng nhập Admin (Hỗ trợ MFA 2 lớp qua Telegram)
   const handleLogin = async (e) => {
     e?.preventDefault();
     setAuthError('');
+    setAuthNotice('');
     setIsLoading(true);
 
     try {
-      const res = await api.adminAuth(passcode.trim(), mfaCode.trim());
+      const res = await api.adminAuth(passcode.trim(), mfaCode.trim(), mfaSessionId);
       if (res.requireMfa) {
         setRequireMfa(true);
+        setMfaSessionId(res.mfaSessionId || '');
+        setMfaViaTelegram(Boolean(res.viaTelegram));
+        setMfaCountdown(180);
         setIsLoading(false);
         return;
       }
@@ -83,12 +104,33 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
+  // Gửi lại mã OTP qua Telegram
+  const handleResendOtp = async () => {
+    if (!mfaSessionId || isResendingMfa) return;
+    setIsResendingMfa(true);
+    setAuthError('');
+    try {
+      const res = await api.resendAdminMfa(mfaSessionId);
+      if (res.success) {
+        setMfaCountdown(180);
+        setAuthNotice('Đã gửi lại mã OTP mới qua Telegram!');
+        setTimeout(() => setAuthNotice(''), 4000);
+      }
+    } catch (err) {
+      setAuthError(err.message || 'Không thể gửi lại mã OTP');
+    } finally {
+      setIsResendingMfa(false);
+    }
+  };
+
   const handleLogout = () => {
     sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     setIsAuthenticated(false);
     setPasscode('');
     setMfaCode('');
+    setMfaSessionId('');
     setRequireMfa(false);
+    setAuthNotice('');
   };
 
   // 2. Nạp toàn bộ dữ liệu quản trị
@@ -209,14 +251,28 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
           <form onSubmit={handleLogin} className="space-y-4">
             {requireMfa ? (
-              <div className="space-y-3">
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-                  <span>Xác thực 2 lớp (MFA/TOTP): Nhập mã 6 số từ ứng dụng Authenticator của bạn.</span>
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/50 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2 text-sky-700 dark:text-sky-300 font-bold">
+                    <Send className="w-4 h-4 text-sky-500 shrink-0" />
+                    <span>Mã OTP đã được gửi đến Telegram</span>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-400 text-[11.5px] leading-relaxed">
+                    {mfaViaTelegram
+                      ? 'Vui lòng kiểm tra ứng dụng Telegram trên điện thoại của bạn để lấy mã xác thực 6 số.'
+                      : 'Mật mã chính xác. Vui lòng nhập mã xác thực OTP 6 số để hoàn tất đăng nhập.'}
+                  </p>
+                  <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                    <span>Thời hạn mã:</span>
+                    <span className={`font-bold ${mfaCountdown < 30 ? 'text-rose-500 animate-pulse' : 'text-sky-600 dark:text-sky-400'}`}>
+                      {Math.floor(mfaCountdown / 60)}:{(mfaCountdown % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-xs font-mono font-bold uppercase text-slate-400 mb-1.5">
-                    Mã Xác Thực 2 Bước (MFA Code)
+                    Mã Xác Thực 6 Số (MFA OTP)
                   </label>
                   <input
                     type="text"
@@ -226,19 +282,32 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     value={mfaCode}
                     onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="VD: 123456"
-                    className="w-full h-11 px-4 text-center tracking-widest font-mono text-lg font-bold rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/40"
+                    className="w-full h-12 px-4 text-center tracking-[0.4em] font-mono text-xl font-black rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/40"
                   />
                 </div>
-                <div className="text-right">
+
+                <div className="flex items-center justify-between text-xs pt-1">
                   <button
                     type="button"
                     onClick={() => {
                       setRequireMfa(false);
                       setMfaCode('');
+                      setMfaSessionId('');
+                      setAuthError('');
+                      setAuthNotice('');
                     }}
-                    className="text-xs text-primary-600 dark:text-primary-400 hover:underline cursor-pointer"
+                    className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer font-medium"
                   >
-                    ← Nhập lại mật mã chính
+                    ← Nhập lại mật mã
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isResendingMfa || mfaCountdown > 150}
+                    onClick={handleResendOtp}
+                    className="text-sky-600 dark:text-sky-400 hover:underline font-semibold disabled:opacity-40 disabled:no-underline cursor-pointer"
+                  >
+                    {isResendingMfa ? 'Đang gửi...' : 'Gửi lại mã OTP'}
                   </button>
                 </div>
               </div>
@@ -259,6 +328,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </div>
             )}
 
+            {authNotice && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>{authNotice}</span>
+              </p>
+            )}
+
             {authError && (
               <p className="text-xs text-rose-500 font-semibold flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -274,7 +350,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               disabled={isLoading}
               className="rounded-xl font-bold shadow-md shadow-primary-600/20"
             >
-              {isLoading ? 'Đang xác thực...' : requireMfa ? 'Xác Nhận Mã MFA ➔' : 'Truy Cập Quản Trị ➔'}
+              {isLoading ? 'Đang xác thực...' : requireMfa ? 'Xác Nhận Mã OTP ➔' : 'Truy Cập Quản Trị ➔'}
             </Button>
           </form>
 
