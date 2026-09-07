@@ -1,5 +1,5 @@
-// CarMate Service Worker v2.0
-const CACHE_NAME = 'carmate-shell-v2';
+// CarMate Service Worker v3.0
+const CACHE_NAME = 'carmate-shell-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -40,7 +40,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-While-Revalidate for app assets
+  // Network-First for HTML navigation to ensure users always get the freshest version
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate for static assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
@@ -53,12 +71,7 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => {
-          // Offline fallback
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-        });
+        .catch(() => null);
 
       return cachedResponse || fetchPromise;
     })
