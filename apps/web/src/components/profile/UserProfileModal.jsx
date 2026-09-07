@@ -113,6 +113,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
 
   // 1. State Thông tin cá nhân
   const [name, setName] = useState(() => currentUser?.name || '');
+  const [phone, setPhone] = useState(() => currentUser?.phone || '');
   const [email, setEmail] = useState(() => currentUser?.email || '');
   const [avatar, setAvatar] = useState(() => currentUser?.avatar || '');
   const [homeAddress, setHomeAddress] = useState(() => currentUser?.homeAddress || '');
@@ -266,6 +267,16 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
       return;
     }
 
+    // Kiểm tra số điện thoại nếu có nhập
+    if (phone.trim()) {
+      const rawP = phone.trim().replace(/\D/g, '');
+      if (rawP.length < 9 || rawP.length > 11) {
+        setFormError('Số điện thoại không đúng định dạng (yêu cầu 10 chữ số)');
+        setActiveTab('profile');
+        return;
+      }
+    }
+
     // Kiểm tra email nếu có nhập
     if (email.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -293,6 +304,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     // Đóng gói payload cập nhật
     const payload = {
       name: name.trim(),
+      phone: phone.trim() || undefined,
       email: email.trim() || null,
       avatar: avatar || null,
       trustScore: trustCalc.score,
@@ -476,7 +488,9 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     Đã xác thực
                   </span>
                 </div>
-                <p className="text-xs text-[#86868b] font-mono mt-0.5">{currentUser?.phone || '0984 883 750'}</p>
+                <p className="text-xs text-[#86868b] font-mono mt-0.5">
+                  {phone || currentUser?.phone || currentUser?.email || 'Chưa liên kết SĐT'}
+                </p>
 
                 {/* Nút hành động ảnh đại diện */}
                 <div className="flex items-center gap-2.5 mt-1.5">
@@ -521,6 +535,26 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
               <p className="text-[11px] text-[#86868b] mt-1">
                 Tên hiển thị giúp Người đi cùng hoặc Chủ xe nhận diện trên danh sách và vé xác nhận.
+              </p>
+            </div>
+
+            {/* Trường 1b: Số điện thoại liên hệ */}
+            <div>
+              <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
+                Số điện thoại liên hệ <span className="text-[11px] font-normal text-[#86868b]">(Gọi đón xe & Zalo)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Ví dụ: 0984 883 750"
+                  className="w-full h-10 pl-9 pr-3.5 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.12] text-xs text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all outline-none font-mono"
+                />
+                <Phone className="w-4 h-4 text-[#86868b] absolute left-3 top-3 pointer-events-none" />
+              </div>
+              <p className="text-[11px] text-[#86868b] mt-1">
+                Dùng để Chủ xe và Người đi cùng gọi điện hoặc gửi tin nhắn Zalo chốt điểm hẹn đón.
               </p>
             </div>
 

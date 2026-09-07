@@ -418,16 +418,19 @@ export async function googleLogin(req, res) {
  */
 export async function getMe(req, res) {
   try {
-    if (!req.user || !req.user.phone) {
+    if (!req.user || (!req.user.phone && !req.user.userId && !req.user.email)) {
       return res.status(401).json({ success: false, error: 'Chưa đăng nhập' });
     }
 
-    const user = getUserByPhone(req.user.phone);
+    const user =
+      (req.user.userId && getUserById(req.user.userId)) ||
+      (req.user.phone && getUserByPhone(req.user.phone)) ||
+      (req.user.email && getUserByEmail(req.user.email));
     if (!user) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy hồ sơ thành viên' });
     }
 
-    const myTrips = getTripsByPhone(user.phone);
+    const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
     const tripIds = myTrips.map((t) => t.id);
 
     return res.status(200).json({
@@ -447,16 +450,32 @@ export async function getMe(req, res) {
  */
 export async function updateProfile(req, res) {
   try {
-    if (!req.user || !req.user.phone) {
+    if (!req.user || (!req.user.phone && !req.user.userId && !req.user.email)) {
       return res.status(401).json({ success: false, error: 'Chưa đăng nhập' });
     }
 
-    const existingUser = getUserByPhone(req.user.phone);
+    const existingUser =
+      (req.user.userId && getUserById(req.user.userId)) ||
+      (req.user.phone && getUserByPhone(req.user.phone)) ||
+      (req.user.email && getUserByEmail(req.user.email));
     if (!existingUser) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy hồ sơ thành viên' });
     }
 
-    const { name, email, avatar, bio, homeAddress, workAddress, vehicle } = req.body || {};
+    const { name, email, phone, avatar, bio, homeAddress, workAddress, vehicle } = req.body || {};
+
+    // 0. Cập nhật số điện thoại nếu người dùng đăng ký qua Google bổ sung số điện thoại
+    if (phone !== undefined) {
+      const rawP = (phone || '').trim();
+      if (rawP) {
+        const cleanP = cleanPhoneNumber(rawP);
+        if (cleanP && cleanP.length >= 9) {
+          existingUser.phone = cleanP;
+        } else {
+          return res.status(400).json({ success: false, error: 'Số điện thoại không đúng định dạng' });
+        }
+      }
+    }
 
     // 1. Kiểm tra định dạng Email nếu người dùng cung cấp
     let cleanEmail = existingUser.email;
