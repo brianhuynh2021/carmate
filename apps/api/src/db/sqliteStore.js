@@ -1180,8 +1180,13 @@ export function getAnalyticsSummary() {
   for (const row of allSearchEvents) {
     try {
       const p = JSON.parse(row.properties || '{}');
-      const r = p.route || p.selectedRoute || (p.from && p.to ? `${p.from} - ${p.to}` : null);
-      if (r) {
+      let r = p.route || p.selectedRoute;
+      if (!r && p.from && p.to) r = `${p.from} - ${p.to}`;
+      else if (!r && (p.from || p.to)) r = p.from || p.to;
+      if (typeof r === 'string') {
+        r = r.trim().replace(/^-\s*|\s*-$/g, '');
+      }
+      if (r && r !== '-') {
         routeCounts[r] = (routeCounts[r] || 0) + 1;
       }
     } catch {
@@ -1209,8 +1214,12 @@ export function getAnalyticsSummary() {
 
   return {
     totalEvents: total,
-    funnel: funnelCounts,
+    funnel: {
+      ...funnelCounts,
+      open_zalo_chat: funnelCounts.open_zalo || 0
+    },
     topRoutes,
+    topSearchedRoutes: topRoutes,
     recentEvents
   };
 }

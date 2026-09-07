@@ -1018,10 +1018,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
               <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Lượt Chốt Qua Zalo</p>
               <p className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
-                {analyticsSummary?.funnel?.open_zalo_chat || 0}
+                {analyticsSummary?.funnel?.open_zalo ?? analyticsSummary?.funnel?.open_zalo_chat ?? 0}
               </p>
               <p className="text-[10.5px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                Tỷ lệ mở Zalo: {analyticsSummary?.funnel?.page_view ? ((analyticsSummary.funnel.open_zalo_chat / analyticsSummary.funnel.page_view) * 100).toFixed(1) : 0}%
+                Tỷ lệ mở Zalo: {(() => {
+                  const zaloCount = analyticsSummary?.funnel?.open_zalo ?? analyticsSummary?.funnel?.open_zalo_chat ?? 0;
+                  const pageViews = analyticsSummary?.funnel?.page_view || 0;
+                  return pageViews > 0 ? ((zaloCount / pageViews) * 100).toFixed(1) : '0';
+                })()}%
               </p>
             </div>
 
@@ -1059,7 +1063,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 { key: 'search_route', name: '2. Tìm Tuyến Xe (Search Route)', count: funnel.search_route || 0, desc: 'Khách gõ điểm đi / điểm đến tìm chuyến' },
                 { key: 'view_trip', name: '3. Xem Chi Tiết Vé (View Trip)', count: funnel.view_trip || 0, desc: 'Khách bấm xem chi tiết giá & thông tin bác tài' },
                 { key: 'initiate_booking', name: '4. Bấm Đặt Chỗ (Initiate Booking)', count: funnel.initiate_booking || 0, desc: 'Khách chọn số ghế & bấm tiếp tục' },
-                { key: 'open_zalo_chat', name: '5. Mở Chat Zalo (Open Zalo Chat)', count: funnel.open_zalo_chat || 0, desc: 'Khách chuyển sang app Zalo nhắn tin cho bác tài' },
+                { key: 'open_zalo', name: '5. Mở Chat Zalo (Open Zalo Chat)', count: (funnel.open_zalo ?? funnel.open_zalo_chat ?? 0), desc: 'Khách chuyển sang app Zalo nhắn tin cho bác tài' },
                 { key: 'driver_confirm', name: '6. Bác Tài Nhận Đón (Driver Confirmed)', count: funnel.driver_confirm || 0, desc: 'Bác tài bấm xác nhận nhận cuốc qua Magic Link' }
               ];
               const baseCount = Math.max(stages[0].count, 1);
@@ -1129,30 +1133,36 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 <span>Top Tuyến Đường Tìm Kiếm Nhiều Nhất</span>
               </h3>
 
-              {!analyticsSummary?.topSearchedRoutes || analyticsSummary.topSearchedRoutes.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-xs text-[#86868b]">
-                  Chưa có dữ liệu tìm kiếm tuyến. Khi khách gõ tìm xe trên trang chủ, dữ liệu sẽ tự động tổng hợp tại đây.
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {analyticsSummary.topSearchedRoutes.map((rt, rIdx) => (
-                    <div
-                      key={rIdx}
-                      className="p-3 rounded-xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[11px] font-bold flex items-center justify-center">
-                          {rIdx + 1}
-                        </span>
-                        <span className="text-xs font-bold text-[#1d1d1f] dark:text-white">{rt.route}</span>
-                      </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
-                        {rt.count} lượt
-                      </span>
+              {(() => {
+                const routesList = analyticsSummary?.topRoutes || analyticsSummary?.topSearchedRoutes || [];
+                if (!routesList || routesList.length === 0) {
+                  return (
+                    <div className="p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-xs text-[#86868b]">
+                      Chưa có dữ liệu tìm kiếm tuyến. Khi khách gõ tìm xe trên trang chủ, dữ liệu sẽ tự động tổng hợp tại đây.
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                }
+                return (
+                  <div className="space-y-2.5">
+                    {routesList.map((rt, rIdx) => (
+                      <div
+                        key={rIdx}
+                        className="p-3 rounded-xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[11px] font-bold flex items-center justify-center">
+                            {rIdx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-[#1d1d1f] dark:text-white">{rt.route}</span>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+                          {rt.count} lượt
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Dòng Sự Kiện Thời Gian Thực (Live Event Stream) */}
