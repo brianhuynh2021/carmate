@@ -115,7 +115,7 @@ export default function Header({
             <LogoMark className="w-7 h-7 sm:w-8 sm:h-8 group-hover:scale-105 transition-transform" />
             <div className="flex flex-col">
               <span className="font-display font-black text-lg sm:text-xl tracking-tight leading-none text-[#1d1d1f] dark:text-white">
-                Car<span className="text-[#0071e3]">Mate</span>
+                Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
               </span>
               <span className="text-[9.5px] sm:text-[10px] font-medium tracking-wide text-[#86868b] uppercase mt-0.5 hidden xs:inline">
                 Rideshare

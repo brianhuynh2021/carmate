@@ -23,8 +23,8 @@ export default function Logo({ size = 'md', tagline, onClick }) {
     >
       <LogoMark className={`${mark} transition-transform duration-200 group-hover:scale-105 shrink-0 shadow-xs`} />
       <div className="flex items-center gap-2">
-        <span className={`font-display font-black tracking-tight ${text} text-[#1d1d1f] leading-none`}>
-          Car<span className="text-[#0071e3]">Mate</span>
+        <span className={`font-display font-black tracking-tight ${text} text-[#1d1d1f] dark:text-white leading-none`}>
+          Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
         </span>
         {tagline && (
           <span className="hidden 2xl:inline-block text-[11px] font-medium text-[#86868b] whitespace-nowrap border-l border-black/[0.1] pl-2 leading-none">

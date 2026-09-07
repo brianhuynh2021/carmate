@@ -98,8 +98,8 @@ export default function Footer({ onNavigate, onOpenTerms }) {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <LogoMark className="w-6 h-6" />
-              <span className="font-display font-black text-sm tracking-tight text-[#1d1d1f]">
-                Car<span className="text-[#0071e3]">Mate</span>
+              <span className="font-display font-black text-sm tracking-tight text-[#1d1d1f] dark:text-white">
+                Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
               </span>
             </div>
             <span className="text-black/[0.15]">·</span>
