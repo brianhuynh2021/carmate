@@ -9,11 +9,18 @@ export function useZaloReentry({ isOpsPortal, onNavigateTab } = {}) {
   const [driverConfirmCode, setDriverConfirmCode] = useState(null);
   const [pendingZaloBooking, setPendingZaloBooking] = useState(null);
 
-  // 1. Hỗ trợ truy cập nhanh /#admin và Magic Link xác nhận /#confirm-[code]
+  // 1. Hỗ trợ truy cập nhanh /#admin, /admin và Magic Link xác nhận /#confirm-[code]
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash || '';
-      if (hash === '#admin' || isOpsPortal) {
+      const path = window.location.pathname || '';
+      if (
+        hash === '#admin' ||
+        path === '/admin' ||
+        path.startsWith('/admin') ||
+        window.location.search.includes('portal=ops') ||
+        isOpsPortal
+      ) {
         onNavigateTab?.('admin');
       } else if (hash.startsWith('#confirm-')) {
         const code = hash.replace('#confirm-', '').trim();
@@ -24,7 +31,11 @@ export function useZaloReentry({ isOpsPortal, onNavigateTab } = {}) {
     };
     handleHash();
     window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
+    window.addEventListener('popstate', handleHash);
+    return () => {
+      window.removeEventListener('hashchange', handleHash);
+      window.removeEventListener('popstate', handleHash);
+    };
   }, [isOpsPortal, onNavigateTab]);
 
   // 2. Lắng nghe sự kiện Page Visibility API khi hành khách quay lại CarMate sau khi mở app Zalo

@@ -13,19 +13,41 @@ import {
 } from '../db/sqliteStore.js';
 
 const JWT_SECRET = getJwtSecret();
-const ADMIN_PASSCODE = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY;
-
 const isProduction = process.env.NODE_ENV === 'production';
 
-if (!ADMIN_PASSCODE || ADMIN_PASSCODE.trim() === '') {
-  if (isProduction) {
-    throw new Error('FATAL SECURITY ERROR: CARMATE_ADMIN_PASSCODE must be configured in production!');
-  }
-  console.warn('[Security Notice] CARMATE_ADMIN_PASSCODE chưa cấu hình trong dev. Sử dụng mã dev tạm thời.');
+function getEffectiveAdminPasscode() {
+  const code = process.env.CARMATE_ADMIN_PASSCODE || process.env.ADMIN_SECRET_KEY;
+  if (code && code.trim() !== '') return code.trim();
+  return isProduction ? '' : 'admin123';
 }
 
-const EFFECTIVE_ADMIN_PASSCODE = ADMIN_PASSCODE || (!isProduction ? 'admin123' : '');
-const ADMIN_MFA_CODE = process.env.CARMATE_ADMIN_MFA_CODE || '';
+function verifyAdminPasscode(inputPasscode) {
+  if (typeof inputPasscode !== 'string') return false;
+  const trimmed = inputPasscode.trim();
+  const configuredPasscode = getEffectiveAdminPasscode();
+
+  if (configuredPasscode) {
+    const inputBuffer = Buffer.from(trimmed);
+    const targetBuffer = Buffer.from(configuredPasscode);
+    if (inputBuffer.length === targetBuffer.length && crypto.timingSafeEqual(inputBuffer, targetBuffer)) {
+      return true;
+    }
+  }
+
+  // Trong môi trường development: Chấp nhận cả 'admin123' lẫn 'AdminCarmate2026!' để developer test local thuận tiện
+  if (!isProduction) {
+    const devPasscodes = ['admin123', 'AdminCarmate2026!'];
+    for (const devPass of devPasscodes) {
+      const inputBuffer = Buffer.from(trimmed);
+      const devBuf = Buffer.from(devPass);
+      if (inputBuffer.length === devBuf.length && crypto.timingSafeEqual(inputBuffer, devBuf)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 // Bộ nhớ đệm giới hạn tần suất đăng nhập (Chống Brute-Force mật mã Admin)
 const failedAttemptsMap = new Map(); // ip -> { count, lockedUntil }
@@ -77,14 +99,7 @@ export function adminAuth(req, res) {
     const { passcode, mfaCode } = req.body || {};
 
     // 2. Kiểm tra mật mã chính bằng crypto.timingSafeEqual chống Timing Attack
-    let isPasscodeValid = false;
-    if (typeof passcode === 'string' && EFFECTIVE_ADMIN_PASSCODE) {
-      const inputBuffer = Buffer.from(passcode);
-      const targetBuffer = Buffer.from(EFFECTIVE_ADMIN_PASSCODE);
-      if (inputBuffer.length === targetBuffer.length) {
-        isPasscodeValid = crypto.timingSafeEqual(inputBuffer, targetBuffer);
-      }
-    }
+    const isPasscodeValid = verifyAdminPasscode(passcode);
 
     if (!isPasscodeValid) {
       const currentFailures = (tracker?.count || 0) + 1;
@@ -104,7 +119,8 @@ export function adminAuth(req, res) {
     }
 
     // 3. Kiểm tra MFA nếu được kích hoạt
-    if (ADMIN_MFA_CODE) {
+    const adminMfa = process.env.CARMATE_ADMIN_MFA_CODE || '';
+    if (adminMfa) {
       if (!mfaCode) {
         return res.status(200).json({
           success: true,
@@ -112,7 +128,7 @@ export function adminAuth(req, res) {
           message: 'Mật mã chính xác. Vui lòng nhập mã xác thực bảo vệ 2 lớp (MFA/OTP).'
         });
       }
-      if (mfaCode.trim() !== ADMIN_MFA_CODE.trim()) {
+      if (mfaCode.trim() !== adminMfa.trim()) {
         return res.status(401).json({
           success: false,
           error: 'Mã xác thực 2 lớp (MFA) không chính xác.'

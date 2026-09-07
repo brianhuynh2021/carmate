@@ -85,7 +85,9 @@ export default function App() {
         window.location.hostname.startsWith('ops.') ||
         window.location.hostname.startsWith('admin.') ||
         window.location.search.includes('portal=ops') ||
-        window.location.hash === '#admin'
+        window.location.hash === '#admin' ||
+        window.location.pathname === '/admin' ||
+        window.location.pathname.startsWith('/admin')
       ) {
         return 'admin';
       }
@@ -797,6 +799,8 @@ export default function App() {
               onExitAdmin={() => {
                 if (window.location.hash === '#admin') {
                   window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                } else if (window.location.pathname.startsWith('/admin')) {
+                  window.history.replaceState(null, '', '/' + window.location.search);
                 }
                 setActiveTab('market');
               }}
