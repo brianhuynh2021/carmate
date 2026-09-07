@@ -9,13 +9,14 @@ export const ROUTE_BENCHMARKS = {
     region: 'north',
     distanceKm: 105,
     fuelCost: 160000, // ~7.5L xăng RON 95
-    botFee: 190000,    // Vé cao tốc Hà Nội - Hải Phòng (Nút Cổ Linh - Đình Vũ)
+    botFee: 190000, // Vé cao tốc Hà Nội - Hải Phòng (Nút Cổ Linh - Đình Vũ)
     suggestedRate: 150000,
     minSafePrice: 100000,
     maxSafePrice: 280000,
     marketLimoRef: '220.000đ - 250.000đ',
     traditionalBusRef: '150.000đ - 180.000đ',
-    calculationBasis: '105km cao tốc 5B Hà Nội - Hải Phòng. Xăng ~160k + vé cao tốc 190k = 350.000đ chi phí toàn xe. Ghép 2-3 người chia sẻ ~130k - 150k/ghế.'
+    calculationBasis:
+      '105km cao tốc 5B Hà Nội - Hải Phòng. Xăng ~160k + vé cao tốc 190k = 350.000đ chi phí toàn xe. Ghép 2-3 người chia sẻ ~130k - 150k/ghế.'
   },
   'Tuyến CT Pháp Vân - Ninh Bình': {
     name: 'Hà Nội ⇄ Ninh Bình / Nam Định (~95km)',
@@ -24,7 +25,7 @@ export const ROUTE_BENCHMARKS = {
     region: 'north',
     distanceKm: 95,
     fuelCost: 145000,
-    botFee: 110000,    // Cao tốc Pháp Vân - Cầu Giẽ - Cao Bồ
+    botFee: 110000, // Cao tốc Pháp Vân - Cầu Giẽ - Cao Bồ
     suggestedRate: 130000,
     minSafePrice: 80000,
     maxSafePrice: 250000,
@@ -41,7 +42,7 @@ export const ROUTE_BENCHMARKS = {
     region: 'central',
     distanceKm: 100,
     fuelCost: 150000,
-    botFee: 110000,    // Vé qua hầm Hải Vân + Trạm Phú Bài
+    botFee: 110000, // Vé qua hầm Hải Vân + Trạm Phú Bài
     suggestedRate: 140000,
     minSafePrice: 90000,
     maxSafePrice: 260000,
@@ -58,13 +59,14 @@ export const ROUTE_BENCHMARKS = {
     region: 'south',
     distanceKm: 140,
     fuelCost: 210000, // ~9L xăng RON 95
-    botFee: 70000,    // Trạm Lái Thiêu, Suối Giữa, Bàu Bàng, Tân Lập
+    botFee: 70000, // Trạm Lái Thiêu, Suối Giữa, Bàu Bàng, Tân Lập
     suggestedRate: 180000,
     minSafePrice: 100000,
     maxSafePrice: 350000,
     marketLimoRef: '240.000đ - 260.000đ',
     traditionalBusRef: '200.000đ - 220.000đ',
-    calculationBasis: '140km x 1.500đ xăng/km + 70.000đ vé cầu đường = 280.000đ chi phí xe. Ghép 2-3 người chia sẻ ~150k - 180k/ghế.'
+    calculationBasis:
+      '140km x 1.500đ xăng/km + 70.000đ vé cầu đường = 280.000đ chi phí xe. Ghép 2-3 người chia sẻ ~150k - 180k/ghế.'
   },
   'Tuyến QL51': {
     name: 'Vũng Tàu / Bà Rịa ⇄ Sài Gòn (Cao Tốc Long Thành ~100km)',
@@ -73,13 +75,14 @@ export const ROUTE_BENCHMARKS = {
     region: 'south',
     distanceKm: 100,
     fuelCost: 150000,
-    botFee: 98000,    // Trạm Cao tốc Long Thành - Dầu Giây + QL51
+    botFee: 98000, // Trạm Cao tốc Long Thành - Dầu Giây + QL51
     suggestedRate: 160000,
     minSafePrice: 90000,
     maxSafePrice: 300000,
     marketLimoRef: '220.000đ - 260.000đ',
     traditionalBusRef: '180.000đ',
-    calculationBasis: '100km x 1.500đ xăng/km + 98.000đ vé cao tốc = 248.000đ chi phí xe. Ghép chia sẻ ~140k - 160k/ghế.'
+    calculationBasis:
+      '100km x 1.500đ xăng/km + 98.000đ vé cao tốc = 248.000đ chi phí xe. Ghép chia sẻ ~140k - 160k/ghế.'
   },
   'Tuyến QL20': {
     name: 'Bảo Lộc / Đà Lạt (Lâm Đồng) ⇄ Sài Gòn (~180-300km)',

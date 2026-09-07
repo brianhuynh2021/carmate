@@ -2,7 +2,15 @@ import React from 'react';
 import { Check } from 'lucide-react';
 
 /** Filter chip theo chuẩn Cursor / Linear micro-interaction */
-export default function Chip({ active = false, onClick, icon: Icon, children, showCheck = true, className = '', ...rest }) {
+export default function Chip({
+  active = false,
+  onClick,
+  icon: Icon,
+  children,
+  showCheck = true,
+  className = '',
+  ...rest
+}) {
   return (
     <button
       type="button"
@@ -15,7 +23,11 @@ export default function Chip({ active = false, onClick, icon: Icon, children, sh
       } ${className}`}
       {...rest}
     >
-      {active && showCheck ? <Check className="w-3.5 h-3.5 text-white" strokeWidth={2.5} /> : Icon ? <Icon className="w-3.5 h-3.5 text-[#86868b]" /> : null}
+      {active && showCheck ? (
+        <Check className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+      ) : Icon ? (
+        <Icon className="w-3.5 h-3.5 text-[#86868b]" />
+      ) : null}
       <span>{children}</span>
     </button>
   );
@@ -47,13 +59,7 @@ export function Segmented({ options, value, onChange, fullWidth = false, size = 
                 : 'text-[#515154] hover:text-[#1d1d1f] hover:bg-white/60'
             }`}
           >
-            {Icon && (
-              <Icon
-                className={`w-3.5 h-3.5 shrink-0 ${
-                  active ? 'text-[#0071e3]' : 'text-[#86868b]'
-                }`}
-              />
-            )}
+            {Icon && <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />}
             <span className="truncate">{opt.label}</span>
           </button>
         );

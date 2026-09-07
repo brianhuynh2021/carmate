@@ -73,11 +73,11 @@ export default function App() {
   }, []);
 
   // Nhận diện Subdomain chuyên dụng: ops.carmate.vn / admin.carmate.vn / ?portal=ops
-  const isOpsPortal = typeof window !== 'undefined' && (
-    window.location.hostname.startsWith('ops.') ||
-    window.location.hostname.startsWith('admin.') ||
-    window.location.search.includes('portal=ops')
-  );
+  const isOpsPortal =
+    typeof window !== 'undefined' &&
+    (window.location.hostname.startsWith('ops.') ||
+      window.location.hostname.startsWith('admin.') ||
+      window.location.search.includes('portal=ops'));
 
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -99,12 +99,7 @@ export default function App() {
   }, [activeTab]);
 
   // Magic Link 1-Chạm Bác tài & Apple Re-entry Card Khách quay lại web
-  const {
-    driverConfirmCode,
-    setDriverConfirmCode,
-    pendingZaloBooking,
-    setPendingZaloBooking
-  } = useZaloReentry({
+  const { driverConfirmCode, setDriverConfirmCode, pendingZaloBooking, setPendingZaloBooking } = useZaloReentry({
     isOpsPortal,
     onNavigateTab: setActiveTab
   });
@@ -163,45 +158,48 @@ export default function App() {
   } = useAppModals();
 
   // Helper tính số lượng bài đăng của tôi
-  const updateMyTripsCount = useCallback((user = currentUser, offers = null, requests = null) => {
-    try {
-      let storedIds = [];
-      if (!user) {
-        if (localStorage.getItem('carmate_my_trip_ids')) {
-          localStorage.removeItem('carmate_my_trip_ids');
+  const updateMyTripsCount = useCallback(
+    (user = currentUser, offers = null, requests = null) => {
+      try {
+        let storedIds = [];
+        if (!user) {
+          if (localStorage.getItem('carmate_my_trip_ids')) {
+            localStorage.removeItem('carmate_my_trip_ids');
+          }
+          storedIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
+        } else {
+          const userKey = `carmate_my_trip_ids_${user.id || user.phone}`;
+          storedIds = JSON.parse(localStorage.getItem(userKey) || localStorage.getItem('carmate_my_trip_ids') || '[]');
         }
-        storedIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
-      } else {
-        const userKey = `carmate_my_trip_ids_${user.id || user.phone}`;
-        storedIds = JSON.parse(localStorage.getItem(userKey) || localStorage.getItem('carmate_my_trip_ids') || '[]');
-      }
-      if (!Array.isArray(storedIds)) storedIds = [];
+        if (!Array.isArray(storedIds)) storedIds = [];
 
-      const all = [...(offers || []), ...(requests || [])];
-      const userPhoneClean = user?.phone ? String(user.phone).replace(/\D/g, '') : '';
+        const all = [...(offers || []), ...(requests || [])];
+        const userPhoneClean = user?.phone ? String(user.phone).replace(/\D/g, '') : '';
 
-      const validTrips = all.filter((t) => {
-        if (user) {
-          if (t.userId && t.userId === user.id) return true;
-          if (userPhoneClean && t.phoneReal && String(t.phoneReal).replace(/\D/g, '') === userPhoneClean) return true;
+        const validTrips = all.filter((t) => {
+          if (user) {
+            if (t.userId && t.userId === user.id) return true;
+            if (userPhoneClean && t.phoneReal && String(t.phoneReal).replace(/\D/g, '') === userPhoneClean) return true;
+            return storedIds.includes(t.id);
+          }
           return storedIds.includes(t.id);
-        }
-        return storedIds.includes(t.id);
-      });
+        });
 
-      if (all.length > 0 && storedIds.length > 0) {
-        const cleanIds = storedIds.filter(id => all.some(t => t.id === id));
-        if (cleanIds.length !== storedIds.length) {
-          const storageKey = user ? `carmate_my_trip_ids_${user.id || user.phone}` : 'carmate_guest_trip_ids';
-          localStorage.setItem(storageKey, JSON.stringify(cleanIds));
+        if (all.length > 0 && storedIds.length > 0) {
+          const cleanIds = storedIds.filter((id) => all.some((t) => t.id === id));
+          if (cleanIds.length !== storedIds.length) {
+            const storageKey = user ? `carmate_my_trip_ids_${user.id || user.phone}` : 'carmate_guest_trip_ids';
+            localStorage.setItem(storageKey, JSON.stringify(cleanIds));
+          }
         }
+
+        setMyTripsCount(validTrips.length);
+      } catch {
+        setMyTripsCount(0);
       }
-
-      setMyTripsCount(validTrips.length);
-    } catch {
-      setMyTripsCount(0);
-    }
-  }, [currentUser]);
+    },
+    [currentUser]
+  );
 
   // Hook quản lý Dữ liệu chuyến đi & Escrow Bookings
   const {
@@ -275,11 +273,11 @@ export default function App() {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key?.toLowerCase() === 'k') {
         e.preventDefault();
-        setShowAiModal(prev => !prev);
+        setShowAiModal((prev) => !prev);
       }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key?.toLowerCase() === 'a') {
         e.preventDefault();
-        setActiveTab(prev => (prev === 'admin' ? 'market' : 'admin'));
+        setActiveTab((prev) => (prev === 'admin' ? 'market' : 'admin'));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -370,8 +368,12 @@ export default function App() {
     if (currentUser) {
       const uId = currentUser.id;
       const uPhone = currentUser.phone ? String(currentUser.phone).replace(/\D/g, '') : '';
-      setDriverOffers(prev => prev.filter(t => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone)));
-      setPassengerRequests(prev => prev.filter(t => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone)));
+      setDriverOffers((prev) =>
+        prev.filter((t) => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone))
+      );
+      setPassengerRequests((prev) =>
+        prev.filter((t) => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone))
+      );
     }
     handleLogout();
   };
@@ -404,7 +406,10 @@ export default function App() {
   const handleFooterNavigate = (key) => {
     const tabs = { market: 'market', match: 'match', post: 'post', admin: 'admin' };
     if (tabs[key]) return setActiveTab(tabs[key]);
-    if (key === 'benchmark') { setActiveTab('market'); return setShowBenchmarkModal(true); }
+    if (key === 'benchmark') {
+      setActiveTab('market');
+      return setShowBenchmarkModal(true);
+    }
     if (key === 'trust' || key === 'safety') {
       setSelectedDriverForTrust({
         publicName: 'Nguyễn Anh Tuấn',
@@ -418,11 +423,12 @@ export default function App() {
       });
       return;
     }
-    if (['policy', 'terms', 'privacy', 'dispute', 'community', 'help', 'faq', 'report'].includes(key)) return setShowPolicyModal(true);
+    if (['policy', 'terms', 'privacy', 'dispute', 'community', 'help', 'faq', 'report'].includes(key))
+      return setShowPolicyModal(true);
     setActiveTab('market');
   };
 
-  const activeBookedCount = bookedEscrows.filter(b => b.status === 'zalo_active' || b.status === 'delayed').length;
+  const activeBookedCount = bookedEscrows.filter((b) => b.status === 'zalo_active' || b.status === 'delayed').length;
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
 
   return (
@@ -470,7 +476,11 @@ export default function App() {
                     value={marketViewMode}
                     onChange={setMarketViewMode}
                     options={[
-                      { value: 'all', label: `Tất cả (${driverOffers.length + passengerRequests.length})`, icon: LayoutGrid },
+                      {
+                        value: 'all',
+                        label: `Tất cả (${driverOffers.length + passengerRequests.length})`,
+                        icon: LayoutGrid
+                      },
                       { value: 'drivers', label: `Chủ xe (${driverOffers.length})`, icon: Car },
                       { value: 'passengers', label: `Khách (${passengerRequests.length})`, icon: Users }
                     ]}
@@ -501,14 +511,26 @@ export default function App() {
                     >
                       <option value="all">Tất cả khung giờ</option>
                       {TIME_SLOTS.map((slot) => (
-                        <option key={slot.id} value={slot.id}>{slot.short}</option>
+                        <option key={slot.id} value={slot.id}>
+                          {slot.short}
+                        </option>
                       ))}
                     </select>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
                   </div>
 
-                  {(selectedTimeSlot !== 'all' || marketViewMode !== 'all' || selectedCarCategory !== 'all' || searchKeyword || searchFrom || searchTo) && (
-                    <Button variant="ghost" size="xs" onClick={resetFilters} className="text-xs font-bold text-[#0071e3] hover:text-[#0077ed]">
+                  {(selectedTimeSlot !== 'all' ||
+                    marketViewMode !== 'all' ||
+                    selectedCarCategory !== 'all' ||
+                    searchKeyword ||
+                    searchFrom ||
+                    searchTo) && (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={resetFilters}
+                      className="text-xs font-bold text-[#0071e3] hover:text-[#0077ed]"
+                    >
                       {t('market.resetFilters')}
                     </Button>
                   )}
@@ -627,7 +649,9 @@ export default function App() {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[#107c41]"></span>
                     </span>
-                    <span>Hiển thị {paginatedMarketItems.length} / {displayedMarketItems.length} chuyến</span>
+                    <span>
+                      Hiển thị {paginatedMarketItems.length} / {displayedMarketItems.length} chuyến
+                    </span>
                   </div>
                 </div>
 
@@ -675,8 +699,12 @@ export default function App() {
                           onClick={() => setVisibleCount((prev) => prev + 9)}
                           className="px-6 py-3 rounded-full bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-800 font-semibold text-xs transition-all shadow-xs hover:shadow-sm active:scale-95 cursor-pointer inline-flex items-center gap-2"
                         >
-                          <span>Xem thêm {Math.min(9, displayedMarketItems.length - visibleCount)} chuyến tiếp theo</span>
-                          <span className="text-slate-400 font-normal">({displayedMarketItems.length - visibleCount} chuyến còn lại)</span>
+                          <span>
+                            Xem thêm {Math.min(9, displayedMarketItems.length - visibleCount)} chuyến tiếp theo
+                          </span>
+                          <span className="text-slate-400 font-normal">
+                            ({displayedMarketItems.length - visibleCount} chuyến còn lại)
+                          </span>
                           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                       </div>
@@ -690,7 +718,12 @@ export default function App() {
 
         {activeTab === 'match' && (
           <div className={`${container} py-8`}>
-            <MatchRadarView driverOffers={driverOffers} passengerRequests={passengerRequests} onBook={handleInitiateBook} onViewTrustProfile={setSelectedDriverForTrust} />
+            <MatchRadarView
+              driverOffers={driverOffers}
+              passengerRequests={passengerRequests}
+              onBook={handleInitiateBook}
+              onViewTrustProfile={setSelectedDriverForTrust}
+            />
           </div>
         )}
 
@@ -698,16 +731,22 @@ export default function App() {
           <div className={`${container} py-8`}>
             {!currentUser ? (
               <PostTripAuthGuard
-                onOpenAuth={() => openAuthWithContext({
-                  title: 'Đăng Nhập Để Tạo Chuyến Xe',
-                  subtitle: 'Xác thực tài khoản chính chủ để đăng bài & kết nối khách an toàn',
-                  contextNotice: 'Đăng nhập chính chủ để tạo chuyến xe và quản lý khách ghép',
-                  pendingTab: 'post'
-                })}
+                onOpenAuth={() =>
+                  openAuthWithContext({
+                    title: 'Đăng Nhập Để Tạo Chuyến Xe',
+                    subtitle: 'Xác thực tài khoản chính chủ để đăng bài & kết nối khách an toàn',
+                    contextNotice: 'Đăng nhập chính chủ để tạo chuyến xe và quản lý khách ghép',
+                    pendingTab: 'post'
+                  })
+                }
                 onBackToMarket={() => setActiveTab('market')}
               />
             ) : (
-              <PostTripForm onSubmit={handlePostTrip} currentUser={currentUser} onOpenAuth={() => openAuthWithContext()} />
+              <PostTripForm
+                onSubmit={handlePostTrip}
+                currentUser={currentUser}
+                onOpenAuth={() => openAuthWithContext()}
+              />
             )}
           </div>
         )}
@@ -789,19 +828,22 @@ export default function App() {
         />
       )}
       {ticketToShare && (
-        <TicketShareModal trip={ticketToShare} onClose={() => setTicketToShare(null)} onShowToast={showToast} onViewInMarket={handleViewTripInMarket} />
-      )}
-      {editingTrip && (
-        <EditTripModal
-          trip={editingTrip}
-          onClose={() => setEditingTrip(null)}
-          onSave={handleEditTrip}
+        <TicketShareModal
+          trip={ticketToShare}
+          onClose={() => setTicketToShare(null)}
+          onShowToast={showToast}
+          onViewInMarket={handleViewTripInMarket}
         />
       )}
+      {editingTrip && <EditTripModal trip={editingTrip} onClose={() => setEditingTrip(null)} onSave={handleEditTrip} />}
       {showPolicyModal && <PolicyModal onClose={() => setShowPolicyModal(false)} />}
       {showTermsModal && <TermsModal onClose={() => setShowTermsModal(false)} />}
       {cancelRecord && (
-        <CancelModal record={cancelRecord} onClose={() => setCancelRecord(null)} onConfirmCancel={handleConfirmCancel} />
+        <CancelModal
+          record={cancelRecord}
+          onClose={() => setCancelRecord(null)}
+          onConfirmCancel={handleConfirmCancel}
+        />
       )}
       {delayRecord && (
         <DelayModal record={delayRecord} onClose={() => setDelayRecord(null)} onSendDelay={handleSendDelay} />

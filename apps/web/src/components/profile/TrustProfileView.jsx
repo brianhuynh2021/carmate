@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShieldCheck, BadgeCheck, Share2, FileText, Check,
-  ChevronRight, Heart, Users, CigaretteOff, Star, Languages, Car
+  ShieldCheck,
+  BadgeCheck,
+  Share2,
+  FileText,
+  Check,
+  ChevronRight,
+  Heart,
+  Users,
+  CigaretteOff,
+  Star,
+  Languages,
+  Car
 } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import { LanguageToggle } from '../common/Header.jsx';
@@ -85,7 +95,9 @@ export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
     }
 
     fetchTrust();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleShare = () => {
@@ -141,13 +153,23 @@ export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
 
       {/* Passport card — Phong cách Google Wallet Pass */}
       <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#0c4a6e] via-[#075985] to-[#0e1e36] text-white p-6 sm:p-8 shadow-xl border border-white/10">
-        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 blur-3xl pointer-events-none" aria-hidden="true" />
-        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" aria-hidden="true" />
+        <div
+          className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 blur-3xl pointer-events-none"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-amber-400/10 blur-3xl pointer-events-none"
+          aria-hidden="true"
+        />
 
         <div className="relative flex items-start justify-between gap-6 flex-wrap">
           <div className="flex items-center gap-4">
             <span className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md text-white font-display text-xl font-bold inline-flex items-center justify-center shrink-0 border border-white/30 shadow-sm">
-              {profile.name.split(' ').slice(-2).map((w) => w[0]).join('')}
+              {profile.name
+                .split(' ')
+                .slice(-2)
+                .map((w) => w[0])
+                .join('')}
             </span>
             <div>
               <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -163,7 +185,8 @@ export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wider text-sky-200">{t('profile.trustScore')}</p>
             <p className="font-display text-4xl font-extrabold tabular tracking-tight leading-none mt-1">
-              {profile.trustScore}<span className="text-base font-medium text-sky-200">/100</span>
+              {profile.trustScore}
+              <span className="text-base font-medium text-sky-200">/100</span>
             </p>
           </div>
         </div>
@@ -172,7 +195,9 @@ export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
           {stats.map((s) => (
             <div key={s.label}>
               <dt className="text-xs text-sky-200">{s.label}</dt>
-              <dd className={`text-sm font-semibold mt-0.5 truncate inline-flex items-center gap-1 ${s.mono ? 'tabular' : ''}`}>
+              <dd
+                className={`text-sm font-semibold mt-0.5 truncate inline-flex items-center gap-1 ${s.mono ? 'tabular' : ''}`}
+              >
                 {s.star && <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />}
                 {s.value}
               </dd>
@@ -207,13 +232,18 @@ export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
 
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {profile.verifications.map((v) => (
-            <li key={v.key} className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-[#151c2e]/60">
+            <li
+              key={v.key}
+              className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-[#151c2e]/60"
+            >
               <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 inline-flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                 <Check className="w-3.5 h-3.5" strokeWidth={3} />
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">{v.label}</p>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">✓ Đã xác thực thành công</p>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+                  ✓ Đã xác thực thành công
+                </p>
               </div>
             </li>
           ))}
@@ -226,7 +256,10 @@ export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 mb-5">{t('profile.etiquetteDesc')}</p>
         <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {etiquettes.map((item, idx) => (
-            <li key={item.title} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-750">
+            <li
+              key={item.title}
+              className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-750"
+            >
               <IconTile icon={ETIQUETTE_ICONS[idx]} tone="primary" size="sm" />
               <p className="text-sm font-bold text-slate-900 dark:text-white mt-3">{item.title}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">{item.desc}</p>
@@ -237,10 +270,24 @@ export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
 
       {/* Cài Đặt Ứng Dụng & Quy Chế */}
       <section className="surface overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-        <h3 className="text-base font-bold text-slate-900 dark:text-white px-5 pt-5 pb-3">{t('profile.settingsTitle')}</h3>
+        <h3 className="text-base font-bold text-slate-900 dark:text-white px-5 pt-5 pb-3">
+          {t('profile.settingsTitle')}
+        </h3>
         <div className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
-          <SettingRow icon={FileText} tone="primary" title={t('profile.policyTitle')} description={t('profile.policyDesc')} onClick={onOpenPolicy} />
-          <SettingRow icon={Languages} tone="neutral" title={t('profile.langTitle')} description={t('profile.langDesc')} action={<LanguageToggle size="sm" />} />
+          <SettingRow
+            icon={FileText}
+            tone="primary"
+            title={t('profile.policyTitle')}
+            description={t('profile.policyDesc')}
+            onClick={onOpenPolicy}
+          />
+          <SettingRow
+            icon={Languages}
+            tone="neutral"
+            title={t('profile.langTitle')}
+            description={t('profile.langDesc')}
+            action={<LanguageToggle size="sm" />}
+          />
         </div>
       </section>
     </div>

@@ -28,15 +28,18 @@ export default function useAppModals() {
   const [pendingBookingTrip, setPendingBookingTrip] = useState(null);
   const [pendingPostTrip, setPendingPostTrip] = useState(null);
 
-  const openAuthWithContext = useCallback(({
-    title = 'Đăng Nhập CarMate',
-    subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
-    contextNotice = null,
-    pendingTab = null
-  } = {}) => {
-    setAuthModalConfig({ title, subtitle, contextNotice, pendingTab });
-    setShowAuthModal(true);
-  }, []);
+  const openAuthWithContext = useCallback(
+    ({
+      title = 'Đăng Nhập CarMate',
+      subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
+      contextNotice = null,
+      pendingTab = null
+    } = {}) => {
+      setAuthModalConfig({ title, subtitle, contextNotice, pendingTab });
+      setShowAuthModal(true);
+    },
+    []
+  );
 
   const closeAllModals = useCallback(() => {
     setSelectedItemForEscrow(null);

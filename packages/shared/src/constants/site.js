@@ -15,7 +15,10 @@ export const SITE_INFO = {
   contactPerson: 'Mr. Huỳnh Nguyễn',
   hotline: '0984 883 750',
   phoneRaw: '0984883750',
-  hotlineHours: { vi: 'Hỗ trợ Tel/Zalo: 0984 883 750 - Mr. Huỳnh Nguyễn', en: 'Tel/Zalo: 0984 883 750 - Mr. Huynh Nguyen' },
+  hotlineHours: {
+    vi: 'Hỗ trợ Tel/Zalo: 0984 883 750 - Mr. Huỳnh Nguyễn',
+    en: 'Tel/Zalo: 0984 883 750 - Mr. Huynh Nguyen'
+  },
   email: 'hotro@carmate.vn',
   zaloOA: 'https://zalo.me/0984883750',
   facebook: 'https://www.facebook.com/profile.php?id=61593891160413',

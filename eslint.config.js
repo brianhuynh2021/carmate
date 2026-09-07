@@ -4,13 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
   {
-    ignores: [
-      '**/node_modules/**',
-      '**/dist/**',
-      'archive/**',
-      'apps/web/public/sw.js',
-      'apps/api/data/**'
-    ]
+    ignores: ['**/node_modules/**', '**/dist/**', 'archive/**', 'apps/web/public/sw.js', 'apps/api/data/**']
   },
   js.configs.recommended,
   // Backend (Node)

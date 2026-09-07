@@ -29,9 +29,7 @@ export default class ErrorBoundary extends React.Component {
             <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 inline-flex items-center justify-center">
               <AlertTriangle className="w-7 h-7" />
             </div>
-            <h2 className="text-xl font-bold font-display text-slate-900 dark:text-white">
-              Đã xảy ra sự cố hiển thị
-            </h2>
+            <h2 className="text-xl font-bold font-display text-slate-900 dark:text-white">Đã xảy ra sự cố hiển thị</h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
               Hệ thống đã tự động ghi nhận nhật ký để khắc phục. Vui lòng bấm tải lại để tiếp tục sử dụng.
             </p>

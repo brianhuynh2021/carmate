@@ -292,13 +292,13 @@ export async function suggestLocationsHandler(req, res) {
   }
 
   const cleanQ = removeAccents(query);
-  const rawTokens = cleanQ.split(/[\s,.-]+/).filter(t => t.length >= 2);
+  const rawTokens = cleanQ.split(/[\s,.-]+/).filter((t) => t.length >= 2);
 
   // 1. Tìm kiếm trong kho Curated với chấm điểm độ liên quan chuẩn xác (Strict Relevance Scoring)
-  const localMatches = CURATED_LOCATIONS.map(item => {
+  const localMatches = CURATED_LOCATIONS.map((item) => {
     const normName = removeAccents(item.name);
     const normDetail = removeAccents(item.detail);
-    const normKeywords = item.keywords.map(k => removeAccents(k)).join(' ');
+    const normKeywords = item.keywords.map((k) => removeAccents(k)).join(' ');
     const allWords = (normName + ' ' + normDetail + ' ' + normKeywords).split(/[\s,.-]+/);
 
     let score = 0;
@@ -308,7 +308,7 @@ export async function suggestLocationsHandler(req, res) {
 
     if (rawTokens.length >= 2) {
       // Khi gõ từ 2 từ trở lên (VD: "Gia Kiệm"): Tất cả các từ bắt buộc phải xuất hiện
-      const matchedCount = rawTokens.filter(t => allWords.some(w => w === t || w.startsWith(t))).length;
+      const matchedCount = rawTokens.filter((t) => allWords.some((w) => w === t || w.startsWith(t))).length;
       if (matchedCount === rawTokens.length) {
         score += 80;
       } else if (!normName.includes(cleanQ) && !normKeywords.includes(cleanQ)) {
@@ -317,14 +317,14 @@ export async function suggestLocationsHandler(req, res) {
       }
     } else if (rawTokens.length === 1) {
       const t = rawTokens[0];
-      if (allWords.some(w => w === t)) score += 40;
-      else if (allWords.some(w => w.startsWith(t))) score += 20;
+      if (allWords.some((w) => w === t)) score += 40;
+      else if (allWords.some((w) => w.startsWith(t))) score += 20;
     }
 
     return { ...item, score };
   })
-  .filter(item => item.score > 0)
-  .sort((a, b) => b.score - a.score);
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score);
 
   // 2. Gọi Photon Geocoding nếu truy vấn dài hơn 2 ký tự
   let onlineMatches = [];
@@ -336,7 +336,7 @@ export async function suggestLocationsHandler(req, res) {
       const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8`;
       const response = await fetch(photonUrl, {
         signal: controller.signal,
-        headers: { 'Accept': 'application/json' }
+        headers: { Accept: 'application/json' }
       });
       clearTimeout(timeoutId);
 
@@ -344,7 +344,7 @@ export async function suggestLocationsHandler(req, res) {
         const json = await response.json();
         if (Array.isArray(json.features)) {
           onlineMatches = json.features
-            .map(f => {
+            .map((f) => {
               const p = f.properties || {};
               const name = p.name || p.street || p.city || query;
               const parts = [
@@ -367,7 +367,7 @@ export async function suggestLocationsHandler(req, res) {
               let score = 50;
               if (normOnlineName.includes(cleanQ)) score += 200;
               else if (normOnlineDetail.includes(cleanQ)) score += 80;
-              else if (rawTokens.every(t => normOnlineName.includes(t) || normOnlineDetail.includes(t))) score += 70;
+              else if (rawTokens.every((t) => normOnlineName.includes(t) || normOnlineDetail.includes(t))) score += 70;
 
               return {
                 name,
@@ -380,10 +380,17 @@ export async function suggestLocationsHandler(req, res) {
                 countryCode: (p.countrycode || '').toLowerCase()
               };
             })
-            .filter(item => {
+            .filter((item) => {
               // Lọc ưu tiên địa điểm Việt Nam
               const d = removeAccents(item.detail);
-              return item.countryCode === 'vn' || d.includes('viet nam') || d.includes('dong nai') || d.includes('ho chi minh') || d.includes('ha noi') || d.includes('binh phuoc');
+              return (
+                item.countryCode === 'vn' ||
+                d.includes('viet nam') ||
+                d.includes('dong nai') ||
+                d.includes('ho chi minh') ||
+                d.includes('ha noi') ||
+                d.includes('binh phuoc')
+              );
             });
         }
       }

@@ -13,10 +13,7 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c * 10) / 10;
 }
@@ -181,12 +178,32 @@ export const ROUTE_CORRIDORS = {
       'Chợ Bến Thành / Quận 1'
     ],
     waypoints: [
-      { name: 'Bến xe Vũng Tàu', sub: 'Xuất phát TP. Vũng Tàu', lat: 10.3541, lng: 107.0851, isStart: true, type: 'pickup' },
+      {
+        name: 'Bến xe Vũng Tàu',
+        sub: 'Xuất phát TP. Vũng Tàu',
+        lat: 10.3541,
+        lng: 107.0851,
+        isStart: true,
+        type: 'pickup'
+      },
       { name: 'TP. Bà Rịa', sub: 'Cổng chào Bà Rịa QL51', lat: 10.4952, lng: 107.1685, type: 'waypoint' },
       { name: 'Thị xã Phú Mỹ', sub: 'Dọc QL51 cổng KCN', lat: 10.6015, lng: 107.0542, type: 'waypoint' },
       { name: 'Trạm dừng chân Long Thành', sub: 'Nút vào Cao tốc', lat: 10.7412, lng: 106.9582, type: 'waypoint' },
-      { name: 'Nút giao Vành Đai 2 / Mai Chí Thọ', sub: 'Đầu TP. Thủ Đức', lat: 10.7925, lng: 106.7725, type: 'dropoff' },
-      { name: 'Ngã tư Hàng Xanh / Q1', sub: 'Điểm cuối TP.HCM', lat: 10.8012, lng: 106.7114, isEnd: true, type: 'dropoff' }
+      {
+        name: 'Nút giao Vành Đai 2 / Mai Chí Thọ',
+        sub: 'Đầu TP. Thủ Đức',
+        lat: 10.7925,
+        lng: 106.7725,
+        type: 'dropoff'
+      },
+      {
+        name: 'Ngã tư Hàng Xanh / Q1',
+        sub: 'Điểm cuối TP.HCM',
+        lat: 10.8012,
+        lng: 106.7114,
+        isEnd: true,
+        type: 'dropoff'
+      }
     ]
   },
 
@@ -214,17 +231,20 @@ export const ROUTE_CORRIDORS = {
       'Định Quán / Tân Phú (Đồng Nai)',
       'Ngã 3 Dầu Giây (Cao tốc)'
     ],
-    popularDropoffs: [
-      'Suối Tiên (TP. Thủ Đức)',
-      'Ngã tư Hàng Xanh (Bình Thạnh)',
-      'Sân bay Tân Sơn Nhất'
-    ],
+    popularDropoffs: ['Suối Tiên (TP. Thủ Đức)', 'Ngã tư Hàng Xanh (Bình Thạnh)', 'Sân bay Tân Sơn Nhất'],
     waypoints: [
       { name: 'Bến xe Đà Lạt', sub: 'Đầu tuyến Lâm Đồng', lat: 11.9254, lng: 108.4412, isStart: true, type: 'pickup' },
       { name: 'Bến xe Bảo Lộc', sub: 'Trần Phú, TP. Bảo Lộc', lat: 11.5425, lng: 107.8085, type: 'waypoint' },
       { name: 'Madagui / Đạ Huoai', sub: 'Chân đèo Bảo Lộc', lat: 11.4015, lng: 107.5452, type: 'waypoint' },
       { name: 'Ngã 3 Dầu Giây', sub: 'Vào cao tốc Long Thành', lat: 10.9652, lng: 107.1354, type: 'waypoint' },
-      { name: 'Ngã tư Hàng Xanh (TP.HCM)', sub: 'Điểm trả trung tâm', lat: 10.8012, lng: 106.7114, isEnd: true, type: 'dropoff' }
+      {
+        name: 'Ngã tư Hàng Xanh (TP.HCM)',
+        sub: 'Điểm trả trung tâm',
+        lat: 10.8012,
+        lng: 106.7114,
+        isEnd: true,
+        type: 'dropoff'
+      }
     ]
   },
 
@@ -251,16 +271,32 @@ export const ROUTE_CORRIDORS = {
       'Hàm Tân / La Gi (Bình Thuận)',
       'Xuân Lộc (Đồng Nai)'
     ],
-    popularDropoffs: [
-      'Bến xe Miền Đông mới (Thủ Đức)',
-      'Ngã tư Hàng Xanh (Bình Thạnh)',
-      'Quận 1 / Bến Thành'
-    ],
+    popularDropoffs: ['Bến xe Miền Đông mới (Thủ Đức)', 'Ngã tư Hàng Xanh (Bình Thạnh)', 'Quận 1 / Bến Thành'],
     waypoints: [
-      { name: 'Vòng xoay Suối Cát (Phan Thiết)', sub: 'Đầu cao tốc Phan Thiết', lat: 10.9215, lng: 108.0752, isStart: true, type: 'pickup' },
-      { name: 'Nút giao Ba Bàu (Hàm Thuận Nam)', sub: 'Điểm đón cao tốc', lat: 10.8845, lng: 107.9852, type: 'waypoint' },
+      {
+        name: 'Vòng xoay Suối Cát (Phan Thiết)',
+        sub: 'Đầu cao tốc Phan Thiết',
+        lat: 10.9215,
+        lng: 108.0752,
+        isStart: true,
+        type: 'pickup'
+      },
+      {
+        name: 'Nút giao Ba Bàu (Hàm Thuận Nam)',
+        sub: 'Điểm đón cao tốc',
+        lat: 10.8845,
+        lng: 107.9852,
+        type: 'waypoint'
+      },
       { name: 'Nút giao Dầu Giây', sub: 'Chuyển tiếp cao tốc LT-DG', lat: 10.9652, lng: 107.1354, type: 'waypoint' },
-      { name: 'Bến xe Miền Đông mới', sub: 'Điểm trả TP.HCM', lat: 10.8814, lng: 106.8291, isEnd: true, type: 'dropoff' }
+      {
+        name: 'Bến xe Miền Đông mới',
+        sub: 'Điểm trả TP.HCM',
+        lat: 10.8814,
+        lng: 106.8291,
+        isEnd: true,
+        type: 'dropoff'
+      }
     ]
   },
 
@@ -288,17 +324,27 @@ export const ROUTE_CORRIDORS = {
       'KCN Trảng Bàng / KCN Linh Trung 3',
       'Củ Chi (Cầu vượt Củ Chi / Bến xe Củ Chi)'
     ],
-    popularDropoffs: [
-      'Bến xe An Sương (Quận 12)',
-      'Ngã 4 Bảy Hiền (Tân Bình)',
-      'Quận 10 / Bệnh viện 115'
-    ],
+    popularDropoffs: ['Bến xe An Sương (Quận 12)', 'Ngã 4 Bảy Hiền (Tân Bình)', 'Quận 10 / Bệnh viện 115'],
     waypoints: [
-      { name: 'Bến xe Tây Ninh', sub: 'Trung tâm TP. Tây Ninh', lat: 11.3092, lng: 106.0984, isStart: true, type: 'pickup' },
+      {
+        name: 'Bến xe Tây Ninh',
+        sub: 'Trung tâm TP. Tây Ninh',
+        lat: 11.3092,
+        lng: 106.0984,
+        isStart: true,
+        type: 'pickup'
+      },
       { name: 'Ngã 3 Gò Dầu', sub: 'QL22 giao QL22B', lat: 11.1685, lng: 106.2652, type: 'waypoint' },
       { name: 'Ngã 3 Trảng Bàng', sub: 'Dọc QL22', lat: 11.0345, lng: 106.3685, type: 'waypoint' },
       { name: 'Bến xe Củ Chi', sub: 'Cửa ngõ TP.HCM', lat: 10.9752, lng: 106.4952, type: 'waypoint' },
-      { name: 'Bến xe An Sương (Q12)', sub: 'Điểm kết thúc tuyến QL22', lat: 10.8462, lng: 106.6134, isEnd: true, type: 'dropoff' }
+      {
+        name: 'Bến xe An Sương (Q12)',
+        sub: 'Điểm kết thúc tuyến QL22',
+        lat: 10.8462,
+        lng: 106.6134,
+        isEnd: true,
+        type: 'dropoff'
+      }
     ]
   }
 };
@@ -321,31 +367,31 @@ export const PROVINCE_COORDINATES = {
   'lạng sơn': { name: 'Lạng Sơn', lat: 21.8537, lng: 106.7624 },
   'thanh hóa': { name: 'Thanh Hóa', lat: 19.8067, lng: 105.7852 },
   'nghệ an': { name: 'Nghệ An', lat: 18.6796, lng: 105.6813 },
-  'vinh': { name: 'Vinh', lat: 18.6796, lng: 105.6813 },
+  vinh: { name: 'Vinh', lat: 18.6796, lng: 105.6813 },
   'hà tĩnh': { name: 'Hà Tĩnh', lat: 18.3559, lng: 105.9059 },
   'đà nẵng': { name: 'Đà Nẵng', lat: 16.0544, lng: 108.2022 },
-  'huế': { name: 'Huế', lat: 16.4637, lng: 107.5909 },
+  huế: { name: 'Huế', lat: 16.4637, lng: 107.5909 },
   'quảng nam': { name: 'Quảng Nam', lat: 15.5651, lng: 108.4735 },
   'quảng ngãi': { name: 'Quảng Ngãi', lat: 15.1205, lng: 108.7923 },
-  'bình định': { name: 'Bình Định', lat: 13.7820, lng: 109.2197 },
-  'quy nhơn': { name: 'Quy Nhơn', lat: 13.7820, lng: 109.2197 },
+  'bình định': { name: 'Bình Định', lat: 13.782, lng: 109.2197 },
+  'quy nhơn': { name: 'Quy Nhơn', lat: 13.782, lng: 109.2197 },
   'phú yên': { name: 'Phú Yên', lat: 13.0882, lng: 109.3135 },
   'tuy hòa': { name: 'Tuy Hòa', lat: 13.0882, lng: 109.3135 },
   'khánh hòa': { name: 'Khánh Hòa', lat: 12.2388, lng: 109.1967 },
   'nha trang': { name: 'Nha Trang', lat: 12.2388, lng: 109.1967 },
   'ninh thuận': { name: 'Ninh Thuận', lat: 11.5653, lng: 108.9959 },
   'phan rang': { name: 'Phan Rang', lat: 11.5653, lng: 108.9959 },
-  'bình thuận': { name: 'Bình Thuận', lat: 10.9333, lng: 108.1000 },
-  'phan thiết': { name: 'Phan Thiết', lat: 10.9333, lng: 108.1000 },
+  'bình thuận': { name: 'Bình Thuận', lat: 10.9333, lng: 108.1 },
+  'phan thiết': { name: 'Phan Thiết', lat: 10.9333, lng: 108.1 },
   'lâm đồng': { name: 'Lâm Đồng', lat: 11.9404, lng: 108.4583 },
   'đà lạt': { name: 'Đà Lạt', lat: 11.9404, lng: 108.4583 },
-  'bảo lộc': { name: 'Bảo Lộc', lat: 11.5476, lng: 107.8090 },
-  'đắk lắk': { name: 'Đắk Lắk', lat: 12.6667, lng: 108.0500 },
-  'buôn ma thuột': { name: 'Buôn Ma Thuột', lat: 12.6667, lng: 108.0500 },
-  'gia lai': { name: 'Gia Lai', lat: 13.9833, lng: 108.0000 },
-  'pleiku': { name: 'Pleiku', lat: 13.9833, lng: 108.0000 },
-  'kon tum': { name: 'Kon Tum', lat: 14.3500, lng: 108.0000 },
-  'đắk nông': { name: 'Đắk Nông', lat: 12.0000, lng: 107.6833 },
+  'bảo lộc': { name: 'Bảo Lộc', lat: 11.5476, lng: 107.809 },
+  'đắk lắk': { name: 'Đắk Lắk', lat: 12.6667, lng: 108.05 },
+  'buôn ma thuột': { name: 'Buôn Ma Thuột', lat: 12.6667, lng: 108.05 },
+  'gia lai': { name: 'Gia Lai', lat: 13.9833, lng: 108.0 },
+  pleiku: { name: 'Pleiku', lat: 13.9833, lng: 108.0 },
+  'kon tum': { name: 'Kon Tum', lat: 14.35, lng: 108.0 },
+  'đắk nông': { name: 'Đắk Nông', lat: 12.0, lng: 107.6833 },
   'sài gòn': { name: 'TP.HCM', lat: 10.8231, lng: 106.6297 },
   'tp.hcm': { name: 'TP.HCM', lat: 10.8231, lng: 106.6297 },
   'tp hcm': { name: 'TP.HCM', lat: 10.8231, lng: 106.6297 },
@@ -355,23 +401,23 @@ export const PROVINCE_COORDINATES = {
   'bình phước': { name: 'Bình Phước', lat: 11.7512, lng: 106.7234 },
   'đồng xoài': { name: 'Đồng Xoài', lat: 11.5333, lng: 106.8833 },
   'lộc ninh': { name: 'Lộc Ninh', lat: 11.8385, lng: 106.5925 },
-  'bình long': { name: 'Bình Long', lat: 11.6500, lng: 106.6000 },
-  'chơn thành': { name: 'Chơn Thành', lat: 11.4500, lng: 106.6333 },
+  'bình long': { name: 'Bình Long', lat: 11.65, lng: 106.6 },
+  'chơn thành': { name: 'Chơn Thành', lat: 11.45, lng: 106.6333 },
   'đồng nai': { name: 'Đồng Nai', lat: 10.9575, lng: 106.8427 },
   'biên hòa': { name: 'Biên Hòa', lat: 10.9575, lng: 106.8427 },
-  'vũng tàu': { name: 'Bà Rịa - Vũng Tàu', lat: 10.3460, lng: 107.0843 },
+  'vũng tàu': { name: 'Bà Rịa - Vũng Tàu', lat: 10.346, lng: 107.0843 },
   'bà rịa': { name: 'Bà Rịa', lat: 10.4962, lng: 107.1685 },
   'tây ninh': { name: 'Tây Ninh', lat: 11.3092, lng: 106.0984 },
-  'long an': { name: 'Long An', lat: 10.5333, lng: 106.4000 },
-  'tiền giang': { name: 'Tiền Giang', lat: 10.3500, lng: 106.3500 },
-  'mỹ tho': { name: 'Mỹ Tho', lat: 10.3500, lng: 106.3500 },
+  'long an': { name: 'Long An', lat: 10.5333, lng: 106.4 },
+  'tiền giang': { name: 'Tiền Giang', lat: 10.35, lng: 106.35 },
+  'mỹ tho': { name: 'Mỹ Tho', lat: 10.35, lng: 106.35 },
   'bến tre': { name: 'Bến Tre', lat: 10.2333, lng: 106.3833 },
-  'vĩnh long': { name: 'Vĩnh Long', lat: 10.2500, lng: 105.9667 },
+  'vĩnh long': { name: 'Vĩnh Long', lat: 10.25, lng: 105.9667 },
   'cần thơ': { name: 'Cần Thơ', lat: 10.0452, lng: 105.7469 },
   'an giang': { name: 'An Giang', lat: 10.3833, lng: 105.4167 },
-  'đồng tháp': { name: 'Đồng Tháp', lat: 10.4500, lng: 105.6333 },
+  'đồng tháp': { name: 'Đồng Tháp', lat: 10.45, lng: 105.6333 },
   'kiên giang': { name: 'Kiên Giang', lat: 10.0167, lng: 105.0833 },
-  'cà mau': { name: 'Cà Mau', lat: 9.1769, lng: 105.1500 }
+  'cà mau': { name: 'Cà Mau', lat: 9.1769, lng: 105.15 }
 };
 
 export function findLocationCoords(locationStr) {
@@ -427,8 +473,15 @@ export function findNearestWaypoint(userLat, userLng, routeCategoryOrTrip) {
     const fromCoords = findLocationCoords(trip.from);
     const toCoords = findLocationCoords(trip.to);
     const candidates = [];
-    if (fromCoords) candidates.push({ name: `Điểm đón (${trip.from})`, sub: 'Khu vực xuất phát', lat: fromCoords.lat, lng: fromCoords.lng });
-    if (toCoords) candidates.push({ name: `Điểm trả (${trip.to})`, sub: 'Khu vực đích đến', lat: toCoords.lat, lng: toCoords.lng });
+    if (fromCoords)
+      candidates.push({
+        name: `Điểm đón (${trip.from})`,
+        sub: 'Khu vực xuất phát',
+        lat: fromCoords.lat,
+        lng: fromCoords.lng
+      });
+    if (toCoords)
+      candidates.push({ name: `Điểm trả (${trip.to})`, sub: 'Khu vực đích đến', lat: toCoords.lat, lng: toCoords.lng });
 
     let nearest = null;
     let minDistance = Infinity;
@@ -465,7 +518,9 @@ export function findNearestWaypoint(userLat, userLng, routeCategoryOrTrip) {
  */
 export function isGoogleMapsUrl(str) {
   if (!str || typeof str !== 'string') return false;
-  return /^(https?:\/\/)?(www\.)?(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(str.trim());
+  return /^(https?:\/\/)?(www\.)?(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(
+    str.trim()
+  );
 }
 
 /**
@@ -531,7 +586,7 @@ export function parseLocation(str) {
 export function getCorridorDisplay(item, fromParsed, toParsed) {
   const extractTerritory = (parsed, raw) => {
     const text = ((parsed.sub || '') + ' ' + (parsed.main || '') + ' ' + (raw || '')).toLowerCase();
-    
+
     // Tuyến Sài Gòn / TP.HCM
     if (/sài gòn|tp\.hcm|hồ chí minh|hàng xanh|miền đông|thủ đức|quận\s*\d+|tân bình|bình tân|an phú/i.test(text)) {
       return { city: 'Sài Gòn', code: 'SGN', region: 'TP. Hồ Chí Minh', point: parsed.main || 'TP.HCM' };
@@ -587,59 +642,82 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
 
     // Bình Phước & Các Huyện Trục QL13, QL14
     if (/bù đốp/i.test(text)) return { city: 'Bù Đốp', code: 'BĐ', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/lộc ninh/i.test(text)) return { city: 'Lộc Ninh', code: 'LN', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/bình long/i.test(text)) return { city: 'Bình Long', code: 'BL', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/tân khai|hớn quản/i.test(text)) return { city: 'Tân Khai', code: 'TK', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/chơn thành/i.test(text)) return { city: 'Chơn Thành', code: 'CT', region: 'Bình Phước (QL13)', point: parsed.main };
-    if (/đồng xoài/i.test(text)) return { city: 'Đồng Xoài', code: 'ĐX', region: 'Bình Phước (QL14)', point: parsed.main };
-    if (/phước long/i.test(text)) return { city: 'Phước Long', code: 'PL', region: 'Bình Phước (ĐT741)', point: parsed.main };
+    if (/lộc ninh/i.test(text))
+      return { city: 'Lộc Ninh', code: 'LN', region: 'Bình Phước (QL13)', point: parsed.main };
+    if (/bình long/i.test(text))
+      return { city: 'Bình Long', code: 'BL', region: 'Bình Phước (QL13)', point: parsed.main };
+    if (/tân khai|hớn quản/i.test(text))
+      return { city: 'Tân Khai', code: 'TK', region: 'Bình Phước (QL13)', point: parsed.main };
+    if (/chơn thành/i.test(text))
+      return { city: 'Chơn Thành', code: 'CT', region: 'Bình Phước (QL13)', point: parsed.main };
+    if (/đồng xoài/i.test(text))
+      return { city: 'Đồng Xoài', code: 'ĐX', region: 'Bình Phước (QL14)', point: parsed.main };
+    if (/phước long/i.test(text))
+      return { city: 'Phước Long', code: 'PL', region: 'Bình Phước (ĐT741)', point: parsed.main };
     if (/bù đăng/i.test(text)) return { city: 'Bù Đăng', code: 'BĐG', region: 'Bình Phước (QL14)', point: parsed.main };
-    if (/bình phước/i.test(text)) return { city: 'Bình Phước', code: 'BP', region: 'Tỉnh Bình Phước', point: parsed.main };
+    if (/bình phước/i.test(text))
+      return { city: 'Bình Phước', code: 'BP', region: 'Tỉnh Bình Phước', point: parsed.main };
 
     // Đồng Nai & Trục QL20
     if (/gia kiệm/i.test(text)) return { city: 'Gia Kiệm', code: 'GK', region: 'Đồng Nai (QL20)', point: parsed.main };
-    if (/dầu giây/i.test(text)) return { city: 'Dầu Giây', code: 'DG', region: 'Đồng Nai (QL1A/20)', point: parsed.main };
-    if (/long khánh/i.test(text)) return { city: 'Long Khánh', code: 'LK', region: 'Tỉnh Đồng Nai', point: parsed.main };
-    if (/định quán/i.test(text)) return { city: 'Định Quán', code: 'ĐQ', region: 'Đồng Nai (QL20)', point: parsed.main };
-    if (/biên hòa|biên hoà/i.test(text)) return { city: 'Biên Hòa', code: 'BH', region: 'Tỉnh Đồng Nai', point: parsed.main };
+    if (/dầu giây/i.test(text))
+      return { city: 'Dầu Giây', code: 'DG', region: 'Đồng Nai (QL1A/20)', point: parsed.main };
+    if (/long khánh/i.test(text))
+      return { city: 'Long Khánh', code: 'LK', region: 'Tỉnh Đồng Nai', point: parsed.main };
+    if (/định quán/i.test(text))
+      return { city: 'Định Quán', code: 'ĐQ', region: 'Đồng Nai (QL20)', point: parsed.main };
+    if (/biên hòa|biên hoà/i.test(text))
+      return { city: 'Biên Hòa', code: 'BH', region: 'Tỉnh Đồng Nai', point: parsed.main };
     if (/đồng nai/i.test(text)) return { city: 'Đồng Nai', code: 'ĐN', region: 'Tỉnh Đồng Nai', point: parsed.main };
 
     // Tây Nguyên & Lâm Đồng
     if (/đà lạt/i.test(text)) return { city: 'Đà Lạt', code: 'DLI', region: 'Lâm Đồng (QL20)', point: parsed.main };
     if (/bảo lộc/i.test(text)) return { city: 'Bảo Lộc', code: 'BL', region: 'Lâm Đồng (QL20)', point: parsed.main };
-    if (/buôn ma thuột|đắk lắk/i.test(text)) return { city: 'B.M.Thuột', code: 'BMT', region: 'Đắk Lắk (QL14)', point: parsed.main };
-    if (/đắk nông|gia nghĩa/i.test(text)) return { city: 'Gia Nghĩa', code: 'GN', region: 'Đắk Nông (QL14)', point: parsed.main };
-    if (/pleiku|gia lai/i.test(text)) return { city: 'Pleiku', code: 'PXU', region: 'Gia Lai (QL14)', point: parsed.main };
+    if (/buôn ma thuột|đắk lắk/i.test(text))
+      return { city: 'B.M.Thuột', code: 'BMT', region: 'Đắk Lắk (QL14)', point: parsed.main };
+    if (/đắk nông|gia nghĩa/i.test(text))
+      return { city: 'Gia Nghĩa', code: 'GN', region: 'Đắk Nông (QL14)', point: parsed.main };
+    if (/pleiku|gia lai/i.test(text))
+      return { city: 'Pleiku', code: 'PXU', region: 'Gia Lai (QL14)', point: parsed.main };
     if (/kon tum/i.test(text)) return { city: 'Kon Tum', code: 'KT', region: 'Tỉnh Kon Tum', point: parsed.main };
 
     // Bình Dương
-    if (/thủ dầu một/i.test(text)) return { city: 'Thủ Dầu Một', code: 'TDM', region: 'Bình Dương (QL13)', point: parsed.main };
+    if (/thủ dầu một/i.test(text))
+      return { city: 'Thủ Dầu Một', code: 'TDM', region: 'Bình Dương (QL13)', point: parsed.main };
     if (/bến cát/i.test(text)) return { city: 'Bến Cát', code: 'BC', region: 'Bình Dương (QL13)', point: parsed.main };
-    if (/bình dương/i.test(text)) return { city: 'Bình Dương', code: 'BD', region: 'Tỉnh Bình Dương', point: parsed.main };
+    if (/bình dương/i.test(text))
+      return { city: 'Bình Dương', code: 'BD', region: 'Tỉnh Bình Dương', point: parsed.main };
 
     // Tây Ninh & Bà Rịa - Vũng Tàu
-    if (/vũng tàu/i.test(text)) return { city: 'Vũng Tàu', code: 'VT', region: 'Bà Rịa - Vũng Tàu', point: parsed.main };
+    if (/vũng tàu/i.test(text))
+      return { city: 'Vũng Tàu', code: 'VT', region: 'Bà Rịa - Vũng Tàu', point: parsed.main };
     if (/bà rịa/i.test(text)) return { city: 'Bà Rịa', code: 'BR', region: 'Bà Rịa - Vũng Tàu', point: parsed.main };
     if (/tây ninh/i.test(text)) return { city: 'Tây Ninh', code: 'TN', region: 'Tỉnh Tây Ninh', point: parsed.main };
 
     // Đồng Bằng Sông Cửu Long (Miền Tây)
     if (/bến tre/i.test(text)) return { city: 'Bến Tre', code: 'BTR', region: 'Bến Tre (QL60)', point: parsed.main };
-    if (/mỹ tho|tiền giang/i.test(text)) return { city: 'Mỹ Tho', code: 'MT', region: 'Tiền Giang (QL1A)', point: parsed.main };
+    if (/mỹ tho|tiền giang/i.test(text))
+      return { city: 'Mỹ Tho', code: 'MT', region: 'Tiền Giang (QL1A)', point: parsed.main };
     if (/cần thơ/i.test(text)) return { city: 'Cần Thơ', code: 'VCA', region: 'TP. Cần Thơ', point: parsed.main };
     if (/cà mau/i.test(text)) return { city: 'Cà Mau', code: 'CAH', region: 'Tỉnh Cà Mau', point: parsed.main };
-    if (/long xuyên|an giang/i.test(text)) return { city: 'Long Xuyên', code: 'LX', region: 'An Giang', point: parsed.main };
-    if (/rạch giá|kiên giang/i.test(text)) return { city: 'Rạch Giá', code: 'VKG', region: 'Kiên Giang', point: parsed.main };
+    if (/long xuyên|an giang/i.test(text))
+      return { city: 'Long Xuyên', code: 'LX', region: 'An Giang', point: parsed.main };
+    if (/rạch giá|kiên giang/i.test(text))
+      return { city: 'Rạch Giá', code: 'VKG', region: 'Kiên Giang', point: parsed.main };
     if (/phú quốc/i.test(text)) return { city: 'Phú Quốc', code: 'PQC', region: 'Kiên Giang', point: parsed.main };
 
     // Rút gọn địa danh fallback THÔNG MINH (Tuyệt đối KHÔNG cắt đôi từ ghép tiếng Việt)
     let cleanWord = (parsed.main || raw || '')
-      .replace(/^(Cây xăng|Bến xe|Ngã 4|Ngã tư|Ngã ba|Ngã 3|Trạm thu phí|KCN|Chợ|Cổng chào|UBND|BV|Bệnh viện|Trường|Công viên)\s+/i, '')
+      .replace(
+        /^(Cây xăng|Bến xe|Ngã 4|Ngã tư|Ngã ba|Ngã 3|Trạm thu phí|KCN|Chợ|Cổng chào|UBND|BV|Bệnh viện|Trường|Công viên)\s+/i,
+        ''
+      )
       .replace(/\(.*?\)/g, '')
       .trim();
 
     if (cleanWord.includes('/')) cleanWord = cleanWord.split('/')[0].trim();
     if (cleanWord.includes('-')) cleanWord = cleanWord.split('-')[0].trim();
-    
+
     const words = cleanWord.split(/\s+/).filter(Boolean);
     let displayCity = words.length > 2 ? words.slice(0, 2).join(' ') : cleanWord;
     if (!displayCity) displayCity = 'Điểm đón';
@@ -647,18 +725,30 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
     // Tạo mã code 3 chữ cái chuẩn IATA từ các chữ cái đầu
     let code = 'LOT';
     if (words.length >= 2) {
-      const w1 = words[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 1).toUpperCase();
-      const w2 = words[1].normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 2).toUpperCase();
+      const w1 = words[0]
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .slice(0, 1)
+        .toUpperCase();
+      const w2 = words[1]
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .slice(0, 2)
+        .toUpperCase();
       code = (w1 + w2).slice(0, 3);
     } else if (words.length === 1 && words[0]) {
-      code = words[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 3).toUpperCase();
+      code = words[0]
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .slice(0, 3)
+        .toUpperCase();
     }
 
-    return { 
-      city: displayCity, 
-      code, 
-      region: parsed.sub || item.hometown || 'Tuyến kết nối', 
-      point: parsed.main || cleanWord 
+    return {
+      city: displayCity,
+      code,
+      region: parsed.sub || item.hometown || 'Tuyến kết nối',
+      point: parsed.main || cleanWord
     };
   };
 
@@ -681,4 +771,3 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
 
   return { fromInfo, toInfo };
 }
-

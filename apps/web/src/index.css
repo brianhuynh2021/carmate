@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Dark mode điều khiển bằng class .dark trên <html> (không phụ thuộc hệ điều hành) */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -9,8 +9,12 @@
    Precision Apple Typography (#1d1d1f), and Apple Signature Blue (#0071e3)
    ──────────────────────────────────────────────────────────── */
 @theme {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Plus Jakarta Sans", "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Plus Jakarta Sans", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', 'Plus Jakarta Sans', 'Inter', 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-display:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', 'Plus Jakarta Sans', 'Inter', 'Helvetica Neue',
+    Arial, sans-serif;
 
   /* Primary (Apple Blue & Deep Navy Accent) */
   --color-primary-50: #f0f7ff;
@@ -57,7 +61,7 @@
 
   body {
     font-family: var(--font-sans);
-    font-feature-settings: "cv11", "ss01", "calt";
+    font-feature-settings: 'cv11', 'ss01', 'calt';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-size: 14.5px;
@@ -67,14 +71,21 @@
     color: #0f172a;
   }
 
-  h1, h2, h3, h4, .font-display {
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
     font-family: var(--font-display);
     letter-spacing: -0.028em;
     text-wrap: balance;
     color: #1d1d1f;
   }
 
-  button, input, select, textarea {
+  button,
+  input,
+  select,
+  textarea {
     font: inherit;
     letter-spacing: inherit;
   }
@@ -100,22 +111,36 @@
 }
 
 @layer utilities {
-  .tabular { font-variant-numeric: tabular-nums lining-nums; }
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 
   /* Apple Precision Craft Surface (Card & Container) */
   .surface {
     background-color: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.07);
     border-radius: 1rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), 0 12px 28px rgba(0, 0, 0, 0.04);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.03),
+      0 12px 28px rgba(0, 0, 0, 0.04);
   }
   .surface-hover {
-    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms ease;
+    transition:
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 200ms ease;
   }
   .surface-hover:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 16px 36px rgba(0, 0, 0, 0.05);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.06),
+      0 16px 36px rgba(0, 0, 0, 0.05);
     transform: translateY(-2px);
     border-color: rgba(0, 0, 0, 0.14);
   }
@@ -144,26 +169,86 @@
 }
 
 /* Scrollbar mượt mà */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.5); }
-
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes scale-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
-@keyframes shimmer-sweep {
-  0% { transform: translateX(-150%) skewX(-20deg); opacity: 0; }
-  10% { opacity: 1; }
-  45% { transform: translateX(180%) skewX(-20deg); opacity: 1; }
-  46%, 100% { transform: translateX(180%) skewX(-20deg); opacity: 0; }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
 }
 
-.anim-fade-in { animation: fade-in 220ms ease-out both; }
-.anim-slide-up { animation: slide-up 240ms cubic-bezier(0.2, 0, 0, 1) both; }
-.anim-scale-in { animation: scale-in 200ms cubic-bezier(0.2, 0, 0, 1) both; }
-.animate-shimmer-sweep { animation: shimmer-sweep 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  45% {
+    transform: translateX(180%) skewX(-20deg);
+    opacity: 1;
+  }
+  46%,
+  100% {
+    transform: translateX(180%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+.anim-fade-in {
+  animation: fade-in 220ms ease-out both;
+}
+.anim-slide-up {
+  animation: slide-up 240ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.anim-scale-in {
+  animation: scale-in 200ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.animate-shimmer-sweep {
+  animation: shimmer-sweep 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

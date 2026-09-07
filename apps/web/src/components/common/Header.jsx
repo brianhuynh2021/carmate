@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Compass, Sparkles, PlusCircle, Clock, ShieldCheck, FileText, Globe, Car, User, LogOut, ChevronDown, HelpCircle, Trash2 } from 'lucide-react';
+import {
+  Compass,
+  Sparkles,
+  PlusCircle,
+  Clock,
+  ShieldCheck,
+  FileText,
+  Globe,
+  Car,
+  User,
+  LogOut,
+  ChevronDown,
+  HelpCircle,
+  Trash2
+} from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Logo from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
@@ -45,7 +59,10 @@ export default function Header({
     { id: 'booked', label: t('nav.booked'), icon: Clock, badge: bookedCount }
   ];
 
-  const isMac = typeof window !== 'undefined' && typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent || navigator.platform || '');
+  const isMac =
+    typeof window !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent || navigator.platform || '');
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -81,14 +98,13 @@ export default function Header({
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="max-w-[1320px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
-        <Logo
-          size="sm"
-          onClick={() => setActiveTab('market')}
-          tagline="Ghép xe tiện chuyến"
-        />
+        <Logo size="sm" onClick={() => setActiveTab('market')} tagline="Ghép xe tiện chuyến" />
 
         {/* Điều hướng phong cách Apple Segmented Capsule Navigation */}
-        <nav className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.05] dark:border-white/[0.08] shrink-0 shadow-2xs" aria-label="Primary">
+        <nav
+          className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.05] dark:border-white/[0.08] shrink-0 shadow-2xs"
+          aria-label="Primary"
+        >
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
             return (
@@ -103,12 +119,17 @@ export default function Header({
                     : 'text-[#515154] hover:text-[#1d1d1f] hover:bg-white/60'
                 }`}
               >
-                <tab.icon className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-[#0071e3]' : 'text-[#86868b]'}`} strokeWidth={active ? 2.2 : 2} />
+                <tab.icon
+                  className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-[#0071e3]' : 'text-[#86868b]'}`}
+                  strokeWidth={active ? 2.2 : 2}
+                />
                 <span className="whitespace-nowrap">{tab.label}</span>
                 {tab.badge > 0 && (
-                  <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono font-bold inline-flex items-center justify-center tabular-nums shrink-0 transition-colors ${
-                    active ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
-                  }`}>
+                  <span
+                    className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono font-bold inline-flex items-center justify-center tabular-nums shrink-0 transition-colors ${
+                      active ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
+                    }`}
+                  >
                     {tab.badge}
                   </span>
                 )}
@@ -122,7 +143,7 @@ export default function Header({
           <button
             type="button"
             onClick={onOpenAi}
-            title={isMac ? "Trợ lý CarMate AI (Phím tắt: ⌘K)" : "Trợ lý CarMate AI (Phím tắt: Ctrl+K)"}
+            title={isMac ? 'Trợ lý CarMate AI (Phím tắt: ⌘K)' : 'Trợ lý CarMate AI (Phím tắt: Ctrl+K)'}
             aria-label="Mở Trợ lý CarMate AI"
             className="inline-flex items-center justify-center gap-1.5 h-9 w-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
           >
@@ -138,7 +159,7 @@ export default function Header({
             <div className="relative" ref={userMenuRef}>
               <button
                 type="button"
-                onClick={() => setIsUserMenuOpen(prev => !prev)}
+                onClick={() => setIsUserMenuOpen((prev) => !prev)}
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="true"
                 title={`Tài khoản: ${currentUser.name} (${currentUser.phone || ''})`}
@@ -151,7 +172,9 @@ export default function Header({
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
                 </span>
                 <span className="max-w-[70px] sm:max-w-[110px] truncate">{currentUser.name}</span>
-                <ChevronDown className={`w-3 h-3 text-[#86868b] transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`w-3 h-3 text-[#86868b] transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`}
+                />
               </button>
 
               {/* Apple Profile Popover Menu */}
@@ -160,8 +183,12 @@ export default function Header({
                   {/* Header Thông tin tài khoản */}
                   <div className="px-3 py-2 border-b border-black/[0.05] dark:border-white/[0.06] mb-1">
                     <p className="text-xs font-bold text-[#1d1d1f] dark:text-white truncate">{currentUser.name}</p>
-                    <p className="text-[11px] text-[#86868b] font-mono">{currentUser.phone || 'Đã xác thực danh tính'}</p>
-                    {(currentUser.role === 'admin' || currentUser.phone?.includes('0984883750') || currentUser.phone?.includes('0984 883 750')) && (
+                    <p className="text-[11px] text-[#86868b] font-mono">
+                      {currentUser.phone || 'Đã xác thực danh tính'}
+                    </p>
+                    {(currentUser.role === 'admin' ||
+                      currentUser.phone?.includes('0984883750') ||
+                      currentUser.phone?.includes('0984 883 750')) && (
                       <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
                         <ShieldCheck className="w-3 h-3" /> Quản trị viên
                       </span>
@@ -182,7 +209,9 @@ export default function Header({
                   </button>
 
                   {/* Mục 2: Cổng Quản Trị Hệ Thống (CHỈ HIỂN THỊ NẾU LÀ ADMIN) */}
-                  {(currentUser.role === 'admin' || currentUser.phone?.includes('0984883750') || currentUser.phone?.includes('0984 883 750')) && (
+                  {(currentUser.role === 'admin' ||
+                    currentUser.phone?.includes('0984883750') ||
+                    currentUser.phone?.includes('0984 883 750')) && (
                     <button
                       type="button"
                       onClick={() => {

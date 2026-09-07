@@ -2,22 +2,107 @@ import { formatTripDateDisplay } from '@carmate/shared';
 
 const KNOWN_LOCATIONS = [
   // Miền Bắc
-  'Hà Nội', 'Hải Phòng', 'Ninh Bình', 'Quảng Ninh', 'Hạ Long', 'Nam Định', 'Thái Bình',
-  'Hưng Yên', 'Hải Dương', 'Bắc Ninh', 'Bắc Giang', 'Vĩnh Phúc', 'Phú Thọ', 'Thái Nguyên',
-  'Lạng Sơn', 'Hòa Bình', 'Hà Nam', 'Thanh Hóa', 'Nghệ An', 'Vinh', 'Hà Tĩnh',
-  'Mỹ Đình', 'Giáp Bát', 'Nước Ngầm', 'Big C Thăng Long', 'Cầu Giấy', 'Long Biên', 'Hà Đông',
+  'Hà Nội',
+  'Hải Phòng',
+  'Ninh Bình',
+  'Quảng Ninh',
+  'Hạ Long',
+  'Nam Định',
+  'Thái Bình',
+  'Hưng Yên',
+  'Hải Dương',
+  'Bắc Ninh',
+  'Bắc Giang',
+  'Vĩnh Phúc',
+  'Phú Thọ',
+  'Thái Nguyên',
+  'Lạng Sơn',
+  'Hòa Bình',
+  'Hà Nam',
+  'Thanh Hóa',
+  'Nghệ An',
+  'Vinh',
+  'Hà Tĩnh',
+  'Mỹ Đình',
+  'Giáp Bát',
+  'Nước Ngầm',
+  'Big C Thăng Long',
+  'Cầu Giấy',
+  'Long Biên',
+  'Hà Đông',
   // Miền Trung & Tây Nguyên
-  'Đà Nẵng', 'Huế', 'Hội An', 'Quảng Nam', 'Tam Kỳ', 'Quảng Ngãi', 'Bình Định', 'Quy Nhơn',
-  'Phú Yên', 'Tuy Hòa', 'Nha Trang', 'Khánh Hòa', 'Cam Ranh', 'Phan Rang', 'Ninh Thuận',
-  'Phan Thiết', 'Bình Thuận', 'Mũi Né', 'Kon Tum', 'Gia Lai', 'Pleiku', 'Đắk Lắk',
-  'Buôn Ma Thuột', 'Đắk Nông', 'Lâm Đồng', 'Đà Lạt', 'Bảo Lộc', 'Đức Trọng',
+  'Đà Nẵng',
+  'Huế',
+  'Hội An',
+  'Quảng Nam',
+  'Tam Kỳ',
+  'Quảng Ngãi',
+  'Bình Định',
+  'Quy Nhơn',
+  'Phú Yên',
+  'Tuy Hòa',
+  'Nha Trang',
+  'Khánh Hòa',
+  'Cam Ranh',
+  'Phan Rang',
+  'Ninh Thuận',
+  'Phan Thiết',
+  'Bình Thuận',
+  'Mũi Né',
+  'Kon Tum',
+  'Gia Lai',
+  'Pleiku',
+  'Đắk Lắk',
+  'Buôn Ma Thuột',
+  'Đắk Nông',
+  'Lâm Đồng',
+  'Đà Lạt',
+  'Bảo Lộc',
+  'Đức Trọng',
   // Miền Nam
-  'Sài Gòn', 'TP.HCM', 'TP HCM', 'Hồ Chí Minh', 'Bình Phước', 'Lộc Ninh', 'Bù Đốp', 'Bình Long',
-  'Chơn Thành', 'Đồng Xoài', 'Bình Dương', 'Thủ Dầu Một', 'Bến Cát', 'Dĩ An', 'Thuận An',
-  'Đồng Nai', 'Biên Hòa', 'Long Thành', 'Vũng Tàu', 'Bà Rịa', 'Phú Mỹ', 'Tây Ninh',
-  'Trảng Bàng', 'Củ Chi', 'Long An', 'Tân An', 'Tiền Giang', 'Mỹ Tho', 'Bến Tre',
-  'Vĩnh Long', 'Trà Vinh', 'Cần Thơ', 'Hậu Giang', 'Sóc Trăng', 'Bạc Liêu', 'Cà Mau',
-  'Hàng Xanh', 'Bến xe Miền Đông', 'BX Miền Đông', 'Bến xe Miền Tây', 'BX Miền Tây', 'Tân Sơn Nhất', 'An Sương'
+  'Sài Gòn',
+  'TP.HCM',
+  'TP HCM',
+  'Hồ Chí Minh',
+  'Bình Phước',
+  'Lộc Ninh',
+  'Bù Đốp',
+  'Bình Long',
+  'Chơn Thành',
+  'Đồng Xoài',
+  'Bình Dương',
+  'Thủ Dầu Một',
+  'Bến Cát',
+  'Dĩ An',
+  'Thuận An',
+  'Đồng Nai',
+  'Biên Hòa',
+  'Long Thành',
+  'Vũng Tàu',
+  'Bà Rịa',
+  'Phú Mỹ',
+  'Tây Ninh',
+  'Trảng Bàng',
+  'Củ Chi',
+  'Long An',
+  'Tân An',
+  'Tiền Giang',
+  'Mỹ Tho',
+  'Bến Tre',
+  'Vĩnh Long',
+  'Trà Vinh',
+  'Cần Thơ',
+  'Hậu Giang',
+  'Sóc Trăng',
+  'Bạc Liêu',
+  'Cà Mau',
+  'Hàng Xanh',
+  'Bến xe Miền Đông',
+  'BX Miền Đông',
+  'Bến xe Miền Tây',
+  'BX Miền Tây',
+  'Tân Sơn Nhất',
+  'An Sương'
 ];
 
 export function parseNaturalTrip(text) {
@@ -28,7 +113,10 @@ export function parseNaturalTrip(text) {
   const lower = raw.toLowerCase();
 
   // 1. Phân loại vai trò (Chủ xe hay Khách)
-  const isPassenger = /(tìm xe|cần xe|cần ghép|tìm xe ghép|ai có xe|cần đi|xin ghép|cho em ghép|cho e ghép|khách cần|cần tìm)/i.test(lower);
+  const isPassenger =
+    /(tìm xe|cần xe|cần ghép|tìm xe ghép|ai có xe|cần đi|xin ghép|cho em ghép|cho e ghép|khách cần|cần tìm)/i.test(
+      lower
+    );
   const role = isPassenger ? 'passenger' : 'driver';
 
   // 2. Số điện thoại Zalo (10 số, đầu 03, 05, 07, 08, 09)
@@ -58,8 +146,10 @@ export function parseNaturalTrip(text) {
 
   // 4. Số ghế trống hoặc cần tìm (VD: còn 3 ghế, còn 1 ghế sau, chỉ nhận 1 khách, dư 2 chỗ...)
   let seats = null;
-  const seatsMatch = lower.match(/(?:còn|trống|cần|ghép|chỉ nhận|nhận|dư|còn lại|chở thêm|chỉ chở)\s*([1-7])\s*(?:ghế\s*sau|ghế|chỗ|người|vé|khách)/i) ||
-                     lower.match(/([1-7])\s*(?:ghế|chỗ|người|khách)\b/);
+  const seatsMatch =
+    lower.match(
+      /(?:còn|trống|cần|ghép|chỉ nhận|nhận|dư|còn lại|chở thêm|chỉ chở)\s*([1-7])\s*(?:ghế\s*sau|ghế|chỗ|người|vé|khách)/i
+    ) || lower.match(/([1-7])\s*(?:ghế|chỗ|người|khách)\b/);
   if (seatsMatch) {
     seats = parseInt(seatsMatch[1], 10);
   }
@@ -81,7 +171,8 @@ export function parseNaturalTrip(text) {
   else if (/carnival/i.test(lower)) carType = 'Kia Carnival (Xe 7 chỗ)';
   else if (/cross|corolla/i.test(lower)) carType = 'Toyota Corolla Cross (Xe 5 chỗ)';
   else if (/7\s*chỗ/i.test(lower)) carType = hasRelatives ? 'Xe 7 chỗ gia đình (chở người thân)' : 'Xe 7 chỗ rộng rãi';
-  else if (/5\s*chỗ|4\s*chỗ/i.test(lower)) carType = hasRelatives ? 'Xe 5 chỗ gia đình (chở người thân)' : 'Xe 5 chỗ cá nhân';
+  else if (/5\s*chỗ|4\s*chỗ/i.test(lower))
+    carType = hasRelatives ? 'Xe 5 chỗ gia đình (chở người thân)' : 'Xe 5 chỗ cá nhân';
   else if (hasRelatives) carType = 'Xe gia đình (chở người thân)';
 
   // 6. Thời gian & Khung giờ (Được tính toán theo ngày dương lịch thực tế)

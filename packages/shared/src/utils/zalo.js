@@ -102,17 +102,23 @@ export const generateSocialShareText = (trip) => {
   if (!trip) return '';
 
   const isDriver = trip.type === 'driver_offer';
-  const roleText = isDriver ? '🚗 CHỦ XE TÌM BẠN ĐI CÙNG (XE GIA ĐÌNH TIỆN TUYẾN)' : '🙋 NGƯỜI CẦN ĐI TÌM XE GHÉP TIỆN ĐƯỜNG';
-  const seatsText = isDriver ? `Còn trống: ${trip.availableSeats || 3} ghế` : `Cần tìm: ${trip.seatsNeeded || 1} người đi cùng`;
-  const priceText = isDriver ? `${(trip.basePricePerSeat || 180000).toLocaleString('vi-VN')}đ / ghế (Trọn gói xăng & cầu đường)` : `Dự kiến: ${(trip.expectedPrice || 180000).toLocaleString('vi-VN')}đ / người`;
+  const roleText = isDriver
+    ? '🚗 CHỦ XE TÌM BẠN ĐI CÙNG (XE GIA ĐÌNH TIỆN TUYẾN)'
+    : '🙋 NGƯỜI CẦN ĐI TÌM XE GHÉP TIỆN ĐƯỜNG';
+  const seatsText = isDriver
+    ? `Còn trống: ${trip.availableSeats || 3} ghế`
+    : `Cần tìm: ${trip.seatsNeeded || 1} người đi cùng`;
+  const priceText = isDriver
+    ? `${(trip.basePricePerSeat || 180000).toLocaleString('vi-VN')}đ / ghế (Trọn gói xăng & cầu đường)`
+    : `Dự kiến: ${(trip.expectedPrice || 180000).toLocaleString('vi-VN')}đ / người`;
 
-  const perksText = Array.isArray(trip.perks) && trip.perks.length > 0
-    ? `\n✨ Tiện ích / Yêu cầu: ${trip.perks.join(' • ')}`
-    : '';
+  const perksText =
+    Array.isArray(trip.perks) && trip.perks.length > 0 ? `\n✨ Tiện ích / Yêu cầu: ${trip.perks.join(' • ')}` : '';
 
-  const parcelText = trip.acceptsParcel || (Array.isArray(trip.perks) && trip.perks.some(p => /hàng|đồ|bưu phẩm/i.test(p)))
-    ? '\n📦 Có nhận gửi kèm bưu phẩm / đồ đạc tiện chuyến'
-    : '';
+  const parcelText =
+    trip.acceptsParcel || (Array.isArray(trip.perks) && trip.perks.some((p) => /hàng|đồ|bưu phẩm/i.test(p)))
+      ? '\n📦 Có nhận gửi kèm bưu phẩm / đồ đạc tiện chuyến'
+      : '';
 
   return `${roleText}
 ━━━━━━━━━━━━━━━━━━

@@ -100,7 +100,7 @@ export function requireBookingParty(req, res, next) {
   }
 
   const allBookings = getBookings();
-  const booking = allBookings.find(b => b.id === bookingId || b.escrowId === bookingId);
+  const booking = allBookings.find((b) => b.id === bookingId || b.escrowId === bookingId);
   if (!booking) {
     return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi đã kết nối' });
   }
@@ -117,7 +117,10 @@ export function requireBookingParty(req, res, next) {
   const bTarget = cleanPhoneNumber(booking.targetPhone || '');
 
   const isPartyByPhone = Boolean(userPhone && (userPhone === bContact || userPhone === bUser || userPhone === bTarget));
-  const isPartyById = Boolean(req.user.id && (req.user.id === booking.userId || req.user.id === booking.creatorId || req.user.id === booking.driverId));
+  const isPartyById = Boolean(
+    req.user.id &&
+    (req.user.id === booking.userId || req.user.id === booking.creatorId || req.user.id === booking.driverId)
+  );
 
   if (!isPartyByPhone && !isPartyById) {
     return res.status(403).json({

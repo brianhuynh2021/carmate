@@ -16,7 +16,7 @@ export function initSentry() {
       window.Sentry.init({
         dsn,
         environment: import.meta.env.MODE || 'production',
-        tracesSampleRate: 0.1,
+        tracesSampleRate: 0.1
       });
       isSentryReady = true;
     } catch (err) {

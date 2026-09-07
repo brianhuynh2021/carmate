@@ -132,9 +132,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     const nextHidden = !currentHidden;
     try {
       await api.toggleHideTrip(tripId, nextHidden);
-      setTrips((prev) =>
-        prev.map((t) => (t.id === tripId ? { ...t, isHidden: nextHidden } : t))
-      );
+      setTrips((prev) => prev.map((t) => (t.id === tripId ? { ...t, isHidden: nextHidden } : t)));
       showNotice(nextHidden ? 'Đã ẩn bài đăng khỏi bảng tin công khai' : 'Đã khôi phục hiển thị bài đăng');
       // Tải lại metrics
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
@@ -161,9 +159,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     const nextVal = !user[field];
     try {
       await api.updateUserStatus(user.id, { [field]: nextVal });
-      setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, [field]: nextVal } : u))
-      );
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, [field]: nextVal } : u)));
       showNotice(`Đã cập nhật xác minh ${field === 'isCccdVerified' ? 'CCCD' : 'GPLX'} thành công`);
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
@@ -180,9 +176,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
     try {
       await api.updateUserStatus(user.id, { isBanned: nextBan });
-      setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, isBanned: nextBan } : u))
-      );
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isBanned: nextBan } : u)));
       showNotice(`Đã ${actionText.toLowerCase()} tài khoản thành công`);
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
@@ -199,9 +193,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <div className="w-12 h-12 rounded-2xl bg-primary-500/10 text-primary-600 dark:text-primary-400 inline-flex items-center justify-center mb-1">
               <Lock className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold font-display text-slate-900 dark:text-white">
-              Cổng Quản Trị CarMate
-            </h2>
+            <h2 className="text-xl font-bold font-display text-slate-900 dark:text-white">Cổng Quản Trị CarMate</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Nhập mã bảo mật quản trị viên để điều hành sàn ghép xe
             </p>
@@ -232,7 +224,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 <div className="text-right">
                   <button
                     type="button"
-                    onClick={() => { setRequireMfa(false); setMfaCode(''); }}
+                    onClick={() => {
+                      setRequireMfa(false);
+                      setMfaCode('');
+                    }}
                     className="text-xs text-primary-600 dark:text-primary-400 hover:underline cursor-pointer"
                   >
                     ← Nhập lại mật mã chính
@@ -429,7 +424,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
             </span>
             <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">100% Ổn định</span>
           </div>
-          <p className="text-[10.5px] text-slate-400 font-mono">Heap: {sysHealth.heapUsedMB || 28}MB / Node {sysHealth.nodeVersion || 'v20'}</p>
+          <p className="text-[10.5px] text-slate-400 font-mono">
+            Heap: {sysHealth.heapUsedMB || 28}MB / Node {sysHealth.nodeVersion || 'v20'}
+          </p>
         </div>
       </div>
 
@@ -522,9 +519,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     }`}
                   >
                     <td className="py-3 px-4">
-                      <div className="font-mono font-bold text-slate-900 dark:text-white">
-                        {t.maskedCode}
-                      </div>
+                      <div className="font-mono font-bold text-slate-900 dark:text-white">{t.maskedCode}</div>
                       <span className="text-[10px] text-slate-400 font-mono">
                         {t.type === 'driver_offer' ? '🚗 Chủ xe' : '👥 Khách tìm xe'}
                       </span>
@@ -723,17 +718,22 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <Clock className="w-4 h-4 text-amber-500" />
               <span>Ghi nhận Báo trễ chuyến ({reports?.delayed?.length || 0})</span>
             </h3>
-            {(!reports?.delayed || reports.delayed.length === 0) ? (
+            {!reports?.delayed || reports.delayed.length === 0 ? (
               <p className="text-xs text-slate-400 italic">Chưa có chuyến xe nào ghi nhận báo trễ.</p>
             ) : (
               <div className="space-y-2">
                 {reports.delayed.map((item) => (
-                  <div key={item.escrowId} className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs">
+                  <div
+                    key={item.escrowId}
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs"
+                  >
                     <div className="flex items-center justify-between font-bold">
                       <span className="font-mono text-primary-600">{item.escrowId}</span>
                       <span className="text-amber-600 font-mono">Trễ ~{item.delayedMinutes || 15} phút</span>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-300 mt-1">Lý do: &ldquo;{item.delayNote || 'Kẹt xe dọc tuyến'}&rdquo;</p>
+                    <p className="text-slate-600 dark:text-slate-300 mt-1">
+                      Lý do: &ldquo;{item.delayNote || 'Kẹt xe dọc tuyến'}&rdquo;
+                    </p>
                   </div>
                 ))}
               </div>
@@ -746,17 +746,22 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <AlertTriangle className="w-4 h-4 text-rose-500" />
               <span>Ghi nhận Huỷ chuyến ({reports?.cancelled?.length || 0})</span>
             </h3>
-            {(!reports?.cancelled || reports.cancelled.length === 0) ? (
+            {!reports?.cancelled || reports.cancelled.length === 0 ? (
               <p className="text-xs text-slate-400 italic">Chưa có chuyến xe nào bị huỷ.</p>
             ) : (
               <div className="space-y-2">
                 {reports.cancelled.map((item) => (
-                  <div key={item.escrowId} className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs">
+                  <div
+                    key={item.escrowId}
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs"
+                  >
                     <div className="flex items-center justify-between font-bold">
                       <span className="font-mono text-primary-600">{item.escrowId}</span>
                       <span className="text-rose-600">Đã huỷ</span>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-300 mt-1">Lý do: &ldquo;{item.cancelReason || 'Thay đổi kế hoạch gia đình'}&rdquo;</p>
+                    <p className="text-slate-600 dark:text-slate-300 mt-1">
+                      Lý do: &ldquo;{item.cancelReason || 'Thay đổi kế hoạch gia đình'}&rdquo;
+                    </p>
                   </div>
                 ))}
               </div>
@@ -824,7 +829,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   <span>Radar Tuyến Đường Khát Xe (Unmet Demand Discovery)</span>
                 </h3>
                 <p className="text-xs text-[#86868b] mt-0.5">
-                  Phát hiện tự động các tuyến đường hành khách hỏi tìm nhiều nhất qua AI nhưng hiện tại chưa có chủ xe nào đăng bài
+                  Phát hiện tự động các tuyến đường hành khách hỏi tìm nhiều nhất qua AI nhưng hiện tại chưa có chủ xe
+                  nào đăng bài
                 </p>
               </div>
               <Badge tone="warning" className="text-xs font-semibold">
@@ -832,7 +838,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </Badge>
             </div>
 
-            {(!aiIntelligence?.unmetDemandRoutes || aiIntelligence.unmetDemandRoutes.length === 0) ? (
+            {!aiIntelligence?.unmetDemandRoutes || aiIntelligence.unmetDemandRoutes.length === 0 ? (
               <div className="p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-xs text-[#86868b]">
                 Hiện tại tất cả các yêu cầu tìm xe đều được đáp ứng hoặc có chuyến xe chạy ngang thuận tiện.
               </div>
@@ -848,9 +854,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center">
                           {idx + 1}
                         </span>
-                        <p className="text-sm font-bold text-[#1d1d1f] dark:text-white">
-                          {routeItem.route}
-                        </p>
+                        <p className="text-sm font-bold text-[#1d1d1f] dark:text-white">{routeItem.route}</p>
                       </div>
                       <p className="text-xs text-[#86868b]">
                         Gợi ý: Đăng bài thông báo vào nhóm Zalo địa phương để kêu gọi thêm chủ xe tuyến này.
@@ -884,23 +888,19 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </span>
             </div>
 
-            {(!aiIntelligence?.recentTrajectories || aiIntelligence.recentTrajectories.length === 0) ? (
+            {!aiIntelligence?.recentTrajectories || aiIntelligence.recentTrajectories.length === 0 ? (
               <div className="p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-xs text-[#86868b]">
-                Chưa có dữ liệu quỹ đạo nào được lưu. Hãy thử trò chuyện với Trợ lý CarMate AI để xem luồng suy luận xuất hiện tại đây.
+                Chưa có dữ liệu quỹ đạo nào được lưu. Hãy thử trò chuyện với Trợ lý CarMate AI để xem luồng suy luận
+                xuất hiện tại đây.
               </div>
             ) : (
               <div className="space-y-3">
                 {aiIntelligence.recentTrajectories.map((traj) => (
-                  <div
-                    key={traj.id}
-                    className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] space-y-2.5"
-                  >
+                  <div key={traj.id} className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] space-y-2.5">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-bold text-[#0071e3]">
-                            {traj.id}
-                          </span>
+                          <span className="font-mono text-xs font-bold text-[#0071e3]">{traj.id}</span>
                           {traj.requestedRoute && (
                             <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-900 border border-blue-200">
                               {traj.requestedRoute}
@@ -924,7 +924,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       <div className="text-right text-[11px] text-[#86868b] tabular shrink-0">
                         <span className="font-bold text-[#1d1d1f]">{traj.executionTimeMs}ms</span>
                         <span className="mx-1">·</span>
-                        <span>{new Date(traj.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>
+                          {new Date(traj.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
                     </div>
 
@@ -946,10 +948,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                                   isVerify
                                     ? 'bg-blue-50/80 text-blue-900 border border-blue-200/60'
                                     : isReflect
-                                    ? 'bg-amber-50/80 text-amber-900 border border-amber-200/60'
-                                    : isReplan
-                                    ? 'bg-emerald-50/80 text-emerald-900 border border-emerald-200/60'
-                                    : 'text-[#515154] bg-black/[0.02]'
+                                      ? 'bg-amber-50/80 text-amber-900 border border-amber-200/60'
+                                      : isReplan
+                                        ? 'bg-emerald-50/80 text-emerald-900 border border-emerald-200/60'
+                                        : 'text-[#515154] bg-black/[0.02]'
                                 }`}
                               >
                                 {step}

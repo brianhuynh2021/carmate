@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Car, Users, Sparkles, CheckCircle2,
-  MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap
-} from 'lucide-react';
+import { Car, Users, Sparkles, CheckCircle2, MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap } from 'lucide-react';
 import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, cleanPhoneNumber, isTripExpired } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { Segmented } from '../ui/Chip.jsx';
@@ -44,7 +41,9 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
     }
 
     fetchSmartMatches();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [selectedRouteKey]);
 
   // Lọc chỉ giữ các cặp ghép còn hạn chạy
@@ -55,9 +54,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
   // Danh sách duyệt thủ công (Fallback & Direct Browse) loại bỏ chuyến quá giờ
   const manualList = useMemo(() => {
     const source = (userRole === 'driver' ? passengerRequests : driverOffers).filter((i) => !isTripExpired(i));
-    return selectedRouteKey === 'all'
-      ? source
-      : source.filter((i) => i.routeCategory === selectedRouteKey);
+    return selectedRouteKey === 'all' ? source : source.filter((i) => i.routeCategory === selectedRouteKey);
   }, [userRole, selectedRouteKey, driverOffers, passengerRequests]);
 
   // Đếm số lượng xe và khách còn hiệu lực
@@ -85,9 +82,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
             <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3]"></span>
             <span>Mục đích tìm kiếm của bạn</span>
           </span>
-          <span className="text-[11px] text-slate-500 font-medium">
-            Chọn để hệ thống quét đúng đối tác
-          </span>
+          <span className="text-[11px] text-slate-500 font-medium">Chọn để hệ thống quét đúng đối tác</span>
         </div>
 
         {/* Cụm 2 Tab Hero chuẩn Apple Liquid Segmented */}
@@ -113,9 +108,11 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1.5">
-                <span className={`text-sm sm:text-base font-extrabold transition-colors ${
-                  userRole === 'passenger' ? 'text-[#0071e3]' : 'text-slate-800'
-                }`}>
+                <span
+                  className={`text-sm sm:text-base font-extrabold transition-colors ${
+                    userRole === 'passenger' ? 'text-[#0071e3]' : 'text-slate-800'
+                  }`}
+                >
                   Tôi Cần Đi Xe
                 </span>
                 <span
@@ -155,9 +152,11 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1.5">
-                <span className={`text-sm sm:text-base font-extrabold transition-colors ${
-                  userRole === 'driver' ? 'text-[#107c41]' : 'text-slate-800'
-                }`}>
+                <span
+                  className={`text-sm sm:text-base font-extrabold transition-colors ${
+                    userRole === 'driver' ? 'text-[#107c41]' : 'text-slate-800'
+                  }`}
+                >
                   Tôi Có Xe Trống
                 </span>
                 <span
@@ -219,7 +218,9 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
               >
                 <option value="all">Tất cả các tuyến quốc lộ</option>
                 {routeKeys.map((key) => (
-                  <option key={key} value={key}>{ROUTE_BENCHMARKS[key].shortName}</option>
+                  <option key={key} value={key}>
+                    {ROUTE_BENCHMARKS[key].shortName}
+                  </option>
                 ))}
               </Select>
             </div>
@@ -232,7 +233,9 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-base font-bold text-[#1d1d1f] flex items-center gap-2">
-              <span>{userRole === 'passenger' ? 'Các Chuyến Xe Bác Tài Phù Hợp Nhất' : 'Các Hành Khách Cần Đi Cùng Tuyến'}</span>
+              <span>
+                {userRole === 'passenger' ? 'Các Chuyến Xe Bác Tài Phù Hợp Nhất' : 'Các Hành Khách Cần Đi Cùng Tuyến'}
+              </span>
               <span className="px-2 py-0.5 rounded-full text-xs bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 font-bold tabular">
                 {validMatches.length}
               </span>
@@ -272,16 +275,14 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                     {/* Header Điểm Tương Thích */}
                     <div className="flex items-center justify-between gap-3 flex-wrap border-b border-black/[0.06] pb-3.5">
                       <div className="flex items-center gap-2.5">
-                        <span className={`px-3 py-1 rounded-full text-xs font-extrabold tabular shadow-xs ${
-                          isPerfect
-                            ? 'bg-[#107c41] text-white'
-                            : 'bg-[#0071e3] text-white'
-                        }`}>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-extrabold tabular shadow-xs ${
+                            isPerfect ? 'bg-[#107c41] text-white' : 'bg-[#0071e3] text-white'
+                          }`}
+                        >
                           {match.score}% PHÙ HỢP
                         </span>
-                        <span className="text-xs font-semibold text-[#1d1d1f]">
-                          {match.routeCategory}
-                        </span>
+                        <span className="text-xs font-semibold text-[#1d1d1f]">{match.routeCategory}</span>
                       </div>
 
                       {/* Lý do ghép */}
@@ -315,9 +316,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <div>
-                              <p className="font-extrabold text-[#1d1d1f] text-base">
-                                {driver.publicName}
-                              </p>
+                              <p className="font-extrabold text-[#1d1d1f] text-base">{driver.publicName}</p>
                               <p className="text-xs text-[#515154] font-medium pt-0.5">
                                 {driver.from} ➔ {driver.to}
                               </p>
@@ -337,7 +336,10 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
                           <div className="flex items-center justify-between pt-2 border-t border-[#0071e3]/10 text-xs">
                             <span className="text-[#86868b] tabular">
-                              Khung giờ: <strong className="text-slate-800 font-semibold">{driver.timeSlot || driver.timeSlotLabel || 'Thoả thuận'}</strong>
+                              Khung giờ:{' '}
+                              <strong className="text-slate-800 font-semibold">
+                                {driver.timeSlot || driver.timeSlotLabel || 'Thoả thuận'}
+                              </strong>
                             </span>
                             <span className="font-extrabold text-[#0071e3] text-sm tabular">
                               ~{formatVND(driver.basePricePerSeat)}/ghế
@@ -347,7 +349,13 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
                         {/* Gợi ý ngữ cảnh đồng hành tinh tế */}
                         <div className="px-3 py-2 rounded-xl bg-slate-50 border border-black/[0.04] text-[11.5px] text-[#86868b] flex items-center justify-between flex-wrap gap-1">
-                          <span>Nhu cầu của bạn: <strong>{passenger.from} ➔ {passenger.to}</strong> ({passenger.seatsNeeded || 1} ghế)</span>
+                          <span>
+                            Nhu cầu của bạn:{' '}
+                            <strong>
+                              {passenger.from} ➔ {passenger.to}
+                            </strong>{' '}
+                            ({passenger.seatsNeeded || 1} ghế)
+                          </span>
                           <span className="text-[#107c41] font-semibold flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Cùng giờ xuất phát</span>
@@ -381,9 +389,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                           </div>
 
                           <div>
-                            <p className="font-extrabold text-[#1d1d1f] text-base">
-                              {passenger.publicName}
-                            </p>
+                            <p className="font-extrabold text-[#1d1d1f] text-base">{passenger.publicName}</p>
                             <p className="text-xs text-[#515154] font-medium pt-0.5">
                               {passenger.from} ➔ {passenger.to}
                             </p>
@@ -391,7 +397,10 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
                           <div className="flex items-center justify-between pt-2 border-t border-[#ff9500]/15 text-xs">
                             <span className="text-[#86868b] tabular">
-                              Giờ đón: <strong className="text-slate-800 font-semibold">{passenger.timeSlot || passenger.timeSlotLabel || 'Thoả thuận'}</strong>
+                              Giờ đón:{' '}
+                              <strong className="text-slate-800 font-semibold">
+                                {passenger.timeSlot || passenger.timeSlotLabel || 'Thoả thuận'}
+                              </strong>
                             </span>
                             <span className="text-xs text-[#515154] font-medium italic">
                               "{passenger.notes?.slice(0, 45) || 'Cần xe tiện chuyến đi cùng tuyến'}"
@@ -401,7 +410,9 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
                         {/* Gợi ý ngữ cảnh đồng hành */}
                         <div className="px-3 py-2 rounded-xl bg-slate-50 border border-black/[0.04] text-[11.5px] text-[#86868b] flex items-center justify-between flex-wrap gap-1">
-                          <span>Chuyến xe của bạn: <strong>{driver.publicName}</strong> ({driver.availableSeats} chỗ trống)</span>
+                          <span>
+                            Chuyến xe của bạn: <strong>{driver.publicName}</strong> ({driver.availableSeats} chỗ trống)
+                          </span>
                           <span className="text-[#107c41] font-semibold flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Thuận đường đón trả</span>
@@ -460,7 +471,10 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {manualList.map((item) => (
-                <article key={item.id} className="surface p-5 rounded-3xl border border-black/[0.08] shadow-[0_2px_16px_rgba(0,0,0,0.03)] space-y-3.5 hover:border-[#0071e3]/30 transition-all">
+                <article
+                  key={item.id}
+                  className="surface p-5 rounded-3xl border border-black/[0.08] shadow-[0_2px_16px_rgba(0,0,0,0.03)] space-y-3.5 hover:border-[#0071e3]/30 transition-all"
+                >
                   {/* Hàng Tiêu Đề Thẻ Vé */}
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-slate-800 text-[#1d1d1f] dark:text-slate-200 border border-black/[0.04]">
@@ -468,7 +482,9 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                     </span>
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#0071e3] tabular">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>{item.date || 'Hôm nay'} · {item.timeSlot || item.timeSlotLabel || '07:00 – 08:00'}</span>
+                      <span>
+                        {item.date || 'Hôm nay'} · {item.timeSlot || item.timeSlotLabel || '07:00 – 08:00'}
+                      </span>
                     </div>
                   </div>
 
@@ -480,15 +496,14 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="font-bold text-slate-900 dark:text-white text-sm truncate">
-                            {item.publicName}
-                          </p>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{item.publicName}</p>
                           <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 shrink-0">
                             98đ
                           </span>
                         </div>
                         <p className="text-[11px] text-[#86868b] truncate">
-                          {item.hometown || 'Đồng hương'} · {item.carType || 'Xe 7 chỗ'} (Còn {item.availableSeats || 1} ghế)
+                          {item.hometown || 'Đồng hương'} · {item.carType || 'Xe 7 chỗ'} (Còn {item.availableSeats || 1}{' '}
+                          ghế)
                         </p>
                       </div>
                     </div>

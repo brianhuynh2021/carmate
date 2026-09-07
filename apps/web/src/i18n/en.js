@@ -72,7 +72,8 @@ export default {
   hero: {
     eyebrow: 'Direct Rideshare Network · Nationwide',
     title: 'Intercity Ridesharing & Convenient Empty-Leg Matching',
-    subtitle: 'Directly connect vehicle owners with empty seats to passengers on the same route — Fair fuel and highway toll sharing with zero intermediary interference.',
+    subtitle:
+      'Directly connect vehicle owners with empty seats to passengers on the same route — Fair fuel and highway toll sharing with zero intermediary interference.',
     findTripCta: 'Find a ride',
     postTripCta: 'Post empty seats (Family & Empty-leg)',
     stat_members: 'verified members',
@@ -351,28 +352,47 @@ export default {
     openTelegram: 'Send Telegram'
   },
 
-
   policy: {
     title: 'Operating policy',
     subtitle: 'Legal principles & code of conduct of the CarMate platform',
     updated: 'Updated: 1 Sep 2026',
     s1Title: '1. Platform principle: non-commercial sharing',
     s1: [
-      ['0% commission', 'CarMate takes no commission or discount on the cost contribution of any trip. All fuel and toll sharing belongs to the driver.'],
-      ['Direct connection', 'Driver and passenger communicate via Zalo or phone. Payment is made directly in cash or bank transfer, with no intermediary gateway.'],
-      ['Quick confirmation', 'After tapping Join, both sides get in touch within 15 minutes to agree on pickup and drop-off.']
+      [
+        '0% commission',
+        'CarMate takes no commission or discount on the cost contribution of any trip. All fuel and toll sharing belongs to the driver.'
+      ],
+      [
+        'Direct connection',
+        'Driver and passenger communicate via Zalo or phone. Payment is made directly in cash or bank transfer, with no intermediary gateway.'
+      ],
+      [
+        'Quick confirmation',
+        'After tapping Join, both sides get in touch within 15 minutes to agree on pickup and drop-off.'
+      ]
     ],
     s2Title: '2. Platform role: connection only',
     s2: [
-      ['Both sides agree directly', 'Pickup point, timing, luggage and any special request are agreed between driver and passenger on Zalo. The platform does not intervene.'],
-      ['No trip coordination', 'CarMate is not a transport operator. It does not schedule, price, or act as a party to the agreement between two users.'],
-      ['Member-posted content', 'Trip details are posted by members who remain responsible for them. For stronger service commitments, the two sides should arrange that themselves.']
+      [
+        'Both sides agree directly',
+        'Pickup point, timing, luggage and any special request are agreed between driver and passenger on Zalo. The platform does not intervene.'
+      ],
+      [
+        'No trip coordination',
+        'CarMate is not a transport operator. It does not schedule, price, or act as a party to the agreement between two users.'
+      ],
+      [
+        'Member-posted content',
+        'Trip details are posted by members who remain responsible for them. For stronger service commitments, the two sides should arrange that themselves.'
+      ]
     ],
     s3Title: '3. Mutual responsibilities & conduct',
     s3Driver: 'Driver responsibilities',
-    s3DriverText: 'Vehicle meets technical safety with valid liability insurance; drive safely, no alcohol; never exceed seating capacity; keep the car clean and smoke-free.',
+    s3DriverText:
+      'Vehicle meets technical safety with valid liability insurance; drive safely, no alcohol; never exceed seating capacity; keep the car clean and smoke-free.',
     s3Passenger: 'Passenger responsibilities',
-    s3PassengerText: 'Be on time at the agreed point; behave courteously; carry no prohibited or flammable goods; contribute the agreed cost share.',
+    s3PassengerText:
+      'Be on time at the agreed point; behave courteously; carry no prohibited or flammable goods; contribute the agreed cost share.',
     s3Note: 'Courtesy notice: if plans change, inform the other party at least 2–4 hours in advance.',
     accept: 'I understand & agree'
   },
@@ -406,7 +426,8 @@ export default {
   },
 
   footer: {
-    aboutDesc: 'An open bulletin board connecting vehicle owners with passengers traveling on the same route. Direct fuel & toll cost sharing, 0% platform fee.',
+    aboutDesc:
+      'An open bulletin board connecting vehicle owners with passengers traveling on the same route. Direct fuel & toll cost sharing, 0% platform fee.',
     platform: 'Platform',
     support: 'Support',
     legal: 'Legal',
@@ -435,7 +456,8 @@ export default {
     trust2: '0% commission',
     trust3: 'SSL-encrypted data',
     copyright: '© {year} CarMate. All rights reserved.',
-    disclaimer: 'CarMate is an open bulletin board connecting drivers and passengers directly. CarMate is not a transport provider and charges 0% commission. All arrangements, cost contributions, and legal compliances are voluntarily agreed upon by the participants.',
+    disclaimer:
+      'CarMate is an open bulletin board connecting drivers and passengers directly. CarMate is not a transport provider and charges 0% commission. All arrangements, cost contributions, and legal compliances are voluntarily agreed upon by the participants.',
     madeIn: 'Built in Vietnam'
   }
 };

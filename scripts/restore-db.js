@@ -22,9 +22,7 @@ import { pipeline } from 'stream/promises';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.resolve(__dirname, '../apps/api/data');
 const DB_PATH = path.join(DATA_DIR, 'carmate.sqlite');
-const BACKUP_DIR = path.resolve(
-  process.env.CARMATE_BACKUP_DIR || path.join(DATA_DIR, 'backups')
-);
+const BACKUP_DIR = path.resolve(process.env.CARMATE_BACKUP_DIR || path.join(DATA_DIR, 'backups'));
 
 function fail(message) {
   console.error(`[restore] ✗ ${message}`);
@@ -69,20 +67,14 @@ async function main() {
     return;
   }
 
-  const source = argv.includes('--latest')
-    ? backups[0]
-    : path.resolve(argv[0]);
+  const source = argv.includes('--latest') ? backups[0] : path.resolve(argv[0]);
 
   if (!source) fail('Không có bản sao lưu nào để khôi phục.');
   if (!fs.existsSync(source)) fail(`Không tìm thấy file ${source}`);
 
   // Giải nén ra file tạm rồi kiểm tra trước khi động vào DB thật
   const tmpPath = path.join(DATA_DIR, `.restore-${Date.now()}.sqlite`);
-  await pipeline(
-    fs.createReadStream(source),
-    zlib.createGunzip(),
-    fs.createWriteStream(tmpPath)
-  );
+  await pipeline(fs.createReadStream(source), zlib.createGunzip(), fs.createWriteStream(tmpPath));
 
   let tripCount = 0;
   let userCount = 0;

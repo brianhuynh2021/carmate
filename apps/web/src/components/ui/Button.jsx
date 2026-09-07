@@ -3,26 +3,17 @@ import React from 'react';
 const VARIANTS = {
   primary:
     'bg-[#0071e3] text-white hover:bg-[#0077ed] active:bg-[#0062c4] shadow-xs hover:shadow-sm active:scale-[0.98] disabled:bg-[#0071e3]/40',
-  secondary:
-    'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/15 active:bg-[#0071e3]/20',
-  tonal:
-    'bg-black/[0.05] text-[#1d1d1f] hover:bg-black/[0.08] active:bg-black/[0.12]',
+  secondary: 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/15 active:bg-[#0071e3]/20',
+  tonal: 'bg-black/[0.05] text-[#1d1d1f] hover:bg-black/[0.08] active:bg-black/[0.12]',
   outline:
     'bg-white text-[#1d1d1f] border border-black/[0.08] hover:bg-[#f5f5f7] hover:border-black/[0.16] active:bg-[#ebebee] shadow-xs',
-  ghost:
-    'text-[#515154] hover:bg-black/[0.04] hover:text-[#1d1d1f] active:bg-black/[0.08]',
-  dark:
-    'bg-[#1d1d1f] text-white hover:bg-black active:bg-black/90 shadow-xs hover:shadow',
-  googlePill:
-    'bg-white text-[#1d1d1f] border border-black/[0.08] shadow-xs hover:border-black/[0.16]',
-  success:
-    'bg-[#107c41] text-white hover:bg-[#0f6e39] active:bg-[#0d5e30] shadow-xs',
-  danger:
-    'bg-[#e11d48] text-white hover:bg-[#be123c] active:bg-[#9f1239] shadow-xs',
-  dangerGhost:
-    'text-[#e11d48] hover:bg-rose-50 active:bg-rose-100',
-  warningGhost:
-    'text-[#b45309] hover:bg-amber-50 active:bg-amber-100'
+  ghost: 'text-[#515154] hover:bg-black/[0.04] hover:text-[#1d1d1f] active:bg-black/[0.08]',
+  dark: 'bg-[#1d1d1f] text-white hover:bg-black active:bg-black/90 shadow-xs hover:shadow',
+  googlePill: 'bg-white text-[#1d1d1f] border border-black/[0.08] shadow-xs hover:border-black/[0.16]',
+  success: 'bg-[#107c41] text-white hover:bg-[#0f6e39] active:bg-[#0d5e30] shadow-xs',
+  danger: 'bg-[#e11d48] text-white hover:bg-[#be123c] active:bg-[#9f1239] shadow-xs',
+  dangerGhost: 'text-[#e11d48] hover:bg-rose-50 active:bg-rose-100',
+  warningGhost: 'text-[#b45309] hover:bg-amber-50 active:bg-amber-100'
 };
 
 // Chiều cao và bo góc chuẩn Apple Human Interface Guidelines (rounded-xl)

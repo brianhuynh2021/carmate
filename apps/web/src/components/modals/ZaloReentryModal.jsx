@@ -11,13 +11,7 @@ import api from '../../api/client.js';
  * Tự động bật lên khi hành khách quay lại tab CarMate sau khi mở app Zalo để nhắn bác tài.
  * Giải quyết triệt để vấn đề "Gãy luồng trạng thái (State Decoupling)"
  */
-export default function ZaloReentryModal({
-  booking,
-  onClose,
-  onConfirmedSchedule,
-  onCancelBooking,
-  onShowToast
-}) {
+export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule, onCancelBooking, onShowToast }) {
   const [cancelling, setCancelling] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -102,9 +96,13 @@ export default function ZaloReentryModal({
           </div>
 
           <div className="flex items-center justify-between text-slate-500 pt-1 border-t border-slate-200/60 text-[11px]">
-            <span>Số ghế: <strong className="text-slate-800">{booking.seats || 1}</strong></span>
+            <span>
+              Số ghế: <strong className="text-slate-800">{booking.seats || 1}</strong>
+            </span>
             {booking.totalDeal > 0 && (
-              <span>Chi phí: <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong></span>
+              <span>
+                Chi phí: <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong>
+              </span>
             )}
           </div>
         </div>

@@ -1,23 +1,23 @@
 import React from 'react';
-import { 
-  Car, 
-  Users, 
-  BadgeCheck, 
-  Share2, 
-  Check, 
-  MapPin, 
-  Navigation, 
-  Clock, 
+import {
+  Car,
+  Users,
+  BadgeCheck,
+  Share2,
+  Check,
+  MapPin,
+  Navigation,
+  Clock,
   ArrowRight,
   Package,
   Camera
 } from 'lucide-react';
-import { 
-  formatVND, 
-  getTimeSlotLabel, 
-  isGoogleMapsUrl, 
-  ROUTE_BENCHMARKS, 
-  decodeHtmlEntities, 
+import {
+  formatVND,
+  getTimeSlotLabel,
+  isGoogleMapsUrl,
+  ROUTE_BENCHMARKS,
+  decodeHtmlEntities,
   formatTripDateDisplay,
   parseLocation,
   getCorridorDisplay
@@ -70,7 +70,7 @@ function getPaletteForItem(item) {
   const raw = String(item.id || item.author || 'trip');
   let hash = 0;
   for (let i = 0; i < raw.length; i++) {
-    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash = (hash << 5) - hash + raw.charCodeAt(i);
     hash |= 0;
   }
   const positiveHash = Math.abs(hash);
@@ -89,17 +89,23 @@ export function RouteTimeline({ from, to, routeCategory, waypointNote, compact =
       <div className="flex items-start gap-3 min-w-0">
         <div className="flex flex-col items-center mt-1 shrink-0">
           <span className="w-2.5 h-2.5 rounded-full bg-[#107c41] ring-4 ring-[#107c41]/20 shrink-0" />
-          <span className={`w-[2px] ${compact ? 'h-3.5' : 'min-h-[20px] h-full'} bg-slate-300 dark:bg-slate-600 my-1`} />
+          <span
+            className={`w-[2px] ${compact ? 'h-3.5' : 'min-h-[20px] h-full'} bg-slate-300 dark:bg-slate-600 my-1`}
+          />
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className={`font-bold text-slate-900 dark:text-white leading-snug truncate ${compact ? 'text-xs' : 'text-[14px]'}`}>
+          <p
+            className={`font-bold text-slate-900 dark:text-white leading-snug truncate ${compact ? 'text-xs' : 'text-[14px]'}`}
+          >
             {fromIsMap ? (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-[#107c41] shrink-0" />
                 <span>Vị trí ghim trên Google Maps</span>
               </span>
-            ) : fromParsed.main}
+            ) : (
+              fromParsed.main
+            )}
           </p>
           {fromParsed.sub && !fromIsMap && (
             <p className="text-[12px] text-slate-600 dark:text-slate-400 mt-0.5 truncate font-medium leading-snug">
@@ -116,13 +122,17 @@ export function RouteTimeline({ from, to, routeCategory, waypointNote, compact =
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className={`font-bold text-slate-900 dark:text-white leading-snug truncate ${compact ? 'text-xs' : 'text-[14px]'}`}>
+          <p
+            className={`font-bold text-slate-900 dark:text-white leading-snug truncate ${compact ? 'text-xs' : 'text-[14px]'}`}
+          >
             {toIsMap ? (
               <span className="inline-flex items-center gap-1">
                 <Navigation className="w-3.5 h-3.5 text-[#ff3b30] shrink-0" />
                 <span>Vị trí ghim trên Google Maps</span>
               </span>
-            ) : toParsed.main}
+            ) : (
+              toParsed.main
+            )}
           </p>
           {toParsed.sub && !toIsMap && (
             <p className="text-[12px] text-slate-600 dark:text-slate-400 mt-0.5 truncate font-medium leading-snug">
@@ -138,21 +148,24 @@ export function RouteTimeline({ from, to, routeCategory, waypointNote, compact =
 export default function TripCard({ item, onBook, onShare, onViewTrustProfile, onViewRoute, onViewCarPhotos }) {
   const { lang } = useI18n();
   const isDriver = item.type === 'driver_offer';
-  const isConvenient = isDriver && (
-    item.carCategory === 'convenient_trip' ||
-    item.notes?.toLowerCase().includes('tiện chuyến') ||
-    item.notes?.toLowerCase().includes('biển vàng') ||
-    item.carType?.toLowerCase().includes('tiện chuyến')
-  );
+  const isConvenient =
+    isDriver &&
+    (item.carCategory === 'convenient_trip' ||
+      item.notes?.toLowerCase().includes('tiện chuyến') ||
+      item.notes?.toLowerCase().includes('biển vàng') ||
+      item.carType?.toLowerCase().includes('tiện chuyến'));
 
   const price = item.basePricePerSeat || item.expectedPrice || item.suggestedContribution || item.price || 180000;
   const distanceKm = ROUTE_BENCHMARKS[item.routeCategory]?.distanceKm;
 
-  const driverDisplayName = item.publicName && !item.publicName.includes('Test E2E')
-    ? item.publicName
-    : item.author || (isDriver ? `Bác tài ${item.maskedCode || ''}` : `Khách tìm xe ${item.maskedCode || ''}`);
+  const driverDisplayName =
+    item.publicName && !item.publicName.includes('Test E2E')
+      ? item.publicName
+      : item.author || (isDriver ? `Bác tài ${item.maskedCode || ''}` : `Khách tìm xe ${item.maskedCode || ''}`);
 
-  const avatarLetter = (driverDisplayName.replace(/^(Chủ xe|Bác tài|Khách|Anh|Chị)\s*/i, '').trim()[0] || (isDriver ? 'T' : 'K')).toUpperCase();
+  const avatarLetter = (
+    driverDisplayName.replace(/^(Chủ xe|Bác tài|Khách|Anh|Chị)\s*/i, '').trim()[0] || (isDriver ? 'T' : 'K')
+  ).toUpperCase();
 
   const fromParsed = parseLocation(item.from);
   const toParsed = parseLocation(item.to);
@@ -160,13 +173,20 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
   const palette = getPaletteForItem(item);
 
   // Danh sách tiện ích phục vụ Progressive Disclosure khi hover / chạm
-  const perksList = Array.from(new Set(Array.isArray(item.perks) ? item.perks.filter(Boolean) : [])).filter(p => {
+  const perksList = Array.from(new Set(Array.isArray(item.perks) ? item.perks.filter(Boolean) : [])).filter((p) => {
     if (typeof p !== 'string') return false;
     const lower = p.toLowerCase();
-    return !lower.includes('biển vàng') && !lower.includes('biển trắng') && !lower.includes('tiện chuyến') && !lower.includes('gia đình');
+    return (
+      !lower.includes('biển vàng') &&
+      !lower.includes('biển trắng') &&
+      !lower.includes('tiện chuyến') &&
+      !lower.includes('gia đình')
+    );
   });
-  const defaultPerks = isDriver 
-    ? (item.acceptsParcel ? ['Máy lạnh', 'Không khói thuốc', 'Nhận gửi đồ'] : ['Máy lạnh', 'Không khói thuốc', 'Cốp rộng'])
+  const defaultPerks = isDriver
+    ? item.acceptsParcel
+      ? ['Máy lạnh', 'Không khói thuốc', 'Nhận gửi đồ']
+      : ['Máy lạnh', 'Không khói thuốc', 'Cốp rộng']
     : ['Đúng giờ', 'Không hút thuốc'];
   const displayPerks = perksList.length > 0 ? perksList.slice(0, 3) : defaultPerks;
 
@@ -176,24 +196,28 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
       className="flex flex-col relative overflow-hidden rounded-3xl bg-white dark:bg-[#151c28] border border-slate-200/90 dark:border-slate-800/80 hover:border-[#0071e3]/50 dark:hover:border-sky-400/50 active:border-[#0071e3]/80 dark:active:border-sky-400/80 shadow-[0_8px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_0_0_1.5px_rgba(0,113,227,0.35),0_16px_40px_-6px_rgba(0,113,227,0.18),0_24px_54px_rgba(0,0,0,0.06)] active:shadow-[0_0_0_2px_rgba(0,113,227,0.55),0_8px_24px_-4px_rgba(0,113,227,0.25)] dark:hover:shadow-[0_0_0_1.5px_rgba(56,189,248,0.4),0_16px_40px_-6px_rgba(14,165,233,0.22),0_24px_54px_rgba(0,0,0,0.4)] dark:active:shadow-[0_0_0_2px_rgba(56,189,248,0.65),0_8px_24px_-4px_rgba(14,165,233,0.3)] hover:-translate-y-2 active:scale-[0.985] transition-all duration-300 ease-out group select-none cursor-pointer"
     >
       {/* Lớp viền ánh sáng vi mô khi hover hoặc chạm (Luminous Shimmer Border) */}
-      <div 
-        aria-hidden="true" 
-        className="absolute inset-0 rounded-3xl pointer-events-none opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 ring-1 ring-inset ring-[#0071e3]/25 dark:ring-sky-400/30 z-30" 
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 rounded-3xl pointer-events-none opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 ring-1 ring-inset ring-[#0071e3]/25 dark:ring-sky-400/30 z-30"
       />
-      <div 
-        aria-hidden="true" 
-        className="absolute inset-x-6 top-0 h-[1.5px] rounded-full pointer-events-none opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-transparent via-white/80 to-transparent z-30" 
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-6 top-0 h-[1.5px] rounded-full pointer-events-none opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-transparent via-white/80 to-transparent z-30"
       />
       {/* ── 1. VISUAL ROUTE POSTER (FLY.IO ARTWORK + APPLE BOARDING PASS) ── */}
-      <div 
+      <div
         role="button"
         tabIndex={0}
         onClick={() => onViewRoute?.(item)}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item);
+        }}
         className={`relative overflow-hidden p-5 text-white cursor-pointer transition-all duration-300 ${palette.bgGradient}`}
       >
         {/* Glow hiệu ứng nền nghệ thuật đa tầng */}
-        <div className={`absolute -right-8 -bottom-8 w-40 h-40 rounded-full ${palette.glowColor} blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500`} />
+        <div
+          className={`absolute -right-8 -bottom-8 w-40 h-40 rounded-full ${palette.glowColor} blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500`}
+        />
         <div className="absolute -left-8 -top-8 w-40 h-40 rounded-full bg-black/25 blur-xl pointer-events-none" />
 
         {/* Top Header: Badge phân loại xe & Số ghế trống */}
@@ -208,9 +232,13 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide backdrop-blur-md bg-emerald-500/95 text-white border border-emerald-300/40 shadow-sm group-hover:bg-emerald-500 transition-colors">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
             {isDriver ? (
-              <span>Còn <span className="font-mono">{item.availableSeats}</span> chỗ</span>
+              <span>
+                Còn <span className="font-mono">{item.availableSeats}</span> chỗ
+              </span>
             ) : (
-              <span>Cần <span className="font-mono">{item.seatsNeeded || 1}</span> chỗ</span>
+              <span>
+                Cần <span className="font-mono">{item.seatsNeeded || 1}</span> chỗ
+              </span>
             )}
           </span>
         </div>
@@ -225,9 +253,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
             <h3 className="text-[19px] sm:text-[21px] font-black tracking-tight text-white leading-tight mt-0.5">
               {fromInfo.city}
             </h3>
-            <p className="text-[11px] text-white/80 font-medium truncate mt-0.5">
-              {fromInfo.region}
-            </p>
+            <p className="text-[11px] text-white/80 font-medium truncate mt-0.5">{fromInfo.region}</p>
           </div>
 
           {/* Icon xe lăn bánh siêu nhỏ gọn ở giữa, KHÔNG mang text dài ngày giờ */}
@@ -249,9 +275,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
             <h3 className="text-[19px] sm:text-[21px] font-black tracking-tight text-white leading-tight mt-0.5">
               {toInfo.city}
             </h3>
-            <p className="text-[11px] text-white/80 font-medium truncate mt-0.5">
-              {toInfo.region}
-            </p>
+            <p className="text-[11px] text-white/80 font-medium truncate mt-0.5">{toInfo.region}</p>
           </div>
         </div>
 
@@ -276,13 +300,14 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
 
       {/* ── 2. CARD BODY: THÔNG TIN CHI TIẾT ĐIỂM ĐÓN / TRẢ ── */}
       <div className="p-5 flex flex-col flex-1 gap-3">
-        
         {/* Địa chỉ đón & trả rõ ràng từng ngõ ngách, phân cấp rõ rệt */}
-        <div 
+        <div
           role="button"
           tabIndex={0}
           onClick={() => onViewRoute?.(item)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onViewRoute?.(item);
+          }}
           className="space-y-2.5 cursor-pointer select-none group/route"
           title="Bấm để xem bản đồ lộ trình"
         >
@@ -291,7 +316,9 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[10.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-tight">Điểm đón</span>
+              <span className="text-[10.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-tight">
+                Điểm đón
+              </span>
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate group-hover/route:text-[#0071e3] transition-colors mt-0.5">
                 {fromParsed.sub ? `${fromParsed.main} (${fromParsed.sub})` : fromParsed.main}
               </p>
@@ -303,7 +330,9 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
               <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[10.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-tight">Điểm trả</span>
+              <span className="text-[10.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-tight">
+                Điểm trả
+              </span>
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate group-hover/route:text-[#0071e3] transition-colors mt-0.5">
                 {toParsed.sub ? `${toParsed.main} (${toParsed.sub})` : toParsed.main}
               </p>
@@ -315,7 +344,10 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
         <div className="overflow-hidden transition-all duration-300 max-h-0 opacity-0 group-hover:max-h-8 group-hover:opacity-100 group-focus-within:max-h-8 group-focus-within:opacity-100">
           <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
             {displayPerks.map((p, idx) => (
-              <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-blue-50/80 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 shadow-2xs">
+              <span
+                key={idx}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-blue-50/80 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 shadow-2xs"
+              >
                 <Check className="w-2.5 h-2.5 stroke-[3]" />
                 <span>{p}</span>
               </span>
@@ -409,9 +441,7 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
             <span className="text-[22px] sm:text-[24px] font-black text-slate-900 dark:text-white tracking-tight leading-none font-mono">
               {formatVND(price)}
             </span>
-            <span className="text-[11.5px] text-slate-500 dark:text-slate-400 font-medium">
-              /người
-            </span>
+            <span className="text-[11.5px] text-slate-500 dark:text-slate-400 font-medium">/người</span>
           </div>
 
           <button

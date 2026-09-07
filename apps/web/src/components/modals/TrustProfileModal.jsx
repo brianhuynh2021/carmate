@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import {
-  ShieldCheck, BadgeCheck, Check, Star, Car,
-  CigaretteOff, Users, Heart, Share2, AlertTriangle, MessageSquare
+  ShieldCheck,
+  BadgeCheck,
+  Check,
+  Star,
+  Car,
+  CigaretteOff,
+  Users,
+  Heart,
+  Share2,
+  AlertTriangle,
+  MessageSquare
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -22,7 +31,8 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
   const plate = item.licensePlateMasked || item.car?.plate || '93A-289.xx (Đã đối soát)';
   const karmaScore = item.karmaScore || item.trustScore || 98;
   const rating = item.rating || 4.95;
-  const driverTrips = item.driverStats?.tripsCompleted || (isCurrentDriver ? (item.safeTripsCount || item.tripsCompleted || 48) : 24);
+  const driverTrips =
+    item.driverStats?.tripsCompleted || (isCurrentDriver ? item.safeTripsCount || item.tripsCompleted || 48 : 24);
   const passengerTrips = item.passengerStats?.tripsCompleted || 14;
 
   const safetyWarnings = item.safetyWarnings || [];
@@ -64,7 +74,13 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
               Đóng
             </Button>
             {onBook && (
-              <Button size="sm" onClick={() => { onClose(); onBook(item); }}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onBook(item);
+                }}
+              >
                 {isCurrentDriver ? 'Ghép chuyến với bạn này' : 'Nhận đón bạn này'}
               </Button>
             )}
@@ -75,8 +91,11 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
       <div className="space-y-5 text-sm">
         {/* Passport Card — Phong cách Thẻ Căn Cước Số / Google Wallet */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0c4a6e] via-[#075985] to-[#0e1e36] text-white p-5 sm:p-6 shadow-lg border border-white/10">
-          <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none" aria-hidden="true" />
-          
+          <div
+            className="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none"
+            aria-hidden="true"
+          />
+
           <div className="relative flex items-start justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <span className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md text-white font-display text-lg font-bold inline-flex items-center justify-center shrink-0 border border-white/30 shadow-xs">
@@ -87,16 +106,15 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
                   <span>{name}</span>
                   <BadgeCheck className="w-4 h-4 text-amber-300 shrink-0" />
                 </h4>
-                <p className="text-xs text-sky-100 mt-0.5 font-medium">
-                  Thành viên CarMate · Đồng hương {hometown}
-                </p>
+                <p className="text-xs text-sky-100 mt-0.5 font-medium">Thành viên CarMate · Đồng hương {hometown}</p>
               </div>
             </div>
 
             <div className="text-right shrink-0">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-200">Điểm Tín Nhiệm (Karma)</p>
               <p className="font-display text-3xl font-extrabold tabular tracking-tight leading-none mt-1">
-                {karmaScore}<span className="text-xs font-medium text-sky-200">/100</span>
+                {karmaScore}
+                <span className="text-xs font-medium text-sky-200">/100</span>
               </p>
             </div>
           </div>
@@ -201,10 +219,15 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Được hành khách khen ngợi nhiều nhất:</p>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Được hành khách khen ngợi nhiều nhất:
+              </p>
               <div className="flex flex-wrap gap-1.5">
-                {['Lái xe an toàn', 'Xe sạch êm không mùi', 'Đúng giờ', 'Không khói thuốc', 'Thân thiện'].map(t => (
-                  <span key={t} className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[11px] font-medium border border-blue-200 dark:border-blue-900">
+                {['Lái xe an toàn', 'Xe sạch êm không mùi', 'Đúng giờ', 'Không khói thuốc', 'Thân thiện'].map((t) => (
+                  <span
+                    key={t}
+                    className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[11px] font-medium border border-blue-200 dark:border-blue-900"
+                  >
                     ✓ {t}
                   </span>
                 ))}
@@ -214,10 +237,13 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-900 dark:text-white">Chị Mai (Hành khách Lộc Ninh)</span>
-                <span className="text-amber-500 font-bold inline-flex items-center gap-0.5">5.0 <Star className="w-3 h-3 fill-amber-400" /></span>
+                <span className="text-amber-500 font-bold inline-flex items-center gap-0.5">
+                  5.0 <Star className="w-3 h-3 fill-amber-400" />
+                </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 italic">
-                "Bác Tuấn lái xe rất cẩn thận, đón đúng giờ tại cổng chào, xe gia đình sạch sẽ không một chút mùi khói thuốc."
+                "Bác Tuấn lái xe rất cẩn thận, đón đúng giờ tại cổng chào, xe gia đình sạch sẽ không một chút mùi khói
+                thuốc."
               </p>
             </div>
           </div>
@@ -242,8 +268,11 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Được các chủ xe khác nhận xét:</p>
               <div className="flex flex-wrap gap-1.5">
-                {['Đúng giờ điểm hẹn', 'Lịch sự văn minh', 'Giữ vệ sinh xe', 'Gửi tiền xăng sòng phẳng'].map(t => (
-                  <span key={t} className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-medium border border-emerald-200 dark:border-emerald-900">
+                {['Đúng giờ điểm hẹn', 'Lịch sự văn minh', 'Giữ vệ sinh xe', 'Gửi tiền xăng sòng phẳng'].map((t) => (
+                  <span
+                    key={t}
+                    className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-medium border border-emerald-200 dark:border-emerald-900"
+                  >
                     ✓ {t}
                   </span>
                 ))}
@@ -253,10 +282,13 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-900 dark:text-white">Anh Hùng (Chủ xe Đồng Phú)</span>
-                <span className="text-amber-500 font-bold inline-flex items-center gap-0.5">5.0 <Star className="w-3 h-3 fill-amber-400" /></span>
+                <span className="text-amber-500 font-bold inline-flex items-center gap-0.5">
+                  5.0 <Star className="w-3 h-3 fill-amber-400" />
+                </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 italic">
-                "Anh Tuấn đi nhờ xe tôi về Bến xe Miền Đông, đứng chờ đúng điểm hẹn, lên xe chào hỏi văn minh, gửi tiền xăng sòng phẳng."
+                "Anh Tuấn đi nhờ xe tôi về Bến xe Miền Đông, đứng chờ đúng điểm hẹn, lên xe chào hỏi văn minh, gửi tiền
+                xăng sòng phẳng."
               </p>
             </div>
           </div>
@@ -267,7 +299,10 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
           <div className="space-y-3">
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {verifications.map((v, i) => (
-                <li key={i} className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-start gap-2.5">
+                <li
+                  key={i}
+                  className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-start gap-2.5"
+                >
                   <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 inline-flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
@@ -280,7 +315,9 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
             </ul>
 
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800">
-              <p className="text-xs font-semibold text-slate-900 dark:text-white mb-2">Quy ước văn minh đi chung xe CarMate:</p>
+              <p className="text-xs font-semibold text-slate-900 dark:text-white mb-2">
+                Quy ước văn minh đi chung xe CarMate:
+              </p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-lg bg-white dark:bg-[#151c2e] border border-slate-200/50 dark:border-white/[0.08]">
                   <CigaretteOff className="w-4 h-4 text-rose-500 mx-auto mb-1" />
@@ -302,4 +339,3 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
     </Modal>
   );
 }
-

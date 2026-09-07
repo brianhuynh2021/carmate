@@ -1,6 +1,38 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Car, Users, PlusCircle, MapPin, Navigation, CalendarDays, Receipt, ExternalLink, ArrowLeftRight, Sparkles, Plus, Check, Clock, ChevronDown, Camera, Upload, Trash2, ShieldCheck, Eye, Image as ImageIcon } from 'lucide-react';
-import { ROUTE_BENCHMARKS, TIME_SLOTS, formatVND, getTimeSlotLabel, isGoogleMapsUrl, getGoogleMapsUrl, mapTimeToSlot, isTimeInSlot, getUpcomingDays, formatTripDateDisplay } from '@carmate/shared';
+import {
+  Car,
+  Users,
+  PlusCircle,
+  MapPin,
+  Navigation,
+  CalendarDays,
+  Receipt,
+  ExternalLink,
+  ArrowLeftRight,
+  Sparkles,
+  Plus,
+  Check,
+  Clock,
+  ChevronDown,
+  Camera,
+  Upload,
+  Trash2,
+  ShieldCheck,
+  Eye,
+  Image as ImageIcon
+} from 'lucide-react';
+import {
+  ROUTE_BENCHMARKS,
+  TIME_SLOTS,
+  formatVND,
+  getTimeSlotLabel,
+  isGoogleMapsUrl,
+  getGoogleMapsUrl,
+  mapTimeToSlot,
+  isTimeInSlot,
+  getUpcomingDays,
+  formatTripDateDisplay
+} from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
 import Chip from '../ui/Chip.jsx';
@@ -68,7 +100,9 @@ function TimeSlotPicker({ value, onChange, exactTime, onExactTimeChange }) {
               {exactTime ? exactTime : selectedSlot.short}
             </span>
             <span className="text-xs font-normal text-slate-500 dark:text-slate-400 truncate hidden xs:inline">
-              {exactTime ? `(Khung ${selectedSlot.short})` : `(${selectedSlot.label.split('(')[1]?.replace(')', '') || ''})`}
+              {exactTime
+                ? `(Khung ${selectedSlot.short})`
+                : `(${selectedSlot.label.split('(')[1]?.replace(')', '') || ''})`}
             </span>
           </div>
           <ChevronDown
@@ -363,7 +397,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
     const validPhotos = (carPhotos || []).filter(Boolean);
     if (isDriver && validPhotos.length > 0) {
       if (validPhotos.length < 3) {
-        setFormError('Tùy chọn hình ảnh xe: Nếu tải ảnh, vui lòng cung cấp ít nhất 3 hình (Trước, Sau, Thân xe) và tối đa 5 hình để đảm bảo độ tin cậy.');
+        setFormError(
+          'Tùy chọn hình ảnh xe: Nếu tải ảnh, vui lòng cung cấp ít nhất 3 hình (Trước, Sau, Thân xe) và tối đa 5 hình để đảm bảo độ tin cậy.'
+        );
         return;
       }
       if (validPhotos.length > 5) {
@@ -464,14 +500,20 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
           <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-2">{t('post.whoAreYou')}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <OptionCard active={isDriver} onClick={() => setRole('driver')} icon={Car} title={t('post.driverRole')} />
-            <OptionCard active={!isDriver} onClick={() => setRole('passenger')} icon={Users} title={t('post.passengerRole')} />
+            <OptionCard
+              active={!isDriver}
+              onClick={() => setRole('passenger')}
+              icon={Users}
+              title={t('post.passengerRole')}
+            />
           </div>
         </div>
 
         {/* LỘ TRÌNH TỰ DO TOÀN QUỐC — KHÔNG ÉP CỨNG SÀI GÒN / VỀ TỈNH */}
         <FormSection icon={MapPin} title="Lộ trình di chuyển">
           <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2">
-            Linh hoạt điểm đi và điểm đến bất kỳ tỉnh thành nào trên toàn quốc (Hà Nội, Hải Phòng, Đà Nẵng, Bình Phước, Sài Gòn...).
+            Linh hoạt điểm đi và điểm đến bất kỳ tỉnh thành nào trên toàn quốc (Hà Nội, Hải Phòng, Đà Nẵng, Bình Phước,
+            Sài Gòn...).
           </p>
 
           <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-4 items-start pt-1">
@@ -620,7 +662,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                         : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 border border-slate-200/70 dark:border-white/5'
                     }`}
                   >
-                    {isAdded ? <Check className="w-3 h-3 text-emerald-600" /> : <Plus className="w-3 h-3 text-slate-400" />}
+                    {isAdded ? (
+                      <Check className="w-3 h-3 text-emerald-600" />
+                    ) : (
+                      <Plus className="w-3 h-3 text-slate-400" />
+                    )}
                     <span>{wp}</span>
                   </button>
                 );
@@ -629,7 +675,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
           </div>
         </FormSection>
 
-
         <FormSection icon={CalendarDays} title={t('post.sectionSchedule')}>
           <div>
             <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-2">{t('post.date')}</p>
@@ -637,11 +682,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
               {upcomingDays.map((d) => {
                 const isActive = scheduleDay === d.label || scheduleDay === d.iso || scheduleDay === d.fullDisplay;
                 return (
-                  <Chip
-                    key={d.iso}
-                    active={isActive}
-                    onClick={() => setScheduleDay(d.label)}
-                  >
+                  <Chip key={d.iso} active={isActive} onClick={() => setScheduleDay(d.label)}>
                     {d.label}
                   </Chip>
                 );
@@ -660,21 +701,32 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                 className="h-8 px-3 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#151c2e] text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-primary-500 cursor-pointer transition-all font-mono"
               />
             </div>
-            <Checkbox className="mt-3" checked={isRecurringWeekly} onChange={(e) => setIsRecurringWeekly(e.target.checked)} label={t('post.recurring')} />
+            <Checkbox
+              className="mt-3"
+              checked={isRecurringWeekly}
+              onChange={(e) => setIsRecurringWeekly(e.target.checked)}
+              label={t('post.recurring')}
+            />
           </div>
-
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div className="space-y-1.5">
               <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
                 {t('post.timeSlot')} <span className="text-rose-500">*</span>
               </label>
-              <TimeSlotPicker value={timeSlot} onChange={setTimeSlot} exactTime={exactTime} onExactTimeChange={setExactTime} />
+              <TimeSlotPicker
+                value={timeSlot}
+                onChange={setTimeSlot}
+                exactTime={exactTime}
+                onExactTimeChange={setExactTime}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>{isDriver ? t('post.seatsDriver') : t('post.seatsPassenger')} <span className="text-rose-500">*</span></span>
+                <span>
+                  {isDriver ? t('post.seatsDriver') : t('post.seatsPassenger')} <span className="text-rose-500">*</span>
+                </span>
                 <span className="text-xs text-slate-400 font-normal">tối đa 7 chỗ</span>
               </label>
               <div className="grid grid-cols-6 gap-1.5">
@@ -745,7 +797,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
             {/* GIÁ TIỀN GỢI Ý / MỨC ĐÓNG GÓP */}
             <div className="space-y-2">
               <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 tracking-tight flex items-baseline justify-between">
-                <span>{isDriver ? t('post.priceDriver') : t('post.pricePassenger')} <span className="text-rose-500">*</span></span>
+                <span>
+                  {isDriver ? t('post.priceDriver') : t('post.pricePassenger')} <span className="text-rose-500">*</span>
+                </span>
                 <span className="text-[11px] text-slate-400 font-normal">đã gồm cầu đường</span>
               </label>
 
@@ -792,9 +846,12 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
               </Field>
             ) : (
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs text-slate-500 dark:text-slate-400 space-y-1">
-                <span className="font-bold text-slate-700 dark:text-slate-200 block">💡 Mẹo tiết kiệm cho hành khách:</span>
+                <span className="font-bold text-slate-700 dark:text-slate-200 block">
+                  💡 Mẹo tiết kiệm cho hành khách:
+                </span>
                 <p className="leading-relaxed">
-                  Mức giá gợi ý khoảng 100k – 200k/ghế trên các trục QL13, QL14, QL1A giúp bạn kết nối với các chủ xe đi cùng lộ trình nhanh nhất.
+                  Mức giá gợi ý khoảng 100k – 200k/ghế trên các trục QL13, QL14, QL1A giúp bạn kết nối với các chủ xe đi
+                  cùng lộ trình nhanh nhất.
                 </p>
               </div>
             )}
@@ -810,15 +867,17 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-sm text-slate-900 dark:text-white">
-                        Hình ảnh thực tế của xe
-                      </span>
+                      <span className="font-bold text-sm text-slate-900 dark:text-white">Hình ảnh thực tế của xe</span>
                       <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
                         Tùy chọn tăng tín nhiệm
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Khách an tâm hơn khi thấy hình xe thật. <strong className="text-slate-700 dark:text-slate-300">Yêu cầu ít nhất 3 hình và tối đa 5 hình</strong> (Góc Trước, Góc Sau, Thân xe). Biển số tự động che bảo mật.
+                      Khách an tâm hơn khi thấy hình xe thật.{' '}
+                      <strong className="text-slate-700 dark:text-slate-300">
+                        Yêu cầu ít nhất 3 hình và tối đa 5 hình
+                      </strong>{' '}
+                      (Góc Trước, Góc Sau, Thân xe). Biển số tự động che bảo mật.
                     </p>
                   </div>
                 </div>
@@ -845,8 +904,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                         currentPhoto
                           ? 'border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10 ring-1 ring-emerald-500/30'
                           : slot.required
-                          ? 'border-dashed border-slate-300 dark:border-white/20 bg-white dark:bg-[#121827] hover:border-primary-500 hover:bg-primary-50/30 dark:hover:bg-primary-950/20'
-                          : 'border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0e1320] hover:border-slate-300 opacity-90'
+                            ? 'border-dashed border-slate-300 dark:border-white/20 bg-white dark:bg-[#121827] hover:border-primary-500 hover:bg-primary-50/30 dark:hover:bg-primary-950/20'
+                            : 'border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0e1320] hover:border-slate-300 opacity-90'
                       }`}
                     >
                       {currentPhoto ? (
@@ -966,7 +1025,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
 
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-              <span>Được bảo mật danh tính tự động bằng mã viết tắt ({isDriver ? 'CX-xxx' : 'HK-xxx'}) trước khi kết nối</span>
+              <span>
+                Được bảo mật danh tính tự động bằng mã viết tắt ({isDriver ? 'CX-xxx' : 'HK-xxx'}) trước khi kết nối
+              </span>
             </div>
           </div>
 
@@ -990,22 +1051,74 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               {isDriver ? (
                 <>
-                  <Checkbox checked={noSmoking} onChange={(e) => setNoSmoking(e.target.checked)} label="Không khói thuốc trên xe" />
-                  <Checkbox checked={botIncluded} onChange={(e) => setBotIncluded(e.target.checked)} label="Trọn gói xăng xe & vé cầu đường" />
-                  <Checkbox checked={familyCar} onChange={(e) => setFamilyCar(e.target.checked)} label="Xe gia đình êm ái, sạch sẽ" />
-                  <Checkbox checked={largeTrunk} onChange={(e) => setLargeTrunk(e.target.checked)} label="Cốp rộng để nhiều hành lý" />
-                  <Checkbox checked={acOn} onChange={(e) => setAcOn(e.target.checked)} label="Bật máy lạnh suốt tuyến" />
-                  <Checkbox checked={acceptsParcel} onChange={(e) => setAcceptsParcel(e.target.checked)} label="📦 Nhận gửi đồ / bưu phẩm tiện chuyến" />
-                  <Checkbox checked={noPet} onChange={(e) => setNoPet(e.target.checked)} label="Không nhận chở thú cưng" />
+                  <Checkbox
+                    checked={noSmoking}
+                    onChange={(e) => setNoSmoking(e.target.checked)}
+                    label="Không khói thuốc trên xe"
+                  />
+                  <Checkbox
+                    checked={botIncluded}
+                    onChange={(e) => setBotIncluded(e.target.checked)}
+                    label="Trọn gói xăng xe & vé cầu đường"
+                  />
+                  <Checkbox
+                    checked={familyCar}
+                    onChange={(e) => setFamilyCar(e.target.checked)}
+                    label="Xe gia đình êm ái, sạch sẽ"
+                  />
+                  <Checkbox
+                    checked={largeTrunk}
+                    onChange={(e) => setLargeTrunk(e.target.checked)}
+                    label="Cốp rộng để nhiều hành lý"
+                  />
+                  <Checkbox
+                    checked={acOn}
+                    onChange={(e) => setAcOn(e.target.checked)}
+                    label="Bật máy lạnh suốt tuyến"
+                  />
+                  <Checkbox
+                    checked={acceptsParcel}
+                    onChange={(e) => setAcceptsParcel(e.target.checked)}
+                    label="📦 Nhận gửi đồ / bưu phẩm tiện chuyến"
+                  />
+                  <Checkbox
+                    checked={noPet}
+                    onChange={(e) => setNoPet(e.target.checked)}
+                    label="Không nhận chở thú cưng"
+                  />
                 </>
               ) : (
                 <>
-                  <Checkbox checked={noSmoking} onChange={(e) => setNoSmoking(e.target.checked)} label="Không hút thuốc lá" />
-                  <Checkbox checked={compactLuggage} onChange={(e) => setCompactLuggage(e.target.checked)} label="Hành lý gọn gàng (balo/vali nhỏ)" />
-                  <Checkbox checked={onTime} onChange={(e) => setOnTime(e.target.checked)} label="Đúng giờ hẹn, không trễ" />
-                  <Checkbox checked={pickupHighway} onChange={(e) => setPickupHighway(e.target.checked)} label="Đón dọc Quốc Lộ tiện đường" />
-                  <Checkbox checked={noPet} onChange={(e) => setNoPet(e.target.checked)} label="Không mang theo thú cưng" />
-                  <Checkbox checked={hasChild} onChange={(e) => setHasChild(e.target.checked)} label="Có trẻ nhỏ đi cùng" />
+                  <Checkbox
+                    checked={noSmoking}
+                    onChange={(e) => setNoSmoking(e.target.checked)}
+                    label="Không hút thuốc lá"
+                  />
+                  <Checkbox
+                    checked={compactLuggage}
+                    onChange={(e) => setCompactLuggage(e.target.checked)}
+                    label="Hành lý gọn gàng (balo/vali nhỏ)"
+                  />
+                  <Checkbox
+                    checked={onTime}
+                    onChange={(e) => setOnTime(e.target.checked)}
+                    label="Đúng giờ hẹn, không trễ"
+                  />
+                  <Checkbox
+                    checked={pickupHighway}
+                    onChange={(e) => setPickupHighway(e.target.checked)}
+                    label="Đón dọc Quốc Lộ tiện đường"
+                  />
+                  <Checkbox
+                    checked={noPet}
+                    onChange={(e) => setNoPet(e.target.checked)}
+                    label="Không mang theo thú cưng"
+                  />
+                  <Checkbox
+                    checked={hasChild}
+                    onChange={(e) => setHasChild(e.target.checked)}
+                    label="Có trẻ nhỏ đi cùng"
+                  />
                 </>
               )}
             </div>
@@ -1017,15 +1130,23 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
               <Input
                 value={customPerk}
                 onChange={(e) => setCustomPerk(e.target.value)}
-                placeholder={isDriver ? "VD: Đón tận nơi tại Lộc Ninh, Không đón khách say xe..." : "VD: Cần 2 ghế cạnh nhau, Xin ngồi ghế trước chống say..."}
+                placeholder={
+                  isDriver
+                    ? 'VD: Đón tận nơi tại Lộc Ninh, Không đón khách say xe...'
+                    : 'VD: Cần 2 ghế cạnh nhau, Xin ngồi ghế trước chống say...'
+                }
                 className="text-xs bg-white dark:bg-slate-900"
               />
             </div>
           </div>
 
-
           <Field label={t('post.notes')} optional={t('common.optional')}>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('post.notesPh')} />
+            <Textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={t('post.notesPh')}
+            />
           </Field>
         </FormSection>
 
@@ -1039,7 +1160,10 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
           <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200">
             <div className="flex items-center gap-2.5">
               <span className="text-base">🔒</span>
-              <span>Bạn chưa đăng nhập. Khi bấm Đăng chuyến, CarMate sẽ mở xác thực SĐT/Zalo nhanh để gắn bài đăng chính chủ vào tài khoản của bạn.</span>
+              <span>
+                Bạn chưa đăng nhập. Khi bấm Đăng chuyến, CarMate sẽ mở xác thực SĐT/Zalo nhanh để gắn bài đăng chính chủ
+                vào tài khoản của bạn.
+              </span>
             </div>
             {onOpenAuth && (
               <button
@@ -1053,7 +1177,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
           </div>
         )}
 
-        <Button type="submit" size="lg" fullWidth icon={PlusCircle}>{t('post.submit')}</Button>
+        <Button type="submit" size="lg" fullWidth icon={PlusCircle}>
+          {t('post.submit')}
+        </Button>
       </form>
     </div>
   );

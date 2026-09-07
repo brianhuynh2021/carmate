@@ -23,7 +23,14 @@ export function LogoMark({ className = 'w-9 h-9' }) {
       </defs>
 
       {/* Nền Squircle Sapphire Gradient cao cấp chuẩn Apple */}
-      <rect width="100" height="100" rx="26" fill="url(#cmBrandSquircle)" stroke="rgba(0,113,227,0.3)" strokeWidth="1.5" />
+      <rect
+        width="100"
+        height="100"
+        rx="26"
+        fill="url(#cmBrandSquircle)"
+        stroke="rgba(0,113,227,0.3)"
+        strokeWidth="1.5"
+      />
 
       {/* Dải cao tốc CM Monogram liền mạch (Car C -> Mate M) */}
       <path

@@ -158,26 +158,67 @@ export async function generateTicketImage(trip, lang = 'vi') {
   const boxH = 120;
 
   // Ô 1: Thời gian xuất phát
-  drawInfoBox(ctx, cardX + 50, infoBoxY, boxW, boxH, 'THỜI GIAN XUẤT PHÁT', `${getTimeSlotLabel(trip, lang)}`, trip.date || 'Hôm nay', '#38bdf8');
+  drawInfoBox(
+    ctx,
+    cardX + 50,
+    infoBoxY,
+    boxW,
+    boxH,
+    'THỜI GIAN XUẤT PHÁT',
+    `${getTimeSlotLabel(trip, lang)}`,
+    trip.date || 'Hôm nay',
+    '#38bdf8'
+  );
 
   // Ô 2: Số chỗ trống
   const isDriver = trip.type === 'driver_offer';
   const seatsLabel = isDriver ? `Còn ${trip.availableSeats || 3} ghế trống` : `Cần ${trip.seatsNeeded || 1} chỗ`;
-  drawInfoBox(ctx, cardX + 70 + boxW, infoBoxY, boxW, boxH, 'TÌNH TRẠNG GHẾ', seatsLabel, trip.carType || 'Xe 7 chỗ rộng rãi', '#fbbf24');
+  drawInfoBox(
+    ctx,
+    cardX + 70 + boxW,
+    infoBoxY,
+    boxW,
+    boxH,
+    'TÌNH TRẠNG GHẾ',
+    seatsLabel,
+    trip.carType || 'Xe 7 chỗ rộng rãi',
+    '#fbbf24'
+  );
 
   // Ô 3: Chi phí chia sẻ
   const priceY = infoBoxY + boxH + 20;
   const priceVal = formatVND(trip.basePricePerSeat || trip.expectedPrice || 180000);
-  drawInfoBox(ctx, cardX + 50, priceY, boxW, boxH, 'CHI PHÍ CHIA SẺ', `${priceVal} / ghế`, 'Đã gồm vé cầu đường & xăng', '#34d399');
+  drawInfoBox(
+    ctx,
+    cardX + 50,
+    priceY,
+    boxW,
+    boxH,
+    'CHI PHÍ CHIA SẺ',
+    `${priceVal} / ghế`,
+    'Đã gồm vé cầu đường & xăng',
+    '#34d399'
+  );
 
   // Ô 4: Liên hệ Zalo / SĐT
   const phoneFormatted = formatPhoneForTicket(trip.phoneReal || trip.contactPhone || '0984883750');
-  drawInfoBox(ctx, cardX + 70 + boxW, priceY, boxW, boxH, 'LIÊN HỆ ĐÓN (ZALO / SĐT)', phoneFormatted, 'Không cần cọc · Lên xe gửi tiền', '#60a5fa');
+  drawInfoBox(
+    ctx,
+    cardX + 70 + boxW,
+    priceY,
+    boxW,
+    boxH,
+    'LIÊN HỆ ĐÓN (ZALO / SĐT)',
+    phoneFormatted,
+    'Không cần cọc · Lên xe gửi tiền',
+    '#60a5fa'
+  );
 
   // 6. TIỆN ÍCH & ĐẶC BIỆT (Gửi hàng / Bưu phẩm)
   const perksY = priceY + boxH + 30;
-  const hasParcel = trip.acceptsParcel || (Array.isArray(trip.perks) && trip.perks.some(p => /hàng|đồ|bưu phẩm/i.test(p)));
-  
+  const hasParcel =
+    trip.acceptsParcel || (Array.isArray(trip.perks) && trip.perks.some((p) => /hàng|đồ|bưu phẩm/i.test(p)));
+
   if (hasParcel) {
     // Banner nhận gửi hàng tiện chuyến
     ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
@@ -194,7 +235,7 @@ export async function generateTicketImage(trip, lang = 'vi') {
 
   // 7. Vết đục lỗ xé vé (Perforated ticket cutouts)
   const tearY = cardY + cardH - 240;
-  
+
   // Nửa hình tròn lõm hai bên
   ctx.fillStyle = '#090d16';
   ctx.beginPath();
@@ -217,7 +258,7 @@ export async function generateTicketImage(trip, lang = 'vi') {
 
   // 8. PHẦN CUỐI VÉ (FOOTER STUB)
   const stubY = tearY + 40;
-  
+
   // Text hướng dẫn
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
@@ -306,7 +347,7 @@ function drawCarMateLogo(ctx, x, y, size) {
   grad.addColorStop(0, '#38bdf8');
   grad.addColorStop(1, '#2563eb');
   ctx.fillStyle = grad;
-  
+
   drawRoundedRect(ctx, x, y, size, size, 16);
   ctx.fill();
 

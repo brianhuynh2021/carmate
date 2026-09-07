@@ -11,7 +11,9 @@ const TONES = {
 
 export default function Badge({ tone = 'neutral', icon: Icon, children, className = '' }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[12px] font-medium whitespace-nowrap tracking-tight ${TONES[tone] || TONES.neutral} ${className}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[12px] font-medium whitespace-nowrap tracking-tight ${TONES[tone] || TONES.neutral} ${className}`}
+    >
       {Icon && <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={2.2} />}
       <span>{children}</span>
     </span>
@@ -36,7 +38,9 @@ export function Avatar({ label = '', tone = 'primary', size = 'md', className = 
     .join('')
     .toUpperCase();
   return (
-    <span className={`inline-flex items-center justify-center rounded-full font-semibold shrink-0 select-none shadow-sm ${dims} ${tones[tone] || tones.primary} ${className}`}>
+    <span
+      className={`inline-flex items-center justify-center rounded-full font-semibold shrink-0 select-none shadow-sm ${dims} ${tones[tone] || tones.primary} ${className}`}
+    >
       {initials || '?'}
     </span>
   );
@@ -47,7 +51,9 @@ export function IconTile({ icon: Icon, tone = 'primary', size = 'md', className 
   const dims = size === 'sm' ? 'w-8 h-8 rounded-xl' : size === 'lg' ? 'w-12 h-12 rounded-2xl' : 'w-10 h-10 rounded-2xl';
   const ico = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
   return (
-    <span className={`inline-flex items-center justify-center shrink-0 ${dims} ${TONES[tone] || TONES.primary} ${className}`}>
+    <span
+      className={`inline-flex items-center justify-center shrink-0 ${dims} ${TONES[tone] || TONES.primary} ${className}`}
+    >
       <Icon className={ico} />
     </span>
   );

@@ -35,11 +35,10 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
       subtitle={`Gửi thông báo tới ${record.contactName} (${record.escrowId})`}
       footer={
         <div className="grid grid-cols-2 gap-3 w-full">
-          <Button variant="outline" onClick={onClose}>Đóng</Button>
-          <Button 
-            className="bg-[#0068ff] hover:bg-[#0055d4] text-white font-bold"
-            onClick={handleConfirmAndSend}
-          >
+          <Button variant="outline" onClick={onClose}>
+            Đóng
+          </Button>
+          <Button className="bg-[#0068ff] hover:bg-[#0055d4] text-white font-bold" onClick={handleConfirmAndSend}>
             <ZaloIcon className="w-4 h-4 mr-1.5" />
             <span>Báo trễ & Nhắn Zalo</span>
           </Button>
@@ -54,7 +53,12 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
           </p>
           <div className="flex gap-2">
             {[15, 30, 45].map((m) => (
-              <Chip key={m} active={minutes === m} onClick={() => setMinutes(m)} className="flex-1 justify-center tabular font-bold cursor-pointer">
+              <Chip
+                key={m}
+                active={minutes === m}
+                onClick={() => setMinutes(m)}
+                className="flex-1 justify-center tabular font-bold cursor-pointer"
+              >
                 +{m} phút
               </Chip>
             ))}
@@ -62,9 +66,9 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
         </div>
 
         <Field label="Lý do báo trễ:">
-          <Input 
-            value={note} 
-            onChange={(e) => setNote(e.target.value)} 
+          <Input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
             placeholder="VD: Kẹt xe ngã tư, việc gấp phát sinh..."
           />
         </Field>

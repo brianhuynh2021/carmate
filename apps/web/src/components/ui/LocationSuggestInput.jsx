@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  MapPin, 
-  Building2, 
-  Bus, 
-  Plane, 
-  Milestone, 
-  X, 
-  ChevronRight, 
-  Search, 
-  Loader2, 
-  Hospital, 
+import {
+  MapPin,
+  Building2,
+  Bus,
+  Plane,
+  Milestone,
+  X,
+  ChevronRight,
+  Search,
+  Loader2,
+  Hospital,
   Navigation,
   Check,
   Clock,
@@ -124,7 +124,7 @@ export default function LocationSuggestInput({
     // Lưu vào lịch sử tìm kiếm gần đây (Tối đa 4 mục gần nhất theo chuẩn Grab / Maps)
     try {
       const recents = JSON.parse(localStorage.getItem('carmate_recent_places') || '[]');
-      const filtered = [item, ...recents.filter(r => r.name !== item.name)].slice(0, 4);
+      const filtered = [item, ...recents.filter((r) => r.name !== item.name)].slice(0, 4);
       localStorage.setItem('carmate_recent_places', JSON.stringify(filtered));
       setRecentLocations(filtered);
     } catch {}
@@ -142,10 +142,10 @@ export default function LocationSuggestInput({
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex(prev => (prev < displayedSuggestions.length - 1 ? prev + 1 : 0));
+      setActiveIndex((prev) => (prev < displayedSuggestions.length - 1 ? prev + 1 : 0));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIndex(prev => (prev > 0 ? prev - 1 : displayedSuggestions.length - 1));
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : displayedSuggestions.length - 1));
     } else if (e.key === 'Enter') {
       if (activeIndex >= 0 && displayedSuggestions[activeIndex]) {
         e.preventDefault();
@@ -161,9 +161,8 @@ export default function LocationSuggestInput({
   const isOmnibar = variant === 'omnibar';
 
   // Lọc theo tag danh mục nếu người dùng bấm chip filter
-  const displayedSuggestions = activeCategoryFilter === 'all'
-    ? suggestions
-    : suggestions.filter(s => s.category === activeCategoryFilter);
+  const displayedSuggestions =
+    activeCategoryFilter === 'all' ? suggestions : suggestions.filter((s) => s.category === activeCategoryFilter);
 
   // Vị trí dropdown: Nếu là ô điểm đến (search-to-input), căn lề phải để không tràn mép phải
   const isRightAligned = id === 'search-to-input';
@@ -201,9 +200,11 @@ export default function LocationSuggestInput({
           autoComplete="off"
           className={
             isOmnibar
-              ? "w-full bg-transparent border-0 p-0 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none truncate"
+              ? 'w-full bg-transparent border-0 p-0 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none truncate'
               : `w-full h-10 ${LeadingIcon ? 'pl-9' : 'pl-3'} pr-8 rounded-xl text-xs font-semibold bg-white dark:bg-[#151c2e] border ${
-                  isOpen ? 'border-[#0071e3] ring-2 ring-[#0071e3]/20 shadow-md' : 'border-slate-200/90 dark:border-white/[0.08]'
+                  isOpen
+                    ? 'border-[#0071e3] ring-2 ring-[#0071e3]/20 shadow-md'
+                    : 'border-slate-200/90 dark:border-white/[0.08]'
                 } text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all shadow-2xs`
           }
         />
@@ -275,7 +276,7 @@ export default function LocationSuggestInput({
               { id: 'highway', label: 'Nút giao', icon: Milestone },
               { id: 'airport', label: 'Sân bay', icon: Plane },
               { id: 'building', label: 'Địa danh', icon: Building2 }
-            ].map(cat => {
+            ].map((cat) => {
               const Icon = cat.icon;
               return (
                 <button
@@ -332,9 +333,7 @@ export default function LocationSuggestInput({
                           <p className="text-xs font-bold truncate leading-tight text-slate-900 dark:text-white">
                             {item.name}
                           </p>
-                          <p className="text-[10.5px] text-slate-400 truncate">
-                            {item.detail}
-                          </p>
+                          <p className="text-[10.5px] text-slate-400 truncate">{item.detail}</p>
                         </div>
                       </div>
                       <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
@@ -390,20 +389,18 @@ export default function LocationSuggestInput({
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        isSelected
-                          ? 'bg-[#0071e3]/15 text-[#0071e3]'
-                          : 'bg-slate-100 dark:bg-white/5'
-                      }`}>
+                      <span
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                          isSelected ? 'bg-[#0071e3]/15 text-[#0071e3]' : 'bg-slate-100 dark:bg-white/5'
+                        }`}
+                      >
                         <CategoryIcon type={item.category} />
                       </span>
                       <div className="min-w-0">
                         <p className="text-xs font-bold truncate leading-tight text-slate-900 dark:text-white">
                           {item.name}
                         </p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                          {item.detail}
-                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.detail}</p>
                       </div>
                     </div>
 

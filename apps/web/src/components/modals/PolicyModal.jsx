@@ -29,7 +29,11 @@ export default function PolicyModal({ onClose, zIndex = 'z-50' }) {
       icon={Scale}
       title={t('policy.title')}
       subtitle={`${t('policy.subtitle')} · ${t('policy.updated')}`}
-      footer={<Button fullWidth size="lg" onClick={onClose}>{t('policy.accept')}</Button>}
+      footer={
+        <Button fullWidth size="lg" onClick={onClose}>
+          {t('policy.accept')}
+        </Button>
+      }
     >
       <div className="space-y-7 text-sm leading-relaxed">
         <PolicySection icon={ShieldCheck} title={t('policy.s1Title')}>
@@ -51,11 +55,17 @@ export default function PolicyModal({ onClose, zIndex = 'z-50' }) {
         <PolicySection icon={Handshake} title={t('policy.s3Title')}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-              <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1"><Car className="w-4 h-4 text-primary-600" />{t('policy.s3Driver')}</p>
+              <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1">
+                <Car className="w-4 h-4 text-primary-600" />
+                {t('policy.s3Driver')}
+              </p>
               <p className="text-[13px] text-slate-600 dark:text-slate-400">{t('policy.s3DriverText')}</p>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-              <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1"><Users className="w-4 h-4 text-warning-600" />{t('policy.s3Passenger')}</p>
+              <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1">
+                <Users className="w-4 h-4 text-warning-600" />
+                {t('policy.s3Passenger')}
+              </p>
               <p className="text-[13px] text-slate-600 dark:text-slate-400">{t('policy.s3PassengerText')}</p>
             </div>
           </div>

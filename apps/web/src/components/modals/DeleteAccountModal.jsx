@@ -38,12 +38,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
           <Button variant="outline" onClick={onClose} disabled={isDeleting}>
             Giữ lại tài khoản
           </Button>
-          <Button
-            variant="danger"
-            onClick={handleDelete}
-            disabled={!confirmed || isDeleting}
-            className="font-semibold"
-          >
+          <Button variant="danger" onClick={handleDelete} disabled={!confirmed || isDeleting} className="font-semibold">
             {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
           </Button>
         </div>
@@ -54,7 +49,8 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
         <div className="p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/60 border border-black/[0.06] text-xs space-y-1">
           <p className="text-slate-500 font-medium">Tài khoản chuẩn bị xóa:</p>
           <p className="font-extrabold text-slate-900 dark:text-white text-sm">
-            {currentUser.name} {currentUser.phone ? `(${currentUser.phone})` : currentUser.email ? `(${currentUser.email})` : ''}
+            {currentUser.name}{' '}
+            {currentUser.phone ? `(${currentUser.phone})` : currentUser.email ? `(${currentUser.email})` : ''}
           </p>
         </div>
 
@@ -67,19 +63,27 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
           <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-2 pl-1">
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1.5"></span>
-              <span><strong>Xóa vĩnh viễn</strong> số điện thoại, email và hồ sơ thành viên khỏi cơ sở dữ liệu.</span>
+              <span>
+                <strong>Xóa vĩnh viễn</strong> số điện thoại, email và hồ sơ thành viên khỏi cơ sở dữ liệu.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1.5"></span>
-              <span><strong>Hủy ngay lập tức</strong> tất cả các chuyến xe do bạn đăng đang hoạt động trên sàn.</span>
+              <span>
+                <strong>Hủy ngay lập tức</strong> tất cả các chuyến xe do bạn đăng đang hoạt động trên sàn.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1.5"></span>
-              <span><strong>Ẩn danh hóa (Anonymize)</strong> lịch sử kết nối cũ để không làm gián đoạn người đi cùng.</span>
+              <span>
+                <strong>Ẩn danh hóa (Anonymize)</strong> lịch sử kết nối cũ để không làm gián đoạn người đi cùng.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1.5"></span>
-              <span><strong>Đăng xuất và hủy mã Token</strong> trên tất cả các thiết bị. Không thể khôi phục lại.</span>
+              <span>
+                <strong>Đăng xuất và hủy mã Token</strong> trên tất cả các thiết bị. Không thể khôi phục lại.
+              </span>
             </li>
           </ul>
         </div>

@@ -12,7 +12,7 @@ const PRESET_CANCEL_REASONS = [
   'Việc gia đình đột xuất',
   'Thay đổi lịch trình công tác',
   'Kẹt xe / phương tiện gặp sự cố',
-  'Đã tìm được phương án khác',
+  'Đã tìm được phương án khác'
 ];
 
 export default function CancelModal({ record, onClose, onConfirmCancel }) {
@@ -40,7 +40,9 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
       subtitle={`Mã chuyến ${record.escrowId} · Đối tác: ${record.contactName}`}
       footer={
         <div className="grid grid-cols-2 gap-3 w-full">
-          <Button variant="outline" onClick={onClose}>Quay lại</Button>
+          <Button variant="outline" onClick={onClose}>
+            Quay lại
+          </Button>
           <Button variant="danger" onClick={handleCancelAndNotify} className="font-semibold">
             <ZaloIcon className="w-4 h-4 mr-1.5" />
             <span>Xác nhận & Báo Zalo</span>
@@ -51,7 +53,9 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
       <div className="space-y-4">
         <div className="p-3.5 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] text-sm">
           <p className="text-xs text-[#86868b]">Lộ trình đã ghép</p>
-          <p className="font-bold text-[#1d1d1f] mt-0.5">{record.from} ➔ {record.to}</p>
+          <p className="font-bold text-[#1d1d1f] mt-0.5">
+            {record.from} ➔ {record.to}
+          </p>
         </div>
 
         <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
@@ -59,23 +63,17 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
           <div className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
             <strong className="font-bold">Văn hoá đi chung xe văn minh:</strong>
             <p className="mt-0.5">
-              CarMate <strong>không thu tiền cọc và không phạt tiền</strong> (0đ phạt). Để giữ gìn uy tín cộng đồng, xin vui lòng thông báo sớm qua Zalo trước 1-2 tiếng để đối tác kịp thu xếp bạn đồng hành khác.
+              CarMate <strong>không thu tiền cọc và không phạt tiền</strong> (0đ phạt). Để giữ gìn uy tín cộng đồng, xin
+              vui lòng thông báo sớm qua Zalo trước 1-2 tiếng để đối tác kịp thu xếp bạn đồng hành khác.
             </p>
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-bold text-[#1d1d1f] mb-2 block">
-            Chọn nhanh lý do thay đổi:
-          </label>
+          <label className="text-xs font-bold text-[#1d1d1f] mb-2 block">Chọn nhanh lý do thay đổi:</label>
           <div className="flex flex-wrap gap-2">
             {PRESET_CANCEL_REASONS.map((r) => (
-              <Chip
-                key={r}
-                active={reason === r}
-                onClick={() => setReason(r)}
-                className="text-xs cursor-pointer"
-              >
+              <Chip key={r} active={reason === r} onClick={() => setReason(r)} className="text-xs cursor-pointer">
                 {r}
               </Chip>
             ))}
@@ -83,11 +81,7 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
         </div>
 
         <Field label="Hoặc ghi rõ lý do cụ thể:">
-          <Input
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Nhập lý do thay đổi..."
-          />
+          <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Nhập lý do thay đổi..." />
         </Field>
 
         {/* Khung xem trước tin nhắn Zalo gửi đối tác */}
@@ -104,4 +98,3 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
     </Modal>
   );
 }
-

@@ -1,12 +1,5 @@
 import { ROUTE_BENCHMARKS, cleanPhoneNumber } from '@carmate/shared';
-import {
-  getDB,
-  getUserById,
-  getUserByPhone,
-  getAllUsers,
-  getTripsByPhone,
-  getTripById
-} from '../db/sqliteStore.js';
+import { getDB, getUserById, getUserByPhone, getAllUsers, getTripsByPhone, getTripById } from '../db/sqliteStore.js';
 
 /**
  * GET /api/health - Kiểm tra tình trạng hoạt động của API
@@ -114,16 +107,15 @@ export function getTrustProfile(req, res) {
         if (trip) {
           tripSample = trip;
           user = (trip.phoneReal && getUserByPhone(trip.phoneReal)) ||
-                 (trip.userId && getUserById(trip.userId)) ||
-                 {
-                   id: trip.userId || 'USR-' + (trip.phoneReal ? cleanPhoneNumber(trip.phoneReal) : 'ANON'),
-                   phone: trip.phoneReal,
-                   name: trip.publicName || 'Chủ xe ' + (trip.maskedCode || ''),
-                   role: trip.type === 'passenger_request' ? 'passenger' : 'driver',
-                   trustScore: trip.trustScore || 98,
-                   isCccdVerified: 1,
-                   isGplxVerified: trip.type === 'driver_offer' ? 1 : 0
-                 };
+            (trip.userId && getUserById(trip.userId)) || {
+              id: trip.userId || 'USR-' + (trip.phoneReal ? cleanPhoneNumber(trip.phoneReal) : 'ANON'),
+              phone: trip.phoneReal,
+              name: trip.publicName || 'Chủ xe ' + (trip.maskedCode || ''),
+              role: trip.type === 'passenger_request' ? 'passenger' : 'driver',
+              trustScore: trip.trustScore || 98,
+              isCccdVerified: 1,
+              isGplxVerified: trip.type === 'driver_offer' ? 1 : 0
+            };
         }
       }
     }
@@ -147,11 +139,17 @@ export function getTrustProfile(req, res) {
     const computedPassengerTrips = isDefaultOrDemo ? Math.max(4, passengerTrips.length) : passengerTrips.length;
 
     const profile = {
-      id: isDefaultOrDemo ? memberId : (user.id || memberId),
-      name: isDefaultOrDemo ? 'Nguyễn Anh Tuấn' : (user.name || 'Thành viên CarMate'),
-      publicName: isDefaultOrDemo ? 'Chủ xe Lộc Ninh #101' : (user.name ? `${user.name} (${user.role === 'driver' ? 'Chủ xe' : 'Hành khách'})` : (firstDriverTrip?.maskedCode || 'Thành viên')),
+      id: isDefaultOrDemo ? memberId : user.id || memberId,
+      name: isDefaultOrDemo ? 'Nguyễn Anh Tuấn' : user.name || 'Thành viên CarMate',
+      publicName: isDefaultOrDemo
+        ? 'Chủ xe Lộc Ninh #101'
+        : user.name
+          ? `${user.name} (${user.role === 'driver' ? 'Chủ xe' : 'Hành khách'})`
+          : firstDriverTrip?.maskedCode || 'Thành viên',
       hometown: user.hometown || firstDriverTrip?.hometown || 'Bình Phước',
-      memberSince: user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' }) : '2025',
+      memberSince: user.createdAt
+        ? new Date(user.createdAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
+        : '2025',
       karmaScore: user.trustScore || 98,
       trustScore: user.trustScore || 98,
       rating: user.rating || 5.0,
@@ -170,16 +168,28 @@ export function getTrustProfile(req, res) {
         reviewsCount: Math.min(computedPassengerTrips, 5),
         topTags: ['Đúng giờ điểm đón', 'Lịch sự văn minh', 'Sòng phẳng tiền xăng']
       },
-      car: firstDriverTrip ? {
-        model: firstDriverTrip.carCategory || firstDriverTrip.carType || 'Xe ô tô 7 chỗ gia đình',
-        plate: firstDriverTrip.licensePlate ? firstDriverTrip.licensePlate.replace(/\d{2}$/, 'xx') : '93A-***.xx (Đã kiểm tra)',
-        color: 'Trắng',
-        features: ['100% không khói thuốc lá', 'Điều hoà mát mẻ']
-      } : null,
+      car: firstDriverTrip
+        ? {
+            model: firstDriverTrip.carCategory || firstDriverTrip.carType || 'Xe ô tô 7 chỗ gia đình',
+            plate: firstDriverTrip.licensePlate
+              ? firstDriverTrip.licensePlate.replace(/\d{2}$/, 'xx')
+              : '93A-***.xx (Đã kiểm tra)',
+            color: 'Trắng',
+            features: ['100% không khói thuốc lá', 'Điều hoà mát mẻ']
+          }
+        : null,
       verifications: [
         { key: 'phone_zalo', label: 'Số điện thoại & Zalo chính chủ', verified: Boolean(user.phone) },
-        { key: 'id_card', label: 'Căn cước công dân gắn chip', verified: Boolean(user.isCccdVerified || user.verifiedCCCD) },
-        { key: 'driver_license', label: 'Giấy phép lái xe B2', verified: Boolean(user.isGplxVerified || user.verifiedGPLX) },
+        {
+          key: 'id_card',
+          label: 'Căn cước công dân gắn chip',
+          verified: Boolean(user.isCccdVerified || user.verifiedCCCD)
+        },
+        {
+          key: 'driver_license',
+          label: 'Giấy phép lái xe B2',
+          verified: Boolean(user.isGplxVerified || user.verifiedGPLX)
+        },
         { key: 'car_inspection', label: 'Đăng kiểm & Phương tiện lưu thông', verified: Boolean(driverTrips.length > 0) }
       ],
       safetyWarnings: user.isBanned ? ['Tài khoản đang bị khoá do vi phạm quy chế cộng đồng'] : [],

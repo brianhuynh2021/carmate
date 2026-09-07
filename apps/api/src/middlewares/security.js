@@ -7,14 +7,17 @@
 const ipRequestBuckets = new Map();
 
 // Tự động dọn dẹp các IP đã hết hạn định kỳ mỗi 5 phút để tránh rò rỉ RAM
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, bucket] of ipRequestBuckets.entries()) {
-    if (now - bucket.resetTime > 60000) {
-      ipRequestBuckets.delete(key);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, bucket] of ipRequestBuckets.entries()) {
+      if (now - bucket.resetTime > 60000) {
+        ipRequestBuckets.delete(key);
+      }
     }
-  }
-}, 5 * 60 * 1000).unref();
+  },
+  5 * 60 * 1000
+).unref();
 
 /**
  * Trích xuất địa chỉ IP của client (Chỉ tin cậy proxy khi được cấu hình app.set('trust proxy'))
@@ -38,7 +41,11 @@ function getClientIp(req) {
  * @param {number} options.max - Số lượng request tối đa trong khoảng thời gian
  * @param {string} options.message - Thông điệp trả về khi vượt ngưỡng
  */
-export function createRateLimiter({ windowMs = 60 * 1000, max = 120, message = 'Quá nhiều yêu cầu, vui lòng thử lại sau ít phút.' } = {}) {
+export function createRateLimiter({
+  windowMs = 60 * 1000,
+  max = 120,
+  message = 'Quá nhiều yêu cầu, vui lòng thử lại sau ít phút.'
+} = {}) {
   return (req, res, next) => {
     // KHÔNG CÓ CỬA HẬU TEST: Mọi request đều phải tuân thủ rate limit
     const ip = getClientIp(req);
@@ -131,7 +138,10 @@ export function sanitizeInput(req, res, next) {
       for (const key of Object.keys(obj)) {
         if (typeof obj[key] === 'string') {
           // Loại bỏ scheme nguy hiểm và escape HTML entities
-          let val = obj[key].replace(/javascript:/gi, '').replace(/vbscript:/gi, '').trim();
+          let val = obj[key]
+            .replace(/javascript:/gi, '')
+            .replace(/vbscript:/gi, '')
+            .trim();
           obj[key] = escapeHtml(val);
         } else if (typeof obj[key] === 'object' && obj[key] !== null) {
           cleanObject(obj[key]);

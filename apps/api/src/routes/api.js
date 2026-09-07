@@ -1,7 +1,24 @@
 import { Router } from 'express';
-import { listTrips, getTrip, createTrip, updateStatus, updateTripHandler, deleteTripHandler, republishTripHandler } from '../controllers/tripController.js';
+import {
+  listTrips,
+  getTrip,
+  createTrip,
+  updateStatus,
+  updateTripHandler,
+  deleteTripHandler,
+  republishTripHandler
+} from '../controllers/tripController.js';
 import { getMatches } from '../controllers/matchController.js';
-import { listBookings, createBooking, reportDelay, cancelBooking, completeBooking, submitReview, getBookingPublicSummary, driverConfirmBooking } from '../controllers/bookingController.js';
+import {
+  listBookings,
+  createBooking,
+  reportDelay,
+  cancelBooking,
+  completeBooking,
+  submitReview,
+  getBookingPublicSummary,
+  driverConfirmBooking
+} from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile } from '../controllers/miscController.js';
 import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe, deleteAccount } from '../controllers/authController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';

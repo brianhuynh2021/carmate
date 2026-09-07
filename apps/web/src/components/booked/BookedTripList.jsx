@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Clock, Phone, CheckCircle2, Timer, ShieldCheck, XCircle,
-  Share2, Check, Ticket, MessageSquare, ArrowRight, History, Star,
-  Sparkles, Lock, Shield
+  Clock,
+  Phone,
+  CheckCircle2,
+  Timer,
+  ShieldCheck,
+  XCircle,
+  Share2,
+  Check,
+  Ticket,
+  MessageSquare,
+  ArrowRight,
+  History,
+  Star,
+  Sparkles,
+  Lock,
+  Shield
 } from 'lucide-react';
 import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -46,7 +59,9 @@ function Countdown30Min({ createdAt }) {
       }`}
     >
       <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-      <span>Còn {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')} để chốt điểm đón qua Zalo</span>
+      <span>
+        Còn {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')} để chốt điểm đón qua Zalo
+      </span>
     </div>
   );
 }
@@ -61,26 +76,26 @@ function TripProgressStepper({ status, delayedMinutes }) {
       id: 1,
       label: 'Khớp xe tiện đường',
       desc: 'Chi phí xăng & vé trạm',
-      state: 'completed',
+      state: 'completed'
     },
     {
       id: 2,
       label: isDelayed ? `Báo trễ +${delayedMinutes || 15}p` : 'Hẹn điểm đón Zalo',
       desc: isCancelled ? 'Đã dừng kết nối' : 'Thoả thuận điểm đón GPS',
-      state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active',
+      state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active'
     },
     {
       id: 3,
       label: 'Lên xe & Phụ xăng',
       desc: '0% phí sàn · Đưa trực tiếp',
-      state: isCompleted ? 'completed' : 'pending',
+      state: isCompleted ? 'completed' : 'pending'
     },
     {
       id: 4,
       label: 'Tín nhiệm 2 chiều',
       desc: isCompleted ? 'Đã ghi nhận uy tín' : 'Tích xanh CCCD',
-      state: isCompleted ? 'completed' : 'pending',
-    },
+      state: isCompleted ? 'completed' : 'pending'
+    }
   ];
 
   return (
@@ -96,7 +111,13 @@ function TripProgressStepper({ status, delayedMinutes }) {
           </span>
         </div>
         <span className="text-[11px] font-semibold text-[#86868b] tabular">
-          {isCompleted ? '4/4 hoàn tất' : isCancelled ? 'Đã dừng' : isDelayed ? 'Bước 2/4 (Báo trễ)' : 'Bước 2/4 đang kết nối'}
+          {isCompleted
+            ? '4/4 hoàn tất'
+            : isCancelled
+              ? 'Đã dừng'
+              : isDelayed
+                ? 'Bước 2/4 (Báo trễ)'
+                : 'Bước 2/4 đang kết nối'}
         </span>
       </div>
 
@@ -114,12 +135,12 @@ function TripProgressStepper({ status, delayedMinutes }) {
                 isDone
                   ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/70 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-200'
                   : isActive
-                  ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-2 ring-blue-500/15'
-                  : isDelayState
-                  ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
-                  : isCancelState
-                  ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 text-rose-900'
-                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] text-[#86868b] opacity-60'
+                    ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-2 ring-blue-500/15'
+                    : isDelayState
+                      ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+                      : isCancelState
+                        ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 text-rose-900'
+                        : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] text-[#86868b] opacity-60'
               }`}
             >
               <div className="flex items-center gap-1.5 mb-1">
@@ -128,23 +149,19 @@ function TripProgressStepper({ status, delayedMinutes }) {
                     isDone
                       ? 'bg-emerald-600 text-white'
                       : isActive
-                      ? 'bg-[#0071e3] text-white animate-pulse'
-                      : isDelayState
-                      ? 'bg-amber-500 text-white'
-                      : isCancelState
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#86868b]'
+                        ? 'bg-[#0071e3] text-white animate-pulse'
+                        : isDelayState
+                          ? 'bg-amber-500 text-white'
+                          : isCancelState
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#86868b]'
                   }`}
                 >
                   {isDone ? '✓' : isCancelState ? '✕' : step.id}
                 </span>
-                <span className="text-[11.5px] font-bold leading-tight line-clamp-1">
-                  {step.label}
-                </span>
+                <span className="text-[11.5px] font-bold leading-tight line-clamp-1">{step.label}</span>
               </div>
-              <p className="text-[10.5px] leading-tight opacity-75 truncate font-medium">
-                {step.desc}
-              </p>
+              <p className="text-[10.5px] leading-tight opacity-75 truncate font-medium">{step.desc}</p>
             </div>
           );
         })}
@@ -219,9 +236,11 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
         >
           <Clock className={`w-4 h-4 ${activeTab === 'active' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
           <span>Chuyến đang diễn ra</span>
-          <span className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
-            activeTab === 'active' ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
-          }`}>
+          <span
+            className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
+              activeTab === 'active' ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
+            }`}
+          >
             {activeBookings.length}
           </span>
         </button>
@@ -237,9 +256,11 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
         >
           <History className={`w-4 h-4 ${activeTab === 'history' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
           <span>Lịch sử chuyến đi</span>
-          <span className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
-            activeTab === 'history' ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
-          }`}>
+          <span
+            className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
+              activeTab === 'history' ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
+            }`}
+          >
             {historyBookings.length}
           </span>
         </button>
@@ -251,7 +272,11 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
           <EmptyState
             icon={activeTab === 'active' ? Clock : History}
             title={activeTab === 'active' ? 'Chưa có chuyến đi nào đang chờ' : 'Chưa có lịch sử chuyến'}
-            description={activeTab === 'active' ? 'Tìm chuyến xe cùng tuyến để kết nối bạn đồng hành ngay.' : 'Các chuyến đi bạn đã hoàn thành hoặc huỷ sẽ lưu lại tại đây.'}
+            description={
+              activeTab === 'active'
+                ? 'Tìm chuyến xe cùng tuyến để kết nối bạn đồng hành ngay.'
+                : 'Các chuyến đi bạn đã hoàn thành hoặc huỷ sẽ lưu lại tại đây.'
+            }
             action={<Button onClick={onFindTrip}>Tìm chuyến tiện đường ngay</Button>}
           />
         </div>
@@ -263,7 +288,10 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
               phone,
               `Xin chào ${record.contactName}, tôi vừa ghép chuyến CarMate [${record.escrowId}] tuyến ${record.from} đi ${record.to}. Mình trao đổi chốt điểm đón nhé!`
             );
-            const waUrl = getWhatsAppChatUrl(phone, `Xin chào, tôi vừa ghép chuyến CarMate [${record.escrowId}] tuyến ${record.from} đi ${record.to}`);
+            const waUrl = getWhatsAppChatUrl(
+              phone,
+              `Xin chào, tôi vừa ghép chuyến CarMate [${record.escrowId}] tuyến ${record.from} đi ${record.to}`
+            );
             const teleUrl = getTelegramChatUrl(phone);
             const totalCost = record.fullTripAmount || record.totalDeal || 0;
             const isCompleted = record.status === 'completed';
@@ -271,7 +299,10 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
             const isDelayed = record.status === 'delayed';
 
             return (
-              <article key={record.escrowId} className="surface overflow-hidden shadow-xs border border-black/[0.08] rounded-3xl">
+              <article
+                key={record.escrowId}
+                className="surface overflow-hidden shadow-xs border border-black/[0.08] rounded-3xl"
+              >
                 {/* Header Vé */}
                 <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-3 flex-wrap border-b border-black/[0.06]">
                   <div className="flex items-center gap-3">
@@ -315,9 +346,7 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                       <span className="font-semibold text-[#1d1d1f] tabular">
                         {record.timeSlot} {record.targetItem?.date ? `(${record.targetItem.date})` : ''}
                       </span>
-                      <span className="text-[#86868b] font-medium">
-                        {record.seats} người đồng hành
-                      </span>
+                      <span className="text-[#86868b] font-medium">{record.seats} người đồng hành</span>
                     </div>
                     <RouteTimeline from={record.from} to={record.to} compact />
                   </div>
@@ -332,22 +361,21 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                             <div className="w-10 h-10 rounded-full bg-[#0071e3]/10 text-[#0071e3] font-bold text-sm flex items-center justify-center border border-[#0071e3]/20">
                               {(record.contactName || 'T')[0]?.toUpperCase()}
                             </div>
-                            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900" title="Đã xác thực CCCD & GPLX">
+                            <span
+                              className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
+                              title="Đã xác thực CCCD & GPLX"
+                            >
                               ✓
                             </span>
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <p className="font-bold text-sm text-[#1d1d1f] dark:text-white">
-                                {record.contactName}
-                              </p>
+                              <p className="font-bold text-sm text-[#1d1d1f] dark:text-white">{record.contactName}</p>
                               <span className="text-[11px] font-semibold px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60">
                                 98đ Tín nhiệm
                               </span>
                             </div>
-                            <p className="text-xs text-[#86868b] mt-0.5">
-                              Chủ xe gia đình · Xác thực danh tính thật
-                            </p>
+                            <p className="text-xs text-[#86868b] mt-0.5">Chủ xe gia đình · Xác thực danh tính thật</p>
                           </div>
                         </div>
 
@@ -416,9 +444,7 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                       <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular mt-1">
                         0 ₫ · Miễn phí trọn đời
                       </p>
-                      <p className="text-[11px] text-[#86868b] mt-0.5">
-                        Không thu chiết khấu trung gian
-                      </p>
+                      <p className="text-[11px] text-[#86868b] mt-0.5">Không thu chiết khấu trung gian</p>
                     </div>
 
                     <div className="p-4 rounded-2xl border border-black/[0.06] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
@@ -426,9 +452,7 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
                       <p className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular mt-1">
                         {formatVND(totalCost)}
                       </p>
-                      <p className="text-[11px] text-[#86868b] mt-0.5">
-                        Gửi trực tiếp tài xế khi lên xe
-                      </p>
+                      <p className="text-[11px] text-[#86868b] mt-0.5">Gửi trực tiếp tài xế khi lên xe</p>
                     </div>
                   </div>
                 </div>
@@ -488,7 +512,9 @@ export default function BookedTripList({ bookedEscrows = [], onCancel, onDelay, 
 
                   {(isCompleted || isCancelled) && (
                     <div className="flex items-center justify-between w-full text-xs text-slate-500 dark:text-slate-400">
-                      <span>{isCompleted ? '✓ Chuyến đi đã hoàn tất an toàn' : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}</span>
+                      <span>
+                        {isCompleted ? '✓ Chuyến đi đã hoàn tất an toàn' : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
+                      </span>
                       {isCompleted && onReview && (
                         <button
                           type="button"

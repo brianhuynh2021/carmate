@@ -8,14 +8,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@carmate/shared': path.resolve(__dirname, '../../packages/shared/src/index.js'),
-    },
+      '@carmate/shared': path.resolve(__dirname, '../../packages/shared/src/index.js')
+    }
   },
   build: {
     rollupOptions: {
@@ -39,5 +36,5 @@ export default defineConfig({
         changeOrigin: true
       }
     }
-  },
+  }
 });

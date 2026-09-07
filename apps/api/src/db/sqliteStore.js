@@ -95,7 +95,7 @@ export async function initDB() {
 
   // Migration an toàn cho database hiện hữu nếu chưa có cột email
   try {
-    const userColumns = db.pragma('table_info(users)').map(col => col.name);
+    const userColumns = db.pragma('table_info(users)').map((col) => col.name);
     if (!userColumns.includes('email')) {
       db.exec('ALTER TABLE users ADD COLUMN email TEXT');
     }
@@ -168,10 +168,13 @@ export async function initDB() {
         const raw = fs.readFileSync(LEGACY_JSON_FILE, 'utf-8');
         const legacy = JSON.parse(raw);
         if (Array.isArray(legacy.driverOffers) && legacy.driverOffers.length > 0) initialDrivers = legacy.driverOffers;
-        if (Array.isArray(legacy.passengerRequests) && legacy.passengerRequests.length > 0) initialPassengers = legacy.passengerRequests;
+        if (Array.isArray(legacy.passengerRequests) && legacy.passengerRequests.length > 0)
+          initialPassengers = legacy.passengerRequests;
         if (Array.isArray(legacy.bookings) && legacy.bookings.length > 0) initialBookings = legacy.bookings;
         if (Array.isArray(legacy.users) && legacy.users.length > 0) initialUsers = legacy.users;
-        console.log(`[SQLite DB] Đọc thành công dữ liệu di chuyển (${initialDrivers.length} chủ xe, ${initialPassengers.length} khách, ${initialBookings.length} lượt ghép)`);
+        console.log(
+          `[SQLite DB] Đọc thành công dữ liệu di chuyển (${initialDrivers.length} chủ xe, ${initialPassengers.length} khách, ${initialBookings.length} lượt ghép)`
+        );
       } catch (e) {
         console.warn('[SQLite DB] Lỗi đọc carmate_db.json:', e.message);
       }
@@ -357,7 +360,7 @@ export function getDB() {
       members: SITE_INFO.stats.members,
       tripsCompleted: SITE_INFO.stats.tripsCompleted,
       routes: SITE_INFO.stats.routes,
-      avgRating: SITE_INFO.stats.avgRating,
+      avgRating: SITE_INFO.stats.avgRating
     }
   };
 }
@@ -511,10 +514,16 @@ export async function addTrip(tripData) {
   const database = getRawDB();
   const cleanPhone = cleanPhoneNumber(tripData.phoneReal || tripData.phone || '');
   const id = tripData.id || `${tripData.type === 'passenger_request' ? 'REQ' : 'DRV'}-${Date.now()}`;
-  const maskedCode = tripData.maskedCode || `${tripData.type === 'passenger_request' ? 'HK' : 'CX'}-${Math.floor(100 + Math.random() * 900)}`;
+  const maskedCode =
+    tripData.maskedCode ||
+    `${tripData.type === 'passenger_request' ? 'HK' : 'CX'}-${Math.floor(100 + Math.random() * 900)}`;
 
   let dateVal = tripData.date || 'Hôm nay';
-  if (tripData.departureTime && /mai/i.test(tripData.departureTime) && (!tripData.date || tripData.date === 'Hôm nay')) {
+  if (
+    tripData.departureTime &&
+    /mai/i.test(tripData.departureTime) &&
+    (!tripData.date || tripData.date === 'Hôm nay')
+  ) {
     dateVal = 'Ngày mai';
   }
 
@@ -597,7 +606,7 @@ export async function republishTrip(id, updates = {}) {
 
   const newDate = updates.date || getTomorrowISO();
   const newTimeSlot = updates.timeSlot || existing.timeSlot || '07:00-09:00';
-  const newExactTime = updates.exactTime !== undefined ? updates.exactTime : (existing.exactTime || '');
+  const newExactTime = updates.exactTime !== undefined ? updates.exactTime : existing.exactTime || '';
 
   const prefix = existing.type === 'passenger_request' ? 'REQ' : 'DRV';
   const codePrefix = existing.type === 'passenger_request' ? 'HK' : 'CX';
@@ -608,8 +617,16 @@ export async function republishTrip(id, updates = {}) {
   // `updates` để tránh ghi đè quyền sở hữu (phoneReal/userId) — nếu không,
   // chủ bài có thể tái đăng thành chuyến đứng tên số điện thoại người khác.
   const ALLOWED_REPUBLISH_FIELDS = [
-    'date', 'timeSlot', 'exactTime', 'availableSeats', 'seatsNeeded',
-    'basePricePerSeat', 'expectedPrice', 'notes', 'perks', 'direction'
+    'date',
+    'timeSlot',
+    'exactTime',
+    'availableSeats',
+    'seatsNeeded',
+    'basePricePerSeat',
+    'expectedPrice',
+    'notes',
+    'perks',
+    'direction'
   ];
   const safeUpdates = {};
   for (const key of ALLOWED_REPUBLISH_FIELDS) {
@@ -646,13 +663,15 @@ export async function deleteTrip(id) {
 export function getBookings() {
   const database = getRawDB();
   const rows = database.prepare('SELECT payload FROM bookings ORDER BY createdAt DESC').all();
-  return rows.map((r) => {
-    try {
-      return JSON.parse(r.payload);
-    } catch {
-      return null;
-    }
-  }).filter(Boolean);
+  return rows
+    .map((r) => {
+      try {
+        return JSON.parse(r.payload);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 }
 
 export async function addBooking(bookingData) {
@@ -666,17 +685,21 @@ export async function addBooking(bookingData) {
     createdAt: bookingData.createdAt || Date.now()
   };
 
-  database.prepare(`
+  database
+    .prepare(
+      `
     INSERT OR REPLACE INTO bookings (escrowId, tripId, passengerPhone, status, createdAt, payload)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(
-    escrowId,
-    full.tripId || '',
-    cleanPhoneNumber(full.passengerPhone || ''),
-    full.status || 'zalo_active',
-    full.createdAt,
-    JSON.stringify(full)
-  );
+  `
+    )
+    .run(
+      escrowId,
+      full.tripId || '',
+      cleanPhoneNumber(full.passengerPhone || ''),
+      full.status || 'zalo_active',
+      full.createdAt,
+      JSON.stringify(full)
+    );
 
   return full;
 }
@@ -702,9 +725,13 @@ export async function updateBookingStatus(id, status, extra = {}) {
     full.status = status;
     Object.assign(full, extra);
 
-    database.prepare(`
+    database
+      .prepare(
+        `
       UPDATE bookings SET status = ?, payload = ? WHERE escrowId = ?
-    `).run(status, JSON.stringify(full), id);
+    `
+      )
+      .run(status, JSON.stringify(full), id);
 
     return full;
   } catch {
@@ -752,8 +779,9 @@ export function getUserByEmail(email) {
   if (!email) return null;
   const cleanEmail = email.trim().toLowerCase();
   // Ưu tiên truy vấn qua Index cột email O(1), fallback quét payload nếu là dữ liệu cũ
-  const row = database.prepare('SELECT payload FROM users WHERE email = ?').get(cleanEmail) ||
-              database.prepare('SELECT payload FROM users WHERE payload LIKE ?').get(`%"email":"${cleanEmail}"%`);
+  const row =
+    database.prepare('SELECT payload FROM users WHERE email = ?').get(cleanEmail) ||
+    database.prepare('SELECT payload FROM users WHERE payload LIKE ?').get(`%"email":"${cleanEmail}"%`);
   if (!row) return null;
 
   try {
@@ -779,27 +807,31 @@ export async function saveUser(user) {
     createdAt: user.createdAt || now
   };
 
-  database.prepare(`
+  database
+    .prepare(
+      `
     INSERT OR REPLACE INTO users (
       id, phone, email, name, role, avatar, trustScore, isCccdVerified, isGplxVerified, isBanned, createdAt, updatedAt, payload
     ) VALUES (
       @id, @phone, @email, @name, @role, @avatar, @trustScore, @isCccdVerified, @isGplxVerified, @isBanned, @createdAt, @updatedAt, @payload
     )
-  `).run({
-    id,
-    phone: clean,
-    email: cleanEmail,
-    name: full.name || 'Thành viên ' + (clean ? clean.slice(-4) : 'mới'),
-    role: full.role || 'driver',
-    avatar: full.avatar || '',
-    trustScore: Number(full.trustScore || 98),
-    isCccdVerified: full.isCccdVerified ? 1 : 0,
-    isGplxVerified: full.isGplxVerified ? 1 : 0,
-    isBanned: full.isBanned ? 1 : 0,
-    createdAt: full.createdAt,
-    updatedAt: full.updatedAt,
-    payload: JSON.stringify(full)
-  });
+  `
+    )
+    .run({
+      id,
+      phone: clean,
+      email: cleanEmail,
+      name: full.name || 'Thành viên ' + (clean ? clean.slice(-4) : 'mới'),
+      role: full.role || 'driver',
+      avatar: full.avatar || '',
+      trustScore: Number(full.trustScore || 98),
+      isCccdVerified: full.isCccdVerified ? 1 : 0,
+      isGplxVerified: full.isGplxVerified ? 1 : 0,
+      isBanned: full.isBanned ? 1 : 0,
+      createdAt: full.createdAt,
+      updatedAt: full.updatedAt,
+      payload: JSON.stringify(full)
+    });
 
   return full;
 }
@@ -828,13 +860,16 @@ export async function deleteUserAccount(userId, phone) {
 
   // 2. Ẩn danh hóa các cuốc ghép trong lịch sử để không làm hỏng dữ liệu của người đi cùng
   if (effectivePhone) {
-    const userBookings = database.prepare('SELECT escrowId, payload FROM bookings WHERE passengerPhone = ?').all(effectivePhone);
+    const userBookings = database
+      .prepare('SELECT escrowId, payload FROM bookings WHERE passengerPhone = ?')
+      .all(effectivePhone);
     for (const b of userBookings) {
       try {
         const payload = JSON.parse(b.payload || '{}');
         payload.passengerPhone = '[Đã xóa]';
         payload.passengerName = '[Tài khoản đã xóa]';
-        database.prepare('UPDATE bookings SET passengerPhone = ?, payload = ? WHERE escrowId = ?')
+        database
+          .prepare('UPDATE bookings SET passengerPhone = ?, payload = ? WHERE escrowId = ?')
           .run('[Đã xóa]', JSON.stringify(payload), b.escrowId);
       } catch {}
     }
@@ -859,14 +894,18 @@ export function getTripsByPhone(phone) {
   const clean = cleanPhoneNumber(phone);
   if (!clean) return [];
 
-  const rows = database.prepare('SELECT payload FROM trips WHERE phoneReal = ? OR userId = ? ORDER BY createdAt DESC').all(clean, 'USR-' + clean);
-  return rows.map((r) => {
-    try {
-      return JSON.parse(r.payload);
-    } catch {
-      return null;
-    }
-  }).filter(Boolean);
+  const rows = database
+    .prepare('SELECT payload FROM trips WHERE phoneReal = ? OR userId = ? ORDER BY createdAt DESC')
+    .all(clean, 'USR-' + clean);
+  return rows
+    .map((r) => {
+      try {
+        return JSON.parse(r.payload);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 }
 
 export function getAllUsers() {
@@ -910,7 +949,9 @@ export function getAllUsers() {
 export async function updateUserStatus(userId, updates = {}) {
   const database = getRawDB();
   let found = null;
-  const row = database.prepare('SELECT payload FROM users WHERE id = ? OR phone = ?').get(userId, cleanPhoneNumber(userId));
+  const row = database
+    .prepare('SELECT payload FROM users WHERE id = ? OR phone = ?')
+    .get(userId, cleanPhoneNumber(userId));
   if (row) {
     try {
       found = JSON.parse(row.payload);
@@ -933,7 +974,9 @@ export async function updateUserStatus(userId, updates = {}) {
 
   if (updates.isBanned !== undefined) {
     const isBannedInt = updates.isBanned ? 1 : 0;
-    database.prepare('UPDATE trips SET isBanned = ? WHERE phoneReal = ? OR userId = ?').run(isBannedInt, cleanPhoneNumber(found.phone), userId);
+    database
+      .prepare('UPDATE trips SET isBanned = ? WHERE phoneReal = ? OR userId = ?')
+      .run(isBannedInt, cleanPhoneNumber(found.phone), userId);
   }
 
   return found;
@@ -958,14 +1001,20 @@ export function getAdminMetrics() {
   const database = getRawDB();
   const totalTripsCount = database.prepare('SELECT COUNT(*) as count FROM trips').get().count;
   const hiddenTripsCount = database.prepare('SELECT COUNT(*) as count FROM trips WHERE isHidden = 1').get().count;
-  const activeTripsCount = database.prepare('SELECT COUNT(*) as count FROM trips WHERE isHidden = 0 AND isBanned = 0 AND status = ?').get('active').count;
+  const activeTripsCount = database
+    .prepare('SELECT COUNT(*) as count FROM trips WHERE isHidden = 0 AND isBanned = 0 AND status = ?')
+    .get('active').count;
   const totalBookingsCount = database.prepare('SELECT COUNT(*) as count FROM bookings').get().count;
-  const completedBookingsCount = database.prepare('SELECT COUNT(*) as count FROM bookings WHERE status = ?').get('completed').count;
-  const activeBookingsCount = database.prepare('SELECT COUNT(*) as count FROM bookings WHERE status = ?').get('zalo_active').count;
+  const completedBookingsCount = database
+    .prepare('SELECT COUNT(*) as count FROM bookings WHERE status = ?')
+    .get('completed').count;
+  const activeBookingsCount = database
+    .prepare('SELECT COUNT(*) as count FROM bookings WHERE status = ?')
+    .get('zalo_active').count;
 
   const allUsersList = getAllUsers();
   const totalMembersCount = allUsersList.length;
-  const verifiedDriversCount = allUsersList.filter(u => u.isCccdVerified && u.isGplxVerified).length;
+  const verifiedDriversCount = allUsersList.filter((u) => u.isCccdVerified && u.isGplxVerified).length;
 
   const uptimeSeconds = Math.floor(process.uptime());
   const heapUsedMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
@@ -1034,10 +1083,14 @@ export function recordAiTrajectory({
 
 export function getAiTrajectories(limit = 30) {
   const database = getRawDB();
-  const rows = database.prepare(`
+  const rows = database
+    .prepare(
+      `
     SELECT * FROM ai_trajectories ORDER BY createdAt DESC LIMIT ?
-  `).all(limit);
-  return rows.map(r => ({
+  `
+    )
+    .all(limit);
+  return rows.map((r) => ({
     ...r,
     reasoningSteps: r.reasoningSteps ? JSON.parse(r.reasoningSteps) : [],
     unmetDemand: Boolean(r.unmetDemand)
@@ -1047,20 +1100,28 @@ export function getAiTrajectories(limit = 30) {
 export function getAiIntelligenceStats() {
   const database = getRawDB();
   const total = database.prepare('SELECT COUNT(*) as count FROM ai_trajectories').get().count;
-  const resolved = database.prepare('SELECT COUNT(*) as count FROM ai_trajectories WHERE suggestionsCount > 0').get().count;
+  const resolved = database
+    .prepare('SELECT COUNT(*) as count FROM ai_trajectories WHERE suggestionsCount > 0')
+    .get().count;
   const avgLatencyRow = database.prepare('SELECT AVG(executionTimeMs) as avgLat FROM ai_trajectories').get();
   const avgLatencyMs = Math.round(avgLatencyRow?.avgLat || 0);
-  const unmetTotal = database.prepare('SELECT COUNT(*) as count FROM ai_trajectories WHERE unmetDemand = 1').get().count;
+  const unmetTotal = database
+    .prepare('SELECT COUNT(*) as count FROM ai_trajectories WHERE unmetDemand = 1')
+    .get().count;
 
   // Nhóm các tuyến xe chưa được đáp ứng nhiều nhất (Unmet Demand)
-  const unmetRoutes = database.prepare(`
+  const unmetRoutes = database
+    .prepare(
+      `
     SELECT requestedRoute as route, COUNT(*) as count, MAX(createdAt) as lastQueriedAt
     FROM ai_trajectories
     WHERE unmetDemand = 1 AND requestedRoute IS NOT NULL AND requestedRoute != ''
     GROUP BY requestedRoute
     ORDER BY count DESC
     LIMIT 10
-  `).all();
+  `
+    )
+    .all();
 
   const recentTrajectories = getAiTrajectories(20);
 
@@ -1086,7 +1147,7 @@ export function saveAnalyticsEvent({ id, eventName, properties, userId, createdA
   stmt.run(
     id || `evt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     eventName,
-    typeof properties === 'object' ? JSON.stringify(properties) : (properties || '{}'),
+    typeof properties === 'object' ? JSON.stringify(properties) : properties || '{}',
     userId || null,
     createdAt || Date.now()
   );
@@ -1095,7 +1156,7 @@ export function saveAnalyticsEvent({ id, eventName, properties, userId, createdA
 export function getAnalyticsSummary() {
   const database = getRawDB();
   const total = database.prepare('SELECT COUNT(*) as count FROM analytics_events').get().count;
-  
+
   // Funnel events count
   const funnelEvents = ['page_view', 'search_route', 'view_trip', 'initiate_booking', 'open_zalo', 'driver_confirm'];
   const funnelCounts = {};
@@ -1105,11 +1166,15 @@ export function getAnalyticsSummary() {
   }
 
   // Top searched routes from properties
-  const allSearchEvents = database.prepare(`
+  const allSearchEvents = database
+    .prepare(
+      `
     SELECT properties FROM analytics_events 
     WHERE event_name = 'search_route' 
     ORDER BY created_at DESC LIMIT 500
-  `).all();
+  `
+    )
+    .all();
 
   const routeCounts = {};
   for (const row of allSearchEvents) {
@@ -1130,12 +1195,17 @@ export function getAnalyticsSummary() {
     .map(([route, count]) => ({ route, count }));
 
   // Recent 20 events
-  const recentEvents = database.prepare(`
+  const recentEvents = database
+    .prepare(
+      `
     SELECT * FROM analytics_events ORDER BY created_at DESC LIMIT 20
-  `).all().map(r => ({
-    ...r,
-    properties: r.properties ? JSON.parse(r.properties) : {}
-  }));
+  `
+    )
+    .all()
+    .map((r) => ({
+      ...r,
+      properties: r.properties ? JSON.parse(r.properties) : {}
+    }));
 
   return {
     totalEvents: total,
@@ -1144,4 +1214,3 @@ export function getAnalyticsSummary() {
     recentEvents
   };
 }
-

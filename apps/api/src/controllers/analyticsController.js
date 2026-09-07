@@ -1,4 +1,5 @@
 import { saveAnalyticsEvent, getAnalyticsSummary } from '../db/sqliteStore.js';
+import { sendSystemErrorAlert } from '../utils/telegramAlert.js';
 
 /**
  * POST /api/analytics/event
@@ -16,14 +17,26 @@ export function recordEvent(req, res) {
       return res.status(400).json({ success: false, error: 'eventName không được vượt quá 100 ký tự' });
     }
 
+    const trimmedEventName = eventName.trim();
     const effectiveUserId = req.user?.id || userId || null;
 
     saveAnalyticsEvent({
-      eventName: eventName.trim(),
+      eventName: trimmedEventName,
       properties: properties && typeof properties === 'object' ? properties : {},
       userId: effectiveUserId,
       createdAt: Date.now()
     });
+
+    // Nếu là sự kiện crash từ trình duyệt người dùng, tự động bắn cảnh báo Telegram
+    if (trimmedEventName === 'error_unhandled') {
+      const clientError = new Error(properties?.message || 'Sự cố ngoại lệ trình duyệt (Client Crash)');
+      if (properties?.stack) clientError.stack = properties.stack;
+      sendSystemErrorAlert({
+        error: clientError,
+        req,
+        source: 'Frontend Browser (Client Crash)'
+      }).catch(() => {});
+    }
 
     return res.status(201).json({ success: true, message: 'Ghi nhận sự kiện thành công' });
   } catch (error) {

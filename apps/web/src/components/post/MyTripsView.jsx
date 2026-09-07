@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Car, 
-  Edit3, 
-  Trash2, 
-  CheckCircle2, 
-  Lock, 
-  Unlock, 
-  PlusCircle, 
-  ExternalLink, 
-  Users, 
-  Clock, 
-  ShieldCheck, 
-  Sparkles, 
-  Fuel, 
-  MapPin, 
-  LogIn, 
+import {
+  Car,
+  Edit3,
+  Trash2,
+  CheckCircle2,
+  Lock,
+  Unlock,
+  PlusCircle,
+  ExternalLink,
+  Users,
+  Clock,
+  ShieldCheck,
+  Sparkles,
+  Fuel,
+  MapPin,
+  LogIn,
   RefreshCw,
   Info,
   Camera
 } from 'lucide-react';
-import { 
-  formatVND, 
-  getTimeSlotLabel, 
-  getRouteCorridor, 
+import {
+  formatVND,
+  getTimeSlotLabel,
+  getRouteCorridor,
   ROUTE_BENCHMARKS,
   formatTripDateDisplay,
   isTripExpired
@@ -78,7 +78,7 @@ export default function MyTripsView({
         const stored = JSON.parse(localStorage.getItem(userKey) || localStorage.getItem('carmate_my_trip_ids') || '[]');
         const validStored = Array.isArray(stored) ? stored : [];
         if (allTrips.length > 0) {
-          const clean = validStored.filter(id => allTrips.some(t => t.id === id));
+          const clean = validStored.filter((id) => allTrips.some((t) => t.id === id));
           if (clean.length !== validStored.length) {
             localStorage.setItem(userKey, JSON.stringify(clean));
           }
@@ -94,7 +94,7 @@ export default function MyTripsView({
         const guestStored = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
         const validGuest = Array.isArray(guestStored) ? guestStored : [];
         if (allTrips.length > 0) {
-          const clean = validGuest.filter(id => allTrips.some(t => t.id === id));
+          const clean = validGuest.filter((id) => allTrips.some((t) => t.id === id));
           if (clean.length !== validGuest.length) {
             localStorage.setItem('carmate_guest_trip_ids', JSON.stringify(clean));
           }
@@ -121,13 +121,14 @@ export default function MyTripsView({
   const activeOpenCount = activeTrips.filter((t) => t.status !== 'full').length;
   const activeFullCount = activeTrips.filter((t) => t.status === 'full').length;
 
-  const filteredTrips = mainTab === 'history'
-    ? historyTrips
-    : activeTrips.filter((t) => {
-        if (statusFilter === 'open') return t.status !== 'full';
-        if (statusFilter === 'full') return t.status === 'full';
-        return true;
-      });
+  const filteredTrips =
+    mainTab === 'history'
+      ? historyTrips
+      : activeTrips.filter((t) => {
+          if (statusFilter === 'open') return t.status !== 'full';
+          if (statusFilter === 'full') return t.status === 'full';
+          return true;
+        });
 
   const handleConfirmDelete = (trip) => {
     const codeStr = trip.maskedCode ? `(${trip.maskedCode})` : '';
@@ -136,7 +137,9 @@ export default function MyTripsView({
       const updated = myTripIds.filter((id) => id !== trip.id);
       setMyTripIds(updated);
       try {
-        const storageKey = currentUser ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}` : 'carmate_guest_trip_ids';
+        const storageKey = currentUser
+          ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}`
+          : 'carmate_guest_trip_ids';
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem('carmate_my_trip_ids');
       } catch {}
@@ -288,7 +291,8 @@ export default function MyTripsView({
                 Hộ Chiếu Số CarMate · Chuyến Đi Của Tôi
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Bạn đang duyệt ở chế độ <strong>Khách</strong> (Chưa đăng nhập). Hãy đăng nhập bằng Số điện thoại Zalo hoặc Google để tự động đồng bộ tất cả chuyến xe của bạn trên mọi thiết bị và quản lý nhận khách an toàn.
+                Bạn đang duyệt ở chế độ <strong>Khách</strong> (Chưa đăng nhập). Hãy đăng nhập bằng Số điện thoại Zalo
+                hoặc Google để tự động đồng bộ tất cả chuyến xe của bạn trên mọi thiết bị và quản lý nhận khách an toàn.
               </p>
             </div>
 
@@ -356,7 +360,8 @@ export default function MyTripsView({
                 Chào {currentUser.name}! Bạn chưa đăng chuyến đi nào.
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Khi bạn đăng chuyến đi (Chủ xe có ghế trống hoặc Khách cần tìm xe), bài đăng sẽ hiển thị tại đây để bạn cập nhật giờ chạy, giá vé hoặc đóng chỗ khi đã đủ khách.
+                Khi bạn đăng chuyến đi (Chủ xe có ghế trống hoặc Khách cần tìm xe), bài đăng sẽ hiển thị tại đây để bạn
+                cập nhật giờ chạy, giá vé hoặc đóng chỗ khi đã đủ khách.
               </p>
             </div>
             <Button variant="primary" size="md" icon={PlusCircle} onClick={onPostNew} className="shadow-sm">
@@ -374,7 +379,9 @@ export default function MyTripsView({
                   <Sparkles className="w-3.5 h-3.5" />
                 </span>
                 <p className="text-slate-700 dark:text-slate-300 font-medium leading-snug">
-                  Các chuyến xe đã qua giờ khởi hành được lưu trữ tại đây. Nhấn <strong>⚡ Tái đăng cho ngày mai</strong> để tiếp tục nhận khách trong 2 giây mà không cần nhập lại lộ trình hay mức giá.
+                  Các chuyến xe đã qua giờ khởi hành được lưu trữ tại đây. Nhấn{' '}
+                  <strong>⚡ Tái đăng cho ngày mai</strong> để tiếp tục nhận khách trong 2 giây mà không cần nhập lại lộ
+                  trình hay mức giá.
                 </p>
               </div>
             </div>
@@ -382,7 +389,8 @@ export default function MyTripsView({
 
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 font-medium">
             <span>
-              Đang hiển thị {filteredTrips.length} {mainTab === 'history' ? 'chuyến trong lịch sử' : 'chuyến đang tìm khách'}
+              Đang hiển thị {filteredTrips.length}{' '}
+              {mainTab === 'history' ? 'chuyến trong lịch sử' : 'chuyến đang tìm khách'}
             </span>
             <span>Tự động đồng bộ với bảng tin cộng đồng</span>
           </div>
@@ -390,7 +398,9 @@ export default function MyTripsView({
           {filteredTrips.length === 0 ? (
             <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.08] space-y-2">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                {mainTab === 'history' ? 'Chưa có chuyến xe nào trong lịch sử' : 'Không có chuyến đi nào đang nhận khách'}
+                {mainTab === 'history'
+                  ? 'Chưa có chuyến xe nào trong lịch sử'
+                  : 'Không có chuyến đi nào đang nhận khách'}
               </p>
               {mainTab === 'history' ? (
                 <button
@@ -418,16 +428,16 @@ export default function MyTripsView({
                 const expired = isTripExpired(trip);
                 const price = trip.basePricePerSeat || trip.expectedPrice || trip.suggestedContribution || 150000;
                 const seats = trip.availableSeats || trip.seatsNeeded || 1;
-                const isConvenient = isDriver && (
-                  trip.carCategory === 'convenient_trip' ||
-                  trip.notes?.toLowerCase().includes('tiện chuyến') ||
-                  trip.carType?.toLowerCase().includes('tiện chuyến')
-                );
+                const isConvenient =
+                  isDriver &&
+                  (trip.carCategory === 'convenient_trip' ||
+                    trip.notes?.toLowerCase().includes('tiện chuyến') ||
+                    trip.carType?.toLowerCase().includes('tiện chuyến'));
 
                 // Tra cứu định mức kỹ thuật xăng RON 95 + BOT tuyến này
                 const corridor = getRouteCorridor(trip.from, trip.to);
                 const benchmark = corridor ? ROUTE_BENCHMARKS[corridor] : null;
-                const fuelBotRef = benchmark ? benchmark.suggestedRate : (trip.suggestedContribution || price);
+                const fuelBotRef = benchmark ? benchmark.suggestedRate : trip.suggestedContribution || price;
 
                 return (
                   <div
@@ -450,13 +460,15 @@ export default function MyTripsView({
                             </span>
                           )}
 
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
-                            isDriver
-                              ? isConvenient
-                                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-200/80 dark:border-blue-800/60'
-                                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60'
-                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/60'
-                          }`}>
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
+                              isDriver
+                                ? isConvenient
+                                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-200/80 dark:border-blue-800/60'
+                                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60'
+                                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/60'
+                            }`}
+                          >
                             {isDriver ? (isConvenient ? 'Tiện chuyến' : 'Chủ xe gia đình') : 'Khách tìm xe'}
                           </span>
 
@@ -511,18 +523,29 @@ export default function MyTripsView({
 
                           <span className="text-[12px] text-slate-600 dark:text-slate-400 font-medium inline-flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Giờ chạy: <strong className="text-slate-900 dark:text-white font-semibold">{getTimeSlotLabel(trip)}</strong></span>
+                            <span>
+                              Giờ chạy:{' '}
+                              <strong className="text-slate-900 dark:text-white font-semibold">
+                                {getTimeSlotLabel(trip)}
+                              </strong>
+                            </span>
                           </span>
                         </div>
 
                         {/* Inline Telemetry Badges */}
                         <div className="flex items-center gap-2 flex-wrap text-[11px]">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 font-mono font-medium" title="Định mức chi phí nhiên liệu & vé trạm thu phí theo quy chuẩn kỹ thuật">
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 font-mono font-medium"
+                            title="Định mức chi phí nhiên liệu & vé trạm thu phí theo quy chuẩn kỹ thuật"
+                          >
                             <Fuel className="w-3 h-3 text-slate-500" />
                             <span>Định mức xăng + BOT: ~{formatVND(fuelBotRef)}</span>
                           </span>
 
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 font-medium" title="Kết nối trực tiếp qua Zalo không mất phí viễn thông">
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 font-medium"
+                            title="Kết nối trực tiếp qua Zalo không mất phí viễn thông"
+                          >
                             <ShieldCheck className="w-3 h-3 text-blue-600" />
                             <span>Zalo Direct (0đ SMS)</span>
                           </span>
@@ -577,7 +600,11 @@ export default function MyTripsView({
                                 ? 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/90 dark:border-emerald-800/60 shadow-2xs'
                                 : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700'
                             }`}
-                            title={isFull ? 'Mở lại bài đăng để tiếp tục nhận khách' : 'Đánh dấu đã đủ người để không nhận thêm liên hệ Zalo'}
+                            title={
+                              isFull
+                                ? 'Mở lại bài đăng để tiếp tục nhận khách'
+                                : 'Đánh dấu đã đủ người để không nhận thêm liên hệ Zalo'
+                            }
                           >
                             {isFull ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                             <span>{isFull ? 'Mở nhận khách' : 'Báo đủ chỗ'}</span>
@@ -588,7 +615,7 @@ export default function MyTripsView({
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => onViewTrip ? onViewTrip(trip) : onViewInMarket?.(trip)}
+                          onClick={() => (onViewTrip ? onViewTrip(trip) : onViewInMarket?.(trip))}
                           className="h-8.5 px-3.5 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0071e3] dark:text-[#2997ff] border border-[#0071e3]/20 font-bold text-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                           title="Xem chi tiết thẻ vé & chia sẻ bài đăng"
                         >

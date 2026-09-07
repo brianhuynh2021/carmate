@@ -1,5 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Phone, Users, ShieldCheck, MapPin, Building2, Bus, Milestone, Check, Sparkles, Navigation, Copy, CheckCheck } from 'lucide-react';
+import {
+  Phone,
+  Users,
+  ShieldCheck,
+  MapPin,
+  Building2,
+  Bus,
+  Milestone,
+  Check,
+  Sparkles,
+  Navigation,
+  Copy,
+  CheckCheck
+} from 'lucide-react';
 import { formatVND, calculatePricing, getTimeSlotLabel, getZaloChatUrl, cleanPhoneNumber } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -158,18 +171,21 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
 
       // Lưu trạng thái Zalo Re-entry vào localStorage để khi khách quay lại web hiển thị Apple Action Sheet
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('carmate_pending_zalo_booking', JSON.stringify({
-          escrowId: bookingCode,
-          tripId: item.id,
-          driverName: item.publicName || 'Bác tài',
-          driverPhone: targetPhoneForZalo,
-          from: item.from,
-          to: item.to,
-          seats,
-          totalDeal: pricing.total,
-          timeSlot,
-          timestamp: Date.now()
-        }));
+        localStorage.setItem(
+          'carmate_pending_zalo_booking',
+          JSON.stringify({
+            escrowId: bookingCode,
+            tripId: item.id,
+            driverName: item.publicName || 'Bác tài',
+            driverPhone: targetPhoneForZalo,
+            from: item.from,
+            to: item.to,
+            seats,
+            totalDeal: pricing.total,
+            timeSlot,
+            timestamp: Date.now()
+          })
+        );
       }
 
       window.open(zaloUrl, '_blank', 'noopener,noreferrer');
@@ -188,7 +204,11 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
         className="bg-[#0068ff] hover:bg-[#0055d4] disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-sm font-semibold text-base py-3 cursor-pointer transition-all duration-150 active:scale-[0.99]"
       >
         <ZaloIcon className="w-5 h-5 mr-2" />
-        {submitting ? 'Đang kết nối...' : (isDriverItem ? 'Xác nhận cam kết & Nhắn Zalo chốt điểm đón' : 'Xác nhận cam kết & Nhắn Zalo hẹn giờ')}
+        {submitting
+          ? 'Đang kết nối...'
+          : isDriverItem
+            ? 'Xác nhận cam kết & Nhắn Zalo chốt điểm đón'
+            : 'Xác nhận cam kết & Nhắn Zalo hẹn giờ'}
       </Button>
 
       {phoneClean && (
@@ -247,20 +267,22 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
               Số người cùng đi:
             </span>
             <div className="inline-flex items-center gap-1.5 p-1 rounded-lg bg-slate-100">
-              {[1, 2, 3, 4].filter((n) => n <= maxSeats).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setSeats(n)}
-                  className={`w-8 h-8 rounded-md text-sm font-bold tabular cursor-pointer transition-all ${
-                    seats === n
-                      ? 'bg-white text-primary-700 shadow-xs font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
+              {[1, 2, 3, 4]
+                .filter((n) => n <= maxSeats)
+                .map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setSeats(n)}
+                    className={`w-8 h-8 rounded-md text-sm font-bold tabular cursor-pointer transition-all ${
+                      seats === n
+                        ? 'bg-white text-primary-700 shadow-xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
             </div>
           </div>
         )}
@@ -367,9 +389,7 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
               <p className="text-xs font-semibold text-slate-800">Thanh toán khi lên xe</p>
               <p className="text-[11px] text-slate-500">Trọn gói xăng & cầu đường · Không thu cọc</p>
             </div>
-            <p className="font-display font-extrabold text-lg text-primary-700 tabular">
-              {formatVND(pricing.total)}
-            </p>
+            <p className="font-display font-extrabold text-lg text-primary-700 tabular">{formatVND(pricing.total)}</p>
           </div>
         </div>
 
@@ -416,7 +436,8 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
             className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 shrink-0"
           />
           <span className="text-xs text-amber-900 leading-relaxed font-medium">
-            <strong className="font-bold">Cam kết đi xe văn minh:</strong> Tôi cam kết có mặt đúng giờ tại điểm đón. Nếu có việc bận đột xuất, tôi sẽ chủ động gọi điện hoặc nhắn Zalo trước ít nhất 1 giờ để chủ xe sắp xếp ghế.
+            <strong className="font-bold">Cam kết đi xe văn minh:</strong> Tôi cam kết có mặt đúng giờ tại điểm đón. Nếu
+            có việc bận đột xuất, tôi sẽ chủ động gọi điện hoặc nhắn Zalo trước ít nhất 1 giờ để chủ xe sắp xếp ghế.
           </span>
         </label>
       </div>

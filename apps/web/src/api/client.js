@@ -13,7 +13,7 @@ async function request(endpoint, options = {}) {
     headers: {
       'Content-Type': 'application/json',
       ...(adminToken ? { 'x-admin-key': adminToken } : {}),
-      ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...options.headers
     },
     ...options

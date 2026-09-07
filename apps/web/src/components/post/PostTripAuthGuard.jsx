@@ -27,7 +27,8 @@ export default function PostTripAuthGuard({ onOpenAuth, onBackToMarket }) {
             Đăng Nhập Để Tạo Chuyến Xe
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-            CarMate cam kết <strong className="text-slate-800 dark:text-slate-200">100% chuyến xe chính chủ</strong>. Vui lòng đăng nhập bằng Số điện thoại hoặc Zalo để mở chuyến xe, quản lý khách ghép và bảo mật liên hệ.
+            CarMate cam kết <strong className="text-slate-800 dark:text-slate-200">100% chuyến xe chính chủ</strong>.
+            Vui lòng đăng nhập bằng Số điện thoại hoặc Zalo để mở chuyến xe, quản lý khách ghép và bảo mật liên hệ.
           </p>
         </div>
 

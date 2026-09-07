@@ -43,20 +43,22 @@ self.addEventListener('fetch', (event) => {
   // Stale-While-Revalidate for app assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Offline fallback
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-      });
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Offline fallback
+          if (event.request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+        });
 
       return cachedResponse || fetchPromise;
     })

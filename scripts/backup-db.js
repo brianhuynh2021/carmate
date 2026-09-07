@@ -43,12 +43,8 @@ if (args.help) {
   process.exit(0);
 }
 
-const BACKUP_DIR = path.resolve(
-  args.out || process.env.CARMATE_BACKUP_DIR || path.join(DATA_DIR, 'backups')
-);
-const KEEP = Number.isFinite(args.keep)
-  ? args.keep
-  : Number(process.env.CARMATE_BACKUP_KEEP || 14);
+const BACKUP_DIR = path.resolve(args.out || process.env.CARMATE_BACKUP_DIR || path.join(DATA_DIR, 'backups'));
+const KEEP = Number.isFinite(args.keep) ? args.keep : Number(process.env.CARMATE_BACKUP_KEEP || 14);
 
 function fail(message) {
   console.error(`[backup] ✗ ${message}`);
@@ -69,7 +65,10 @@ async function main() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
   // Dấu thời gian dạng 2026-09-06T12-30-00 để tên file sắp xếp đúng thứ tự
-  const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, '').replace(/:/g, '-');
+  const stamp = new Date()
+    .toISOString()
+    .replace(/\.\d{3}Z$/, '')
+    .replace(/:/g, '-');
   const rawPath = path.join(BACKUP_DIR, `carmate-${stamp}.sqlite`);
   const gzPath = `${rawPath}.gz`;
 
@@ -99,15 +98,13 @@ async function main() {
       fail(`Bản sao lưu không toàn vẹn (integrity_check = ${result}). Đã xoá bản lỗi.`);
     }
 
-    await pipeline(
-      fs.createReadStream(rawPath),
-      zlib.createGzip({ level: 9 }),
-      fs.createWriteStream(gzPath)
-    );
+    await pipeline(fs.createReadStream(rawPath), zlib.createGzip({ level: 9 }), fs.createWriteStream(gzPath));
     fs.unlinkSync(rawPath);
 
     const size = fs.statSync(gzPath).size;
-    console.log(`[backup] ✓ ${path.basename(gzPath)} (${formatBytes(size)}) — ${tripCount} chuyến, ${userCount} thành viên`);
+    console.log(
+      `[backup] ✓ ${path.basename(gzPath)} (${formatBytes(size)}) — ${tripCount} chuyến, ${userCount} thành viên`
+    );
   } finally {
     db.close();
   }

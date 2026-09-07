@@ -7,9 +7,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
   // Hook phải luôn được gọi trước mọi early return (Rules of Hooks)
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const photos = Array.isArray(trip?.carPhotos) && trip.carPhotos.length >= 1
-    ? trip.carPhotos
-    : [];
+  const photos = Array.isArray(trip?.carPhotos) && trip.carPhotos.length >= 1 ? trip.carPhotos : [];
 
   if (!isOpen || !trip || photos.length === 0) return null;
 
@@ -75,12 +73,8 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
           {/* Privacy Plate Badge Watermark */}
           <div className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center gap-2 shadow-lg">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="text-[11.5px] font-mono font-bold tracking-wide">
-              Biển số: {plateMask}
-            </span>
-            <span className="text-[10px] text-emerald-300 font-normal hidden xs:inline">
-              (Bảo mật quyền riêng tư)
-            </span>
+            <span className="text-[11.5px] font-mono font-bold tracking-wide">Biển số: {plateMask}</span>
+            <span className="text-[10px] text-emerald-300 font-normal hidden xs:inline">(Bảo mật quyền riêng tư)</span>
           </div>
 
           {/* Angle Tag Badge */}
@@ -141,11 +135,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                     : 'border-white/15 opacity-60 hover:opacity-100 hover:border-white/40'
                 }`}
               >
-                <img
-                  src={p.url || p}
-                  alt={`Thumbnail ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                />
+                <img src={p.url || p} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
                 <span className="absolute bottom-0 inset-x-0 bg-black/70 text-[9px] text-white text-center py-0.5 font-bold truncate px-1">
                   {p.label ? p.label.replace('Góc ', '') : `${idx + 1}`}
                 </span>

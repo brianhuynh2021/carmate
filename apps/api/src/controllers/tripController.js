@@ -1,5 +1,15 @@
-import { getTrips, getPaginatedTrips, getTripById, addTrip, updateTrip, republishTrip, deleteTrip, getDB } from '../db/sqliteStore.js';
+import {
+  getTrips,
+  getPaginatedTrips,
+  getTripById,
+  addTrip,
+  updateTrip,
+  republishTrip,
+  deleteTrip,
+  getDB
+} from '../db/sqliteStore.js';
 import { cleanPhoneNumber } from '@carmate/shared';
+import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
  * Che giấu thông tin định danh cá nhân (PII Protection - Nghị định 13/2023/NĐ-CP)
@@ -135,6 +145,22 @@ export async function createTrip(req, res) {
 
     const newTrip = await addTrip(body);
 
+    // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
+    sendBusinessAlert({
+      title: newTrip.type === 'driver_offer' ? '🚗 Bác tài đăng chuyến mới' : '🙋‍♂️ Hành khách tìm xe mới',
+      details: {
+        'Mã chuyến': newTrip.id,
+        'Lộ trình': `${newTrip.from} ➔ ${newTrip.to}`,
+        'Khởi hành': `${newTrip.date || 'Hôm nay'} lúc ${newTrip.time || 'Linh hoạt'}`,
+        'Ghế trống/cần': newTrip.availableSeats || newTrip.seatsNeeded || 1,
+        'Mức giá': newTrip.basePricePerSeat
+          ? `${newTrip.basePricePerSeat.toLocaleString('vi-VN')} đ`
+          : newTrip.expectedPrice
+            ? `${newTrip.expectedPrice.toLocaleString('vi-VN')} đ`
+            : 'Thỏa thuận'
+      }
+    }).catch(() => {});
+
     return res.status(201).json({
       success: true,
       message: 'Đăng chuyến thành công',
@@ -226,4 +252,3 @@ export async function republishTripHandler(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
-

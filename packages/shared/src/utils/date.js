@@ -76,7 +76,10 @@ export const formatTripDateDisplay = (dateStr, baseDate = new Date()) => {
 
   const str = String(dateStr).trim();
   const isRecurring = str.includes('Lặp lại hàng tuần') || str.includes('hàng tuần');
-  const cleanStr = str.replace(/\(Lặp lại hàng tuần\)/gi, '').replace(/hàng tuần/gi, '').trim();
+  const cleanStr = str
+    .replace(/\(Lặp lại hàng tuần\)/gi, '')
+    .replace(/hàng tuần/gi, '')
+    .trim();
 
   // 1. Nếu đã có sẵn định dạng dd/mm (ví dụ "Thứ 3 (08/09)" hoặc "08/09")
   if (/\d{1,2}\/\d{1,2}/.test(cleanStr)) {
@@ -236,25 +239,35 @@ export const getTripEndTimestamp = (trip, baseDate = new Date()) => {
     endHour = Number(timeMatch[1]);
     endMinute = Number(timeMatch[2]);
   } else if (rawSlot.includes('03:00-05:00')) {
-    endHour = 5; endMinute = 0;
+    endHour = 5;
+    endMinute = 0;
   } else if (rawSlot.includes('05:00-07:00')) {
-    endHour = 7; endMinute = 0;
+    endHour = 7;
+    endMinute = 0;
   } else if (rawSlot.includes('07:00-09:00')) {
-    endHour = 9; endMinute = 0;
+    endHour = 9;
+    endMinute = 0;
   } else if (rawSlot.includes('09:00-11:00')) {
-    endHour = 11; endMinute = 0;
+    endHour = 11;
+    endMinute = 0;
   } else if (rawSlot.includes('11:00-13:00')) {
-    endHour = 13; endMinute = 0;
+    endHour = 13;
+    endMinute = 0;
   } else if (rawSlot.includes('13:00-15:00')) {
-    endHour = 15; endMinute = 0;
+    endHour = 15;
+    endMinute = 0;
   } else if (rawSlot.includes('15:00-17:00')) {
-    endHour = 17; endMinute = 0;
+    endHour = 17;
+    endMinute = 0;
   } else if (rawSlot.includes('17:00-19:00')) {
-    endHour = 19; endMinute = 0;
+    endHour = 19;
+    endMinute = 0;
   } else if (rawSlot.includes('19:00-21:00')) {
-    endHour = 21; endMinute = 0;
+    endHour = 21;
+    endMinute = 0;
   } else if (rawSlot.includes('21:00-23:00')) {
-    endHour = 23; endMinute = 0;
+    endHour = 23;
+    endMinute = 0;
   }
 
   const resultDate = new Date(year, month, day, endHour, endMinute, 0, 0);
@@ -291,7 +304,7 @@ export const isTripExpired = (trip, now = new Date()) => {
   const nowMs = (now instanceof Date ? now : new Date(now)).getTime();
 
   // Quá giờ khởi hành + 30 phút dung sai
-  return nowMs > (endTimestamp + EXPIRY_TOLERANCE_MS);
+  return nowMs > endTimestamp + EXPIRY_TOLERANCE_MS;
 };
 
 /**
@@ -343,4 +356,3 @@ export const groupTripsByTemporalWindow = (trips = [], now = new Date()) => {
 
   return result;
 };
-

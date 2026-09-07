@@ -1,5 +1,14 @@
-import { getDB, getBookings, getBookingById, getTripById, addBooking, updateBookingStatus, removeBooking } from '../db/sqliteStore.js';
+import {
+  getDB,
+  getBookings,
+  getBookingById,
+  getTripById,
+  addBooking,
+  updateBookingStatus,
+  removeBooking
+} from '../db/sqliteStore.js';
 import { cleanPhoneNumber } from '@carmate/shared';
+import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
  * GET /api/bookings - Lấy danh sách chuyến đi đã kết nối (Chuyến của tôi)
@@ -18,7 +27,7 @@ export function listBookings(req, res) {
     }
 
     const allBookings = getBookings();
-    
+
     // Quản trị viên hệ thống: Xem toàn bộ
     if (user.role === 'admin' || user.role === 'super_admin') {
       return res.status(200).json({
@@ -87,6 +96,18 @@ export async function createBooking(req, res) {
     }
 
     const booking = await addBooking(body);
+
+    // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
+    sendBusinessAlert({
+      title: '🎟️ Hành khách kết nối giữ chỗ mới',
+      details: {
+        'Mã booking': booking.id,
+        'Lộ trình': `${booking.from} ➔ ${booking.to}`,
+        'Khởi hành': `${booking.date || 'Hôm nay'} ${booking.time || ''}`.trim(),
+        'Chuyến liên kết': targetTripId || 'Tự do',
+        'Số ghế': booking.seatsBooked || 1
+      }
+    }).catch(() => {});
 
     return res.status(201).json({
       success: true,
@@ -189,7 +210,7 @@ export async function submitReview(req, res) {
     const { reviewerRole = 'driver', rating = 5, tags = [], comment = '' } = req.body || {};
 
     const db = getDB();
-    const booking = (db.bookings || []).find(b => b.escrowId === id || b.id === id);
+    const booking = (db.bookings || []).find((b) => b.escrowId === id || b.id === id);
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi để đánh giá' });
     }
@@ -207,17 +228,19 @@ export async function submitReview(req, res) {
 
     const existingReviews = Array.isArray(booking.reviews) ? booking.reviews : [];
     // Cập nhật hoặc thêm mới review của role này
-    const filteredReviews = existingReviews.filter(r => r.reviewerRole !== reviewerRole);
+    const filteredReviews = existingReviews.filter((r) => r.reviewerRole !== reviewerRole);
     const updatedReviews = [...filteredReviews, reviewEntry];
 
     // Kiểm tra cờ an toàn / cảnh báo nếu có vi phạm (Ví dụ: Bom xe, trễ hẹn, thô lỗ)
     const existingFlags = Array.isArray(booking.safetyFlags) ? booking.safetyFlags : [];
-    const isNegative = Number(rating) <= 2 || tags.some(t => t.includes('Leo cây') || t.includes('Bom') || t.includes('Trễ') || t.includes('thô lỗ'));
+    const isNegative =
+      Number(rating) <= 2 ||
+      tags.some((t) => t.includes('Leo cây') || t.includes('Bom') || t.includes('Trễ') || t.includes('thô lỗ'));
     let updatedFlags = existingFlags;
 
     if (isNegative) {
       updatedFlags = [
-        ...existingFlags.filter(f => f.targetRole !== reviewEntry.targetRole),
+        ...existingFlags.filter((f) => f.targetRole !== reviewEntry.targetRole),
         {
           targetRole: reviewEntry.targetRole,
           reason: tags.join(', ') || comment || 'Đánh giá tiêu cực',
@@ -317,5 +340,3 @@ export async function driverConfirmBooking(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
-
-

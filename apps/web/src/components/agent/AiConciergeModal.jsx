@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Sparkles, 
-  Send, 
-  X, 
-  Bot, 
-  User, 
-  Clock, 
-  MapPin, 
-  ShieldCheck, 
-  CheckCircle2, 
+import {
+  Sparkles,
+  Send,
+  X,
+  Bot,
+  User,
+  Clock,
+  MapPin,
+  ShieldCheck,
+  CheckCircle2,
   ExternalLink,
   RotateCcw,
   Users,
@@ -62,14 +62,12 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
       text: query
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInputMessage('');
     setIsLoading(true);
 
     try {
-      const history = messages
-        .filter(m => m.id !== 'welcome')
-        .map(m => ({ role: m.role, content: m.text }));
+      const history = messages.filter((m) => m.id !== 'welcome').map((m) => ({ role: m.role, content: m.text }));
 
       const res = await api.agentChat(query, history);
       if (res.success && res.data) {
@@ -80,17 +78,19 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
           reasoningSteps: res.data.reasoningSteps || [],
           suggestedTrips: res.data.suggestedTrips || []
         };
-        setMessages(prev => [...prev, agentMsg]);
+        setMessages((prev) => [...prev, agentMsg]);
       } else {
         throw new Error(res.error || 'Không nhận được phản hồi');
       }
     } catch (err) {
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         {
           id: `err-${Date.now()}`,
           role: 'assistant',
-          text: 'Xin lỗi bạn, hiện tại kết nối đến Trợ lý AI đang bị gián đoạn: ' + (err.message || 'Vui lòng thử lại sau ít giây.'),
+          text:
+            'Xin lỗi bạn, hiện tại kết nối đến Trợ lý AI đang bị gián đoạn: ' +
+            (err.message || 'Vui lòng thử lại sau ít giây.'),
           reasoningSteps: ['Lỗi kết nối mạng hoặc máy chủ bận'],
           suggestedTrips: []
         }
@@ -102,7 +102,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-200">
-      <div 
+      <div
         className="w-full max-w-2xl h-[92vh] sm:h-[680px] flex flex-col rounded-2xl bg-white border border-black/[0.08] shadow-[0_20px_48px_rgba(0,0,0,0.16)] overflow-hidden animate-in zoom-in-95 duration-200 text-left"
         role="dialog"
         aria-modal="true"
@@ -115,9 +115,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-[#1d1d1f]">
-                  Trợ Lý Chuyến Đi CarMate
-                </h3>
+                <h3 className="text-sm font-bold text-[#1d1d1f]">Trợ Lý Chuyến Đi CarMate</h3>
                 <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-50 text-[#107c41] border border-emerald-200/80">
                   Trực tuyến 24/7
                 </span>
@@ -180,9 +178,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                           >
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-xs text-[#1d1d1f]">
-                                  {trip.publicName}
-                                </span>
+                                <span className="font-bold text-xs text-[#1d1d1f]">{trip.publicName}</span>
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono">
                                   {trip.carType}
                                 </span>
@@ -194,7 +190,9 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
 
                             <div className="text-xs text-[#1d1d1f] flex items-center gap-1.5">
                               <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                              <span className="font-medium truncate">{trip.from} ➔ {trip.to}</span>
+                              <span className="font-medium truncate">
+                                {trip.from} ➔ {trip.to}
+                              </span>
                             </div>
 
                             {/* Tags: Xe chở người thân / Đón dọc hành lang */}
@@ -228,7 +226,10 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                                 <span>{trip.timeSlot}</span>
                               </span>
                               <a
-                                href={getZaloChatLink(trip.phoneReal || '0984883750', `Chào bạn, mình thấy chuyến xe ${trip.from} đi ${trip.to} của bạn trên CarMate, mình muốn đăng ký ghép chỗ!`)}
+                                href={getZaloChatLink(
+                                  trip.phoneReal || '0984883750',
+                                  `Chào bạn, mình thấy chuyến xe ${trip.from} đi ${trip.to} của bạn trên CarMate, mình muốn đăng ký ghép chỗ!`
+                                )}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="h-7 px-3 rounded-lg bg-[#0068ff] text-white hover:bg-[#0055d4] font-bold inline-flex items-center gap-1 text-[11px] transition-all cursor-pointer shadow-2xs"

@@ -17,27 +17,96 @@ export function matchLocationFuzzy(fieldValue, query) {
 
   // 2. Nhóm hành lang & đô thị liên tỉnh trọng điểm
   const corridorGroups = [
-    ['sài gòn', 'sai gon', 'tp. hcm', 'tp hcm', 'tphcm', 'hồ chí minh', 'ho chi minh', 'miền đông', 'miền tây', 'an sương', 'tân sơn nhất', 'quận 1', 'quận 2', 'quận 3', 'quận 4', 'quận 5', 'quận 7', 'quận 9', 'quận 10', 'bình thạnh', 'thủ đức', 'gò vấp', 'cống quỳnh', 'nguyễn cư trinh', 'bến thành', 'hàng xanh', 'suối tiên'],
-    ['bình phước', 'binh phuoc', 'bù đốp', 'bu dop', 'thanh hoà', 'thanh hoa', 'đồng xoài', 'dong xoai', 'chơn thành', 'chon thanh', 'phước long', 'phuoc long', 'lộc ninh', 'loc ninh', 'bù gia mập', 'bù đăng', 'hớn quản'],
-    ['vũng tàu', 'vung tau', 'bà rịa', 'ba ria', 'phú mỹ', 'phu my', 'long hải', 'châu đức', 'xuyên mộc', 'bãi sau', 'bãi trước'],
+    [
+      'sài gòn',
+      'sai gon',
+      'tp. hcm',
+      'tp hcm',
+      'tphcm',
+      'hồ chí minh',
+      'ho chi minh',
+      'miền đông',
+      'miền tây',
+      'an sương',
+      'tân sơn nhất',
+      'quận 1',
+      'quận 2',
+      'quận 3',
+      'quận 4',
+      'quận 5',
+      'quận 7',
+      'quận 9',
+      'quận 10',
+      'bình thạnh',
+      'thủ đức',
+      'gò vấp',
+      'cống quỳnh',
+      'nguyễn cư trinh',
+      'bến thành',
+      'hàng xanh',
+      'suối tiên'
+    ],
+    [
+      'bình phước',
+      'binh phuoc',
+      'bù đốp',
+      'bu dop',
+      'thanh hoà',
+      'thanh hoa',
+      'đồng xoài',
+      'dong xoai',
+      'chơn thành',
+      'chon thanh',
+      'phước long',
+      'phuoc long',
+      'lộc ninh',
+      'loc ninh',
+      'bù gia mập',
+      'bù đăng',
+      'hớn quản'
+    ],
+    [
+      'vũng tàu',
+      'vung tau',
+      'bà rịa',
+      'ba ria',
+      'phú mỹ',
+      'phu my',
+      'long hải',
+      'châu đức',
+      'xuyên mộc',
+      'bãi sau',
+      'bãi trước'
+    ],
     ['đà lạt', 'da lat', 'lâm đồng', 'lam dong', 'bảo lộc', 'bao loc', 'đức trọng', 'di linh', 'đơn dương', 'prenn'],
-    ['hà nội', 'ha noi', 'nội bài', 'mỹ đình', 'giáp bát', 'nước ngầm', 'gia lâm', 'yên nghĩa', 'hoàn kiếm', 'cầu giấy'],
+    [
+      'hà nội',
+      'ha noi',
+      'nội bài',
+      'mỹ đình',
+      'giáp bát',
+      'nước ngầm',
+      'gia lâm',
+      'yên nghĩa',
+      'hoàn kiếm',
+      'cầu giấy'
+    ],
     ['hải phòng', 'hai phong', 'cầu rào', 'niệm nghĩa', 'đồ sơn', 'thuỷ nguyên'],
     ['cần thơ', 'can tho', 'bến tre', 'tiền giang', 'mỹ tho', 'đồng tháp', 'cao lãnh', 'vĩnh long', 'long an', 'tân an']
   ];
 
   for (const group of corridorGroups) {
-    const fieldMatch = group.some(alias => normField.includes(alias));
-    const queryMatch = group.some(alias => normQuery.includes(alias));
+    const fieldMatch = group.some((alias) => normField.includes(alias));
+    const queryMatch = group.some((alias) => normQuery.includes(alias));
     if (fieldMatch && queryMatch) {
       return true;
     }
   }
 
   // 3. Khớp cụm từ khóa (Token matching: nếu có từ định danh >= 3 ký tự trùng nhau)
-  const queryTokens = normQuery.split(/[\s,–—\-/]+/).filter(t => t.length >= 3);
-  const fieldTokens = normField.split(/[\s,–—\-/]+/).filter(t => t.length >= 3);
-  const common = queryTokens.filter(t => fieldTokens.includes(t));
+  const queryTokens = normQuery.split(/[\s,–—\-/]+/).filter((t) => t.length >= 3);
+  const fieldTokens = normField.split(/[\s,–—\-/]+/).filter((t) => t.length >= 3);
+  const common = queryTokens.filter((t) => fieldTokens.includes(t));
   if (common.length >= 1) {
     return true;
   }
@@ -95,7 +164,8 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
         const kw = searchKeyword.toLowerCase();
         const perksStr = Array.isArray(item.perks) ? item.perks.join(' ') : '';
         const parcelStr = item.acceptsParcel ? 'gửi hàng gửi đồ bưu phẩm' : '';
-        const matchText = `${item.from} ${item.to} ${item.routeCategory} ${item.hometown || ''} ${item.notes || ''} ${perksStr} ${parcelStr}`.toLowerCase();
+        const matchText =
+          `${item.from} ${item.to} ${item.routeCategory} ${item.hometown || ''} ${item.notes || ''} ${perksStr} ${parcelStr}`.toLowerCase();
         if (!matchText.includes(kw)) return false;
       }
       if (searchFrom.trim()) {
@@ -109,7 +179,8 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
       if (selectedTimeSlot !== 'all' && item.timeSlot !== selectedTimeSlot) return false;
       if (selectedDirection !== 'all' && item.direction !== selectedDirection) return false;
       if (selectedCarCategory !== 'all' && item.type === 'driver_offer') {
-        const isConvenient = item.carCategory === 'convenient_trip' || item.notes?.toLowerCase().includes('tiện chuyến');
+        const isConvenient =
+          item.carCategory === 'convenient_trip' || item.notes?.toLowerCase().includes('tiện chuyến');
         if (selectedCarCategory === 'convenient_trip' && !isConvenient) return false;
         if (selectedCarCategory === 'family_car' && isConvenient) return false;
       }
@@ -151,7 +222,16 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
   // Tự động reset số lượng chuyến hiển thị về 9 khi thay đổi bất kỳ bộ lọc nào
   useEffect(() => {
     setVisibleCount(9);
-  }, [marketViewMode, selectedCarCategory, selectedTimeSlot, selectedDirection, searchKeyword, searchFrom, searchTo, temporalFilter]);
+  }, [
+    marketViewMode,
+    selectedCarCategory,
+    selectedTimeSlot,
+    selectedDirection,
+    searchKeyword,
+    searchFrom,
+    searchTo,
+    temporalFilter
+  ]);
 
   return {
     searchKeyword,

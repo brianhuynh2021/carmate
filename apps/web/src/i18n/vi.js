@@ -72,7 +72,8 @@ export default {
   hero: {
     eyebrow: 'Bảng tin kết nối chuyến đi trực tiếp toàn quốc',
     title: 'Đi chung xe & Ghép xe tiện chuyến liên tỉnh',
-    subtitle: 'Kết nối trực tiếp xe còn ghế trống với hành khách cùng hành trình — Chia sẻ công bằng chi phí xăng xe và cầu đường, liên hệ thẳng không qua trung gian.',
+    subtitle:
+      'Kết nối trực tiếp xe còn ghế trống với hành khách cùng hành trình — Chia sẻ công bằng chi phí xăng xe và cầu đường, liên hệ thẳng không qua trung gian.',
     findTripCta: 'Tìm chuyến ngay',
     postTripCta: 'Đăng ghế trống (Xe nhà & Tiện chuyến)',
     stat_members: 'thành viên xác minh',
@@ -351,28 +352,44 @@ export default {
     openTelegram: 'Gửi Telegram'
   },
 
-
   policy: {
     title: 'Quy chế hoạt động',
     subtitle: 'Nguyên tắc pháp lý & quy tắc ứng xử của nền tảng CarMate',
     updated: 'Cập nhật: 01/09/2026',
     s1Title: '1. Tôn chỉ nền tảng: chia sẻ phi thương mại',
     s1: [
-      ['0% phí chiết khấu', 'CarMate không thu hoa hồng hay chiết khấu trên khoản đóng góp chi phí chuyến đi. Toàn bộ tiền chia sẻ xăng và vé cầu đường thuộc về chủ xe.'],
-      ['Kết nối trực tiếp', 'Chủ xe và người đi cùng trao đổi qua Zalo hoặc điện thoại. Chi phí thanh toán trực tiếp bằng tiền mặt hoặc chuyển khoản, không qua cổng trung gian.'],
+      [
+        '0% phí chiết khấu',
+        'CarMate không thu hoa hồng hay chiết khấu trên khoản đóng góp chi phí chuyến đi. Toàn bộ tiền chia sẻ xăng và vé cầu đường thuộc về chủ xe.'
+      ],
+      [
+        'Kết nối trực tiếp',
+        'Chủ xe và người đi cùng trao đổi qua Zalo hoặc điện thoại. Chi phí thanh toán trực tiếp bằng tiền mặt hoặc chuyển khoản, không qua cổng trung gian.'
+      ],
       ['Xác nhận nhanh', 'Sau khi bấm ghép chuyến, hai bên liên hệ trong 15 phút để chốt điểm đón trả.']
     ],
     s2Title: '2. Vai trò nền tảng: chỉ kết nối',
     s2: [
-      ['Hai bên tự thoả thuận', 'Điểm đón trả, giờ giấc, hành lý và mọi yêu cầu riêng do chủ xe và người đi cùng tự trao đổi, thống nhất qua Zalo. Nền tảng không can thiệp.'],
-      ['Không điều phối chuyến', 'CarMate không phải đơn vị kinh doanh vận tải, không sắp lịch, không định giá và không là một bên trong thoả thuận giữa hai người dùng.'],
-      ['Thông tin do thành viên đăng', 'Nội dung chuyến đi do thành viên tự đăng và tự chịu trách nhiệm. Nếu cần cam kết dịch vụ chặt chẽ hơn, hai bên nên tự thoả thuận riêng.']
+      [
+        'Hai bên tự thoả thuận',
+        'Điểm đón trả, giờ giấc, hành lý và mọi yêu cầu riêng do chủ xe và người đi cùng tự trao đổi, thống nhất qua Zalo. Nền tảng không can thiệp.'
+      ],
+      [
+        'Không điều phối chuyến',
+        'CarMate không phải đơn vị kinh doanh vận tải, không sắp lịch, không định giá và không là một bên trong thoả thuận giữa hai người dùng.'
+      ],
+      [
+        'Thông tin do thành viên đăng',
+        'Nội dung chuyến đi do thành viên tự đăng và tự chịu trách nhiệm. Nếu cần cam kết dịch vụ chặt chẽ hơn, hai bên nên tự thoả thuận riêng.'
+      ]
     ],
     s3Title: '3. Trách nhiệm & ứng xử đôi bên',
     s3Driver: 'Trách nhiệm chủ xe',
-    s3DriverText: 'Phương tiện đạt an toàn kỹ thuật, bảo hiểm TNDS còn hiệu lực; lái xe an toàn, không rượu bia; không chở quá số người; giữ xe sạch, không hút thuốc.',
+    s3DriverText:
+      'Phương tiện đạt an toàn kỹ thuật, bảo hiểm TNDS còn hiệu lực; lái xe an toàn, không rượu bia; không chở quá số người; giữ xe sạch, không hút thuốc.',
     s3Passenger: 'Trách nhiệm người đi cùng',
-    s3PassengerText: 'Đúng giờ tại điểm hẹn; ứng xử lịch sự; không mang hàng cấm, chất dễ cháy nổ; đóng góp đúng phần chi phí đã thoả thuận.',
+    s3PassengerText:
+      'Đúng giờ tại điểm hẹn; ứng xử lịch sự; không mang hàng cấm, chất dễ cháy nổ; đóng góp đúng phần chi phí đã thoả thuận.',
     s3Note: 'Văn hoá báo trước: nếu có lịch đột xuất, vui lòng thông báo cho đối phương trước ít nhất 2–4 giờ.',
     accept: 'Đã hiểu & đồng ý'
   },
@@ -406,7 +423,8 @@ export default {
   },
 
   footer: {
-    aboutDesc: 'Nền tảng bảng tin điện tử kết nối tự nguyện giữa người có xe với người cần đi cùng tuyến. Chia sẻ trực tiếp chi phí xăng & cầu đường, 0% phí trung gian.',
+    aboutDesc:
+      'Nền tảng bảng tin điện tử kết nối tự nguyện giữa người có xe với người cần đi cùng tuyến. Chia sẻ trực tiếp chi phí xăng & cầu đường, 0% phí trung gian.',
     platform: 'Nền tảng',
     support: 'Hỗ trợ',
     legal: 'Pháp lý',
@@ -435,7 +453,8 @@ export default {
     trust2: '0% phí chiết khấu',
     trust3: 'Dữ liệu mã hoá SSL',
     copyright: '© {year} CarMate. Bảo lưu mọi quyền.',
-    disclaimer: 'CarMate là nền tảng bảng tin điện tử kết nối thông tin tự nguyện giữa người đi xe và chủ xe, không phải đơn vị kinh doanh vận tải và không thu bất kỳ khoản phí môi giới nào. Mọi thỏa thuận, chi phí xăng xe và an toàn do các bên tự nguyện thống nhất và tự chịu trách nhiệm theo quy định pháp luật.',
+    disclaimer:
+      'CarMate là nền tảng bảng tin điện tử kết nối thông tin tự nguyện giữa người đi xe và chủ xe, không phải đơn vị kinh doanh vận tải và không thu bất kỳ khoản phí môi giới nào. Mọi thỏa thuận, chi phí xăng xe và an toàn do các bên tự nguyện thống nhất và tự chịu trách nhiệm theo quy định pháp luật.',
     madeIn: 'Phát triển tại Việt Nam'
   }
 };

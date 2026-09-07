@@ -1,14 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  MapPin, Navigation, Compass, CheckCircle2, Clock,
-  Car, Users, MessageCircle, AlertCircle, Sparkles, X, ChevronRight, ExternalLink
+  MapPin,
+  Navigation,
+  Compass,
+  CheckCircle2,
+  Clock,
+  Car,
+  Users,
+  MessageCircle,
+  AlertCircle,
+  Sparkles,
+  X,
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
-  getRouteCorridor, findNearestWaypoint, calculateDistanceKm,
-  formatDistance, formatVND, getZaloChatUrl, cleanPhoneNumber,
-  isGoogleMapsUrl, getGoogleMapsUrl, findLocationCoords, decodeHtmlEntities
+  getRouteCorridor,
+  findNearestWaypoint,
+  calculateDistanceKm,
+  formatDistance,
+  formatVND,
+  getZaloChatUrl,
+  cleanPhoneNumber,
+  isGoogleMapsUrl,
+  getGoogleMapsUrl,
+  findLocationCoords,
+  decodeHtmlEntities
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -28,7 +47,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
 
   const corridor = trip ? getRouteCorridor(trip.routeCategory) : null;
   const isDriver = trip?.type === 'driver_offer';
-  const price = trip ? (trip.basePricePerSeat || trip.expectedPrice || trip.suggestedContribution || 180000) : 0;
+  const price = trip ? trip.basePricePerSeat || trip.expectedPrice || trip.suggestedContribution || 180000 : 0;
   const tripFrom = decodeHtmlEntities(trip?.from);
   const tripTo = decodeHtmlEntities(trip?.to);
   const waypointNote = decodeHtmlEntities(trip?.waypointNote);
@@ -43,19 +62,31 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
     mapWaypoints.push(...corridor.waypoints);
   } else {
     if (fromCoords) {
-      mapWaypoints.push({ name: tripFrom, sub: 'Điểm đón ban đầu', lat: fromCoords.lat, lng: fromCoords.lng, isStart: true, type: 'pickup' });
+      mapWaypoints.push({
+        name: tripFrom,
+        sub: 'Điểm đón ban đầu',
+        lat: fromCoords.lat,
+        lng: fromCoords.lng,
+        isStart: true,
+        type: 'pickup'
+      });
     }
     if (toCoords) {
-      mapWaypoints.push({ name: tripTo, sub: 'Điểm trả kết thúc', lat: toCoords.lat, lng: toCoords.lng, isEnd: true, type: 'dropoff' });
+      mapWaypoints.push({
+        name: tripTo,
+        sub: 'Điểm trả kết thúc',
+        lat: toCoords.lat,
+        lng: toCoords.lng,
+        isEnd: true,
+        type: 'dropoff'
+      });
     }
   }
 
   const latLngs = mapWaypoints.map((w) => [w.lat, w.lng]);
 
   // Tính toán khoảng cách nếu có vị trí người dùng
-  const proximityResult = userLocation
-    ? findNearestWaypoint(userLocation.lat, userLocation.lng, trip)
-    : null;
+  const proximityResult = userLocation ? findNearestWaypoint(userLocation.lat, userLocation.lng, trip) : null;
 
   // Khởi tạo bản đồ Leaflet
   useEffect(() => {
@@ -67,11 +98,14 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
       mapInstanceRef.current = null;
     }
 
-    const defaultCenter = corridor?.center || (
-      latLngs.length > 0
-        ? [(latLngs[0][0] + (latLngs[1]?.[0] || latLngs[0][0])) / 2, (latLngs[0][1] + (latLngs[1]?.[1] || latLngs[0][1])) / 2]
-        : [16.0, 107.0]
-    );
+    const defaultCenter =
+      corridor?.center ||
+      (latLngs.length > 0
+        ? [
+            (latLngs[0][0] + (latLngs[1]?.[0] || latLngs[0][0])) / 2,
+            (latLngs[0][1] + (latLngs[1]?.[1] || latLngs[0][1])) / 2
+          ]
+        : [16.0, 107.0]);
     const defaultZoom = corridor?.zoom || (latLngs.length > 1 ? 8 : 10);
 
     const map = L.map(mapContainerRef.current, {
@@ -265,9 +299,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
             <span className="text-xl font-bold text-[#1d1d1f] dark:text-white tracking-tight leading-none">
               {formatVND(price)}
             </span>
-            <span className="text-xs text-[#86868b] dark:text-slate-400">
-              /người
-            </span>
+            <span className="text-xs text-[#86868b] dark:text-slate-400">/người</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -319,9 +351,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
                 Kiểm tra độ gần với vị trí của bạn
               </p>
             </div>
-            <span className="text-[11px] font-medium text-primary-700 dark:text-primary-300">
-              Định vị tiện đường
-            </span>
+            <span className="text-[11px] font-medium text-primary-700 dark:text-primary-300">Định vị tiện đường</span>
           </div>
 
           <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -348,16 +378,14 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
             >
               <option value="">-- Chọn trạm gần bạn --</option>
               {mapWaypoints.map((w) => (
-                <option key={w.name} value={w.name}>{w.name}</option>
+                <option key={w.name} value={w.name}>
+                  {w.name}
+                </option>
               ))}
             </select>
           </div>
 
-          {locationError && (
-            <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
-              ⚠️ {locationError}
-            </p>
-          )}
+          {locationError && <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">⚠️ {locationError}</p>}
 
           {/* KẾT QUẢ SO SÁNH KHOẢNG CÁCH */}
           {proximityResult && (
@@ -385,7 +413,8 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
                   )}
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                  Trạm đón gần bạn nhất: <strong>{proximityResult.waypoint.name}</strong> ({proximityResult.waypoint.sub || 'Dọc tuyến'}).
+                  Trạm đón gần bạn nhất: <strong>{proximityResult.waypoint.name}</strong> (
+                  {proximityResult.waypoint.sub || 'Dọc tuyến'}).
                 </p>
               </div>
             </div>
@@ -404,9 +433,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950 mt-1.5 shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                    Điểm đón ban đầu:
-                  </p>
+                  <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Điểm đón ban đầu:</p>
                   <a
                     href={getGoogleMapsUrl(tripFrom || corridor?.startLandmark?.name)}
                     target="_blank"
@@ -419,10 +446,14 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
                   </a>
                 </div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {isGoogleMapsUrl(tripFrom) ? '📍 Vị trí ghim trên Google Maps' : (tripFrom || corridor?.startLandmark?.name)}
+                  {isGoogleMapsUrl(tripFrom)
+                    ? '📍 Vị trí ghim trên Google Maps'
+                    : tripFrom || corridor?.startLandmark?.name}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {corridor ? corridor.startLandmark.address : `Khu vực ${tripFrom} (Điểm đón do chủ xe & khách tự thỏa thuận)`}
+                  {corridor
+                    ? corridor.startLandmark.address
+                    : `Khu vực ${tripFrom} (Điểm đón do chủ xe & khách tự thỏa thuận)`}
                 </p>
               </div>
             </div>
@@ -432,9 +463,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-4 ring-rose-100 dark:ring-rose-950 mt-1.5 shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold text-rose-800 dark:text-rose-300">
-                    Điểm đến kết thúc:
-                  </p>
+                  <p className="text-xs font-bold text-rose-800 dark:text-rose-300">Điểm đến kết thúc:</p>
                   <a
                     href={getGoogleMapsUrl(tripTo || corridor?.endLandmark?.name)}
                     target="_blank"
@@ -447,7 +476,7 @@ export default function RouteDetailModal({ trip, onClose, onBook }) {
                   </a>
                 </div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {isGoogleMapsUrl(tripTo) ? '📍 Vị trí ghim trên Google Maps' : (tripTo || corridor?.endLandmark?.name)}
+                  {isGoogleMapsUrl(tripTo) ? '📍 Vị trí ghim trên Google Maps' : tripTo || corridor?.endLandmark?.name}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {corridor ? corridor.endLandmark.address : `Khu vực ${tripTo} (Điểm trả đích đến theo thỏa thuận)`}

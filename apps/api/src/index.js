@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { initDB, closeDB } from './db/sqliteStore.js';
 import apiRouter from './routes/api.js';
 import { securityHeadersMiddleware, sanitizeInput, globalApiLimiter } from './middlewares/security.js';
+import { sendSystemErrorAlert } from './utils/telegramAlert.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,34 +28,32 @@ if (process.env.TRUST_PROXY === 'true') {
 app.use(securityHeadersMiddleware);
 
 // CORS Whitelist: Cho phép domain cục bộ, production domains và domain tuỳ biến qua ALLOWED_ORIGINS
-const defaultAllowedOrigins = [
-  'https://carmate.vn',
-  'https://www.carmate.vn',
-  'https://ops.carmate.vn'
-];
+const defaultAllowedOrigins = ['https://carmate.vn', 'https://www.carmate.vn', 'https://ops.carmate.vn'];
 const customAllowed = (process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
 const allowedOrigins = new Set([...defaultAllowedOrigins, ...customAllowed]);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Cho phép request cùng nguồn (no origin), curl, mobile app hoặc local development
-    if (!origin) return callback(null, true);
-    if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-      return callback(null, true);
-    }
-    if (allowedOrigins.has(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
-  exposedHeaders: ['x-request-id'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Cho phép request cùng nguồn (no origin), curl, mobile app hoặc local development
+      if (!origin) return callback(null, true);
+      if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      if (allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
+    exposedHeaders: ['x-request-id'],
+    credentials: true
+  })
+);
 
 // Giới hạn gói tin 1MB chống tấn công DDoS làm tràn RAM
 app.use(express.json({ limit: '1mb' }));
@@ -73,7 +72,9 @@ app.use((req, res, next) => {
       const duration = Date.now() - start;
       const statusColor = res.statusCode >= 400 ? '\x1b[31m' : res.statusCode >= 300 ? '\x1b[33m' : '\x1b[32m';
       const shortId = typeof reqId === 'string' ? reqId.slice(0, 8) : 'req';
-      console.log(`[API] [${shortId}] ${req.method} ${req.originalUrl} -> ${statusColor}${res.statusCode}\x1b[0m (${duration}ms)`);
+      console.log(
+        `[API] [${shortId}] ${req.method} ${req.originalUrl} -> ${statusColor}${res.statusCode}\x1b[0m (${duration}ms)`
+      );
     });
   }
   next();
@@ -127,6 +128,8 @@ if (fs.existsSync(webDistDir)) {
 // 5. Global Error Handler
 app.use((err, req, res, next) => {
   console.error('[API ERROR]', err);
+  // Bắn cảnh báo Telegram ngay lập tức (không chặn luồng phản hồi)
+  sendSystemErrorAlert({ error: err, req, source: 'Express Global Error' }).catch(() => {});
   if (res.headersSent) return next(err);
   res.status(500).json({
     success: false,
@@ -185,10 +188,16 @@ async function startServer() {
 // 7. Vành đai an toàn chống sập (Process Crash Boundary)
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[CarMate Safety] Bắt được Unhandled Promise Rejection (Đã cách ly, không sập server):', reason);
+  sendSystemErrorAlert({ error: reason, source: 'Node UnhandledRejection' }).catch(() => {});
 });
 
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', async (err) => {
   console.error('[FATAL] Uncaught Exception. Exiting for clean process restart:', err);
+  try {
+    await sendSystemErrorAlert({ error: err, source: 'Node UncaughtException' });
+  } catch {
+    // Silent
+  }
   process.exit(1);
 });
 

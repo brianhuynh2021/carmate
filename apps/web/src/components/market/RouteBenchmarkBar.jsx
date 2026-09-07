@@ -21,7 +21,11 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
       const kw = searchKeyword.toLowerCase();
       const found = routeKeys.find((key) => {
         const info = ROUTE_BENCHMARKS[key];
-        return key.toLowerCase().includes(kw) || info.name.toLowerCase().includes(kw) || info.keyword.toLowerCase().includes(kw);
+        return (
+          key.toLowerCase().includes(kw) ||
+          info.name.toLowerCase().includes(kw) ||
+          info.keyword.toLowerCase().includes(kw)
+        );
       });
       if (found) {
         if (ROUTE_BENCHMARKS[found]?.region) {
@@ -35,11 +39,14 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
 
   const info = ROUTE_BENCHMARKS[activeRouteKey] || ROUTE_BENCHMARKS['Tuyến QL13'];
   const open = showDetail || forceOpen;
-  const close = () => { setShowDetail(false); onCloseForced?.(); };
+  const close = () => {
+    setShowDetail(false);
+    onCloseForced?.();
+  };
 
   // Lọc tuyến theo miền đã chọn
   const routesInRegion = useMemo(() => {
-    return routeKeys.filter(k => {
+    return routeKeys.filter((k) => {
       const r = ROUTE_BENCHMARKS[k].region || 'south';
       return r === selectedRegion;
     });
@@ -64,7 +71,8 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
               {info.shortName}:
             </span>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 font-bold text-xs font-mono border border-blue-200/80 dark:border-blue-800/60 whitespace-nowrap">
-              ~{formatVND(info.suggestedRate)}{t('common.perSeat')}
+              ~{formatVND(info.suggestedRate)}
+              {t('common.perSeat')}
             </span>
             <span className="text-[12px] text-slate-600 dark:text-slate-400 font-medium hidden sm:inline truncate">
               · {t('benchmark.inclusive')}
@@ -73,7 +81,10 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
         </div>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); setShowDetail(true); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDetail(true);
+          }}
           className="text-xs font-bold text-[#0071e3] group-hover:text-[#0077ed] px-3 py-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/30 inline-flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
         >
           <span>{t('benchmark.basis')}</span>
@@ -104,7 +115,9 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
                   Khu vực & Tuyến hành lang
                 </span>
-                <span className="text-[11.5px] text-slate-500 dark:text-slate-400 font-medium">Bấm chọn tuyến để xem</span>
+                <span className="text-[11.5px] text-slate-500 dark:text-slate-400 font-medium">
+                  Bấm chọn tuyến để xem
+                </span>
               </div>
 
               {/* Segmented Miền Bắc - Trung - Nam */}
@@ -114,7 +127,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                 value={selectedRegion}
                 onChange={(reg) => {
                   setSelectedRegion(reg);
-                  const firstInRegion = routeKeys.find(k => (ROUTE_BENCHMARKS[k].region || 'south') === reg);
+                  const firstInRegion = routeKeys.find((k) => (ROUTE_BENCHMARKS[k].region || 'south') === reg);
                   if (firstInRegion) {
                     setSelectedRouteKey(firstInRegion);
                     setSearchKeyword?.(ROUTE_BENCHMARKS[firstInRegion].keyword);
@@ -164,7 +177,8 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
               </div>
 
               <p className="mt-2.5 text-xs text-slate-600 dark:text-slate-300 font-medium max-w-md mx-auto leading-relaxed">
-                Áp dụng tính trên <strong>từng ghế trống thực tế</strong> (phù hợp cho cả xe gia đình có người thân hoặc xe đi công việc). Trọn gói xăng & vé BOT, thanh toán trực tiếp khi lên xe.
+                Áp dụng tính trên <strong>từng ghế trống thực tế</strong> (phù hợp cho cả xe gia đình có người thân hoặc
+                xe đi công việc). Trọn gói xăng & vé BOT, thanh toán trực tiếp khi lên xe.
               </p>
             </div>
 
@@ -228,9 +242,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
                   <span className="text-slate-600 dark:text-slate-400 font-medium">Limousine 9 chỗ đón trả</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
-                    {info.marketLimoRef}
-                  </span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{info.marketLimoRef}</span>
                 </div>
 
                 <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
@@ -257,13 +269,15 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
               <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span className="text-slate-700 dark:text-slate-300 font-medium">
-                  <strong>Thỏa thuận tự do:</strong> Hai bên tự do nhắn Zalo hẹn điểm đón trả và chốt chi phí phù hợp nhất.
+                  <strong>Thỏa thuận tự do:</strong> Hai bên tự do nhắn Zalo hẹn điểm đón trả và chốt chi phí phù hợp
+                  nhất.
                 </span>
               </div>
               <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span className="text-slate-700 dark:text-slate-300 font-medium">
-                  <strong>0đ Phí sàn trung gian:</strong> Toàn bộ chi phí chia sẻ trực tiếp khi lên xe, tuyệt đối không giữ tiền.
+                  <strong>0đ Phí sàn trung gian:</strong> Toàn bộ chi phí chia sẻ trực tiếp khi lên xe, tuyệt đối không
+                  giữ tiền.
                 </span>
               </div>
             </div>

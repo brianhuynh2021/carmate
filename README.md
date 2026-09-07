@@ -11,6 +11,7 @@
 CarMate được tạo ra để kết nối những người **CÙNG ĐƯỜNG, TIỆN TUYẾN**: Chủ xe có ghế trống (dù là đi làm hàng tuần, về thăm gia đình dòng họ, đi công tác hay việc riêng) chia sẻ chỗ cho hành khách đi cùng hướng để san sẻ chi phí xăng xe và vé cầu đường văn minh, tiết kiệm. (Nếu có duyên cùng quê hay gần nhà thì càng vui và ấm áp hơn, nhưng cốt lõi là **tiện đường đi chung**).
 
 ### Cơ chế Kết Nối Trực Tiếp (Sáng Kiến Đi Chung Xe CarMate + Zalo Organic KYC):
+
 1. **Không thu phí cọc sàn:** Hành khách không cần nạp tiền hay trả phí trung gian qua sàn (loại bỏ tâm lý e ngại lừa đảo và không rủi ro pháp lý cho Founder).
 2. **Cam kết qua Zalo trong 30 phút:** Sau khi bấm ghép chuyến, hai bên có 30 phút để nhắn tin Zalo cho nhau chốt điểm đón. Profile Zalo thật (avatar, số điện thoại, quê quán) là bộ lọc danh tính tự nhiên tốt nhất. Quá 30 phút không nhắn, hệ thống tự động nhả ghế.
 3. **Thanh toán trực tiếp:** Tiền cước xăng dầu & vé cầu đường trả bằng tiền mặt hoặc chuyển khoản trực tiếp cho tài xế khi bước lên xe.
@@ -84,9 +85,9 @@ npm install     # chỉ lần đầu
 npm run dev
 ```
 
-* 🌐 **Web:** [http://localhost:5173](http://localhost:5173)
-* 🔌 **API:** [http://localhost:5173/api](http://localhost:5173/api)
-* 🩺 **Health:** [http://localhost:5173/api/health](http://localhost:5173/api/health)
+- 🌐 **Web:** [http://localhost:5173](http://localhost:5173)
+- 🔌 **API:** [http://localhost:5173/api](http://localhost:5173/api)
+- 🩺 **Health:** [http://localhost:5173/api/health](http://localhost:5173/api/health)
 
 Ở chế độ dev, Vite chạy dưới dạng middleware nên sửa code là giao diện tự cập nhật ngay. Nhấn `Ctrl + C` để dừng.
 
@@ -106,15 +107,15 @@ npm run restore       # liệt kê các bản sao lưu
 
 Ở **production, thiếu biến bắt buộc thì server từ chối khởi động** — đây là cơ chế fail-closed có chủ đích:
 
-| Biến | Bắt buộc | Ý nghĩa |
-|---|---|---|
-| `JWT_SECRET` | ✅ production | Khoá ký phiên đăng nhập |
-| `CARMATE_ADMIN_PASSCODE` | ✅ production | Mã vào cổng quản trị |
-| `ALLOWED_ORIGINS` | | Danh sách domain được gọi API, ngăn cách bằng dấu phẩy |
-| `TRUST_PROXY` | | Đặt `true` khi có proxy/CDN đứng trước |
-| `CARMATE_ADMIN_MFA_CODE` | | Bật xác thực 2 lớp cho cổng quản trị |
-| `GEMINI_API_KEY` | | Bật trợ lý AI (thiếu thì tự chuyển sang bộ suy luận cục bộ) |
-| `DISABLE_VITE_DEV` | | Đặt `true` để bỏ Vite middleware, phục vụ bản dist đã build |
+| Biến                     | Bắt buộc      | Ý nghĩa                                                     |
+| ------------------------ | ------------- | ----------------------------------------------------------- |
+| `JWT_SECRET`             | ✅ production | Khoá ký phiên đăng nhập                                     |
+| `CARMATE_ADMIN_PASSCODE` | ✅ production | Mã vào cổng quản trị                                        |
+| `ALLOWED_ORIGINS`        |               | Danh sách domain được gọi API, ngăn cách bằng dấu phẩy      |
+| `TRUST_PROXY`            |               | Đặt `true` khi có proxy/CDN đứng trước                      |
+| `CARMATE_ADMIN_MFA_CODE` |               | Bật xác thực 2 lớp cho cổng quản trị                        |
+| `GEMINI_API_KEY`         |               | Bật trợ lý AI (thiếu thì tự chuyển sang bộ suy luận cục bộ) |
+| `DISABLE_VITE_DEV`       |               | Đặt `true` để bỏ Vite middleware, phục vụ bản dist đã build |
 
 > ⚠️ Không đặt khoá bí mật vào `apps/web/.env`. Vite nhúng mọi biến `VITE_*` thẳng vào bundle công khai — khoá API phải nằm ở `apps/api/.env`.
 
@@ -251,6 +252,7 @@ fly status        # kiểm tra máy và volume
 ```
 
 Kiểm tra nhanh:
+
 ```bash
 curl https://carmate.fly.dev/api/health
 ```
@@ -264,6 +266,7 @@ fly ips list        # lấy IPv4 (A) và IPv6 (AAAA)
 ```
 
 Tại Cloudflare (hoặc PA Việt Nam):
+
 1. Thêm bản ghi **A** `@` → IPv4 vừa lấy, và **AAAA** `@` → IPv6
 2. Thêm **CNAME** `www` → `carmate.vn`
 3. Nếu dùng Cloudflare proxy (mây cam), đặt SSL/TLS mode là **Full (strict)**
@@ -272,12 +275,12 @@ Cuối cùng, cập nhật `ALLOWED_ORIGINS` trong `fly.toml` cho khớp domain 
 
 ### Những điểm dễ sai
 
-| Vấn đề | Hậu quả |
-|---|---|
-| Quên tạo volume, hoặc mount sai `/app/apps/api/data` | **Mất toàn bộ dữ liệu sau mỗi lần deploy** |
-| Chạy nhiều hơn 1 máy | Hai tiến trình ghi cùng file SQLite → **hỏng dữ liệu**. `fly.toml` đã ghim 1 máy, đừng `fly scale count 2` |
-| Quên `TRUST_PROXY=true` | Rate limiter thấy mọi request đến từ cùng một IP → chặn nhầm người dùng thật |
-| Chạy `fly launch` khi đã có `fly.toml` | Ghi đè cấu hình volume và region |
+| Vấn đề                                               | Hậu quả                                                                                                    |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Quên tạo volume, hoặc mount sai `/app/apps/api/data` | **Mất toàn bộ dữ liệu sau mỗi lần deploy**                                                                 |
+| Chạy nhiều hơn 1 máy                                 | Hai tiến trình ghi cùng file SQLite → **hỏng dữ liệu**. `fly.toml` đã ghim 1 máy, đừng `fly scale count 2` |
+| Quên `TRUST_PROXY=true`                              | Rate limiter thấy mọi request đến từ cùng một IP → chặn nhầm người dùng thật                               |
+| Chạy `fly launch` khi đã có `fly.toml`               | Ghi đè cấu hình volume và region                                                                           |
 
 ### Vận hành
 
@@ -297,4 +300,3 @@ fly ssh sftp get /app/apps/api/data/backups/<tên-file>.gz
 **Chi phí ước tính:** ~$2-3/tháng (`shared-cpu-1x` 512MB + volume 1GB).
 
 **Trần chịu tải:** SQLite một máy phục vụ tốt tới vài nghìn người dùng/ngày. Vượt mốc đó mới cần tính tới Postgres.
-

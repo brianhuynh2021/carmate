@@ -8,11 +8,7 @@
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#1a73e8",
-  "categories": [
-    "travel",
-    "social",
-    "productivity"
-  ],
+  "categories": ["travel", "social", "productivity"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -39,9 +35,6 @@
       "purpose": "any"
     }
   ],
-  "display_override": [
-    "standalone",
-    "minimal-ui"
-  ],
+  "display_override": ["standalone", "minimal-ui"],
   "lang": "vi"
 }

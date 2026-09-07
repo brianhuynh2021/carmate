@@ -1,5 +1,12 @@
 import { cleanPhoneNumber, isValidVietnamesePhone } from '@carmate/shared';
-import { getUserByPhone, getUserById, getUserByEmail, saveUser, getTripsByPhone, deleteUserAccount } from '../db/sqliteStore.js';
+import {
+  getUserByPhone,
+  getUserById,
+  getUserByEmail,
+  saveUser,
+  getTripsByPhone,
+  deleteUserAccount
+} from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
 
 // Bộ nhớ đệm OTP tạm thời trong RAM (5 phút hết hạn, 0đ chi phí SMS)
@@ -28,7 +35,11 @@ export function requestOtp(req, res) {
     }
 
     const now = Date.now();
-    const phoneLimit = phoneRateLimitMap.get(cleaned) || { lastRequestedAt: 0, count: 0, resetAt: now + 24 * 60 * 60 * 1000 };
+    const phoneLimit = phoneRateLimitMap.get(cleaned) || {
+      lastRequestedAt: 0,
+      count: 0,
+      resetAt: now + 24 * 60 * 60 * 1000
+    };
 
     // Reset bộ đếm nếu đã qua 24 giờ
     if (now > phoneLimit.resetAt) {
@@ -161,7 +172,8 @@ export async function zaloLogin(req, res) {
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: 'Yêu cầu accessToken từ Zalo SDK. Không thể đăng nhập bằng thông tin mạo danh. Nếu đăng nhập bằng số điện thoại, vui lòng dùng luồng xác thực OTP SMS.'
+        error:
+          'Yêu cầu accessToken từ Zalo SDK. Không thể đăng nhập bằng thông tin mạo danh. Nếu đăng nhập bằng số điện thoại, vui lòng dùng luồng xác thực OTP SMS.'
       });
     }
 
@@ -180,7 +192,9 @@ export async function zaloLogin(req, res) {
     } else {
       // Xác thực trực tiếp với máy chủ Zalo Graph API
       try {
-        const zaloRes = await fetch(`https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(token)}&fields=id,name,picture`);
+        const zaloRes = await fetch(
+          `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(token)}&fields=id,name,picture`
+        );
         const zaloData = await zaloRes.json().catch(() => ({}));
         if (!zaloRes.ok || zaloData.error || !zaloData.id) {
           return res.status(401).json({
@@ -257,7 +271,15 @@ export async function zaloLogin(req, res) {
  */
 export async function googleLogin(req, res) {
   try {
-    const { idToken, credential, token: inputToken, email: rawEmail, googleId: rawGoogleId, name: reqName, phone: reqPhone } = req.body || {};
+    const {
+      idToken,
+      credential,
+      token: inputToken,
+      email: rawEmail,
+      googleId: rawGoogleId,
+      name: reqName,
+      phone: reqPhone
+    } = req.body || {};
     const token = (idToken || credential || inputToken || '').trim();
 
     if (!token) {

@@ -11,13 +11,23 @@ import { ROUTE_BENCHMARKS, formatVND, cleanPhoneNumber } from '@carmate/shared';
 export const toolDeclarations = [
   {
     name: 'searchTrips',
-    description: 'Tìm kiếm danh sách chuyến xe trong cơ sở dữ liệu CarMate theo điểm đón, điểm đến, thời gian, loại xe và tiện ích.',
+    description:
+      'Tìm kiếm danh sách chuyến xe trong cơ sở dữ liệu CarMate theo điểm đón, điểm đến, thời gian, loại xe và tiện ích.',
     parameters: {
       type: Type.OBJECT,
       properties: {
-        from: { type: Type.STRING, description: 'Điểm đón hoặc xuất phát (VD: Hà Nội, Bình Phước, Sài Gòn, Hàng Xanh...)' },
-        to: { type: Type.STRING, description: 'Điểm đến hoặc trả khách (VD: Hải Phòng, Đồng Xoài, Bến xe Miền Đông...)' },
-        type: { type: Type.STRING, description: 'Loại chuyến: "drivers" (chủ xe đang tìm khách) hoặc "passengers" (khách tìm xe)' },
+        from: {
+          type: Type.STRING,
+          description: 'Điểm đón hoặc xuất phát (VD: Hà Nội, Bình Phước, Sài Gòn, Hàng Xanh...)'
+        },
+        to: {
+          type: Type.STRING,
+          description: 'Điểm đến hoặc trả khách (VD: Hải Phòng, Đồng Xoài, Bến xe Miền Đông...)'
+        },
+        type: {
+          type: Type.STRING,
+          description: 'Loại chuyến: "drivers" (chủ xe đang tìm khách) hoặc "passengers" (khách tìm xe)'
+        },
         timeSlot: { type: Type.STRING, description: 'Khung giờ xuất phát (VD: 07:00-08:00, 13:00-14:00, 17:00-18:00)' },
         maxPrice: { type: Type.NUMBER, description: 'Mức giá tối đa mong muốn (VNĐ)' },
         requiresFamilyCar: { type: Type.BOOLEAN, description: 'Chỉ tìm xe gia đình cá nhân biển trắng' },
@@ -27,17 +37,22 @@ export const toolDeclarations = [
   },
   {
     name: 'getRouteBenchmarks',
-    description: 'Tra cứu bảng giá tham chiếu thị trường công bằng trên các tuyến đường liên tỉnh (QL13, QL14, QL1A...).',
+    description:
+      'Tra cứu bảng giá tham chiếu thị trường công bằng trên các tuyến đường liên tỉnh (QL13, QL14, QL1A...).',
     parameters: {
       type: Type.OBJECT,
       properties: {
-        routeName: { type: Type.STRING, description: 'Tên hoặc từ khoá tuyến đường (VD: QL13, QL14, Sài Gòn, Bình Phước)' }
+        routeName: {
+          type: Type.STRING,
+          description: 'Tên hoặc từ khoá tuyến đường (VD: QL13, QL14, Sài Gòn, Bình Phước)'
+        }
       }
     }
   },
   {
     name: 'checkMemberTrust',
-    description: 'Kiểm tra hồ sơ Hộ chiếu tín nhiệm, điểm Karma, trạng thái duyệt CCCD/GPLX của tài xế hoặc thành viên.',
+    description:
+      'Kiểm tra hồ sơ Hộ chiếu tín nhiệm, điểm Karma, trạng thái duyệt CCCD/GPLX của tài xế hoặc thành viên.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -87,25 +102,29 @@ export function executeSearchTrips(args = {}) {
   let filtered = allTrips;
   if (args.from) {
     const fromKw = args.from.toLowerCase();
-    filtered = filtered.filter(t => (t.from || '').toLowerCase().includes(fromKw) || (t.routeCategory || '').toLowerCase().includes(fromKw));
+    filtered = filtered.filter(
+      (t) => (t.from || '').toLowerCase().includes(fromKw) || (t.routeCategory || '').toLowerCase().includes(fromKw)
+    );
   }
   if (args.to) {
     const toKw = args.to.toLowerCase();
-    filtered = filtered.filter(t => (t.to || '').toLowerCase().includes(toKw) || (t.routeCategory || '').toLowerCase().includes(toKw));
+    filtered = filtered.filter(
+      (t) => (t.to || '').toLowerCase().includes(toKw) || (t.routeCategory || '').toLowerCase().includes(toKw)
+    );
   }
   if (args.requiresFamilyCar) {
-    filtered = filtered.filter(t => t.carCategory === 'family_car');
+    filtered = filtered.filter((t) => t.carCategory === 'family_car');
   }
   if (args.noSmoking) {
-    filtered = filtered.filter(t => (t.perks || []).some(p => p.toLowerCase().includes('thuốc')));
+    filtered = filtered.filter((t) => (t.perks || []).some((p) => p.toLowerCase().includes('thuốc')));
   }
   if (args.maxPrice) {
-    filtered = filtered.filter(t => (t.basePricePerSeat || t.price || 0) <= args.maxPrice);
+    filtered = filtered.filter((t) => (t.basePricePerSeat || t.price || 0) <= args.maxPrice);
   }
 
   return {
     count: filtered.length,
-    results: filtered.slice(0, 6).map(t => ({
+    results: filtered.slice(0, 6).map((t) => ({
       id: t.id,
       maskedCode: t.maskedCode,
       publicName: t.publicName || 'Chủ xe',
@@ -149,17 +168,19 @@ export function executeCheckMemberTrust(args = {}) {
   const clean = cleanPhoneNumber(args.identifier || '');
   const allUsers = getAllUsers();
   const queryStr = (args.identifier || '').toLowerCase();
-  const user = allUsers.find(u => 
-    (clean && cleanPhoneNumber(u.phone) === clean) || 
-    u.id === args.identifier ||
-    (u.name && u.name.toLowerCase().includes(queryStr))
+  const user = allUsers.find(
+    (u) =>
+      (clean && cleanPhoneNumber(u.phone) === clean) ||
+      u.id === args.identifier ||
+      (u.name && u.name.toLowerCase().includes(queryStr))
   );
 
   if (!user) {
     const driverOffers = getTrips({ type: 'drivers' });
-    const matchedDriver = driverOffers.find(d => 
-      (clean && cleanPhoneNumber(d.phoneReal) === clean) ||
-      (d.publicName && d.publicName.toLowerCase().includes(queryStr))
+    const matchedDriver = driverOffers.find(
+      (d) =>
+        (clean && cleanPhoneNumber(d.phoneReal) === clean) ||
+        (d.publicName && d.publicName.toLowerCase().includes(queryStr))
     );
     if (matchedDriver) {
       return {
@@ -197,7 +218,7 @@ export function executeCalculateEstimatedFare(args = {}) {
   const seats = Number(args.seatsCount) || 1;
   // Xăng trung bình 8L/100km (~22.000đ/L) = ~176.000đ + phí BOT cầu đường (~70.000đ)
   const totalCost = km * 1800 + 70000;
-  const fairPerSeat = Math.round((totalCost / 3) / 10000) * 10000;
+  const fairPerSeat = Math.round(totalCost / 3 / 10000) * 10000;
 
   return {
     distanceKm: km,
@@ -214,7 +235,9 @@ export function executeDraftZaloMessage(args = {}) {
     `Em xin phép đăng ký ghép ${pCount} chỗ ngồi.`,
     args.luggageNote ? `(Ghi chú hành lý: ${args.luggageNote})` : null,
     `Em gửi kèm vị trí đón chính xác qua Zalo này nhé. Rất mong anh/chị xác nhận giúp em!`
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   return { draftedText: msg };
 }
@@ -229,12 +252,13 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
   // 1. [VERIFY] Xác minh số ghế thực tế và ngữ cảnh gia đình
   innerLoopLog.push(`[VERIFY] Thẩm tra tính khả dụng của ${rawTrips.length} chuyến xe.`);
 
-  const verifiedTrips = rawTrips.map(trip => {
-    const isFamilyWithRelatives = Boolean(trip.hasRelatives) || 
+  const verifiedTrips = rawTrips.map((trip) => {
+    const isFamilyWithRelatives =
+      Boolean(trip.hasRelatives) ||
       /(vợ con|người nhà|con nhỏ|chở vợ|gia đình)/i.test(`${trip.note || ''} ${trip.carType || ''}`);
-    
+
     // Nếu xe chở người thân (vợ con), chỉ nhận 1 khách
-    const actualAvailableSeats = isFamilyWithRelatives ? 1 : (trip.seats || 1);
+    const actualAvailableSeats = isFamilyWithRelatives ? 1 : trip.seats || 1;
     const isCompatible = actualAvailableSeats >= seatsRequested;
 
     return {
@@ -245,21 +269,25 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
     };
   });
 
-  const compatibleTrips = verifiedTrips.filter(t => t.isCompatible);
+  const compatibleTrips = verifiedTrips.filter((t) => t.isCompatible);
 
   if (seatsRequested > 1) {
-    const excludedCount = verifiedTrips.filter(t => !t.isCompatible).length;
+    const excludedCount = verifiedTrips.filter((t) => !t.isCompatible).length;
     if (excludedCount > 0) {
-      innerLoopLog.push(`[VERIFY] Đã tự động loại trừ ${excludedCount} xe gia đình chở người thân (chỉ nhận tối đa 1 khách) để đảm bảo bạn đi ${seatsRequested} người không bị thiếu chỗ.`);
+      innerLoopLog.push(
+        `[VERIFY] Đã tự động loại trừ ${excludedCount} xe gia đình chở người thân (chỉ nhận tối đa 1 khách) để đảm bảo bạn đi ${seatsRequested} người không bị thiếu chỗ.`
+      );
     } else {
       innerLoopLog.push(`[VERIFY] Xác nhận: Các chuyến đều đủ ${seatsRequested} ghế ngồi thoải mái.`);
     }
   } else {
-    innerLoopLog.push(`[VERIFY] Xác nhận ghế: Nhu cầu 1 người hoàn toàn phù hợp với cả xe tiện chuyến lẫn xe gia đình.`);
+    innerLoopLog.push(
+      `[VERIFY] Xác nhận ghế: Nhu cầu 1 người hoàn toàn phù hợp với cả xe tiện chuyến lẫn xe gia đình.`
+    );
   }
 
   // 2. [REFLECT] Tự phản tư tính công bằng & so sánh định mức
-  const evaluatedTrips = (compatibleTrips.length > 0 ? compatibleTrips : verifiedTrips).map(trip => {
+  const evaluatedTrips = (compatibleTrips.length > 0 ? compatibleTrips : verifiedTrips).map((trip) => {
     const tripPrice = trip.price || 150000;
     const benchRate = benchmark?.suggestedRate || 140000;
     let reflection = '';
@@ -279,39 +307,54 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
   });
 
   if (benchmark) {
-    innerLoopLog.push(`[REFLECT] Phản tư giá cước: Đối chiếu mức phụ xăng với định mức chuẩn (${formatVND(benchmark.suggestedRate)}/ghế).`);
+    innerLoopLog.push(
+      `[REFLECT] Phản tư giá cước: Đối chiếu mức phụ xăng với định mức chuẩn (${formatVND(benchmark.suggestedRate)}/ghế).`
+    );
   }
 
   // 3. [REPLAN] Tái lập kế hoạch hành lang di chuyển khi chưa có xe trùng điểm đón chính xác
   let replannedTrips = evaluatedTrips;
   if (evaluatedTrips.length === 0) {
-    innerLoopLog.push(`[REPLAN] Không tìm thấy chuyến trùng khớp điểm đón chính xác. Đang tái lập quét mở rộng hành lang trục chính...`);
-    
+    innerLoopLog.push(
+      `[REPLAN] Không tìm thấy chuyến trùng khớp điểm đón chính xác. Đang tái lập quét mở rộng hành lang trục chính...`
+    );
+
     // Kiểm tra tính tương thích hành lang: Chỉ Replan xe có cùng hướng di chuyển
     const toLower = (to || '').toLowerCase();
     const isHeadingSouth = /sài gòn|tp|hcm|bình dương|đồng nai|miền đông|hàng xanh/i.test(toLower);
     const isHeadingBinhPhuoc = /bình phước|đồng xoài|chơn thành|bù đốp|lộc ninh/i.test(toLower);
     const isHeadingNorth = /hải phòng|hà nội/i.test(toLower);
 
-    const corridorTrips = getTrips({ type: 'drivers' }).filter(t => {
-      const tTo = (t.to || '').toLowerCase();
-      const tFrom = (t.from || '').toLowerCase();
-      if (isHeadingSouth && (tTo.includes('sài gòn') || tTo.includes('bến xe') || tTo.includes('hàng xanh'))) {
-        return (t.routeCategory && (t.routeCategory.includes('QL13') || t.routeCategory.includes('QL14'))) ||
-          tFrom.includes('bình phước') || tFrom.includes('lộc ninh') || tFrom.includes('đồng xoài');
-      }
-      if (isHeadingBinhPhuoc && (tTo.includes('bình phước') || tTo.includes('đồng xoài') || tTo.includes('chơn thành'))) {
-        return true;
-      }
-      if (isHeadingNorth && (tTo.includes('hải phòng') || tTo.includes('hà nội'))) {
-        return true;
-      }
-      return false;
-    }).slice(0, 3);
+    const corridorTrips = getTrips({ type: 'drivers' })
+      .filter((t) => {
+        const tTo = (t.to || '').toLowerCase();
+        const tFrom = (t.from || '').toLowerCase();
+        if (isHeadingSouth && (tTo.includes('sài gòn') || tTo.includes('bến xe') || tTo.includes('hàng xanh'))) {
+          return (
+            (t.routeCategory && (t.routeCategory.includes('QL13') || t.routeCategory.includes('QL14'))) ||
+            tFrom.includes('bình phước') ||
+            tFrom.includes('lộc ninh') ||
+            tFrom.includes('đồng xoài')
+          );
+        }
+        if (
+          isHeadingBinhPhuoc &&
+          (tTo.includes('bình phước') || tTo.includes('đồng xoài') || tTo.includes('chơn thành'))
+        ) {
+          return true;
+        }
+        if (isHeadingNorth && (tTo.includes('hải phòng') || tTo.includes('hà nội'))) {
+          return true;
+        }
+        return false;
+      })
+      .slice(0, 3);
 
     if (corridorTrips.length > 0) {
-      innerLoopLog.push(`[REPLAN] Tái lập thành công: Đề xuất ${corridorTrips.length} chuyến xe chạy ngang hành lang tiện đón trả dọc tuyến.`);
-      replannedTrips = corridorTrips.map(t => ({
+      innerLoopLog.push(
+        `[REPLAN] Tái lập thành công: Đề xuất ${corridorTrips.length} chuyến xe chạy ngang hành lang tiện đón trả dọc tuyến.`
+      );
+      replannedTrips = corridorTrips.map((t) => ({
         id: t.id,
         maskedCode: t.maskedCode,
         publicName: t.publicName || 'Chủ xe',
@@ -329,7 +372,9 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
         isCorridorFallback: true
       }));
     } else {
-      innerLoopLog.push(`[REPLAN] Toàn bộ hành lang hiện chưa có chuyến xe phù hợp hướng ${to || 'yêu cầu'}. Đã ghi nhận vào Hộp đen Tuyến khát xe (Unmet Demand).`);
+      innerLoopLog.push(
+        `[REPLAN] Toàn bộ hành lang hiện chưa có chuyến xe phù hợp hướng ${to || 'yêu cầu'}. Đã ghi nhận vào Hộp đen Tuyến khát xe (Unmet Demand).`
+      );
     }
   }
 
@@ -347,7 +392,12 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
   reasoningSteps.push('[PLAN] Tiếp nhận & Phân tích ngữ cảnh nhu cầu di chuyển của bạn.');
 
   // 1. Nhánh kiểm tra hồ sơ uy tín & an toàn
-  if (prompt.includes('uy tín') || prompt.includes('tín nhiệm') || prompt.includes('trust') || prompt.includes('an toàn')) {
+  if (
+    prompt.includes('uy tín') ||
+    prompt.includes('tín nhiệm') ||
+    prompt.includes('trust') ||
+    prompt.includes('an toàn')
+  ) {
     reasoningSteps.push('[ACT] Rà soát hồ sơ an toàn và đánh giá 2 chiều trong cộng đồng.');
     let identifier = 'Tuấn';
     if (prompt.includes('tuấn')) identifier = 'Tuấn';
@@ -357,11 +407,14 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     }
     reasoningSteps.push(`[VERIFY] Thẩm tra hồ sơ xác thực CCCD gắn chip & GPLX của thành viên "${identifier}".`);
     const trustRes = executeCheckMemberTrust({ identifier });
-    reasoningSteps.push(`[REFLECT] Điểm tin cậy đạt ${trustRes.trustScore || 98}/100 ⭐ (${trustRes.summary || trustRes.message}).`);
+    reasoningSteps.push(
+      `[REFLECT] Điểm tin cậy đạt ${trustRes.trustScore || 98}/100 ⭐ (${trustRes.summary || trustRes.message}).`
+    );
     reasoningSteps.push('[RESOLVE] Hoàn tất thẩm tra: Thành viên đủ điều kiện kết nối an toàn.');
 
     return {
-      reply: `🛡️ **Hồ sơ tín nhiệm & Điểm tin cậy (Trust Score):**\n\n` +
+      reply:
+        `🛡️ **Hồ sơ tín nhiệm & Điểm tin cậy (Trust Score):**\n\n` +
         `• **Tên thành viên:** **${trustRes.name || identifier}**\n` +
         `• **Điểm tin cậy (Trust Score):** **${trustRes.trustScore || 98}/100** ⭐\n` +
         `• **Căn cước công dân (CCCD):** ${trustRes.isCccdVerified ? '✅ Đã xác thực gắn chip' : '⚠️ Chưa xác thực'}\n` +
@@ -375,7 +428,13 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
   }
 
   // 2. Nhánh tra cứu bảng giá định mức & chi phí xăng / cầu đường
-  if (prompt.includes('giá') || prompt.includes('xăng') || prompt.includes('vé') || prompt.includes('cầu đường') || prompt.includes('bao nhiêu')) {
+  if (
+    prompt.includes('giá') ||
+    prompt.includes('xăng') ||
+    prompt.includes('vé') ||
+    prompt.includes('cầu đường') ||
+    prompt.includes('bao nhiêu')
+  ) {
     reasoningSteps.push('[ACT] Tra cứu bảng định mức tiền xăng & vé trạm thu phí BOT.');
     let routeName = 'QL13';
     if (prompt.includes('14') || prompt.includes('ql14')) routeName = 'QL14';
@@ -385,11 +444,14 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     reasoningSteps.push(`[VERIFY] Đo cự ly và chi phí vận hành xe thực tế trên tuyến ${routeName}.`);
     const benchRes = executeGetRouteBenchmarks({ routeName });
     const match = benchRes.matches?.[0];
-    reasoningSteps.push(`[REFLECT] Phản tư tính công bằng: Mức chia sẻ khuyến nghị tuyến ${routeName}: ${match?.suggestedRateFormatted || '150.000đ'}/ghế.`);
+    reasoningSteps.push(
+      `[REFLECT] Phản tư tính công bằng: Mức chia sẻ khuyến nghị tuyến ${routeName}: ${match?.suggestedRateFormatted || '150.000đ'}/ghế.`
+    );
     reasoningSteps.push('[RESOLVE] Hoàn tất: Bảng định mức chi phí chuẩn hoá bảo vệ cả hai bên khỏi ép giá.');
 
     return {
-      reply: `📊 **Bảng định mức chi phí tham chiếu CarMate (${match?.route || routeName}):**\n\n` +
+      reply:
+        `📊 **Bảng định mức chi phí tham chiếu CarMate (${match?.route || routeName}):**\n\n` +
         `• **Mức giá san sẻ khuyến nghị:** **${match?.suggestedRateFormatted || '150.000đ'}/ghế**\n` +
         `• **Biên độ thị trường hợp lý:** ${match?.marketRange || '120.000đ – 180.000đ/ghế'}\n` +
         `• **Bao gồm:** Trọn gói tiền xăng thực tế & vé trạm thu phí BOT toàn tuyến.\n` +
@@ -420,8 +482,20 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
   if (!from && !to) {
     if (prompt.includes('hà nội') || prompt.includes('hn')) from = 'Hà Nội';
     if (prompt.includes('hải phòng') || prompt.includes('hp')) to = 'Hải Phòng';
-    if (prompt.includes('bình phước') || prompt.includes('đồng xoài') || prompt.includes('chơn thành') || prompt.includes('bù đốp') || prompt.includes('lộc ninh')) {
-      if (prompt.includes('về sài gòn') || prompt.includes('đi sài gòn') || prompt.includes('đi tp') || prompt.includes('về tp') || prompt.includes('hàng xanh')) {
+    if (
+      prompt.includes('bình phước') ||
+      prompt.includes('đồng xoài') ||
+      prompt.includes('chơn thành') ||
+      prompt.includes('bù đốp') ||
+      prompt.includes('lộc ninh')
+    ) {
+      if (
+        prompt.includes('về sài gòn') ||
+        prompt.includes('đi sài gòn') ||
+        prompt.includes('đi tp') ||
+        prompt.includes('về tp') ||
+        prompt.includes('hàng xanh')
+      ) {
         from = 'Bình Phước';
         to = 'Sài Gòn';
       } else {
@@ -431,7 +505,9 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     }
   }
 
-  reasoningSteps.push(`[ACT] Tra cứu các chuyến xe khởi hành từ "${from || 'toàn quốc'}" đến "${to || 'toàn quốc'}" cho ${seatsRequested} người.`);
+  reasoningSteps.push(
+    `[ACT] Tra cứu các chuyến xe khởi hành từ "${from || 'toàn quốc'}" đến "${to || 'toàn quốc'}" cho ${seatsRequested} người.`
+  );
   const searchRes = executeSearchTrips({ from, to });
 
   // Lấy benchmark của tuyến để phục vụ bước [REFLECT]
@@ -454,10 +530,15 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
   if (finalTrips.length > 0) {
     reasoningSteps.push('[RESOLVE] Hoàn tất: Lựa chọn các chuyến xe phù hợp nhất gửi đến bạn.');
     const topTrip = finalTrips[0];
-    const relativeNotice = topTrip.hasRelatives ? '\n*(Xe này chủ xe có chở người thân, chỉ nhận 1 khách đi cùng lịch sự)*' : '';
-    const fallbackNotice = topTrip.isCorridorFallback ? '\n*(Gợi ý xe tiện chuyến chạy ngang trục hành lang gần bạn)*' : '';
+    const relativeNotice = topTrip.hasRelatives
+      ? '\n*(Xe này chủ xe có chở người thân, chỉ nhận 1 khách đi cùng lịch sự)*'
+      : '';
+    const fallbackNotice = topTrip.isCorridorFallback
+      ? '\n*(Gợi ý xe tiện chuyến chạy ngang trục hành lang gần bạn)*'
+      : '';
 
-    textResponse = `Dạ chào bạn! Mình đã tìm thấy **${finalTrips.length} chuyến xe phù hợp** với yêu cầu của bạn (${seatsRequested} ghế):${fallbackNotice}\n\n` +
+    textResponse =
+      `Dạ chào bạn! Mình đã tìm thấy **${finalTrips.length} chuyến xe phù hợp** với yêu cầu của bạn (${seatsRequested} ghế):${fallbackNotice}\n\n` +
       `• **${topTrip.publicName}** (${topTrip.carType})\n` +
       `• Tuyến: **${topTrip.from} ➔ ${topTrip.to}**\n` +
       `• Khung giờ: **${topTrip.timeSlot}** (${topTrip.date})\n` +
@@ -467,7 +548,8 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
       `Bạn có thể bấm trực tiếp vào nút **"Nhắn Zalo đón"** bên dưới để chốt điểm hẹn thuận tiện nhé!`;
   } else {
     reasoningSteps.push('[RESOLVE] Hoàn tất: Gợi ý phương án đăng tin tìm xe ghép tiện chuyến.');
-    textResponse = `Chào bạn! Hiện tại tuyến đường này đang chưa có chuyến khởi hành trùng khớp yêu cầu (${seatsRequested} người), nhưng bạn có thể đăng tin **[Tìm xe]** để các chủ xe tiện chuyến liên hệ.\n\n` +
+    textResponse =
+      `Chào bạn! Hiện tại tuyến đường này đang chưa có chuyến khởi hành trùng khớp yêu cầu (${seatsRequested} người), nhưng bạn có thể đăng tin **[Tìm xe]** để các chủ xe tiện chuyến liên hệ.\n\n` +
       `💡 **Mức giá tham khảo công bằng:** Tuyến liên tỉnh này thường dao động từ **120.000đ – 180.000đ/ghế** (đã bao gồm xăng xe & vé trạm BOT). Bạn có muốn mình hỗ trợ soạn tin đăng nhanh không?`;
   }
 
@@ -475,7 +557,7 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     reply: textResponse,
     reasoningSteps,
     suggestedTrips: finalTrips,
-    requestedRoute: (from && to) ? `${from} ➔ ${to}` : '',
+    requestedRoute: from && to ? `${from} ➔ ${to}` : '',
     engine: 'local-heuristic-agent'
   };
 }

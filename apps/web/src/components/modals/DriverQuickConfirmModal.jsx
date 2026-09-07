@@ -10,11 +10,7 @@ import api from '../../api/client.js';
  * Mở trực tiếp khi Bác tài bấm link trong tin nhắn Zalo (#confirm-CX-XXXX)
  * Không cần đăng nhập, bảo vệ thông tin PII, xác nhận 1 chạm tức thì.
  */
-export default function DriverQuickConfirmModal({
-  bookingCode,
-  onClose,
-  onShowToast
-}) {
+export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowToast }) {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState('');
@@ -55,7 +51,9 @@ export default function DriverQuickConfirmModal({
     }
 
     fetchSummary();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [bookingCode]);
 
   const handleConfirm = async () => {
@@ -123,19 +121,32 @@ export default function DriverQuickConfirmModal({
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs space-y-1.5 text-slate-700">
             <div className="flex items-center gap-1.5 font-bold text-slate-900">
               <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{booking.from} ➔ {booking.to}</span>
+              <span>
+                {booking.from} ➔ {booking.to}
+              </span>
             </div>
             {booking.pickupPoint && (
-              <p className="text-slate-600">Điểm đón: <strong className="text-slate-800">{booking.pickupPoint}</strong></p>
+              <p className="text-slate-600">
+                Điểm đón: <strong className="text-slate-800">{booking.pickupPoint}</strong>
+              </p>
             )}
             <div className="flex justify-between pt-1 border-t border-slate-200/80 text-slate-500 text-[11px]">
-              <span>Khung giờ: <strong>{booking.timeSlot}</strong></span>
-              <span>Thu trực tiếp: <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong></span>
+              <span>
+                Khung giờ: <strong>{booking.timeSlot}</strong>
+              </span>
+              <span>
+                Thu trực tiếp: <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong>
+              </span>
             </div>
           </div>
 
           <div className="pt-2">
-            <Button fullWidth size="lg" onClick={onClose} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+            <Button
+              fullWidth
+              size="lg"
+              onClick={onClose}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            >
               Xong · Về trang chủ
             </Button>
           </div>
@@ -174,9 +185,14 @@ export default function DriverQuickConfirmModal({
             )}
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
-              <span className="text-slate-600">Đăng ký: <strong className="text-slate-900">{booking.seats || 1} ghế</strong></span>
               <span className="text-slate-600">
-                Phụ xăng chia sẻ: <strong className="text-emerald-700 font-extrabold text-sm tabular">{formatVND(booking.totalDeal)}</strong>
+                Đăng ký: <strong className="text-slate-900">{booking.seats || 1} ghế</strong>
+              </span>
+              <span className="text-slate-600">
+                Phụ xăng chia sẻ:{' '}
+                <strong className="text-emerald-700 font-extrabold text-sm tabular">
+                  {formatVND(booking.totalDeal)}
+                </strong>
               </span>
             </div>
           </div>
@@ -209,12 +225,7 @@ export default function DriverQuickConfirmModal({
               {submitting ? 'Đang xác nhận...' : '✓ Bác tài đồng ý nhận đón'}
             </Button>
 
-            <Button
-              fullWidth
-              variant="secondary"
-              onClick={onClose}
-              className="text-xs py-2 text-slate-600"
-            >
+            <Button fullWidth variant="secondary" onClick={onClose} className="text-xs py-2 text-slate-600">
               Để trả lời sau trên Zalo
             </Button>
           </div>

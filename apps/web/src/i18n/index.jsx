@@ -32,21 +32,26 @@ export function I18nProvider({ children }) {
 
   const setLang = useCallback((next) => {
     setLangState(next);
-    try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {}
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
 
-  const t = useCallback((key, params) => {
-    const primary = getByPath(DICTS[lang], key);
-    const fallback = getByPath(DICTS.vi, key);
-    const value = primary !== undefined ? primary : fallback;
-    if (value === undefined) return key;
-    if (typeof value === 'string') return interpolate(value, params);
-    return value; // arrays / objects (e.g. lists of bullet points)
-  }, [lang]);
+  const t = useCallback(
+    (key, params) => {
+      const primary = getByPath(DICTS[lang], key);
+      const fallback = getByPath(DICTS.vi, key);
+      const value = primary !== undefined ? primary : fallback;
+      if (value === undefined) return key;
+      if (typeof value === 'string') return interpolate(value, params);
+      return value; // arrays / objects (e.g. lists of bullet points)
+    },
+    [lang]
+  );
 
   const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
 

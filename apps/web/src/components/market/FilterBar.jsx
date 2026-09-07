@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
 import { TIME_SLOTS, getTimeSlotLabel } from '@carmate/shared';
-import { Search, SlidersHorizontal, Users, Car, X, LayoutGrid, RotateCcw, MousePointerClick, MessageCircle, Banknote } from 'lucide-react';
+import {
+  Search,
+  SlidersHorizontal,
+  Users,
+  Car,
+  X,
+  LayoutGrid,
+  RotateCcw,
+  MousePointerClick,
+  MessageCircle,
+  Banknote
+} from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Chip, { Segmented } from '../ui/Chip.jsx';
 import { Field, Select } from '../ui/Field.jsx';
@@ -46,8 +57,9 @@ export function SearchBar({ searchKeyword, setSearchKeyword }) {
       {/* Quick Highway Chips: Tự động xuống dòng gọn gàng, bao phủ Bắc - Trung - Nam */}
       <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 pt-0.5">
         {POPULAR_HIGHWAYS.map((hw) => {
-          const isSelected = hw.id === 'all' ? searchKeyword === '' : searchKeyword.toLowerCase().includes(hw.id.toLowerCase());
-          const label = hw.id === 'all' ? t('market.allRoutes') : (lang === 'en' && hw.labelEn ? hw.labelEn : hw.label);
+          const isSelected =
+            hw.id === 'all' ? searchKeyword === '' : searchKeyword.toLowerCase().includes(hw.id.toLowerCase());
+          const label = hw.id === 'all' ? t('market.allRoutes') : lang === 'en' && hw.labelEn ? hw.labelEn : hw.label;
           return (
             <Chip
               key={hw.id}
@@ -81,7 +93,9 @@ export function FilterPanel({
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold text-[#1d1d1f]">{t('market.sidebarTitle')}</h3>
         {hasActive && (
-          <Button variant="ghost" size="xs" icon={RotateCcw} onClick={onReset}>{t('market.resetFilters')}</Button>
+          <Button variant="ghost" size="xs" icon={RotateCcw} onClick={onReset}>
+            {t('market.resetFilters')}
+          </Button>
         )}
       </div>
 
@@ -102,8 +116,10 @@ export function FilterPanel({
 
       <Field label={t('market.timeSlot')}>
         <Select value={selectedTimeSlot} onChange={(e) => setSelectedTimeSlot(e.target.value)}>
-          {TIME_SLOTS.filter(slot => !slot.isAlias).map((slot) => (
-            <option key={slot.id} value={slot.id}>{getTimeSlotLabel(slot.id, lang, 'full')}</option>
+          {TIME_SLOTS.filter((slot) => !slot.isAlias).map((slot) => (
+            <option key={slot.id} value={slot.id}>
+              {getTimeSlotLabel(slot.id, lang, 'full')}
+            </option>
           ))}
         </Select>
       </Field>
@@ -135,10 +151,7 @@ export function FilterPanel({
 export default function FilterBar({ searchKeyword, setSearchKeyword }) {
   return (
     <div id="market-filter-bar" className="space-y-4 scroll-mt-24">
-      <SearchBar
-        searchKeyword={searchKeyword}
-        setSearchKeyword={setSearchKeyword}
-      />
+      <SearchBar searchKeyword={searchKeyword} setSearchKeyword={setSearchKeyword} />
     </div>
   );
 }

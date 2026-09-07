@@ -53,14 +53,14 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
   const warningTags = isDriverReviewing ? DRIVER_WARNING_TAGS : PASSENGER_WARNING_TAGS;
 
   const handleToggleTag = (tag) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
+    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
   const handleRoleChange = (role) => {
     setReviewerRole(role);
-    setSelectedTags(role === 'driver' ? ['Đúng giờ điểm hẹn', 'Lịch sự văn minh'] : ['Lái xe an toàn', 'Đúng giờ xuất phát']);
+    setSelectedTags(
+      role === 'driver' ? ['Đúng giờ điểm hẹn', 'Lịch sự văn minh'] : ['Lái xe an toàn', 'Đúng giờ xuất phát']
+    );
   };
 
   const handleSubmit = async () => {
@@ -82,7 +82,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
   };
 
   const isLowRating = rating <= 2;
-  const hasWarningTag = selectedTags.some(t => warningTags.includes(t));
+  const hasWarningTag = selectedTags.some((t) => warningTags.includes(t));
 
   if (!booking) return null;
 
@@ -145,9 +145,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Bạn đang đánh giá {isDriverReviewing ? 'hành khách' : 'chủ xe'}:
           </p>
-          <h4 className="text-lg font-bold text-slate-900 dark:text-white">
-            {targetName}
-          </h4>
+          <h4 className="text-lg font-bold text-slate-900 dark:text-white">{targetName}</h4>
 
           {/* Chấm sao tương tác */}
           <div className="flex items-center justify-center gap-2 pt-1">
@@ -165,9 +163,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
                 >
                   <Star
                     className={`w-8 h-8 transition-colors ${
-                      isFilled
-                        ? 'fill-amber-400 text-amber-400 drop-shadow-xs'
-                        : 'text-slate-200 dark:text-slate-700'
+                      isFilled ? 'fill-amber-400 text-amber-400 drop-shadow-xs' : 'text-slate-200 dark:text-slate-700'
                     }`}
                   />
                 </button>
@@ -189,12 +185,11 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="font-bold">
-                {isDriverReviewing
-                  ? 'Gắn cờ bảo vệ các bác tài khác:'
-                  : 'Góp ý kiểm duyệt tài xế:'}
+                {isDriverReviewing ? 'Gắn cờ bảo vệ các bác tài khác:' : 'Góp ý kiểm duyệt tài xế:'}
               </p>
               <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
-                Đánh giá này sẽ lưu vào lịch sử tín nhiệm để các thành viên khác cảnh giác, đảm bảo cộng đồng không bị tái diễn tình trạng leo cây hoặc trễ hẹn.
+                Đánh giá này sẽ lưu vào lịch sử tín nhiệm để các thành viên khác cảnh giác, đảm bảo cộng đồng không bị
+                tái diễn tình trạng leo cây hoặc trễ hẹn.
               </p>
             </div>
           </div>
@@ -202,9 +197,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Thẻ tiêu chí tích cực */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-            Điểm cộng chuyến đi:
-          </p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Điểm cộng chuyến đi:</p>
           <div className="flex flex-wrap gap-1.5">
             {positiveTags.map((tag) => {
               const active = selectedTags.includes(tag);
@@ -228,9 +221,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Thẻ tiêu chí cảnh báo / góp ý */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">
-            Góp ý hoặc cảnh báo (nếu có):
-          </p>
+          <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">Góp ý hoặc cảnh báo (nếu có):</p>
           <div className="flex flex-wrap gap-1.5">
             {warningTags.map((tag) => {
               const active = selectedTags.includes(tag);

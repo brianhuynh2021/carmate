@@ -25,7 +25,9 @@ export default function Modal({
   zIndex = 'z-50'
 }) {
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -38,7 +40,9 @@ export default function Modal({
   return (
     <div
       className={`fixed inset-0 ${zIndex} flex items-end sm:items-center justify-center bg-black/25 backdrop-blur-md p-0 sm:p-4 anim-fade-in`}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={typeof title === 'string' ? title : undefined}
@@ -50,7 +54,9 @@ export default function Modal({
         {/* Header */}
         <div className="flex items-start gap-3 px-6 pt-6 pb-4 border-b border-black/[0.06]">
           {Icon && (
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${ICON_TONES[iconTone] || ICON_TONES.primary}`}>
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${ICON_TONES[iconTone] || ICON_TONES.primary}`}
+            >
               <Icon className="w-5 h-5" />
             </div>
           )}
@@ -72,11 +78,7 @@ export default function Modal({
         <div className={`px-6 py-5 overflow-y-auto overscroll-contain flex-1 ${bodyClassName}`}>{children}</div>
 
         {/* Footer */}
-        {footer && (
-          <div className="px-6 py-4 border-t border-black/[0.06] bg-[#f5f5f7]">
-            {footer}
-          </div>
-        )}
+        {footer && <div className="px-6 py-4 border-t border-black/[0.06] bg-[#f5f5f7]">{footer}</div>}
       </div>
     </div>
   );

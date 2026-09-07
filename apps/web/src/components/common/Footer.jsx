@@ -29,7 +29,6 @@ export default function Footer({ onNavigate, onOpenTerms }) {
   return (
     <footer className="mt-20 border-t border-black/[0.06] bg-[#f5f5f7] pb-24 md:pb-8 transition-colors">
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
-        
         {/* ── TẦNG 1: TRẠNG THÁI & LIÊN HỆ TRỰC TIẾP ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-black/[0.06]">
           {/* Brand + Status */}
@@ -43,9 +42,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
             <span className="text-black/[0.15]">·</span>
             <div className="flex items-center gap-2 text-xs text-[#515154]">
               <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0" />
-              <span className="text-[12px] font-medium text-[#515154]">
-                Tiện chuyến cùng đường · 0đ Phí trung gian
-              </span>
+              <span className="text-[12px] font-medium text-[#515154]">Tiện chuyến cùng đường · 0đ Phí trung gian</span>
             </div>
           </div>
 
@@ -57,7 +54,9 @@ export default function Footer({ onNavigate, onOpenTerms }) {
             >
               <Phone className="w-3.5 h-3.5 text-[#107c41]" />
               <span>{SITE_INFO.hotline}</span>
-              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-sans font-medium">({SITE_INFO.contactPerson})</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-sans font-medium">
+                ({SITE_INFO.contactPerson})
+              </span>
             </a>
 
             <a
@@ -121,7 +120,6 @@ export default function Footer({ onNavigate, onOpenTerms }) {
             <span>© {year} CarMate.vn</span>
           </div>
         </div>
-
       </div>
     </footer>
   );

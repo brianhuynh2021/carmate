@@ -572,12 +572,12 @@ export function searchLocations(query = '', limit = 8) {
     return TOP_TRANSIT_HUBS.slice(0, limit);
   }
 
-  const tokens = clean.split(/[\s,.-]+/).filter(t => t.length >= 2);
+  const tokens = clean.split(/[\s,.-]+/).filter((t) => t.length >= 2);
 
-  const scored = POPULAR_LOCATIONS.map(item => {
+  const scored = POPULAR_LOCATIONS.map((item) => {
     const normName = removeAccents(item.name);
     const normDetail = removeAccents(item.detail);
-    const normKeywords = (item.keywords || []).map(k => removeAccents(k)).join(' ');
+    const normKeywords = (item.keywords || []).map((k) => removeAccents(k)).join(' ');
     const allWords = (normName + ' ' + normDetail + ' ' + normKeywords).split(/[\s,.-]+/);
 
     let score = 0;
@@ -587,7 +587,7 @@ export function searchLocations(query = '', limit = 8) {
 
     if (tokens.length >= 2) {
       // Khi gõ từ 2 từ trở lên: bắt buộc phải xuất hiện đầy đủ các từ
-      const matchedCount = tokens.filter(t => allWords.some(w => w === t || w.startsWith(t))).length;
+      const matchedCount = tokens.filter((t) => allWords.some((w) => w === t || w.startsWith(t))).length;
       if (matchedCount === tokens.length) {
         score += 80;
       } else if (!normName.includes(clean) && !normKeywords.includes(clean)) {
@@ -595,14 +595,14 @@ export function searchLocations(query = '', limit = 8) {
       }
     } else if (tokens.length === 1) {
       const t = tokens[0];
-      if (allWords.some(w => w === t)) score += 40;
-      else if (allWords.some(w => w.startsWith(t))) score += 20;
+      if (allWords.some((w) => w === t)) score += 40;
+      else if (allWords.some((w) => w.startsWith(t))) score += 20;
     }
 
     return { ...item, score };
   })
-  .filter(item => item.score > 0)
-  .sort((a, b) => b.score - a.score);
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score);
 
   if (scored.length > 0) {
     return scored.slice(0, limit);
@@ -661,9 +661,5 @@ export function getSuggestedWaypoints(from = '', to = '') {
     }
   }
 
-  return [
-    'Tiện đón dọc Quốc Lộ',
-    'Các cây xăng lớn tiện đường',
-    'Đón trả tại các nút giao cao tốc'
-  ];
+  return ['Tiện đón dọc Quốc Lộ', 'Các cây xăng lớn tiện đường', 'Đón trả tại các nút giao cao tốc'];
 }

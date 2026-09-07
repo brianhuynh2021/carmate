@@ -16,12 +16,14 @@ export async function agentChatHandler(req, res) {
       });
     }
 
-    const userContext = req.user ? {
-      userId: req.user.userId,
-      phone: req.user.phone,
-      name: req.user.name,
-      role: req.user.role
-    } : {};
+    const userContext = req.user
+      ? {
+          userId: req.user.userId,
+          phone: req.user.phone,
+          name: req.user.name,
+          role: req.user.role
+        }
+      : {};
 
     const startTime = Date.now();
     const result = await runCarMateAgent({
@@ -76,4 +78,3 @@ export async function agentChatHandler(req, res) {
     });
   }
 }
-

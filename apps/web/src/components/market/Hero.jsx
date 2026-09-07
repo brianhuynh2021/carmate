@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  BadgePercent, 
-  MessageCircle, 
-  Sparkles, 
-  MapPin, 
-  Navigation, 
-  ArrowLeftRight, 
-  Search, 
-  Car, 
-  Zap, 
-  X, 
-  Package, 
-  ArrowRight 
+import {
+  ShieldCheck,
+  BadgePercent,
+  MessageCircle,
+  Sparkles,
+  MapPin,
+  Navigation,
+  ArrowLeftRight,
+  Search,
+  Car,
+  Zap,
+  X,
+  Package,
+  ArrowRight
 } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Chip from '../ui/Chip.jsx';
@@ -26,7 +26,7 @@ const POPULAR_ROTATING_ROUTES = [
   { from: 'Sài Gòn', to: 'Vũng Tàu' },
   { from: 'Hà Nội', to: 'Hải Phòng' },
   { from: 'Sài Gòn', to: 'Đà Lạt' },
-  { from: 'Bù Đốp', to: 'TP. Hồ Chí Minh' },
+  { from: 'Bù Đốp', to: 'TP. Hồ Chí Minh' }
 ];
 
 export default function Hero({
@@ -130,7 +130,10 @@ export default function Hero({
               <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
               <span>Gợi ý tuyến HOT:</span>
             </span>
-            <div key={routeCycleIndex} className="anim-fade-in flex items-center gap-1.5 text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff]">
+            <div
+              key={routeCycleIndex}
+              className="anim-fade-in flex items-center gap-1.5 text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff]"
+            >
               <span>{activeRouteHint.from}</span>
               <ArrowLeftRight className="w-3 h-3 text-slate-400 shrink-0" />
               <span>{activeRouteHint.to}</span>
@@ -153,7 +156,6 @@ export default function Hero({
         <div className="pt-2 max-w-4xl mx-auto w-full relative z-40">
           <div className="p-2 sm:p-2.5 rounded-2xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(0,113,227,0.14)] focus-within:ring-2 focus-within:ring-[#0071e3]/30 focus-within:border-[#0071e3] transition-all text-left relative z-40">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-1.5">
-              
               {/* Điểm xuất phát */}
               <div className="relative flex-1 flex items-center min-w-0 px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#f5f5f7] border border-black/[0.04] hover:bg-[#ebebee] focus-within:bg-white focus-within:border-[#0071e3]/60 transition-colors focus-within:z-50">
                 <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0 mr-2.5">
@@ -161,9 +163,7 @@ export default function Hero({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 leading-none mb-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
-                      Xuất phát
-                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Xuất phát</span>
                     <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Tỉnh / Bến xe</span>
                   </div>
                   <LocationSuggestInput
@@ -204,9 +204,7 @@ export default function Hero({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 leading-none mb-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">
-                      Điểm đến
-                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Điểm đến</span>
                     <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Tỉnh / Bến xe</span>
                   </div>
                   <LocationSuggestInput
@@ -255,7 +253,10 @@ export default function Hero({
                     aria-hidden="true"
                     className="absolute inset-0 w-full h-full bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.45)_50%,transparent_80%)] animate-shimmer-sweep pointer-events-none"
                   />
-                  <Search className="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 relative z-10" strokeWidth={2.4} />
+                  <Search
+                    className="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 relative z-10"
+                    strokeWidth={2.4}
+                  />
                   <span className="relative z-10 tracking-tight">{t('hero.findTripCta') || 'Tìm chuyến ngay'}</span>
                 </button>
               </div>
@@ -266,7 +267,10 @@ export default function Hero({
           <div className="pt-2 px-2 flex items-center justify-center">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.04] dark:border-white/[0.06] text-[11px] text-[#515154] dark:text-slate-400 max-w-2xl text-center leading-snug">
               <span className="text-amber-500 font-bold shrink-0">💡 Mẹo ghép xe:</span>
-              <span>Nên chọn <strong>Tỉnh thành, Bến xe hoặc Quận/Huyện</strong> để tìm thấy nhiều xe nhất. Chi tiết ngõ ngách sẽ chốt linh hoạt cùng tài xế qua Zalo!</span>
+              <span>
+                Nên chọn <strong>Tỉnh thành, Bến xe hoặc Quận/Huyện</strong> để tìm thấy nhiều xe nhất. Chi tiết ngõ
+                ngách sẽ chốt linh hoạt cùng tài xế qua Zalo!
+              </span>
             </div>
           </div>
 
@@ -282,10 +286,13 @@ export default function Hero({
               {/* Route Pills (Non-wrapping single horizontal rail) */}
               <div className="flex items-center gap-1.5 shrink-0">
                 {POPULAR_HIGHWAYS.map((hw) => {
-                  const isSelected = hw.id === 'all'
-                    ? (!searchKeyword && !searchFrom && !searchTo)
-                    : (searchKeyword.toLowerCase().includes(hw.id.toLowerCase()) || searchFrom.toLowerCase().includes(hw.id.toLowerCase()));
-                  const label = hw.id === 'all' ? t('market.allRoutes') : (lang === 'en' && hw.labelEn ? hw.labelEn : hw.label);
+                  const isSelected =
+                    hw.id === 'all'
+                      ? !searchKeyword && !searchFrom && !searchTo
+                      : searchKeyword.toLowerCase().includes(hw.id.toLowerCase()) ||
+                        searchFrom.toLowerCase().includes(hw.id.toLowerCase());
+                  const label =
+                    hw.id === 'all' ? t('market.allRoutes') : lang === 'en' && hw.labelEn ? hw.labelEn : hw.label;
                   return (
                     <Chip
                       key={hw.id}
@@ -320,11 +327,12 @@ export default function Hero({
                     : 'bg-white text-[#515154] border border-black/[0.08] hover:bg-[#f5f5f7] hover:border-black/[0.16] hover:text-[#1d1d1f]'
                 }`}
               >
-                <Package className={`w-3.5 h-3.5 ${isParcelActive ? 'text-amber-600' : 'text-[#86868b]'}`} strokeWidth={2} />
+                <Package
+                  className={`w-3.5 h-3.5 ${isParcelActive ? 'text-amber-600' : 'text-[#86868b]'}`}
+                  strokeWidth={2}
+                />
                 <span>Nhận gửi đồ kèm xe</span>
-                {isParcelActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />
-                )}
+                {isParcelActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />}
               </button>
             </div>
           </div>

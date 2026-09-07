@@ -34,7 +34,9 @@ export function Select({ className = '', children, ...props }) {
 }
 
 export function Textarea({ className = '', rows = 3, ...props }) {
-  return <textarea rows={rows} className={`${inputBase} h-auto py-3 resize-y leading-relaxed ${className}`} {...props} />;
+  return (
+    <textarea rows={rows} className={`${inputBase} h-auto py-3 resize-y leading-relaxed ${className}`} {...props} />
+  );
 }
 
 export function Checkbox({ label, description, className = '', ...props }) {
@@ -67,16 +69,22 @@ export function OptionCard({ active, onClick, title, description, icon: Icon, ta
       } ${className}`}
     >
       <div className="flex items-start gap-3">
-        <span className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-          active ? 'border-[#0071e3] bg-[#0071e3]' : 'border-black/[0.2] bg-white'
-        }`}>
+        <span
+          className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+            active ? 'border-[#0071e3] bg-[#0071e3]' : 'border-black/[0.2] bg-white'
+          }`}
+        >
           {active && <span className="w-2 h-2 rounded-full bg-white" />}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             {Icon && <Icon className={`w-4 h-4 ${active ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />}
             <span className={`text-sm font-bold ${active ? 'text-[#1d1d1f]' : 'text-[#515154]'}`}>{title}</span>
-            {tag && <span className="ml-auto text-[11px] font-mono px-2 py-0.5 rounded-full bg-black/[0.05] text-[#515154]">{tag}</span>}
+            {tag && (
+              <span className="ml-auto text-[11px] font-mono px-2 py-0.5 rounded-full bg-black/[0.05] text-[#515154]">
+                {tag}
+              </span>
+            )}
           </div>
           {description && <p className="text-xs text-[#86868b] mt-1 leading-snug">{description}</p>}
         </div>

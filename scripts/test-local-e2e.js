@@ -49,12 +49,12 @@ async function runTests() {
   // 2. Kiểm tra Health & Stats API
   console.log('\n--- 2. Kiểm thử API Health & Stats ---');
   try {
-    const health = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
+    const health = await fetch(`${BASE_URL}/api/health`).then((r) => r.json());
     assert(health.status === 'ok', 'API Health trả về status "ok"');
     assert(health.service === 'CarMate Core API Engine', 'Tên định danh service chuẩn xác');
     assert(health.database.driverOffersCount > 0, 'Database có dữ liệu chuyến đi chủ xe');
 
-    const stats = await fetch(`${BASE_URL}/api/stats`).then(r => r.json());
+    const stats = await fetch(`${BASE_URL}/api/stats`).then((r) => r.json());
     assert(stats.success === true, 'API Stats trả về thành công');
     assert(typeof stats.data.members === 'number' && stats.data.members > 0, 'Số lượng thành viên hiển thị sống');
     assert(stats.data.routes > 0, 'Số lượng tuyến đường liên tỉnh có sẵn');
@@ -65,7 +65,7 @@ async function runTests() {
   // 3. Kiểm tra Bảng Giá Tham Chiếu (Benchmarks)
   console.log('\n--- 3. Kiểm thử Bảng Giá Tham Chiếu & Chống Giá Ảo ---');
   try {
-    const benchmarks = await fetch(`${BASE_URL}/api/benchmarks`).then(r => r.json());
+    const benchmarks = await fetch(`${BASE_URL}/api/benchmarks`).then((r) => r.json());
     assert(benchmarks.success === true, 'Tải bảng giá thị trường');
     assert(benchmarks.count >= 5, 'Có ít nhất 5 tuyến đường tham chiếu (QL13, QL14, QL1A...)');
     assert(benchmarks.data['Tuyến QL13'] !== undefined, 'Tuyến QL13 (Bình Phước ⇄ Sài Gòn) có trong danh mục');
@@ -77,16 +77,24 @@ async function runTests() {
   // 4. Kiểm tra Danh sách Chuyến Đi & Bộ lọc Tìm Kiếm
   console.log('\n--- 4. Kiểm thử Danh Sách Chuyến Đi & Bộ Lọc Tuyến ---');
   try {
-    const allTrips = await fetch(`${BASE_URL}/api/trips`).then(r => r.json());
+    const allTrips = await fetch(`${BASE_URL}/api/trips`).then((r) => r.json());
     assert(allTrips.success === true, 'Tải toàn bộ danh sách chuyến đi');
     assert(allTrips.total > 0, `Có tổng cộng ${allTrips.total} chuyến đi đang mở`);
-    assert(allTrips.data.all.every(t => t.phoneReal === undefined && t.phone === undefined), 'PII Protection: phoneReal và phone được che giấu trên endpoint public');
+    assert(
+      allTrips.data.all.every((t) => t.phoneReal === undefined && t.phone === undefined),
+      'PII Protection: phoneReal và phone được che giấu trên endpoint public'
+    );
 
-    const ql13Trips = await fetch(`${BASE_URL}/api/trips?routeCategory=Tuy%E1%BA%BFn+QL13`).then(r => r.json());
+    const ql13Trips = await fetch(`${BASE_URL}/api/trips?routeCategory=Tuy%E1%BA%BFn+QL13`).then((r) => r.json());
     assert(ql13Trips.success === true, 'Lọc chuyến đi theo Tuyến QL13');
-    assert(ql13Trips.data.all.every(t => t.routeCategory.includes('QL13')), 'Tất cả kết quả lọc đều thuộc QL13');
+    assert(
+      ql13Trips.data.all.every((t) => t.routeCategory.includes('QL13')),
+      'Tất cả kết quả lọc đều thuộc QL13'
+    );
 
-    const filteredDirection = await fetch(`${BASE_URL}/api/trips?direction=B%C3%ACnh+Ph%C6%B0%E1%BB%9Bc+%E2%9E%94+TP.HCM`).then(r => r.json());
+    const filteredDirection = await fetch(
+      `${BASE_URL}/api/trips?direction=B%C3%ACnh+Ph%C6%B0%E1%BB%9Bc+%E2%9E%94+TP.HCM`
+    ).then((r) => r.json());
     assert(filteredDirection.success === true, 'Lọc chuyến đi theo chiều Bình Phước ➔ TP.HCM');
   } catch (err) {
     assert(false, 'Kiểm thử Trips API', err.message);
@@ -126,8 +134,11 @@ async function runTests() {
     newTripId = postTripData.data.id;
 
     // Xác nhận chuyến mới xuất hiện trong danh sách
-    const checkTripRes = await fetch(`${BASE_URL}/api/trips/${newTripId}`).then(r => r.json());
-    assert(checkTripRes.success === true && checkTripRes.data.id === newTripId, 'Chuyến mới được lưu trữ và truy xuất thành công');
+    const checkTripRes = await fetch(`${BASE_URL}/api/trips/${newTripId}`).then((r) => r.json());
+    assert(
+      checkTripRes.success === true && checkTripRes.data.id === newTripId,
+      'Chuyến mới được lưu trữ và truy xuất thành công'
+    );
   } catch (err) {
     assert(false, 'Đăng chuyến đi mới', err.message);
   }
@@ -135,13 +146,16 @@ async function runTests() {
   // 6. Kiểm tra Radar Khớp Lệnh AI Thông Minh
   console.log('\n--- 6. Kiểm thử Radar Khớp Lệnh AI (GET /api/matches) ---');
   try {
-    const matchesRes = await fetch(`${BASE_URL}/api/matches`).then(r => r.json());
+    const matchesRes = await fetch(`${BASE_URL}/api/matches`).then((r) => r.json());
     assert(matchesRes.success === true, 'Quét radar ghép tiện tuyến thành công');
     assert(matchesRes.data.matches.length > 0, `Phát hiện ${matchesRes.data.matches.length} cặp tương thích cao`);
-    
+
     const firstMatch = matchesRes.data.matches[0];
     assert(firstMatch.score >= 70, `Điểm tương thích AI đạt ngưỡng cao (${firstMatch.score}%)`);
-    assert(Array.isArray(firstMatch.reasons) && firstMatch.reasons.length > 0, 'Có danh sách lý do ghép tiện tuyến thông minh');
+    assert(
+      Array.isArray(firstMatch.reasons) && firstMatch.reasons.length > 0,
+      'Có danh sách lý do ghép tiện tuyến thông minh'
+    );
     assert(firstMatch.driver && firstMatch.passenger, 'Cặp ghép chứa đủ thông tin Chủ xe và Khách');
   } catch (err) {
     assert(false, 'Kiểm thử Radar Matching', err.message);
@@ -160,7 +174,7 @@ async function runTests() {
     const passengerAuth = await passengerAuthRes.json();
     const passengerHeaders = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${passengerAuth.token}`
+      Authorization: `Bearer ${passengerAuth.token}`
     };
 
     const driverAuthRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
@@ -171,7 +185,7 @@ async function runTests() {
     const driverAuth = await driverAuthRes.json();
     const driverHeaders = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${driverAuth.token}`
+      Authorization: `Bearer ${driverAuth.token}`
     };
 
     // 7.1 Tạo booking với tài khoản Hành khách
@@ -236,7 +250,10 @@ async function runTests() {
     const driverReviewData = await driverReviewRes.json();
     assert(driverReviewRes.status === 200, 'Chủ xe gửi đánh giá Khách hàng thành công (HTTP 200)');
     assert(driverReviewData.data.newReview.reviewerRole === 'driver', 'Ghi nhận vai trò người đánh giá là Chủ xe');
-    assert(driverReviewData.data.newReview.targetRole === 'passenger', 'Ghi nhận đối tượng nhận đánh giá là Hành khách');
+    assert(
+      driverReviewData.data.newReview.targetRole === 'passenger',
+      'Ghi nhận đối tượng nhận đánh giá là Hành khách'
+    );
 
     // 7.5 Kiểm tra Đánh giá 2 chiều đối xứng (Khách hàng đánh giá Chủ xe)
     const passengerReviewRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/review`, {
@@ -290,7 +307,7 @@ async function runTests() {
     const cancelUserToken = (await cancelUserAuth.json()).token;
     const cancelHeaders = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${cancelUserToken}`
+      Authorization: `Bearer ${cancelUserToken}`
     };
 
     const cancelTestRes = await fetch(`${BASE_URL}/api/bookings`, {
@@ -322,16 +339,31 @@ async function runTests() {
   // 8. Kiểm tra Hộ Chiếu Tín Nhiệm (Trust Passport & Dual Community Roles)
   console.log('\n--- 8. Kiểm thử Hộ Chiếu Tín Nhiệm & Thành Viên Bình Đẳng (GET /api/trust) ---');
   try {
-    const trustRes = await fetch(`${BASE_URL}/api/trust`).then(r => r.json());
+    const trustRes = await fetch(`${BASE_URL}/api/trust`).then((r) => r.json());
     assert(trustRes.success === true, 'Tải hồ sơ tín nhiệm mặc định');
-    assert(trustRes.data.karmaScore >= 90 || trustRes.data.trustScore >= 90, `Điểm Karma cộng đồng đạt chuẩn (${trustRes.data.karmaScore || trustRes.data.trustScore}/100)`);
+    assert(
+      trustRes.data.karmaScore >= 90 || trustRes.data.trustScore >= 90,
+      `Điểm Karma cộng đồng đạt chuẩn (${trustRes.data.karmaScore || trustRes.data.trustScore}/100)`
+    );
     assert(trustRes.data.driverStats?.tripsCompleted > 0, 'Hồ sơ có thống kê Kinh nghiệm Cầm lái');
-    assert(trustRes.data.passengerStats?.tripsCompleted > 0, 'Hồ sơ có thống kê Kinh nghiệm Đi cùng (2 vai trò linh hoạt)');
-    assert(trustRes.data.verifications.some(v => v.key === 'id_card' && v.verified), 'Đã xác thực CCCD gắn chip');
-    assert(trustRes.data.verifications.some(v => v.key === 'driver_license' && v.verified), 'Đã xác thực GPLX');
+    assert(
+      trustRes.data.passengerStats?.tripsCompleted > 0,
+      'Hồ sơ có thống kê Kinh nghiệm Đi cùng (2 vai trò linh hoạt)'
+    );
+    assert(
+      trustRes.data.verifications.some((v) => v.key === 'id_card' && v.verified),
+      'Đã xác thực CCCD gắn chip'
+    );
+    assert(
+      trustRes.data.verifications.some((v) => v.key === 'driver_license' && v.verified),
+      'Đã xác thực GPLX'
+    );
 
-    const specificTrustRes = await fetch(`${BASE_URL}/api/trust/tuan-bp`).then(r => r.json());
-    assert(specificTrustRes.success === true && specificTrustRes.data.id === 'tuan-bp', 'Tải hồ sơ thành viên cụ thể (tuan-bp)');
+    const specificTrustRes = await fetch(`${BASE_URL}/api/trust/tuan-bp`).then((r) => r.json());
+    assert(
+      specificTrustRes.success === true && specificTrustRes.data.id === 'tuan-bp',
+      'Tải hồ sơ thành viên cụ thể (tuan-bp)'
+    );
     assert(Array.isArray(specificTrustRes.data.recentMutualReviews), 'Có danh sách nhận xét 2 chiều từ cộng đồng');
 
     const notFoundTrustRes = await fetch(`${BASE_URL}/api/trust/random-xyz-999`);
@@ -393,14 +425,24 @@ async function runTests() {
     const metricsRes = await fetch(`${BASE_URL}/api/admin/metrics`, { headers: adminHeaders });
     const metricsData = await metricsRes.json();
     assert(metricsRes.status === 200 && metricsData.success === true, 'Tải chỉ số Telemetry & KPIs vận hành');
-    assert(metricsData.data.systemHealth?.heapUsedMB !== undefined && metricsData.data.systemHealth?.uptimeSeconds !== undefined, 'Đo lường RAM thực và Uptime máy chủ hoạt động');
-    assert(metricsData.data.overview?.totalTripsCount > 0, `Đếm tổng số chuyến đi: ${metricsData.data.overview?.totalTripsCount}`);
+    assert(
+      metricsData.data.systemHealth?.heapUsedMB !== undefined &&
+        metricsData.data.systemHealth?.uptimeSeconds !== undefined,
+      'Đo lường RAM thực và Uptime máy chủ hoạt động'
+    );
+    assert(
+      metricsData.data.overview?.totalTripsCount > 0,
+      `Đếm tổng số chuyến đi: ${metricsData.data.overview?.totalTripsCount}`
+    );
 
     // 10.4 Kiểm tra Danh sách chuyến Admin & Tính năng Ẩn/Hiện chuyến vi phạm
     const adminTripsRes = await fetch(`${BASE_URL}/api/admin/trips`, { headers: adminHeaders });
     const adminTripsData = await adminTripsRes.json();
     assert(adminTripsRes.status === 200, 'Tải danh sách chuyến dành riêng cho Admin');
-    assert(Array.isArray(adminTripsData.data) && adminTripsData.data.length > 0, 'Hiển thị đầy đủ chuyến bao gồm cả bài ẩn/kiểm duyệt');
+    assert(
+      Array.isArray(adminTripsData.data) && adminTripsData.data.length > 0,
+      'Hiển thị đầy đủ chuyến bao gồm cả bài ẩn/kiểm duyệt'
+    );
 
     const testTrip = adminTripsData.data[0];
     const tripIdToToggle = testTrip.id;
@@ -412,10 +454,12 @@ async function runTests() {
     });
     const hideData = await hideRes.json();
     assert(hideRes.status === 200, `Bật/Tắt kiểm duyệt ẩn chuyến ${tripIdToToggle}`);
-    
+
     // Kiểm tra chuyến đã ẩn thì không còn xuất hiện trên Market công khai
-    const publicTripsAfterHide = await fetch(`${BASE_URL}/api/trips`).then(r => r.json());
-    const isPresentPublicly = publicTripsAfterHide.data.all.some(t => t.id === tripIdToToggle && hideData.data.isHidden);
+    const publicTripsAfterHide = await fetch(`${BASE_URL}/api/trips`).then((r) => r.json());
+    const isPresentPublicly = publicTripsAfterHide.data.all.some(
+      (t) => t.id === tripIdToToggle && hideData.data.isHidden
+    );
     assert(!isPresentPublicly, 'Chuyến bị Admin ẩn sẽ biến mất ngay khỏi sàn công khai');
 
     // Mở lại chuyến (Unhide) nếu vừa ẩn
@@ -440,7 +484,10 @@ async function runTests() {
         headers: adminHeaders,
         body: JSON.stringify({ verifiedCCCD: true, verifiedGPLX: true, status: 'active' })
       });
-      assert(updateStatusRes.status === 200, `Duyệt cấp tích xanh CCCD & GPLX cho thành viên (${targetUser.name || targetUser.phone})`);
+      assert(
+        updateStatusRes.status === 200,
+        `Duyệt cấp tích xanh CCCD & GPLX cho thành viên (${targetUser.name || targetUser.phone})`
+      );
     }
 
     // 10.6 Kiểm tra Danh mục Báo cáo Trễ & Huỷ chuyến
@@ -469,10 +516,13 @@ async function runTests() {
 
     // 11.2 Kiểm tra endpoint /api/auth/me với tokenA
     const meRes = await fetch(`${BASE_URL}/api/auth/me`, {
-      headers: { 'Authorization': `Bearer ${tokenA}` }
+      headers: { Authorization: `Bearer ${tokenA}` }
     });
     const meData = await meRes.json();
-    assert(meRes.status === 200 && meData.user?.phone === '0984883750', 'Xác thực phiên làm việc /api/auth/me qua JWT Token thành công');
+    assert(
+      meRes.status === 200 && meData.user?.phone === '0984883750',
+      'Xác thực phiên làm việc /api/auth/me qua JWT Token thành công'
+    );
 
     // 11.3 Đăng nhập User B
     const loginBRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
@@ -481,7 +531,10 @@ async function runTests() {
       body: JSON.stringify({ token: 'TEST_ZALO_TOKEN_0913889922', phone: '0913889922', name: 'Tài xế Trần Văn B' })
     });
     const loginBData = await loginBRes.json();
-    assert(loginBRes.status === 200 && typeof loginBData.token === 'string', 'Đăng nhập User B nhận JWT Token riêng biệt');
+    assert(
+      loginBRes.status === 200 && typeof loginBData.token === 'string',
+      'Đăng nhập User B nhận JWT Token riêng biệt'
+    );
     const tokenB = loginBData.token;
 
     // 11.4 User A tạo 1 chuyến đi thử nghiệm
@@ -489,7 +542,7 @@ async function runTests() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokenA}`
+        Authorization: `Bearer ${tokenA}`
       },
       body: JSON.stringify({
         id: `DRV-SEC-${Date.now()}`,
@@ -508,14 +561,14 @@ async function runTests() {
     // 11.5 User B cố tình xóa bài đăng của User A -> BỊ CHẶN 403
     const attackRes = await fetch(`${BASE_URL}/api/trips/${createdTrip.id}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${tokenB}` }
+      headers: { Authorization: `Bearer ${tokenB}` }
     });
     assert(attackRes.status === 403, 'Chặn User B xâm phạm xóa bài đăng của User A (HTTP 403 Forbidden - Anti-IDOR)');
 
     // 11.6 User A xóa chính bài của mình -> ĐƯỢC PHÉP 200
     const ownerDeleteRes = await fetch(`${BASE_URL}/api/trips/${createdTrip.id}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${tokenA}` }
+      headers: { Authorization: `Bearer ${tokenA}` }
     });
     assert(ownerDeleteRes.status === 200, 'User A xóa bài đăng chính chủ của mình thành công');
   } catch (err) {
@@ -538,8 +591,14 @@ async function runTests() {
     const searchAiData = await searchAiRes.json();
     assert(searchAiRes.status === 200, 'Gọi API Agentic AI thành công (HTTP 200)');
     assert(searchAiData.success === true, 'Agent phản hồi success: true');
-    assert(typeof searchAiData.data.reply === 'string' && searchAiData.data.reply.length > 0, 'Agent trả về câu trả lời tự nhiên');
-    assert(Array.isArray(searchAiData.data.reasoningSteps) && searchAiData.data.reasoningSteps.length > 0, 'Agent ghi nhận các bước suy luận Stanford Loop (Plan -> Act -> Observe -> Reflect)');
+    assert(
+      typeof searchAiData.data.reply === 'string' && searchAiData.data.reply.length > 0,
+      'Agent trả về câu trả lời tự nhiên'
+    );
+    assert(
+      Array.isArray(searchAiData.data.reasoningSteps) && searchAiData.data.reasoningSteps.length > 0,
+      'Agent ghi nhận các bước suy luận Stanford Loop (Plan -> Act -> Observe -> Reflect)'
+    );
     assert(Array.isArray(searchAiData.data.suggestedTrips), 'Agent trả về danh sách gợi ý chuyến xe');
 
     // 12.2 Kiểm tra truy vấn giá san sẻ công bằng
@@ -552,7 +611,12 @@ async function runTests() {
     });
     const benchAiData = await benchAiRes.json();
     assert(benchAiRes.status === 200, 'Agent tra cứu định mức tuyến đường thành công');
-    assert(benchAiData.data.reply.toLowerCase().includes('ql13') || benchAiData.data.reply.toLowerCase().includes('13') || benchAiData.data.reply.includes('đ'), 'Agent trích xuất số liệu vé trạm và xăng chính xác');
+    assert(
+      benchAiData.data.reply.toLowerCase().includes('ql13') ||
+        benchAiData.data.reply.toLowerCase().includes('13') ||
+        benchAiData.data.reply.includes('đ'),
+      'Agent trích xuất số liệu vé trạm và xăng chính xác'
+    );
 
     // 12.3 Kiểm tra xác minh hồ sơ uy tín
     const trustAiRes = await fetch(`${BASE_URL}/api/agent/chat`, {
@@ -564,7 +628,12 @@ async function runTests() {
     });
     const trustAiData = await trustAiRes.json();
     assert(trustAiRes.status === 200, 'Agent tra cứu Trust Score thành công');
-    assert(trustAiData.data.reply.includes('Tuấn') || trustAiData.data.reply.includes('tin cậy') || trustAiData.data.reply.includes('Trust'), 'Agent phân tích đúng hồ sơ tin cậy');
+    assert(
+      trustAiData.data.reply.includes('Tuấn') ||
+        trustAiData.data.reply.includes('tin cậy') ||
+        trustAiData.data.reply.includes('Trust'),
+      'Agent phân tích đúng hồ sơ tin cậy'
+    );
   } catch (err) {
     assert(false, 'Kiểm thử Agentic AI Engine', err.message);
   }
@@ -575,14 +644,20 @@ async function runTests() {
   console.log('\n--- 13. KIỂM THỬ AN NINH BẢO MẬT NÂNG CAO (PII, IDOR, AUTH, XSS) ---');
   try {
     // 13.1 Bookings endpoint ẩn dữ liệu với unauthenticated
-    const publicBookings = await fetch(`${BASE_URL}/api/bookings`).then(r => r.json());
-    assert(publicBookings.success === true && Array.isArray(publicBookings.data) && publicBookings.data.length === 0, 'PII Protection: /api/bookings không rò rỉ danh sách đặt chỗ cho khách vãng lai');
+    const publicBookings = await fetch(`${BASE_URL}/api/bookings`).then((r) => r.json());
+    assert(
+      publicBookings.success === true && Array.isArray(publicBookings.data) && publicBookings.data.length === 0,
+      'PII Protection: /api/bookings không rò rỉ danh sách đặt chỗ cho khách vãng lai'
+    );
 
     // 13.2 Chặn raw passcode làm bearer token
     const rawPasscodeRes = await fetch(`${BASE_URL}/api/admin/users`, {
       headers: { 'x-admin-key': ADMIN_PASSCODE }
     });
-    assert(rawPasscodeRes.status === 401 || rawPasscodeRes.status === 403, 'Bảo mật Admin: Dùng raw passcode làm token bị từ chối 401/403 (Bắt buộc JWT có chữ ký)');
+    assert(
+      rawPasscodeRes.status === 401 || rawPasscodeRes.status === 403,
+      'Bảo mật Admin: Dùng raw passcode làm token bị từ chối 401/403 (Bắt buộc JWT có chữ ký)'
+    );
 
     // 13.3 Chặn thao tác booking không có quyền (IDOR protection)
     const unauthorizedCancelRes = await fetch(`${BASE_URL}/api/bookings/ESC-TEST-IDOR/cancel`, {
@@ -590,14 +665,17 @@ async function runTests() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason: 'Test cancel unauthorized' })
     });
-    assert(unauthorizedCancelRes.status === 401 || unauthorizedCancelRes.status === 403, 'Kiểm soát quyền: Hủy booking không có token bị chặn 401/403');
+    assert(
+      unauthorizedCancelRes.status === 401 || unauthorizedCancelRes.status === 403,
+      'Kiểm soát quyền: Hủy booking không có token bị chặn 401/403'
+    );
 
     // 13.4 Chống Stored XSS: input có HTML tag được escape
     const xssTripRes = await fetch(`${BASE_URL}/api/trips`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({
         from: '<img src=x onerror=alert(1)>',
@@ -609,28 +687,38 @@ async function runTests() {
       })
     });
     const xssTripData = await xssTripRes.json();
-    assert(xssTripRes.status === 201 && !xssTripData.data.from.includes('<img'), 'Chống Stored XSS: Ký tự HTML độc hại được mã hóa thực thể an toàn');
+    assert(
+      xssTripRes.status === 201 && !xssTripData.data.from.includes('<img'),
+      'Chống Stored XSS: Ký tự HTML độc hại được mã hóa thực thể an toàn'
+    );
     if (xssTripData?.data?.id && sharedTokenA) {
       await fetch(`${BASE_URL}/api/trips/${xssTripData.data.id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${sharedTokenA}` }
+        headers: { Authorization: `Bearer ${sharedTokenA}` }
       }).catch(() => {});
     }
 
     // 13.5 Radar so khớp O(N+M) hoạt động và che PII
-    const matchesRes = await fetch(`${BASE_URL}/api/matches?route=Tuy%E1%BA%BFn+QL13`).then(r => r.json());
-    assert(matchesRes.success === true && Array.isArray(matchesRes.data.matches), 'Radar ghép xe O(N+M) phản hồi kết quả');
+    const matchesRes = await fetch(`${BASE_URL}/api/matches?route=Tuy%E1%BA%BFn+QL13`).then((r) => r.json());
+    assert(
+      matchesRes.success === true && Array.isArray(matchesRes.data.matches),
+      'Radar ghép xe O(N+M) phản hồi kết quả'
+    );
     if (matchesRes.data.matches.length > 0) {
       const firstMatch = matchesRes.data.matches[0];
-      assert(firstMatch.driver.phoneReal === undefined && firstMatch.passenger.phoneReal === undefined, 'PII Protection: Radar che giấu SĐT thật của tài xế và khách');
+      assert(
+        firstMatch.driver.phoneReal === undefined && firstMatch.passenger.phoneReal === undefined,
+        'PII Protection: Radar che giấu SĐT thật của tài xế và khách'
+      );
     }
 
     // 14. KIỂM THỬ CURSOR INLINE CO-PILOT & ZALO SMART DRAFT (PHASE 1)
     console.log('\n--- 14. Kiểm thử Cursor Inline Co-Pilot & Zalo Smart Draft ---');
     const { parseNaturalTrip, generateSmartZaloDraft } = await import('../apps/web/src/utils/nlpTripParser.js');
-    
+
     // 14.1 Nhận diện xe gia đình chở vợ con
-    const familyTripText = 'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
+    const familyTripText =
+      'Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750';
     const parsedFamily = parseNaturalTrip(familyTripText);
     assert(parsedFamily.role === 'driver', 'NLP nhận diện đúng vai trò chủ xe');
     assert(parsedFamily.hasRelatives === true, 'NLP phát hiện chính xác xe gia đình chở vợ con (hasRelatives: true)');
@@ -661,7 +749,7 @@ async function runTests() {
     const { initDB } = await import('../apps/api/src/db/sqliteStore.js');
     await initDB();
     const { runStanfordInnerLoop } = await import('../apps/api/src/agent/carmateAgent.js');
-    
+
     const mockTrips = [
       { id: 'TRIP-FAM-1', publicName: 'Anh Huỳnh', seats: 4, hasRelatives: true, price: 120000, note: 'chở vợ con' },
       { id: 'TRIP-CONV-2', publicName: 'Bác Tài 7 chỗ', seats: 3, hasRelatives: false, price: 140000 }
@@ -677,7 +765,10 @@ async function runTests() {
     });
     assert(loop2Seats.finalTrips.length === 1, 'Verify: Tự động loại trừ xe gia đình chở vợ con khi khách cần 2 ghế');
     assert(loop2Seats.finalTrips[0].publicName === 'Bác Tài 7 chỗ', 'Verify: Giữ lại chuyến xe có đủ 2 ghế trống');
-    assert(loop2Seats.innerLoopLog.some(l => l.includes('[VERIFY]')), 'Verify: Ghi nhận nhật ký thẩm tra số ghế');
+    assert(
+      loop2Seats.innerLoopLog.some((l) => l.includes('[VERIFY]')),
+      'Verify: Ghi nhận nhật ký thẩm tra số ghế'
+    );
 
     // 15.2 Verify: Chấp nhận xe gia đình khi khách chỉ đi 1 người
     const loop1Seat = runStanfordInnerLoop({
@@ -687,11 +778,20 @@ async function runTests() {
       rawTrips: mockTrips,
       benchmark: { suggestedRate: 140000 }
     });
-    assert(loop1Seat.finalTrips.length === 2, 'Verify: Xe gia đình chở người thân hoàn toàn khả dụng khi khách đi 1 người');
+    assert(
+      loop1Seat.finalTrips.length === 2,
+      'Verify: Xe gia đình chở người thân hoàn toàn khả dụng khi khách đi 1 người'
+    );
 
     // 15.3 Reflect: Phản tư tính công bằng với bảng định mức
-    assert(loop1Seat.innerLoopLog.some(l => l.includes('[REFLECT]')), 'Reflect: Tự động đối chiếu mức phụ xăng với định mức chuẩn');
-    assert(loop1Seat.finalTrips[0].reflection.includes('Phụ xăng rất công bằng'), 'Reflect: Đánh giá chi phí 120k công bằng, thấp hơn 140k');
+    assert(
+      loop1Seat.innerLoopLog.some((l) => l.includes('[REFLECT]')),
+      'Reflect: Tự động đối chiếu mức phụ xăng với định mức chuẩn'
+    );
+    assert(
+      loop1Seat.finalTrips[0].reflection.includes('Phụ xăng rất công bằng'),
+      'Reflect: Đánh giá chi phí 120k công bằng, thấp hơn 140k'
+    );
 
     // 15.4 Replan: Tái lập kế hoạch khi không có chuyến khớp điểm đón
     const loopEmpty = runStanfordInnerLoop({
@@ -701,30 +801,48 @@ async function runTests() {
       rawTrips: [],
       benchmark: { suggestedRate: 140000 }
     });
-    assert(loopEmpty.innerLoopLog.some(l => l.includes('[REPLAN]')), 'Replan: Tự kích hoạt quét mở rộng hành lang trục chính');
+    assert(
+      loopEmpty.innerLoopLog.some((l) => l.includes('[REPLAN]')),
+      'Replan: Tự kích hoạt quét mở rộng hành lang trục chính'
+    );
 
     // 15.5 Endpoint /api/agent/chat trả về chuẩn cấu trúc Stanford
     const chatAgentRes = await fetch(`${BASE_URL}/api/agent/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: 'Tìm xe từ Bình Phước về Sài Gòn chiều nay cần 2 ghế' })
-    }).then(r => r.json());
+    }).then((r) => r.json());
     assert(chatAgentRes.success === true, 'API Chat Agentic phản hồi thành công');
-    assert(Array.isArray(chatAgentRes.data.reasoningSteps) && chatAgentRes.data.reasoningSteps.length >= 4, 'API Chat trả về chuỗi tư duy đầy đủ các bước');
-    assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[PLAN]')), 'API Chat có bước [PLAN]');
-    assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[ACT]')), 'API Chat có bước [ACT]');
-    assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[VERIFY]')), 'API Chat có bước [VERIFY]');
-    assert(chatAgentRes.data.reasoningSteps.some(s => s.startsWith('[RESOLVE]')), 'API Chat có bước [RESOLVE]');
+    assert(
+      Array.isArray(chatAgentRes.data.reasoningSteps) && chatAgentRes.data.reasoningSteps.length >= 4,
+      'API Chat trả về chuỗi tư duy đầy đủ các bước'
+    );
+    assert(
+      chatAgentRes.data.reasoningSteps.some((s) => s.startsWith('[PLAN]')),
+      'API Chat có bước [PLAN]'
+    );
+    assert(
+      chatAgentRes.data.reasoningSteps.some((s) => s.startsWith('[ACT]')),
+      'API Chat có bước [ACT]'
+    );
+    assert(
+      chatAgentRes.data.reasoningSteps.some((s) => s.startsWith('[VERIFY]')),
+      'API Chat có bước [VERIFY]'
+    );
+    assert(
+      chatAgentRes.data.reasoningSteps.some((s) => s.startsWith('[RESOLVE]')),
+      'API Chat có bước [RESOLVE]'
+    );
 
     // 16. KIỂM THỬ MIT OUTER SYSTEM (3-TIER HUMAN-IN-THE-LOOP & TRAJECTORY STEPPER)
     console.log('\n--- 16. Kiểm thử MIT Outer System (3-Tier Human-in-the-Loop & Trajectory Stepper) ---');
-    
+
     // 16.1 Tạo booking với tài khoản User A
     const bookRes = await fetch(`${BASE_URL}/api/bookings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({
         from: 'Bù Đốp',
@@ -738,17 +856,23 @@ async function runTests() {
       })
     });
     const bookData = await bookRes.json();
-    assert(bookRes.status === 201 && bookData.success === true, 'MIT Tier 1: Tạo kết nối chuyến xe và sinh mã Escrow thành công');
+    assert(
+      bookRes.status === 201 && bookData.success === true,
+      'MIT Tier 1: Tạo kết nối chuyến xe và sinh mã Escrow thành công'
+    );
     const escrowId = bookData.data?.escrowId;
     assert(escrowId && escrowId.startsWith('ESC-'), 'MIT Tier 1: Mã Escrow định dạng chuẩn ESC-');
-    assert(bookData.data.status === 'zalo_active', 'MIT Tier 2: Trạng thái khởi tạo là zalo_active (Bước 2/4: Chốt Zalo & Điểm hẹn)');
+    assert(
+      bookData.data.status === 'zalo_active',
+      'MIT Tier 2: Trạng thái khởi tạo là zalo_active (Bước 2/4: Chốt Zalo & Điểm hẹn)'
+    );
 
     // 16.2 Báo trễ giờ hẹn văn minh (+15 phút)
     const delayRes = await fetch(`${BASE_URL}/api/bookings/${escrowId}/delay`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({
         minutes: 15,
@@ -765,14 +889,17 @@ async function runTests() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({
         reason: 'Việc gia đình đột xuất'
       })
     });
     const cancelData = await cancelRes.json();
-    assert(cancelRes.status === 200 && cancelData.success === true, 'MIT Tier 3: Huỷ chuyến văn minh thành công (0đ tiền phạt)');
+    assert(
+      cancelRes.status === 200 && cancelData.success === true,
+      'MIT Tier 3: Huỷ chuyến văn minh thành công (0đ tiền phạt)'
+    );
     assert(cancelData.data.status === 'cancelled', 'MIT Tier 3: Trạng thái chuyển thành cancelled');
     assert(cancelData.data.cancelReason === 'Việc gia đình đột xuất', 'MIT Tier 3: Lưu lý do huỷ chuyến chuẩn xác');
 
@@ -788,8 +915,14 @@ async function runTests() {
       })
     });
     const trajChatData = await trajChatRes.json();
-    assert(trajChatRes.status === 200 && trajChatData.success === true, 'Phase 4: Gọi Agent Chat ghi nhận telemetry thành công');
-    assert(typeof trajChatData.data.executionTimeMs === 'number' && trajChatData.data.executionTimeMs >= 0, 'Phase 4: Agent Chat đo lường chính xác thời gian thực thi (executionTimeMs)');
+    assert(
+      trajChatRes.status === 200 && trajChatData.success === true,
+      'Phase 4: Gọi Agent Chat ghi nhận telemetry thành công'
+    );
+    assert(
+      typeof trajChatData.data.executionTimeMs === 'number' && trajChatData.data.executionTimeMs >= 0,
+      'Phase 4: Agent Chat đo lường chính xác thời gian thực thi (executionTimeMs)'
+    );
 
     // 17.2 Phát hiện Tuyến khát xe (Unmet Demand Detection)
     const unmetChatRes = await fetch(`${BASE_URL}/api/agent/chat`, {
@@ -800,24 +933,45 @@ async function runTests() {
       })
     });
     const unmetChatData = await unmetChatRes.json();
-    assert(unmetChatRes.status === 200 && unmetChatData.success === true, 'Phase 4: Truy vấn tuyến lạ phản hồi thành công');
-    assert(Array.isArray(unmetChatData.data.suggestedTrips) && unmetChatData.data.suggestedTrips.length === 0, 'Phase 4: Tuyến lạ ghi nhận 0 chuyến (kích hoạt cờ Unmet Demand)');
+    assert(
+      unmetChatRes.status === 200 && unmetChatData.success === true,
+      'Phase 4: Truy vấn tuyến lạ phản hồi thành công'
+    );
+    assert(
+      Array.isArray(unmetChatData.data.suggestedTrips) && unmetChatData.data.suggestedTrips.length === 0,
+      'Phase 4: Tuyến lạ ghi nhận 0 chuyến (kích hoạt cờ Unmet Demand)'
+    );
 
     // 17.3 Admin truy vấn Telemetry & Trajectory Hub qua /api/admin/ai-intelligence
     const aiIntelRes = await fetch(`${BASE_URL}/api/admin/ai-intelligence`, {
       headers: { 'x-admin-key': adminToken }
     });
     const aiIntelData = await aiIntelRes.json();
-    assert(aiIntelRes.status === 200 && aiIntelData.success === true, 'Phase 4: Admin tải Telemetry & Quỹ đạo AI thành công (HTTP 200)');
-    assert(aiIntelData.data?.summary && typeof aiIntelData.data.summary.totalQueries === 'number', 'Phase 4: Telemetry tổng hợp số lượng truy vấn AI');
+    assert(
+      aiIntelRes.status === 200 && aiIntelData.success === true,
+      'Phase 4: Admin tải Telemetry & Quỹ đạo AI thành công (HTTP 200)'
+    );
+    assert(
+      aiIntelData.data?.summary && typeof aiIntelData.data.summary.totalQueries === 'number',
+      'Phase 4: Telemetry tổng hợp số lượng truy vấn AI'
+    );
     assert(typeof aiIntelData.data.summary.resolutionRate === 'number', 'Phase 4: Đo lường Task Resolution Rate (%)');
     assert(typeof aiIntelData.data.summary.avgLatencyMs === 'number', 'Phase 4: Đo lường Average Latency (ms)');
-    assert(Array.isArray(aiIntelData.data.recentTrajectories) && aiIntelData.data.recentTrajectories.length > 0, 'Phase 4: Hộp đen lưu trữ danh sách Trajectories thời gian thực');
-    
+    assert(
+      Array.isArray(aiIntelData.data.recentTrajectories) && aiIntelData.data.recentTrajectories.length > 0,
+      'Phase 4: Hộp đen lưu trữ danh sách Trajectories thời gian thực'
+    );
+
     const firstTraj = aiIntelData.data.recentTrajectories[0];
     assert(firstTraj.id && firstTraj.id.startsWith('TRAJ-'), 'Phase 4: Mã Trajectory chuẩn TRAJ-xxxx');
-    assert(Array.isArray(firstTraj.reasoningSteps) && firstTraj.reasoningSteps.length > 0, 'Phase 4: Lưu giữ chuỗi lập luận Stanford Loop [PLAN ➔ ACT...]');
-    assert(Array.isArray(aiIntelData.data.unmetDemandRoutes), 'Phase 4: Báo cáo danh sách tuyến đường khát xe (Unmet Demand Routes)');
+    assert(
+      Array.isArray(firstTraj.reasoningSteps) && firstTraj.reasoningSteps.length > 0,
+      'Phase 4: Lưu giữ chuỗi lập luận Stanford Loop [PLAN ➔ ACT...]'
+    );
+    assert(
+      Array.isArray(aiIntelData.data.unmetDemandRoutes),
+      'Phase 4: Báo cáo danh sách tuyến đường khát xe (Unmet Demand Routes)'
+    );
 
     // 18. KIỂM THỬ LỊCH TRÌNH DƯƠNG LỊCH & TÙY CHỌN ẢNH XE THỰC TẾ (3-5 ẢNH CHE BIỂN SỐ)
     console.log('\n--- 18. Kiểm thử Lịch Trình Dương Lịch & Tùy Chọn Ảnh Xe (3-5 ảnh che biển) ---');
@@ -826,13 +980,22 @@ async function runTests() {
 
     // 18.1 Kiểm thử định dạng ngày dương lịch thực tế (Xóa bỏ mập mờ "Sáng Thứ 3")
     const dateToday = formatTripDateDisplay('Hôm nay');
-    assert(dateToday.includes('(') && dateToday.includes('/'), 'Định dạng ngày Hôm nay gắn kèm ngày tháng dương lịch (DD/MM)');
-    
+    assert(
+      dateToday.includes('(') && dateToday.includes('/'),
+      'Định dạng ngày Hôm nay gắn kèm ngày tháng dương lịch (DD/MM)'
+    );
+
     const dateTue = formatTripDateDisplay('Sáng Thứ 3');
-    assert(dateTue.includes('Thứ 3') && dateTue.includes('(') && dateTue.includes('/'), 'Chuyển đổi "Sáng Thứ 3" mập mờ thành "Thứ 3 (DD/MM)" chính xác');
-    
+    assert(
+      dateTue.includes('Thứ 3') && dateTue.includes('(') && dateTue.includes('/'),
+      'Chuyển đổi "Sáng Thứ 3" mập mờ thành "Thứ 3 (DD/MM)" chính xác'
+    );
+
     const upcomingList = getUpcomingDays(7);
-    assert(Array.isArray(upcomingList) && upcomingList.length === 7, 'Sinh 7 ngày dương lịch sắp tới cho thanh chọn ngày');
+    assert(
+      Array.isArray(upcomingList) && upcomingList.length === 7,
+      'Sinh 7 ngày dương lịch sắp tới cho thanh chọn ngày'
+    );
     assert(upcomingList[0].iso && upcomingList[0].label, 'Mỗi ngày có mã chuẩn ISO và nhãn hiển thị trực quan');
 
     // 18.2 Kiểm thử quy tắc 3-5 ảnh xe (Tùy chọn: 0 ảnh hợp lệ, có tải thì [3, 5])
@@ -850,19 +1013,32 @@ async function runTests() {
     assert(validateCarPhotoCount(['front', 'back']).valid === false, 'Tải 2 ảnh bị chặn: Yêu cầu ít nhất 3 hình');
     assert(validateCarPhotoCount(['front', 'back', 'side']).valid === true, 'Tải 3 ảnh (Trước, Sau, Thân) hợp lệ');
     assert(validateCarPhotoCount(['front', 'back', 'side', 'interior']).valid === true, 'Tải 4 ảnh hợp lệ');
-    assert(validateCarPhotoCount(['front', 'back', 'side', 'interior', 'trunk']).valid === true, 'Tải 5 ảnh (đầy đủ 5 góc) hợp lệ');
+    assert(
+      validateCarPhotoCount(['front', 'back', 'side', 'interior', 'trunk']).valid === true,
+      'Tải 5 ảnh (đầy đủ 5 góc) hợp lệ'
+    );
     assert(validateCarPhotoCount(['1', '2', '3', '4', '5', '6']).valid === false, 'Tải 6 ảnh bị chặn: Tối đa 5 hình');
 
     // 18.3 Kiểm thử bộ ảnh mẫu xe và màng bảo mật che biển số
     const xpanderPhotos = findSampleCarPhotos('Mitsubishi Xpander');
-    assert(Array.isArray(xpanderPhotos) && xpanderPhotos.length >= 3 && xpanderPhotos.length <= 5, 'Bộ ảnh mẫu Xpander có từ 3 đến 5 góc chụp');
+    assert(
+      Array.isArray(xpanderPhotos) && xpanderPhotos.length >= 3 && xpanderPhotos.length <= 5,
+      'Bộ ảnh mẫu Xpander có từ 3 đến 5 góc chụp'
+    );
     assert(SAMPLE_CAR_PHOTO_SETS[0].plateMask.includes('***'), 'Biển số được tự động che bảo mật (93A - ***.**)');
 
     // 18.4 Kiểm thử trích xuất hành lang chuẩn xác (Xóa bỏ lỗi cắt cụt "Phan Thiết" thành "Phan")
     const { getCorridorDisplay, parseLocation } = await import('../packages/shared/src/utils/geo.js');
     const phanThietItem = { from: 'Sài Gòn', to: 'Phan Thiết (Mũi Né / Đồi Cát Bay)' };
-    const ptCorridor = getCorridorDisplay(phanThietItem, parseLocation(phanThietItem.from), parseLocation(phanThietItem.to));
-    assert(ptCorridor.toInfo.city === 'Phan Thiết', 'Trích xuất đúng "Phan Thiết" nguyên vẹn (Không bị cắt cụt thành "Phan")');
+    const ptCorridor = getCorridorDisplay(
+      phanThietItem,
+      parseLocation(phanThietItem.from),
+      parseLocation(phanThietItem.to)
+    );
+    assert(
+      ptCorridor.toInfo.city === 'Phan Thiết',
+      'Trích xuất đúng "Phan Thiết" nguyên vẹn (Không bị cắt cụt thành "Phan")'
+    );
     assert(ptCorridor.toInfo.code === 'PTH', 'Mã hành lang chuẩn PTH cho Phan Thiết');
 
     const benTreItem = { from: 'Sài Gòn', to: 'TP Bến Tre' };
@@ -878,24 +1054,27 @@ async function runTests() {
   console.log('\n--- 19. KỊCH BẢN PENTEST CHUYÊN SÂU & KHÁNG TẤN CÔNG (OWASP & NĐ 13/2023) ---');
   try {
     // 19.1 Pentest: Chống giả mạo chữ ký JWT (Alg: None Attack)
-    const fakeNoneToken = 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VySWQiOiJVU1ItMDk4NDg4Mzc1MCIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJIYWNrZXIifQ.';
+    const fakeNoneToken =
+      'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VySWQiOiJVU1ItMDk4NDg4Mzc1MCIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJIYWNrZXIifQ.';
     const jwtNoneRes = await fetch(`${BASE_URL}/api/admin/users`, {
       headers: { 'x-admin-key': fakeNoneToken }
     });
-    assert(jwtNoneRes.status === 401 || jwtNoneRes.status === 403, 'Pentest 1: Chống giả mạo chữ ký JWT (Alg None Attack bị từ chối 401/403)');
+    assert(
+      jwtNoneRes.status === 401 || jwtNoneRes.status === 403,
+      'Pentest 1: Chống giả mạo chữ ký JWT (Alg None Attack bị từ chối 401/403)'
+    );
 
     // 19.2 Pentest: Chống vượt quyền qua Prefix phiên cũ (carmate_admin_session_...)
     const prefixBypassRes = await fetch(`${BASE_URL}/api/admin/users`, {
       headers: { 'x-admin-key': 'carmate_admin_session_anything_i_want' }
     });
-    assert(prefixBypassRes.status === 401 || prefixBypassRes.status === 403, 'Pentest 2: Chống Bypass quyền Admin qua token prefix cũ (Khóa chặt 401/403)');
+    assert(
+      prefixBypassRes.status === 401 || prefixBypassRes.status === 403,
+      'Pentest 2: Chống Bypass quyền Admin qua token prefix cũ (Khóa chặt 401/403)'
+    );
 
     // 19.3 Pentest: Chống SQL Injection qua SQLite Parameterized Queries
-    const sqliQueries = [
-      "' OR '1'='1",
-      "' UNION SELECT payload, null, null FROM users --",
-      "'; DROP TABLE trips; --"
-    ];
+    const sqliQueries = ["' OR '1'='1", "' UNION SELECT payload, null, null FROM users --", "'; DROP TABLE trips; --"];
     let sqliSafe = true;
     for (const sqli of sqliQueries) {
       const sqliRes = await fetch(`${BASE_URL}/api/trips?from=${encodeURIComponent(sqli)}`);
@@ -917,11 +1096,14 @@ async function runTests() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: bigPayload
-    }).catch(err => ({ status: 413 }));
-    assert(bigPayloadRes.status === 413 || bigPayloadRes.status === 500, 'Pentest 4: Chống Payload Bomb (Gói tin > 1MB bị chặn ngay với HTTP 413 Payload Too Large)');
+    }).catch((err) => ({ status: 413 }));
+    assert(
+      bigPayloadRes.status === 413 || bigPayloadRes.status === 500,
+      'Pentest 4: Chống Payload Bomb (Gói tin > 1MB bị chặn ngay với HTTP 413 Payload Too Large)'
+    );
 
     // 19.5 Pentest: Chống BOLA/IDOR chéo tài khoản trên Booking Escrow
     const fakeBookingId = 'ESC-PENTEST-FORGED-' + Date.now();
@@ -929,15 +1111,21 @@ async function runTests() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({ reason: 'Hacker forged cancel' })
     });
-    assert(forgedCancelRes.status === 401 || forgedCancelRes.status === 403 || forgedCancelRes.status === 404, 'Pentest 5: Chống BOLA/IDOR chéo tài khoản trên Booking (Chặn can thiệp trái phép)');
+    assert(
+      forgedCancelRes.status === 401 || forgedCancelRes.status === 403 || forgedCancelRes.status === 404,
+      'Pentest 5: Chống BOLA/IDOR chéo tài khoản trên Booking (Chặn can thiệp trái phép)'
+    );
 
     // 19.6 Pentest: Quét rò rỉ dữ liệu cá nhân PII trên sàn công khai (Nghị định 13/2023/NĐ-CP)
-    const publicTripsRes = await fetch(`${BASE_URL}/api/trips`).then(r => r.json());
-    const allPublicTrips = [...(publicTripsRes.data?.driverOffers || []), ...(publicTripsRes.data?.passengerRequests || [])];
+    const publicTripsRes = await fetch(`${BASE_URL}/api/trips`).then((r) => r.json());
+    const allPublicTrips = [
+      ...(publicTripsRes.data?.driverOffers || []),
+      ...(publicTripsRes.data?.passengerRequests || [])
+    ];
     let piiLeaked = false;
     for (const trip of allPublicTrips) {
       if (trip.phoneReal) {
@@ -953,7 +1141,7 @@ async function runTests() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({
         from: 'Bù Đốp',
@@ -966,11 +1154,14 @@ async function runTests() {
       })
     });
     const sanitizedData = await sanitizedTripRes.json();
-    assert(sanitizedTripRes.status === 201 && !sanitizedData.data?.notes?.includes('<script>'), 'Pentest 7: Kháng Stored XSS triệt để (Script độc hại bị mã hóa thành &lt;script&gt;)');
+    assert(
+      sanitizedTripRes.status === 201 && !sanitizedData.data?.notes?.includes('<script>'),
+      'Pentest 7: Kháng Stored XSS triệt để (Script độc hại bị mã hóa thành &lt;script&gt;)'
+    );
     if (sanitizedData.data?.id) {
       await fetch(`${BASE_URL}/api/trips/${sanitizedData.data.id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${sharedTokenA}` }
+        headers: { Authorization: `Bearer ${sharedTokenA}` }
       }).catch(() => {});
     }
 
@@ -983,11 +1174,11 @@ async function runTests() {
 
     // 20. KIỂM THỬ CƠ CHẾ TỰ ĐỘNG HẾT HẠN (TTL), TÁI ĐĂNG 1 CHẠM & PHÂN NHÓM THỜI GIAN
     console.log('\n--- 20. Kiểm thử Cơ Chế Tự Động Hết Hạn (TTL), Tái Đăng 1 Chạm & Phân Nhóm Thời Gian ---');
-    const { 
-      isTripExpired: testIsTripExpired, 
-      groupTripsByTemporalWindow: testGroupTrips, 
-      getTomorrowISO: testTomorrowISO, 
-      getTripEndTimestamp: testTripEndTimestamp 
+    const {
+      isTripExpired: testIsTripExpired,
+      groupTripsByTemporalWindow: testGroupTrips,
+      getTomorrowISO: testTomorrowISO,
+      getTripEndTimestamp: testTripEndTimestamp
     } = await import('@carmate/shared');
 
     // 20.1 Kiểm thử đơn vị các hàm thời gian trong @carmate/shared
@@ -995,12 +1186,21 @@ async function runTests() {
     const tomorrowTripObj = { id: 'T-TOMORROW', date: testTomorrowISO(), timeSlot: '07:00-09:00' };
     const weeklyTripObj = { id: 'T-WEEKLY', date: 'Thứ 2 (Lặp lại hàng tuần)', timeSlot: '07:00-09:00' };
 
-    assert(testIsTripExpired(pastTripObj) === true, 'TTL 1: Chuyến đi trong quá khứ được nhận diện là đã hết hạn (isTripExpired = true)');
-    assert(testIsTripExpired(tomorrowTripObj) === false, 'TTL 2: Chuyến đi ngày mai vẫn còn hiệu lực (isTripExpired = false)');
+    assert(
+      testIsTripExpired(pastTripObj) === true,
+      'TTL 1: Chuyến đi trong quá khứ được nhận diện là đã hết hạn (isTripExpired = true)'
+    );
+    assert(
+      testIsTripExpired(tomorrowTripObj) === false,
+      'TTL 2: Chuyến đi ngày mai vẫn còn hiệu lực (isTripExpired = false)'
+    );
     assert(testIsTripExpired(weeklyTripObj) === false, 'TTL 3: Chuyến định kỳ lặp lại hàng tuần không bị hết hạn');
 
     const sampleGroups = testGroupTrips([pastTripObj, tomorrowTripObj, weeklyTripObj]);
-    assert(sampleGroups.expired.length === 1 && sampleGroups.expired[0].id === 'T-PAST', 'Phân nhóm 1: Chuyến quá giờ tự động được đưa vào nhóm expired');
+    assert(
+      sampleGroups.expired.length === 1 && sampleGroups.expired[0].id === 'T-PAST',
+      'Phân nhóm 1: Chuyến quá giờ tự động được đưa vào nhóm expired'
+    );
     assert(sampleGroups.tomorrow.length >= 1, 'Phân nhóm 2: Chuyến ngày mai được gom chính xác vào nhóm tomorrow');
 
     // 20.2 Kiểm thử lọc TTL qua API /api/trips
@@ -1008,7 +1208,7 @@ async function runTests() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({
         from: 'Đồng Xoài',
@@ -1028,13 +1228,20 @@ async function runTests() {
     assert(createPastTripRes.status === 201 && pastTripId, 'Tạo chuyến xe quá khứ phục vụ kiểm thử TTL thành công');
 
     // Truy vấn công khai: Chuyến quá khứ không được xuất hiện
-    const ttlPublicTripsRes = await fetch(`${BASE_URL}/api/trips?routeCategory=Tuy%E1%BA%BFn+QL14`).then(r => r.json());
-    const publicTripIds = ttlPublicTripsRes.data?.all?.map(t => t.id) || [];
-    assert(!publicTripIds.includes(pastTripId), 'TTL 4: Chuyến xe quá giờ tự động bị ẩn khỏi danh sách tìm kiếm công khai');
+    const ttlPublicTripsRes = await fetch(`${BASE_URL}/api/trips?routeCategory=Tuy%E1%BA%BFn+QL14`).then((r) =>
+      r.json()
+    );
+    const publicTripIds = ttlPublicTripsRes.data?.all?.map((t) => t.id) || [];
+    assert(
+      !publicTripIds.includes(pastTripId),
+      'TTL 4: Chuyến xe quá giờ tự động bị ẩn khỏi danh sách tìm kiếm công khai'
+    );
 
     // Truy vấn có cờ includeExpired: Chuyến quá khứ xuất hiện
-    const allTripsWithExpired = await fetch(`${BASE_URL}/api/trips?routeCategory=Tuy%E1%BA%BFn+QL14&includeExpired=true`).then(r => r.json());
-    const allTripIds = allTripsWithExpired.data?.all?.map(t => t.id) || [];
+    const allTripsWithExpired = await fetch(
+      `${BASE_URL}/api/trips?routeCategory=Tuy%E1%BA%BFn+QL14&includeExpired=true`
+    ).then((r) => r.json());
+    const allTripIds = allTripsWithExpired.data?.all?.map((t) => t.id) || [];
     assert(allTripIds.includes(pastTripId), 'TTL 5: API hỗ trợ includeExpired=true cho màn hình lịch sử');
 
     // 20.3 Kiểm thử Tái Đăng 1 Chạm POST /api/trips/:id/republish
@@ -1042,7 +1249,7 @@ async function runTests() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({
         date: testTomorrowISO()
@@ -1051,11 +1258,23 @@ async function runTests() {
     const republishData = await republishRes.json();
     const newRepublishedId = republishData.data?.id;
 
-    assert(republishRes.status === 201 && republishData.success === true, 'Tái đăng 1: API /api/trips/:id/republish phản hồi thành công (HTTP 201)');
+    assert(
+      republishRes.status === 201 && republishData.success === true,
+      'Tái đăng 1: API /api/trips/:id/republish phản hồi thành công (HTTP 201)'
+    );
     assert(newRepublishedId && newRepublishedId !== pastTripId, 'Tái đăng 2: Chuyến mới được cấp mã ID riêng biệt');
-    assert(republishData.data?.date === testTomorrowISO(), 'Tái đăng 3: Chuyến mới được tự động gán ngày khởi hành là Ngày mai');
-    assert(republishData.data?.status === 'active', 'Tái đăng 4: Chuyến mới ở trạng thái hoạt động nhận khách (status = active)');
-    assert(republishData.data?.from === 'Đồng Xoài' && republishData.data?.to === 'Sài Gòn', 'Tái đăng 5: Sao chép nguyên vẹn 100% lộ trình và điểm đến');
+    assert(
+      republishData.data?.date === testTomorrowISO(),
+      'Tái đăng 3: Chuyến mới được tự động gán ngày khởi hành là Ngày mai'
+    );
+    assert(
+      republishData.data?.status === 'active',
+      'Tái đăng 4: Chuyến mới ở trạng thái hoạt động nhận khách (status = active)'
+    );
+    assert(
+      republishData.data?.from === 'Đồng Xoài' && republishData.data?.to === 'Sài Gòn',
+      'Tái đăng 5: Sao chép nguyên vẹn 100% lộ trình và điểm đến'
+    );
 
     // Dọn sạch dữ liệu test để SQLite không bị bẩn
     if (pastTripId) {
@@ -1088,7 +1307,10 @@ async function runTests() {
       bookingCode: testCode
     });
 
-    assert(magicDraft.includes(`#confirm-${testCode}`), 'Magic Link 1-Chạm: Tin nhắn Zalo tự động gắn kèm link xác nhận cho Bác tài');
+    assert(
+      magicDraft.includes(`#confirm-${testCode}`),
+      'Magic Link 1-Chạm: Tin nhắn Zalo tự động gắn kèm link xác nhận cho Bác tài'
+    );
 
     // Tạo booking test trong SQLite
     const createTestBookingRes = await fetch(`${BASE_URL}/api/bookings`, {
@@ -1107,15 +1329,27 @@ async function runTests() {
       })
     });
     const createTestBookingData = await createTestBookingRes.json();
-    assert(createTestBookingRes.status === 201 && createTestBookingData.success === true, 'Tạo booking phục vụ kiểm thử Magic Link thành công');
+    assert(
+      createTestBookingRes.status === 201 && createTestBookingData.success === true,
+      'Tạo booking phục vụ kiểm thử Magic Link thành công'
+    );
 
     // Bác tài mở Magic Link: Gọi GET /api/bookings/:id/public-summary không cần đăng nhập
     const summaryRes = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`);
     const summaryData = await summaryRes.json();
-    assert(summaryRes.status === 200 && summaryData.success === true, 'Public Summary: Bác tài truy cập tóm tắt chuyến không cần đăng nhập (HTTP 200)');
-    assert(summaryData.data.from === 'Bù Đốp' && summaryData.data.to === 'Sài Gòn', 'Public Summary: Lộ trình hiển thị chuẩn xác');
+    assert(
+      summaryRes.status === 200 && summaryData.success === true,
+      'Public Summary: Bác tài truy cập tóm tắt chuyến không cần đăng nhập (HTTP 200)'
+    );
+    assert(
+      summaryData.data.from === 'Bù Đốp' && summaryData.data.to === 'Sài Gòn',
+      'Public Summary: Lộ trình hiển thị chuẩn xác'
+    );
     assert(summaryData.data.totalDeal === 120000, 'Public Summary: Mức phụ xăng hiển thị đúng');
-    assert(!summaryData.data.phoneReal && !summaryData.data.contactPhone, 'PII Protection: Public Summary tuyệt đối không để lộ số điện thoại thô');
+    assert(
+      !summaryData.data.phoneReal && !summaryData.data.contactPhone,
+      'PII Protection: Public Summary tuyệt đối không để lộ số điện thoại thô'
+    );
     assert(summaryData.data.driverConfirmed === false, 'Khởi tạo: Bác tài chưa xác nhận đón');
 
     // Bác tài bấm 1 chạm "Đồng ý đón": Gọi POST /api/bookings/:id/driver-confirm
@@ -1127,20 +1361,31 @@ async function runTests() {
       })
     });
     const confirmData = await confirmRes.json();
-    assert(confirmRes.status === 200 && confirmData.success === true, 'Driver 1-Tap: Bác tài xác nhận đón 1 chạm thành công (HTTP 200)');
-    assert(confirmData.data.status === 'driver_confirmed', 'Driver 1-Tap: Trạng thái booking chuyển sang driver_confirmed');
+    assert(
+      confirmRes.status === 200 && confirmData.success === true,
+      'Driver 1-Tap: Bác tài xác nhận đón 1 chạm thành công (HTTP 200)'
+    );
+    assert(
+      confirmData.data.status === 'driver_confirmed',
+      'Driver 1-Tap: Trạng thái booking chuyển sang driver_confirmed'
+    );
     assert(confirmData.data.driverConfirmed === true, 'Driver 1-Tap: Cờ driverConfirmed được bật true');
 
     // Kiểm tra lại qua public-summary
-    const summaryAfterConfirm = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`).then(r => r.json());
-    assert(summaryAfterConfirm.data.driverConfirmed === true, 'Đồng bộ: Hành khách và Bác tài đều thấy trạng thái đã xác nhận đón');
+    const summaryAfterConfirm = await fetch(`${BASE_URL}/api/bookings/${testCode}/public-summary`).then((r) =>
+      r.json()
+    );
+    assert(
+      summaryAfterConfirm.data.driverConfirmed === true,
+      'Đồng bộ: Hành khách và Bác tài đều thấy trạng thái đã xác nhận đón'
+    );
 
     // Dọn dẹp booking test
     await fetch(`${BASE_URL}/api/bookings/${testCode}/cancel`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sharedTokenA}`
+        Authorization: `Bearer ${sharedTokenA}`
       },
       body: JSON.stringify({ reason: 'Dọn dẹp test' })
     }).catch(() => {});
@@ -1157,7 +1402,10 @@ async function runTests() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: '0988112233' })
     });
-    assert(attackZaloNoTokenRes.status === 401, 'Pentest Zalo 1: Chặn đứng mạo danh số điện thoại khi không có token (Bắt buộc HTTP 401)');
+    assert(
+      attackZaloNoTokenRes.status === 401,
+      'Pentest Zalo 1: Chặn đứng mạo danh số điện thoại khi không có token (Bắt buộc HTTP 401)'
+    );
 
     // 22.2 Pentest Zalo Login: Kẻ tấn công gửi token giả mạo
     const attackZaloFakeTokenRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
@@ -1165,7 +1413,10 @@ async function runTests() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: 'fake_forged_zalo_token_xyz', phone: '0988112233' })
     });
-    assert(attackZaloFakeTokenRes.status === 401, 'Pentest Zalo 2: Chặn token giả mạo từ chối cấp quyền (Bắt buộc HTTP 401)');
+    assert(
+      attackZaloFakeTokenRes.status === 401,
+      'Pentest Zalo 2: Chặn token giả mạo từ chối cấp quyền (Bắt buộc HTTP 401)'
+    );
 
     // 22.3 Pentest Google Login: Kẻ tấn công gửi email nạn nhân mà KHÔNG CÓ ID TOKEN
     const attackGgNoTokenRes = await fetch(`${BASE_URL}/api/auth/google-login`, {
@@ -1173,7 +1424,10 @@ async function runTests() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'victim@gmail.com', googleId: '123456789' })
     });
-    assert(attackGgNoTokenRes.status === 401, 'Pentest Google 1: Chặn đứng mạo danh email Google khi không có idToken (Bắt buộc HTTP 401)');
+    assert(
+      attackGgNoTokenRes.status === 401,
+      'Pentest Google 1: Chặn đứng mạo danh email Google khi không có idToken (Bắt buộc HTTP 401)'
+    );
 
     // 22.4 Pentest Google Login: Kẻ tấn công gửi idToken giả
     const attackGgFakeTokenRes = await fetch(`${BASE_URL}/api/auth/google-login`, {
@@ -1193,15 +1447,24 @@ async function runTests() {
       })
     });
     const validGgData = await validGgRes.json();
-    assert(validGgRes.status === 200 && validGgData.success === true, 'Google Login: Đăng nhập chính chủ thành công (HTTP 200)');
+    assert(
+      validGgRes.status === 200 && validGgData.success === true,
+      'Google Login: Đăng nhập chính chủ thành công (HTTP 200)'
+    );
     assert(typeof validGgData.token === 'string', 'Google Login: Cấp mã JWT Token bảo mật');
-    assert(validGgData.user.email === 'huynhnguyen.dev@gmail.com', 'Google Login: Email người dùng được trích xuất an toàn từ token');
+    assert(
+      validGgData.user.email === 'huynhnguyen.dev@gmail.com',
+      'Google Login: Email người dùng được trích xuất an toàn từ token'
+    );
 
     // 22.6 Kiểm tra Request ID Correlation Header (Observability & Easy to Debug)
     const traceRes = await fetch(`${BASE_URL}/api/health`, {
       headers: { 'x-request-id': 'test-trace-uuid-123456' }
     });
-    assert(traceRes.headers.get('x-request-id') === 'test-trace-uuid-123456', 'Observability: Header x-request-id được phản hồi và bảo toàn xuyên suốt');
+    assert(
+      traceRes.headers.get('x-request-id') === 'test-trace-uuid-123456',
+      'Observability: Header x-request-id được phản hồi và bảo toàn xuyên suốt'
+    );
 
     // 22.7 Kiểm tra An Toàn Luồng OTP Phone
     const otpReqRes = await fetch(`${BASE_URL}/api/auth/request-otp`, {
@@ -1285,7 +1548,10 @@ async function runTests() {
 
     // 4a. PII/BOLA: tổng quan phễu KHÔNG được lộ cho khách vãng lai (không token)
     const summaryNoAuth = await fetch(`${BASE_URL}/api/admin/analytics/summary`);
-    assert(summaryNoAuth.status === 401 || summaryNoAuth.status === 403, 'Analytics 2b: Chặn tổng quan phễu khi không có quyền Admin (BOLA 401/403)');
+    assert(
+      summaryNoAuth.status === 401 || summaryNoAuth.status === 403,
+      'Analytics 2b: Chặn tổng quan phễu khi không có quyền Admin (BOLA 401/403)'
+    );
 
     // 4b. Lấy thống kê phễu chuyển đổi bằng quyền Admin
     const adminAuthForAnalytics = await fetch(`${BASE_URL}/api/admin/auth`, {
@@ -1298,7 +1564,10 @@ async function runTests() {
       headers: { 'x-admin-key': analyticsAdminToken }
     });
     const summaryData = await summaryRes.json();
-    assert(summaryRes.status === 200 && summaryData.success === true, 'Analytics 3: Tải tổng quan phễu chuyển đổi thành công (HTTP 200)');
+    assert(
+      summaryRes.status === 200 && summaryData.success === true,
+      'Analytics 3: Tải tổng quan phễu chuyển đổi thành công (HTTP 200)'
+    );
     assert(summaryData.data.totalEvents >= 4, 'Analytics 4: Đếm đúng tổng số sự kiện trong SQLite');
     assert(typeof summaryData.data.funnel === 'object', 'Analytics 5: Báo cáo đầy đủ các chỉ số phễu');
     assert(summaryData.data.funnel.search_route >= 1, 'Analytics 6: Đếm chính xác sự kiện search_route');
@@ -1337,7 +1606,7 @@ async function runTests() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${deleteToken}`
+        Authorization: `Bearer ${deleteToken}`
       },
       body: JSON.stringify({
         type: 'driver_offer',
@@ -1358,15 +1627,18 @@ async function runTests() {
     const delRes = await fetch(`${BASE_URL}/api/auth/me`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${deleteToken}`
+        Authorization: `Bearer ${deleteToken}`
       }
     });
     const delData = await delRes.json();
-    assert(delRes.status === 200 && delData.success === true, 'Delete Account 4: Xóa vĩnh viễn tài khoản thành công (HTTP 200)');
+    assert(
+      delRes.status === 200 && delData.success === true,
+      'Delete Account 4: Xóa vĩnh viễn tài khoản thành công (HTTP 200)'
+    );
 
     // 5. Kiểm tra tài khoản đã bị xóa khỏi hệ thống
     const meAfterRes = await fetch(`${BASE_URL}/api/auth/me`, {
-      headers: { 'Authorization': `Bearer ${deleteToken}` }
+      headers: { Authorization: `Bearer ${deleteToken}` }
     });
     assert(meAfterRes.status === 404, 'Delete Account 5: Tài khoản không còn tồn tại trong hệ thống (HTTP 404)');
 
@@ -1405,16 +1677,123 @@ async function runTests() {
       assert(blocked, `Admin Guard: ${method} ${path} bị chặn khi không có quyền (nhận ${res.status})`);
       if (blocked) blockedCount += 1;
     }
-    assert(blockedCount === adminRoutes.length, `Admin Guard: Toàn bộ ${adminRoutes.length} route admin đều yêu cầu xác thực`);
+    assert(
+      blockedCount === adminRoutes.length,
+      `Admin Guard: Toàn bộ ${adminRoutes.length} route admin đều yêu cầu xác thực`
+    );
   } catch (err) {
     assert(false, '25. Kiểm thử Phân Quyền Toàn Bộ Cổng Admin', err.message);
   }
 
-  const passed = results.filter(r => r.pass).length;
-  const failed = results.filter(r => !r.pass).length;
+  // -------------------------------------------------------------
+  // 26. Kiểm thử Hệ Thống Telegram Alerting (Kháng Lỗi & Chống Spam)
+  // -------------------------------------------------------------
+  console.log('\n--- 26. Kiểm thử Hệ Thống Telegram Alerting (Kháng Lỗi & Chống Spam) ---');
+  try {
+    const { sendTelegramMessage, sendSystemErrorAlert, sendBusinessAlert, _resetDeduplicationCache } =
+      await import('../apps/api/src/utils/telegramAlert.js');
+
+    // Test 1-3: Kháng lỗi khi chưa cấu hình token (Graceful No-Op)
+    const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+    const originalChatId = process.env.TELEGRAM_LOG_CHAT_ID;
+
+    delete process.env.TELEGRAM_BOT_TOKEN;
+    delete process.env.TELEGRAM_LOG_CHAT_ID;
+
+    const noopResult = await sendTelegramMessage('Test alert text');
+    assert(noopResult === false, 'Telegram 1: Tự động bỏ qua an toàn khi chưa cấu hình token (không gây lỗi)');
+
+    const errNoopResult = await sendSystemErrorAlert({ error: new Error('Test crash'), source: 'Unit Test' });
+    assert(errNoopResult === false, 'Telegram 2: Báo lỗi hệ thống an toàn khi chưa có token');
+
+    const bizNoopResult = await sendBusinessAlert({ title: 'Test Trip', details: { id: 'TRIP-123' } });
+    assert(bizNoopResult === false, 'Telegram 3: Báo nghiệp vụ an toàn khi chưa có token');
+
+    // Test 4-11: Cơ chế chống spam (Deduplication) khi có token
+    _resetDeduplicationCache();
+    process.env.TELEGRAM_BOT_TOKEN = 'mock_bot_token_test';
+    process.env.TELEGRAM_LOG_CHAT_ID = 'mock_chat_id_test';
+
+    // Mock fetch để kiểm tra logic định dạng và HTTP payload
+    const originalFetch = globalThis.fetch;
+    const dispatchedMessages = [];
+    globalThis.fetch = async (url, opts) => {
+      if (typeof url === 'string' && url.includes('api.telegram.org')) {
+        const body = JSON.parse(opts.body);
+        dispatchedMessages.push(body);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true }),
+          text: async () => JSON.stringify({ ok: true })
+        };
+      }
+      return originalFetch(url, opts);
+    };
+
+    // Lần 1: Bắn lỗi
+    const firstDispatch = await sendSystemErrorAlert({
+      error: new Error('Database connection timeout'),
+      req: { method: 'GET', originalUrl: '/api/trips' },
+      source: 'Test Engine'
+    });
+    assert(firstDispatch === true, 'Telegram 4: Gửi cảnh báo thành công qua Telegram API khi có cấu hình');
+    assert(dispatchedMessages.length === 1, 'Telegram 5: Dispatch message nhận đúng 1 payload');
+    assert(
+      dispatchedMessages[0].text.includes('Database connection timeout'),
+      'Telegram 6: Nội dung tin nhắn chứa đúng lỗi'
+    );
+    assert(dispatchedMessages[0].parse_mode === 'HTML', 'Telegram 7: Sử dụng định dạng HTML chuẩn');
+
+    // Lần 2: Bắn lại đúng lỗi đó trong cùng 60s -> Phải bị chặn chống spam
+    const secondDispatch = await sendSystemErrorAlert({
+      error: new Error('Database connection timeout'),
+      req: { method: 'GET', originalUrl: '/api/trips' },
+      source: 'Test Engine'
+    });
+    assert(secondDispatch === false, 'Telegram 8: Tự động chặn tin nhắn trùng lặp liên tiếp trong 60s chống spam');
+    assert(dispatchedMessages.length === 1, 'Telegram 9: Không tạo thêm tin nhắn rác lên Telegram');
+
+    // Lần 3: Bắn lỗi khác hoặc path khác -> Phải được thông qua
+    const thirdDispatch = await sendSystemErrorAlert({
+      error: new Error('Different error message'),
+      req: { method: 'POST', originalUrl: '/api/bookings' },
+      source: 'Test Engine'
+    });
+    assert(thirdDispatch === true, 'Telegram 10: Cho phép lỗi mới khác biệt đi qua');
+    assert(dispatchedMessages.length === 2, 'Telegram 11: Tổng số tin nhắn tăng lên 2');
+
+    // Test 12-14: Thông báo nghiệp vụ mới
+    const bizDispatch = await sendBusinessAlert({
+      title: 'Bác tài đăng chuyến mới',
+      details: {
+        Mã: 'TRIP-TEST-999',
+        'Lộ trình': 'Sài Gòn -> Bình Phước'
+      }
+    });
+    assert(bizDispatch === true, 'Telegram 12: Gửi thông báo nghiệp vụ thành công');
+    assert(dispatchedMessages.length === 3, 'Telegram 13: Tin nhắn nghiệp vụ được chuyển tới Telegram');
+    assert(
+      dispatchedMessages[2].text.includes('Bác tài đăng chuyến mới'),
+      'Telegram 14: Tiêu đề nghiệp vụ hiển thị chính xác'
+    );
+
+    // Khôi phục môi trường
+    globalThis.fetch = originalFetch;
+    if (originalToken) process.env.TELEGRAM_BOT_TOKEN = originalToken;
+    else delete process.env.TELEGRAM_BOT_TOKEN;
+    if (originalChatId) process.env.TELEGRAM_LOG_CHAT_ID = originalChatId;
+    else delete process.env.TELEGRAM_LOG_CHAT_ID;
+    _resetDeduplicationCache();
+  } catch (err) {
+    assert(false, '26. Kiểm thử Hệ Thống Telegram Alerting', err.message);
+  }
+
+  const passed = results.filter((r) => r.pass).length;
+  const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
   console.log(`Tổng số bài test: ${total}`);
-  console.log(`Số bài ĐẠT (PASS): ${passed} / ${total} (${Math.round(passed/total*100)}%)`);
+  console.log(`Số bài ĐẠT (PASS): ${passed} / ${total} (${Math.round((passed / total) * 100)}%)`);
   console.log(`Số bài LỖI (FAIL): ${failed}`);
 
   if (failed === 0) {

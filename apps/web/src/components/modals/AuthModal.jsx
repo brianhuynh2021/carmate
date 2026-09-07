@@ -41,7 +41,7 @@ export default function AuthModal({
     try {
       // Gửi token xác thực hợp lệ
       const cleanEmail = email.trim().toLowerCase();
-      const mockSub = 'user_' + Math.abs(cleanEmail.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0));
+      const mockSub = 'user_' + Math.abs(cleanEmail.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0));
       const res = await api.googleLogin({
         idToken: `TEST_GOOGLE_TOKEN_${cleanEmail}:${mockSub}`,
         email: cleanEmail,
@@ -120,14 +120,7 @@ export default function AuthModal({
   };
 
   return (
-    <Modal
-      onClose={onClose}
-      size="sm"
-      icon={ShieldCheck}
-      iconTone="brand"
-      title={title}
-      subtitle={subtitle}
-    >
+    <Modal onClose={onClose} size="sm" icon={ShieldCheck} iconTone="brand" title={title} subtitle={subtitle}>
       <div className="space-y-4">
         {contextNotice && (
           <div className="p-3 rounded-2xl bg-[#0071e3]/10 dark:bg-[#0071e3]/15 border border-[#0071e3]/20 text-xs font-semibold text-[#0071e3] dark:text-[#2997ff] flex items-center gap-2 leading-relaxed">
@@ -140,7 +133,10 @@ export default function AuthModal({
         <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-black/[0.04] dark:bg-slate-800/80">
           <button
             type="button"
-            onClick={() => { setAuthTab('phone'); setError(''); }}
+            onClick={() => {
+              setAuthTab('phone');
+              setError('');
+            }}
             className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               authTab === 'phone'
                 ? 'bg-white dark:bg-slate-900 text-[#0071e3] dark:text-[#2997ff] shadow-xs'
@@ -153,7 +149,10 @@ export default function AuthModal({
 
           <button
             type="button"
-            onClick={() => { setAuthTab('google'); setError(''); }}
+            onClick={() => {
+              setAuthTab('google');
+              setError('');
+            }}
             className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               authTab === 'google'
                 ? 'bg-white dark:bg-slate-900 text-[#1d1d1f] dark:text-white shadow-xs'
@@ -225,7 +224,8 @@ export default function AuthModal({
               <form onSubmit={handleVerifyOtp} className="space-y-3.5">
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-black/[0.06] text-center space-y-1">
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Mã xác thực 6 số đã được gửi tới số <span className="font-bold text-slate-900 dark:text-white">{phone}</span>
+                    Mã xác thực 6 số đã được gửi tới số{' '}
+                    <span className="font-bold text-slate-900 dark:text-white">{phone}</span>
                   </p>
                   {devOtp && (
                     <div className="inline-block py-0.5 px-2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
@@ -253,7 +253,10 @@ export default function AuthModal({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => { setPhoneStep('input'); setOtp(''); }}
+                    onClick={() => {
+                      setPhoneStep('input');
+                      setOtp('');
+                    }}
                     className="py-3 px-4 rounded-2xl text-xs font-bold text-[#86868b] hover:bg-black/[0.04] cursor-pointer"
                   >
                     Đổi số khác
@@ -407,14 +410,10 @@ export default function AuthModal({
       </div>
 
       {/* Modal Điều khoản Dịch vụ & An toàn */}
-      {activeLegalModal === 'terms' && (
-        <TermsModal onClose={() => setActiveLegalModal(null)} zIndex="z-[60]" />
-      )}
+      {activeLegalModal === 'terms' && <TermsModal onClose={() => setActiveLegalModal(null)} zIndex="z-[60]" />}
 
       {/* Modal Quy chế & Chính sách bảo mật */}
-      {activeLegalModal === 'policy' && (
-        <PolicyModal onClose={() => setActiveLegalModal(null)} zIndex="z-[60]" />
-      )}
+      {activeLegalModal === 'policy' && <PolicyModal onClose={() => setActiveLegalModal(null)} zIndex="z-[60]" />}
     </Modal>
   );
 }

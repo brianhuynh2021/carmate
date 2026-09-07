@@ -124,11 +124,9 @@ export function adminAuth(req, res) {
     failedAttemptsMap.delete(clientIp);
 
     // 4. Ký mã JWT Token thật có chữ ký mật mã (Cryptographic Signature, hạn 2 tiếng)
-    const adminToken = jwt.sign(
-      { role: 'super_admin', sessionType: 'admin_portal', issuedAt: now },
-      JWT_SECRET,
-      { expiresIn: '2h' }
-    );
+    const adminToken = jwt.sign({ role: 'super_admin', sessionType: 'admin_portal', issuedAt: now }, JWT_SECRET, {
+      expiresIn: '2h'
+    });
 
     return res.status(200).json({
       success: true,
@@ -255,7 +253,7 @@ export function getAdminReports(req, res) {
   try {
     const db = getDB();
     const bookings = db.bookings || [];
-    
+
     // Thu thập các sự cố hủy chuyến hoặc báo trễ
     const delayed = bookings.filter((b) => b.status === 'delayed' || b.delayedMinutes);
     const cancelled = bookings.filter((b) => b.status === 'cancelled');
@@ -293,4 +291,3 @@ export function getAdminAiIntelligence(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
-

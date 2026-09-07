@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { Share2, Copy, Check, ChevronDown, ChevronUp, ExternalLink, Download, Image as ImageIcon, Loader2 } from 'lucide-react';
+import {
+  Share2,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Download,
+  Image as ImageIcon,
+  Loader2
+} from 'lucide-react';
 import { generateSocialShareText, formatVND, getTimeSlotLabel, getFacebookShareUrl } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -133,7 +143,11 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
               onClick={() => handleCopy()}
               className="py-2.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-slate-500" />
+              )}
               <span>{copied ? 'Đã chép' : 'Sao chép tin'}</span>
             </button>
 
@@ -166,14 +180,19 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
       <div className="space-y-4">
         {/* Ticket Card — Trọng tâm thị giác duy nhất phong cách Google Boarding Pass */}
         <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-5 shadow-lg border border-white/10">
-          <div className="absolute -top-20 -right-16 w-56 h-56 rounded-full bg-primary-600/40 blur-3xl pointer-events-none" aria-hidden="true" />
+          <div
+            className="absolute -top-20 -right-16 w-56 h-56 rounded-full bg-primary-600/40 blur-3xl pointer-events-none"
+            aria-hidden="true"
+          />
           <div className="absolute inset-0 hero-grid opacity-60 pointer-events-none" aria-hidden="true" />
 
           <div className="relative flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <LogoMark className="w-8 h-8" />
               <div>
-                <p className="text-sm font-semibold leading-tight">CarMate · {t('ticket.brandLine') || 'Xe Gia Đình Tiện Tuyến'}</p>
+                <p className="text-sm font-semibold leading-tight">
+                  CarMate · {t('ticket.brandLine') || 'Xe Gia Đình Tiện Tuyến'}
+                </p>
                 <p className="text-[11px] text-slate-400">{t('ticket.brandSub') || '0% Phí sàn · Đi chung văn minh'}</p>
               </div>
             </div>
@@ -203,13 +222,16 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
             <div>
               <p className="text-[11px] text-slate-400">{t('ticket.cost') || 'Chi phí chia sẻ'}</p>
               <p className="text-2xl font-bold tabular tracking-tight leading-none mt-1">
-                {formatVND(trip.basePricePerSeat || trip.expectedPrice || 180000)}<span className="text-xs font-normal text-slate-400">{t('common.perSeat')}</span>
+                {formatVND(trip.basePricePerSeat || trip.expectedPrice || 180000)}
+                <span className="text-xs font-normal text-slate-400">{t('common.perSeat')}</span>
               </p>
               <p className="text-[11px] text-slate-400 mt-1">{t('ticket.incl') || 'Đã gồm xăng & vé cầu đường'}</p>
             </div>
             <div className="text-right">
               <p className="text-[11px] text-slate-400">{t('ticket.seatStatus') || 'Tình trạng chỗ'}</p>
-              <p className="text-sm font-semibold text-amber-400">{t('ticket.seatsLeft', { n: trip.availableSeats || trip.seatsNeeded || 3 })}</p>
+              <p className="text-sm font-semibold text-amber-400">
+                {t('ticket.seatsLeft', { n: trip.availableSeats || trip.seatsNeeded || 3 })}
+              </p>
               <p className="text-[11px] text-slate-400 mt-0.5">{trip.carType || t('common.familyCar')}</p>
             </div>
           </div>
