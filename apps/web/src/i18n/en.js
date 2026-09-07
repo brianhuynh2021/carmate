@@ -70,10 +70,10 @@ export default {
   },
 
   hero: {
-    eyebrow: 'Founded by a car owner commuting weekly to Saigon · 0% Platform Fee',
+    eyebrow: 'Direct family rideshare & convenient intercity empty-leg network · 0% fee',
     title: 'Intercity Ridesharing & Convenient Empty-Leg Matching',
     subtitle:
-      'Say goodbye to cramped commercial buses and empty family car seats. CarMate connects car owners with fellow travelers — Travel comfortably like family, fairly share fuel & tolls, direct connection with 0% commission.',
+      'Say goodbye to cramped commercial buses and empty family car seats. CarMate directly connects vehicle owners with fellow travelers — Travel comfortably like family, fairly share fuel & tolls, direct connection via Zalo.',
     findTripCta: 'Find a ride',
     postTripCta: 'Post empty seats (Family & Empty-leg)',
     stat_members: 'verified members',

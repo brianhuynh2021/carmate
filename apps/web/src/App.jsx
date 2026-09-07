@@ -44,7 +44,6 @@ import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
 import VehicleMismatchModal from './components/modals/VehicleMismatchModal.jsx';
 import UserProfileModal from './components/profile/UserProfileModal.jsx';
-import FounderStorySection from './components/market/FounderStorySection.jsx';
 
 // Custom Hooks
 import useZaloReentry from './hooks/useZaloReentry.js';
@@ -850,18 +849,6 @@ export default function App() {
                     )}
                   </>
                 )}
-              </div>
-
-              {/* Khối Tâm Thư Founder & So Sánh Trải Nghiệm Thực Tế */}
-              <div id="founder-story-section">
-                <FounderStorySection
-                  onPostClick={handleRequestPostTrip}
-                  onFindTripClick={() => {
-                    const el = document.getElementById('search-from-input');
-                    if (el) el.focus();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                />
               </div>
             </div>
           </>
