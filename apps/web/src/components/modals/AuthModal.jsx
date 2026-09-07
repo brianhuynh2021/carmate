@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Phone, ShieldCheck, User, AlertCircle, Mail, ArrowRight, Sparkles } from 'lucide-react';
+import { ShieldCheck, User, AlertCircle, Mail, Sparkles, Phone } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
-import { GoogleIcon, ZaloIcon } from '../ui/SocialIcons.jsx';
+import { GoogleIcon } from '../ui/SocialIcons.jsx';
 import TermsModal from './TermsModal.jsx';
 import PolicyModal from './PolicyModal.jsx';
 import api from '../../api/client.js';
@@ -15,12 +15,8 @@ export default function AuthModal({
   subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
   contextNotice
 }) {
-  const [authTab, setAuthTab] = useState('google'); // 'google' | 'phone' - Ưu tiên Google 1-chạm không tốn phí SMS
-  const [phoneStep, setPhoneStep] = useState('input'); // 'input' | 'otp'
   const [phone, setPhone] = useState(initialPhone);
   const [name, setName] = useState('');
-  const [otp, setOtp] = useState('');
-  const [devOtp, setDevOtp] = useState('');
   const [email, setEmail] = useState('');
   const [showGoogleForm, setShowGoogleForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,11 +28,14 @@ export default function AuthModal({
   // Tải cấu hình Google Client ID từ máy chủ (Hỗ trợ cấu hình động trên Fly.io không cần rebuild)
   useEffect(() => {
     let mounted = true;
-    api.getAuthConfig().then((cfg) => {
-      if (mounted && cfg?.googleClientId) {
-        setClientId(cfg.googleClientId);
-      }
-    }).catch(() => {});
+    api
+      .getAuthConfig()
+      .then((cfg) => {
+        if (mounted && cfg?.googleClientId) {
+          setClientId(cfg.googleClientId);
+        }
+      })
+      .catch(() => {});
     return () => {
       mounted = false;
     };
@@ -70,9 +69,9 @@ export default function AuthModal({
     }
   };
 
-  // Khởi tạo Google Identity Services Button khi tab Google hoạt động
+  // Khởi tạo Google Identity Services Button khi component sẵn sàng
   useEffect(() => {
-    if (authTab !== 'google' || showGoogleForm) return;
+    if (showGoogleForm) return;
 
     let retryTimer = null;
     const initAndRender = () => {
@@ -117,13 +116,13 @@ export default function AuthModal({
     return () => {
       if (retryTimer) clearInterval(retryTimer);
     };
-  }, [authTab, clientId, showGoogleForm]);
+  }, [clientId, showGoogleForm]);
 
-  // 1. Luồng đăng nhập Google thủ công (Dùng cho kiểm thử offline / dev fallback)
+  // Luồng đăng nhập nhanh (Dùng cho kiểm thử offline / dev test)
   const handleGoogleSubmit = async (e) => {
     e?.preventDefault();
     if (!email.trim() || !email.includes('@')) {
-      setError('Vui lòng nhập địa chỉ email Google (Gmail) hợp lệ');
+      setError('Vui lòng nhập địa chỉ email hợp lệ');
       return;
     }
 
@@ -131,7 +130,6 @@ export default function AuthModal({
     setError('');
 
     try {
-      // Gửi token xác thực hợp lệ
       const cleanEmail = email.trim().toLowerCase();
       const mockSub = 'user_' + Math.abs(cleanEmail.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0));
       const res = await api.googleLogin({
@@ -145,67 +143,10 @@ export default function AuthModal({
         onSuccess?.(res.user, res.tripIds || []);
         onClose();
       } else {
-        setError(res?.error || 'Đăng nhập Google không thành công');
+        setError(res?.error || 'Đăng nhập không thành công');
       }
     } catch (err) {
       setError(err.message || 'Lỗi kết nối máy chủ');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 2. Luồng gửi mã OTP qua Số điện thoại
-  const handleSendOtp = async (e) => {
-    e?.preventDefault();
-    if (!phone.trim() || phone.replace(/\D/g, '').length < 9) {
-      setError('Vui lòng nhập số điện thoại hợp lệ (10 chữ số)');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await api.requestOtp(phone.trim());
-      if (res?.success) {
-        setPhoneStep('otp');
-        if (res.devOtp) setDevOtp(res.devOtp);
-      } else {
-        setError(res?.error || 'Không thể gửi mã xác thực, vui lòng thử lại');
-      }
-    } catch (err) {
-      setError(err.message || 'Lỗi gửi mã OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 3. Luồng xác thực mã OTP chính chủ để cấp Token
-  const handleVerifyOtp = async (e) => {
-    e?.preventDefault();
-    if (!otp.trim() || otp.trim().length < 4) {
-      setError('Vui lòng nhập mã OTP gồm 6 chữ số');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await api.verifyOtp({
-        phone: phone.trim(),
-        otp: otp.trim(),
-        name: name.trim() || undefined
-      });
-
-      if (res?.success && res?.user) {
-        onSuccess?.(res.user, res.tripIds || []);
-        onClose();
-      } else {
-        setError(res?.error || 'Mã OTP không đúng hoặc đã hết hạn');
-      }
-    } catch (err) {
-      setError(err.message || 'Lỗi xác thực mã OTP');
     } finally {
       setLoading(false);
     }
@@ -221,41 +162,6 @@ export default function AuthModal({
           </div>
         )}
 
-        {/* Lựa chọn phương thức: Số điện thoại (OTP) hoặc Google (Apple Capsule Segmented) */}
-        <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-black/[0.04] dark:bg-slate-800/80">
-          <button
-            type="button"
-            onClick={() => {
-              setAuthTab('phone');
-              setError('');
-            }}
-            className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              authTab === 'phone'
-                ? 'bg-white dark:bg-slate-900 text-[#0071e3] dark:text-[#2997ff] shadow-xs'
-                : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
-            }`}
-          >
-            <Phone className="w-4 h-4 shrink-0" />
-            <span>Số điện thoại (OTP)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setAuthTab('google');
-              setError('');
-            }}
-            className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              authTab === 'google'
-                ? 'bg-white dark:bg-slate-900 text-[#1d1d1f] dark:text-white shadow-xs'
-                : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
-            }`}
-          >
-            <GoogleIcon className="w-4 h-4 shrink-0" />
-            <span>Google 1 chạm</span>
-          </button>
-        </div>
-
         {error && (
           <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -263,44 +169,108 @@ export default function AuthModal({
           </div>
         )}
 
-        {/* ── TAB 1: SỐ ĐIỆN THOẠI (XÁC THỰC OTP CHÍNH CHỦ) ── */}
-        {authTab === 'phone' && (
-          <div className="space-y-3.5">
-            {phoneStep === 'input' ? (
-              <form onSubmit={handleSendOtp} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Số điện thoại của bạn *
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      required
-                      autoFocus
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="VD: 0984 883 750"
-                      className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
-                    />
-                  </div>
+        {/* ── GOOGLE 1 CHẠM TRỰC TIẾP (100% 0đ, KHÔNG TỐN PHÍ SMS) ── */}
+        <div className="space-y-3.5">
+          {!showGoogleForm ? (
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/60 border border-black/[0.06] dark:border-slate-700/60 text-center space-y-1.5">
+                <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 shadow-xs flex items-center justify-center mx-auto border border-black/[0.06]">
+                  <GoogleIcon className="w-5 h-5" />
                 </div>
+                <p className="text-xs font-bold text-[#1d1d1f] dark:text-white pt-1">Đăng nhập tài khoản Google</p>
+                <p className="text-[11.5px] text-[#86868b] dark:text-slate-400 leading-relaxed px-1">
+                  Xác thực danh tính 1 chạm, tự động bảo vệ tài khoản và đồng bộ chuyến xe miễn phí 100%.
+                </p>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tên hiển thị (Chủ xe / Người đi cùng)
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="VD: Tuấn Nguyễn, Anh Hải..."
-                      className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
-                    />
-                  </div>
+              {/* Khối nút Google Identity Services chính thức */}
+              <div className="flex flex-col items-center justify-center min-h-[44px] py-1">
+                {clientId ? (
+                  <div ref={googleBtnRef} className="flex justify-center w-full min-h-[44px]" />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleForm(true)}
+                    disabled={loading}
+                    className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-black/[0.14] dark:border-slate-600 hover:border-black/[0.3] hover:bg-black/[0.02] text-[#1d1d1f] dark:text-white text-sm font-semibold flex items-center justify-center gap-3 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer"
+                  >
+                    <GoogleIcon className="w-5 h-5 shrink-0" />
+                    <span>Tiếp tục với Google</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Tuỳ chọn đăng nhập kiểm thử offline */}
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleForm(true)}
+                  className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#0071e3] dark:hover:text-[#2997ff] font-medium transition-colors cursor-pointer"
+                >
+                  Dùng form đăng nhập nhanh (Dev Test)
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleGoogleSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Địa chỉ Email Google (Gmail) *
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ban@gmail.com"
+                    className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Tên hiển thị của bạn (Tùy chọn)
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="VD: Tuấn Nguyễn, Chị Linh..."
+                    className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Số điện thoại liên hệ (Tùy chọn)
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="VD: 0984 883 750"
+                    className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleForm(false)}
+                  className="py-3 px-4 rounded-2xl text-xs font-bold text-[#86868b] hover:bg-black/[0.04] cursor-pointer"
+                >
+                  Quay lại
+                </button>
 
                 <Button
                   type="submit"
@@ -309,186 +279,14 @@ export default function AuthModal({
                   disabled={loading}
                   className="bg-[#0071e3] hover:bg-[#0055d4] text-white font-bold text-sm shadow-md py-3 rounded-2xl cursor-pointer"
                 >
-                  <span>{loading ? 'Đang gửi mã...' : 'Nhận mã xác thực OTP'}</span>
+                  <span>{loading ? 'Đang xác thực...' : 'Xác nhận đăng nhập'}</span>
                 </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-3.5">
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-black/[0.06] text-center space-y-1">
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Mã xác thực 6 số đã được gửi tới số{' '}
-                    <span className="font-bold text-slate-900 dark:text-white">{phone}</span>
-                  </p>
-                  {devOtp && (
-                    <div className="inline-block py-0.5 px-2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
-                      Mã thử nghiệm: {devOtp}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Nhập mã OTP 6 chữ số *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    maxLength={6}
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    placeholder="123456"
-                    className="w-full h-12 text-center tracking-[0.3em] font-mono text-xl font-bold rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPhoneStep('input');
-                      setOtp('');
-                    }}
-                    className="py-3 px-4 rounded-2xl text-xs font-bold text-[#86868b] hover:bg-black/[0.04] cursor-pointer"
-                  >
-                    Đổi số khác
-                  </button>
-
-                  <Button
-                    type="submit"
-                    fullWidth
-                    size="lg"
-                    disabled={loading}
-                    className="bg-[#0071e3] hover:bg-[#0055d4] text-white font-bold text-sm shadow-md py-3 rounded-2xl cursor-pointer"
-                  >
-                    <span>{loading ? 'Đang xác nhận...' : 'Xác thực & Đăng nhập'}</span>
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
-
-        {/* ── TAB 2: GOOGLE 1 CHẠM ── */}
-        {authTab === 'google' && (
-          <div className="space-y-3.5">
-            {!showGoogleForm ? (
-              <div className="space-y-3">
-                <div className="p-4 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/60 border border-black/[0.06] dark:border-slate-700/60 text-center space-y-1.5">
-                  <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 shadow-xs flex items-center justify-center mx-auto border border-black/[0.06]">
-                    <GoogleIcon className="w-5 h-5" />
-                  </div>
-                  <p className="text-xs font-bold text-[#1d1d1f] dark:text-white pt-1">Đăng nhập tài khoản Google</p>
-                  <p className="text-[11.5px] text-[#86868b] dark:text-slate-400 leading-relaxed px-1">
-                    Xác thực danh tính 1 chạm, tự động bảo vệ tài khoản và đồng bộ chuyến xe miễn phí.
-                  </p>
-                </div>
-
-                {/* Khối nút Google Identity Services chính thức */}
-                <div className="flex flex-col items-center justify-center min-h-[44px] py-1">
-                  {clientId ? (
-                    <div ref={googleBtnRef} className="flex justify-center w-full min-h-[44px]" />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setShowGoogleForm(true)}
-                      disabled={loading}
-                      className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-black/[0.14] dark:border-slate-600 hover:border-black/[0.3] hover:bg-black/[0.02] text-[#1d1d1f] dark:text-white text-sm font-semibold flex items-center justify-center gap-3 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer"
-                    >
-                      <GoogleIcon className="w-5 h-5 shrink-0" />
-                      <span>Tiếp tục với Google</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Tuỳ chọn đăng nhập kiểm thử offline */}
-                <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowGoogleForm(true)}
-                    className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#0071e3] dark:hover:text-[#2997ff] font-medium transition-colors cursor-pointer"
-                  >
-                    Dùng form đăng nhập nhanh (Dev Test)
-                  </button>
-                </div>
               </div>
-            ) : (
-              <form onSubmit={handleGoogleSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Địa chỉ Email Google (Gmail) *
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="email"
-                      required
-                      autoFocus
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="ban@gmail.com"
-                      className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
-                    />
-                  </div>
-                </div>
+            </form>
+          )}
+        </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tên hiển thị của bạn (Tùy chọn)
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="VD: Tuấn Nguyễn, Chị Linh..."
-                      className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Số điện thoại liên hệ (Tùy chọn)
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="VD: 0984 883 750"
-                      className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowGoogleForm(false)}
-                    className="py-3 px-4 rounded-2xl text-xs font-bold text-[#86868b] hover:bg-black/[0.04] cursor-pointer"
-                  >
-                    Quay lại
-                  </button>
-
-                  <Button
-                    type="submit"
-                    fullWidth
-                    size="lg"
-                    disabled={loading}
-                    className="bg-[#0071e3] hover:bg-[#0055d4] text-white font-bold text-sm shadow-md py-3 rounded-2xl cursor-pointer"
-                  >
-                    <span>{loading ? 'Đang xác thực...' : 'Xác nhận đăng nhập Google'}</span>
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
-
-        {/* ── FOOTER TINH TẾ CHUẨN APPLE (THAY THẾ CHỮ XẤU CŨ) ── */}
+        {/* ── FOOTER TINH TẾ CHUẨN APPLE ── */}
         <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2">
           {/* Micro Trust Badge sang trọng */}
           <div className="flex items-center justify-center gap-1.5 py-1 px-3.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] text-[11px] font-medium text-[#86868b] dark:text-slate-400 w-fit mx-auto border border-black/[0.04] dark:border-white/[0.06]">
