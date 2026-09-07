@@ -25,15 +25,19 @@ export async function sendTelegramMessage(text, options = {}) {
     return false;
   }
 
+  const isMockToken = token.startsWith('mock_');
+
   // 1. Tuyệt đối KHÔNG gửi tin nhắn ra Telegram thật khi đang chạy bộ kiểm thử tự động
-  if (
-    options.isTest ||
-    options.req?.isAutomatedTest ||
-    options.req?.headers?.['x-carmate-testing'] === 'true' ||
-    process.env.CARMATE_DISABLE_TELEGRAM === 'true' ||
-    process.env.NODE_ENV === 'test'
-  ) {
-    return false;
+  if (!isMockToken) {
+    if (
+      options.isTest ||
+      options.req?.isAutomatedTest ||
+      options.req?.headers?.['x-carmate-testing'] === 'true' ||
+      process.env.CARMATE_DISABLE_TELEGRAM === 'true' ||
+      process.env.NODE_ENV === 'test'
+    ) {
+      return false;
+    }
   }
 
   const { parseMode = 'HTML', disableNotification = false } = options;
@@ -119,23 +123,27 @@ export async function sendSystemErrorAlert({ error, req = null, source = 'API Se
  * @param {object} params - { title, details, req }
  */
 export async function sendBusinessAlert({ title, details = {}, req = null }) {
-  // 1. Chặn tuyệt đối khi là request từ bộ test tự động
-  if (
-    req?.isAutomatedTest ||
-    req?.headers?.['x-carmate-testing'] === 'true' ||
-    process.env.CARMATE_DISABLE_TELEGRAM === 'true' ||
-    process.env.NODE_ENV === 'test'
-  ) {
-    return false;
-  }
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const isMockToken = token?.startsWith('mock_');
 
-  // 2. Ở môi trường phát triển (development/local), mặc định không spam tin nhắn tạo chuyến / đặt chỗ
-  // vào Telegram của Founder trừ khi chủ động bật ENABLE_DEV_TELEGRAM_ALERTS=true hoặc dùng mock token test
-  const isProduction = process.env.NODE_ENV === 'production';
-  const enableDevAlerts = process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true';
-  const isMockToken = process.env.TELEGRAM_BOT_TOKEN?.startsWith('mock_');
-  if (!isProduction && !enableDevAlerts && !isMockToken) {
-    return false;
+  // 1. Chặn tuyệt đối khi là request từ bộ test tự động (trừ khi là mock token cho unit test)
+  if (!isMockToken) {
+    if (
+      req?.isAutomatedTest ||
+      req?.headers?.['x-carmate-testing'] === 'true' ||
+      process.env.CARMATE_DISABLE_TELEGRAM === 'true' ||
+      process.env.NODE_ENV === 'test'
+    ) {
+      return false;
+    }
+
+    // 2. Ở môi trường phát triển (development/local), mặc định không spam tin nhắn tạo chuyến / đặt chỗ
+    // vào Telegram của Founder trừ khi chủ động bật ENABLE_DEV_TELEGRAM_ALERTS=true
+    const isProduction = process.env.NODE_ENV === 'production';
+    const enableDevAlerts = process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true';
+    if (!isProduction && !enableDevAlerts) {
+      return false;
+    }
   }
 
   const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
