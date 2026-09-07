@@ -3021,6 +3021,35 @@ async function runTests() {
     assert(false, '38. Kiểm thử Hệ Thống Quản Trị Quy Tắc Tín Nhiệm Động', err.message);
   }
 
+  // 39. Kiểm tra Phân Ly Ngữ Cảnh & Cô Lập Bộ Lọc Tuyến Tham Khảo (Stanford Ergonomics UX)
+  console.log('\n--- 39. KIỂM THỬ CÔ LẬP TRẠNG THÁI ĐỊNH GIÁ THAM KHẢO (ZERO SIDE-EFFECT) ---');
+  try {
+    const routeBenchmarkPath = path.resolve(process.cwd(), 'apps/web/src/components/market/RouteBenchmarkBar.jsx');
+    const routeBenchmarkContent = fs.readFileSync(routeBenchmarkPath, 'utf8');
+
+    // 1. Tuyệt đối không gọi setSearchKeyword ngầm khi bấm Chip tuyến
+    assert(
+      !routeBenchmarkContent.includes('setSearchKeyword?.(ROUTE_BENCHMARKS[k].keyword)'),
+      'Bấm chip tham khảo giá không tự ý kích hoạt setSearchKeyword ngầm'
+    );
+    // 2. Tuyệt đối không gọi setSearchKeyword ngầm khi chuyển miền Bắc/Trung/Nam
+    assert(
+      !routeBenchmarkContent.includes('setSearchKeyword?.(ROUTE_BENCHMARKS[firstInRegion].keyword)'),
+      'Chuyển miền Bắc/Trung/Nam không tự ý kích hoạt setSearchKeyword ngầm'
+    );
+    // 3. Có nút bấm chủ động để lọc nếu người dùng thực sự muốn
+    assert(
+      routeBenchmarkContent.includes('applyFilterAndClose'),
+      'Cung cấp hành động chủ động applyFilterAndClose cho người dùng'
+    );
+    assert(
+      routeBenchmarkContent.includes('filterThisRoute'),
+      'Tích hợp nút Tìm chuyến theo tuyến này trong footer Modal'
+    );
+  } catch (err) {
+    assert(false, '39. Kiểm thử Cô Lập Trạng Thái Định Giá Tham Khảo', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

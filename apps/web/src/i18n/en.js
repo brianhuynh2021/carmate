@@ -118,6 +118,7 @@ export default {
     heroLabel: 'Reference pricing for this route',
     heroDesc:
       'Calculated per empty seat for fair cost sharing. The final rate is mutually agreed upon directly between Car Owner and Passenger.',
+    filterThisRoute: 'Find trips on this route',
     chooseRoute: 'Route',
     technicalTitle: 'Actual operating cost',
     distance: 'Distance',

@@ -118,6 +118,7 @@ export default {
     heroLabel: 'Định giá tham khảo cho tuyến này',
     heroDesc:
       'Áp dụng tính trên từng ghế trống thực tế để chia sẻ công bằng chi phí lăn bánh. Mức đóng góp cuối cùng do Chủ xe và Người đi cùng trực tiếp thống nhất khi liên hệ.',
+    filterThisRoute: 'Tìm chuyến theo tuyến này',
     chooseRoute: 'Chọn tuyến',
     technicalTitle: 'Chi phí vận hành thực tế',
     distance: 'Quãng đường',

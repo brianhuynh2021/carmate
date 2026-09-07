@@ -41,7 +41,16 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
   const open = showDetail || forceOpen;
   const close = () => {
     setShowDetail(false);
+    setSelectedRouteKey(null);
     onCloseForced?.();
+  };
+
+  const applyFilterAndClose = () => {
+    const route = ROUTE_BENCHMARKS[activeRouteKey];
+    if (route?.keyword) {
+      setSearchKeyword?.(route.keyword);
+    }
+    close();
   };
 
   // Lọc tuyến theo miền đã chọn
@@ -104,8 +113,17 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
           title={t('benchmark.modalTitle')}
           subtitle={t('benchmark.modalSub')}
           footer={
-            <div className="flex items-center justify-end w-full">
-              <Button onClick={close} variant="primary" size="sm" className="px-6 font-bold rounded-full">
+            <div className="flex items-center justify-between w-full gap-3 flex-wrap">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={applyFilterAndClose}
+                className="px-4 font-semibold rounded-full text-xs text-[#0071e3] border-[#0071e3]/40 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer"
+              >
+                🔍 {t('benchmark.filterThisRoute')}
+              </Button>
+              <Button onClick={close} variant="primary" size="sm" className="px-6 font-bold rounded-full cursor-pointer">
                 {t('common.understood')}
               </Button>
             </div>
@@ -133,7 +151,6 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                   const firstInRegion = routeKeys.find((k) => (ROUTE_BENCHMARKS[k].region || 'south') === reg);
                   if (firstInRegion) {
                     setSelectedRouteKey(firstInRegion);
-                    setSearchKeyword?.(ROUTE_BENCHMARKS[firstInRegion].keyword);
                   }
                 }}
                 options={[
@@ -151,7 +168,6 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                     active={k === activeRouteKey}
                     onClick={() => {
                       setSelectedRouteKey(k);
-                      setSearchKeyword?.(ROUTE_BENCHMARKS[k].keyword);
                     }}
                     className="h-8 px-3 text-xs"
                   >
