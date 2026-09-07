@@ -11,12 +11,12 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env --env-file-if-exists=apps/api/.env apps/api/src/index.js",
-    "start": "node --env-file-if-exists=.env --env-file-if-exists=apps/api/.env apps/api/src/index.js",
-    "dev:all": "node --env-file-if-exists=.env --env-file-if-exists=apps/api/.env apps/api/src/index.js",
+    "dev": "node --env-file-if-exists=.env apps/api/src/index.js",
+    "start": "node --env-file-if-exists=.env apps/api/src/index.js",
+    "dev:all": "node --env-file-if-exists=.env apps/api/src/index.js",
     "build": "npm run build --workspace=@carmate/web",
     "preview": "npm run preview --workspace=@carmate/web",
-    "test": "node --env-file-if-exists=.env --env-file-if-exists=apps/api/.env scripts/test-local-e2e.js",
+    "test": "node --env-file-if-exists=.env scripts/test-local-e2e.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
