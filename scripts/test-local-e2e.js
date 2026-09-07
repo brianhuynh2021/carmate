@@ -3145,6 +3145,48 @@ async function runTests() {
       /Đăng chuyến đầu tiên[\s\S]{0,200}<\/Button>|setActiveTab\('post'\)/.test(appContent),
       'Empty State 3: Có hành động 1-chạm chuyển sang màn đăng chuyến'
     );
+
+    // Giao diện cũng phải tuân thủ bất biến: chỉ hiển thị chuyến do máy chủ trả
+    // về. Trước đây state khởi tạo bằng dữ liệu mẫu nên sàn hiện 13 chuyến ảo
+    // ngay khi mở trang, và nhánh `length > 0` khiến chúng không bao giờ bị xoá.
+    const tripsHookPath = path.resolve(process.cwd(), 'apps/web/src/hooks/useTripsData.js');
+    const tripsHookContent = fs.readFileSync(tripsHookPath, 'utf8');
+
+    assert(
+      !/INITIAL_DRIVER_OFFERS|INITIAL_PASSENGER_REQUESTS|INITIAL_BOOKED_ESCROWS/.test(tripsHookContent),
+      'Bất biến Giao Diện 1: useTripsData không còn nhập dữ liệu mẫu'
+    );
+    assert(
+      /useState\(\[\]\)[\s\S]{0,200}useState\(\[\]\)/.test(tripsHookContent),
+      'Bất biến Giao Diện 2: Danh sách chuyến khởi tạo rỗng, chờ máy chủ trả về'
+    );
+    assert(
+      tripsHookContent.includes('if (Array.isArray(drivers)) setDriverOffers(drivers)') &&
+        tripsHookContent.includes('if (Array.isArray(passengers)) setPassengerRequests(passengers)'),
+      'Bất biến Giao Diện 3: Chấp nhận mảng rỗng từ máy chủ (sàn trống được phản ánh đúng)'
+    );
+
+    // Chốt chặn toàn cục: không file nào trong apps/web được tham chiếu dữ liệu mẫu.
+    const webSrcDir = path.resolve(process.cwd(), 'apps/web/src');
+    const offenders = [];
+    const walkWeb = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walkWeb(full);
+        } else if (/\.(js|jsx)$/.test(entry.name)) {
+          const content = fs.readFileSync(full, 'utf8');
+          if (/\bINITIAL_(DRIVER_OFFERS|PASSENGER_REQUESTS|BOOKED_ESCROWS)\b/.test(content)) {
+            offenders.push(path.relative(process.cwd(), full));
+          }
+        }
+      }
+    };
+    walkWeb(webSrcDir);
+    assert(
+      offenders.length === 0,
+      `Bất biến Giao Diện 4: Toàn bộ apps/web không tham chiếu dữ liệu mẫu${offenders.length ? ' (vi phạm: ' + offenders.join(', ') + ')' : ''}`
+    );
   } catch (err) {
     assert(false, '40. Kiểm thử Bất Biến Sàn Thật', err.message);
   }

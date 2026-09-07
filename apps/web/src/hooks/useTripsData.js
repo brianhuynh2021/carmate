@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  INITIAL_DRIVER_OFFERS,
-  INITIAL_PASSENGER_REQUESTS,
-  INITIAL_BOOKED_ESCROWS,
-  getTomorrowISO
-} from '@carmate/shared';
+// Không import dữ liệu mẫu vào đây: sàn chỉ được hiển thị chuyến từ máy chủ.
+// Bỏ hẳn đường import khiến dữ liệu mẫu không thể vô tình quay lại giao diện.
+import { getTomorrowISO } from '@carmate/shared';
 import api from '../api/client.js';
 import { trackInitiateBooking, trackOpenZalo, trackDriverConfirm } from '../utils/analytics.js';
 
@@ -24,9 +21,14 @@ export default function useTripsData({
   setShowAuthModal,
   t
 }) {
-  const [driverOffers, setDriverOffers] = useState(INITIAL_DRIVER_OFFERS);
-  const [passengerRequests, setPassengerRequests] = useState(INITIAL_PASSENGER_REQUESTS);
-  const [bookedEscrows, setBookedEscrows] = useState(INITIAL_BOOKED_ESCROWS);
+  // BẤT BIẾN SÀN THẬT: sàn chỉ hiển thị chuyến do máy chủ trả về.
+  // Trước đây state khởi tạo bằng dữ liệu mẫu nên người dùng thấy ngay 13 chuyến
+  // ảo khi mở trang (kể cả khi máy chủ không có chuyến nào), và dữ liệu mẫu đó
+  // không bao giờ bị xoá vì nhánh cập nhật chỉ chạy khi mảng trả về > 0.
+  // Khởi tạo rỗng: sàn trống là sự thật, và empty state sẽ mời đăng chuyến.
+  const [driverOffers, setDriverOffers] = useState([]);
+  const [passengerRequests, setPassengerRequests] = useState([]);
+  const [bookedEscrows, setBookedEscrows] = useState([]);
   const [platformStats, setPlatformStats] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -50,8 +52,10 @@ export default function useTripsData({
 
         if (tripsRes.status === 'fulfilled' && tripsRes.value?.success) {
           const { driverOffers: drivers, passengerRequests: passengers } = tripsRes.value.data || {};
-          if (Array.isArray(drivers) && drivers.length > 0) setDriverOffers(drivers);
-          if (Array.isArray(passengers) && passengers.length > 0) setPassengerRequests(passengers);
+          // Nhận cả mảng rỗng: "máy chủ không có chuyến nào" là một câu trả lời
+          // hợp lệ và phải được phản ánh đúng trên sàn.
+          if (Array.isArray(drivers)) setDriverOffers(drivers);
+          if (Array.isArray(passengers)) setPassengerRequests(passengers);
         }
 
         if (bookingsRes.status === 'fulfilled' && bookingsRes.value?.success) {
