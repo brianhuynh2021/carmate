@@ -3203,6 +3203,163 @@ async function runTests() {
     assert(false, '40. Kiểm thử Bất Biến Sàn Thật', err.message);
   }
 
+  console.log('\n--- 41. KIỂM THỬ XÁC THỰC TELEGRAM 0Đ & BẤT BIẾN HAI VAI TRÒ (MIT, STANFORD, APPLE) ---');
+  try {
+    // 1. Kiểm tra cấu hình công khai Telegram Bot
+    const configRes = await fetch(`${BASE_URL}/api/auth/config`);
+    const configData = await configRes.json();
+    assert(configRes.status === 200, 'Telegram Config 1: API /api/auth/config hoạt động tốt (HTTP 200)');
+    assert(typeof configData.data?.telegramBotUsername === 'string', 'Telegram Config 2: Cung cấp username Bot Telegram');
+    assert(configData.data?.hasTelegramAuth === true, 'Telegram Config 3: hasTelegramAuth = true khi có Token Bot');
+
+    // 2. MIT Invariant: Từ chối payload thiếu thông tin xác thực Telegram
+    const emptyTgRes = await fetch(`${BASE_URL}/api/auth/telegram-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    assert(emptyTgRes.status === 400, 'Telegram Invariant 1: Chặn payload rỗng không có id và hash (HTTP 400)');
+
+    // 3. MIT Invariant: Từ chối chữ ký hash mạo danh / sai lệch
+    const fakeTgRes = await fetch(`${BASE_URL}/api/auth/telegram-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 99999999,
+        first_name: 'Hacker',
+        auth_date: Math.floor(Date.now() / 1000),
+        hash: 'invalid_forged_hash_1234567890abcdef1234567890abcdef'
+      })
+    });
+    assert(fakeTgRes.status === 401, 'Telegram Invariant 2: Chặn đứng chữ ký cryptographic giả mạo (HTTP 401)');
+
+    // 4. Xác thực đăng nhập Telegram Dev Test (môi trường dev)
+    const validTgRes = await fetch(`${BASE_URL}/api/auth/telegram-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: 12345678,
+        first_name: 'Minh',
+        last_name: 'Nguyễn',
+        username: 'minh_carmate_test',
+        auth_date: Math.floor(Date.now() / 1000),
+        hash: 'TEST_TELEGRAM_MOCK_minh_carmate_test:12345678'
+      })
+    });
+    const validTgData = await validTgRes.json();
+    assert(validTgRes.status === 200 && validTgData.success === true, 'Telegram Login 1: Đăng nhập Telegram Dev thành công (HTTP 200)');
+    assert(validTgData.token && typeof validTgData.token === 'string', 'Telegram Login 2: Cấp phát JWT token bảo mật');
+    assert(validTgData.user?.provider === 'telegram', 'Telegram Login 3: Provider ghi nhận chính xác là telegram');
+    assert(validTgData.user?.role === 'passenger', 'Telegram Invariant 3: Người dùng mới Telegram mặc định là passenger');
+
+    // 5. Kiểm tra tính công bằng hai vai trò (Dual-role Ergonomics) trong code giao diện
+    const headerCode = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx'), 'utf8');
+    assert(headerCode.includes('Cần tìm xe') && headerCode.includes('Đăng xe trống'), 'Stanford Dual-Role 1: Header có đủ 2 nút Cần tìm xe & Đăng xe trống');
+
+    const heroCode = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/market/Hero.jsx'), 'utf8');
+    assert(heroCode.includes('hero_family_ride.jpg'), 'Apple Hero Background: Hero sử dụng hình ảnh chuyến đi gia đình làm nền');
+
+    const appCode = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/App.jsx'), 'utf8');
+    assert(appCode.includes('Chủ xe') && appCode.includes('Người tìm xe'), 'Stanford Dual-Role 2: Hệ thống phân định rõ ràng 2 vai trò Chủ xe và Người tìm xe');
+
+    const authModalCode = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/modals/AuthModal.jsx'), 'utf8');
+    assert(authModalCode.includes('telegram') && authModalCode.includes('telegramLogin'), 'Apple Auth 1: AuthModal tích hợp phương thức Telegram 0đ SMS');
+
+    // 6. Kiểm thử Hợp nhất tài khoản Google và Telegram (Account Linking & Merging)
+    const testMergePhone = '0988776655';
+    const testMergeEmail = 'carmate_merge_test@gmail.com';
+    const testGoogleId = 'sub_merge_998877';
+    const testTelegramId = 99887766;
+
+    // 6.1 Đăng nhập bằng Google trước (có SĐT)
+    const googleLoginRes = await fetch(`${BASE_URL}/api/auth/google-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        credential: `TEST_GOOGLE_TOKEN_${testMergeEmail}:${testGoogleId}`,
+        name: 'Minh Hợp Nhất',
+        phone: testMergePhone
+      })
+    });
+    const googleLoginData = await googleLoginRes.json();
+    assert(googleLoginRes.status === 200 && googleLoginData.success === true, 'Account Merging 1: Đăng ký/đăng nhập Google thành công');
+    const firstUserId = googleLoginData.user.id;
+
+    // 6.2 Người đó đăng nhập tiếp bằng Telegram (cùng SĐT)
+    const tgMergeRes = await fetch(`${BASE_URL}/api/auth/telegram-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: testTelegramId,
+        first_name: 'Minh',
+        last_name: 'Telegram',
+        username: 'minh_tg_merge',
+        phone: testMergePhone,
+        auth_date: Math.floor(Date.now() / 1000),
+        hash: `TEST_TELEGRAM_MOCK_minh_tg_merge:${testTelegramId}`
+      })
+    });
+    const tgMergeData = await tgMergeRes.json();
+    assert(tgMergeRes.status === 200 && tgMergeData.success === true, 'Account Merging 2: Đăng nhập Telegram có cùng SĐT thành công');
+    assert(tgMergeData.user.id === firstUserId, 'Account Merging 3: Cả Google và Telegram hợp nhất thành 1 ID tài khoản duy nhất');
+    assert(tgMergeData.user.googleId === testGoogleId, 'Account Merging 4: Tài khoản lưu giữ Google ID');
+    assert(tgMergeData.user.telegramId === String(testTelegramId), 'Account Merging 5: Tài khoản đồng thời lưu giữ Telegram ID');
+
+    // 6.3 Đăng nhập lại bằng Google: Vẫn vào đúng tài khoản đó
+    const ggReLoginRes = await fetch(`${BASE_URL}/api/auth/google-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        credential: `TEST_GOOGLE_TOKEN_${testMergeEmail}:${testGoogleId}`
+      })
+    });
+    const ggReLoginData = await ggReLoginRes.json();
+    assert(ggReLoginData.user.id === firstUserId, 'Account Merging 6: Đăng nhập lại Google trả về đúng tài khoản đã gộp');
+    assert(ggReLoginData.user.telegramId === String(testTelegramId), 'Account Merging 7: Thông tin Telegram không bị ghi đè hay thất thoát');
+  } catch (err) {
+    assert(false, '41. Kiểm thử Xác thực Telegram 0đ & Bất biến Hai Vai Trò', err.message);
+  }
+
+  // =========================================================================
+  // 42. KIỂM THỬ TRÍ TUỆ AMBIENT NHẬN DIỆN NGÔN NGỮ & BỘ CHỌN CÀI ĐẶT (APPLE & STANFORD)
+  // =========================================================================
+  console.log('\n🌐 42. Kiểm thử Trí tuệ Ambient Nhận diện Ngôn ngữ & Bộ chọn Cài đặt...');
+  try {
+    const i18nIndexContent = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/i18n/index.jsx'), 'utf8');
+    assert(
+      i18nIndexContent.includes('browserLang.startsWith(\'en\')'),
+      'Ambient Lang 1: i18n tự động phát hiện ngôn ngữ máy/trình duyệt của người dùng'
+    );
+
+    const headerContent = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx'), 'utf8');
+    assert(
+      headerContent.includes('setLang(\'vi\')') && headerContent.includes('setLang(\'en\')'),
+      'Menu Settings 1: Menu Tài khoản tích hợp bộ chuyển đổi ngôn ngữ chuẩn Apple HIG'
+    );
+
+    const authModalContent = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/modals/AuthModal.jsx'), 'utf8');
+    assert(
+      authModalContent.includes('setLang(\'vi\')') && authModalContent.includes('setLang(\'en\')'),
+      'Guest Setting 1: Màn hình Đăng nhập (AuthModal) có sẵn bộ chuyển đổi ngôn ngữ cho khách quốc tế'
+    );
+
+    const footerContent = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/common/Footer.jsx'), 'utf8');
+    assert(
+      footerContent.includes('hidden md:block'),
+      'Mobile Native 1: Footer web được ẩn trên mobile để giữ trải nghiệm 100% Native App'
+    );
+    assert(
+      footerContent.includes('Hỗ trợ bạn') && footerContent.includes('md:hidden'),
+      'Mobile Support 1: Cuối màn hình mobile có card "Hỗ trợ bạn" gọn gàng, tinh tế chuẩn Apple'
+    );
+    assert(
+      !footerContent.includes('CSKH') && !headerContent.includes('CSKH'),
+      'Terminology Standard: Tuyệt đối dùng "Hỗ trợ bạn", không dùng "CSKH" để giữ tinh thần chia sẻ cộng đồng'
+    );
+  } catch (err) {
+    assert(false, '42. Kiểm thử Trí tuệ Ambient Nhận diện Ngôn ngữ & Bộ chọn Cài đặt', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

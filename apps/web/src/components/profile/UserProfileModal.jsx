@@ -20,6 +20,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
+import { GoogleIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import api from '../../api/client.js';
 import { computeTrustScore, getTrustLevel, DEFAULT_TRUST_RULES } from '@carmate/shared';
 
@@ -622,6 +623,65 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 placeholder="VD: Đi lại hàng tuần thứ 2 và thứ 6, tính tình vui vẻ, xe gia đình giữ gìn sạch sẽ..."
                 className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.12] text-xs text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:border-[#0071e3] outline-none resize-none"
               />
+            </div>
+
+            {/* ── TÀI KHOẢN ĐỊNH DANH ĐÃ LIÊN KẾT (ACCOUNT LINKING & MERGING) ── */}
+            <div className="pt-2.5 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#1d1d1f] dark:text-slate-200 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3]" />
+                  <span>Tài khoản định danh liên kết</span>
+                </span>
+                <span className="text-[11px] text-[#86868b]">Tự động hợp nhất 1 tài khoản</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Thẻ Google */}
+                <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <GoogleIcon className="w-4 h-4 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-[#1d1d1f] dark:text-white truncate">Google</p>
+                      <p className="text-[10px] text-[#86868b] truncate">
+                        {currentUser?.googleId || currentUser?.email ? (currentUser?.email || 'Đã liên kết') : 'Chưa liên kết'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                    currentUser?.googleId || currentUser?.email
+                      ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40'
+                      : 'bg-black/[0.04] dark:bg-white/[0.06] text-[#86868b]'
+                  }`}>
+                    {currentUser?.googleId || currentUser?.email ? 'Đã liên kết' : 'Trống'}
+                  </span>
+                </div>
+
+                {/* Thẻ Telegram */}
+                <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <TelegramIcon className="w-4 h-4 text-[#229ED9] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-[#1d1d1f] dark:text-white truncate">Telegram</p>
+                      <p className="text-[10px] text-[#86868b] truncate">
+                        {currentUser?.telegramId || currentUser?.username
+                          ? `@${currentUser?.username || currentUser?.telegramId}`
+                          : 'Chưa liên kết'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                    currentUser?.telegramId || currentUser?.username
+                      ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40'
+                      : 'bg-black/[0.04] dark:bg-white/[0.06] text-[#86868b]'
+                  }`}>
+                    {currentUser?.telegramId || currentUser?.username ? 'Đã liên kết' : 'Trống'}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[10.5px] text-[#86868b] leading-relaxed">
+                CarMate tự động đối soát Số điện thoại và Email để hợp nhất tài khoản Google & Telegram làm 1, không tạo 2 tài khoản trùng lặp.
+              </p>
             </div>
           </div>
         )}

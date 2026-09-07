@@ -47,7 +47,7 @@ export default function Button({
       {...props}
     >
       {Icon && <Icon className={`${ICON_SIZES[size] || ICON_SIZES.md} shrink-0`} strokeWidth={2.2} />}
-      {children && <span className="truncate">{children}</span>}
+      {children && <span className="inline-flex items-center justify-center gap-1.5 truncate">{children}</span>}
       {IconRight && <IconRight className={`${ICON_SIZES[size] || ICON_SIZES.md} shrink-0`} strokeWidth={2.2} />}
     </Component>
   );

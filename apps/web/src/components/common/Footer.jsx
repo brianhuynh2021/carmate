@@ -1,4 +1,5 @@
 import React from 'react';
+import { MessageCircle } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
@@ -27,7 +28,67 @@ export default function Footer({ onNavigate, onOpenTerms }) {
   ];
 
   return (
-    <footer className="mt-20 border-t border-black/[0.06] bg-[#f5f5f7] pb-24 md:pb-8 transition-colors">
+    <>
+      {/* ── MOBILE NATIVE SUPPORT CARD (md:hidden) ── */}
+      {/* Thiết kế công thái học Stanford & Liquid Apple: Gọn nhẹ, tải nhận thức = 0, danh xưng 'Hỗ trợ bạn' chuẩn mực cộng đồng */}
+      <section className="md:hidden mt-8 px-4 pb-28 pt-2">
+        <div className="rounded-3xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] p-5 shadow-xs text-center space-y-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-xs font-semibold">
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>Hỗ trợ bạn</span>
+            </div>
+            <h3 className="text-sm font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+              Bạn cần hỗ trợ về chuyến đi?
+            </h3>
+            <p className="text-xs text-[#86868b] leading-relaxed max-w-xs mx-auto">
+              CarMate luôn sẵn sàng đồng hành cùng bạn và chủ xe qua kênh trao đổi trực tiếp.
+            </p>
+          </div>
+
+          {/* Nút hỗ trợ trực tiếp 1-chạm (Zalo & Telegram) */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <a
+              href={SITE_INFO.zaloOA}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-10 px-3 rounded-2xl bg-[#0068ff]/10 hover:bg-[#0068ff]/15 active:scale-[0.98] border border-[#0068ff]/20 text-[#0068ff] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+            >
+              <ZaloIcon className="w-4 h-4" />
+              <span>Hỗ trợ Zalo</span>
+            </a>
+
+            <a
+              href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-10 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+            >
+              <TelegramIcon className="w-4 h-4" />
+              <span>Hỗ trợ Telegram</span>
+            </a>
+          </div>
+
+          {/* Quy chế, Ngôn ngữ & Bản quyền */}
+          <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[11px] text-[#86868b]">
+            <button
+              type="button"
+              onClick={onOpenTerms}
+              className="hover:text-[#0071e3] transition-colors cursor-pointer"
+            >
+              Quy chế & Điều khoản
+            </button>
+            <div className="flex items-center gap-1.5">
+              <span>© CarMate</span>
+              <span>·</span>
+              <LanguageToggle size="sm" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── DESKTOP FOOTER (hidden md:block) ── */}
+      <footer className="hidden md:block mt-20 border-t border-black/[0.06] bg-[#f5f5f7] pb-8 transition-colors">
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         {/* ── TẦNG 1: TRẠNG THÁI & LIÊN HỆ TRỰC TIẾP ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-black/[0.06]">
@@ -130,5 +191,6 @@ export default function Footer({ onNavigate, onOpenTerms }) {
         </div>
       </div>
     </footer>
+  </>
   );
 }

@@ -24,6 +24,17 @@ const detectInitialLang = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === 'vi' || saved === 'en') return saved;
   } catch {}
+
+  // Trí tuệ Ambient: Tự động nhận diện theo ngôn ngữ máy/trình duyệt của người dùng
+  try {
+    if (typeof navigator !== 'undefined') {
+      const browserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+      if (browserLang.startsWith('en')) {
+        return 'en';
+      }
+    }
+  } catch {}
+
   return 'vi';
 };
 

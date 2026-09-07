@@ -369,7 +369,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                             onClick={() => onBook(driver)}
                             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0071e3] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
                           >
-                            <span>Ghép Chuyến Với Chủ Xe (1 chạm)</span>
+                            <span>Ghép Chuyến Với Chủ Xe</span>
                             <ArrowRight className="w-4 h-4" />
                           </button>
                         </div>

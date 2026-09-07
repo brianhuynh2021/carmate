@@ -11,7 +11,8 @@ import {
   ArrowRight,
   Package,
   Camera,
-  Lock
+  Lock,
+  User
 } from 'lucide-react';
 import {
   formatVND,
@@ -162,10 +163,6 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
     item.publicName && !item.publicName.includes('Test E2E')
       ? item.publicName
       : item.author || (isDriver ? `Chủ xe ${item.maskedCode || ''}` : `Khách tìm xe ${item.maskedCode || ''}`);
-
-  const avatarLetter = (
-    driverDisplayName.replace(/^(Chủ xe|Bác tài|Khách|Anh|Chị)\s*/i, '').trim()[0] || (isDriver ? 'C' : 'K')
-  ).toUpperCase();
 
   const fromParsed = parseLocation(item.from);
   const toParsed = parseLocation(item.to);
@@ -421,8 +418,8 @@ export default function TripCard({ item, onBook, onShare, onViewTrustProfile, on
                   className="w-9 h-9 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-2xs group-hover/driver:border-[#0071e3] transition-colors"
                 />
               ) : (
-                <span className="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-xs shadow-2xs group-hover/driver:border-[#0071e3] transition-colors">
-                  {avatarLetter}
+                <span className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100/70 dark:from-blue-950/60 dark:to-indigo-900/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/70 dark:border-blue-800/60 flex items-center justify-center shadow-2xs group-hover/driver:border-[#0071e3] group-hover/driver:scale-105 transition-all">
+                  <User className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </span>
               )}
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#107c41] border-2 border-white dark:border-slate-900 flex items-center justify-center">

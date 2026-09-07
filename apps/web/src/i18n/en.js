@@ -73,7 +73,7 @@ export default {
     eyebrow: 'Direct family rideshare & convenient intercity empty-leg network · 0% fee',
     title: 'Intercity Ridesharing & Convenient Empty-Leg Matching',
     subtitle:
-      'Say goodbye to cramped commercial buses and empty family car seats. CarMate directly connects vehicle owners with fellow travelers — Travel comfortably like family, fairly share fuel & tolls, direct connection via Zalo.',
+      'Travel comfortably like family, fairly share fuel & tolls. Direct connection between vehicle owners with empty seats and fellow travelers — 0% platform fee.',
     findTripCta: 'Find a ride',
     postTripCta: 'Post empty seats (Family & Empty-leg)',
     stat_members: 'verified members',

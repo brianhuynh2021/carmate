@@ -19,7 +19,7 @@ export default function useAppModals() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalConfig, setAuthModalConfig] = useState({
     title: 'Đăng Nhập CarMate',
-    subtitle: 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
+    subtitle: 'Đồng bộ bài đăng · Tiết kiệm chi phí · An toàn & bảo mật',
     contextNotice: null,
     pendingTab: null
   });
@@ -32,7 +32,7 @@ export default function useAppModals() {
   const openAuthWithContext = useCallback(
     ({
       title = 'Đăng Nhập CarMate',
-      subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · 100% an toàn',
+      subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · An toàn & bảo mật',
       contextNotice = null,
       pendingTab = null
     } = {}) => {

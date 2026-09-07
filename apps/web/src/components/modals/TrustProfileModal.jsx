@@ -10,7 +10,8 @@ import {
   Heart,
   Share2,
   AlertTriangle,
-  MessageSquare
+  MessageSquare,
+  User
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -105,8 +106,8 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
                   className="w-12 h-12 rounded-full object-cover shrink-0 border border-white/30 shadow-xs ring-2 ring-white/20"
                 />
               ) : (
-                <span className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md text-white font-display text-lg font-bold inline-flex items-center justify-center shrink-0 border border-white/30 shadow-xs">
-                  {name.slice(0, 2).toUpperCase()}
+                <span className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md text-white inline-flex items-center justify-center shrink-0 border border-white/30 shadow-xs">
+                  <User className="w-6 h-6 text-white" strokeWidth={2.2} />
                 </span>
               )}
               <div>

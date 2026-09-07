@@ -21,7 +21,7 @@ import {
   reportVehicleMismatch
 } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
-import { requestOtp, verifyOtp, zaloLogin, googleLogin, getMe, updateProfile, deleteAccount, getAuthConfigHandler } from '../controllers/authController.js';
+import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, getMe, updateProfile, deleteAccount, getAuthConfigHandler } from '../controllers/authController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -58,6 +58,7 @@ router.post('/agent/chat', optionalAuth, agentChatHandler);
 // --- Auth & Identity (Zero-Cost / Google & Zalo với Auth Limiter & JWT) ---
 router.get('/auth/config', getAuthConfigHandler);
 router.post('/auth/google-login', googleLogin);
+router.post('/auth/telegram-login', authLimiter, telegramLogin);
 router.post('/auth/zalo-login', zaloLogin);
 router.post('/auth/request-otp', authLimiter, requestOtp);
 router.post('/auth/verify-otp', authLimiter, verifyOtp);

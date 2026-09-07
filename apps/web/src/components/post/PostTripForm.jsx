@@ -238,13 +238,19 @@ const CAR_PHOTO_SLOTS = [
   { id: 'trunk', label: 'Khoang hành lý', required: false, desc: 'Cốp rộng để đồ thoải mái' }
 ];
 
-export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
+export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initialRole = 'driver' }) {
   const { t, lang } = useI18n();
   const data = useDataLabel();
 
   const upcomingDays = useMemo(() => getUpcomingDays(7), []);
 
-  const [role, setRole] = useState('driver');
+  const [role, setRole] = useState(initialRole);
+
+  useEffect(() => {
+    if (initialRole) {
+      setRole(initialRole);
+    }
+  }, [initialRole]);
   // Lộ trình hoàn toàn tự do toàn quốc (Hà Nội, Hải Phòng, Đà Nẵng, Bình Phước, Sài Gòn...)
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
@@ -665,7 +671,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
             className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 transition-all shadow-xs shrink-0 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Áp dụng 1-chạm (0.1s)</span>
+            <span>Áp dụng</span>
           </button>
         </div>
       )}
@@ -1041,7 +1047,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth }) {
                     <span>⚡ Xe tiện chuyến (Biển vàng)</span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
-                    Xe dịch vụ chiều về rỗng khách, nhận ghép trợ giá chi phí cầu đường, không phí sàn.
+                    Xe dịch vụ chiều về rỗng khách, nhận ghép trợ giá chi phí cầu đường, 0 phí sàn.
                   </p>
                 </button>
               </div>
