@@ -22,11 +22,28 @@ const candidateEnvPaths = [
   path.resolve(process.cwd(), '.env') // CWD .env
 ];
 for (const envPath of candidateEnvPaths) {
-  if (fs.existsSync(envPath) && typeof process.loadEnvFile === 'function') {
+  if (fs.existsSync(envPath)) {
     try {
-      process.loadEnvFile(envPath);
+      if (typeof process.loadEnvFile === 'function') {
+        process.loadEnvFile(envPath);
+      }
+      // Đảm bảo các biến có giá trị trong file .env luôn được cập nhật nếu trước đó bị rỗng
+      const content = fs.readFileSync(envPath, 'utf8');
+      for (const line of content.split('\n')) {
+        const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)?\s*$/);
+        if (match) {
+          const key = match[1];
+          let val = (match[2] || '').trim();
+          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            val = val.slice(1, -1);
+          }
+          if (val && (!process.env[key] || process.env[key].trim() === '')) {
+            process.env[key] = val;
+          }
+        }
+      }
     } catch {
-      // Bỏ qua nếu đã nạp hoặc file rỗng
+      // Bỏ qua nếu lỗi nạp
     }
   }
 }

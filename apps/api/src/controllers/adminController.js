@@ -286,7 +286,7 @@ export async function adminAuth(req, res) {
     const hasTelegram = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_LOG_CHAT_ID);
 
     if (hasTelegram) {
-      sendTelegramMessage(
+      await sendTelegramMessage(
         `🔐 <b>[CARMATE ADMIN MFA]</b>\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `Mã OTP xác thực đăng nhập Cổng Quản Trị của bạn là:\n\n` +
@@ -297,7 +297,9 @@ export async function adminAuth(req, res) {
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `⚠️ <i>Nếu không phải bạn yêu cầu, hãy đổi mật mã Admin ngay!</i>`,
         { parseMode: 'HTML' }
-      ).catch(() => {});
+      ).catch((err) => {
+        console.warn('[Admin Auth] Lỗi gửi OTP qua Telegram:', err.message);
+      });
     }
 
     if (!isProduction) {
