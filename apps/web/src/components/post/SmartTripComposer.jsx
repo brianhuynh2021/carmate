@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   Check,
@@ -15,15 +15,18 @@ import {
   Package,
   HeartHandshake,
   Plane,
-  RefreshCw
+  RefreshCw,
+  Share2
 } from 'lucide-react';
 import { parseNaturalTrip, SMART_TRIP_TEMPLATES } from '../../utils/nlpTripParser.js';
 import { formatVND } from '@carmate/shared';
+import TicketShareModal from '../modals/TicketShareModal.jsx';
 
 export default function SmartTripComposer({ onApply, onInstantSubmit, currentRole = 'driver', onRoleChange, currentUser }) {
   const [inputText, setInputText] = useState('');
   const [parsedResult, setParsedResult] = useState(null);
   const [activeCategory, setActiveCategory] = useState(currentRole === 'passenger' ? 'passenger' : 'driver');
+  const [showTicketShare, setShowTicketShare] = useState(false);
 
   // Đồng bộ tab danh mục mẫu khi vai trò ở Form cha thay đổi
   useEffect(() => {
@@ -92,6 +95,27 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
   };
 
   const currentTemplates = SMART_TRIP_TEMPLATES[activeCategory] || SMART_TRIP_TEMPLATES.driver;
+
+  const synthesizedTrip = useMemo(() => {
+    if (!parsedResult) return null;
+    return {
+      id: `smart-${Date.now()}`,
+      from: parsedResult.fromLocation || 'Hà Nội',
+      to: parsedResult.toLocation || 'Hải Phòng',
+      timeSlot: parsedResult.timeSlot || '07:00-09:00',
+      timeSlotLabel: `${parsedResult.timeSlot || '07:00-09:00'} · ${parsedResult.scheduleDay || 'Hôm nay'}`,
+      availableSeats: parsedResult.seats || 3,
+      seatsNeeded: parsedResult.seats || 1,
+      basePricePerSeat: parsedResult.price || 150000,
+      carType: parsedResult.carType || 'Toyota Vios (Xe 5 chỗ)',
+      routeCategory: parsedResult.carCategory === 'convenient_trip' ? 'Xe tiện chuyến' : 'Xe gia đình',
+      phoneReal: parsedResult.phoneReal || currentUser?.phone || '',
+      phone: parsedResult.phoneReal || currentUser?.phone || '',
+      publicName: currentUser?.name || (parsedResult.role === 'driver' ? 'Chủ xe CarMate' : 'Khách CarMate'),
+      notes: parsedResult.waypointNote || '',
+      type: parsedResult.role === 'passenger' ? 'passenger_request' : 'driver_offer'
+    };
+  }, [parsedResult, currentUser]);
 
   return (
     <div className="rounded-2xl bg-gradient-to-b from-slate-900 via-[#16181d] to-[#0f1013] text-white p-4 sm:p-5 border border-slate-800 shadow-xl relative overflow-hidden mb-6">
@@ -250,18 +274,28 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
               <Check className="w-3.5 h-3.5" />
               <span>Đã nhận diện và tự điền biểu mẫu:</span>
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                if (parsedResult && onInstantSubmit) {
-                  onInstantSubmit(parsedResult);
-                }
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all cursor-pointer active:scale-95 shrink-0"
-            >
-              <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
-              <span>Đăng chuyến ngay</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setShowTicketShare(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+              >
+                <Share2 className="w-3.5 h-3.5 text-sky-400" />
+                <span>Xuất Vé VIP Đăng Zalo/FB</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (parsedResult && onInstantSubmit) {
+                    onInstantSubmit(parsedResult);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all cursor-pointer active:scale-95 shrink-0"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
+                <span>Đăng chuyến ngay</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
@@ -359,6 +393,13 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
             )}
           </div>
         </div>
+      )}
+
+      {showTicketShare && synthesizedTrip && (
+        <TicketShareModal
+          trip={synthesizedTrip}
+          onClose={() => setShowTicketShare(false)}
+        />
       )}
     </div>
   );

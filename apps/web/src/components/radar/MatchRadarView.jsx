@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Car, Users, Sparkles, CheckCircle2, MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap, User } from 'lucide-react';
+import { Car, Users, Sparkles, CheckCircle2, MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap, User, Radio, BellRing } from 'lucide-react';
 import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, cleanPhoneNumber, isTripExpired } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { Segmented } from '../ui/Chip.jsx';
@@ -11,13 +11,30 @@ import { RouteTimeline } from '../market/TripCard.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import api from '../../api/client.js';
 
-export default function MatchRadarView({ driverOffers = [], passengerRequests = [], onBook, onViewTrustProfile }) {
+export default function MatchRadarView({ driverOffers = [], passengerRequests = [], onBook, onViewTrustProfile, onShowToast }) {
   const { t, lang } = useI18n();
   const [radarMode, setRadarMode] = useState('smart'); // 'smart' | 'manual'
   const [userRole, setUserRole] = useState('passenger'); // 'driver' | 'passenger'
   const [selectedRouteKey, setSelectedRouteKey] = useState('all');
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isRadarWatcherActive, setIsRadarWatcherActive] = useState(() => {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem('carmate_radar_watcher_active_v1') === 'true';
+  });
+
+  const handleToggleRadarWatcher = () => {
+    const next = !isRadarWatcherActive;
+    setIsRadarWatcherActive(next);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('carmate_radar_watcher_active_v1', String(next));
+    }
+    if (next) {
+      onShowToast?.('📡 Đã kích hoạt Radar AI Săn Xe 24/7! Hệ thống đang tự động giám sát các chuyến mới.');
+    } else {
+      onShowToast?.('Đã tạm dừng Radar Săn Xe.');
+    }
+  };
 
   const routeKeys = Object.keys(ROUTE_BENCHMARKS);
 
@@ -73,6 +90,83 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
           </Badge>
         }
       />
+
+      {/* ── AUTONOMOUS BACKGROUND RADAR: SĂN XE 24/7 (CURSOR AI AMBIENT AGENT) ── */}
+      <div
+        className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 relative overflow-hidden ${
+          isRadarWatcherActive
+            ? 'bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white border-emerald-500/40 shadow-xl shadow-emerald-500/10'
+            : 'bg-white dark:bg-[#1c1c1e] text-slate-800 dark:text-white border-black/[0.08] dark:border-white/[0.08] shadow-xs'
+        }`}
+      >
+        {isRadarWatcherActive && (
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+        )}
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+          <div className="flex items-center gap-3.5">
+            {/* Vòng quét sóng Radar phát xung (Apple Liquid Radar Wave) */}
+            <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 shrink-0">
+              {isRadarWatcherActive ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-emerald-400 opacity-60 pointer-events-none" />
+                  <Radio className="w-6 h-6 text-emerald-400 relative z-10 animate-pulse" />
+                </>
+              ) : (
+                <Radio className="w-6 h-6 text-slate-400" />
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-sm sm:text-base tracking-tight flex items-center gap-1.5">
+                  <span>Radar AI Săn Xe 24/7</span>
+                  {isRadarWatcherActive && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold tracking-wider uppercase border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Đang giám sát
+                    </span>
+                  )}
+                </h4>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 pt-0.5 max-w-lg">
+                {isRadarWatcherActive
+                  ? `AI chạy ngầm giám sát tuyến "${selectedRouteKey === 'all' ? 'Tất cả các tuyến' : ROUTE_BENCHMARKS[selectedRouteKey]?.shortName}". Tự động rung chuông khi có chuyến mới phù hợp.`
+                  : 'Kích hoạt để AI tự động quét chuyến mới liên tục, giải phóng bạn khỏi việc phải F5 trang liên tục.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end shrink-0">
+            {isRadarWatcherActive && (
+              <span className="text-xs font-bold text-emerald-400 tabular px-3 py-1 rounded-xl bg-white/5 border border-white/10">
+                {validMatches.length} chuyến khớp
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleToggleRadarWatcher}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer inline-flex items-center gap-2 active:scale-95 shadow-md ${
+                isRadarWatcherActive
+                  ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                  : 'bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-blue-500/25'
+              }`}
+            >
+              {isRadarWatcherActive ? (
+                <>
+                  <BellRing className="w-3.5 h-3.5" />
+                  <span>Tắt Radar</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>Bật Radar Săn Xe</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* ── HERO MASTER ROLE SWITCH: VỊ TRÍ SỐ 1 CHO NGƯỜI DÙNG (APPLE HIG & STANFORD HCI) ── */}
       <div className="surface p-3 sm:p-4 rounded-3xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-3.5 bg-gradient-to-b from-white to-[#fafafc]">

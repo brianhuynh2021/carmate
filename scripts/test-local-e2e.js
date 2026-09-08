@@ -4352,6 +4352,59 @@ async function runTests() {
     assert(false, '58. Kiểm thử Phòng Chống & Xử Phạt Số Điện Thoại Ảo', err.message);
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 59. KIỂM THỬ TRÍ TUỆ BẢN ĐỊA PHONG CÁCH CURSOR (EDGE-AI & ZERO-THINKING UX)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  console.log('\n🤖 59. Kiểm thử Trí Tuệ Bản Địa Phong Cách Cursor (Edge-AI & Zero-Thinking UX)...');
+  try {
+    // 1. Ghost Route (Cursor Tab)
+    const personaMemorySrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/utils/personaMemory.js'), 'utf8');
+    assert(personaMemorySrc.includes('export function getContextualGhostRoute'), 'Cursor Tab 1: personaMemory.js có hàm getContextualGhostRoute');
+    assert(personaMemorySrc.includes('hintLabel') && personaMemorySrc.includes('isPersonalHistory'), 'Cursor Tab 2: getContextualGhostRoute trả về cấu trúc lộ trình ma hoàn chỉnh');
+
+    const heroSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/market/Hero.jsx'), 'utf8');
+    assert(heroSrc.includes('getContextualGhostRoute'), 'Cursor Tab 3: Hero.jsx tích hợp hàm dự đoán Ghost Route');
+    assert(heroSrc.includes("e.key === 'Tab'") && heroSrc.includes('handleApplyGhostRoute'), 'Cursor Tab 4: Hero.jsx bắt sự kiện phím Tab vật lý để tự điền lộ trình');
+    assert(heroSrc.includes('Tuyến quen:') && heroSrc.includes('Tự điền ⚡'), 'Cursor Tab 5: Hero.jsx hiển thị Capsule Tuyến quen thuộc chuẩn Apple HIG');
+
+    // 2. Cursor Cmd+K (Paste Facebook/Zalo Status & VIP Ticket)
+    assert(heroSrc.includes("e.key.toLowerCase() === 'k'") && heroSrc.includes('setShowQuickPasteModal'), 'Cmd+K 1: Hero.jsx bắt phím tắt Cmd+K / Ctrl+K mở nhanh dán tin bài');
+    assert(heroSrc.includes('Dán tin FB / Zalo') && heroSrc.includes('⌘K'), 'Cmd+K 2: Hero.jsx có nút 1-chạm Dán tin FB / Zalo kèm phím tắt ⌘K');
+    assert(heroSrc.includes('<SmartTripComposer'), 'Cmd+K 3: Hero.jsx tích hợp SmartTripComposer trong QuickPasteModal');
+
+    const composerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/SmartTripComposer.jsx'), 'utf8');
+    assert(composerSrc.includes('Xuất Vé VIP Đăng Zalo/FB'), 'VIP Ticket 1: SmartTripComposer có nút 1-chạm Xuất Vé VIP Đăng Zalo/FB');
+    assert(composerSrc.includes('synthesizedTrip'), 'VIP Ticket 2: SmartTripComposer tự tổng hợp dữ liệu thẻ vé chuyến từ kết quả bóc tách NLP');
+    assert(composerSrc.includes('<TicketShareModal'), 'VIP Ticket 3: SmartTripComposer kết nối trực tiếp với TicketShareModal');
+
+    // 3. Consensus Chat AI (Dynamic Context-Aware Smart Replies)
+    const inboxSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxSrc.includes('lastPartnerMsg'), 'Smart Replies 1: InboxModal phân tích tin nhắn gần nhất của đối tác');
+    assert(inboxSrc.includes('Cốp xe rộng') && inboxSrc.includes('vali size 20'), 'Smart Replies 2: Phản hồi thông minh theo Intent Hành lý / Vali');
+    assert(inboxSrc.includes('cây xăng') && inboxSrc.includes('ngã tư'), 'Smart Replies 3: Phản hồi thông minh theo Intent Điểm đón / Hẹn');
+    assert(inboxSrc.includes('xuất phát đúng giờ'), 'Smart Replies 4: Phản hồi thông minh theo Intent Giờ giấc / Thời gian');
+    assert(inboxSrc.includes('Xác nhận chuyến để trao đổi SĐT'), 'Smart Replies 5: Phản hồi thông minh theo Intent Đồng ý / Chốt giữ chỗ');
+    assert(!inboxSrc.includes('bác tài') && !inboxSrc.includes('Bác tài'), 'Smart Replies 6: Tuân thủ tuyệt đối quy tắc danh xưng Chủ xe / Người đi cùng (Zero bác tài)');
+
+    // 4. Autonomous Background Radar (24/7 Active Route Watcher)
+    const radarSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/radar/MatchRadarView.jsx'), 'utf8');
+    assert(radarSrc.includes('isRadarWatcherActive') && radarSrc.includes('setIsRadarWatcherActive'), 'AI Radar 1: MatchRadarView quản lý trạng thái Radar AI Săn Xe 24/7');
+    assert(radarSrc.includes('carmate_radar_watcher_active_v1'), 'AI Radar 2: Lưu cấu hình radar săn xe vào localStorage');
+    assert(radarSrc.includes('Radar AI Săn Xe 24/7') && radarSrc.includes('animate-ping'), 'AI Radar 3: MatchRadarView hiển thị hiệu ứng sóng radar phát xung chuẩn Apple');
+    assert(radarSrc.includes('Bật Radar Săn Xe') && radarSrc.includes('Tắt Radar'), 'AI Radar 4: Hỗ trợ 1-chạm bật/tắt radar săn xe');
+
+    // 5. Fair-Split Calculator (Minh Bạch Xăng Xe & Cầu Đường)
+    const fairSplitSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/FairSplitModal.jsx'), 'utf8');
+    assert(fairSplitSrc.includes('litersConsumed') && fairSplitSrc.includes('fuelCost'), 'Fair Split 1: Tính toán chi phí xăng xe toán học MIT theo cự ly thực tế');
+    assert(fairSplitSrc.includes('tollFee') && fairSplitSrc.includes('totalTripCost'), 'Fair Split 2: Tổng hợp chi phí lăn bánh gồm xăng và vé cầu đường');
+    assert(fairSplitSrc.includes('fairPricePerSeat') && fairSplitSrc.includes('taxiCost'), 'Fair Split 3: So sánh tiết kiệm minh bạch với taxi truyền thống');
+    assert(heroSrc.includes('<FairSplitModal') && heroSrc.includes('Định mức xăng'), 'Fair Split 4: Hero.jsx tích hợp FairSplitModal và nút mở 1-chạm');
+    const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postFormSrc.includes('<FairSplitModal') && postFormSrc.includes('Bảng tính chi phí xăng & cầu đường'), 'Fair Split 5: PostTripForm.jsx tích hợp FairSplitModal cho chủ xe tham khảo');
+  } catch (err) {
+    assert(false, '59. Kiểm thử Trí Tuệ Bản Địa Phong Cách Cursor', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

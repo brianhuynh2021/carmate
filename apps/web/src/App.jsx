@@ -679,6 +679,8 @@ export default function App() {
               searchTo={searchTo}
               setSearchTo={setSearchTo}
               onPostClick={handleRequestPostTrip}
+              currentUser={currentUser}
+              onShowToast={showToast}
             />
 
             <div className={`${container} py-3.5 sm:py-6 space-y-3.5 sm:space-y-5 relative z-10`}>
@@ -961,6 +963,7 @@ export default function App() {
               passengerRequests={passengerRequests}
               onBook={handleInitiateBook}
               onViewTrustProfile={setSelectedDriverForTrust}
+              onShowToast={showToast}
             />
           </div>
         )}

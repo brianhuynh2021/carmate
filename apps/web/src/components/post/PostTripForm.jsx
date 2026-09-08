@@ -22,10 +22,12 @@ import {
   AlertTriangle,
   Eye,
   Crosshair,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Calculator
 } from 'lucide-react';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import PlateMaskModal from '../modals/PlateMaskModal.jsx';
+import FairSplitModal from '../modals/FairSplitModal.jsx';
 import {
   ROUTE_BENCHMARKS,
   TIME_SLOTS,
@@ -334,6 +336,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   }, [fromLocation, toLocation]);
 
   const [hasManuallyEditedPrice, setHasManuallyEditedPrice] = useState(false);
+  const [showFairSplitModal, setShowFairSplitModal] = useState(false);
   useEffect(() => {
     if (!hasManuallyEditedPrice && routePriceBenchmark?.suggestedPrice && fromLocation && toLocation) {
       setPrice(routePriceBenchmark.suggestedPrice);
@@ -1108,6 +1111,14 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     · {routePriceBenchmark.note}
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setShowFairSplitModal(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer ml-auto"
+                >
+                  <Calculator className="w-3 h-3 text-[#0071e3]" />
+                  <span>Bảng tính chi phí xăng & cầu đường</span>
+                </button>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">
                 * Định giá tham khảo theo hao phí lăn bánh. Mức chia sẻ thực tế do Chủ xe và Người đi cùng tự do thoả
@@ -1768,6 +1779,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
           onClose={() => setEditingMaskIndex(null)}
         />
       )}
+
+      {/* Modal Định mức xăng & Cầu đường minh bạch */}
+      <FairSplitModal
+        isOpen={showFairSplitModal}
+        onClose={() => setShowFairSplitModal(false)}
+        initialRouteKey="hn_hp"
+        onSelectSuggestedPrice={(rate) => {
+          setPrice(rate);
+          setHasManuallyEditedPrice(true);
+          onShowToast?.(`Đã áp dụng định mức phụ xăng ${formatVND(rate)}/ghế!`);
+        }}
+      />
     </div>
   );
 }

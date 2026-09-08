@@ -148,10 +148,81 @@ export default function InboxModal({
     });
   }, [activeBooking]);
 
-  // Gợi ý tin nhắn khi đang thỏa thuận trước khi chốt
+  // Gợi ý tin nhắn thông minh theo ngữ cảnh (Cursor AI Context-Aware Smart Replies)
   const quickResponseChips = useMemo(() => {
     if (activeBooking?.status !== 'inquiring') return [];
-    if (activeTab === 'incoming') {
+    const msgs = activeBooking?.messages || [];
+    const myRole = activeTab === 'incoming' ? 'driver' : 'passenger';
+    // Lấy tin nhắn gần nhất của đối tác
+    const lastPartnerMsg = [...msgs].reverse().find((m) => !m.isSystem && m.senderRole !== myRole);
+    const partnerText = (lastPartnerMsg?.text || '').toLowerCase();
+
+    // 1. Phân tích Intent: Hỏi hoặc đề cập đến Hành lý / Vali / Thùng hàng
+    if (/(vali|hành lý|hanh ly|đồ đạc|do dac|balo|thùng|thung|cốp|cop)/i.test(partnerText)) {
+      if (myRole === 'driver') {
+        return [
+          '🧳 Cốp xe rộng, để vừa 1 vali to và túi',
+          '🎒 Xe chỉ nhận balo gọn thôi nhé bạn',
+          '📦 Có nhận thùng đồ nhỏ gửi kèm nha'
+        ];
+      }
+      return [
+        '🎒 Em chỉ mang 1 balo nhỏ gọn',
+        '🧳 Em có 1 vali size 20 và balo xách tay',
+        '📦 Em có 1 thùng quà quê nhỏ gọn thôi ạ'
+      ];
+    }
+
+    // 2. Phân tích Intent: Điểm đón / Cây xăng / Ngã tư / Trục đường
+    if (/(đón ở|don o|chỗ nào|cho nao|ở đâu|o dau|cây xăng|cay xang|ngã tư|nga tu|quốc lộ|quoc lo|tiện đường|tien duong)/i.test(partnerText)) {
+      if (myRole === 'driver') {
+        return [
+          '📍 Đón tại cây xăng/ngã tư trên trục đường chính nhé',
+          '📍 Bạn đứng ở cổng chào mình ghé đón',
+          '📍 Sau khi chốt chuyến có ngay SĐT để gọi đón'
+        ];
+      }
+      return [
+        '📍 Em đứng đợi ở cây xăng ven đường chính',
+        '📍 Bạn ghé ngã tư đón giúp em được không?',
+        '📍 Em đón đúng điểm hẹn trên đường nhé'
+      ];
+    }
+
+    // 3. Phân tích Intent: Giờ giấc / Thời gian xuất phát
+    if (/(mấy giờ|may gio|khi nào|khi nao|đúng giờ|dung gio|sớm|muộn|trễ|khoảng|chạy chưa|chay chua)/i.test(partnerText)) {
+      if (myRole === 'driver') {
+        return [
+          '⏱️ Xe xuất phát đúng giờ hẹn, bạn ra trước 5p nhé',
+          '⏱️ Dự kiến đến điểm đón đúng giờ',
+          '⏱️ Xe chạy đúng khung giờ đã thông báo'
+        ];
+      }
+      return [
+        '⏱️ Em ra điểm hẹn trước 5 phút chờ xe',
+        '⏱️ Khung giờ đó em sẵn sàng xuất phát rồi ạ',
+        '⏱️ Bạn cứ thong thả đi, em đợi được ạ'
+      ];
+    }
+
+    // 4. Phân tích Intent: Đồng ý / Chốt chuyến / Giữ chỗ
+    if (/(ok|oke|chốt|chot|đồng ý|dong y|nhất trí|nhat tri|giữ chỗ|giu cho|hẹn)/i.test(partnerText)) {
+      if (myRole === 'driver') {
+        return [
+          '🤝 Nhất trí nhé, mình giữ chỗ cho bạn',
+          '✅ Bấm Xác nhận chuyến để trao đổi SĐT đón nha',
+          '👍 Đã chốt, hẹn gặp bạn đúng giờ nhé'
+        ];
+      }
+      return [
+        '🤝 Dạ ok bạn, chốt giúp em nhé',
+        '✅ Em bấm xác nhận giữ chỗ ngay ạ',
+        '👍 Nhất trí, em chờ bạn đến đón'
+      ];
+    }
+
+    // Gợi ý mặc định theo vai trò (Stanford Zero-Thinking Default)
+    if (myRole === 'driver') {
       return [
         '👍 Đồng ý đón tại điểm này',
         '⏱️ Xe đến tầm giờ đã hẹn nhé',
@@ -161,9 +232,9 @@ export default function InboxModal({
     return [
       '📍 Em đón đúng điểm hẹn trên đường',
       '🎒 Em chỉ mang 1 balo nhỏ gọn',
-      '🤝 Dạ ok anh, chốt giúp em nhé'
+      '🤝 Dạ ok bạn, chốt giúp em nhé'
     ];
-  }, [activeBooking?.status, activeTab]);
+  }, [activeBooking?.status, activeBooking?.messages, activeTab]);
 
   const handleSelectQuickChip = (chipText) => {
     setInputMessage(chipText);
