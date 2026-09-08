@@ -340,52 +340,61 @@ export default function TripCard({
             </div>
           </button>
 
-          {/* Xe & Thumbnail ảnh thật (nếu có) */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="text-right">
-              <div className="flex items-center justify-end gap-1 text-[11.5px] font-medium text-slate-600 dark:text-slate-300">
-                <Car className="w-3 h-3 text-slate-400" />
-                <span className="truncate max-w-[120px]">
-                  {isDriver
-                    ? item.carType
+          {/* Xe & Thumbnail ảnh thật — Bấm vào xem Thông tin & Hình ảnh xe */}
+          {isDriver ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewCarPhotos?.(item);
+              }}
+              className="flex items-center gap-2 shrink-0 text-right cursor-pointer group/car rounded-xl p-1 -m-1 hover:bg-slate-100/80 dark:hover:bg-white/[0.06] transition-colors select-none"
+              title="Xem thông tin và hình ảnh xe"
+            >
+              <div>
+                <div className="flex items-center justify-end gap-1 text-[11.5px] font-medium text-slate-600 dark:text-slate-300 group-hover/car:text-[#0071e3] transition-colors">
+                  <Car className="w-3 h-3 text-slate-400 group-hover/car:text-[#0071e3] transition-colors shrink-0" />
+                  <span className="truncate max-w-[120px]">
+                    {item.carType
                       ? item.carType.split('(')[0].trim().replace(/\s*(cá nhân|gia đình)\b/gi, '')
-                      : `Xe ${item.capacity || 5} chỗ`
-                    : 'Khách tìm xe'}
-                </span>
-              </div>
-              {isDriver && item.carType && !item.carType.toLowerCase().includes('chỗ') && (
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                  {item.capacity || 5} chỗ
-                </p>
-              )}
-            </div>
-
-            {coverPhoto && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewCarPhotos?.(item);
-                }}
-                className="relative w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-white/[0.04] cursor-pointer group/photo shrink-0 ring-1 ring-black/5 dark:ring-white/10"
-                title="Bấm để xem bộ ảnh xe thực tế"
-              >
-                <img
-                  src={coverPhoto}
-                  alt=""
-                  loading="lazy"
-                  onError={() => setCoverFailed(true)}
-                  className="w-full h-full object-cover group-hover/photo:scale-110 transition-transform duration-200"
-                />
-                {photos.length > 1 && (
-                  <span className="absolute bottom-0.5 right-0.5 inline-flex items-center gap-0.5 px-1 py-0.2 rounded-full bg-black/60 text-white text-[8px] font-bold">
-                    <Camera className="w-2 h-2" />
-                    {photos.length}
+                      : `Xe ${item.capacity || 5} chỗ`}
                   </span>
+                </div>
+                {item.carType && !item.carType.toLowerCase().includes('chỗ') && (
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {item.capacity || 5} chỗ
+                  </p>
                 )}
-              </button>
-            )}
-          </div>
+              </div>
+
+              {coverPhoto ? (
+                <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-white/[0.04] shrink-0 ring-1 ring-black/5 dark:ring-white/10 group-hover/car:ring-[#0071e3]/40 transition-all">
+                  <img
+                    src={coverPhoto}
+                    alt=""
+                    loading="lazy"
+                    onError={() => setCoverFailed(true)}
+                    className="w-full h-full object-cover group-hover/car:scale-110 transition-transform duration-200"
+                  />
+                  {photos.length > 1 && (
+                    <span className="absolute bottom-0.5 right-0.5 inline-flex items-center gap-0.5 px-1 py-0.2 rounded-full bg-black/60 text-white text-[8px] font-bold">
+                      <Camera className="w-2 h-2" />
+                      {photos.length}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center text-slate-400 dark:text-slate-500 shrink-0 ring-1 ring-black/5 dark:ring-white/10 group-hover/car:text-[#0071e3] transition-colors">
+                  <Car className="w-4 h-4" />
+                </div>
+              )}
+            </button>
+          ) : (
+            <div className="flex items-center gap-1 text-[11.5px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+              <Car className="w-3 h-3 text-slate-400" />
+              <span>Khách tìm xe</span>
+            </div>
+          )}
         </div>
 
         {/* Hàng: Tiện ích & Nút CTA */}
