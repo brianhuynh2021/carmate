@@ -146,27 +146,9 @@ export default function InboxModal({
     });
   }, [activeBooking]);
 
-  // Gợi ý tin nhắn 1-chạm (Zero-Typing Quick Response Chips)
+  // Gợi ý tin nhắn khi đang thỏa thuận trước khi chốt
   const quickResponseChips = useMemo(() => {
-    if (activeBooking?.status !== 'inquiring' && activeBooking?.status !== 'confirmed') return [];
-    if (activeBooking?.status === 'confirmed') {
-      if (activeTab === 'incoming') {
-        // Chủ xe đang đón / chuẩn bị xe
-        return [
-          '🚗 Mình đang xuất phát đến điểm hẹn',
-          '⏱️ Xe sẽ đến sau khoảng 5-10 phút',
-          '📍 Mình dừng xe bật đèn khẩn cấp gần điểm hẹn',
-          '✅ Đã đón khách an toàn, xuất phát nhé'
-        ];
-      }
-      // Người đi cùng đang đứng đợi
-      return [
-        '📍 Em đang đứng ở điểm hẹn rồi anh',
-        '⏱️ Em ra đến điểm hẹn sau 3 phút',
-        '👕 Em mặc áo khoác màu đen đứng gần lề đường',
-        '👍 Đã thấy xe anh đến'
-      ];
-    }
+    if (activeBooking?.status !== 'inquiring') return [];
     if (activeTab === 'incoming') {
       return [
         '👍 Đồng ý đón tại điểm này',
@@ -633,6 +615,48 @@ export default function InboxModal({
                       </div>
                     );
                   })
+                )}
+                {isConfirmed && partnerPhone && (
+                  <div className="my-3 p-3.5 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-xs text-center space-y-2.5">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
+                        ✓
+                      </span>
+                      <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                        Chuyến đi đã chốt thành công!
+                      </p>
+                    </div>
+                    <div className="py-0.5">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Số điện thoại liên hệ {partnerAlias}:</p>
+                      <p className="text-lg font-mono font-bold text-slate-900 dark:text-white tabular tracking-tight">
+                        {partnerPhone}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <a
+                        href={`tel:${partnerPhone}`}
+                        className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Gọi điện</span>
+                      </a>
+                      <a
+                        href={`sms:${partnerPhone}`}
+                        className="py-2 px-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Nhắn SMS</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPhone(partnerPhone)}
+                        className="py-2 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
+                      >
+                        {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedPhone ? 'Đã chép' : 'Chép'}</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>

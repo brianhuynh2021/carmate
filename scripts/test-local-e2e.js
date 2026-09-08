@@ -4220,11 +4220,12 @@ async function runTests() {
     const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
     assert(postFormSrc.includes("index === 4 ? 'col-span-2 sm:col-span-1' : ''"), 'Mobile UX 8: Ô ảnh thứ 5 trong lưới 5 ảnh xe thật trải rộng cân đối trên mobile');
 
-    // 7. Driver In-transit Quick Reply Chips in InboxModal
+    // 7. Mở khóa số điện thoại & Thẻ liên hệ trực tiếp trong InboxModal
     const inboxSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
-    assert(inboxSrc.includes('Mình đang xuất phát đến điểm hẹn'), 'Driver UX 1: InboxModal có chip 1-chạm "Mình đang xuất phát đến điểm hẹn" cho Chủ xe');
-    assert(inboxSrc.includes('Xe sẽ đến sau khoảng 5-10 phút'), 'Driver UX 2: InboxModal có chip 1-chạm "Xe sẽ đến sau khoảng 5-10 phút" cho Chủ xe');
-    assert(inboxSrc.includes('Em đang đứng ở điểm hẹn rồi anh'), 'Passenger UX 1: InboxModal có chip 1-chạm "Em đang đứng ở điểm hẹn rồi anh" cho Khách');
+    assert(!inboxSrc.includes('Mình đang xuất phát đến điểm hẹn'), 'Clean Chat 1: Đã gỡ bỏ toàn bộ chip rườm rà khi chuyến đã chốt');
+    assert(inboxSrc.includes('Số điện thoại liên hệ {partnerAlias}:'), 'Clean Chat 2: InboxModal hiển thị trực tiếp SĐT đối tác trong luồng chat khi chốt');
+    assert(inboxSrc.includes('href={`tel:${partnerPhone}`}'), 'Clean Chat 3: Cung cấp nút gọi điện thoại trực tiếp cho đối tác');
+    assert(inboxSrc.includes('href={`sms:${partnerPhone}`}'), 'Clean Chat 4: Cung cấp nút nhắn tin SMS trực tiếp cho đối tác');
   } catch (err) {
     assert(false, '57. Kiểm thử Tự Động An Ninh Mạng & Trải Nghiệm Mobile Responsive', err.message);
   }
