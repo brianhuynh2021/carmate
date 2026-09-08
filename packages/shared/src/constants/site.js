@@ -21,7 +21,7 @@ export const SITE_INFO = {
   },
   telegram: 'https://t.me/brianhuynh91',
   telegramSupport: 'https://t.me/brianhuynh91',
-  email: 'hotro@carmate.vn',
+  email: '', // Tạm thời ẩn email, người dùng liên hệ trực tiếp qua Zalo & Telegram 1-chạm
   zaloOA: 'https://zalo.me/0984883750',
   zaloGroup: 'https://zalo.me/g/carmate',
   facebook: 'https://www.facebook.com/profile.php?id=61593891160413',

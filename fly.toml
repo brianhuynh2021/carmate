@@ -16,7 +16,7 @@ primary_region = 'sin'
   # từ X-Forwarded-For thay vì thấy mọi request đến từ một IP nội bộ.
   TRUST_PROXY = 'true'
   # Domain được phép gọi API. Thêm domain thật khi trỏ tên miền.
-  ALLOWED_ORIGINS = 'https://carmate.vn,https://www.carmate.vn'
+  ALLOWED_ORIGINS = 'https://carmate.vn,https://www.carmate.vn,https://admin.carmate.vn,https://ops.carmate.vn'
 
 # Ổ đĩa bền cho SQLite. KHÔNG bỏ mục này — thiếu nó, dữ liệu nằm trong
 # lớp ghi tạm của container và mất sạch sau mỗi lần deploy.

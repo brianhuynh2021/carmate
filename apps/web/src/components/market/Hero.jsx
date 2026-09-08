@@ -107,7 +107,7 @@ export default function Hero({
 
         {/* Dynamic Route Suggester Capsule (Hiệu ứng: Gợi ý cặp tuyến HOT tự động) */}
         <div className="pt-0.5 sm:pt-1 flex items-center justify-center">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs max-w-full">
             <span className="flex items-center gap-1 text-[11px] font-bold text-[#1d1d1f] dark:text-white shrink-0">
               <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
               <span className="hidden xs:inline">Tuyến HOT:</span>
@@ -115,13 +115,13 @@ export default function Hero({
             </span>
             <div
               key={`${routeCycleIndex}-${activeRouteHint.from}-${activeRouteHint.to}`}
-              className="anim-fade-in flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] truncate max-w-[160px] xs:max-w-none"
+              className="anim-fade-in flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] shrink-0"
             >
-              <span className="truncate">{activeRouteHint.from}</span>
+              <span className="whitespace-nowrap">{activeRouteHint.from}</span>
               <ArrowLeftRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
-              <span className="truncate">{activeRouteHint.to}</span>
+              <span className="whitespace-nowrap">{activeRouteHint.to}</span>
               {activeRouteHint.count > 0 && (
-                <span className="hidden sm:inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
                   {activeRouteHint.count} xe
                 </span>
               )}
@@ -135,7 +135,7 @@ export default function Hero({
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
               title="Điền nhanh cặp tuyến này"
-              className="ml-0.5 sm:ml-1 text-[10.5px] sm:text-[11px] font-bold text-[#0071e3] hover:text-[#0077ed] dark:text-[#2997ff] bg-[#0071e3]/10 hover:bg-[#0071e3]/20 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-0.5 shrink-0"
+              className="ml-0.5 sm:ml-1 text-[10.5px] sm:text-[11px] font-bold text-[#0071e3] hover:text-[#0077ed] dark:text-[#2997ff] bg-[#0071e3]/10 hover:bg-[#0071e3]/20 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-0.5 shrink-0 whitespace-nowrap"
             >
               <span>Áp dụng ⚡</span>
             </button>

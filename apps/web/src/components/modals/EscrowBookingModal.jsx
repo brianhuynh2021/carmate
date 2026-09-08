@@ -402,7 +402,7 @@ export default function EscrowBookingModal({
         size="lg"
         onClick={() => {
           onClose();
-          onViewBookedTab?.('my_trips');
+          onViewBookedTab?.('my-trips');
         }}
         className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-base py-3.5 cursor-pointer transition-all duration-150 active:scale-[0.99]"
       >

@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, ShieldCheck, Camera, Check, Car, Package } from 'lucide-react';
 import { maskLicensePlate } from '@carmate/shared';
 import Button from '../ui/Button.jsx';
 
 export default function CarPhotosModal({ trip, isOpen, onClose }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const photos = Array.isArray(trip?.carPhotos) && trip.carPhotos.length >= 1 ? trip.carPhotos : [];
   const total = photos.length;
@@ -43,9 +49,9 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
     ? trip.carType.split('(')[0].trim().replace(/\s*(cá nhân|gia đình)\b/gi, '')
     : `Xe ${trip.capacity || 5} chỗ`;
 
-  return (
+  const modalNode = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
@@ -215,4 +221,10 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
       </div>
     </div>
   );
+
+  if (mounted && typeof document !== 'undefined') {
+    return createPortal(modalNode, document.body);
+  }
+
+  return modalNode;
 }

@@ -18,7 +18,7 @@ import {
   ShieldAlert,
   Ban
 } from 'lucide-react';
-import { formatVND, toPublicAlias, detectPiiLeak, maskPhoneNumber } from '@carmate/shared';
+import { formatVND, toPublicAlias, detectPiiLeak } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
