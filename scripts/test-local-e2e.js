@@ -3819,6 +3819,35 @@ async function runTests() {
     assert(false, '50. Kiểm thử Chuẩn Hoá Khung Giờ', err.message);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n⭐ 51. Kiểm thử Hiển Thị Sao & Số Chuyến Trên Thẻ Chuyến Đi (Zero Điểm Rối Mắt)...');
+  try {
+    const cardContent = fs.readFileSync('./apps/web/src/components/market/TripCard.jsx', 'utf8');
+    // 1. Thẻ luôn có icon Star và không hiển thị điểm dạng {trustScore}đ
+    assert(
+      !cardContent.includes('{trustScore}đ'),
+      'Card Rating 1: Triệt tiêu hoàn toàn điểm số dạng xxđ gây rối mắt người dùng'
+    );
+    // 2. Luôn render ngôi sao và chữ chuyến
+    assert(
+      cardContent.includes('<Star') && cardContent.includes('chuyến'),
+      'Card Rating 2: Luôn hiển thị ngôi sao đánh giá (*) và số chuyến đã đi'
+    );
+
+    // 3. API /api/trips trả về rating đầy đủ cho 100% chuyến đi
+    const res = await fetch(`${BASE_URL}/api/trips`);
+    const json = await res.json();
+    const trips = json.data?.all || [];
+    assert(trips.length > 0, 'API Trips trả về danh sách chuyến');
+    const tripsWithoutRating = trips.filter((t) => t.rating == null || Number.isNaN(Number(t.rating)));
+    assert(
+      tripsWithoutRating.length === 0,
+      'Card Rating 3: 100% chuyến xe trả về từ API đều bảo lưu số sao đánh giá'
+    );
+  } catch (err) {
+    assert(false, '51. Kiểm thử Hiển Thị Sao & Số Chuyến', err.message);
+  }
+
 
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;

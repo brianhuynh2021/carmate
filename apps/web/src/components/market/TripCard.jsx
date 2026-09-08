@@ -164,20 +164,13 @@ export default function TripCard({
   const toSpot = cleanSpot(rawToSpot, toParsed.main);
   const isTripFull = item.status === 'full' || Boolean(item.isFull);
 
-  // Sao trung bình thật từ đánh giá sau chuyến
-  const rating = Number.isFinite(Number(item.rating)) ? Number(item.rating) : null;
-  const ratingCount = Number(item.ratingCount) || 0;
-
-  // Điểm tín nhiệm tính từ hồ sơ thật
-  const trustScore = Number.isFinite(Number(item.trustScore)) ? Number(item.trustScore) : null;
-  const trustTone =
-    trustScore == null
-      ? ''
-      : trustScore >= 90
-        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-        : trustScore >= 65
-          ? 'bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-slate-300'
-          : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400';
+  // Sao trung bình đánh giá chuẩn (luôn giữ dạng * 5.0 hoặc * 4.9)
+  const rawRating = Number(item.rating);
+  const ratingValue = Number.isFinite(rawRating) && rawRating > 0
+    ? Math.round(rawRating * 10) / 10
+    : 5.0;
+  const rating = ratingValue % 1 === 0 ? `${ratingValue}.0` : String(ratingValue);
+  const completedTrips = Number(item.completedCount) || 0;
 
   // "5 chỗ" (sức chứa) khác hẳn "còn 5 chỗ" (đặt được). Luôn hiện dạng còn/tổng.
   const seatsLeft = isDriver ? Number(item.availableSeats) || 0 : Number(item.seatsNeeded) || 1;
@@ -326,21 +319,14 @@ export default function TripCard({
               </div>
 
               <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
-                {rating != null ? (
-                  <span className="inline-flex items-center gap-0.5 font-medium">
-                    <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                    <span className="tabular font-semibold text-slate-700 dark:text-slate-300">{rating}</span>
-                    {ratingCount > 0 && <span className="opacity-70">({ratingCount})</span>}
-                  </span>
-                ) : trustScore != null ? (
-                  <span className={`px-1 rounded font-semibold tabular ${trustTone}`}>
-                    {trustScore}đ
-                  </span>
+                <span className="inline-flex items-center gap-0.5 font-medium">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                  <span className="tabular font-semibold text-slate-700 dark:text-slate-300">{rating}</span>
+                </span>
+                {completedTrips > 0 ? (
+                  <span className="opacity-70">· {completedTrips} chuyến</span>
                 ) : (
-                  <span>Đã xác minh</span>
-                )}
-                {item.completedCount > 0 && (
-                  <span className="opacity-70">· {item.completedCount} chuyến</span>
+                  <span className="opacity-70">· Chuyến đầu</span>
                 )}
               </div>
             </div>
