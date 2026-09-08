@@ -15,20 +15,32 @@ import Modal from '../ui/Modal.jsx';
 export default function FairSplitModal({
   isOpen,
   onClose,
-  initialRouteKey = 'hn_hp',
+  initialRouteKey,
   onSelectSuggestedPrice
 }) {
-  const [selectedRouteKey, setSelectedRouteKey] = useState(initialRouteKey || 'hn_hp');
+  const routeKeys = Object.keys(ROUTE_BENCHMARKS || {});
+  const defaultRouteKey = routeKeys[0] || 'Tuyến CT Hà Nội - Hải Phòng';
+
+  const [selectedRouteKey, setSelectedRouteKey] = useState(
+    () => (initialRouteKey && ROUTE_BENCHMARKS?.[initialRouteKey] ? initialRouteKey : defaultRouteKey)
+  );
   const [customDistanceKm, setCustomDistanceKm] = useState(105);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [passengerSeats, setPassengerSeats] = useState(3);
   const [fuelPricePerLiter, setFuelPricePerLiter] = useState(24000);
 
-  const routeKeys = Object.keys(ROUTE_BENCHMARKS);
-  const currentBenchmark = ROUTE_BENCHMARKS[selectedRouteKey] || ROUTE_BENCHMARKS.hn_hp;
+  const currentBenchmark =
+    (ROUTE_BENCHMARKS && ROUTE_BENCHMARKS[selectedRouteKey]) ||
+    (ROUTE_BENCHMARKS && ROUTE_BENCHMARKS[defaultRouteKey]) || {
+      name: 'Hà Nội ⇄ Hải Phòng (Cao Tốc 5B ~105km)',
+      shortName: 'Hà Nội ⇄ Hải Phòng',
+      distanceKm: 105,
+      fuelCost: 160000,
+      botFee: 190000
+    };
 
-  const distanceKm = isCustomMode ? customDistanceKm : currentBenchmark.distanceKm;
-  const tollFee = isCustomMode ? Math.round(distanceKm * 600) : (currentBenchmark.botFee || 0);
+  const distanceKm = isCustomMode ? (Number(customDistanceKm) || 10) : (currentBenchmark?.distanceKm || 105);
+  const tollFee = isCustomMode ? Math.round(distanceKm * 600) : (currentBenchmark?.botFee || 0);
 
   // MIT Mathematical Invariant: Định mức xăng xe 8L/100km cho xe gia đình 5-7 chỗ
   const litersConsumed = useMemo(() => {
@@ -136,7 +148,7 @@ export default function FairSplitModal({
             >
               {routeKeys.map((k) => (
                 <option key={k} value={k}>
-                  {ROUTE_BENCHMARKS[k].shortName} (~{ROUTE_BENCHMARKS[k].distanceKm}km)
+                  {ROUTE_BENCHMARKS[k]?.shortName || k} (~{ROUTE_BENCHMARKS[k]?.distanceKm || 0}km)
                 </option>
               ))}
             </select>

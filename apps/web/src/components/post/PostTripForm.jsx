@@ -1781,16 +1781,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       )}
 
       {/* Modal Định mức xăng & Cầu đường minh bạch */}
-      <FairSplitModal
-        isOpen={showFairSplitModal}
-        onClose={() => setShowFairSplitModal(false)}
-        initialRouteKey="hn_hp"
-        onSelectSuggestedPrice={(rate) => {
-          setPrice(rate);
-          setHasManuallyEditedPrice(true);
-          onShowToast?.(`Đã áp dụng định mức phụ xăng ${formatVND(rate)}/ghế!`);
-        }}
-      />
+      {showFairSplitModal && (
+        <FairSplitModal
+          isOpen={showFairSplitModal}
+          onClose={() => setShowFairSplitModal(false)}
+          initialRouteKey="Tuyến CT Hà Nội - Hải Phòng"
+          onSelectSuggestedPrice={(rate) => {
+            setPrice(rate);
+            setHasManuallyEditedPrice(true);
+            onShowToast?.(`Đã áp dụng định mức phụ xăng ${formatVND(rate)}/ghế!`);
+          }}
+        />
+      )}
     </div>
   );
 }

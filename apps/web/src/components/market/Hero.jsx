@@ -437,14 +437,16 @@ export default function Hero({
       )}
 
       {/* ── MODAL FAIR-SPLIT CALCULATOR: MINH BẠCH CHI PHÍ XĂNG & CẦU ĐƯỜNG ── */}
-      <FairSplitModal
-        isOpen={showFairSplitModal}
-        onClose={() => setShowFairSplitModal(false)}
-        initialRouteKey="hn_hp"
-        onSelectSuggestedPrice={(rate) => {
-          onShowToast?.(`Đã chọn mức phụ xăng công bằng ${formatVND(rate)}/ghế!`);
-        }}
-      />
+      {showFairSplitModal && (
+        <FairSplitModal
+          isOpen={showFairSplitModal}
+          onClose={() => setShowFairSplitModal(false)}
+          initialRouteKey="Tuyến CT Hà Nội - Hải Phòng"
+          onSelectSuggestedPrice={(rate) => {
+            onShowToast?.(`Đã chọn mức phụ xăng công bằng ${formatVND(rate)}/ghế!`);
+          }}
+        />
+      )}
     </section>
   );
 }
