@@ -2908,11 +2908,11 @@ async function runTests() {
     assert(ticketCanvasContent.includes('width = 1080') && ticketCanvasContent.includes('height = 1920'), 'Story Ticket chuẩn tỷ lệ 9:16 (1080x1920 HD)');
     assert(!ticketCanvasContent.includes('hoa hồng tài xế'), 'ticketCanvas.js tuân thủ danh xưng: không dùng "tài xế"');
 
-    // 5. Kiểm tra TicketShareModal có nút tải Story 9:16
+    // 5. Kiểm tra TicketShareModal có nút tải Story
     const ticketSharePath = path.resolve(process.cwd(), 'apps/web/src/components/modals/TicketShareModal.jsx');
     const ticketShareContent = fs.readFileSync(ticketSharePath, 'utf8');
     assert(ticketShareContent.includes('handleDownloadStory'), 'TicketShareModal có handler tải ảnh Story');
-    assert(ticketShareContent.includes('Tải ảnh Story 9:16'), 'TicketShareModal hiển thị nút Tải ảnh Story 9:16');
+    assert(ticketShareContent.includes('Tải Story'), 'TicketShareModal hiển thị nút Tải Story');
 
     // 6. Kiểm tra TripCard hiển thị trạng thái Đã kín chỗ
     const tripCardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');

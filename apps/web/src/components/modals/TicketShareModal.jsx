@@ -129,7 +129,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
       const dataUrl = await generateTicketStoryImage(trip, lang);
       if (dataUrl) {
         downloadTicketStoryImage(dataUrl, trip.id?.slice(0, 8) || 'story');
-        onShowToast?.('Đã tải ảnh Story 9:16 sắc nét! Đăng ngay lên Zalo Story, FB Story hoặc TikTok.');
+        onShowToast?.('Đã tải ảnh Story sắc nét! Đăng ngay lên Zalo Story, FB Story hoặc TikTok.');
       }
     } catch (err) {
       console.warn('[Share] Lỗi tạo ảnh story:', err);
@@ -212,7 +212,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
             )}
           </button>
 
-          {/* Hàng nút phụ: Chia sẻ ngay (1-Chạm) & Tải Story 9:16 */}
+          {/* Hàng nút phụ: Chia sẻ ngay & Tải Story */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -239,7 +239,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
               ) : (
                 <Download className="w-3.5 h-3.5 text-sky-500" />
               )}
-              <span>{t('ticket.downloadStory') || 'Tải ảnh Story 9:16'}</span>
+              <span>{t('ticket.downloadStory') || 'Tải Story'}</span>
             </button>
           </div>
 

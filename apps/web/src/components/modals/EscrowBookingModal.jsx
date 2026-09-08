@@ -319,7 +319,7 @@ export default function EscrowBookingModal({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    {isDriverItem ? 'Tăng 95% cơ hội có xe: Đăng tìm xe 1-chạm' : 'Tăng lấp đầy xe: Đăng chuyến trống 1-chạm'}
+                    {isDriverItem ? 'Tăng 95% cơ hội có xe: Đăng tìm xe' : 'Tăng lấp đầy xe: Đăng chuyến trống'}
                   </h4>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300/40">
                     Khuyên dùng
@@ -355,8 +355,8 @@ export default function EscrowBookingModal({
                     <Zap className="w-4 h-4 fill-current text-amber-300" />
                     <span>
                       {isDriverItem
-                        ? 'Đăng nhu cầu tìm xe lên Bảng tin (1-Chạm)'
-                        : 'Đăng chuyến xe trống lên Bảng tin (1-Chạm)'}
+                        ? 'Đăng nhu cầu tìm xe lên Bảng tin'
+                        : 'Đăng chuyến xe trống lên Bảng tin'}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </>
