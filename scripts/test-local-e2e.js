@@ -3513,10 +3513,10 @@ async function runTests() {
       'Zalo Personal 1: Cung cấp link Zalo trực tiếp đến số điện thoại người đăng chuyến (không qua trung gian)'
     );
 
-    // 4. Cung cấp liên kết Zalo Group cộng đồng CarMate tiện chuyến
+    // 4. Triệt tiêu link Nhóm Zalo Tiện Chuyến khỏi TicketShareModal (Zero Distraction)
     assert(
-      ticketModalContent.includes('zaloGroupUrl') && ticketModalContent.includes('Nhóm Zalo Tiện Chuyến'),
-      'Zalo Group 1: Cung cấp link mở thẳng Nhóm Zalo Tiện Chuyến cộng đồng'
+      !ticketModalContent.includes('Nhóm Zalo Tiện Chuyến') && !ticketModalContent.includes('zaloGroupUrl'),
+      'Zalo Group 1: Triệt tiêu link Nhóm Zalo Tiện Chuyến khỏi TicketShareModal để tập trung chia sẻ bài'
     );
 
     // 5. Kiểm tra hàm chia sẻ trong packages/shared

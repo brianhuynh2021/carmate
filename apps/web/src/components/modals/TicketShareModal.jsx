@@ -9,7 +9,6 @@ import {
   Download,
   Loader2,
   MessageCircle,
-  Users,
   ShieldCheck,
   QrCode
 } from 'lucide-react';
@@ -18,8 +17,7 @@ import {
   formatVND,
   getTimeSlotLabel,
   getZaloChatUrl,
-  cleanPhoneNumber,
-  SITE_INFO
+  cleanPhoneNumber
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -45,7 +43,6 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
   const shareText = generateSocialShareText(trip);
   const contactPhone = cleanPhoneNumber(trip.phoneReal || trip.phone || '');
   const zaloPersonalUrl = contactPhone ? getZaloChatUrl(contactPhone) : null;
-  const zaloGroupUrl = SITE_INFO.zaloGroup || 'https://zalo.me/g/carmate';
   const isDriverOffer = trip.type === 'driver_offer';
 
   const handleCopy = (customMsg) => {
@@ -245,7 +242,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
             </button>
           </div>
 
-          {/* Hàng tiện ích: Sao chép tóm tắt, Nhóm Zalo & Xem bài trên Bảng tin */}
+          {/* Hàng tiện ích: Sao chép tóm tắt & Xem bài trên Bảng tin */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <button
               type="button"
@@ -255,18 +252,6 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Đã sao chép lời nhắn' : 'Sao chép văn bản tóm tắt'}</span>
             </button>
-
-            {zaloGroupUrl && (
-              <a
-                href={zaloGroupUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 font-medium"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Nhóm Zalo Tiện Chuyến</span>
-              </a>
-            )}
 
             {onViewInMarket && (
               <button
