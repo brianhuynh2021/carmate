@@ -12,7 +12,8 @@ import {
   cleanPhoneNumber,
   isTripExpired,
   getTomorrowISO,
-  DEFAULT_TRUST_RULES
+  DEFAULT_TRUST_RULES,
+  sanitizeTimeLabel
 } from '@carmate/shared';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -405,6 +406,9 @@ function rowToTrip(row) {
     obj.routeCategory = row.routeCategory || obj.routeCategory;
     obj.direction = row.direction || obj.direction;
     obj.timeSlot = row.timeSlot || obj.timeSlot;
+    if (obj.timeSlotLabel) {
+      obj.timeSlotLabel = sanitizeTimeLabel(obj.timeSlotLabel);
+    }
     obj.date = row.date || obj.date;
     obj.basePricePerSeat = row.price || obj.basePricePerSeat;
     obj.availableSeats = row.seats || obj.availableSeats;

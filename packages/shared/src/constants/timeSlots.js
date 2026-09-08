@@ -141,8 +141,70 @@ export const TIME_SLOTS = [
     short: '21:00 – 22:00',
     shortEn: '21:00 – 22:00',
     isAlias: true
+  },
+  {
+    id: '16:00-18:00',
+    label: '16:00 – 18:00 (Tan tầm)',
+    labelEn: '16:00 – 18:00 (Evening rush)',
+    short: '16:00 – 18:00',
+    shortEn: '16:00 – 18:00',
+    isAlias: true
+  },
+  {
+    id: '06:00-08:00',
+    label: '06:00 – 08:00 (Sáng sớm)',
+    labelEn: '06:00 – 08:00 (Morning)',
+    short: '06:00 – 08:00',
+    shortEn: '06:00 – 08:00',
+    isAlias: true
+  },
+  {
+    id: '08:00-10:00',
+    label: '08:00 – 10:00 (Giữa sáng)',
+    labelEn: '08:00 – 10:00 (Mid-morning)',
+    short: '08:00 – 10:00',
+    shortEn: '08:00 – 10:00',
+    isAlias: true
+  },
+  {
+    id: '14:00-15:00',
+    label: '14:00 – 15:00 (Đầu giờ chiều)',
+    labelEn: '14:00 – 15:00 (Early afternoon)',
+    short: '14:00 – 15:00',
+    shortEn: '14:00 – 15:00',
+    isAlias: true
+  },
+  {
+    id: '14:00-16:00',
+    label: '14:00 – 16:00 (Buổi chiều)',
+    labelEn: '14:00 – 16:00 (Afternoon)',
+    short: '14:00 – 16:00',
+    shortEn: '14:00 – 16:00',
+    isAlias: true
+  },
+  {
+    id: '18:00-20:00',
+    label: '18:00 – 20:00 (Chập tối)',
+    labelEn: '18:00 – 20:00 (Early evening)',
+    short: '18:00 – 20:00',
+    shortEn: '18:00 – 20:00',
+    isAlias: true
   }
 ];
+
+/** Chuẩn hóa và làm sạch nhãn thời gian, loại bỏ các từ chỉ buổi thừa (chiều, sáng, trưa, tối...) sau giờ 24h */
+export const sanitizeTimeLabel = (str) => {
+  if (!str || typeof str !== 'string') return '';
+  let cleaned = str.trim();
+  // Loại bỏ các từ chỉ buổi thừa (VD: "16:00 – 18:00 Chiều" -> "16:00 – 18:00", "05:00 - 06:00 Sáng mai" -> "05:00 – 06:00")
+  cleaned = cleaned.replace(
+    /(\d{1,2}:\d{2}(?:\s*[-–—]\s*\d{1,2}:\d{2})?)\s*(?:chiều|sáng|trưa|tối|đêm)(?:\s+mai|\s+hôm nay)?\b/gi,
+    '$1'
+  );
+  // Chuẩn hóa dấu gạch ngang sang en-dash chuẩn: " – "
+  cleaned = cleaned.replace(/(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})/, '$1 – $2');
+  return cleaned.trim();
+};
 
 /** Kiểm tra giờ đón cụ thể có nằm trong khung giờ hay không */
 export const isTimeInSlot = (timeStr, slotId) => {
@@ -160,10 +222,10 @@ export const getTimeSlotLabel = (idOrItem, lang = 'vi', variant = 'short') => {
   const isValidExactTime = exactTime && (!slot || slot.id === 'all' || isTimeInSlot(exactTime, slot.id));
 
   if (isValidExactTime) {
-    if (!slot || slot.id === 'all') return exactTime;
+    if (!slot || slot.id === 'all') return sanitizeTimeLabel(exactTime);
     const slotText =
       variant === 'short' ? (lang === 'en' ? slot.shortEn : slot.short) : lang === 'en' ? slot.labelEn : slot.label;
-    return `${exactTime} (${slotText})`;
+    return `${sanitizeTimeLabel(exactTime)} (${slotText})`;
   }
 
   if (slot && slot.id !== 'all') {
@@ -188,9 +250,9 @@ export const getTimeSlotLabel = (idOrItem, lang = 'vi', variant = 'short') => {
         return matchedSlot.short;
       }
     }
-    return rawLabel;
+    return sanitizeTimeLabel(rawLabel);
   }
-  return idOrItem || '';
+  return sanitizeTimeLabel(idOrItem || '');
 };
 
 /** Tự động ánh xạ giờ chính xác (vd: 04:30) vào khung giờ 24/7 tương ứng */

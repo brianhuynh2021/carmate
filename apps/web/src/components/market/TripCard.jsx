@@ -186,9 +186,11 @@ export default function TripCard({
   const rawDate = item.date ? formatTripDateDisplay(item.date) : 'Hôm nay';
   const dateLabel = rawDate.replace(/\s*\((\d{1,2}\/\d{1,2})\)\s*/, ' · $1').trim();
 
-  // Giờ: định dạng giờ chính xác
+  // Giờ: định dạng giờ chính xác, triệt tiêu hoàn toàn từ chỉ buổi thừa (chiều/sáng...)
   const rawTime = getTimeSlotLabel(item, lang) || '';
-  const timeLabel = (rawTime.match(/^(\d{1,2}:\d{2})\s*\(/)?.[1] || rawTime).trim();
+  const timeLabel = (rawTime.match(/^(\d{1,2}:\d{2})\s*\(/)?.[1] || rawTime)
+    .replace(/\s*(?:chiều|sáng|trưa|tối|đêm)(?:\s+mai|\s+hôm nay)?\b/gi, '')
+    .trim();
 
   // Ảnh xe thật — hiển thị thumbnail thanh lịch nếu có
   const [coverFailed, setCoverFailed] = useState(false);

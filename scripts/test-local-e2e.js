@@ -3736,6 +3736,54 @@ async function runTests() {
     assert(false, '49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe', err.message);
   }
 
+  // -------------------------------------------------------------
+  // 50. Kiểm thử Chuẩn Hoá Khung Giờ & Triệt Tiêu Từ Chỉ Buổi Dư Thừa (MIT & Apple Typography)
+  // -------------------------------------------------------------
+  console.log('\n--- 50. Kiểm thử Chuẩn Hoá Khung Giờ & Triệt Tiêu Từ Chỉ Buổi Dư Thừa ---');
+  try {
+    const { sanitizeTimeLabel, getTimeSlotLabel } = await import('../packages/shared/src/constants/timeSlots.js');
+
+    // 1. Kiểm tra hàm sanitizeTimeLabel
+    assert(
+      sanitizeTimeLabel('16:00 – 18:00 Chiều') === '16:00 – 18:00',
+      'TimeSanitize 1: Triệt tiêu chữ "Chiều" dư thừa sau khoảng giờ 24h (16:00 – 18:00 Chiều -> 16:00 – 18:00)'
+    );
+    assert(
+      sanitizeTimeLabel('05:00 - 06:00 Sáng') === '05:00 – 06:00',
+      'TimeSanitize 2: Triệt tiêu chữ "Sáng" dư thừa và chuẩn hoá en-dash (05:00 - 06:00 Sáng -> 05:00 – 06:00)'
+    );
+    assert(
+      sanitizeTimeLabel('07:00 - 08:00 Sáng mai') === '07:00 – 08:00',
+      'TimeSanitize 3: Triệt tiêu "Sáng mai" gắn sau mốc giờ 24h'
+    );
+    assert(
+      sanitizeTimeLabel('14:00 - 15:00 Chiều') === '14:00 – 15:00',
+      'TimeSanitize 4: Triệt tiêu "Chiều" sau 14:00 - 15:00'
+    );
+
+    // 2. Kiểm tra getTimeSlotLabel với slot alias 16:00-18:00
+    assert(
+      getTimeSlotLabel('16:00-18:00') === '16:00 – 18:00',
+      'TimeSanitize 5: getTimeSlotLabel(16:00-18:00) trả về 16:00 – 18:00 chuẩn xác'
+    );
+    assert(
+      getTimeSlotLabel({ timeSlot: '16:00-18:00', timeSlotLabel: '16:00 – 18:00 Chiều' }) === '16:00 – 18:00',
+      'TimeSanitize 6: Đối tượng chuyến đi có nhãn cũ dính chữ "Chiều" tự động được làm sạch'
+    );
+
+    // 3. Kiểm tra API trips thực tế không còn dính từ chỉ buổi thừa
+    const testTrips = await fetch(`${BASE_URL}/api/trips`).then((r) => r.json());
+    const tripsWithRedundantPeriod = (testTrips?.data?.all || []).filter(
+      (t) => t.timeSlotLabel && /\d{1,2}:\d{2}.*(?:chiều|sáng|trưa|tối)/i.test(t.timeSlotLabel)
+    );
+    assert(
+      tripsWithRedundantPeriod.length === 0,
+      'TimeSanitize 7: 100% chuyến đi trên sàn không dính từ chỉ buổi thừa sau giờ 24h'
+    );
+  } catch (err) {
+    assert(false, '50. Kiểm thử Chuẩn Hoá Khung Giờ', err.message);
+  }
+
 
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
