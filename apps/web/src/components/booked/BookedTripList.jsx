@@ -541,9 +541,9 @@ export default function BookedTripList({
                 </div>
 
                 {/* Thanh Hành Động */}
-                <div className="px-5 py-3.5 border-t border-black/[0.06] bg-[#fbfbfd] dark:bg-slate-900/60 flex items-center justify-between gap-3 flex-wrap">
+                <div className="px-4 sm:px-5 py-3.5 border-t border-black/[0.06] bg-[#fbfbfd] dark:bg-slate-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {/* Cụm chia sẻ cho người thân */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 justify-between sm:justify-start w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => handleCopyForFamily(record)}
@@ -575,11 +575,11 @@ export default function BookedTripList({
 
                   {/* Nút hành động trạng thái */}
                   {!isCompleted && !isCancelled && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Button variant="warningGhost" size="sm" icon={Timer} onClick={() => onDelay(record)}>
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                      <Button variant="warningGhost" size="sm" icon={Timer} onClick={() => onDelay(record)} className="flex-1 sm:flex-initial justify-center">
                         Báo trễ
                       </Button>
-                      <Button variant="dangerGhost" size="sm" icon={XCircle} onClick={() => onCancel(record)}>
+                      <Button variant="dangerGhost" size="sm" icon={XCircle} onClick={() => onCancel(record)} className="flex-1 sm:flex-initial justify-center">
                         Huỷ chuyến
                       </Button>
                       {onReportMismatch && (
@@ -588,7 +588,7 @@ export default function BookedTripList({
                           size="sm"
                           icon={ShieldAlert}
                           onClick={() => onReportMismatch(record)}
-                          className="text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
+                          className="flex-1 sm:flex-initial justify-center text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
                           title="Báo cáo xe đón thực tế là Biển vàng hoặc sai mô tả"
                         >
                           Báo sai loại xe
@@ -600,7 +600,7 @@ export default function BookedTripList({
                           size="sm"
                           icon={PhoneOff}
                           onClick={() => onReportUnreachablePhone(record)}
-                          className="text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
+                          className="w-full sm:w-auto justify-center text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
                           title="Báo cáo đối tác dùng số điện thoại ảo hoặc không liên lạc được"
                         >
                           Báo số ảo / Không nghe máy
@@ -609,7 +609,7 @@ export default function BookedTripList({
                       <button
                         type="button"
                         onClick={() => onComplete(record.escrowId, record)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                        className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl sm:rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black text-xs font-semibold shadow-2xs transition-all cursor-pointer min-h-[38px] sm:min-h-0"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
                         <span>Hoàn tất chuyến</span>

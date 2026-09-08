@@ -139,14 +139,16 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end shrink-0">
             {isRadarWatcherActive && (
-              <span className="text-xs font-bold text-emerald-400 tabular px-3 py-1 rounded-xl bg-white/5 border border-white/10">
+              <span className="text-xs font-bold text-emerald-400 tabular px-3 py-1 rounded-xl bg-white/5 border border-white/10 shrink-0">
                 {validMatches.length} chuyến khớp
               </span>
             )}
             <button
               type="button"
               onClick={handleToggleRadarWatcher}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer inline-flex items-center gap-2 active:scale-95 shadow-md ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer inline-flex items-center justify-center gap-2 active:scale-95 shadow-md ${
+                !isRadarWatcherActive ? 'w-full sm:w-auto' : 'flex-1 sm:flex-initial'
+              } ${
                 isRadarWatcherActive
                   ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40'
                   : 'bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-blue-500/25'

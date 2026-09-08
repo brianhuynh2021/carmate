@@ -117,6 +117,10 @@ export default function TripCard({
   onShare
 }) {
   const { lang } = useI18n();
+  const [coverFailed, setCoverFailed] = useState(false);
+
+  if (!item) return null;
+
   const isDriver = item.type === 'driver_offer';
   const isConvenient =
     isDriver &&
@@ -178,7 +182,6 @@ export default function TripCard({
   const timeLabel = sanitizeTimeLabel((rawTime.match(/^([^()]+)\s*\(/)?.[1] || rawTime).trim());
 
   // Ảnh xe thật — hiển thị thumbnail thanh lịch nếu có
-  const [coverFailed, setCoverFailed] = useState(false);
   const photos = (item.carPhotos || []).filter(Boolean);
   const rawCover = photos.length > 0 ? photos[0].url || photos[0] : null;
   const coverPhoto = coverFailed ? null : rawCover;

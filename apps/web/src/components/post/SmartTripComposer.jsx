@@ -194,13 +194,13 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 setActiveCategory('driver');
                 if (onRoleChange) onRoleChange('driver');
               }}
-              className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeCategory === 'driver'
                   ? 'bg-primary-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Car className="w-3 h-3" />
+              <Car className="w-3 h-3 shrink-0" />
               <span>Mẫu Chủ xe ({SMART_TRIP_TEMPLATES.driver.length})</span>
             </button>
             <button
@@ -209,14 +209,14 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 setActiveCategory('passenger');
                 if (onRoleChange) onRoleChange('passenger');
               }}
-              className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeCategory === 'passenger'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Users className="w-3 h-3" />
-              <span>Mẫu Khách tìm xe ({SMART_TRIP_TEMPLATES.passenger.length})</span>
+              <Users className="w-3 h-3 shrink-0" />
+              <span>Mẫu Khách ({SMART_TRIP_TEMPLATES.passenger.length})</span>
             </button>
           </div>
 
@@ -269,16 +269,16 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
       {/* Real-time Extracted Entity Pills (Chuẩn Cursor & Apple) */}
       {parsedResult && (
         <div className="mt-3.5 pt-3 border-t border-slate-800/80 space-y-2.5 relative z-10 animate-in fade-in duration-200">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             <span className="flex items-center gap-1 text-emerald-400 font-semibold text-xs">
               <Check className="w-3.5 h-3.5" />
               <span>Đã nhận diện và tự điền biểu mẫu:</span>
             </span>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setShowTicketShare(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+                className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
               >
                 <Share2 className="w-3.5 h-3.5 text-sky-400" />
                 <span>Xuất Vé VIP Đăng Zalo/FB</span>
@@ -290,7 +290,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                     onInstantSubmit(parsedResult);
                   }
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all cursor-pointer active:scale-95 shrink-0"
+                className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all cursor-pointer active:scale-95 shrink-0"
               >
                 <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
                 <span>Đăng chuyến ngay</span>

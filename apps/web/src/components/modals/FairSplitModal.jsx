@@ -80,16 +80,16 @@ export default function FairSplitModal({
       title="Định Mức Xăng Xe & Cầu Đường"
       subtitle="Minh bạch chi phí lăn bánh thực tế — Không mặc cả, không thương mại taxi"
       footer={
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
-          <div className="text-xs text-[#86868b] flex items-center gap-1.5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+          <div className="text-xs text-[#86868b] flex items-center justify-center sm:justify-start gap-1.5 w-full sm:w-auto text-center sm:text-left">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>Định mức khuyến nghị: <strong>{formatVND(fairPricePerSeat)}</strong> / ghế</span>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer w-full sm:w-auto"
+              className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer w-full sm:w-auto text-center"
             >
               Đóng
             </button>
@@ -153,8 +153,8 @@ export default function FairSplitModal({
               ))}
             </select>
           ) : (
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
                 <label htmlFor="custom-dist-input" className="text-[11px] text-[#86868b] block mb-1">Cự ly thực tế (km)</label>
                 <input
                   id="custom-dist-input"
@@ -166,7 +166,7 @@ export default function FairSplitModal({
                   className="w-full h-9 px-3 rounded-xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] text-xs font-bold text-slate-800 dark:text-white"
                 />
               </div>
-              <div className="flex-1">
+              <div>
                 <label htmlFor="fuel-price-input" className="text-[11px] text-[#86868b] block mb-1">Giá xăng RON95 (đ/Lít)</label>
                 <input
                   id="fuel-price-input"
@@ -181,7 +181,7 @@ export default function FairSplitModal({
           )}
 
           {/* Số ghế khách chia sẻ */}
-          <div className="flex items-center justify-between gap-2 pt-1 border-t border-black/[0.04]">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-black/[0.04]">
             <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Số người đi cùng chia sẻ:</span>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4].map((s) => (
