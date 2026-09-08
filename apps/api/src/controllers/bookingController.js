@@ -6,7 +6,10 @@ import {
   addBooking,
   updateBookingStatus,
   removeBooking,
-  updateTrip
+  updateTrip,
+  getUserById,
+  getUserByPhone,
+  updateUserStatus
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber, detectPiiLeak, maskPhoneNumber } from '@carmate/shared';
 import crypto from 'crypto';
@@ -473,16 +476,130 @@ export async function addBookingMessageHandler(req, res) {
 
     const isConfirmed = booking.status === 'confirmed' || booking.bothConfirmed === true;
 
-    // THUẬT TOÁN AI PII: Nếu chưa chốt chính thức, cấm tuyệt đối gửi SĐT / Zalo / Liên hệ ngoài
+    // 1. Xác định danh tính người gửi (User ID hoặc Số điện thoại)
+    let senderUser = null;
+    let senderKey = null;
+    if (req.user) {
+      senderKey = req.user.id || req.user.phone;
+      senderUser = getUserById(req.user.id) || getUserByPhone(req.user.phone) || req.user;
+    }
+    if (!senderUser) {
+      const senderPhone = senderRole === 'driver'
+        ? (booking.driverPhone || booking.phoneReal || booking.contactPhone)
+        : (booking.passengerPhone || booking.userPhone || booking.contactPhone);
+      const senderId = senderRole === 'driver' ? booking.driverId : booking.userId;
+      senderKey = senderId || senderPhone;
+      if (senderId) senderUser = getUserById(senderId);
+      if (!senderUser && senderPhone) senderUser = getUserByPhone(senderPhone);
+    }
+
+    // 2. Kiểm tra nếu tài khoản hoặc phiên đã bị cấm (Banned Check)
+    if (senderUser?.isBanned || booking.isBanned) {
+      return res.status(403).json({
+        success: false,
+        isBanned: true,
+        error: '⛔ Tài khoản của bạn đã bị khóa do vi phạm quy chế bảo mật cộng đồng.'
+      });
+    }
+
+    // 3. THUẬT TOÁN AI PII & CHẾ TÀI BẬC THANG (3-Strike Progressive Sanction)
     if (!isConfirmed) {
       const piiCheck = detectPiiLeak(text);
       if (piiCheck.hasLeak) {
-        return res.status(400).json({
-          success: false,
-          error: piiCheck.warningMessage,
-          reason: piiCheck.reason,
-          detectedSample: piiCheck.detectedSample
-        });
+        const currentStrikes = Number(senderUser?.piiStrikes || booking?.piiStrikes?.[senderRole] || 0);
+        const newStrikes = currentStrikes + 1;
+        const bookingStrikes = { ...(booking.piiStrikes || {}), [senderRole]: newStrikes };
+
+        if (newStrikes === 1) {
+          // LẦN 1: Cảnh báo nhẹ, chặn gửi tin
+          if (senderKey) {
+            await updateUserStatus(senderKey, { piiStrikes: 1 });
+          }
+          await updateBookingStatus(id, booking.status, { piiStrikes: bookingStrikes });
+
+          return res.status(400).json({
+            success: false,
+            strike: 1,
+            violationLevel: 'warning',
+            error: `⚠️ CẢNH BÁO VI PHẠM (Lần 1/3): ${piiCheck.warningMessage} Vui lòng thỏa thuận trên CarMate và bấm [Đề xuất chốt] để mở khóa an toàn.`,
+            reason: piiCheck.reason,
+            detectedSample: piiCheck.detectedSample
+          });
+        } else if (newStrikes === 2) {
+          // LẦN 2: Cảnh cáo nghiêm trọng + HẠ ĐIỂM TÍN NHIỆM (-15 ĐIỂM)
+          const currentTrust = Number(senderUser?.trustScore ?? 98);
+          const newTrustScore = Math.max(0, currentTrust - 15);
+
+          if (senderKey) {
+            await updateUserStatus(senderKey, {
+              trustScore: newTrustScore,
+              piiStrikes: 2
+            });
+          }
+          await updateBookingStatus(id, booking.status, { piiStrikes: bookingStrikes });
+
+          // Báo động Telegram cho Founder
+          sendBusinessAlert({
+            title: '🚨 VI PHẠM PII LẦN 2: TRỪ 15 ĐIỂM TÍN NHIỆM',
+            details: {
+              'Mã yêu cầu': id,
+              'Người vi phạm': senderUser?.name || senderName || 'Thành viên',
+              'SĐT/ID': senderKey || 'N/A',
+              'Điểm tín nhiệm cũ': `${currentTrust}/100`,
+              'Điểm tín nhiệm MỚI': `${newTrustScore}/100 (-15đ)`,
+              'Nội dung vi phạm': text
+            },
+            req
+          }).catch(() => {});
+
+          return res.status(400).json({
+            success: false,
+            strike: 2,
+            violationLevel: 'penalty',
+            trustScore: newTrustScore,
+            deductedPoints: 15,
+            error: `🚨 CẢNH CÁO VI PHẠM NGHIÊM TRỌNG (Lần 2/3): Bạn tiếp tục cố tình luồn lách thông tin liên lạc! Hệ thống đã TRỪ -15 ĐIỂM TÍN NHIỆM (còn ${newTrustScore}/100). Vi phạm thêm lần nữa, tài khoản sẽ bị KHÓA CẤM VĨNH VIỄN (BAN)!`,
+            reason: piiCheck.reason,
+            detectedSample: piiCheck.detectedSample
+          });
+        } else {
+          // LẦN 3 TRỞ ĐI: KHÓA TÀI KHOẢN VĨNH VIỄN (BAN)
+          if (senderKey) {
+            await updateUserStatus(senderKey, {
+              isBanned: true,
+              status: 'banned',
+              piiStrikes: newStrikes,
+              banReason: 'Cố tình chia sẻ SĐT/kênh liên lạc ngoài luồng 3 lần liên tiếp'
+            });
+          }
+          await updateBookingStatus(id, booking.status, {
+            piiStrikes: bookingStrikes,
+            isBanned: true
+          });
+
+          // Báo động Telegram Khẩn Cấp
+          sendBusinessAlert({
+            title: '⛔ TÀI KHOẢN BỊ KHÓA (AUTO-BAN): Vi phạm PII 3 lần liên tiếp',
+            details: {
+              'Mã yêu cầu': id,
+              'Thành viên bị khóa': senderUser?.name || senderName || 'Thành viên',
+              'SĐT/ID': senderKey || 'N/A',
+              'Lý do': 'Chia sẻ thông tin ngoài luồng 3 lần liên tiếp',
+              'Nội dung vi phạm': text
+            },
+            req
+          }).catch(() => {});
+
+          return res.status(403).json({
+            success: false,
+            strike: newStrikes,
+            violationLevel: 'banned',
+            isBanned: true,
+            error: '⛔ TÀI KHOẢN ĐÃ BỊ KHÓA VĨNH VIỄN (BAN): Bạn đã vi phạm chính sách bảo mật thông tin liên tục 3 lần. Toàn bộ chuyến xe và quyền truy cập đã bị đình chỉ.',
+            reason: piiCheck.reason,
+            detectedSample: piiCheck.detectedSample
+          });
+        }
       }
     }
 

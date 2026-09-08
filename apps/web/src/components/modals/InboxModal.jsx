@@ -14,7 +14,9 @@ import {
   ShieldCheck,
   Zap,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  ShieldAlert,
+  Ban
 } from 'lucide-react';
 import { formatVND, toPublicAlias, detectPiiLeak, maskPhoneNumber } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -36,6 +38,8 @@ export default function InboxModal({
   const [sending, setSending] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [piiWarning, setPiiWarning] = useState('');
+  const [violationInfo, setViolationInfo] = useState(null);
+  const [isBannedState, setIsBannedState] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [timeLeftStr, setTimeLeftStr] = useState('');
   const messagesEndRef = useRef(null);
@@ -116,22 +120,12 @@ export default function InboxModal({
 
   if (!isOpen) return null;
 
-  // Gửi tin nhắn có bảo vệ AI PII
+  // Gửi tin nhắn có bảo vệ AI PII và Chế tài Bậc thang (Warning -> -15đ Tín nhiệm -> Ban)
   const handleSendMessage = async (e) => {
     e?.preventDefault();
     if (!inputMessage.trim() || sending || !activeBooking) return;
 
     const bId = activeBooking.escrowId || activeBooking.id;
-    const isConfirmed = activeBooking.status === 'confirmed' || activeBooking.bothConfirmed === true;
-
-    // THUẬT TOÁN AI PII KIỂM TRA TRỰC TIẾP CLIENT-SIDE (0.2ms)
-    if (!isConfirmed) {
-      const piiCheck = detectPiiLeak(inputMessage);
-      if (piiCheck.hasLeak) {
-        setPiiWarning(piiCheck.warningMessage);
-        return;
-      }
-    }
 
     setPiiWarning('');
     setSending(true);
@@ -147,9 +141,34 @@ export default function InboxModal({
       });
 
       setInputMessage('');
+      setViolationInfo(null);
       onRefreshBookings?.();
     } catch (err) {
-      setPiiWarning(err.message || 'Lỗi gửi tin nhắn');
+      const vData = err.data || {};
+      const strike = vData.strike || 1;
+      const isBanned = Boolean(vData.isBanned || err.status === 403);
+
+      setViolationInfo({
+        strike,
+        level: vData.violationLevel || (isBanned ? 'banned' : strike === 2 ? 'penalty' : 'warning'),
+        message: err.message || 'Lỗi gửi tin nhắn',
+        trustScore: vData.trustScore,
+        isBanned
+      });
+
+      if (isBanned) {
+        setIsBannedState(true);
+      }
+
+      onShowToast?.(
+        isBanned
+          ? '⛔ Tài khoản của bạn đã bị khóa do vi phạm liên tục!'
+          : strike === 2
+            ? `🚨 CẢNH CÁO: Đã trừ -15 điểm tín nhiệm (còn ${vData.trustScore || 0}/100)`
+            : '⚠️ Cảnh báo: Không chia sẻ thông tin ngoài luồng khi chưa chốt chuyến!'
+      );
+
+      onRefreshBookings?.();
     } finally {
       setSending(false);
     }
@@ -512,8 +531,50 @@ export default function InboxModal({
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* CẢNH BÁO AI PII TỨC THÌ (REACTIVITY) */}
-              {piiWarning && (
+              {/* CẢNH BÁO AI PII VÀ CHẾ TÀI BẬC THANG */}
+              {violationInfo ? (
+                <div
+                  className={`px-4 py-2.5 border-t text-xs flex items-start gap-2.5 anim-shake ${
+                    violationInfo.isBanned || violationInfo.strike >= 3
+                      ? 'bg-rose-100 dark:bg-rose-950/80 border-rose-300 dark:border-rose-900 text-rose-900 dark:text-rose-100'
+                      : violationInfo.strike === 2
+                        ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                        : 'bg-amber-50 dark:bg-amber-950/70 border-amber-200/80 text-amber-900 dark:text-amber-200'
+                  }`}
+                >
+                  {violationInfo.isBanned || violationInfo.strike >= 3 ? (
+                    <Ban className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  ) : violationInfo.strike === 2 ? (
+                    <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold">
+                        {violationInfo.isBanned || violationInfo.strike >= 3
+                          ? 'Khóa tài khoản vĩnh viễn (Cấp 3):'
+                          : violationInfo.strike === 2
+                            ? 'Cảnh cáo nghiêm trọng (Cấp 2):'
+                            : 'Cảnh báo quy chế (Cấp 1):'}
+                      </p>
+                      {violationInfo.strike === 2 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-200 text-[10px] font-mono font-bold">
+                          -15 Điểm Tín Nhiệm
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] leading-relaxed mt-0.5">{violationInfo.message}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViolationInfo(null)}
+                    className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : piiWarning ? (
                 <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/70 border-t border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2 anim-shake">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="flex-1">
@@ -528,37 +589,54 @@ export default function InboxModal({
                     ✕
                   </button>
                 </div>
-              )}
+              ) : null}
 
-              {/* KHUNG NHẬP TIN NHẮN */}
-              <form
-                onSubmit={handleSendMessage}
-                className="p-3 border-t border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#1c1c1e] flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  value={inputMessage}
-                  disabled={isConfirmed && activeBooking.status === 'completed'}
-                  onChange={(e) => {
-                    setInputMessage(e.target.value);
-                    if (piiWarning) setPiiWarning('');
-                  }}
-                  placeholder={
-                    isConfirmed
-                      ? 'Nhắn tin cập nhật điểm đón / chuẩn bị lên xe...'
-                      : 'Thỏa thuận điểm đón, hành lý (SĐT tự động bảo mật)...'
-                  }
-                  className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 transition-all outline-hidden"
-                />
-
-                <button
-                  type="submit"
-                  disabled={!inputMessage.trim() || sending}
-                  className="p-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+              {/* KHUNG NHẬP TIN NHẮN HOẶC TRẠNG THÁI KHÓA */}
+              {isBannedState || currentUser?.isBanned || activeBooking.isBanned ? (
+                <div className="p-3.5 border-t border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-center gap-2 font-medium">
+                  <Ban className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>⛔ Tài khoản của bạn đã bị khóa do cố tình vi phạm quy chế bảo mật thông tin liên tục.</span>
+                </div>
+              ) : (
+                <form
+                  onSubmit={handleSendMessage}
+                  className="p-3 border-t border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#1c1c1e] flex items-center gap-2"
                 >
-                  <Send className="w-4 h-4" />
-                </button>
-              </form>
+                  <input
+                    type="text"
+                    value={inputMessage}
+                    disabled={isConfirmed && activeBooking.status === 'completed'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setInputMessage(val);
+                      if (!isConfirmed && val.trim()) {
+                        const check = detectPiiLeak(val);
+                        if (check.hasLeak) {
+                          setPiiWarning(check.warningMessage);
+                        } else if (piiWarning) {
+                          setPiiWarning('');
+                        }
+                      } else if (piiWarning) {
+                        setPiiWarning('');
+                      }
+                    }}
+                    placeholder={
+                      isConfirmed
+                        ? 'Nhắn tin cập nhật điểm đón / chuẩn bị lên xe...'
+                        : 'Thỏa thuận điểm đón, hành lý (SĐT tự động bảo mật)...'
+                    }
+                    className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 transition-all outline-hidden"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={!inputMessage.trim() || sending}
+                    className="p-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+              )}
             </>
           )}
         </div>

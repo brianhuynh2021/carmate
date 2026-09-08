@@ -4033,6 +4033,91 @@ async function runTests() {
     assert(false, '54. Kiểm thử Bộ Lọc AI PII & Giao Thức Bắt Tay 2 Pha', err.message);
   }
 
+  // BÀI TEST 55: KIỂM THỬ HỆ THỐNG XỬ PHẠT BẬC THANG (3-STRIKE PROGRESSIVE SANCTIONS)
+  console.log('\n⚖️ 55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang: Lần 1 Cảnh Cáo, Lần 2 Hạ Điểm Tín Dụng, Lần 3 Ban Luôn...');
+  try {
+    // 1. Tạo một yêu cầu ghép chuyến để kiểm thử
+    const strikeBookRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'TP.HCM',
+        to: 'Vũng Tàu',
+        seats: 1,
+        totalDeal: 150000,
+        contactPhone: '0977112233'
+      })
+    });
+    const strikeBookData = await strikeBookRes.json();
+    const strikeBookingId = strikeBookData.data.escrowId || strikeBookData.data.id;
+
+    // 2. Vi phạm LẦN 1 (Strike 1): Cảnh cáo nhẹ, chặn gửi
+    const s1Res = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Alo số đt mình nè không chín bảy bảy một một hai hai ba ba',
+        senderRole: 'passenger'
+      })
+    });
+    const s1Data = await s1Res.json();
+    assert(s1Res.status === 400, '3-Strike 1: Vi phạm lần 1 bị chặn (HTTP 400)');
+    assert(s1Data.strike === 1, '3-Strike 2: Ghi nhận vi phạm Strike = 1');
+    assert(s1Data.violationLevel === 'warning', '3-Strike 3: Cấp độ vi phạm là warning');
+    assert(s1Data.error.includes('Lần 1/3'), '3-Strike 4: Thông báo cảnh báo vi phạm lần 1/3');
+
+    // 3. Vi phạm LẦN 2 (Strike 2): Cố tình tái phạm -> Cảnh cáo nghiêm trọng + HẠ ĐIỂM TÍN NHIỆM (-15đ)
+    const s2Res = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Nhắn qua za.lo số 0977.112.233 nha',
+        senderRole: 'passenger'
+      })
+    });
+    const s2Data = await s2Res.json();
+    assert(s2Res.status === 400, '3-Strike 5: Vi phạm lần 2 bị chặn (HTTP 400)');
+    assert(s2Data.strike === 2, '3-Strike 6: Ghi nhận vi phạm Strike = 2');
+    assert(s2Data.violationLevel === 'penalty', '3-Strike 7: Cấp độ vi phạm là penalty');
+    assert(s2Data.deductedPoints === 15, '3-Strike 8: Hệ thống trừ chính xác 15 điểm tín nhiệm');
+    assert(s2Data.error.includes('TRỪ -15 ĐIỂM TÍN NHIỆM') || s2Data.error.includes('Lần 2/3'), '3-Strike 9: Cảnh cáo trừ điểm tín nhiệm hiển thị rõ ràng');
+
+    // 4. Vi phạm LẦN 3 (Strike 3 - Liên tục): KHÓA TÀI KHOẢN VĨNH VIỄN (BAN)
+    const s3Res = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Cố tình nhắn zl 0977 112 233 nè',
+        senderRole: 'passenger'
+      })
+    });
+    const s3Data = await s3Res.json();
+    assert(s3Res.status === 403, '3-Strike 10: Vi phạm lần 3 bị từ chối truy cập (HTTP 403)');
+    assert(s3Data.isBanned === true, '3-Strike 11: Cờ isBanned = true kích hoạt');
+    assert(s3Data.error.includes('KHÓA VĨNH VIỄN') || s3Data.error.includes('BAN'), '3-Strike 12: Thông báo tài khoản bị khóa vĩnh viễn (BAN)');
+
+    // 5. Kiểm thử sau khi Ban: Thử gửi tin nhắn bình thường cũng bị chặn vĩnh viễn
+    const s4Res = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Em hỏi bình thường thôi mà',
+        senderRole: 'passenger'
+      })
+    });
+    const s4Data = await s4Res.json();
+    assert(s4Res.status === 403, '3-Strike 13: Tài khoản đã bị Ban không thể gửi bất kỳ tin nhắn nào (HTTP 403)');
+    assert(s4Data.isBanned === true, '3-Strike 14: Phản hồi cấm truy cập do tài khoản bị khóa');
+
+    // 6. Kiểm tra giao diện InboxModal có tích hợp ShieldAlert và xử lý khóa tài khoản
+    const inboxModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxModalSrc.includes('ShieldAlert') && inboxModalSrc.includes('violationInfo'), '3-Strike UI 1: InboxModal tích hợp cảnh báo vi phạm bậc thang');
+    assert(inboxModalSrc.includes('-15 Điểm Tín Nhiệm'), '3-Strike UI 2: InboxModal hiển thị huy hiệu trừ điểm tín nhiệm');
+    assert(inboxModalSrc.includes('Tài khoản của bạn đã bị khóa'), '3-Strike UI 3: InboxModal hiển thị trạng thái khóa tài khoản');
+  } catch (err) {
+    assert(false, '55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang (3-Strike Sanctions)', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

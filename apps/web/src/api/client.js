@@ -23,7 +23,10 @@ async function request(endpoint, options = {}) {
     const response = await fetch(url, config);
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      const err = new Error(data.error || `HTTP error! status: ${response.status}`);
+      err.data = data;
+      err.status = response.status;
+      throw err;
     }
     return data;
   } catch (error) {
