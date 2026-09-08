@@ -10,7 +10,7 @@ import {
   getUserById,
   getUserByPhone
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore } from '@carmate/shared';
+import { cleanPhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias } from '@carmate/shared';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
@@ -94,28 +94,7 @@ function resolveTrustScore(trip) {
   }
 }
 
-/**
- * Sinh bí danh công khai ổn định cho một chuyến đi.
- * Không bao giờ trả về tên thật — chỉ vai trò + số hiệu suy ra từ id chuyến,
- * nên cùng một chuyến luôn cho ra cùng một bí danh giữa các lần gọi API.
- */
-export function toPublicAlias(trip) {
-  const isDriver = trip?.type === 'driver_offer';
-  const isConvenient = trip?.carCategory === 'convenient_trip';
-  const role = isDriver ? (isConvenient ? 'Xe tiện chuyến' : 'Chủ xe') : 'Khách';
-
-  // Giữ lại bí danh cũ nếu nó vốn đã ẩn danh (mock data, chuyến cũ)
-  const existing = String(trip?.publicName || '').trim();
-  if (existing && /^(Chủ xe|Khách|Xe tiện chuyến|Người)\b/i.test(existing)) return existing;
-
-  const masked = String(trip?.maskedCode || '').trim();
-  if (masked) return `${role} ${masked}`;
-
-  const seed = String(trip?.id || trip?.userId || '');
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 900;
-  return `${role} #${100 + hash}`;
-}
+export { toPublicAlias };
 
 export function sanitizeTripForPublic(trip, reqUser) {
   if (!trip) return null;
@@ -136,6 +115,9 @@ export function sanitizeTripForPublic(trip, reqUser) {
     sanitized.phoneMasked = cleaned.length >= 7 ? `${cleaned.slice(0, 3)}***${cleaned.slice(-4)}` : '098***2233';
   }
 
+  // Chuẩn hoá bí danh hiển thị công khai (Chủ xe CX-xxx / Khách KX-xxx)
+  sanitized.publicName = toPublicAlias(sanitized);
+
   // Ẩn triệt để phoneReal nếu không phải chủ sở hữu hoặc admin
   if (!isOwner) {
     delete sanitized.phoneReal;
@@ -144,9 +126,8 @@ export function sanitizeTripForPublic(trip, reqUser) {
       sanitized.licensePlate = sanitized.licensePlate.replace(/\d{2}$/, 'xx');
     }
 
-    // Ẩn danh tính thật: feed công khai chỉ được thấy bí danh dạng "Chủ xe #123".
+    // Ẩn danh tính thật: feed công khai chỉ được thấy bí danh dạng "Chủ xe CX-xxx".
     // Tên thật chỉ lộ cho hai bên sau khi ghép chuyến thành công (qua booking).
-    sanitized.publicName = toPublicAlias(sanitized);
     delete sanitized.driverName;
     delete sanitized.contactName;
     delete sanitized.author;

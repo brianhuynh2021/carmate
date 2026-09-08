@@ -3879,6 +3879,60 @@ async function runTests() {
     assert(false, '52. Kiểm thử Trích Xuất Tuyến HOT Động', err.message);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n✨ 53. Kiểm thử Chuẩn Hoá Bí Danh Công Khai (Chủ xe CX-xxx & Khách KX-xxx)...');
+  try {
+    const { toPublicAlias } = await import('@carmate/shared');
+
+    // 1. Kiểm thử đơn vị toPublicAlias với các chuỗi cũ
+    assert(toPublicAlias('Chủ xe Lộc Ninh #101') === 'Chủ xe CX-101', 'Public Alias 1: Chuẩn hoá "Chủ xe Lộc Ninh #101" -> "Chủ xe CX-101"');
+    assert(toPublicAlias('Chủ xe Phan Thiết #103') === 'Chủ xe CX-103', 'Public Alias 2: Chuẩn hoá "Chủ xe Phan Thiết #103" -> "Chủ xe CX-103"');
+    assert(toPublicAlias('Khách đi khám Chợ Rẫy #201') === 'Khách KX-201', 'Public Alias 3: Chuẩn hoá "Khách đi khám Chợ Rẫy #201" -> "Khách KX-201"');
+    assert(toPublicAlias('Khách về quê #202') === 'Khách KX-202', 'Public Alias 4: Chuẩn hoá "Khách về quê #202" -> "Khách KX-202"');
+    assert(toPublicAlias('Chủ xe CX-101') === 'Chủ xe CX-101', 'Public Alias 5: Giữ nguyên chuẩn "Chủ xe CX-101"');
+    assert(toPublicAlias('Khách KX-201') === 'Khách KX-201', 'Public Alias 6: Giữ nguyên chuẩn "Khách KX-201"');
+    assert(toPublicAlias('Chủ xe Test E2E 999') === 'Chủ xe Test E2E 999', 'Public Alias 7: Bảo lưu tên bài đăng test E2E');
+
+    // 2. Kiểm thử đơn vị toPublicAlias với object trip
+    const driverTripObj = { id: 'DRV-101', type: 'driver_offer', maskedCode: 'CX-101' };
+    const paxTripObj = { id: 'REQ-201', type: 'passenger_request', maskedCode: 'KX-201' };
+    assert(toPublicAlias(driverTripObj) === 'Chủ xe CX-101', 'Public Alias 8: Đối tượng chuyến của Chủ xe -> "Chủ xe CX-101"');
+    assert(toPublicAlias(paxTripObj) === 'Khách KX-201', 'Public Alias 9: Đối tượng chuyến của Khách -> "Khách KX-201"');
+
+    // 3. Kiểm thử API /api/trips: 100% chuyến xe trả về tuân thủ chuẩn Chủ xe CX-xxx hoặc Khách KX-xxx
+    const tripsRes = await fetch(`${BASE_URL}/api/trips`);
+    const tripsData = await tripsRes.json();
+    const publicTrips = Array.isArray(tripsData.data) ? tripsData.data : (tripsData.data?.all || []);
+    assert(Array.isArray(publicTrips) && publicTrips.length > 0, 'Public Alias 10: API /api/trips phản hồi danh sách chuyến xe');
+
+    let allAliasesValid = true;
+    for (const trip of publicTrips) {
+      const pName = trip.publicName || '';
+      // Bỏ qua chuyến test E2E nếu có
+      if (pName.includes('Test E2E')) continue;
+      const isValidFormat =
+        /^(?:Chủ xe|Xe tiện chuyến)\s+CX-\d+/.test(pName) ||
+        /^Khách\s+KX-\d+/.test(pName);
+      if (!isValidFormat) {
+        allAliasesValid = false;
+        console.error(`Invalid publicName detected: "${pName}" for trip ID ${trip.id}`);
+        break;
+      }
+    }
+    assert(allAliasesValid, 'Public Alias 11: 100% chuyến xe trên sàn đều tuân thủ chuẩn "Chủ xe CX-xxx" hoặc "Khách KX-xxx"');
+
+    // 4. Kiểm thử API /api/trust/:memberId trả về chuẩn "Chủ xe CX-xxx"
+    const trustRes = await fetch(`${BASE_URL}/api/trust/USR-0900000019`);
+    if (trustRes.status === 200) {
+      const trustData = await trustRes.json();
+      const profile = trustData.data || trustData;
+      const validTrustName = /^(?:Chủ xe|Xe tiện chuyến)\s+CX-\d+/.test(profile.publicName || profile.name);
+      assert(validTrustName, 'Public Alias 12: Hồ sơ tin cậy công khai hiển thị chuẩn "Chủ xe CX-xxx"');
+    }
+  } catch (err) {
+    assert(false, '53. Kiểm thử Chuẩn Hoá Bí Danh Công Khai', err.message);
+  }
+
 
 
   const passed = results.filter((r) => r.pass).length;

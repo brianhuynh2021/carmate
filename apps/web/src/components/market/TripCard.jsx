@@ -19,7 +19,8 @@ import {
   isGoogleMapsUrl,
   formatTripDateDisplay,
   parseLocation,
-  getCorridorDisplay
+  getCorridorDisplay,
+  toPublicAlias
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 
@@ -125,18 +126,8 @@ export default function TripCard({
   const price = item.basePricePerSeat || item.expectedPrice || item.suggestedContribution || item.price || 180000;
   const formattedPrice = `${Number(price || 0).toLocaleString('vi-VN')}đ`;
 
-  // Danh tính công khai: chỉ hiển thị bí danh vai trò + mã định danh
-  const driverDisplayName = (() => {
-    const role = isDriver ? (isConvenient ? 'Xe tiện chuyến' : 'Chủ xe') : 'Khách tìm xe';
-    const candidate = String(item.publicName || '').trim();
-    const isAlias = /^(Chủ xe|Khách|Xe tiện chuyến|Người)\b/i.test(candidate);
-    if (candidate && isAlias && !candidate.includes('Test E2E')) return candidate;
-    if (item.maskedCode) return `${role} ${item.maskedCode}`;
-    const seed = String(item.id || '');
-    let hash = 0;
-    for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 900;
-    return `${role} #${100 + hash}`;
-  })();
+  // Danh tính công khai: chỉ hiển thị bí danh vai trò + mã định danh chuẩn (Chủ xe CX-xxx / Khách KX-xxx)
+  const driverDisplayName = toPublicAlias(item);
 
   const fromParsed = parseLocation(item.from);
   const toParsed = parseLocation(item.to);
