@@ -162,7 +162,12 @@ export default function App() {
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
           }
         } else if (activeTab === 'admin') {
-          if (window.location.hash !== '#admin' && !window.location.pathname.startsWith('/admin')) {
+          if (isOpsPortal) {
+            // Trên Subdomain chuyên dụng (admin.carmate.vn / ops.carmate.vn), giữ URL sạch sẽ 100%, không gắn đuôi #admin
+            if (window.location.hash) {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+          } else if (window.location.hash !== '#admin' && !window.location.pathname.startsWith('/admin')) {
             window.history.replaceState(null, '', '#admin');
           }
         } else {
