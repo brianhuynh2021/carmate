@@ -1210,7 +1210,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                           {/* Masked plate badge */}
                           <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-[9px] font-mono font-bold text-white flex items-center gap-1">
                             <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
-                            <span>93A-***.**</span>
+                            <span>93A - xxxxx</span>
                           </div>
                           {/* Delete button */}
                           <button
@@ -1261,7 +1261,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                 <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                   <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                   <span>
-                    Bảo mật biển số: Tự động gắn màng bảo vệ <code>93A-***.**</code>, giữ kín danh tính chủ xe.
+                    Bảo mật biển số: Tự động gắn màng bảo vệ <code>93A - xxxxx</code>, giữ kín danh tính chủ xe.
                   </span>
                 </div>
                 <div className="font-mono text-[11.5px] font-semibold text-right">

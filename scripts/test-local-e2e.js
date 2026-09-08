@@ -3717,21 +3717,21 @@ async function runTests() {
     assert(toLoc.main === 'Sài Gòn', 'Ambient Geo 3: Nhận diện Cống Quỳnh (Quận 1) thuộc vĩ mô Sài Gòn');
     assert(toLoc.sub === 'Đường Cống Quỳnh, Quận 1', 'Ambient Geo 4: Rút trích điểm trả vi mô Đường Cống Quỳnh, Quận 1');
 
-    // Test maskLicensePlate Privacy Invariant
+    // Test maskLicensePlate Privacy Invariant (che toàn bộ số sau thành xxxxx)
     const masked1 = maskLicensePlate('93A - 541.86');
-    assert(masked1 === '93A - ***.86', 'Plate Privacy 1: Biển 5 số che đúng 3 số giữa (93A - ***.86)');
+    assert(masked1 === '93A - xxxxx', 'Plate Privacy 1: Biển 5 số che toàn bộ số sau thành 93A - xxxxx');
 
     const masked2 = maskLicensePlate('51K-123.45');
-    assert(masked2 === '51K - ***.45', 'Plate Privacy 2: Biển 5 số định dạng không khoảng trắng (51K - ***.45)');
+    assert(masked2 === '51K - xxxxx', 'Plate Privacy 2: Biển 5 số định dạng không khoảng trắng che thành 51K - xxxxx');
 
     const masked3 = maskLicensePlate('60B-9876');
-    assert(masked3 === '60B - **.76', 'Plate Privacy 3: Biển 4 số che đúng 2 số giữa (60B - **.76)');
+    assert(masked3 === '60B - xxxxx', 'Plate Privacy 3: Biển 4 số che toàn bộ số sau thành 60B - xxxxx');
 
     const masked4 = maskLicensePlate('93A - ***.86');
-    assert(masked4 === '93A - ***.86', 'Plate Privacy 4: Biển đã che giữ nguyên định dạng an toàn');
+    assert(masked4 === '93A - xxxxx', 'Plate Privacy 4: Biển đã có sao chuẩn hoá thành 93A - xxxxx');
 
     const fallbackBP = maskLicensePlate(null, 'Bình Phước');
-    assert(fallbackBP === '93A - ***.86', 'Plate Privacy 5: Fallback theo tỉnh Bình Phước');
+    assert(fallbackBP === '93A - xxxxx', 'Plate Privacy 5: Fallback theo tỉnh Bình Phước thành 93A - xxxxx');
   } catch (err) {
     assert(false, '49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe', err.message);
   }

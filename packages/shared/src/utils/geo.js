@@ -665,35 +665,33 @@ export function parseLocation(str) {
 
 /**
  * Định dạng biển số xe bảo mật (Privacy Masked Plate)
- * Chuẩn MIT Invariants: Tuyệt đối không phơi bày trọn vẹn biển kiểm soát cho người chưa xác nhận ghép chuyến.
- * VD: "93A - 541.86" -> "93A - ***.86"
- *     "51K-123.45"   -> "51K - ***.45"
- *     "60B-9876"     -> "60B - **.76"
- *     "93A - ***.86" -> giữ nguyên "93A - ***.86"
+ * Chuẩn MIT Invariants: Che toàn bộ số phía sau (VD: "93A - xxxxx") để giữ kín danh tính chủ xe trên sàn công khai.
+ * VD: "93A - 541.86" -> "93A - xxxxx"
+ *     "51K-123.45"   -> "51K - xxxxx"
+ *     "60B-9876"     -> "60B - xxxxx"
+ *     "93A - ***.86" -> "93A - xxxxx"
  */
 export function maskLicensePlate(plateStr, fallbackLocation = '') {
+  const fallback = fallbackLocation?.includes('Bình Phước') ? '93A - xxxxx' : '51K - xxxxx';
   if (!plateStr || typeof plateStr !== 'string') {
-    return fallbackLocation?.includes('Bình Phước') ? '93A - ***.86' : '51K - ***.24';
+    return fallback;
   }
   const s = plateStr.trim();
   if (!s) {
-    return fallbackLocation?.includes('Bình Phước') ? '93A - ***.86' : '51K - ***.24';
+    return fallback;
   }
-  // Nếu đã được che bằng sao hoặc x thì chuẩn hóa khoảng trắng quanh dấu gạch ngang
-  if (s.includes('*') || /x{2,}/i.test(s)) {
-    return s.replace(/\s*-\s*/g, ' - ');
+  // Bóc tách tiền tố biển số: 2 số tỉnh + 1-2 chữ cái (VD: 93A, 51K, 60B, 29LD)
+  const matchSeries = s.match(/^([0-9]{2}\s*[A-Z]{1,2})/i);
+  if (matchSeries) {
+    const series = matchSeries[1].replace(/\s+/g, '').toUpperCase();
+    return `${series} - xxxxx`;
   }
-  // Bóc tách chuỗi biển số Việt Nam: 2 số tỉnh + 1-2 chữ cái + dãy 4-5 số
   const clean = s.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-  const match = clean.match(/^([0-9]{2}[A-Z]{1,2})([0-9]{4,5})$/);
-  if (match) {
-    const series = match[1];
-    const digits = match[2];
-    const lastTwo = digits.slice(-2);
-    const starCount = digits.length - 2;
-    return `${series} - ${'*'.repeat(starCount)}.${lastTwo}`;
+  const matchClean = clean.match(/^([0-9]{2}[A-Z]{1,2})/);
+  if (matchClean) {
+    return `${matchClean[1]} - xxxxx`;
   }
-  return s;
+  return fallback;
 }
 
 /**

@@ -13,7 +13,7 @@ import {
   MessageSquare,
   User
 } from 'lucide-react';
-import { formatVND } from '@carmate/shared';
+import { formatVND, maskLicensePlate } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -29,7 +29,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
   const name = item.publicName || item.maskedCode || 'Nguyễn Anh Tuấn';
   const hometown = item.hometown || 'Bình Phước';
   const carModel = item.carModel || item.car?.model || 'Mitsubishi Xpander (7 chỗ)';
-  const plate = item.licensePlateMasked || item.car?.plate || '93A-289.xx (Đã đối soát)';
+  const plate = maskLicensePlate(item.licensePlateMasked || item.car?.plate || item.plateMask, item.from || hometown);
   const karmaScore = item.karmaScore ?? item.trustScore ?? 75;
   const rating = item.rating || 4.95;
   const driverTrips =
