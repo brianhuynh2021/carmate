@@ -85,7 +85,7 @@ export default function App() {
   // Danh mục Tab hợp lệ trên toàn hệ sinh thái CarMate
   const VALID_TABS = ['market', 'match', 'post', 'my-trips', 'booked', 'admin'];
 
-  const [activeTab, setActiveTab] = useState(() => {
+  const [activeTab, _setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
       // 1. Nhận diện Admin Portal chuyên dụng
       if (
@@ -128,6 +128,19 @@ export default function App() {
     }
     return 'market';
   });
+
+  // Bất biến MIT: Chuẩn hóa vĩnh viễn tab 'my_trips' -> 'my-trips' để không bao giờ rơi vào trạng thái rỗng
+  const setActiveTab = useCallback((tabOrUpdater) => {
+    if (typeof tabOrUpdater === 'function') {
+      _setActiveTab((prev) => {
+        const next = tabOrUpdater(prev);
+        return next === 'my_trips' || next === 'mytrips' ? 'my-trips' : next;
+      });
+    } else {
+      const next = tabOrUpdater === 'my_trips' || tabOrUpdater === 'mytrips' ? 'my-trips' : tabOrUpdater;
+      _setActiveTab(next);
+    }
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -476,7 +489,7 @@ export default function App() {
   const handleManageMyTrip = useCallback(
     (trip) => {
       showToast('Chuyển sang mục "Chuyến của tôi" để bạn quản lý bài đăng này.');
-      setActiveTab('my_trips');
+      setActiveTab('my-trips');
     },
     [showToast, setActiveTab]
   );
@@ -485,7 +498,7 @@ export default function App() {
   const handleInitiateBook = (trip) => {
     if (checkIsMyTrip(trip)) {
       showToast('Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.');
-      setActiveTab('my_trips');
+      setActiveTab('my-trips');
       return;
     }
     trackViewTrip(trip.id, `${trip.from} - ${trip.to}`);
@@ -1043,9 +1056,9 @@ export default function App() {
           onClose={() => setSelectedItemForEscrow(null)}
           onConfirmBooking={handleConfirmBooking}
           onViewTrustProfile={setSelectedDriverForTrust}
-          onViewBookedTab={() => {
+          onViewBookedTab={(targetTab = 'booked') => {
             setSelectedItemForEscrow(null);
-            setActiveTab('booked');
+            setActiveTab(targetTab === 'my-trips' || targetTab === 'my_trips' ? 'my-trips' : 'booked');
           }}
           onAutoPostDemand={handlePostTrip}
           onShowToast={showToast}
