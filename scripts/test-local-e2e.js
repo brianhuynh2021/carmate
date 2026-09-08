@@ -3737,9 +3737,9 @@ async function runTests() {
   }
 
   // -------------------------------------------------------------
-  // 50. Kiểm thử Chuẩn Hoá Khung Giờ & Triệt Tiêu Từ Chỉ Buổi Dư Thừa (MIT & Apple Typography)
+  // 50. Kiểm thử Chuẩn Hoá Khung Giờ & Phân Định Buổi Sáng Thông Minh (MIT & Stanford Ergonomics)
   // -------------------------------------------------------------
-  console.log('\n--- 50. Kiểm thử Chuẩn Hoá Khung Giờ & Triệt Tiêu Từ Chỉ Buổi Dư Thừa ---');
+  console.log('\n--- 50. Kiểm thử Chuẩn Hoá Khung Giờ & Phân Định Buổi Sáng Thông Minh ---');
   try {
     const { sanitizeTimeLabel, getTimeSlotLabel } = await import('../packages/shared/src/constants/timeSlots.js');
 
@@ -3749,36 +3749,71 @@ async function runTests() {
       'TimeSanitize 1: Triệt tiêu chữ "Chiều" dư thừa sau khoảng giờ 24h (16:00 – 18:00 Chiều -> 16:00 – 18:00)'
     );
     assert(
-      sanitizeTimeLabel('05:00 - 06:00 Sáng') === '05:00 – 06:00',
-      'TimeSanitize 2: Triệt tiêu chữ "Sáng" dư thừa và chuẩn hoá en-dash (05:00 - 06:00 Sáng -> 05:00 – 06:00)'
+      sanitizeTimeLabel('7:00') === '07:00 Sáng',
+      'TimeSanitize 2: Chuẩn hoá giờ đơn "7:00" thành "07:00 Sáng" giúp hành khách không hỏi lại'
     );
     assert(
-      sanitizeTimeLabel('07:00 - 08:00 Sáng mai') === '07:00 – 08:00',
-      'TimeSanitize 3: Triệt tiêu "Sáng mai" gắn sau mốc giờ 24h'
+      sanitizeTimeLabel('7:00-8:00') === '07:00 – 08:00 Sáng',
+      'TimeSanitize 3: Chuẩn hoá khoảng giờ "7:00-8:00" thành "07:00 – 08:00 Sáng"'
+    );
+    assert(
+      sanitizeTimeLabel('05:00 - 06:00 Sáng') === '05:00 – 06:00 Sáng',
+      'TimeSanitize 4: Giữ chữ "Sáng" và chuẩn hoá en-dash (05:00 - 06:00 Sáng -> 05:00 – 06:00 Sáng)'
+    );
+    assert(
+      sanitizeTimeLabel('07:00 - 08:00 Sáng mai') === '07:00 – 08:00 Sáng',
+      'TimeSanitize 5: Rút gọn "Sáng mai" thành "Sáng" gắn sau mốc giờ'
     );
     assert(
       sanitizeTimeLabel('14:00 - 15:00 Chiều') === '14:00 – 15:00',
-      'TimeSanitize 4: Triệt tiêu "Chiều" sau 14:00 - 15:00'
+      'TimeSanitize 6: Triệt tiêu "Chiều" sau 14:00 - 15:00'
+    );
+    assert(
+      sanitizeTimeLabel('11:00 - 13:00') === '11:00 – 13:00',
+      'TimeSanitize 7: Buổi trưa 11:00 - 13:00 giữ nguyên 24h không bị gắn nhầm "Sáng"'
     );
 
-    // 2. Kiểm tra getTimeSlotLabel với slot alias 16:00-18:00
+    // 2. Kiểm tra getTimeSlotLabel với slot morning và afternoon
+    assert(
+      getTimeSlotLabel('07:00-08:00') === '07:00 – 08:00 Sáng',
+      'TimeSanitize 8: getTimeSlotLabel(07:00-08:00) trả về 07:00 – 08:00 Sáng chuẩn chỉ'
+    );
     assert(
       getTimeSlotLabel('16:00-18:00') === '16:00 – 18:00',
-      'TimeSanitize 5: getTimeSlotLabel(16:00-18:00) trả về 16:00 – 18:00 chuẩn xác'
+      'TimeSanitize 9: getTimeSlotLabel(16:00-18:00) trả về 16:00 – 18:00 tinh gọn'
     );
     assert(
       getTimeSlotLabel({ timeSlot: '16:00-18:00', timeSlotLabel: '16:00 – 18:00 Chiều' }) === '16:00 – 18:00',
-      'TimeSanitize 6: Đối tượng chuyến đi có nhãn cũ dính chữ "Chiều" tự động được làm sạch'
-    );
-
-    // 3. Kiểm tra API trips thực tế không còn dính từ chỉ buổi thừa
-    const testTrips = await fetch(`${BASE_URL}/api/trips`).then((r) => r.json());
-    const tripsWithRedundantPeriod = (testTrips?.data?.all || []).filter(
-      (t) => t.timeSlotLabel && /\d{1,2}:\d{2}.*(?:chiều|sáng|trưa|tối)/i.test(t.timeSlotLabel)
+      'TimeSanitize 10: Chuyến chiều dính chữ "Chiều" tự động được làm sạch thành 16:00 – 18:00'
     );
     assert(
-      tripsWithRedundantPeriod.length === 0,
-      'TimeSanitize 7: 100% chuyến đi trên sàn không dính từ chỉ buổi thừa sau giờ 24h'
+      getTimeSlotLabel({ timeSlot: '07:00-08:00', timeSlotLabel: '7:00 - 8:00' }) === '07:00 – 08:00 Sáng',
+      'TimeSanitize 11: Chuyến sáng chưa có chữ "Sáng" tự động được bổ sung thành 07:00 – 08:00 Sáng'
+    );
+
+    // 3. Kiểm tra API trips thực tế: Buổi chiều không dính chiều/tối, buổi sáng có chữ Sáng
+    const testTrips = await fetch(`${BASE_URL}/api/trips`).then((r) => r.json());
+    const allTrips = testTrips?.data?.all || [];
+    const tripsWithRedundantAfternoon = allTrips.filter((t) => {
+      const match = (t.timeSlotLabel || '').match(/^(\d{1,2}):/);
+      if (!match) return false;
+      const h = parseInt(match[1], 10);
+      return h >= 11 && /(?:chiều|tối|đêm)/i.test(t.timeSlotLabel);
+    });
+    assert(
+      tripsWithRedundantAfternoon.length === 0,
+      'TimeSanitize 12: 100% chuyến xe buổi chiều/tối không dính chữ "chiều/tối" dư thừa'
+    );
+
+    const morningTripsWithoutMorning = allTrips.filter((t) => {
+      const match = (t.timeSlotLabel || '').match(/^(\d{1,2}):/);
+      if (!match) return false;
+      const h = parseInt(match[1], 10);
+      return h >= 3 && h < 11 && !/sáng/i.test(t.timeSlotLabel);
+    });
+    assert(
+      morningTripsWithoutMorning.length === 0,
+      'TimeSanitize 13: 100% chuyến xe buổi sáng có chữ "Sáng" rõ ràng, không lo khách hỏi lại'
     );
   } catch (err) {
     assert(false, '50. Kiểm thử Chuẩn Hoá Khung Giờ', err.message);
