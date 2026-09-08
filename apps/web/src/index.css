@@ -9,6 +9,7 @@
    Precision Apple Typography (#1d1d1f), and Apple Signature Blue (#0071e3)
    ──────────────────────────────────────────────────────────── */
 @theme {
+  --breakpoint-xs: 420px;
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', 'Plus Jakarta Sans', 'Inter', 'Helvetica Neue', Arial,
     sans-serif;
