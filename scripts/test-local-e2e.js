@@ -217,9 +217,15 @@ async function runTests() {
       body: JSON.stringify(bookingPayload)
     });
     const bookData = await bookRes.json();
-    assert(bookRes.status === 201, 'Tạo kết nối chuyến qua Zalo thành công (HTTP 201)');
-    assert(bookData.data.commitmentType === 'zalo_direct', 'Hình thức cam kết đúng chuẩn Zalo trực tiếp');
-    assert(bookData.data.status === 'zalo_active', 'Trạng thái ban đầu là zalo_active');
+    assert(bookRes.status === 201, 'Tạo kết nối chuyến thành công (HTTP 201)');
+    assert(
+      bookData.data.commitmentType === 'inquiry_chat' || bookData.data.commitmentType === 'zalo_direct',
+      'Hình thức cam kết đúng chuẩn (inquiry_chat hoặc zalo_direct)'
+    );
+    assert(
+      bookData.data.status === 'inquiring' || bookData.data.status === 'zalo_active',
+      'Trạng thái ban đầu là inquiring hoặc zalo_active'
+    );
     testBookingId = bookData.data.escrowId;
 
     // 7.2 Báo trễ giờ (Delay report) - Được phép khi có quyền party
@@ -891,8 +897,8 @@ async function runTests() {
     const escrowId = bookData.data?.escrowId;
     assert(escrowId && escrowId.startsWith('ESC-'), 'MIT Tier 1: Mã Escrow định dạng chuẩn ESC-');
     assert(
-      bookData.data.status === 'zalo_active',
-      'MIT Tier 2: Trạng thái khởi tạo là zalo_active (Bước 2/4: Chốt Zalo & Điểm hẹn)'
+      bookData.data.status === 'inquiring' || bookData.data.status === 'zalo_active',
+      'MIT Tier 2: Trạng thái khởi tạo hợp lệ (inquiring hoặc zalo_active)'
     );
 
     // 16.2 Báo trễ giờ hẹn văn minh (+15 phút)
@@ -3933,7 +3939,99 @@ async function runTests() {
     assert(false, '53. Kiểm thử Chuẩn Hoá Bí Danh Công Khai', err.message);
   }
 
+  console.log('\n🛡️ 54. Kiểm thử Bộ Lọc AI PII & Giao Thức Bắt Tay 2 Pha (Two-Phase Commit)...');
+  try {
+    const { detectPiiLeak, maskPhoneNumber } = await import('@carmate/shared');
 
+    // 1. Kiểm thử Thuật toán AI PII phát hiện lách số điện thoại & mạng xã hội
+    assert(detectPiiLeak('0984883750').hasLeak === true, 'AI PII 1: Bắt số điện thoại thông thường');
+    assert(detectPiiLeak('0984.883.750').hasLeak === true, 'AI PII 2: Bắt số điện thoại chèn dấu chấm');
+    assert(detectPiiLeak('0 9 8 4 8 8 3 7 5 0').hasLeak === true, 'AI PII 3: Bắt số điện thoại chèn dấu cách');
+    assert(detectPiiLeak('Nhắn cho anh O98488375O').hasLeak === true, 'AI PII 4: Bắt thủ thuật đổi chữ O thành số 0');
+    assert(detectPiiLeak('Số em: ko chín tám bốn tám tám ba bảy năm không').hasLeak === true, 'AI PII 5: Bắt số viết bằng chữ tiếng Việt');
+    assert(detectPiiLeak('kết bạn z.a.l.o với anh').hasLeak === true, 'AI PII 6: Bắt từ khóa Zalo ngụy trang');
+    assert(detectPiiLeak('qua zl nói chuyện nhé').hasLeak === true, 'AI PII 7: Bắt từ khóa zl');
+    assert(detectPiiLeak('cho em xin số đt').hasLeak === true, 'AI PII 8: Bắt yêu cầu xin số điện thoại');
+    assert(detectPiiLeak('Alo em ơi đón ở đâu').hasLeak === false, 'AI PII 9: Tin nhắn hợp lệ không bị chặn nhầm');
+    assert(detectPiiLeak('giá 150k đón lúc 7h sáng').hasLeak === false, 'AI PII 10: Thỏa thuận giá và giờ đón hợp lệ không bị chặn nhầm');
+
+    // 2. Kiểm thử State Machine 2-Phase Commit qua API
+    // 2.1 Tạo booking mới -> trạng thái ban đầu là inquiring
+    const bookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Sài Gòn',
+        to: 'Vũng Tàu',
+        seats: 1,
+        totalDeal: 150000,
+        passengerNote: 'Em có 1 vali nhỏ',
+        contactPhone: '0984883750'
+      })
+    });
+    const bookingData = await bookingRes.json();
+    assert(bookingRes.status === 201 && bookingData.success, '2PC API 1: Tạo yêu cầu ghép chuyến thành công');
+    const bId = bookingData.data.escrowId || bookingData.data.id;
+    assert(bookingData.data.status === 'inquiring', '2PC API 2: Trạng thái ban đầu bắt buộc là inquiring (chưa chốt)');
+
+    // 2.2 Kiểm thử gửi tin nhắn trong khung chat
+    // Gửi tin nhắn hợp lệ -> Thành công
+    const msgOkRes = await fetch(`${BASE_URL}/api/bookings/${bId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Anh ơi em đón ở ngã tư nhé',
+        senderRole: 'passenger'
+      })
+    });
+    const msgOkData = await msgOkRes.json();
+    assert(msgOkRes.status === 200 && msgOkData.success, '2PC API 3: Gửi tin nhắn thỏa thuận điểm đón thành công');
+
+    // Gửi tin nhắn chứa SĐT khi chưa chốt -> BỊ CHẶN 400
+    const msgLeakRes = await fetch(`${BASE_URL}/api/bookings/${bId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Số anh nè 0984883750 gọi nhé',
+        senderRole: 'driver'
+      })
+    });
+    const msgLeakData = await msgLeakRes.json();
+    assert(msgLeakRes.status === 400 && !msgLeakData.success, '2PC API 4: Chặn đứng gửi SĐT khi chưa chốt chuyến (HTTP 400)');
+
+    // 2.3 Chủ xe Đề xuất chốt & Giữ chỗ 15 phút (Pre-confirm)
+    const preConfirmRes = await fetch(`${BASE_URL}/api/bookings/${bId}/pre-confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preConfirmedBy: 'driver' })
+    });
+    const preConfirmData = await preConfirmRes.json();
+    assert(preConfirmRes.status === 200 && preConfirmData.data.status === 'pre_confirmed', '2PC API 5: Đề xuất chốt chuyến chuyển trạng thái sang pre_confirmed');
+    assert(!!preConfirmData.data.preConfirmedExpiresAt, '2PC API 6: Thiết lập thời hạn đếm ngược 15 phút (Soft Lock TTL)');
+
+    // 2.4 Khách Xác nhận chốt chuyến (Final Confirm - Mutual Commit)
+    const finalConfirmRes = await fetch(`${BASE_URL}/api/bookings/${bId}/final-confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmedBy: 'passenger' })
+    });
+    const finalConfirmData = await finalConfirmRes.json();
+    assert(finalConfirmRes.status === 200 && finalConfirmData.data.status === 'confirmed', '2PC API 7: Khách xác nhận thành công chuyển sang confirmed (Both Confirmed)');
+    assert(finalConfirmData.data.bothConfirmed === true, '2PC API 8: Cờ bothConfirmed được kích hoạt');
+
+    // 3. Kiểm thử Frontend Components: InboxModal, Header, BookedTripList
+    const inboxModalContent = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxModalContent.includes('detectPiiLeak') && inboxModalContent.includes('preConfirmBooking'), '2PC UI 1: InboxModal tích hợp AI PII Filter và Pre-confirm');
+
+    const headerContent = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/common/Header.jsx'), 'utf8');
+    assert(headerContent.includes('onOpenInbox') && headerContent.includes('Bell'), '2PC UI 2: Header tích hợp icon Chuông Hộp Thư & badge đếm');
+
+    const bookedContent = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(!bookedContent.includes('0đ Phí sàn · Kết nối Zalo'), '2PC UI 3: Đã gỡ bỏ nhãn ép buộc Kết nối Zalo');
+    assert(bookedContent.includes('onOpenChat'), '2PC UI 4: BookedTripList hỗ trợ mở thẳng khung chat');
+  } catch (err) {
+    assert(false, '54. Kiểm thử Bộ Lọc AI PII & Giao Thức Bắt Tay 2 Pha', err.message);
+  }
 
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;

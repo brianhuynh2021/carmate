@@ -405,6 +405,17 @@ export default function useTripsData({
     [showToast]
   );
 
+  const refreshBookings = useCallback(async () => {
+    try {
+      const res = await api.getBookings();
+      if (res?.success && Array.isArray(res.data)) {
+        setBookedEscrows(res.data);
+      }
+    } catch (err) {
+      console.warn('[refreshBookings] Lỗi:', err);
+    }
+  }, []);
+
   return {
     driverOffers,
     setDriverOffers,
@@ -412,6 +423,7 @@ export default function useTripsData({
     setPassengerRequests,
     bookedEscrows,
     setBookedEscrows,
+    refreshBookings,
     platformStats,
     setPlatformStats,
     toastMessage,

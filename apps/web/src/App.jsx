@@ -44,6 +44,7 @@ import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
 import VehicleMismatchModal from './components/modals/VehicleMismatchModal.jsx';
 import UserProfileModal from './components/profile/UserProfileModal.jsx';
+import InboxModal from './components/modals/InboxModal.jsx';
 
 // Custom Hooks
 import useZaloReentry from './hooks/useZaloReentry.js';
@@ -356,6 +357,8 @@ export default function App() {
     passengerRequests,
     setPassengerRequests,
     bookedEscrows,
+    setBookedEscrows,
+    refreshBookings,
     toastMessage,
     showToast,
     handleRePublishTrip,
@@ -383,6 +386,21 @@ export default function App() {
     setShowAuthModal,
     t
   });
+
+  // Đếm số lượng yêu cầu đang chờ xử lý trong Hộp thư (inquiring hoặc pre_confirmed)
+  const inboxCount = useMemo(() => {
+    return (bookedEscrows || []).filter(
+      (b) => b.status === 'inquiring' || b.status === 'pre_confirmed'
+    ).length;
+  }, [bookedEscrows]);
+
+  const [showInboxModal, setShowInboxModal] = useState(false);
+  const [inboxInitialBookingId, setInboxInitialBookingId] = useState(null);
+
+  const handleOpenInbox = useCallback((bookingId = null) => {
+    setInboxInitialBookingId(bookingId);
+    setShowInboxModal(true);
+  }, []);
 
   // Hook quản lý Bộ lọc thị trường & Phân nhóm thời gian
   const {
@@ -599,7 +617,7 @@ export default function App() {
     setActiveTab('market');
   };
 
-  const activeBookedCount = bookedEscrows.filter((b) => b.status === 'zalo_active' || b.status === 'delayed').length;
+  const activeBookedCount = bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled').length;
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
 
   return (
@@ -611,6 +629,8 @@ export default function App() {
         setShowPolicyModal={setShowPolicyModal}
         bookedCount={activeBookedCount}
         myTripsCount={myTripsCount}
+        inboxCount={inboxCount}
+        onOpenInbox={() => handleOpenInbox()}
         currentUser={currentUser}
         onOpenAuth={() => openAuthWithContext()}
         onLogout={handleLogout}
@@ -973,6 +993,7 @@ export default function App() {
               onReview={setReviewRecord}
               onReportMismatch={setMismatchRecord}
               onFindTrip={() => setActiveTab('market')}
+              onOpenChat={(id) => handleOpenInbox(id)}
             />
           </div>
         )}
@@ -1003,6 +1024,17 @@ export default function App() {
       <Footer onNavigate={handleFooterNavigate} onOpenTerms={() => setShowTermsModal(true)} />
 
       {/* Modals */}
+      {showInboxModal && (
+        <InboxModal
+          isOpen={showInboxModal}
+          onClose={() => setShowInboxModal(false)}
+          bookings={bookedEscrows}
+          currentUser={currentUser}
+          initialBookingId={inboxInitialBookingId}
+          onRefreshBookings={refreshBookings}
+          onShowToast={showToast}
+        />
+      )}
       {selectedItemForEscrow && (
         <EscrowBookingModal
           item={selectedItemForEscrow}

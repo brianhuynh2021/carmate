@@ -19,7 +19,7 @@ import {
   ShieldAlert,
   User
 } from 'lucide-react';
-import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias } from '@carmate/shared';
+import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -179,7 +179,8 @@ export default function BookedTripList({
   onComplete,
   onFindTrip,
   onReview,
-  onReportMismatch
+  onReportMismatch,
+  onOpenChat
 }) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
@@ -228,7 +229,7 @@ export default function BookedTripList({
         description="Lịch hẹn đi chung xe · 0% chiết khấu sàn · Trực tiếp kết nối bạn đồng hành"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5">
-            0đ Phí sàn · Kết nối Zalo
+            0đ Phí sàn · Tự do kết nối
           </Badge>
         }
       />
@@ -378,7 +379,7 @@ export default function BookedTripList({
                     <RouteTimeline from={record.from} to={record.to} compact />
                   </div>
 
-                  {/* Thẻ Liên Lạc Chuẩn Apple HIG & Cursor Minimalist */}
+                  {/* Thẻ Liên Lạc & Khung Chat Chuẩn MIT 2-Phase Commit */}
                   {!isCompleted && !isCancelled && (
                     <div className="rounded-2xl bg-white dark:bg-slate-900/90 border border-black/[0.08] p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] space-y-3.5">
                       {/* Hàng Tiêu Đề Đối Tác */}
@@ -402,64 +403,103 @@ export default function BookedTripList({
                                 98đ Tín nhiệm
                               </span>
                             </div>
-                            <p className="text-xs text-[#86868b] mt-0.5">Chủ xe gia đình · Xác thực danh tính thật</p>
+                            <p className="text-xs text-[#86868b] mt-0.5">Xác thực danh tính thật · 0 rủi ro</p>
                           </div>
                         </div>
 
-                        {/* Số điện thoại duy nhất */}
+                        {/* Trạng thái liên hệ & Số điện thoại (Chỉ mở khi đã chốt) */}
                         <div className="text-right">
-                          <p className="text-[11px] font-medium text-[#86868b]">Số điện thoại liên hệ</p>
+                          <p className="text-[11px] font-medium text-[#86868b]">
+                            {record.status === 'confirmed' || record.bothConfirmed ? 'Số điện thoại đối tác' : 'Bảo mật thông tin'}
+                          </p>
                           <p className="font-display text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular tracking-tight">
-                            {phone}
+                            {record.status === 'confirmed' || record.bothConfirmed
+                              ? phone
+                              : maskPhoneNumber(phone || '090***xxxx')}
                           </p>
                         </div>
                       </div>
 
-                      {/* Nút Zalo Tiên Quyết - Chuẩn Apple HIG */}
+                      {/* Khối Hành Động Tự Do & An Toàn (Không ép Zalo) */}
                       <div className="space-y-2.5">
-                        <a
-                          href={zaloUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0068ff] text-white hover:bg-[#0057d9] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2.5 shadow-md shadow-blue-500/20 cursor-pointer"
-                        >
-                          <ZaloIcon className="w-5 h-5 shrink-0" />
-                          <span>Mở Zalo chốt điểm đón & gửi định vị</span>
-                        </a>
+                        {record.status === 'confirmed' || record.bothConfirmed ? (
+                          // ĐÃ CHỐT CHUYẾN: Tự do gọi điện, nhắn tin, sao chép
+                          <div className="space-y-2.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <a
+                                href={`tel:${cleanPhoneNumber(phone)}`}
+                                className="w-full h-11 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                              >
+                                <Phone className="w-4 h-4" />
+                                <span>Gọi điện trực tiếp ({phone})</span>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                                className="w-full h-11 px-4 rounded-xl font-bold text-xs bg-[#0071e3] hover:bg-[#0077ed] text-white active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                                <span>Mở Khung Chat Chuyến Đi</span>
+                              </button>
+                            </div>
 
-                        {/* Hàng tuỳ chọn liên lạc phụ */}
-                        <div className="flex items-center justify-between gap-2 pt-1 text-xs text-[#86868b] flex-wrap">
-                          <a
-                            href={`tel:${cleanPhoneNumber(phone)}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f5f5f7] dark:bg-slate-800 hover:bg-[#e8e8ed] text-[#1d1d1f] dark:text-white font-semibold text-xs transition-colors border border-black/[0.04]"
-                          >
-                            <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Gọi điện trực tiếp</span>
-                          </a>
-
-                          <div className="flex items-center gap-2 text-[11.5px]">
-                            <span className="opacity-75">Tùy chọn khác:</span>
-                            <a
-                              href={waUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#0071e3] hover:underline font-medium"
-                              title="Mở WhatsApp (tuỳ chọn)"
-                            >
-                              WhatsApp
-                            </a>
-                            <span>·</span>
-                            <a
-                              href={teleUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#0071e3] hover:underline font-medium"
-                              title="Mở Telegram (tuỳ chọn)"
-                            >
-                              Telegram
-                            </a>
+                            {/* Tùy chọn nền tảng tự do khác */}
+                            <div className="flex items-center justify-between gap-2 pt-1 text-xs text-[#86868b] flex-wrap">
+                              <span className="text-[11.5px] opacity-75">Tự do liên hệ kênh khác:</span>
+                              <div className="flex items-center gap-2 text-[11.5px]">
+                                <a
+                                  href={zaloUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#0071e3] hover:underline font-medium inline-flex items-center gap-1"
+                                >
+                                  <ZaloIcon className="w-3.5 h-3.5" />
+                                  <span>Zalo</span>
+                                </a>
+                                <span>·</span>
+                                <a
+                                  href={teleUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#0071e3] hover:underline font-medium inline-flex items-center gap-1"
+                                >
+                                  <TelegramIcon className="w-3.5 h-3.5" />
+                                  <span>Telegram</span>
+                                </a>
+                                <span>·</span>
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#0071e3] hover:underline font-medium"
+                                >
+                                  WhatsApp
+                                </a>
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          // CHƯA CHỐT: Thương lượng hoặc Giữ chỗ mềm qua Khung Chat
+                          <div className="space-y-2">
+                            <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2">
+                              <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span className="leading-relaxed">
+                                {record.status === 'pre_confirmed'
+                                  ? '⚡ Chuyến xe đang được giữ chỗ 15 phút. Vui lòng mở khung chat để xác nhận chốt!'
+                                  : '💬 Đang thỏa thuận điểm hẹn và hành lý. SĐT sẽ tự động mở sau khi 2 bên cùng chốt.'}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                              className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
+                            >
+                              <MessageSquare className="w-4 h-4 shrink-0" />
+                              <span>Mở Khung Chat & Chốt Chuyến (Bảo mật 100%)</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

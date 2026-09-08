@@ -150,6 +150,27 @@ export const api = {
     });
   },
 
+  async sendBookingMessage(id, messageData = {}) {
+    return request(`/bookings/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  },
+
+  async preConfirmBooking(id, payload = {}) {
+    return request(`/bookings/${id}/pre-confirm`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async finalConfirmBooking(id, payload = {}) {
+    return request(`/bookings/${id}/final-confirm`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
   async reportVehicleMismatch(id, data = {}) {
     return request(`/bookings/${id}/report-vehicle-mismatch`, {
       method: 'POST',

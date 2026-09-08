@@ -5,9 +5,10 @@ import {
   getTripById,
   addBooking,
   updateBookingStatus,
-  removeBooking
+  removeBooking,
+  updateTrip
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber } from '@carmate/shared';
+import { cleanPhoneNumber, detectPiiLeak, maskPhoneNumber } from '@carmate/shared';
 import crypto from 'crypto';
 import { sendBusinessAlert, sendTelegramMessage } from '../utils/telegramAlert.js';
 
@@ -59,32 +60,56 @@ export function listBookings(req, res) {
     }
 
     const allBookings = getBookings();
+    let userBookings = [];
 
     // Quản trị viên hệ thống: Xem toàn bộ
     if (user.role === 'admin' || user.role === 'super_admin') {
-      return res.status(200).json({
-        success: true,
-        count: allBookings.length,
-        data: allBookings
+      userBookings = allBookings;
+    } else {
+      // Người dùng thông thường: Chỉ xem các booking của bản thân
+      const userPhone = cleanPhoneNumber(user.phone || '');
+      userBookings = allBookings.filter((b) => {
+        const bContact = cleanPhoneNumber(b.contactPhone || '');
+        const bCreator = cleanPhoneNumber(b.userPhone || b.creatorPhone || '');
+        const bTarget = cleanPhoneNumber(b.targetPhone || '');
+        const bDriver = cleanPhoneNumber(b.driverPhone || '');
+        const bPass = cleanPhoneNumber(b.passengerPhone || '');
+        return (
+          (userPhone && (bContact === userPhone || bCreator === userPhone || bTarget === userPhone || bDriver === userPhone || bPass === userPhone)) ||
+          (user.id && (b.userId === user.id || b.creatorId === user.id || b.driverId === user.id))
+        );
       });
     }
 
-    // Người dùng thông thường: Chỉ xem các booking của bản thân
-    const userPhone = cleanPhoneNumber(user.phone || '');
-    const userBookings = allBookings.filter((b) => {
-      const bContact = cleanPhoneNumber(b.contactPhone || '');
-      const bCreator = cleanPhoneNumber(b.userPhone || b.creatorPhone || '');
-      const bTarget = cleanPhoneNumber(b.targetPhone || '');
-      return (
-        (userPhone && (bContact === userPhone || bCreator === userPhone || bTarget === userPhone)) ||
-        (user.id && (b.userId === user.id || b.creatorId === user.id || b.driverId === user.id))
-      );
+    const now = Date.now();
+    const sanitizedBookings = userBookings.map((b) => {
+      // 1. Kiểm tra nếu đang ở pre_confirmed mà quá 15 phút -> tự động chuyển sang expired
+      if (b.status === 'pre_confirmed' && b.preConfirmedExpiresAt) {
+        const expiresTime = new Date(b.preConfirmedExpiresAt).getTime();
+        if (now > expiresTime) {
+          b.status = 'expired';
+          updateBookingStatus(b.escrowId || b.id, 'expired', { status: 'expired' });
+        }
+      }
+
+      // 2. BẤT BIẾN ZERO PII: Chỉ mở SĐT thật nếu chuyến đã được chốt chính thức (confirmed)
+      const isConfirmed = b.status === 'confirmed' || b.bothConfirmed === true;
+      if (!isConfirmed && user?.role !== 'admin' && user?.role !== 'super_admin') {
+        return {
+          ...b,
+          phoneReal: maskPhoneNumber(b.phoneReal || b.contactPhone || ''),
+          contactPhone: maskPhoneNumber(b.contactPhone || ''),
+          driverPhone: maskPhoneNumber(b.driverPhone || ''),
+          passengerPhone: maskPhoneNumber(b.passengerPhone || '')
+        };
+      }
+      return b;
     });
 
     return res.status(200).json({
       success: true,
-      count: userBookings.length,
-      data: userBookings
+      count: sanitizedBookings.length,
+      data: sanitizedBookings
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -92,7 +117,7 @@ export function listBookings(req, res) {
 }
 
 /**
- * POST /api/bookings - Tạo kết nối chuyến mới qua Zalo
+ * POST /api/bookings - Tạo kết nối chuyến mới (Trạng thái ban đầu: inquiring)
  */
 export async function createBooking(req, res) {
   try {
@@ -111,7 +136,7 @@ export async function createBooking(req, res) {
       body.userPhone = req.user.phone || body.userPhone;
     }
 
-    // Nếu có tripId, truy vấn SĐT thật của chuyến xe từ DB để cấp quyền kết nối Zalo
+    // Nếu có tripId, truy vấn SĐT thật của chuyến xe từ DB
     const targetTripId = body.tripId || body.targetTripId || body.targetId || (body.targetItem && body.targetItem.id);
     if (targetTripId) {
       const targetTrip = getTripById(targetTripId);
@@ -137,6 +162,22 @@ export async function createBooking(req, res) {
         body.contactName = targetTrip.publicName || body.contactName;
         body.targetTripId = targetTrip.id;
       }
+    }
+
+    // Mặc định trạng thái ban đầu là 'inquiring' (Hỏi ghép / Thương lượng ẩn danh)
+    body.status = body.status || 'inquiring';
+    body.commitmentType = body.commitmentType || 'inquiry_chat';
+    body.messages = Array.isArray(body.messages) ? body.messages : [];
+
+    // Nếu có lời nhắn từ khách, khởi tạo tin nhắn đầu tiên trong khung chat
+    if (body.passengerNote && body.messages.length === 0) {
+      body.messages.push({
+        id: `MSG-${Date.now()}`,
+        senderRole: 'passenger',
+        senderName: body.contactName || 'Người đi cùng',
+        text: body.passengerNote,
+        createdAt: new Date().toISOString()
+      });
     }
 
     const booking = await addBooking(body);
@@ -405,6 +446,231 @@ export async function driverConfirmBooking(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
+
+/**
+ * POST /api/bookings/:id/messages - Gửi tin nhắn trao đổi trong khung chat ẩn danh
+ * Bảo vệ AI PII: Tự động phát hiện và chặn lách số điện thoại / từ khóa ngoài nền tảng
+ */
+export async function addBookingMessageHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { text = '', senderRole = 'passenger', senderName = '' } = req.body || {};
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nội dung tin nhắn không được để trống'
+      });
+    }
+
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy thông tin cuộc trò chuyện'
+      });
+    }
+
+    const isConfirmed = booking.status === 'confirmed' || booking.bothConfirmed === true;
+
+    // THUẬT TOÁN AI PII: Nếu chưa chốt chính thức, cấm tuyệt đối gửi SĐT / Zalo / Liên hệ ngoài
+    if (!isConfirmed) {
+      const piiCheck = detectPiiLeak(text);
+      if (piiCheck.hasLeak) {
+        return res.status(400).json({
+          success: false,
+          error: piiCheck.warningMessage,
+          reason: piiCheck.reason,
+          detectedSample: piiCheck.detectedSample
+        });
+      }
+    }
+
+    const newMsg = {
+      id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      senderRole,
+      senderName: senderName || (senderRole === 'driver' ? 'Chủ xe' : 'Người đi cùng'),
+      text: text.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    const existingMsgs = Array.isArray(booking.messages) ? booking.messages : [];
+    const updatedMsgs = [...existingMsgs, newMsg];
+
+    const updated = await updateBookingStatus(id, booking.status, {
+      messages: updatedMsgs,
+      lastMessageAt: newMsg.createdAt
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã gửi tin nhắn thành công',
+      data: {
+        newMessage: newMsg,
+        booking: updated
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/bookings/:id/pre-confirm - Đề xuất chốt chuyến & Khóa mềm ghế có thời hạn (15 phút TTL)
+ */
+export async function preConfirmBookingHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { preConfirmedBy = 'driver', note = '' } = req.body || {};
+
+    const existing = getBookingById(id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy yêu cầu chuyến đi để đề xuất chốt'
+      });
+    }
+
+    if (existing.status === 'confirmed' || existing.bothConfirmed) {
+      return res.status(400).json({
+        success: false,
+        error: 'Chuyến đi này đã được chốt chính thức trước đó'
+      });
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 phút TTL
+
+    const proposerTitle = preConfirmedBy === 'driver' ? 'Chủ xe' : 'Người đi cùng';
+    const receiverTitle = preConfirmedBy === 'driver' ? 'Người đi cùng' : 'Chủ xe';
+
+    const systemMsg = {
+      id: `SYS-${Date.now()}`,
+      senderRole: 'system',
+      senderName: 'Hệ thống CarMate',
+      isSystem: true,
+      text: `⚡ ${proposerTitle} đã ĐỀ XUẤT CHỐT CHUYẾN & tạm giữ chỗ trong 15 phút. Vui lòng ${receiverTitle} bấm [Xác nhận chốt] để hoàn tất chuyến đi!`,
+      createdAt: now.toISOString()
+    };
+
+    const existingMsgs = Array.isArray(existing.messages) ? existing.messages : [];
+    const updatedMsgs = [...existingMsgs, systemMsg];
+
+    const updated = await updateBookingStatus(id, 'pre_confirmed', {
+      preConfirmedBy,
+      preConfirmedAt: now.toISOString(),
+      preConfirmedExpiresAt: expiresAt.toISOString(),
+      preConfirmNote: note || '',
+      messages: updatedMsgs,
+      lastMessageAt: now.toISOString()
+    });
+
+    // Alert Telegram
+    sendBusinessAlert({
+      title: '⚡ Đề xuất chốt chuyến (Pre-confirm) mới',
+      details: {
+        'Mã yêu cầu': id,
+        'Người đề xuất': proposerTitle,
+        'Thời hạn': '15 phút đếm ngược',
+        'Lộ trình': `${existing.from} ➔ ${existing.to}`
+      },
+      req
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: `${proposerTitle} đã đề xuất chốt chuyến. Chỗ được tạm giữ trong 15 phút.`,
+      data: updated
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/bookings/:id/final-confirm - Xác nhận chốt chuyến chính thức (Mutual Commitment - 2PC)
+ * Trừ ghế cứng và chính thức mở khóa số điện thoại thật của 2 bên
+ */
+export async function finalConfirmBookingHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { confirmedBy = 'passenger', note = '' } = req.body || {};
+
+    const existing = getBookingById(id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy yêu cầu chuyến đi để xác nhận'
+      });
+    }
+
+    // Kiểm tra nếu đã quá 15 phút TTL
+    if (existing.status === 'pre_confirmed' && existing.preConfirmedExpiresAt) {
+      if (Date.now() > new Date(existing.preConfirmedExpiresAt).getTime()) {
+        await updateBookingStatus(id, 'expired');
+        return res.status(400).json({
+          success: false,
+          error: 'Thời hạn 15 phút giữ chỗ đã hết hạn. Vui lòng thỏa thuận lại!'
+        });
+      }
+    }
+
+    const now = new Date();
+    const systemMsg = {
+      id: `SYS-${Date.now()}`,
+      senderRole: 'system',
+      senderName: 'Hệ thống CarMate',
+      isSystem: true,
+      text: '🎉 Chúc mừng 2 bạn! Chuyến đi đã được CHỐT CHÍNH THỨC 2 CHIỀU. Thông tin liên hệ đầy đủ đã được mở khóa an toàn.',
+      createdAt: now.toISOString()
+    };
+
+    const existingMsgs = Array.isArray(existing.messages) ? existing.messages : [];
+    const updatedMsgs = [...existingMsgs, systemMsg];
+
+    // Trừ ghế thật (Hard Lock) trên chuyến xe
+    const targetTripId = existing.tripId || existing.targetTripId;
+    if (targetTripId) {
+      const trip = getTripById(targetTripId);
+      if (trip && typeof trip.availableSeats === 'number') {
+        const seatsBooked = existing.seatsBooked || existing.seats || 1;
+        const remainingSeats = Math.max(0, trip.availableSeats - seatsBooked);
+        await updateTrip(targetTripId, { availableSeats: remainingSeats });
+      }
+    }
+
+    const updated = await updateBookingStatus(id, 'confirmed', {
+      bothConfirmed: true,
+      confirmedAt: now.toISOString(),
+      confirmedBy,
+      confirmNote: note || '',
+      messages: updatedMsgs,
+      lastMessageAt: now.toISOString()
+    });
+
+    // Alert Telegram
+    sendBusinessAlert({
+      title: '🎉 KHỚP CHUYẾN THÀNH CÔNG (Mutual Final Committed)',
+      details: {
+        'Mã chuyến': id,
+        'Lộ trình': `${existing.from} ➔ ${existing.to}`,
+        'Tổng phụ xăng': `${existing.totalDeal || 0}đ`,
+        'SĐT Chủ xe': existing.driverPhone || existing.contactPhone || 'N/A',
+        'SĐT Khách': existing.passengerPhone || existing.userPhone || 'N/A'
+      },
+      req
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Chuyến đi đã được chốt chính thức thành công!',
+      data: updated
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
 
 /**
  * POST /api/bookings/:id/report-vehicle-mismatch - Báo cáo xe đón thực tế không đúng cam kết (Biển vàng / Biển trắng)
