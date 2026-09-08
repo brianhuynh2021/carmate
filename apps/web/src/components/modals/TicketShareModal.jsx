@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import {
   generateSocialShareText,
-  formatVND,
   getTimeSlotLabel,
   getZaloChatUrl,
   cleanPhoneNumber
@@ -31,8 +30,6 @@ import {
 export default function TicketShareModal({ trip, onClose, onShowToast, onViewInMarket }) {
   const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
-  const [copiedImage, setCopiedImage] = useState(false);
-  const [isCopyingImage, setIsCopyingImage] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -41,8 +38,8 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
   if (!trip) return null;
   const shareText = generateSocialShareText(trip);
   const contactPhone = cleanPhoneNumber(trip.phoneReal || trip.phone || '');
+  /* eslint-disable-next-line no-unused-vars */
   const zaloPersonalUrl = contactPhone ? getZaloChatUrl(contactPhone) : null;
-  const isDriverOffer = trip.type === 'driver_offer';
 
   const handleCopy = (customMsg) => {
     try {
@@ -66,44 +63,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
     setTimeout(() => setCopied(false), 3000);
   };
 
-  /**
-   * Sao chép trực tiếp file ảnh vé vào Clipboard hệ thống (1-Chạm dán ngay vào Zalo / Messenger / FB)
-   */
-  const handleCopyTicketImage = async () => {
-    try {
-      setIsCopyingImage(true);
-      const dataUrl = await generateTicketImage(trip, lang);
-      if (!dataUrl) throw new Error('Không tạo được ảnh vé');
 
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-
-      // Hỗ trợ ClipboardItem API trên Safari iOS 13.4+, Chrome, Edge, Safari macOS
-      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
-        try {
-          const item = new ClipboardItem({ 'image/png': blob });
-          await navigator.clipboard.write([item]);
-          setCopiedImage(true);
-          setTimeout(() => setCopiedImage(false), 3000);
-          onShowToast?.('Đã sao chép ảnh thẻ thông tin! Hãy mở Zalo, Messenger hoặc Facebook và chọn Dán (Paste).');
-          return;
-        } catch (clipErr) {
-          console.warn('[Clipboard] Không thể ghi ảnh vào clipboard:', clipErr);
-        }
-      }
-
-      // Dự phòng nếu trình duyệt di động hạn chế ghi ảnh vào clipboard:
-      // Tự động tải ảnh về máy và chép lời nhắn
-      downloadTicketImage(dataUrl, trip.id?.slice(0, 8) || 'the-thong-tin');
-      handleCopy('Đã lưu ảnh thẻ thông tin vào máy & sao chép lời nhắn! Hãy dán vào chat.');
-    } catch (err) {
-      console.warn('[Share] Lỗi sao chép ảnh:', err);
-      onShowToast?.('Chưa thể sao chép ảnh. Đang tải ảnh về máy cho bạn...');
-      handleDownloadTicket();
-    } finally {
-      setIsCopyingImage(false);
-    }
-  };
 
   const handleDownloadTicket = async () => {
     try {
