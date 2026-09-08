@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   MapPin,
@@ -8,22 +8,15 @@ import {
   X,
   Package
 } from 'lucide-react';
+import { parseLocation, computeHotRoutes, DEFAULT_FALLBACK_ROUTES } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Chip from '../ui/Chip.jsx';
 import Button from '../ui/Button.jsx';
 import { POPULAR_HIGHWAYS } from './FilterBar.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 
-const POPULAR_ROTATING_ROUTES = [
-  { from: 'Lộc Ninh (Bình Phước)', to: 'Sài Gòn (BX Miền Đông)' },
-  { from: 'Sài Gòn', to: 'Phan Thiết (Mũi Né)' },
-  { from: 'Sài Gòn', to: 'Vũng Tàu' },
-  { from: 'Hà Nội', to: 'Hải Phòng' },
-  { from: 'Sài Gòn', to: 'Đà Lạt' },
-  { from: 'Bù Đốp', to: 'TP. Hồ Chí Minh' }
-];
-
 export default function Hero({
+  trips = [],
   searchKeyword = '',
   setSearchKeyword,
   searchFrom = '',
@@ -60,17 +53,23 @@ export default function Hero({
 
   const hasSearch = Boolean(searchKeyword || searchFrom || searchTo);
 
+  // Tuyến xoay vòng động theo dữ liệu chuyến xe thực tế đang mở
+  const rotatingRoutes = useMemo(() => {
+    return computeHotRoutes(trips);
+  }, [trips]);
+
   // Hiệu ứng gợi ý cặp tuyến HOT xoay vòng tự động mỗi 3.2s
   const [routeCycleIndex, setRouteCycleIndex] = useState(0);
 
   useEffect(() => {
+    if (rotatingRoutes.length <= 1) return;
     const timer = setInterval(() => {
-      setRouteCycleIndex((prev) => (prev + 1) % POPULAR_ROTATING_ROUTES.length);
+      setRouteCycleIndex((prev) => (prev + 1) % rotatingRoutes.length);
     }, 3200);
     return () => clearInterval(timer);
-  }, []);
+  }, [rotatingRoutes.length]);
 
-  const activeRouteHint = POPULAR_ROTATING_ROUTES[routeCycleIndex];
+  const activeRouteHint = rotatingRoutes[routeCycleIndex % rotatingRoutes.length] || DEFAULT_FALLBACK_ROUTES[0];
 
   return (
     <section className="relative z-20 border-b border-slate-200/80 dark:border-slate-800 hero-canvas overflow-hidden">
@@ -115,18 +114,25 @@ export default function Hero({
               <span className="xs:hidden">HOT:</span>
             </span>
             <div
-              key={routeCycleIndex}
-              className="anim-fade-in flex items-center gap-1 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] truncate max-w-[160px] xs:max-w-none"
+              key={`${routeCycleIndex}-${activeRouteHint.from}-${activeRouteHint.to}`}
+              className="anim-fade-in flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] truncate max-w-[160px] xs:max-w-none"
             >
               <span className="truncate">{activeRouteHint.from}</span>
               <ArrowLeftRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
               <span className="truncate">{activeRouteHint.to}</span>
+              {activeRouteHint.count > 0 && (
+                <span className="hidden sm:inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                  {activeRouteHint.count} xe
+                </span>
+              )}
             </div>
             <button
               type="button"
               onClick={() => {
                 setSearchFrom?.(activeRouteHint.from);
                 setSearchTo?.(activeRouteHint.to);
+                const el = document.getElementById('market-results');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
               title="Điền nhanh cặp tuyến này"
               className="ml-0.5 sm:ml-1 text-[10.5px] sm:text-[11px] font-bold text-[#0071e3] hover:text-[#0077ed] dark:text-[#2997ff] bg-[#0071e3]/10 hover:bg-[#0071e3]/20 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-0.5 shrink-0"

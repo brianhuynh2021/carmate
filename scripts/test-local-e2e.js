@@ -3848,6 +3848,34 @@ async function runTests() {
     assert(false, '51. Kiểm thử Hiển Thị Sao & Số Chuyến', err.message);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n✨ 52. Kiểm thử Trích Xuất Tuyến HOT Động (Dynamic HOT Route Suggester)...');
+  try {
+    const { computeHotRoutes, DEFAULT_FALLBACK_ROUTES } = await import('@carmate/shared');
+    assert(Array.isArray(DEFAULT_FALLBACK_ROUTES) && DEFAULT_FALLBACK_ROUTES.length > 0, 'Dynamic Route 1: Có mảng fallback dự phòng an toàn');
+
+    const mockTrips = [
+      { from: 'Lộc Ninh (Bình Phước)', to: 'Sài Gòn (Bến xe Miền Đông)' },
+      { from: 'Lộc Ninh', to: 'Sài Gòn' },
+      { from: 'Lộc Ninh (Chợ Lộc Ninh)', to: 'Sài Gòn (Quận 1)' },
+      { from: 'Phan Thiết (Mũi Né)', to: 'Sài Gòn (Dầu Giây)' },
+      { from: 'Phan Thiết', to: 'Sài Gòn' },
+      { from: 'Đà Lạt', to: 'Sài Gòn' }
+    ];
+
+    const extracted = computeHotRoutes(mockTrips);
+    assert(extracted.length > 0, 'Dynamic Route 2: Trích xuất thành công danh sách cặp tuyến');
+    assert(extracted[0].from === 'Lộc Ninh' || extracted[0].to === 'Lộc Ninh', 'Dynamic Route 3: Tuyến có nhiều chuyến nhất (Lộc Ninh) đứng đầu bảng');
+    assert(extracted[0].count === 3, 'Dynamic Route 4: Đếm chính xác số lượng xe đang mở (count === 3)');
+
+    const heroContent = fs.readFileSync('./apps/web/src/components/market/Hero.jsx', 'utf8');
+    assert(heroContent.includes('computeHotRoutes(trips)'), 'Dynamic Route 5: Hero component tự động tính toán tuyến xoay vòng từ trips thực tế');
+    assert(heroContent.includes('activeRouteHint.count'), 'Dynamic Route 6: Hiển thị số lượng xe thực tế trên tuyến HOT');
+  } catch (err) {
+    assert(false, '52. Kiểm thử Trích Xuất Tuyến HOT Động', err.message);
+  }
+
+
 
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;

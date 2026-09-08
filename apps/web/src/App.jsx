@@ -624,6 +624,7 @@ export default function App() {
         {activeTab === 'market' && (
           <>
             <Hero
+              trips={driverOffers}
               searchKeyword={searchKeyword}
               setSearchKeyword={setSearchKeyword}
               searchFrom={searchFrom}
