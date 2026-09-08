@@ -96,7 +96,12 @@ app.use((req, res, next) => {
 app.use(securityHeadersMiddleware);
 
 // CORS Whitelist: Cho phép domain cục bộ, production domains và domain tuỳ biến qua ALLOWED_ORIGINS
-const defaultAllowedOrigins = ['https://carmate.vn', 'https://www.carmate.vn', 'https://ops.carmate.vn'];
+const defaultAllowedOrigins = [
+  'https://carmate.vn',
+  'https://www.carmate.vn',
+  'https://ops.carmate.vn',
+  'https://admin.carmate.vn'
+];
 const customAllowed = (process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN || '')
   .split(',')
   .map((s) => s.trim())

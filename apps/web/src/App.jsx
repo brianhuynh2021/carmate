@@ -82,26 +82,33 @@ export default function App() {
       window.location.hostname.startsWith('admin.') ||
       window.location.search.includes('portal=ops'));
 
+  const isLocalhost =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  const canAccessAdmin = isOpsPortal || isLocalhost;
+
   // Danh mục Tab hợp lệ trên toàn hệ sinh thái CarMate
   const VALID_TABS = ['market', 'match', 'post', 'my-trips', 'booked', 'admin'];
 
   const [activeTab, _setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
-      // 1. Nhận diện Admin Portal chuyên dụng
+      // 1. Nhận diện Admin Portal chuyên dụng (Chuẩn MIT Invariant: cô lập trên admin.* / ops.*)
       if (
-        window.location.hostname.startsWith('ops.') ||
-        window.location.hostname.startsWith('admin.') ||
-        window.location.search.includes('portal=ops') ||
-        window.location.hash === '#admin' ||
-        window.location.pathname === '/admin' ||
-        window.location.pathname.startsWith('/admin')
+        isOpsPortal ||
+        (isLocalhost &&
+          (window.location.hash === '#admin' ||
+            window.location.pathname === '/admin' ||
+            window.location.pathname.startsWith('/admin')))
       ) {
         return 'admin';
       }
 
       // 2. Nhận diện URL Hash (#my-trips, #booked, #post, #match, #market)
       const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
-      if (VALID_TABS.includes(rawHash)) {
+      if (rawHash === 'admin' && !canAccessAdmin) {
+        // Chặn truy cập #admin trên domain chính (MIT Zero Attack Surface)
+      } else if (VALID_TABS.includes(rawHash)) {
         return rawHash;
       }
       if (rawHash === 'my_trips' || rawHash === 'mytrips') {
@@ -1022,6 +1029,10 @@ export default function App() {
           >
             <AdminDashboardView
               onExitAdmin={() => {
+                if (isOpsPortal && !isLocalhost) {
+                  window.location.href = 'https://carmate.vn';
+                  return;
+                }
                 if (window.location.hash === '#admin') {
                   window.history.replaceState(null, '', window.location.pathname + window.location.search);
                 } else if (window.location.pathname.startsWith('/admin')) {
