@@ -164,15 +164,22 @@ export function getTrustProfile(req, res) {
 
     const trustCalc = computeTrustScore(userForTrust, vehicleData, historyData, activeRules);
 
+    // Bí danh ẩn danh ổn định, suy ra từ id thành viên (không chứa tên thật)
+    const aliasRole = user.role === 'driver' ? 'Chủ xe' : 'Người đi cùng';
+    const aliasSeed = String(user.id || memberId || '');
+    let aliasHash = 0;
+    for (let i = 0; i < aliasSeed.length; i += 1) aliasHash = (aliasHash * 31 + aliasSeed.charCodeAt(i)) % 900;
+    const publicAlias = firstDriverTrip?.maskedCode
+      ? `${aliasRole} ${firstDriverTrip.maskedCode}`
+      : `${aliasRole} #${100 + aliasHash}`;
+
     const profile = {
       id: isDefaultOrDemo ? memberId : user.id || memberId,
-      name: isDefaultOrDemo ? 'Nguyễn Anh Tuấn' : user.name || 'Thành viên CarMate',
+      // Hồ sơ tin cậy là endpoint công khai (/trust/:memberId) nên tuyệt đối
+      // không trả tên thật — chỉ bí danh vai trò + số hiệu.
+      name: isDefaultOrDemo ? 'Chủ xe Lộc Ninh #101' : publicAlias,
       avatar: effectiveAvatar,
-      publicName: isDefaultOrDemo
-        ? 'Chủ xe Lộc Ninh #101'
-        : user.name
-          ? `${user.name} (${user.role === 'driver' ? 'Chủ xe' : 'Người đi cùng'})`
-          : firstDriverTrip?.maskedCode || 'Thành viên',
+      publicName: isDefaultOrDemo ? 'Chủ xe Lộc Ninh #101' : publicAlias,
       hometown: user.hometown || firstDriverTrip?.hometown || 'Bình Phước',
       memberSince: user.createdAt
         ? new Date(user.createdAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })

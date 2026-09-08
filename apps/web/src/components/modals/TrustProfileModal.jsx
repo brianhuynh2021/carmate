@@ -18,7 +18,7 @@ import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
-export default function TrustProfileModal({ item, onClose, onBook }) {
+export default function TrustProfileModal({ item, isOwner = false, onClose, onBook }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('driver'); // 'driver' | 'passenger' | 'verify'
@@ -75,15 +75,21 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
               Đóng
             </Button>
             {onBook && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  onClose();
-                  onBook(item);
-                }}
-              >
-                {isCurrentDriver ? 'Ghép chuyến với bạn này' : 'Nhận đón bạn này'}
-              </Button>
+              isOwner ? (
+                <span className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200">
+                  Hồ sơ của bạn
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    onClose();
+                    onBook(item);
+                  }}
+                >
+                  {isCurrentDriver ? 'Ghép chuyến với bạn này' : 'Nhận đón bạn này'}
+                </Button>
+              )
             )}
           </div>
         </div>

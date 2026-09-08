@@ -19,12 +19,12 @@ import Button from '../ui/Button.jsx';
 
 export const POPULAR_HIGHWAYS = [
   { id: 'all' },
-  { id: 'Bình Phước', label: 'Sài Gòn ⇄ Bình Phước (QL13)' },
-  { id: 'Vũng Tàu', label: 'Vũng Tàu ⇄ Sài Gòn (QL51)' },
-  { id: 'Đà Lạt', label: 'Đà Lạt ⇄ Sài Gòn (QL20)' },
-  { id: 'Hà Nội', label: 'Hà Nội ⇄ Hải Phòng' },
-  { id: 'Đà Nẵng', label: 'Đà Nẵng ⇄ Huế / Hội An' },
-  { id: 'Phan Thiết', label: 'Phan Thiết ⇄ Sài Gòn (QL1A)' }
+  { id: 'Bình Phước', label: 'Bình Phước' },
+  { id: 'Vũng Tàu', label: 'Vũng Tàu' },
+  { id: 'Đà Lạt', label: 'Đà Lạt' },
+  { id: 'Phan Thiết', label: 'Phan Thiết' },
+  { id: 'Hải Phòng', label: 'Hải Phòng' },
+  { id: 'Đà Nẵng', label: 'Đà Nẵng' }
 ];
 
 /** Thanh tìm kiếm Google Capsule + chip tuyến nhanh */

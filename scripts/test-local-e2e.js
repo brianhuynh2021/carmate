@@ -2283,8 +2283,11 @@ async function runTests() {
     const tripCardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
     const tripCardCode = fs.readFileSync(tripCardPath, 'utf8');
     assert(
-      tripCardCode.includes("item.capacity === 7 || item.availableSeats > 4 ? '7 chỗ' : '5 chỗ'"),
-      'UI TripCard 1: Thẻ chuyến xe hiển thị minh bạch badge phân biệt xe 5 chỗ vs 7 chỗ'
+      tripCardCode.includes('const seatsLeft =') &&
+        tripCardCode.includes('const seatsTotal =') &&
+        tripCardCode.includes('Number(item.capacity)') &&
+        tripCardCode.includes('{seatsTotal ?'),
+      'UI TripCard 1: Thẻ chuyến xe hiển thị số ghế thật dạng còn/tổng (phân biệt xe 5 chỗ vs 7 chỗ)'
     );
 
     // Dọn dẹp bản ghi test
@@ -3444,6 +3447,260 @@ async function runTests() {
   } catch (err) {
     assert(false, '43. Kiểm thử Avatar Biểu tượng Apple Silhouette & Minh bạch Giới tính', err.message);
   }
+
+  // 44. KIỂM THỬ TRẢI NGHIỆM ĐĂNG BÀI: PHẢN HỒI LỖI TỰ ĐỘNG CUỘN & LINH HOẠT ẢNH XE (STANFORD ERGONOMICS)
+  console.log('\n--- 44. Kiểm thử Trải Nghiệm Đăng Bài: Phản Hồi Lỗi Tức Thì & Linh Hoạt Ảnh Xe ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const postFormPath = path.resolve(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx');
+    const postFormContent = fs.readFileSync(postFormPath, 'utf8');
+
+    // 1. Tự động cuộn và phản hồi lỗi tức thì (Zero-friction feedback)
+    assert(
+      postFormContent.includes('errorBannerRef') && postFormContent.includes('triggerError'),
+      'Form Validation 1: Tích hợp triggerError và errorBannerRef để tự động cuộn đến thông báo lỗi'
+    );
+    assert(
+      postFormContent.includes('scrollIntoView({ behavior:'),
+      'Form Validation 2: Tự động cuộn mượt mà (smooth scroll) giúp người dùng thấy ngay lý do không đăng được'
+    );
+
+    // 2. Banner cảnh báo đặt ngay trên nút Đăng Chuyến (Zero Cognitive Distance)
+    assert(
+      postFormContent.includes('{formError && (') && postFormContent.includes('<Button type="submit"'),
+      'Form Validation 3: Banner cảnh báo màu đỏ đặt trực diện ngay trên nút Đăng Chuyến'
+    );
+
+    // 3. Linh hoạt ảnh xe: Cho phép từ 1 đến 5 ảnh, không ép buộc tối thiểu 3 ảnh
+    assert(
+      !postFormContent.includes('validPhotos.length < 3') && !postFormContent.includes('ít nhất 3 hình (Trước, Sau, Thân xe)'),
+      'Photo Upload 1: Đã gỡ bỏ ràng buộc cứng bắt buộc tối thiểu 3 ảnh khi tải ảnh xe'
+    );
+    assert(
+      postFormContent.includes('Tùy chọn tải từ 1 đến 5 hình'),
+      'Photo Upload 2: Hướng dẫn thân thiện "Tùy chọn tải từ 1 đến 5 hình" tạo tâm lý thoải mái cho chủ xe'
+    );
+    assert(
+      postFormContent.includes('validPhotos.length > 5') && postFormContent.includes('Chỉ được tải tối đa 5 hình ảnh xe'),
+      'Photo Upload 3: Vẫn bảo toàn giới hạn trần tối đa 5 ảnh để bảo vệ hiệu năng'
+    );
+  } catch (err) {
+    assert(false, '44. Kiểm thử Trải Nghiệm Đăng Bài', err.message);
+  }
+
+  console.log('\n--- 45. Kiểm thử Liên Kết Zalo Chuẩn Mực & Chia Sẻ Thông Minh (Zero Vô Nghĩa) ---');
+  try {
+    const fs = await import('fs');
+    const ticketModalPath = './apps/web/src/components/modals/TicketShareModal.jsx';
+    const ticketModalContent = fs.readFileSync(ticketModalPath, 'utf8');
+
+    // 1. Tuyệt đối không dùng link "https://zalo.me/" trần trụi vô nghĩa
+    assert(
+      !ticketModalContent.includes('href="https://zalo.me/"'),
+      'Zalo Share 1: Triệt tiêu hoàn toàn link https://zalo.me/ trần trụi không có đích đến'
+    );
+
+    // 2. Chia sẻ thông minh qua Web Share API (chọn Bạn bè hoặc Nhóm Zalo)
+    assert(
+      ticketModalContent.includes('handleZaloShare') && ticketModalContent.includes('navigator.share'),
+      'Zalo Share 2: Kích hoạt Native Share trên mobile để người dùng chọn gửi vào bất kỳ Bạn bè hoặc Nhóm Zalo nào'
+    );
+
+    // 3. Cung cấp liên kết Zalo trực tiếp đến người thật (Chủ xe / Người tìm xe)
+    assert(
+      ticketModalContent.includes('zaloPersonalUrl') && ticketModalContent.includes('getZaloChatUrl'),
+      'Zalo Personal 1: Cung cấp link Zalo trực tiếp đến số điện thoại người đăng chuyến (không qua trung gian)'
+    );
+
+    // 4. Cung cấp liên kết Zalo Group cộng đồng CarMate tiện chuyến
+    assert(
+      ticketModalContent.includes('zaloGroupUrl') && ticketModalContent.includes('Nhóm Zalo Tiện Chuyến'),
+      'Zalo Group 1: Cung cấp link mở thẳng Nhóm Zalo Tiện Chuyến cộng đồng'
+    );
+
+    // 5. Kiểm tra hàm chia sẻ trong packages/shared
+    const { getZaloShareUrl, getZaloGroupUrl, SITE_INFO } = await import('@carmate/shared');
+    const mockTrip = { id: 'TRIP-TEST-123', from: 'Sài Gòn', to: 'Vũng Tàu' };
+    assert(
+      getZaloShareUrl(mockTrip).includes('sp.zalo.me/share_inline') && getZaloShareUrl(mockTrip).includes('TRIP-TEST-123'),
+      'Zalo Share Helper: Sinh đúng URL Zalo Web Share chuẩn mực quốc tế'
+    );
+    assert(
+      getZaloGroupUrl() === 'https://zalo.me/g/carmate' && SITE_INFO.zaloGroup === 'https://zalo.me/g/carmate',
+      'Zalo Group Constant: SITE_INFO và helper đều trả về đúng URL nhóm Zalo tiện chuyến'
+    );
+  } catch (err) {
+    assert(false, '45. Kiểm thử Liên Kết Zalo Chuẩn Mực', err.message);
+  }
+
+  // --- 46. KIỂM THỬ BẤT BIẾN MIT: CHẶN ĐỨNG TỰ GHÉP CHUYẾN CHÍNH MÌNH ---
+  console.log('\n🛡️ 46. Kiểm thử Bất Biến MIT: Chặn Đứng Tự Ghép Chuyến Chính Mình...');
+  try {
+    const fs = await import('fs');
+    const tripCardPath = './apps/web/src/components/market/TripCard.jsx';
+    const tripCardContent = fs.readFileSync(tripCardPath, 'utf8');
+
+    // 1. TripCard có prop isOwner và huy hiệu Chuyến của bạn
+    assert(
+      tripCardContent.includes('isOwner') && tripCardContent.includes('Chuyến của bạn'),
+      'TripCard Invariant 1: TripCard tích hợp thuộc tính isOwner và hiển thị huy hiệu Chuyến của bạn'
+    );
+
+    // 2. TripCard đổi nút CTA thành "Quản lý chuyến của bạn" cho chủ bài đăng
+    assert(
+      tripCardContent.includes('Quản lý chuyến của bạn'),
+      'TripCard Invariant 2: TripCard chuyển đổi nút hành động thành "Quản lý chuyến của bạn" cho chủ xe'
+    );
+
+    // 3. EscrowBookingModal chặn đứng tự gửi yêu cầu cho chính mình
+    const escrowModalPath = './apps/web/src/components/modals/EscrowBookingModal.jsx';
+    const escrowModalContent = fs.readFileSync(escrowModalPath, 'utf8');
+    assert(
+      escrowModalContent.includes('isOwner') && escrowModalContent.includes('Bạn không thể gửi yêu cầu ghép cho chính mình'),
+      'EscrowModal Invariant 3: EscrowBookingModal bảo vệ bất biến logic, từ chối gửi lời nhắn cho chính mình'
+    );
+
+    // 4. API Backend từ chối HTTP 400 khi chủ bài đăng tự gửi yêu cầu ghép cho bài của mình
+    const loginRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '0912345678', name: 'Chủ Xe Test Self-Book' })
+    });
+    const loginData = await loginRes.json();
+    if (loginData.token && newTripId) {
+      const selfBookRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${loginData.token}`
+        },
+        body: JSON.stringify({
+          targetTripId: newTripId,
+          from: 'Lộc Ninh',
+          to: 'Bến xe Miền Đông',
+          contactPhone: '0912.345.678',
+          seats: 1
+        })
+      });
+      const selfBookData = await selfBookRes.json();
+      assert(selfBookRes.status === 400, 'API Invariant 4: Backend chặn đứng yêu cầu tự ghép chuyến với HTTP 400');
+      assert(
+        selfBookData.error && selfBookData.error.includes('chính bài đăng của mình'),
+        'API Invariant 5: Thông điệp phản hồi từ chối rõ ràng chuẩn MIT Invariant'
+      );
+    }
+  } catch (err) {
+    assert(false, '46. Kiểm thử Bất Biến MIT: Chặn Đứng Tự Ghép Chuyến Chính Mình', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n🎨 47. Kiểm thử Giao Diện Tinh Giản Zero-Text Waste: Triệt Tiêu Nhãn In Hoa & Lặp Từ...');
+  try {
+    const tripCardContent = fs.readFileSync('./apps/web/src/components/market/TripCard.jsx', 'utf8');
+    // 1. Không còn nhãn in hoa "Điểm đón" và "Điểm trả" trên thẻ chuyến xe
+    assert(
+      !tripCardContent.includes('Điểm đón</span>') && !tripCardContent.includes('Điểm trả</span>'),
+      'TripCard Text Waste 1: Triệt tiêu vĩnh viễn nhãn chữ thô Điểm đón / Điểm trả trên thẻ bài đăng'
+    );
+    // 2. Không còn dòng text rườm rà "Đã che biển số · Góc Trước, Sau, Thân xe"
+    assert(
+      !tripCardContent.includes('Đã che biển số · Góc Trước, Sau, Thân xe'),
+      'TripCard Text Waste 2: Tinh giản hộp ảnh xe thành chip biểu tượng, bỏ câu giải thích kiểm duyệt rườm rà'
+    );
+    // 3. Hero bỏ eyebrow text dài dòng
+    const heroContent = fs.readFileSync('./apps/web/src/components/market/Hero.jsx', 'utf8');
+    assert(
+      !heroContent.includes('hero.eyebrow'),
+      'Hero Text Waste 3: Triệt tiêu dòng Eyebrow khẩu hiệu dài dòng, giữ subtitle 1 dòng thanh thoát'
+    );
+    // 4. Hero ô tìm kiếm tinh gọn Nơi đi / Nơi đến
+    assert(
+      heroContent.includes('Nơi đi') && heroContent.includes('Nơi đến'),
+      'Hero Text Waste 4: Ô tìm kiếm tối giản nhãn 1 tầng chuẩn Airbnb / Apple Maps'
+    );
+  } catch (err) {
+    assert(false, '47. Kiểm thử Giao Diện Tinh Giản Zero-Text Waste', err.message);
+  }
+
+  console.log('\n⚛️ 48. Kiểm thử Bất biến Cú pháp & JSX: Tất cả Component đều khai báo hợp lệ...');
+  try {
+    const { parse } = await import('espree');
+    function scanJsxDir(dir) {
+      let files = [];
+      for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, item.name);
+        if (item.isDirectory()) files = files.concat(scanJsxDir(full));
+        else if (full.endsWith('.jsx')) files.push(full);
+      }
+      return files;
+    }
+
+    const jsxFiles = scanJsxDir('./apps/web/src');
+    const undeclaredElements = [];
+
+    const builtins = new Set([
+      'React', 'window', 'document', 'console', 'navigator', 'localStorage',
+      'sessionStorage', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+      'fetch', 'URL', 'Image', 'HTMLElement', 'Component', 'Icon', 'IconRight', 'LeadingIcon'
+    ]);
+
+    for (const file of jsxFiles) {
+      const code = fs.readFileSync(file, 'utf8');
+      const ast = parse(code, {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+        loc: true
+      });
+      const declared = new Set(builtins);
+      const jsxUsed = [];
+
+      function traverseNode(node) {
+        if (!node) return;
+        if (node.type === 'ImportSpecifier' || node.type === 'ImportDefaultSpecifier' || node.type === 'ImportNamespaceSpecifier') {
+          declared.add(node.local.name);
+        }
+        if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier') {
+          declared.add(node.id.name);
+        }
+        if (node.type === 'FunctionDeclaration' && node.id) {
+          declared.add(node.id.name);
+        }
+        if (node.type === 'JSXOpeningElement' && node.name.type === 'JSXIdentifier') {
+          const name = node.name.name;
+          if (name[0] === name[0].toUpperCase() && name[0] !== name[0].toLowerCase()) {
+            jsxUsed.push({ name, line: node.loc ? node.loc.start.line : 0 });
+          }
+        }
+        for (const key of Object.keys(node)) {
+          if (key === 'parent') continue;
+          const child = node[key];
+          if (Array.isArray(child)) {
+            child.forEach(traverseNode);
+          } else if (child && typeof child === 'object' && child.type) {
+            traverseNode(child);
+          }
+        }
+      }
+      traverseNode(ast);
+
+      for (const item of jsxUsed) {
+        if (!declared.has(item.name)) {
+          undeclaredElements.push(`${file}:${item.line} <${item.name}>`);
+        }
+      }
+    }
+
+    assert(
+      undeclaredElements.length === 0,
+      'JSX Invariant 1: 100% component JSX trong apps/web/src đều được import/khai báo đầy đủ',
+      undeclaredElements.join(', ')
+    );
+  } catch (err) {
+    assert(false, '48. Kiểm thử Bất biến Cú pháp & JSX', err.message);
+  }
+
 
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;

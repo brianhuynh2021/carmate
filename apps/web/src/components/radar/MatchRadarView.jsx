@@ -421,19 +421,35 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
 
                         {/* DUY NHẤT 1 NÚT HÀNH ĐỘNG RÕ RÀNG CHO CHỦ XE */}
                         <div className="pt-2 flex items-center justify-end">
-                          <a
-                            href={getZaloChatUrl(
-                              passenger.phoneReal,
-                              `Chào bạn ${passenger.publicName}, mình là chủ xe CarMate có chuyến tiện đường qua ${passenger.from} đi ${passenger.to} lúc ${passenger.timeSlot || 'sáng mai'}. Mình còn ghế trống, bạn có muốn đi cùng xe không?`
-                            )}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
-                          >
-                            <ZaloIcon className="w-4 h-4" />
-                            <span>Nhận Đón Khách Này (Nhắn Zalo)</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </a>
+                          {getZaloChatUrl(
+                            passenger.phoneReal || passenger.contactPhone,
+                            `Chào bạn ${passenger.publicName}, mình là chủ xe CarMate có chuyến tiện đường qua ${passenger.from} đi ${passenger.to} lúc ${passenger.timeSlot || 'sáng mai'}. Mình còn ghế trống, bạn có muốn đi cùng xe không?`
+                          ) ? (
+                            <a
+                              href={getZaloChatUrl(
+                                passenger.phoneReal || passenger.contactPhone,
+                                `Chào bạn ${passenger.publicName}, mình là chủ xe CarMate có chuyến tiện đường qua ${passenger.from} đi ${passenger.to} lúc ${passenger.timeSlot || 'sáng mai'}. Mình còn ghế trống, bạn có muốn đi cùng xe không?`
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                              <ZaloIcon className="w-4 h-4" />
+                              <span>Nhận Đón Khách Này (Nhắn Zalo)</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onBook?.(passenger)}
+                              title="Nhận chở khách này để mở khoá Zalo liên hệ"
+                              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                              <ZaloIcon className="w-4 h-4" />
+                              <span>Nhận Đón Khách Này</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

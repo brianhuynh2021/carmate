@@ -40,7 +40,7 @@ export const INITIAL_DRIVER_OFFERS = [
       {
         angle: 'side',
         label: 'Góc Thân xe (Bên hông)',
-        url: 'https://images.unsplash.com/photo-1509000000103-7e6692767b70?auto=format&fit=crop&w=800&q=80',
+        url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80',
         caption: 'Thân xe nguyên bản, không trầy xước'
       },
       {

@@ -173,10 +173,6 @@ export default function Header({
             </kbd>
           </button>
 
-          <div className="hidden sm:inline-flex items-center">
-            <LanguageToggle size="sm" />
-          </div>
-
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>
               <button
@@ -299,7 +295,7 @@ export default function Header({
                     <span>{t('userMenu.safetyPolicy')}</span>
                   </button>
 
-                  <div className="sm:hidden w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
+                  <div className="w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
                     <div className="inline-flex items-center gap-2 font-medium">
                       <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
                       <span>{t('userMenu.language')}</span>

@@ -116,12 +116,24 @@ export async function createBooking(req, res) {
     if (targetTripId) {
       const targetTrip = getTripById(targetTripId);
       if (targetTrip) {
-        const tripPhone = targetTrip.phoneReal || targetTrip.phone;
-        body.driverPhone = tripPhone;
-        body.targetPhone = tripPhone;
+        // BẤT BIẾN MIT: Chặn tự đặt/gửi yêu cầu cho chuyến của chính mình
+        const reqPhone = cleanPhoneNumber(req.user?.phone || body.contactPhone || body.phone || body.passengerPhone || body.userPhone || '');
+        const tripPhone = cleanPhoneNumber(targetTrip.phoneReal || targetTrip.phone || '');
+        const isSelfBooking = (req.user?.id && targetTrip.userId && req.user.id === targetTrip.userId) ||
+                              (reqPhone && tripPhone && reqPhone === tripPhone);
+        if (isSelfBooking) {
+          return res.status(400).json({
+            success: false,
+            error: 'Bạn không thể gửi yêu cầu ghép cho chính bài đăng của mình.'
+          });
+        }
+
+        const tripPhoneFinal = targetTrip.phoneReal || targetTrip.phone;
+        body.driverPhone = tripPhoneFinal;
+        body.targetPhone = tripPhoneFinal;
         body.driverId = targetTrip.userId;
-        body.contactPhone = tripPhone || body.contactPhone;
-        body.phoneReal = tripPhone || body.phoneReal;
+        body.contactPhone = tripPhoneFinal || body.contactPhone;
+        body.phoneReal = tripPhoneFinal || body.phoneReal;
         body.contactName = targetTrip.publicName || body.contactName;
         body.targetTripId = targetTrip.id;
       }
@@ -131,20 +143,22 @@ export async function createBooking(req, res) {
 
     // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
     sendBusinessAlert({
-      title: '🎟️ Người đi cùng kết nối giữ chỗ mới',
+      title: '💬 Yêu cầu ghép chuyến mới từ Người đi cùng',
       details: {
-        'Mã booking': booking.id,
+        'Mã yêu cầu': booking.id || booking.escrowId,
         'Lộ trình': `${booking.from} ➔ ${booking.to}`,
         'Khởi hành': `${booking.date || 'Hôm nay'} ${booking.time || ''}`.trim(),
         'Chuyến liên kết': targetTripId || 'Tự do',
-        'Số ghế': booking.seatsBooked || 1
+        'Số ghế': booking.seatsBooked || booking.seats || 1,
+        'Điểm đón đề xuất': booking.pickupPoint || 'Thỏa thuận tiện đường',
+        'Ghi chú': booking.passengerNote || 'Không có ghi chú'
       },
       req
     }).catch(() => {});
 
     return res.status(201).json({
       success: true,
-      message: 'Kết nối chuyến thành công qua Zalo',
+      message: 'Đã gửi yêu cầu ghép chuyến thành công',
       data: booking
     });
   } catch (err) {

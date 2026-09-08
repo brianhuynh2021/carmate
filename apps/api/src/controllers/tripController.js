@@ -6,15 +6,117 @@ import {
   updateTrip,
   republishTrip,
   deleteTrip,
-  getDB
+  getDB,
+  getUserById,
+  getUserByPhone
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber, sanitizeVehicleCapacityAndSeats } from '@carmate/shared';
+import { cleanPhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore } from '@carmate/shared';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
  * Che giấu thông tin định danh cá nhân (PII Protection - Nghị định 13/2023/NĐ-CP)
  * Chỉ trả SĐT thật (phoneReal) cho chính chủ sở hữu bài đăng hoặc Quản trị viên.
  */
+/**
+ * Tổng hợp sao trung bình THẬT của người đăng chuyến từ các đánh giá đã gửi
+ * sau chuyến đi (booking.reviews). Chỉ trả về khi có ít nhất 1 đánh giá thật —
+ * không bịa 5 sao mặc định cho người chưa ai chấm điểm.
+ */
+function resolveRating(trip) {
+  try {
+    const db = getDB();
+    const bookings = db.bookings || [];
+    const tripPhone = cleanPhoneNumber(trip.phoneReal || trip.phone || '');
+    const isDriverTrip = trip.type === 'driver_offer';
+    // Chuyến của chủ xe -> lấy đánh giá mà khách chấm cho chủ xe, và ngược lại
+    const wantedTargetRole = isDriverTrip ? 'driver' : 'passenger';
+
+    const scores = [];
+    for (const b of bookings) {
+      const reviews = Array.isArray(b.reviews) ? b.reviews : [];
+      if (reviews.length === 0) continue;
+
+      const ownerId = isDriverTrip ? b.driverId : b.userId || b.creatorId;
+      const ownerPhone = cleanPhoneNumber(
+        (isDriverTrip ? b.driverPhone : b.passengerPhone || b.userPhone || b.creatorPhone) || ''
+      );
+      const sameUser =
+        (trip.userId && ownerId && trip.userId === ownerId) || (tripPhone && ownerPhone && tripPhone === ownerPhone);
+      if (!sameUser) continue;
+
+      for (const r of reviews) {
+        if (r.targetRole !== wantedTargetRole) continue;
+        const n = Number(r.rating);
+        if (Number.isFinite(n) && n >= 1 && n <= 5) scores.push(n);
+      }
+    }
+
+    if (scores.length === 0) return null;
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    return { rating: Math.round(avg * 10) / 10, ratingCount: scores.length };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Tính điểm tín nhiệm của người đăng chuyến để hiển thị ngoài feed.
+ * Điểm suy ra từ hồ sơ thật (CCCD, GPLX, biển số, ảnh xe, số chuyến đã đi,
+ * số lần bị báo trễ/huỷ) — không phải số sao mặc định.
+ */
+function resolveTrustScore(trip) {
+  try {
+    const user =
+      (trip.userId && getUserById(trip.userId)) ||
+      (trip.phoneReal && getUserByPhone(trip.phoneReal)) ||
+      (trip.phone && getUserByPhone(trip.phone)) ||
+      null;
+    if (!user) return null;
+
+    const vehicle = user.vehicle || {
+      plate: trip.licensePlate || trip.carPlate,
+      model: trip.carType,
+      hasVerifiedPhotos: Boolean(trip.hasCarPhotos || (trip.carPhotos || []).length >= 3),
+      photos: trip.carPhotos || []
+    };
+    const history = {
+      completedTrips: Number(user.completedTrips || 0),
+      rating: Number(user.rating || 5.0),
+      lateReports: Number(user.lateReports || 0),
+      cancelReports: Number(user.cancelReports || 0),
+      mismatchReports: Number(user.mismatchReports || 0)
+    };
+
+    const calc = computeTrustScore(user, vehicle, history, null);
+    return { score: calc.score, level: calc.level?.label || null, levelId: calc.level?.id || null };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sinh bí danh công khai ổn định cho một chuyến đi.
+ * Không bao giờ trả về tên thật — chỉ vai trò + số hiệu suy ra từ id chuyến,
+ * nên cùng một chuyến luôn cho ra cùng một bí danh giữa các lần gọi API.
+ */
+export function toPublicAlias(trip) {
+  const isDriver = trip?.type === 'driver_offer';
+  const isConvenient = trip?.carCategory === 'convenient_trip';
+  const role = isDriver ? (isConvenient ? 'Xe tiện chuyến' : 'Chủ xe') : 'Khách';
+
+  // Giữ lại bí danh cũ nếu nó vốn đã ẩn danh (mock data, chuyến cũ)
+  const existing = String(trip?.publicName || '').trim();
+  if (existing && /^(Chủ xe|Khách|Xe tiện chuyến|Người)\b/i.test(existing)) return existing;
+
+  const masked = String(trip?.maskedCode || '').trim();
+  if (masked) return `${role} ${masked}`;
+
+  const seed = String(trip?.id || trip?.userId || '');
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 900;
+  return `${role} #${100 + hash}`;
+}
+
 export function sanitizeTripForPublic(trip, reqUser) {
   if (!trip) return null;
   const userPhone = reqUser ? cleanPhoneNumber(reqUser.phone || '') : null;
@@ -41,6 +143,34 @@ export function sanitizeTripForPublic(trip, reqUser) {
     if (sanitized.licensePlate && typeof sanitized.licensePlate === 'string') {
       sanitized.licensePlate = sanitized.licensePlate.replace(/\d{2}$/, 'xx');
     }
+
+    // Ẩn danh tính thật: feed công khai chỉ được thấy bí danh dạng "Chủ xe #123".
+    // Tên thật chỉ lộ cho hai bên sau khi ghép chuyến thành công (qua booking).
+    sanitized.publicName = toPublicAlias(sanitized);
+    delete sanitized.driverName;
+    delete sanitized.contactName;
+    delete sanitized.author;
+    delete sanitized.fullName;
+    delete sanitized.name;
+    delete sanitized.email;
+  }
+
+  // Sao trung bình THẬT từ đánh giá sau chuyến; xoá số sao mặc định nếu chưa có ai chấm
+  const rated = resolveRating(trip);
+  if (rated) {
+    sanitized.rating = rated.rating;
+    sanitized.ratingCount = rated.ratingCount;
+  } else {
+    delete sanitized.rating;
+    delete sanitized.ratingCount;
+  }
+
+  // Điểm tín nhiệm hiển thị ngoài feed (thay cho số sao mặc định)
+  const trust = resolveTrustScore(trip);
+  if (trust) {
+    sanitized.trustScore = trust.score;
+    sanitized.trustLevel = trust.level;
+    sanitized.trustLevelId = trust.levelId;
   }
 
   return sanitized;

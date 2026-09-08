@@ -1,8 +1,8 @@
 import { formatVND, getTimeSlotLabel } from '@carmate/shared';
 
 /**
- * ticketCanvas.js — Trình kết xuất Vé Xe Điện Tử thành file ảnh PNG độ nét cao (HD 1080x1350)
- * Thiết kế theo chuẩn Boarding Pass hàng không / xe khách cao cấp:
+ * ticketCanvas.js — Trình kết xuất Thẻ Thông Tin Chuyến Đi thành file ảnh PNG độ nét cao (HD 1080x1350)
+ * Thiết kế theo chuẩn Boarding Pass hàng không / hành trình cao cấp:
  * - Chuẩn tỷ lệ 4:5 tối ưu tuyệt đối cho Zalo Story, Facebook Feed và ảnh gửi nhóm chat.
  * - 100% Canvas 2D API thuần, tải 0ms, không phụ thuộc thư viện ngoài nặng nề.
  */
@@ -80,8 +80,8 @@ export async function generateTicketImage(trip, lang = 'vi') {
   ctx.font = '500 20px system-ui, -apple-system, sans-serif';
   ctx.fillText('Xe Gia Đình Tiện Tuyến · 0% Phí Sàn', logoX + 84, logoY + 74);
 
-  // Huy hiệu VÉ XE TIỆN CHUYẾN
-  const badgeW = 240;
+  // Huy hiệu THẺ THÔNG TIN CHUYẾN ĐI
+  const badgeW = 270;
   const badgeH = 46;
   const badgeX = cardX + cardW - 50 - badgeW;
   const badgeY = cardY + 52;
@@ -95,9 +95,9 @@ export async function generateTicketImage(trip, lang = 'vi') {
   ctx.fill();
 
   ctx.fillStyle = '#38bdf8';
-  ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
+  ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('VÉ XE TIỆN CHUYẾN', badgeX + badgeW / 2, badgeY + 29);
+  ctx.fillText('THẺ THÔNG TIN CHUYẾN ĐI', badgeX + badgeW / 2, badgeY + 29);
   ctx.textAlign = 'left';
 
   // Đường phân cách mờ
@@ -200,7 +200,7 @@ export async function generateTicketImage(trip, lang = 'vi') {
     '#34d399'
   );
 
-  // Ô 4: Liên hệ Zalo / SĐT
+  // Ô 4: Liên hệ Đón đã bảo mật
   const phoneFormatted = formatPhoneForTicket(trip.phoneReal || trip.contactPhone || '0984883750');
   drawInfoBox(
     ctx,
@@ -208,9 +208,9 @@ export async function generateTicketImage(trip, lang = 'vi') {
     priceY,
     boxW,
     boxH,
-    'LIÊN HỆ ĐÓN (ZALO / SĐT)',
+    'LIÊN HỆ ĐÓN (ĐÃ XÁC THỰC)',
     phoneFormatted,
-    'Không cần cọc · Lên xe gửi tiền',
+    'Bảo mật danh tính · Không cọc',
     '#60a5fa'
   );
 
@@ -266,8 +266,8 @@ export async function generateTicketImage(trip, lang = 'vi') {
 
   ctx.fillStyle = '#94a3b8';
   ctx.font = '500 18px system-ui, -apple-system, sans-serif';
-  ctx.fillText('Mã vé: #' + (trip.maskedCode || trip.id?.slice(0, 8) || 'CM-8837'), cardX + 50, stubY + 65);
-  ctx.fillText('Nền tảng ghép xe gia đình văn minh · Không thu phí sàn Chủ xe', cardX + 50, stubY + 98);
+  ctx.fillText('Mã hành trình: #' + (trip.maskedCode || trip.id?.slice(0, 8) || 'CX-8837'), cardX + 50, stubY + 65);
+  ctx.fillText('Chia sẻ chi phí xăng xe phi lợi nhuận · Không có giá trị vé vận tải', cardX + 50, stubY + 98);
 
   // Nút truy cập nổi bật
   const linkBtnW = 280;
@@ -292,7 +292,7 @@ export async function generateTicketImage(trip, lang = 'vi') {
 }
 
 /**
- * generateTicketStoryImage — Trình kết xuất Vé Xe Điện Tử chuẩn Zalo Story / Facebook Story / TikTok (HD 1080x1920, Tỷ lệ 9:16)
+ * generateTicketStoryImage — Trình kết xuất Thẻ Thông Tin Chuyến Đi chuẩn Zalo Story / Facebook Story / TikTok (HD 1080x1920, Tỷ lệ 9:16)
  * Thiết kế chuẩn Apple Liquid Aesthetics siêu sắc nét, 100% Canvas thuần 0ms:
  * - Tỷ lệ 9:16 chuẩn xác cho Story, màn hình điện thoại di động
  * - Lộ trình dọc trực quan, thông số minh bạch, QR code quét giữ chỗ
@@ -392,9 +392,9 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
   ctx.fill();
 
   ctx.fillStyle = '#38bdf8';
-  ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
+  ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('VÉ TIỆN TUYẾN', badgeX + badgeW / 2, badgeY + 32);
+  ctx.fillText('THẺ THÔNG TIN', badgeX + badgeW / 2, badgeY + 32);
   ctx.textAlign = 'left';
 
   // Đường phân cách mờ
@@ -507,7 +507,7 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
     '#34d399'
   );
 
-  // Ô 4: Liên hệ SĐT / Zalo
+  // Ô 4: Liên hệ Đón đã bảo mật
   const phoneFormatted = formatPhoneForTicket(trip.phoneReal || trip.contactPhone || '0984883750');
   drawInfoBox(
     ctx,
@@ -515,9 +515,9 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
     priceY,
     boxW,
     boxH,
-    'LIÊN HỆ CHỦ XE (ZALO)',
+    'LIÊN HỆ ĐÓN (ĐÃ XÁC THỰC)',
     phoneFormatted,
-    'Không thu cọc · Lên xe gửi tiền',
+    'Bảo mật danh tính · Không thu cọc',
     '#60a5fa'
   );
 
@@ -602,12 +602,12 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
 
   ctx.fillStyle = '#38bdf8';
   ctx.font = '600 22px system-ui, -apple-system, sans-serif';
-  ctx.fillText('Mã chuyến: #' + (trip.maskedCode || trip.id?.slice(0, 8) || 'CX-8837'), qrTextX, stubY + 90);
+  ctx.fillText('Mã hành trình: #' + (trip.maskedCode || trip.id?.slice(0, 8) || 'CX-8837'), qrTextX, stubY + 90);
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '500 18px system-ui, -apple-system, sans-serif';
-  ctx.fillText('Quét mã QR bằng Camera điện thoại hoặc Zalo', qrTextX, stubY + 130);
-  ctx.fillText('Không thu phí hoa hồng · Đi chung xe văn minh', qrTextX, stubY + 165);
+  ctx.font = '500 17px system-ui, -apple-system, sans-serif';
+  ctx.fillText('Quét mã QR bằng Camera điện thoại để xem chi tiết', qrTextX, stubY + 130);
+  ctx.fillText('Thỏa thuận chia sẻ chi phí nhiên liệu phi lợi nhuận · 0% phí sàn', qrTextX, stubY + 165);
 
   return canvas.toDataURL('image/png');
 }
@@ -695,7 +695,7 @@ function drawStylizedQRCode(ctx, x, y, size, seedStr = '') {
 export function downloadTicketImage(dataUrl, tripId = 'chuyen-di') {
   if (!dataUrl) return;
   const link = document.createElement('a');
-  link.download = `carmate-ve-xe-${tripId}.png`;
+  link.download = `carmate-the-thong-tin-${tripId}.png`;
   link.href = dataUrl;
   document.body.appendChild(link);
   link.click();
@@ -708,7 +708,7 @@ export function downloadTicketImage(dataUrl, tripId = 'chuyen-di') {
 export function downloadTicketStoryImage(dataUrl, tripId = 'story') {
   if (!dataUrl) return;
   const link = document.createElement('a');
-  link.download = `carmate-story-9-16-${tripId}.png`;
+  link.download = `carmate-story-thong-tin-${tripId}.png`;
   link.href = dataUrl;
   document.body.appendChild(link);
   link.click();
@@ -787,10 +787,10 @@ function truncateText(ctx, text, maxWidth) {
 }
 
 function formatPhoneForTicket(phone) {
-  if (!phone) return '0984 883 750';
+  if (!phone) return '0984 ••• 750';
   const clean = String(phone).replace(/\D/g, '');
-  if (clean.length === 10) {
-    return `${clean.slice(0, 4)} ${clean.slice(4, 7)} ${clean.slice(7)}`;
+  if (clean.length >= 10) {
+    return `${clean.slice(0, 4)} ••• ${clean.slice(-3)}`;
   }
-  return phone;
+  return '0984 ••• 750';
 }

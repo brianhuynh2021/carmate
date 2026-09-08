@@ -62,7 +62,7 @@ function Countdown30Min({ createdAt }) {
     >
       <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
       <span>
-        Còn {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')} để chốt điểm đón qua Zalo
+        Đang kết nối · Hạn phản hồi {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
       </span>
     </div>
   );
@@ -77,13 +77,13 @@ function TripProgressStepper({ status, delayedMinutes }) {
     {
       id: 1,
       label: 'Khớp xe tiện đường',
-      desc: 'Chi phí xăng & vé trạm',
+      desc: 'Chi phí xăng & phí BOT',
       state: 'completed'
     },
     {
       id: 2,
-      label: isDelayed ? `Báo trễ +${delayedMinutes || 15}p` : 'Hẹn điểm đón Zalo',
-      desc: isCancelled ? 'Đã dừng kết nối' : 'Thoả thuận điểm đón GPS',
+      label: isDelayed ? `Báo trễ +${delayedMinutes || 15}p` : 'Trao đổi & Khớp chuyến',
+      desc: isCancelled ? 'Đã dừng kết nối' : 'Thoả thuận điểm đón & hành lý',
       state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active'
     },
     {

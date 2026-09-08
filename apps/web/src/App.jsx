@@ -321,6 +321,34 @@ export default function App() {
     [currentUser]
   );
 
+  // Helper kiểm tra một chuyến đi có phải của chính người dùng hiện tại (MIT Invariant)
+  const checkIsMyTrip = useCallback(
+    (trip) => {
+      if (!trip) return false;
+      try {
+        let storedIds = [];
+        if (!currentUser) {
+          storedIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
+        } else {
+          const userKey = `carmate_my_trip_ids_${currentUser.id || currentUser.phone}`;
+          storedIds = JSON.parse(localStorage.getItem(userKey) || localStorage.getItem('carmate_my_trip_ids') || '[]');
+        }
+        if (!Array.isArray(storedIds)) storedIds = [];
+        if (storedIds.includes(trip.id)) return true;
+
+        if (currentUser) {
+          if (trip.userId && trip.userId === currentUser.id) return true;
+          const userPhoneClean = currentUser.phone ? String(currentUser.phone).replace(/\D/g, '') : '';
+          const tripPhone = trip.phoneReal || trip.phone;
+          const tripPhoneClean = tripPhone ? String(tripPhone).replace(/\D/g, '') : '';
+          if (userPhoneClean && tripPhoneClean && userPhoneClean === tripPhoneClean) return true;
+        }
+      } catch {}
+      return false;
+    },
+    [currentUser]
+  );
+
   // Hook quản lý Dữ liệu chuyến đi & Escrow Bookings
   const {
     driverOffers,
@@ -426,8 +454,22 @@ export default function App() {
     setActiveTab('post');
   };
 
-  // Ghép chuyến: Chưa đăng nhập sẽ yêu cầu xác thực OTP trước
+  // Quản lý chuyến của chính mình (1-chạm chuyển sang tab Chuyến của tôi)
+  const handleManageMyTrip = useCallback(
+    (trip) => {
+      showToast('Chuyển sang mục "Chuyến của tôi" để bạn quản lý bài đăng này.');
+      setActiveTab('my_trips');
+    },
+    [showToast, setActiveTab]
+  );
+
+  // Ghép chuyến: Chặn tự ghép chuyến của chính mình (MIT Invariant); Chưa đăng nhập sẽ yêu cầu xác thực OTP trước
   const handleInitiateBook = (trip) => {
+    if (checkIsMyTrip(trip)) {
+      showToast('Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.');
+      setActiveTab('my_trips');
+      return;
+    }
     trackViewTrip(trip.id, `${trip.from} - ${trip.to}`);
     if (!currentUser) {
       setPendingBookingTrip(trip);
@@ -608,11 +650,11 @@ export default function App() {
                     options={[
                       {
                         value: 'all',
-                        label: `Tất cả (${driverOffers.length + passengerRequests.length})`,
+                        label: 'Tất cả',
                         icon: LayoutGrid
                       },
-                      { value: 'drivers', label: `Chủ xe (${driverOffers.length})`, icon: Car },
-                      { value: 'passengers', label: `Người tìm xe (${passengerRequests.length})`, icon: Users }
+                      { value: 'drivers', label: 'Chủ xe', icon: Car },
+                      { value: 'passengers', label: 'Người tìm xe', icon: Users }
                     ]}
                   />
                 </div>
@@ -736,7 +778,7 @@ export default function App() {
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
-                        Tất cả ({filteredItems.length})
+                        Tất cả
                       </button>
                       <button
                         type="button"
@@ -747,7 +789,7 @@ export default function App() {
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
-                        Hôm nay ({temporalGroups.today.length})
+                        Hôm nay
                       </button>
                       <button
                         type="button"
@@ -758,7 +800,7 @@ export default function App() {
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
-                        Ngày mai ({temporalGroups.tomorrow.length})
+                        Ngày mai
                       </button>
                       <button
                         type="button"
@@ -769,18 +811,18 @@ export default function App() {
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
-                        Sắp tới ({temporalGroups.upcoming.length})
+                        Sắp tới
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono font-medium">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
                     <span className="relative flex h-2 w-2 shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[#107c41]"></span>
                     </span>
                     <span>
-                      Hiển thị {paginatedMarketItems.length} / {displayedMarketItems.length} chuyến
+                      {displayedMarketItems.length} chuyến trực tiếp
                     </span>
                   </div>
                 </div>
@@ -829,8 +871,9 @@ export default function App() {
                         <TripCard
                           key={item.id}
                           item={item}
+                          isOwner={checkIsMyTrip(item)}
                           onBook={handleInitiateBook}
-                          onShare={setTicketToShare}
+                          onManage={handleManageMyTrip}
                           onViewTrustProfile={setSelectedDriverForTrust}
                           onViewRoute={setSelectedTripForRoute}
                           onViewCarPhotos={setSelectedTripForPhotos}
@@ -893,6 +936,7 @@ export default function App() {
                 currentUser={currentUser}
                 onOpenAuth={() => openAuthWithContext()}
                 initialRole={postTripInitialRole}
+                onShowToast={showToast}
               />
             )}
           </div>
@@ -961,15 +1005,23 @@ export default function App() {
       {selectedItemForEscrow && (
         <EscrowBookingModal
           item={selectedItemForEscrow}
+          isOwner={checkIsMyTrip(selectedItemForEscrow)}
           currentUser={currentUser}
           onClose={() => setSelectedItemForEscrow(null)}
           onConfirmBooking={handleConfirmBooking}
           onViewTrustProfile={setSelectedDriverForTrust}
+          onViewBookedTab={() => {
+            setSelectedItemForEscrow(null);
+            setActiveTab('booked');
+          }}
+          onAutoPostDemand={handlePostTrip}
+          onShowToast={showToast}
         />
       )}
       {selectedDriverForTrust && (
         <TrustProfileModal
           item={selectedDriverForTrust}
+          isOwner={checkIsMyTrip(selectedDriverForTrust)}
           onClose={() => setSelectedDriverForTrust(null)}
           onBook={(item) => {
             setSelectedDriverForTrust(null);
@@ -1015,7 +1067,9 @@ export default function App() {
       {selectedTripForRoute && (
         <RouteDetailModal
           trip={selectedTripForRoute}
+          isOwner={checkIsMyTrip(selectedTripForRoute)}
           onClose={() => setSelectedTripForRoute(null)}
+          onShare={setTicketToShare}
           onBook={(item) => {
             setSelectedTripForRoute(null);
             handleInitiateBook(item);

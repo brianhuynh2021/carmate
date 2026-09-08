@@ -156,7 +156,6 @@ export default function useTripsData({
       if (newTrip.type === 'driver_offer') setDriverOffers((prev) => [newTrip, ...prev]);
       else setPassengerRequests((prev) => [newTrip, ...prev]);
       showToast(t?.('toast.postSuccess') || 'Đăng chuyến thành công!');
-      setTicketToShare?.(newTrip);
       setActiveTab?.('market');
 
       try {
@@ -175,7 +174,6 @@ export default function useTripsData({
           } else {
             setPassengerRequests((prev) => [res.data, ...prev.filter((i) => i.id !== newTrip.id)]);
           }
-          setTicketToShare?.(res.data);
           if (res.data.id !== newTrip.id) {
             try {
               const storageKey = `carmate_my_trip_ids_${authUser.id || authUser.phone}`;
@@ -259,15 +257,16 @@ export default function useTripsData({
   );
 
   const handleConfirmBooking = useCallback(
-    async (newEscrow) => {
+    async (newEscrow, { keepModalOpen = false } = {}) => {
       setBookedEscrows((prev) => [newEscrow, ...prev]);
-      setSelectedItemForEscrow?.(null);
-      showToast(t?.('toast.bookSuccess', { id: newEscrow.escrowId }) || 'Đã kết nối chuyến thành công!');
-      setActiveTab?.('booked');
+      if (!keepModalOpen) {
+        setSelectedItemForEscrow?.(null);
+        setActiveTab?.('booked');
+      }
+      showToast(t?.('toast.bookSuccess', { id: newEscrow.escrowId }) || 'Đã gửi yêu cầu ghép chuyến thành công!');
 
       // Funnel Analytics
       trackInitiateBooking(newEscrow.tripId, newEscrow.seats || 1);
-      trackOpenZalo(newEscrow.tripId, 'passenger', `${newEscrow.from || ''} - ${newEscrow.to || ''}`);
 
       try {
         await api.createBooking(newEscrow);

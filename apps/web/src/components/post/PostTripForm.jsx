@@ -221,7 +221,7 @@ function TimeSlotPicker({ value, onChange, exactTime, onExactTimeChange }) {
 function FormSection({ icon: Icon, title, children }) {
   return (
     <section className="pt-6 first:pt-0 border-t first:border-t-0 border-slate-100 dark:border-slate-800">
-      <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+      <h3 className="text-sm font-semibold text-slate-900 dark:white flex items-center gap-2 mb-4">
         <Icon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
         {title}
       </h3>
@@ -231,14 +231,14 @@ function FormSection({ icon: Icon, title, children }) {
 }
 
 const CAR_PHOTO_SLOTS = [
-  { id: 'front', label: 'Góc Trước (Đầu xe)', required: true, desc: 'Mặt trước, đèn pha & kính lái' },
-  { id: 'back', label: 'Góc Sau (Đuôi xe & Cốp)', required: true, desc: 'Đuôi xe & khoang cốp để đồ' },
-  { id: 'side', label: 'Góc Thân xe (Trái/Phải)', required: true, desc: 'Thân xe bên hông sáng đẹp' },
+  { id: 'front', label: 'Góc Trước (Đầu xe)', required: false, desc: 'Mặt trước, đèn pha & kính lái' },
+  { id: 'back', label: 'Góc Sau (Đuôi xe & Cốp)', required: false, desc: 'Đuôi xe & khoang cốp để đồ' },
+  { id: 'side', label: 'Góc Thân xe (Trái/Phải)', required: false, desc: 'Thân xe bên hông sáng đẹp' },
   { id: 'interior', label: 'Nội thất & Ghế ngồi', required: false, desc: 'Ghế da sạch sẽ, máy lạnh' },
   { id: 'trunk', label: 'Khoang hành lý', required: false, desc: 'Cốp rộng để đồ thoải mái' }
 ];
 
-export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initialRole = 'driver' }) {
+export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initialRole = 'driver', onShowToast }) {
   const { t, lang } = useI18n();
   const data = useDataLabel();
 
@@ -255,6 +255,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
   const [waypointNote, setWaypointNote] = useState('');
+  const [date, setDate] = useState(() => upcomingDays[0]?.iso || '');
   const [timeSlot, setTimeSlot] = useState('07:00-09:00');
   const [exactTime, setExactTime] = useState('');
   const [vehicleCapacity, setVehicleCapacity] = useState(5); // 5 | 7 (Mặc định xe 4-5 chỗ)
@@ -265,6 +266,16 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   const [phoneReal, setPhoneReal] = useState(() => currentUser?.phone || '');
   const [zaloConfirmed, setZaloConfirmed] = useState(true);
   const [formError, setFormError] = useState(null);
+  const errorBannerRef = useRef(null);
+
+  const triggerError = (msg) => {
+    setFormError(msg);
+    onShowToast?.(`⚠️ ${msg}`);
+    setTimeout(() => {
+      errorBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  };
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingPayload, setPendingPayload] = useState(null);
   const [showLivePreview, setShowLivePreview] = useState(true);
@@ -489,36 +500,28 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
 
     const cleanPhone = phoneReal.replace(/[^0-9]/g, '');
     if (cleanPhone.length < 10 || !cleanPhone.startsWith('0')) {
-      setFormError('Bắt buộc: Vui lòng nhập số điện thoại Việt Nam hợp lệ (10 chữ số) đã kích hoạt Zalo.');
+      triggerError('Bắt buộc: Vui lòng nhập số điện thoại Việt Nam hợp lệ (10 chữ số) đã kích hoạt Zalo.');
       return;
     }
     if (!zaloConfirmed) {
-      setFormError('Bắt buộc: Bạn phải cam kết số điện thoại này đang sử dụng Zalo để chốt điểm đón.');
+      triggerError('Bắt buộc: Bạn phải cam kết số điện thoại này đang sử dụng Zalo để chốt điểm đón.');
       return;
     }
 
     if (!fromLocation.trim()) {
-      setFormError('Vui lòng nhập điểm đón cụ thể (số nhà, ngõ xóm, cây xăng hoặc dán link Google Maps).');
+      triggerError('Vui lòng nhập điểm đón cụ thể (số nhà, ngõ xóm, cây xăng hoặc dán link Google Maps).');
       return;
     }
     if (!toLocation.trim()) {
-      setFormError('Vui lòng nhập điểm đến / trả khách cụ thể (quận, bến xe hoặc dán link Google Maps).');
+      triggerError('Vui lòng nhập điểm đến / trả khách cụ thể (quận, bến xe hoặc dán link Google Maps).');
       return;
     }
 
-    // Kiểm tra số lượng ảnh xe thực tế (Tùy chọn: nếu có tải thì ít nhất 3 hình, tối đa 5 hình)
+    // Kiểm tra số lượng ảnh xe thực tế (Tùy chọn: 1 hình cũng được, 2 hình cũng được, tối đa 5 hình)
     const validPhotos = (carPhotos || []).filter(Boolean);
-    if (isDriver && validPhotos.length > 0) {
-      if (validPhotos.length < 3) {
-        setFormError(
-          'Tùy chọn hình ảnh xe: Nếu tải ảnh, vui lòng cung cấp ít nhất 3 hình (Trước, Sau, Thân xe) và tối đa 5 hình để đảm bảo độ tin cậy.'
-        );
-        return;
-      }
-      if (validPhotos.length > 5) {
-        setFormError('Chỉ được tải tối đa 5 hình ảnh xe.');
-        return;
-      }
+    if (isDriver && validPhotos.length > 5) {
+      triggerError('Chỉ được tải tối đa 5 hình ảnh xe.');
+      return;
     }
 
     const slot = TIME_SLOTS.find((s) => s.id === timeSlot) || TIME_SLOTS[2];
@@ -1147,8 +1150,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       Chủ xe tự chụp hoặc tải ảnh xe thật để tạo uy tín.{' '}
-                      <strong className="text-slate-700 dark:text-slate-300">Tối thiểu 3 hình và tối đa 5 hình</strong>{' '}
-                      (Góc Trước, Góc Sau, Thân xe). Biển số tự động che bảo mật.
+                      <strong className="text-slate-700 dark:text-slate-300">Tùy chọn tải từ 1 đến 5 hình</strong>{' '}
+                      (Góc Trước, Góc Sau, Thân xe...). Biển số tự động che bảo mật.
                     </p>
                   </div>
                 </div>
@@ -1270,9 +1273,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                       <span>Đã có {carPhotos.filter(Boolean).length}/5 ảnh xe thật (Đủ điều kiện nhận huy hiệu)</span>
                     </span>
                   ) : (
-                    <span className="text-amber-600 dark:text-amber-400">
-                      ⚠️ Cần thêm {3 - carPhotos.filter(Boolean).length} hình nữa (Tối thiểu 3 hình thật: Trước, Sau,
-                      Thân xe)
+                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 sm:justify-end">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Đã có {carPhotos.filter(Boolean).length}/5 ảnh xe thật</span>
                     </span>
                   )}
                 </div>
@@ -1449,11 +1452,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
           </Field>
         </FormSection>
 
-        {formError && (
-          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold text-rose-700 dark:text-rose-300">
-            ⚠️ {formError}
-          </div>
-        )}
 
         {!currentUser && (
           <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200">
@@ -1581,6 +1579,16 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
           )}
         </div>
 
+        {formError && (
+          <div
+            ref={errorBannerRef}
+            className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 shadow-xs"
+          >
+            <span className="text-base shrink-0">⚠️</span>
+            <span>{formError}</span>
+          </div>
+        )}
+
         <Button type="submit" size="lg" fullWidth icon={PlusCircle}>
           {t('post.submit')}
         </Button>
@@ -1629,7 +1637,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   <span>
                     {pendingPayload.type === 'driver_offer'
                       ? `Chủ xe · ${pendingPayload.capacity === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
-                      : `Hành khách · Cần ${pendingPayload.seatsNeeded} ghế`}
+                      : `Người đi cùng · Cần ${pendingPayload.seatsNeeded} ghế`}
                   </span>
                 </span>
                 <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
@@ -1697,18 +1705,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   <span>Xác nhận đăng bài</span>
                 </button>
               </div>
-
-              {/* Nút đăng bài & Tạo luôn chuyến về (Khứ hồi) 1-chạm */}
-              <button
-                type="button"
-                onClick={handleCreateRoundtrip}
-                className="w-full py-2.5 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-bold text-xs border border-emerald-300/60 dark:border-emerald-800/60 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <ArrowLeftRight className="w-3.5 h-3.5 text-emerald-600" />
-                <span>
-                  Đăng bài & Chuẩn bị chuyến về ({pendingPayload.to} ➔ {pendingPayload.from})
-                </span>
-              </button>
             </div>
           </div>
         </div>
