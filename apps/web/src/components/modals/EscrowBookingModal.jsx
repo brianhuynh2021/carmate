@@ -21,7 +21,8 @@ import {
   formatVND,
   calculatePricing,
   getTimeSlotLabel,
-  getCorridorWaypoints
+  getCorridorWaypoints,
+  toPublicAlias
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -146,7 +147,7 @@ export default function EscrowBookingModal({
       status: 'inquiring',
       commitmentType: 'inquiry_chat',
       partyRole: isDriverItem ? 'Người đi cùng Chủ Xe' : 'Chủ xe đón Người đi cùng',
-      contactName: item.publicName,
+      contactName: toPublicAlias(item),
       createdAt: 'Vừa xong'
     };
 
@@ -227,7 +228,7 @@ export default function EscrowBookingModal({
         icon={CheckCircle2}
         iconTone="success"
         title={isDriverItem ? 'Đã gửi lời nhắn ghép chuyến!' : 'Đã gửi đề xuất đón khách!'}
-        subtitle={`Đã chuyển tới ${item.publicName || 'đối tác'} · Thông báo tức thì qua App & Telegram`}
+        subtitle={`Đã chuyển tới ${toPublicAlias(item)} · Thông báo tức thì qua App & Telegram`}
         footer={
           <div className="w-full space-y-2">
             <button
@@ -277,7 +278,7 @@ export default function EscrowBookingModal({
                   Yêu cầu kết nối #{bookingCode}
                 </p>
                 <p className="font-bold text-slate-900 dark:text-white text-base mt-0.5">
-                  {item.publicName || 'Chủ xe'}
+                  {toPublicAlias(item)}
                 </p>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 text-xs font-bold tabular">
@@ -462,7 +463,7 @@ export default function EscrowBookingModal({
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div>
-              <p className="font-bold text-slate-900 text-base leading-tight">{item.publicName}</p>
+              <p className="font-bold text-slate-900 text-base leading-tight">{toPublicAlias(item)}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-slate-500 font-medium">{item.carType || 'Xe ô tô gia đình'}</span>
                 {onViewTrustProfile && (

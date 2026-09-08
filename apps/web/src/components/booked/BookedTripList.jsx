@@ -19,7 +19,7 @@ import {
   ShieldAlert,
   User
 } from 'lucide-react';
-import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber } from '@carmate/shared';
+import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -185,7 +185,7 @@ export default function BookedTripList({
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
   const [copiedId, setCopiedId] = useState(null);
 
-  const activeBookings = bookedEscrows.filter((b) => b.status === 'zalo_active' || b.status === 'delayed');
+  const activeBookings = bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled');
   const historyBookings = bookedEscrows.filter((b) => b.status === 'completed' || b.status === 'cancelled');
 
   const displayedList = activeTab === 'active' ? activeBookings : historyBookings;
@@ -324,7 +324,7 @@ export default function BookedTripList({
                       <p className="text-base font-bold text-[#1d1d1f]">
                         <span className="tabular font-display tracking-tight text-[#0071e3]">{record.escrowId}</span>
                         <span className="text-[#86868b] mx-1.5">·</span>
-                        <span>{record.contactName}</span>
+                        <span>{toPublicAlias(record.contactName)}</span>
                       </p>
                     </div>
                   </div>
