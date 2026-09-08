@@ -49,7 +49,7 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Chia sẻ chỉ có nghĩa sau khi đã xem chi tiết chuyến */}
+            {/* Chia sẻ chuyến đi */}
             {onShare && (
               <button
                 type="button"
@@ -58,9 +58,10 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
                   onShare(trip);
                 }}
                 title="Chia sẻ chuyến đi qua Zalo / Facebook"
-                className="h-10 w-10 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] inline-flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                className="h-10 px-3.5 rounded-xl font-semibold text-xs text-[#0071e3] dark:text-blue-400 bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/25 shadow-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] shrink-0"
               >
-                <Share2 className="w-4 h-4" />
+                <Share2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Chia sẻ</span>
               </button>
             )}
 
