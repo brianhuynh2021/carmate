@@ -4153,6 +4153,11 @@ async function runTests() {
     const ticketShareModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/TicketShareModal.jsx'), 'utf8');
     assert(!ticketShareModalSrc.includes('icon={Share2}'), 'Zero Redundancy 1: TicketShareModal đã gỡ bỏ icon tròn thừa thãi trên tiêu đề');
 
+    // 5.1 Gỡ bỏ dòng chữ dài dòng dưới nút đặt chỗ trong EscrowBookingModal
+    const escrowBookingModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/EscrowBookingModal.jsx'), 'utf8');
+    assert(!escrowBookingModalSrc.includes('Thoải mái đổi ý'), 'Zero Redundancy 2: EscrowBookingModal đã gỡ bỏ dòng chữ rung chuông rườm rà');
+    assert(escrowBookingModalSrc.includes('<span>0đ cọc</span>'), 'Zero Redundancy 3: EscrowBookingModal giữ lại huy hiệu tinh gọn 0đ cọc');
+
     // 6. Triệt tiêu 100% từ viết tắt "BOT" trên giao diện người dùng
     const footerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/common/Footer.jsx'), 'utf8');
     assert(!footerSrc.includes('Bảng định mức xăng & BOT'), 'Zero BOT 1: Footer đã thay Bảng định mức xăng & BOT thành cầu đường');
