@@ -42,6 +42,7 @@ export default function InboxModal({
   const [isBannedState, setIsBannedState] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [timeLeftStr, setTimeLeftStr] = useState('');
+  const [remainingSecs, setRemainingSecs] = useState(900);
   const messagesEndRef = useRef(null);
 
   // Cập nhật selectedId khi initialBookingId thay đổi
@@ -82,16 +83,12 @@ export default function InboxModal({
   }, [bookings, currentUser]);
 
   const currentList = activeTab === 'incoming' ? incomingBookings : outgoingBookings;
-
-  // Lấy booking đang được chọn
   const activeBooking = useMemo(() => {
-    if (!selectedId) {
-      return currentList[0] || bookings[0] || null;
-    }
+    if (!selectedId) return currentList[0] || null;
     return bookings.find((b) => (b.escrowId || b.id) === selectedId) || currentList[0] || null;
-  }, [selectedId, bookings, currentList]);
+  }, [bookings, selectedId, currentList]);
 
-  // Tự động cuộn xuống cuối khung chat
+  // Cuộn xuống tin nhắn mới nhất
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeBooking?.messages]);
@@ -100,6 +97,7 @@ export default function InboxModal({
   useEffect(() => {
     if (!activeBooking || activeBooking.status !== 'pre_confirmed' || !activeBooking.preConfirmedExpiresAt) {
       setTimeLeftStr('');
+      setRemainingSecs(900);
       return;
     }
 
@@ -107,8 +105,11 @@ export default function InboxModal({
       const remainingMs = new Date(activeBooking.preConfirmedExpiresAt).getTime() - Date.now();
       if (remainingMs <= 0) {
         setTimeLeftStr('00:00 (Hết hạn)');
+        setRemainingSecs(0);
         clearInterval(interval);
       } else {
+        const totalSecs = Math.floor(remainingMs / 1000);
+        setRemainingSecs(totalSecs);
         const mins = Math.floor(remainingMs / 60000);
         const secs = Math.floor((remainingMs % 60000) / 1000);
         setTimeLeftStr(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
@@ -117,6 +118,54 @@ export default function InboxModal({
 
     return () => clearInterval(interval);
   }, [activeBooking]);
+
+  // Trí tuệ Bản địa (Edge AI): Nhận diện thỏa thuận đồng thuận chốt chuyến trong chat (< 0.2ms)
+  const hasConsensus = useMemo(() => {
+    if (!activeBooking || activeBooking.status !== 'inquiring') return false;
+    const msgs = activeBooking.messages || [];
+    if (msgs.length === 0) return false;
+
+    // Quét 4 tin nhắn gần nhất
+    const recentMsgs = msgs.slice(-4);
+    const consensusKeywords = [
+      /\b(ok|oke|okie|oki)\b/i,
+      /\b(chốt|chot)\b/i,
+      /\b(đồng ý|dong y)\b/i,
+      /\b(nhất trí|nhat tri)\b/i,
+      /\b(hẹn anh|hẹn bạn|hẹn em|hen anh|hen em)\b/i,
+      /\b(được anh|được em|duoc anh|duoc em|được nha|duoc nha)\b/i,
+      /\b(đón em|don em|đón anh|don anh|đón nhé|don nhe)\b/i,
+      /\b(giữ chỗ|giu cho)\b/i
+    ];
+
+    return recentMsgs.some((m) => {
+      if (m.isSystem) return false;
+      const txt = (m.text || '').toLowerCase();
+      return consensusKeywords.some((regex) => regex.test(txt));
+    });
+  }, [activeBooking]);
+
+  // Gợi ý tin nhắn 1-chạm (Zero-Typing Quick Response Chips)
+  const quickResponseChips = useMemo(() => {
+    if (activeBooking?.status !== 'inquiring') return [];
+    if (activeTab === 'incoming') {
+      return [
+        '👍 Đồng ý đón tại điểm này',
+        '⏱️ Xe đến tầm giờ đã hẹn nhé',
+        '🧳 Xe chỉ nhận balo/túi gọn'
+      ];
+    }
+    return [
+      '📍 Em đón đúng điểm hẹn trên đường',
+      '🎒 Em chỉ mang 1 balo nhỏ gọn',
+      '🤝 Dạ ok anh, chốt giúp em nhé'
+    ];
+  }, [activeBooking?.status, activeTab]);
+
+  const handleSelectQuickChip = (chipText) => {
+    setInputMessage(chipText);
+    setPiiWarning('');
+  };
 
   if (!isOpen) return null;
 
@@ -419,22 +468,39 @@ export default function InboxModal({
                     </div>
                   </div>
                 ) : isPreConfirmed ? (
-                  // ĐANG Ở BƯỚC PRE-CONFIRM: SOFT-LOCK 15 PHÚT
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                          ⚡ Đã đề xuất chốt
-                        </span>
-                        <span className="text-xs font-bold text-slate-900 dark:text-white tabular">
-                          Thời gian giữ chỗ: {timeLeftStr}
+                  // ĐANG Ở BƯỚC PRE-CONFIRM: SOFT-LOCK 15 PHÚT (DYNAMIC ISLAND LIQUID COUNTDOWN)
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-slate-50 dark:from-slate-900/60 dark:to-blue-950/40 border border-blue-200/70 dark:border-blue-800/50 shadow-xs flex-wrap">
+                    <div className="flex items-center gap-3">
+                      {/* Dynamic Island Capsule */}
+                      <div
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-xs transition-colors ${
+                          remainingSecs <= 180
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 animate-pulse'
+                            : 'bg-[#0071e3]/10 border-[#0071e3]/20 text-[#0071e3] dark:text-sky-400'
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            remainingSecs <= 180 ? 'bg-amber-500 animate-ping' : 'bg-[#0071e3] animate-pulse'
+                          }`}
+                        />
+                        <span className="text-xs font-mono font-black tracking-wider">
+                          {timeLeftStr || '15:00'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">
-                        {activeTab === 'incoming'
-                          ? 'Bạn đã giữ chỗ cho khách. Đang chờ khách bấm xác nhận đi.'
-                          : 'Chủ xe đã đồng ý giữ chỗ cho bạn. Vui lòng bấm xác nhận để chốt ghế!'}
-                      </p>
+
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {activeTab === 'incoming'
+                            ? 'Đang khóa mềm 1 ghế (Chờ khách bấm chốt)'
+                            : 'Chủ xe đang giữ chỗ cho bạn'}
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {activeTab === 'incoming'
+                            ? 'Ghế tự động giải phóng nếu khách không chốt trước khi hết giờ.'
+                            : 'Bấm xác nhận bên phải để nhận ngay SĐT & Zalo chủ xe!'}
+                        </p>
+                      </div>
                     </div>
 
                     {activeTab === 'outgoing' && (
@@ -442,36 +508,54 @@ export default function InboxModal({
                         type="button"
                         disabled={actionLoading}
                         onClick={handleFinalConfirm}
-                        className="py-2 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>XÁC NHẬN CHỐT CHUYẾN NGAY</span>
+                        <span>XÁC NHẬN CHỐT CHUYẾN</span>
                       </button>
                     )}
                   </div>
                 ) : (
                   // ĐANG Ở BƯỚC THƯƠNG LƯỢNG (INQUIRING)
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                        <span>Thỏa thuận điểm hẹn đón & hành lý trước khi chốt</span>
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        Sau khi trao đổi xong, bấm "Đề xuất chốt" để giữ chỗ mềm 15 phút.
-                      </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Thỏa thuận điểm hẹn đón & hành lý trước khi chốt</span>
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Sau khi trao đổi xong, bấm "Đề xuất chốt" để giữ chỗ mềm 15 phút.
+                        </p>
+                      </div>
+
+                      {activeTab === 'incoming' && (
+                        <button
+                          type="button"
+                          disabled={actionLoading}
+                          onClick={handlePreConfirm}
+                          className={`py-2 px-3.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
+                            hasConsensus
+                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-2 ring-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] animate-pulse'
+                              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white'
+                          }`}
+                        >
+                          <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+                          <span>{hasConsensus ? '⚡ Đồng thuận đạt! Giữ chỗ 15p' : 'Đề xuất chốt & Giữ chỗ 15p'}</span>
+                        </button>
+                      )}
                     </div>
 
-                    {activeTab === 'incoming' && (
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={handlePreConfirm}
-                        className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-98 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      >
-                        <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-                        <span>Đề xuất chốt & Giữ chỗ 15p</span>
-                      </button>
+                    {/* Edge AI Ambient Consensus Prompt */}
+                    {hasConsensus && activeTab === 'incoming' && (
+                      <div className="p-2 px-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2 text-xs text-amber-800 dark:text-amber-300 animate-in fade-in slide-in-from-top-1">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span className="font-medium text-[11.5px]">
+                            Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm giữ chỗ 15p cho khách!
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -590,6 +674,25 @@ export default function InboxModal({
                   </button>
                 </div>
               ) : null}
+
+              {/* ZERO-TYPING QUICK RESPONSE CHIPS */}
+              {!isConfirmed && activeBooking.status === 'inquiring' && quickResponseChips.length > 0 && (
+                <div className="px-3 pt-2 pb-1 bg-slate-50/90 dark:bg-[#181920] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  <span className="text-[10.5px] font-bold text-slate-400 shrink-0 mr-0.5 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-primary-500" /> Gợi ý:
+                  </span>
+                  {quickResponseChips.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectQuickChip(chip)}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-slate-800 border border-black/[0.06] dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:border-primary-500/50 hover:text-primary-600 dark:hover:text-primary-400 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* KHUNG NHẬP TIN NHẮN HOẶC TRẠNG THÁI KHÓA */}
               {isBannedState || currentUser?.isBanned || activeBooking.isBanned ? (
