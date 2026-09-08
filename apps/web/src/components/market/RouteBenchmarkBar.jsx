@@ -117,17 +117,17 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
           title={t('benchmark.modalTitle')}
           subtitle={t('benchmark.modalSub')}
           footer={
-            <div className="flex items-center justify-between w-full gap-3 flex-wrap">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between w-full gap-2.5 sm:gap-3">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={applyFilterAndClose}
-                className="px-4 font-semibold rounded-full text-xs text-[#0071e3] border-[#0071e3]/40 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer"
+                className="w-full sm:w-auto px-4 font-semibold rounded-full text-xs text-[#0071e3] border-[#0071e3]/40 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer justify-center"
               >
                 🔍 {t('benchmark.filterThisRoute')}
               </Button>
-              <Button onClick={close} variant="primary" size="sm" className="px-6 font-bold rounded-full cursor-pointer">
+              <Button onClick={close} variant="primary" size="sm" className="w-full sm:w-auto px-6 font-bold rounded-full cursor-pointer justify-center">
                 {t('common.understood')}
               </Button>
             </div>

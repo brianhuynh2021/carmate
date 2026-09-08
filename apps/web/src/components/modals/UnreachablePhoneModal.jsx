@@ -70,12 +70,12 @@ export default function UnreachablePhoneModal({ record, onClose, onSubmitReport 
       title="Báo cáo số ảo / Không liên lạc được"
       subtitle={`Phản ánh sự cố liên lạc với ${targetName} (${record.escrowId || record.id})`}
       footer={
-        <div className="grid grid-cols-2 gap-3 w-full">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
+        <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-2.5 sm:gap-3 w-full">
+          <Button variant="outline" onClick={onClose} disabled={submitting} className="w-full">
             Quay lại
           </Button>
           <Button
-            className="bg-[#d70015] hover:bg-[#b50011] text-white font-bold"
+            className="bg-[#d70015] hover:bg-[#b50011] text-white font-bold w-full"
             onClick={handleSubmit}
             disabled={submitting}
           >

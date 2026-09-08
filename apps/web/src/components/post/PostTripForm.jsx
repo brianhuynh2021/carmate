@@ -1114,7 +1114,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                 <button
                   type="button"
                   onClick={() => setShowFairSplitModal(true)}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer ml-auto"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer sm:ml-auto w-full sm:w-auto pt-1 sm:pt-0"
                 >
                   <Calculator className="w-3 h-3 text-[#0071e3]" />
                   <span>Bảng tính chi phí xăng & cầu đường</span>

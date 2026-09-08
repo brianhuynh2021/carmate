@@ -159,8 +159,8 @@ export default function Hero({
         ) : null}
 
         {/* Dynamic Route Suggester Capsule (Hiệu ứng: Gợi ý cặp tuyến HOT tự động) */}
-        <div className="pt-0.5 sm:pt-1 flex items-center justify-center">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs max-w-full">
+        <div className="pt-0.5 sm:pt-1 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-2 max-w-full">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs max-w-full overflow-hidden">
             <span className="flex items-center gap-1 text-[11px] font-bold text-[#1d1d1f] dark:text-white shrink-0">
               <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
               <span className="hidden xs:inline">Tuyến HOT:</span>
@@ -168,11 +168,11 @@ export default function Hero({
             </span>
             <div
               key={`${routeCycleIndex}-${activeRouteHint.from}-${activeRouteHint.to}`}
-              className="anim-fade-in flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] shrink-0"
+              className="anim-fade-in flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] min-w-0 shrink"
             >
-              <span className="whitespace-nowrap">{activeRouteHint.from}</span>
+              <span className="max-w-[90px] sm:max-w-none truncate">{activeRouteHint.from}</span>
               <ArrowLeftRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
-              <span className="whitespace-nowrap">{activeRouteHint.to}</span>
+              <span className="max-w-[90px] sm:max-w-none truncate">{activeRouteHint.to}</span>
               {activeRouteHint.count > 0 && (
                 <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
                   {activeRouteHint.count} xe
@@ -196,21 +196,21 @@ export default function Hero({
 
           {/* Capsule 2: Ghost Route (Cursor Tab AI) */}
           {ghostRoute && (
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-slate-900/90 dark:bg-black/90 text-white border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all text-xs max-w-full">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-slate-900/90 dark:bg-black/90 text-white border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all text-xs max-w-full overflow-hidden">
               <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400 shrink-0">
                 <Zap className="w-3 h-3 fill-current animate-pulse" />
                 <span className="hidden sm:inline">Tuyến quen:</span>
               </span>
-              <div className="flex items-center gap-1 text-[11.5px] font-bold text-white shrink-0">
-                <span>{ghostRoute.from}</span>
-                <ArrowLeftRight className="w-2.5 h-2.5 text-slate-400" />
-                <span>{ghostRoute.to}</span>
+              <div className="flex items-center gap-1 text-[11.5px] font-bold text-white min-w-0 shrink">
+                <span className="max-w-[90px] sm:max-w-none truncate">{ghostRoute.from}</span>
+                <ArrowLeftRight className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                <span className="max-w-[90px] sm:max-w-none truncate">{ghostRoute.to}</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleApplyGhostRoute(ghostRoute)}
                 title="Nhấn phím Tab trên bàn phím hoặc bấm vào đây để điền ngay"
-                className="ml-0.5 text-[10.5px] sm:text-[11px] font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-1 shrink-0"
+                className="ml-0.5 text-[10.5px] sm:text-[11px] font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-1 shrink-0 whitespace-nowrap"
               >
                 <kbd className="hidden sm:inline-block px-1 py-0.1 rounded bg-black/50 text-[9px] font-mono text-slate-300 border border-white/10">Tab</kbd>
                 <span>Tự điền ⚡</span>
