@@ -9,7 +9,6 @@ import {
   Download,
   Loader2,
   MessageCircle,
-  ShieldCheck,
   QrCode
 } from 'lucide-react';
 import {
@@ -312,15 +311,9 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
           </div>
 
           <div className="relative mt-5 pt-4 border-t border-dashed border-white/20 flex items-center justify-between gap-3">
-            <div className="space-y-1 min-w-0">
-              <div className="flex items-center gap-1.5 text-xs text-sky-400 font-semibold">
-                <QrCode className="w-3.5 h-3.5 shrink-0" />
-                <span>Quét mã đặt chỗ 0đ trực tuyến</span>
-              </div>
-              <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span>0đ cọc · 0% phí sàn · Đổi ý linh hoạt</span>
-              </p>
+            <div className="flex items-center gap-1.5 text-xs text-sky-400 font-semibold min-w-0">
+              <QrCode className="w-3.5 h-3.5 shrink-0" />
+              <span>Quét mã đặt chỗ</span>
             </div>
             <div className="text-right shrink-0">
               <p className="text-[11px] text-slate-400">{t('ticket.seatStatus') || 'Tình trạng chỗ'}</p>
