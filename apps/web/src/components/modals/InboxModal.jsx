@@ -22,6 +22,7 @@ import { formatVND, toPublicAlias, detectPiiLeak } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
+import { playMessageChime, playSuccessChime } from '../../utils/audioFeedback.js';
 
 export default function InboxModal({
   isOpen,
@@ -191,6 +192,7 @@ export default function InboxModal({
 
       setInputMessage('');
       setViolationInfo(null);
+      playMessageChime();
       onRefreshBookings?.();
     } catch (err) {
       const vData = err.data || {};
@@ -231,6 +233,7 @@ export default function InboxModal({
     try {
       const preConfirmedBy = activeTab === 'incoming' ? 'driver' : 'passenger';
       await api.preConfirmBooking(bId, { preConfirmedBy });
+      playSuccessChime();
       onShowToast?.('⚡ Đã đề xuất chốt chuyến & tạm giữ chỗ 15 phút!');
       onRefreshBookings?.();
     } catch (err) {
@@ -248,6 +251,7 @@ export default function InboxModal({
     try {
       const confirmedBy = activeTab === 'incoming' ? 'driver' : 'passenger';
       await api.finalConfirmBooking(bId, { confirmedBy });
+      playSuccessChime();
       onShowToast?.('🎉 ĐÃ CHỐT CHUYẾN CHÍNH THỨC! Chúc hai bạn chuyến đi an toàn.');
       onRefreshBookings?.();
     } catch (err) {

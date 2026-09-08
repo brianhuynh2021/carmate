@@ -157,6 +157,7 @@ export default function useTripsData({
       else setPassengerRequests((prev) => [newTrip, ...prev]);
       showToast(t?.('toast.postSuccess') || 'Đăng chuyến thành công!');
       setActiveTab?.('market');
+      setTicketToShare?.(newTrip);
 
       try {
         const storageKey = `carmate_my_trip_ids_${authUser.id || authUser.phone}`;

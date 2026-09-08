@@ -921,6 +921,7 @@ export default function App() {
                           onViewTrustProfile={setSelectedDriverForTrust}
                           onViewRoute={setSelectedTripForRoute}
                           onViewCarPhotos={setSelectedTripForPhotos}
+                          onShare={(trip) => setTicketToShare(trip)}
                         />
                       ))}
                     </div>
@@ -987,7 +988,7 @@ export default function App() {
         )}
 
         {activeTab === 'my-trips' && (
-          <div className={`${container} py-8`}>
+          <div className={`${container} pt-8 pb-28 sm:pb-8`}>
             <MyTripsView
               driverOffers={driverOffers}
               passengerRequests={passengerRequests}
@@ -1007,7 +1008,7 @@ export default function App() {
         )}
 
         {activeTab === 'booked' && (
-          <div className={`${container} py-8`}>
+          <div className={`${container} pt-8 pb-28 sm:pb-8`}>
             <BookedTripList
               bookedEscrows={bookedEscrows}
               onCancel={setCancelRecord}
@@ -1048,7 +1049,11 @@ export default function App() {
         )}
       </main>
 
-      <Footer onNavigate={handleFooterNavigate} onOpenTerms={() => setShowTermsModal(true)} />
+      <Footer
+        onNavigate={handleFooterNavigate}
+        onOpenTerms={() => setShowTermsModal(true)}
+        onOpenPolicy={() => setShowPolicyModal(true)}
+      />
 
       {/* Modals */}
       {showInboxModal && (
