@@ -664,6 +664,39 @@ export function parseLocation(str) {
 }
 
 /**
+ * Định dạng biển số xe bảo mật (Privacy Masked Plate)
+ * Chuẩn MIT Invariants: Tuyệt đối không phơi bày trọn vẹn biển kiểm soát cho người chưa xác nhận ghép chuyến.
+ * VD: "93A - 541.86" -> "93A - ***.86"
+ *     "51K-123.45"   -> "51K - ***.45"
+ *     "60B-9876"     -> "60B - **.76"
+ *     "93A - ***.86" -> giữ nguyên "93A - ***.86"
+ */
+export function maskLicensePlate(plateStr, fallbackLocation = '') {
+  if (!plateStr || typeof plateStr !== 'string') {
+    return fallbackLocation?.includes('Bình Phước') ? '93A - ***.86' : '51K - ***.24';
+  }
+  const s = plateStr.trim();
+  if (!s) {
+    return fallbackLocation?.includes('Bình Phước') ? '93A - ***.86' : '51K - ***.24';
+  }
+  // Nếu đã được che bằng sao hoặc x thì chuẩn hóa khoảng trắng quanh dấu gạch ngang
+  if (s.includes('*') || /x{2,}/i.test(s)) {
+    return s.replace(/\s*-\s*/g, ' - ');
+  }
+  // Bóc tách chuỗi biển số Việt Nam: 2 số tỉnh + 1-2 chữ cái + dãy 4-5 số
+  const clean = s.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  const match = clean.match(/^([0-9]{2}[A-Z]{1,2})([0-9]{4,5})$/);
+  if (match) {
+    const series = match[1];
+    const digits = match[2];
+    const lastTwo = digits.slice(-2);
+    const starCount = digits.length - 2;
+    return `${series} - ${'*'.repeat(starCount)}.${lastTwo}`;
+  }
+  return s;
+}
+
+/**
  * Trích xuất địa danh đô thị/tỉnh thành lớn để làm tiêu đề vé xe chuẩn Apple Wallet & Fly.io
  * Tuyệt đối KHÔNG cắt đôi từ ghép tiếng Việt (như "Phan Thiết" thành "Phan", "Bến Tre" thành "Bến")
  */

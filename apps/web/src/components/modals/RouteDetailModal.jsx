@@ -121,7 +121,8 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-[12px] font-medium text-[#0071e3] hover:underline inline-flex items-center gap-1 shrink-0 mt-0.5"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11.5px] font-medium text-[#0071e3] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 transition-all cursor-pointer shrink-0 mt-0.5 select-none"
+              title="Mở Google Maps"
             >
               <span>Bản đồ</span>
               <ExternalLink className="w-3 h-3" />
@@ -148,7 +149,8 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-[12px] font-medium text-[#0071e3] hover:underline inline-flex items-center gap-1 shrink-0 mt-0.5"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11.5px] font-medium text-[#0071e3] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 transition-all cursor-pointer shrink-0 mt-0.5 select-none"
+              title="Mở Google Maps"
             >
               <span>Bản đồ</span>
               <ExternalLink className="w-3 h-3" />

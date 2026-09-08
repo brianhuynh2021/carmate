@@ -3701,6 +3701,41 @@ async function runTests() {
     assert(false, '48. Kiểm thử Bất biến Cú pháp & JSX', err.message);
   }
 
+  // -------------------------------------------------------------
+  // 49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe (MIT & Apple)
+  // -------------------------------------------------------------
+  console.log('\n--- 49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe (MIT & Apple) ---');
+  try {
+    const { parseLocation, maskLicensePlate } = await import('../packages/shared/src/utils/geo.js');
+
+    // Test parseLocation Ambient Intelligence
+    const fromLoc = parseLocation('trung tâm hành chính Tân Khai, Hớn Quản, Bình Phước');
+    assert(fromLoc.main === 'Bình Phước', 'Ambient Geo 1: Tách đúng địa danh vĩ mô Bình Phước');
+    assert(fromLoc.sub.includes('Tân Khai'), 'Ambient Geo 2: Giữ điểm đón vi mô Tân Khai');
+
+    const toLoc = parseLocation('Đường Cống Quỳnh (Quận 1)');
+    assert(toLoc.main === 'Sài Gòn', 'Ambient Geo 3: Nhận diện Cống Quỳnh (Quận 1) thuộc vĩ mô Sài Gòn');
+    assert(toLoc.sub === 'Đường Cống Quỳnh, Quận 1', 'Ambient Geo 4: Rút trích điểm trả vi mô Đường Cống Quỳnh, Quận 1');
+
+    // Test maskLicensePlate Privacy Invariant
+    const masked1 = maskLicensePlate('93A - 541.86');
+    assert(masked1 === '93A - ***.86', 'Plate Privacy 1: Biển 5 số che đúng 3 số giữa (93A - ***.86)');
+
+    const masked2 = maskLicensePlate('51K-123.45');
+    assert(masked2 === '51K - ***.45', 'Plate Privacy 2: Biển 5 số định dạng không khoảng trắng (51K - ***.45)');
+
+    const masked3 = maskLicensePlate('60B-9876');
+    assert(masked3 === '60B - **.76', 'Plate Privacy 3: Biển 4 số che đúng 2 số giữa (60B - **.76)');
+
+    const masked4 = maskLicensePlate('93A - ***.86');
+    assert(masked4 === '93A - ***.86', 'Plate Privacy 4: Biển đã che giữ nguyên định dạng an toàn');
+
+    const fallbackBP = maskLicensePlate(null, 'Bình Phước');
+    assert(fallbackBP === '93A - ***.86', 'Plate Privacy 5: Fallback theo tỉnh Bình Phước');
+  } catch (err) {
+    assert(false, '49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe', err.message);
+  }
+
 
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;

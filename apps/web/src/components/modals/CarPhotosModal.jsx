@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, ShieldCheck, Camera, Check, Car, Package } from 'lucide-react';
+import { maskLicensePlate } from '@carmate/shared';
 import Button from '../ui/Button.jsx';
 
 export default function CarPhotosModal({ trip, isOpen, onClose }) {
@@ -36,8 +37,8 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
     setActiveIndex((prev) => (prev < total - 1 ? prev + 1 : 0));
   };
 
-  // Trích xuất mã biển số che mẫu (ví dụ 93A-***.86 hoặc 51K-***.24)
-  const plateMask = trip.plateMask || (trip.from?.includes('Bình Phước') ? '93A - ***.86' : '51K - ***.24');
+  // Trích xuất mã biển số che bảo mật (VD: 93A - ***.86 hoặc 51K - ***.24)
+  const plateMask = maskLicensePlate(trip.plateMask || trip.plate || trip.licensePlate, trip.from);
   const cleanCarName = trip.carType
     ? trip.carType.split('(')[0].trim().replace(/\s*(cá nhân|gia đình)\b/gi, '')
     : `Xe ${trip.capacity || 5} chỗ`;
