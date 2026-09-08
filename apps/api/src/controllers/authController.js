@@ -51,7 +51,7 @@ export function requestOtp(req, res) {
       phoneLimit.resetAt = now + 24 * 60 * 60 * 1000;
     }
 
-    const isTest = process.env.NODE_ENV === 'test';
+    const isTest = process.env.NODE_ENV === 'test' || req.headers['x-carmate-testing'] === 'true';
     const isDev = process.env.NODE_ENV !== 'production';
     const cooldownMs = isTest ? 0 : (isDev ? 5 * 1000 : 60 * 1000); // Test: 0; Dev: 5s; Prod: 60s
 

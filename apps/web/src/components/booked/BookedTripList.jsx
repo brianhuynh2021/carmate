@@ -133,7 +133,7 @@ function TripProgressStepper({ status, delayedMinutes }) {
           return (
             <div
               key={step.id}
-              className={`p-2.5 rounded-xl border transition-all ${
+              className={`p-2 sm:p-2.5 rounded-xl border transition-all ${
                 isDone
                   ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/70 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-200'
                   : isActive
@@ -145,9 +145,9 @@ function TripProgressStepper({ status, delayedMinutes }) {
                         : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] text-[#86868b] opacity-60'
               }`}
             >
-              <div className="flex items-center gap-1.5 mb-1">
+              <div className="flex items-center gap-1.5 mb-0.5 sm:mb-1">
                 <span
-                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold shrink-0 ${
                     isDone
                       ? 'bg-emerald-600 text-white'
                       : isActive
@@ -161,9 +161,9 @@ function TripProgressStepper({ status, delayedMinutes }) {
                 >
                   {isDone ? '✓' : isCancelState ? '✕' : step.id}
                 </span>
-                <span className="text-[11.5px] font-bold leading-tight line-clamp-1">{step.label}</span>
+                <span className="text-[10.5px] sm:text-[11.5px] font-bold leading-tight truncate">{step.label}</span>
               </div>
-              <p className="text-[10.5px] leading-tight opacity-75 truncate font-medium">{step.desc}</p>
+              <p className="text-[9.5px] sm:text-[10.5px] leading-tight opacity-75 truncate font-medium">{step.desc}</p>
             </div>
           );
         })}
@@ -383,7 +383,7 @@ export default function BookedTripList({
                   {!isCompleted && !isCancelled && (
                     <div className="rounded-2xl bg-white dark:bg-slate-900/90 border border-black/[0.08] p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] space-y-3.5">
                       {/* Hàng Tiêu Đề Đối Tác */}
-                      <div className="flex items-center justify-between gap-3 flex-wrap pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
                         <div className="flex items-center gap-3">
                           <div className="relative">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
@@ -408,7 +408,7 @@ export default function BookedTripList({
                         </div>
 
                         {/* Trạng thái liên hệ & Số điện thoại (Chỉ mở khi đã chốt) */}
-                        <div className="text-right">
+                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-black/[0.03] dark:border-white/[0.04]">
                           <p className="text-[11px] font-medium text-[#86868b]">
                             {record.status === 'confirmed' || record.bothConfirmed ? 'Số điện thoại đối tác' : 'Bảo mật thông tin'}
                           </p>

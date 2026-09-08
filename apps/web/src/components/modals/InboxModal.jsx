@@ -148,7 +148,25 @@ export default function InboxModal({
 
   // Gợi ý tin nhắn 1-chạm (Zero-Typing Quick Response Chips)
   const quickResponseChips = useMemo(() => {
-    if (activeBooking?.status !== 'inquiring') return [];
+    if (activeBooking?.status !== 'inquiring' && activeBooking?.status !== 'confirmed') return [];
+    if (activeBooking?.status === 'confirmed') {
+      if (activeTab === 'incoming') {
+        // Chủ xe đang đón / chuẩn bị xe
+        return [
+          '🚗 Mình đang xuất phát đến điểm hẹn',
+          '⏱️ Xe sẽ đến sau khoảng 5-10 phút',
+          '📍 Mình dừng xe bật đèn khẩn cấp gần điểm hẹn',
+          '✅ Đã đón khách an toàn, xuất phát nhé'
+        ];
+      }
+      // Người đi cùng đang đứng đợi
+      return [
+        '📍 Em đang đứng ở điểm hẹn rồi anh',
+        '⏱️ Em ra đến điểm hẹn sau 3 phút',
+        '👕 Em mặc áo khoác màu đen đứng gần lề đường',
+        '👍 Đã thấy xe anh đến'
+      ];
+    }
     if (activeTab === 'incoming') {
       return [
         '👍 Đồng ý đón tại điểm này',
@@ -680,7 +698,7 @@ export default function InboxModal({
               ) : null}
 
               {/* ZERO-TYPING QUICK RESPONSE CHIPS */}
-              {!isConfirmed && activeBooking.status === 'inquiring' && quickResponseChips.length > 0 && (
+              {activeBooking.status !== 'completed' && quickResponseChips.length > 0 && (
                 <div className="px-3 pt-2 pb-1 bg-slate-50/90 dark:bg-[#181920] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                   <span className="text-[10.5px] font-bold text-slate-400 shrink-0 mr-0.5 flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-primary-500" /> Gợi ý:

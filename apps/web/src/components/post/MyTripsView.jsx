@@ -625,14 +625,14 @@ export default function MyTripsView({
                     </div>
 
                     {/* ── D. ACTION TOOLBAR (APPLE TACTILE SQUIRCLE BUTTONS) ── */}
-                    <div className="pt-3 flex items-center justify-between gap-2 border-t border-black/[0.06] dark:border-white/[0.06] flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-black/[0.06] dark:border-white/[0.06]">
+                      <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 w-full sm:w-auto">
                         {/* Nút Tái Đăng 1 Chạm: Luôn hiển thị nổi bật trên chuyến hết hạn, hoặc cho phép sao chép nhanh */}
                         {expired ? (
                           <button
                             type="button"
                             onClick={() => onRePublishTrip?.(trip)}
-                            className="h-8.5 px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs shadow-orange-500/20"
+                            className="col-span-2 sm:col-span-1 h-8.5 px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs active:scale-95 transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs shadow-orange-500/20"
                             title="Tái đăng chuyến này cho ngày mai trong 2 giây"
                           >
                             <Sparkles className="w-3.5 h-3.5 text-amber-100" />
@@ -643,7 +643,7 @@ export default function MyTripsView({
                         <button
                           type="button"
                           onClick={() => onEditTrip?.(trip)}
-                          className="h-8.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-200/80 dark:border-slate-700 font-semibold text-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          className="h-8.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-200/80 dark:border-slate-700 font-semibold text-xs active:scale-95 transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                           title="Chỉnh sửa thông tin lộ trình, giờ chạy và giá vé"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -654,7 +654,7 @@ export default function MyTripsView({
                           <button
                             type="button"
                             onClick={() => onToggleStatus?.(trip.id, isFull ? 'active' : 'full')}
-                            className={`h-8.5 px-3 rounded-xl font-semibold text-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                            className={`h-8.5 px-3 rounded-xl font-semibold text-xs active:scale-95 transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer ${
                               isFull
                                 ? 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/90 dark:border-emerald-800/60 shadow-2xs'
                                 : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700'
@@ -671,11 +671,11 @@ export default function MyTripsView({
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 w-full sm:w-auto">
                         <button
                           type="button"
                           onClick={() => (onViewTrip ? onViewTrip(trip) : onViewInMarket?.(trip))}
-                          className="h-8.5 px-3.5 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0071e3] dark:text-[#2997ff] border border-[#0071e3]/20 font-bold text-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          className="h-8.5 px-3.5 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0071e3] dark:text-[#2997ff] border border-[#0071e3]/20 font-bold text-xs active:scale-95 transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                           title="Xem chi tiết thẻ vé & chia sẻ bài đăng"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -685,7 +685,7 @@ export default function MyTripsView({
                         <button
                           type="button"
                           onClick={() => handleOpenDeleteModal(trip)}
-                          className="h-8.5 px-2.5 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 font-semibold text-xs active:scale-95 transition-all inline-flex items-center gap-1 cursor-pointer"
+                          className="h-8.5 px-2.5 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 font-semibold text-xs active:scale-95 transition-all inline-flex items-center justify-center gap-1 cursor-pointer"
                           title="Xóa bài đăng này"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

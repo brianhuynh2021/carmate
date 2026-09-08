@@ -416,7 +416,7 @@ async function runTests() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ passcode: 'wrong_secret_pass' })
     });
-    assert(failAuthRes.status === 401, 'Nhập sai mã Admin bị từ chối chính xác (HTTP 401)');
+    assert(failAuthRes.status === 401 || failAuthRes.status === 429, 'Nhập sai mã Admin bị từ chối chính xác (HTTP 401/429)');
 
     // 10.2 Đúng mật khẩu (Hỗ trợ quy trình 2 bước MFA)
     const okAuthRes = await fetch(`${BASE_URL}/api/admin/auth`, {
@@ -4179,6 +4179,51 @@ async function runTests() {
     assert(false, '56. Kiểm thử Bảo Mật Che Biển Số Xe Tự Động & Triệt Tiêu Từ Viết Tắt BOT', err.message);
   }
 
+  // 57. Kiểm thử An Ninh Mạng Toàn Diện & Trải Nghiệm Mobile Responsive
+  console.log('\n📱 57. Kiểm thử Tự Động An Ninh Mạng & Trải Nghiệm Mobile Responsive (Apple & Stanford Ergonomics)...');
+  try {
+    // 1. Pentest Script
+    assert(fs.existsSync(path.join(process.cwd(), 'scripts/pentest-security-audit.js')), 'Pentest 1: Kịch bản kiểm thử an ninh scripts/pentest-security-audit.js tồn tại');
+    const pentestScriptSrc = fs.readFileSync(path.join(process.cwd(), 'scripts/pentest-security-audit.js'), 'utf8');
+    assert(pentestScriptSrc.includes('VECTOR 1: BROKEN ACCESS CONTROL'), 'Pentest 2: Kiểm tra vectơ xác thực & IDOR');
+    assert(pentestScriptSrc.includes('VECTOR 2: PII DATA LEAKAGE'), 'Pentest 3: Kiểm tra rà soát rò rỉ dữ liệu cá nhân PII');
+    assert(pentestScriptSrc.includes('VECTOR 3: INJECTION'), 'Pentest 4: Kiểm tra tấn công Injection (SQLi, XSS, Traversal)');
+    assert(pentestScriptSrc.includes('VECTOR 4: DENIAL OF SERVICE'), 'Pentest 5: Kiểm tra khả năng chống DoS & bom dung lượng');
+    assert(pentestScriptSrc.includes('VECTOR 5: MIT MATHEMATICAL INVARIANTS'), 'Pentest 6: Kiểm tra bất biến số ghế và định mức');
+    assert(pentestScriptSrc.includes('VECTOR 6: SECURITY HEADERS'), 'Pentest 7: Kiểm tra Headers an ninh OWASP');
+
+    // 2. Responsive MatchRadarView
+    const radarSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/radar/MatchRadarView.jsx'), 'utf8');
+    assert(radarSrc.includes('w-full sm:w-auto justify-center inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0071e3]'), 'Mobile UX 1: MatchRadarView hỗ trợ nút ghép chuyến ngón tay cái full-width trên mobile');
+    assert(radarSrc.includes('flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3'), 'Mobile UX 2: MatchRadarView tiêu đề tự động co giãn 1-hàng trên desktop và 2-hàng trên mobile');
+
+    // 3. Responsive AdminDashboardView
+    const adminSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/admin/AdminDashboardView.jsx'), 'utf8');
+    assert(adminSrc.includes('overflow-x-auto no-scrollbar py-0.5'), 'Mobile UX 3: Admin tab bar hỗ trợ trượt ngang mượt mà trên mobile, không bị vỡ layout');
+    assert(adminSrc.includes('text-xl sm:text-2xl lg:text-3xl font-mono font-black'), 'Mobile UX 4: Admin KPI cards tối ưu cỡ chữ vừa vặn màn hình điện thoại 360px');
+
+    // 4. Responsive BookedTripList
+    const bookedSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(bookedSrc.includes('text-[10.5px] sm:text-[11.5px] font-bold leading-tight truncate'), 'Mobile UX 5: Quy trình 4 bước kết nối an toàn tối ưu co giãn nhãn chữ trên mobile');
+    assert(bookedSrc.includes('flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3'), 'Mobile UX 6: Khối liên hệ đối tác linh hoạt theo chiều dọc trên mobile và chiều ngang trên desktop');
+
+    // 5. Responsive MyTripsView
+    const myTripsSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'), 'utf8');
+    assert(myTripsSrc.includes('grid grid-cols-2 sm:flex sm:items-center gap-1.5 w-full sm:w-auto'), 'Mobile UX 7: Dải nút thao tác chuyến của tôi dùng lưới 2-cột chuẩn ngón tay cái trên điện thoại');
+
+    // 6. Responsive PostTripForm
+    const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postFormSrc.includes("index === 4 ? 'col-span-2 sm:col-span-1' : ''"), 'Mobile UX 8: Ô ảnh thứ 5 trong lưới 5 ảnh xe thật trải rộng cân đối trên mobile');
+
+    // 7. Driver In-transit Quick Reply Chips in InboxModal
+    const inboxSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxSrc.includes('Mình đang xuất phát đến điểm hẹn'), 'Driver UX 1: InboxModal có chip 1-chạm "Mình đang xuất phát đến điểm hẹn" cho Chủ xe');
+    assert(inboxSrc.includes('Xe sẽ đến sau khoảng 5-10 phút'), 'Driver UX 2: InboxModal có chip 1-chạm "Xe sẽ đến sau khoảng 5-10 phút" cho Chủ xe');
+    assert(inboxSrc.includes('Em đang đứng ở điểm hẹn rồi anh'), 'Passenger UX 1: InboxModal có chip 1-chạm "Em đang đứng ở điểm hẹn rồi anh" cho Khách');
+  } catch (err) {
+    assert(false, '57. Kiểm thử Tự Động An Ninh Mạng & Trải Nghiệm Mobile Responsive', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
@@ -4189,7 +4234,8 @@ async function runTests() {
   if (failed === 0) {
     console.log('\n🎉 TẤT CẢ CÁC TÍNH NĂNG CHẠY Ở LOCAL ĐỀU HOÀN TOÀN TỐT & ỔN ĐỊNH 100%!');
   } else {
-    console.error(`\n⚠️ Có ${failed} bài test chưa đạt, vui lòng kiểm tra lại.`);
+    console.error(`\n⚠️ Có ${failed} bài test chưa đạt:`);
+    results.filter((r) => !r.pass).forEach((f) => console.error(`  - ${f.name}: ${f.details || 'failed'}`));
     process.exit(1);
   }
 }

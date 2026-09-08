@@ -1184,6 +1184,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     <div
                       key={slot.id}
                       className={`relative rounded-2xl border transition-all overflow-hidden flex flex-col justify-between ${
+                        index === 4 ? 'col-span-2 sm:col-span-1' : ''
+                      } ${
                         currentPhoto
                           ? 'border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10 ring-1 ring-emerald-500/30'
                           : slot.required
