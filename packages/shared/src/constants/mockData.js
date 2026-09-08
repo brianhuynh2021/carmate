@@ -21,7 +21,7 @@ export const INITIAL_DRIVER_OFFERS = [
     customDiscountPercent: 10,
     depositPerSeat: 50000,
     isVip: true,
-    rating: 4.95,
+    rating: 5.0,
     completedCount: 142,
     perks: ['Không khói thuốc', 'Trọn gói xăng & cầu đường', 'Xe gia đình'],
     carPhotos: [

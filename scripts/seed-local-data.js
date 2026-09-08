@@ -340,7 +340,7 @@ const TRIPS = [
     depositPerSeat: 0,
     carCategory: 'family_car',
     isVip: true,
-    rating: 4.95,
+    rating: 5.0,
     completedCount: 142,
     perks: ['Không khói thuốc', 'Trọn gói xăng & cầu đường', 'Xe gia đình'],
     carPhotos: CAR_PHOTOS_XPANDER,

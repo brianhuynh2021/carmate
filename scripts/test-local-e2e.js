@@ -3844,6 +3844,10 @@ async function runTests() {
       tripsWithoutRating.length === 0,
       'Card Rating 3: 100% chuyến xe trả về từ API đều bảo lưu số sao đánh giá'
     );
+    assert(
+      !cardContent.includes('ratingCount') && !cardContent.includes('({ratingCount})'),
+      'Card Rating 4: Triệt tiêu hoàn toàn số đếm trùng lặp ({ratingCount}) bên cạnh số chuyến'
+    );
   } catch (err) {
     assert(false, '51. Kiểm thử Hiển Thị Sao & Số Chuyến', err.message);
   }

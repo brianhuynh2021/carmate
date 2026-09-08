@@ -588,7 +588,7 @@ export default function App() {
         hometown: 'Lộc Ninh, Bình Phước',
         trustScore: 98,
         safeTripsCount: 48,
-        rating: 4.95,
+        rating: 5.0,
         carModel: 'Mitsubishi Xpander (7 chỗ)',
         licensePlateMasked: '93A-289.xx'
       });

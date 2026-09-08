@@ -31,7 +31,11 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
   const carModel = item.carModel || item.car?.model || 'Mitsubishi Xpander (7 chỗ)';
   const plate = maskLicensePlate(item.licensePlateMasked || item.car?.plate || item.plateMask, item.from || hometown);
   const karmaScore = item.karmaScore ?? item.trustScore ?? 75;
-  const rating = item.rating || 4.95;
+  const rawRating = Number(item.rating);
+  const ratingValue = Number.isFinite(rawRating) && rawRating > 0
+    ? Math.round(rawRating * 10) / 10
+    : 5.0;
+  const rating = ratingValue % 1 === 0 ? `${ratingValue}.0` : String(ratingValue);
   const driverTrips =
     item.driverStats?.tripsCompleted || (isCurrentDriver ? item.safeTripsCount || item.tripsCompleted || 48 : 24);
   const passengerTrips = item.passengerStats?.tripsCompleted || 14;

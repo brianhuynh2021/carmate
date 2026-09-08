@@ -26,7 +26,7 @@ const DEFAULT_PROFILE = {
   memberSince: '03/2024',
   trustScore: 98,
   safeTripsCount: 142,
-  rating: 4.95,
+  rating: 5.0,
   carModel: 'Mitsubishi Xpander (7 chỗ)',
   carSeats: 7,
   licensePlateMasked: '93A-182.xx',
