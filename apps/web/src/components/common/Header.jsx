@@ -15,7 +15,9 @@ import {
   Trash2,
   Lock,
   Users,
-  MessageCircle
+  MessageCircle,
+  Bell,
+  Inbox
 } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -48,6 +50,8 @@ export default function Header({
   setShowPolicyModal,
   bookedCount = 0,
   myTripsCount = 0,
+  inboxCount = 0,
+  onOpenInbox,
   currentUser = null,
   onOpenAuth,
   onLogout,
@@ -173,9 +177,21 @@ export default function Header({
             </kbd>
           </button>
 
-          <div className="hidden sm:inline-flex items-center">
-            <LanguageToggle size="sm" />
-          </div>
+          {/* Nút Chuông Hộp Thư / Yêu Cầu Ghép Chuyến */}
+          <button
+            type="button"
+            onClick={onOpenInbox}
+            title="Hộp thư yêu cầu ghép chuyến"
+            aria-label="Mở Hộp thư yêu cầu"
+            className="relative inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-[#f5f5f7] dark:hover:bg-slate-700 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0"
+          >
+            <Bell className="w-4 h-4 text-slate-700 dark:text-slate-200" />
+            {inboxCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center shadow-xs animate-pulse">
+                {inboxCount > 9 ? '9+' : inboxCount}
+              </span>
+            )}
+          </button>
 
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>
@@ -262,6 +278,25 @@ export default function Header({
                   <button
                     type="button"
                     onClick={() => {
+                      onOpenInbox?.();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group"
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <Inbox className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
+                      <span>Hộp thư & Chat chuyến</span>
+                    </div>
+                    {inboxCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                        {inboxCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
                       setActiveTab('my-trips');
                       setIsUserMenuOpen(false);
                     }}
@@ -299,7 +334,7 @@ export default function Header({
                     <span>{t('userMenu.safetyPolicy')}</span>
                   </button>
 
-                  <div className="sm:hidden w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
+                  <div className="w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
                     <div className="inline-flex items-center gap-2 font-medium">
                       <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
                       <span>{t('userMenu.language')}</span>

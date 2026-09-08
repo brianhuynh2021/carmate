@@ -18,7 +18,10 @@ import {
   submitReview,
   getBookingPublicSummary,
   driverConfirmBooking,
-  reportVehicleMismatch
+  reportVehicleMismatch,
+  addBookingMessageHandler,
+  preConfirmBookingHandler,
+  finalConfirmBookingHandler
 } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
 import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, getMe, updateProfile, deleteAccount, getAuthConfigHandler } from '../controllers/authController.js';
@@ -89,11 +92,14 @@ router.post('/trips/:id/republish', postTripLimiter, optionalAuth, requireTripOw
 // --- Smart Matching Radar ---
 router.get('/matches', optionalAuth, getMatches);
 
-// --- Bookings / Zalo Connections (Aliases for /escrows) ---
+// --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
 router.get('/bookings', optionalAuth, listBookings);
 router.post('/bookings', optionalAuth, createBooking);
 router.get('/bookings/:id/public-summary', optionalAuth, getBookingPublicSummary);
 router.post('/bookings/:id/driver-confirm', optionalAuth, driverConfirmBooking);
+router.post('/bookings/:id/messages', optionalAuth, addBookingMessageHandler);
+router.post('/bookings/:id/pre-confirm', optionalAuth, preConfirmBookingHandler);
+router.post('/bookings/:id/final-confirm', optionalAuth, finalConfirmBookingHandler);
 router.post('/bookings/:id/delay', optionalAuth, requireBookingParty, reportDelay);
 router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
@@ -104,6 +110,9 @@ router.get('/escrows', optionalAuth, listBookings);
 router.post('/escrows', optionalAuth, createBooking);
 router.get('/escrows/:id/public-summary', optionalAuth, getBookingPublicSummary);
 router.post('/escrows/:id/driver-confirm', optionalAuth, driverConfirmBooking);
+router.post('/escrows/:id/messages', optionalAuth, addBookingMessageHandler);
+router.post('/escrows/:id/pre-confirm', optionalAuth, preConfirmBookingHandler);
+router.post('/escrows/:id/final-confirm', optionalAuth, finalConfirmBookingHandler);
 router.post('/escrows/:id/delay', optionalAuth, requireBookingParty, reportDelay);
 router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);

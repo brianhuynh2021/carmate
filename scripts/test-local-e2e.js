@@ -217,9 +217,15 @@ async function runTests() {
       body: JSON.stringify(bookingPayload)
     });
     const bookData = await bookRes.json();
-    assert(bookRes.status === 201, 'Tạo kết nối chuyến qua Zalo thành công (HTTP 201)');
-    assert(bookData.data.commitmentType === 'zalo_direct', 'Hình thức cam kết đúng chuẩn Zalo trực tiếp');
-    assert(bookData.data.status === 'zalo_active', 'Trạng thái ban đầu là zalo_active');
+    assert(bookRes.status === 201, 'Tạo kết nối chuyến thành công (HTTP 201)');
+    assert(
+      bookData.data.commitmentType === 'inquiry_chat' || bookData.data.commitmentType === 'zalo_direct',
+      'Hình thức cam kết đúng chuẩn (inquiry_chat hoặc zalo_direct)'
+    );
+    assert(
+      bookData.data.status === 'inquiring' || bookData.data.status === 'zalo_active',
+      'Trạng thái ban đầu là inquiring hoặc zalo_active'
+    );
     testBookingId = bookData.data.escrowId;
 
     // 7.2 Báo trễ giờ (Delay report) - Được phép khi có quyền party
@@ -891,8 +897,8 @@ async function runTests() {
     const escrowId = bookData.data?.escrowId;
     assert(escrowId && escrowId.startsWith('ESC-'), 'MIT Tier 1: Mã Escrow định dạng chuẩn ESC-');
     assert(
-      bookData.data.status === 'zalo_active',
-      'MIT Tier 2: Trạng thái khởi tạo là zalo_active (Bước 2/4: Chốt Zalo & Điểm hẹn)'
+      bookData.data.status === 'inquiring' || bookData.data.status === 'zalo_active',
+      'MIT Tier 2: Trạng thái khởi tạo hợp lệ (inquiring hoặc zalo_active)'
     );
 
     // 16.2 Báo trễ giờ hẹn văn minh (+15 phút)
@@ -2283,8 +2289,11 @@ async function runTests() {
     const tripCardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
     const tripCardCode = fs.readFileSync(tripCardPath, 'utf8');
     assert(
-      tripCardCode.includes("item.capacity === 7 || item.availableSeats > 4 ? '7 chỗ' : '5 chỗ'"),
-      'UI TripCard 1: Thẻ chuyến xe hiển thị minh bạch badge phân biệt xe 5 chỗ vs 7 chỗ'
+      tripCardCode.includes('const seatsLeft =') &&
+        tripCardCode.includes('const seatsTotal =') &&
+        tripCardCode.includes('Number(item.capacity)') &&
+        tripCardCode.includes('{seatsTotal ?'),
+      'UI TripCard 1: Thẻ chuyến xe hiển thị số ghế thật dạng còn/tổng (phân biệt xe 5 chỗ vs 7 chỗ)'
     );
 
     // Dọn dẹp bản ghi test
@@ -2905,11 +2914,11 @@ async function runTests() {
     assert(ticketCanvasContent.includes('width = 1080') && ticketCanvasContent.includes('height = 1920'), 'Story Ticket chuẩn tỷ lệ 9:16 (1080x1920 HD)');
     assert(!ticketCanvasContent.includes('hoa hồng tài xế'), 'ticketCanvas.js tuân thủ danh xưng: không dùng "tài xế"');
 
-    // 5. Kiểm tra TicketShareModal có nút tải Story 9:16
+    // 5. Kiểm tra TicketShareModal có nút tải Story
     const ticketSharePath = path.resolve(process.cwd(), 'apps/web/src/components/modals/TicketShareModal.jsx');
     const ticketShareContent = fs.readFileSync(ticketSharePath, 'utf8');
     assert(ticketShareContent.includes('handleDownloadStory'), 'TicketShareModal có handler tải ảnh Story');
-    assert(ticketShareContent.includes('Tải ảnh Story 9:16'), 'TicketShareModal hiển thị nút Tải ảnh Story 9:16');
+    assert(ticketShareContent.includes('Tải Story'), 'TicketShareModal hiển thị nút Tải Story');
 
     // 6. Kiểm tra TripCard hiển thị trạng thái Đã kín chỗ
     const tripCardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
@@ -3443,6 +3452,672 @@ async function runTests() {
     assert(meData.user?.gender === 'male', 'API Profile 3: GET /api/auth/me trả về đầy đủ thuộc tính gender đã lưu');
   } catch (err) {
     assert(false, '43. Kiểm thử Avatar Biểu tượng Apple Silhouette & Minh bạch Giới tính', err.message);
+  }
+
+  // 44. KIỂM THỬ TRẢI NGHIỆM ĐĂNG BÀI: PHẢN HỒI LỖI TỰ ĐỘNG CUỘN & LINH HOẠT ẢNH XE (STANFORD ERGONOMICS)
+  console.log('\n--- 44. Kiểm thử Trải Nghiệm Đăng Bài: Phản Hồi Lỗi Tức Thì & Linh Hoạt Ảnh Xe ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const postFormPath = path.resolve(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx');
+    const postFormContent = fs.readFileSync(postFormPath, 'utf8');
+
+    // 1. Tự động cuộn và phản hồi lỗi tức thì (Zero-friction feedback)
+    assert(
+      postFormContent.includes('errorBannerRef') && postFormContent.includes('triggerError'),
+      'Form Validation 1: Tích hợp triggerError và errorBannerRef để tự động cuộn đến thông báo lỗi'
+    );
+    assert(
+      postFormContent.includes('scrollIntoView({ behavior:'),
+      'Form Validation 2: Tự động cuộn mượt mà (smooth scroll) giúp người dùng thấy ngay lý do không đăng được'
+    );
+
+    // 2. Banner cảnh báo đặt ngay trên nút Đăng Chuyến (Zero Cognitive Distance)
+    assert(
+      postFormContent.includes('{formError && (') && postFormContent.includes('<Button type="submit"'),
+      'Form Validation 3: Banner cảnh báo màu đỏ đặt trực diện ngay trên nút Đăng Chuyến'
+    );
+
+    // 3. Linh hoạt ảnh xe: Cho phép từ 1 đến 5 ảnh, không ép buộc tối thiểu 3 ảnh
+    assert(
+      !postFormContent.includes('validPhotos.length < 3') && !postFormContent.includes('ít nhất 3 hình (Trước, Sau, Thân xe)'),
+      'Photo Upload 1: Đã gỡ bỏ ràng buộc cứng bắt buộc tối thiểu 3 ảnh khi tải ảnh xe'
+    );
+    assert(
+      postFormContent.includes('Tùy chọn tải từ 1 đến 5 hình'),
+      'Photo Upload 2: Hướng dẫn thân thiện "Tùy chọn tải từ 1 đến 5 hình" tạo tâm lý thoải mái cho chủ xe'
+    );
+    assert(
+      postFormContent.includes('validPhotos.length > 5') && postFormContent.includes('Chỉ được tải tối đa 5 hình ảnh xe'),
+      'Photo Upload 3: Vẫn bảo toàn giới hạn trần tối đa 5 ảnh để bảo vệ hiệu năng'
+    );
+  } catch (err) {
+    assert(false, '44. Kiểm thử Trải Nghiệm Đăng Bài', err.message);
+  }
+
+  console.log('\n--- 45. Kiểm thử Liên Kết Zalo Chuẩn Mực & Chia Sẻ Thông Minh (Zero Vô Nghĩa) ---');
+  try {
+    const fs = await import('fs');
+    const ticketModalPath = './apps/web/src/components/modals/TicketShareModal.jsx';
+    const ticketModalContent = fs.readFileSync(ticketModalPath, 'utf8');
+
+    // 1. Tuyệt đối không dùng link "https://zalo.me/" trần trụi vô nghĩa
+    assert(
+      !ticketModalContent.includes('href="https://zalo.me/"'),
+      'Zalo Share 1: Triệt tiêu hoàn toàn link https://zalo.me/ trần trụi không có đích đến'
+    );
+
+    // 2. Chia sẻ thông minh qua Web Share API (chọn Bạn bè hoặc Nhóm Zalo)
+    assert(
+      ticketModalContent.includes('handleZaloShare') && ticketModalContent.includes('navigator.share'),
+      'Zalo Share 2: Kích hoạt Native Share trên mobile để người dùng chọn gửi vào bất kỳ Bạn bè hoặc Nhóm Zalo nào'
+    );
+
+    // 3. Cung cấp liên kết Zalo trực tiếp đến người thật (Chủ xe / Người tìm xe)
+    assert(
+      ticketModalContent.includes('zaloPersonalUrl') && ticketModalContent.includes('getZaloChatUrl'),
+      'Zalo Personal 1: Cung cấp link Zalo trực tiếp đến số điện thoại người đăng chuyến (không qua trung gian)'
+    );
+
+    // 4. Triệt tiêu link Nhóm Zalo Tiện Chuyến khỏi TicketShareModal (Zero Distraction)
+    assert(
+      !ticketModalContent.includes('Nhóm Zalo Tiện Chuyến') && !ticketModalContent.includes('zaloGroupUrl'),
+      'Zalo Group 1: Triệt tiêu link Nhóm Zalo Tiện Chuyến khỏi TicketShareModal để tập trung chia sẻ bài'
+    );
+
+    // 5. Kiểm tra hàm chia sẻ trong packages/shared
+    const { getZaloShareUrl, getZaloGroupUrl, SITE_INFO } = await import('@carmate/shared');
+    const mockTrip = { id: 'TRIP-TEST-123', from: 'Sài Gòn', to: 'Vũng Tàu' };
+    assert(
+      getZaloShareUrl(mockTrip).includes('sp.zalo.me/share_inline') && getZaloShareUrl(mockTrip).includes('TRIP-TEST-123'),
+      'Zalo Share Helper: Sinh đúng URL Zalo Web Share chuẩn mực quốc tế'
+    );
+    assert(
+      getZaloGroupUrl() === 'https://zalo.me/g/carmate' && SITE_INFO.zaloGroup === 'https://zalo.me/g/carmate',
+      'Zalo Group Constant: SITE_INFO và helper đều trả về đúng URL nhóm Zalo tiện chuyến'
+    );
+  } catch (err) {
+    assert(false, '45. Kiểm thử Liên Kết Zalo Chuẩn Mực', err.message);
+  }
+
+  // --- 46. KIỂM THỬ BẤT BIẾN MIT: CHẶN ĐỨNG TỰ GHÉP CHUYẾN CHÍNH MÌNH ---
+  console.log('\n🛡️ 46. Kiểm thử Bất Biến MIT: Chặn Đứng Tự Ghép Chuyến Chính Mình...');
+  try {
+    const fs = await import('fs');
+    const tripCardPath = './apps/web/src/components/market/TripCard.jsx';
+    const tripCardContent = fs.readFileSync(tripCardPath, 'utf8');
+
+    // 1. TripCard có prop isOwner và huy hiệu Chuyến của bạn
+    assert(
+      tripCardContent.includes('isOwner') && tripCardContent.includes('Chuyến của bạn'),
+      'TripCard Invariant 1: TripCard tích hợp thuộc tính isOwner và hiển thị huy hiệu Chuyến của bạn'
+    );
+
+    // 2. TripCard đổi nút CTA thành "Quản lý chuyến của bạn" cho chủ bài đăng
+    assert(
+      tripCardContent.includes('Quản lý chuyến của bạn'),
+      'TripCard Invariant 2: TripCard chuyển đổi nút hành động thành "Quản lý chuyến của bạn" cho chủ xe'
+    );
+
+    // 3. EscrowBookingModal chặn đứng tự gửi yêu cầu cho chính mình
+    const escrowModalPath = './apps/web/src/components/modals/EscrowBookingModal.jsx';
+    const escrowModalContent = fs.readFileSync(escrowModalPath, 'utf8');
+    assert(
+      escrowModalContent.includes('isOwner') && escrowModalContent.includes('Bạn không thể gửi yêu cầu ghép cho chính mình'),
+      'EscrowModal Invariant 3: EscrowBookingModal bảo vệ bất biến logic, từ chối gửi lời nhắn cho chính mình'
+    );
+
+    // 4. API Backend từ chối HTTP 400 khi chủ bài đăng tự gửi yêu cầu ghép cho bài của mình
+    const loginRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '0912345678', name: 'Chủ Xe Test Self-Book' })
+    });
+    const loginData = await loginRes.json();
+    if (loginData.token && newTripId) {
+      const selfBookRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${loginData.token}`
+        },
+        body: JSON.stringify({
+          targetTripId: newTripId,
+          from: 'Lộc Ninh',
+          to: 'Bến xe Miền Đông',
+          contactPhone: '0912.345.678',
+          seats: 1
+        })
+      });
+      const selfBookData = await selfBookRes.json();
+      assert(selfBookRes.status === 400, 'API Invariant 4: Backend chặn đứng yêu cầu tự ghép chuyến với HTTP 400');
+      assert(
+        selfBookData.error && selfBookData.error.includes('chính bài đăng của mình'),
+        'API Invariant 5: Thông điệp phản hồi từ chối rõ ràng chuẩn MIT Invariant'
+      );
+    }
+  } catch (err) {
+    assert(false, '46. Kiểm thử Bất Biến MIT: Chặn Đứng Tự Ghép Chuyến Chính Mình', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n🎨 47. Kiểm thử Giao Diện Tinh Giản Zero-Text Waste: Triệt Tiêu Nhãn In Hoa & Lặp Từ...');
+  try {
+    const tripCardContent = fs.readFileSync('./apps/web/src/components/market/TripCard.jsx', 'utf8');
+    // 1. Không còn nhãn in hoa "Điểm đón" và "Điểm trả" trên thẻ chuyến xe
+    assert(
+      !tripCardContent.includes('Điểm đón</span>') && !tripCardContent.includes('Điểm trả</span>'),
+      'TripCard Text Waste 1: Triệt tiêu vĩnh viễn nhãn chữ thô Điểm đón / Điểm trả trên thẻ bài đăng'
+    );
+    // 2. Không còn dòng text rườm rà "Đã che biển số · Góc Trước, Sau, Thân xe"
+    assert(
+      !tripCardContent.includes('Đã che biển số · Góc Trước, Sau, Thân xe'),
+      'TripCard Text Waste 2: Tinh giản hộp ảnh xe thành chip biểu tượng, bỏ câu giải thích kiểm duyệt rườm rà'
+    );
+    // 3. Hero bỏ eyebrow text dài dòng
+    const heroContent = fs.readFileSync('./apps/web/src/components/market/Hero.jsx', 'utf8');
+    assert(
+      !heroContent.includes('hero.eyebrow'),
+      'Hero Text Waste 3: Triệt tiêu dòng Eyebrow khẩu hiệu dài dòng, giữ subtitle 1 dòng thanh thoát'
+    );
+    // 4. Hero ô tìm kiếm tinh gọn Nơi đi / Nơi đến
+    assert(
+      heroContent.includes('Nơi đi') && heroContent.includes('Nơi đến'),
+      'Hero Text Waste 4: Ô tìm kiếm tối giản nhãn 1 tầng chuẩn Airbnb / Apple Maps'
+    );
+  } catch (err) {
+    assert(false, '47. Kiểm thử Giao Diện Tinh Giản Zero-Text Waste', err.message);
+  }
+
+  console.log('\n⚛️ 48. Kiểm thử Bất biến Cú pháp & JSX: Tất cả Component đều khai báo hợp lệ...');
+  try {
+    const { parse } = await import('espree');
+    function scanJsxDir(dir) {
+      let files = [];
+      for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, item.name);
+        if (item.isDirectory()) files = files.concat(scanJsxDir(full));
+        else if (full.endsWith('.jsx')) files.push(full);
+      }
+      return files;
+    }
+
+    const jsxFiles = scanJsxDir('./apps/web/src');
+    const undeclaredElements = [];
+
+    const builtins = new Set([
+      'React', 'window', 'document', 'console', 'navigator', 'localStorage',
+      'sessionStorage', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+      'fetch', 'URL', 'Image', 'HTMLElement', 'Component', 'Icon', 'IconRight', 'LeadingIcon'
+    ]);
+
+    for (const file of jsxFiles) {
+      const code = fs.readFileSync(file, 'utf8');
+      const ast = parse(code, {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+        loc: true
+      });
+      const declared = new Set(builtins);
+      const jsxUsed = [];
+
+      function traverseNode(node) {
+        if (!node) return;
+        if (node.type === 'ImportSpecifier' || node.type === 'ImportDefaultSpecifier' || node.type === 'ImportNamespaceSpecifier') {
+          declared.add(node.local.name);
+        }
+        if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier') {
+          declared.add(node.id.name);
+        }
+        if (node.type === 'FunctionDeclaration' && node.id) {
+          declared.add(node.id.name);
+        }
+        if (node.type === 'JSXOpeningElement' && node.name.type === 'JSXIdentifier') {
+          const name = node.name.name;
+          if (name[0] === name[0].toUpperCase() && name[0] !== name[0].toLowerCase()) {
+            jsxUsed.push({ name, line: node.loc ? node.loc.start.line : 0 });
+          }
+        }
+        for (const key of Object.keys(node)) {
+          if (key === 'parent') continue;
+          const child = node[key];
+          if (Array.isArray(child)) {
+            child.forEach(traverseNode);
+          } else if (child && typeof child === 'object' && child.type) {
+            traverseNode(child);
+          }
+        }
+      }
+      traverseNode(ast);
+
+      for (const item of jsxUsed) {
+        if (!declared.has(item.name)) {
+          undeclaredElements.push(`${file}:${item.line} <${item.name}>`);
+        }
+      }
+    }
+
+    assert(
+      undeclaredElements.length === 0,
+      'JSX Invariant 1: 100% component JSX trong apps/web/src đều được import/khai báo đầy đủ',
+      undeclaredElements.join(', ')
+    );
+  } catch (err) {
+    assert(false, '48. Kiểm thử Bất biến Cú pháp & JSX', err.message);
+  }
+
+  // -------------------------------------------------------------
+  // 49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe (MIT & Apple)
+  // -------------------------------------------------------------
+  console.log('\n--- 49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe (MIT & Apple) ---');
+  try {
+    const { parseLocation, maskLicensePlate } = await import('../packages/shared/src/utils/geo.js');
+
+    // Test parseLocation Ambient Intelligence
+    const fromLoc = parseLocation('trung tâm hành chính Tân Khai, Hớn Quản, Bình Phước');
+    assert(fromLoc.main === 'Bình Phước', 'Ambient Geo 1: Tách đúng địa danh vĩ mô Bình Phước');
+    assert(fromLoc.sub.includes('Tân Khai'), 'Ambient Geo 2: Giữ điểm đón vi mô Tân Khai');
+
+    const toLoc = parseLocation('Đường Cống Quỳnh (Quận 1)');
+    assert(toLoc.main === 'Sài Gòn', 'Ambient Geo 3: Nhận diện Cống Quỳnh (Quận 1) thuộc vĩ mô Sài Gòn');
+    assert(toLoc.sub === 'Đường Cống Quỳnh, Quận 1', 'Ambient Geo 4: Rút trích điểm trả vi mô Đường Cống Quỳnh, Quận 1');
+
+    // Test maskLicensePlate Privacy Invariant (che toàn bộ số sau thành xxxxx)
+    const masked1 = maskLicensePlate('93A - 541.86');
+    assert(masked1 === '93A - xxxxx', 'Plate Privacy 1: Biển 5 số che toàn bộ số sau thành 93A - xxxxx');
+
+    const masked2 = maskLicensePlate('51K-123.45');
+    assert(masked2 === '51K - xxxxx', 'Plate Privacy 2: Biển 5 số định dạng không khoảng trắng che thành 51K - xxxxx');
+
+    const masked3 = maskLicensePlate('60B-9876');
+    assert(masked3 === '60B - xxxxx', 'Plate Privacy 3: Biển 4 số che toàn bộ số sau thành 60B - xxxxx');
+
+    const masked4 = maskLicensePlate('93A - ***.86');
+    assert(masked4 === '93A - xxxxx', 'Plate Privacy 4: Biển đã có sao chuẩn hoá thành 93A - xxxxx');
+
+    const fallbackBP = maskLicensePlate(null, 'Bình Phước');
+    assert(fallbackBP === '93A - xxxxx', 'Plate Privacy 5: Fallback theo tỉnh Bình Phước thành 93A - xxxxx');
+  } catch (err) {
+    assert(false, '49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe', err.message);
+  }
+
+  // -------------------------------------------------------------
+  // 50. Kiểm thử Chuẩn Hoá Khung Giờ & Phân Định Buổi Sáng Thông Minh (MIT & Stanford Ergonomics)
+  // -------------------------------------------------------------
+  console.log('\n--- 50. Kiểm thử Chuẩn Hoá Khung Giờ & Phân Định Buổi Sáng Thông Minh ---');
+  try {
+    const { sanitizeTimeLabel, getTimeSlotLabel } = await import('../packages/shared/src/constants/timeSlots.js');
+
+    // 1. Kiểm tra hàm sanitizeTimeLabel
+    assert(
+      sanitizeTimeLabel('16:00 – 18:00 Chiều') === '16:00 – 18:00',
+      'TimeSanitize 1: Triệt tiêu chữ "Chiều" dư thừa sau khoảng giờ 24h (16:00 – 18:00 Chiều -> 16:00 – 18:00)'
+    );
+    assert(
+      sanitizeTimeLabel('7:00') === '07:00 Sáng',
+      'TimeSanitize 2: Chuẩn hoá giờ đơn "7:00" thành "07:00 Sáng" giúp hành khách không hỏi lại'
+    );
+    assert(
+      sanitizeTimeLabel('7:00-8:00') === '07:00 – 08:00 Sáng',
+      'TimeSanitize 3: Chuẩn hoá khoảng giờ "7:00-8:00" thành "07:00 – 08:00 Sáng"'
+    );
+    assert(
+      sanitizeTimeLabel('05:00 - 06:00 Sáng') === '05:00 – 06:00 Sáng',
+      'TimeSanitize 4: Giữ chữ "Sáng" và chuẩn hoá en-dash (05:00 - 06:00 Sáng -> 05:00 – 06:00 Sáng)'
+    );
+    assert(
+      sanitizeTimeLabel('07:00 - 08:00 Sáng mai') === '07:00 – 08:00 Sáng',
+      'TimeSanitize 5: Rút gọn "Sáng mai" thành "Sáng" gắn sau mốc giờ'
+    );
+    assert(
+      sanitizeTimeLabel('14:00 - 15:00 Chiều') === '14:00 – 15:00',
+      'TimeSanitize 6: Triệt tiêu "Chiều" sau 14:00 - 15:00'
+    );
+    assert(
+      sanitizeTimeLabel('11:00 - 13:00') === '11:00 – 13:00',
+      'TimeSanitize 7: Buổi trưa 11:00 - 13:00 giữ nguyên 24h không bị gắn nhầm "Sáng"'
+    );
+
+    // 2. Kiểm tra getTimeSlotLabel với slot morning và afternoon
+    assert(
+      getTimeSlotLabel('07:00-08:00') === '07:00 – 08:00 Sáng',
+      'TimeSanitize 8: getTimeSlotLabel(07:00-08:00) trả về 07:00 – 08:00 Sáng chuẩn chỉ'
+    );
+    assert(
+      getTimeSlotLabel('16:00-18:00') === '16:00 – 18:00',
+      'TimeSanitize 9: getTimeSlotLabel(16:00-18:00) trả về 16:00 – 18:00 tinh gọn'
+    );
+    assert(
+      getTimeSlotLabel({ timeSlot: '16:00-18:00', timeSlotLabel: '16:00 – 18:00 Chiều' }) === '16:00 – 18:00',
+      'TimeSanitize 10: Chuyến chiều dính chữ "Chiều" tự động được làm sạch thành 16:00 – 18:00'
+    );
+    assert(
+      getTimeSlotLabel({ timeSlot: '07:00-08:00', timeSlotLabel: '7:00 - 8:00' }) === '07:00 – 08:00 Sáng',
+      'TimeSanitize 11: Chuyến sáng chưa có chữ "Sáng" tự động được bổ sung thành 07:00 – 08:00 Sáng'
+    );
+
+    // 3. Kiểm tra API trips thực tế: Buổi chiều không dính chiều/tối, buổi sáng có chữ Sáng
+    const testTrips = await fetch(`${BASE_URL}/api/trips`).then((r) => r.json());
+    const allTrips = testTrips?.data?.all || [];
+    const tripsWithRedundantAfternoon = allTrips.filter((t) => {
+      const match = (t.timeSlotLabel || '').match(/^(\d{1,2}):/);
+      if (!match) return false;
+      const h = parseInt(match[1], 10);
+      return h >= 11 && /(?:chiều|tối|đêm)/i.test(t.timeSlotLabel);
+    });
+    assert(
+      tripsWithRedundantAfternoon.length === 0,
+      'TimeSanitize 12: 100% chuyến xe buổi chiều/tối không dính chữ "chiều/tối" dư thừa'
+    );
+
+    const morningTripsWithoutMorning = allTrips.filter((t) => {
+      const match = (t.timeSlotLabel || '').match(/^(\d{1,2}):/);
+      if (!match) return false;
+      const h = parseInt(match[1], 10);
+      return h >= 3 && h < 11 && !/sáng/i.test(t.timeSlotLabel);
+    });
+    assert(
+      morningTripsWithoutMorning.length === 0,
+      'TimeSanitize 13: 100% chuyến xe buổi sáng có chữ "Sáng" rõ ràng, không lo khách hỏi lại'
+    );
+  } catch (err) {
+    assert(false, '50. Kiểm thử Chuẩn Hoá Khung Giờ', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n⭐ 51. Kiểm thử Hiển Thị Sao & Số Chuyến Trên Thẻ Chuyến Đi (Zero Điểm Rối Mắt)...');
+  try {
+    const cardContent = fs.readFileSync('./apps/web/src/components/market/TripCard.jsx', 'utf8');
+    // 1. Thẻ luôn có icon Star và không hiển thị điểm dạng {trustScore}đ
+    assert(
+      !cardContent.includes('{trustScore}đ'),
+      'Card Rating 1: Triệt tiêu hoàn toàn điểm số dạng xxđ gây rối mắt người dùng'
+    );
+    // 2. Luôn render ngôi sao và chữ chuyến
+    assert(
+      cardContent.includes('<Star') && cardContent.includes('chuyến'),
+      'Card Rating 2: Luôn hiển thị ngôi sao đánh giá (*) và số chuyến đã đi'
+    );
+
+    // 3. API /api/trips trả về rating đầy đủ cho 100% chuyến đi
+    const res = await fetch(`${BASE_URL}/api/trips`);
+    const json = await res.json();
+    const trips = json.data?.all || [];
+    assert(trips.length > 0, 'API Trips trả về danh sách chuyến');
+    const tripsWithoutRating = trips.filter((t) => t.rating == null || Number.isNaN(Number(t.rating)));
+    assert(
+      tripsWithoutRating.length === 0,
+      'Card Rating 3: 100% chuyến xe trả về từ API đều bảo lưu số sao đánh giá'
+    );
+    assert(
+      !cardContent.includes('ratingCount') && !cardContent.includes('({ratingCount})'),
+      'Card Rating 4: Triệt tiêu hoàn toàn số đếm trùng lặp ({ratingCount}) bên cạnh số chuyến'
+    );
+  } catch (err) {
+    assert(false, '51. Kiểm thử Hiển Thị Sao & Số Chuyến', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n✨ 52. Kiểm thử Trích Xuất Tuyến HOT Động (Dynamic HOT Route Suggester)...');
+  try {
+    const { computeHotRoutes, DEFAULT_FALLBACK_ROUTES } = await import('@carmate/shared');
+    assert(Array.isArray(DEFAULT_FALLBACK_ROUTES) && DEFAULT_FALLBACK_ROUTES.length > 0, 'Dynamic Route 1: Có mảng fallback dự phòng an toàn');
+
+    const mockTrips = [
+      { from: 'Lộc Ninh (Bình Phước)', to: 'Sài Gòn (Bến xe Miền Đông)' },
+      { from: 'Lộc Ninh', to: 'Sài Gòn' },
+      { from: 'Lộc Ninh (Chợ Lộc Ninh)', to: 'Sài Gòn (Quận 1)' },
+      { from: 'Phan Thiết (Mũi Né)', to: 'Sài Gòn (Dầu Giây)' },
+      { from: 'Phan Thiết', to: 'Sài Gòn' },
+      { from: 'Đà Lạt', to: 'Sài Gòn' }
+    ];
+
+    const extracted = computeHotRoutes(mockTrips);
+    assert(extracted.length > 0, 'Dynamic Route 2: Trích xuất thành công danh sách cặp tuyến');
+    assert(extracted[0].from === 'Lộc Ninh' || extracted[0].to === 'Lộc Ninh', 'Dynamic Route 3: Tuyến có nhiều chuyến nhất (Lộc Ninh) đứng đầu bảng');
+    assert(extracted[0].count === 3, 'Dynamic Route 4: Đếm chính xác số lượng xe đang mở (count === 3)');
+
+    const heroContent = fs.readFileSync('./apps/web/src/components/market/Hero.jsx', 'utf8');
+    assert(heroContent.includes('computeHotRoutes(trips)'), 'Dynamic Route 5: Hero component tự động tính toán tuyến xoay vòng từ trips thực tế');
+    assert(heroContent.includes('activeRouteHint.count'), 'Dynamic Route 6: Hiển thị số lượng xe thực tế trên tuyến HOT');
+  } catch (err) {
+    assert(false, '52. Kiểm thử Trích Xuất Tuyến HOT Động', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n✨ 53. Kiểm thử Chuẩn Hoá Bí Danh Công Khai (Chủ xe CX-xxx & Khách KX-xxx)...');
+  try {
+    const { toPublicAlias } = await import('@carmate/shared');
+
+    // 1. Kiểm thử đơn vị toPublicAlias với các chuỗi cũ
+    assert(toPublicAlias('Chủ xe Lộc Ninh #101') === 'Chủ xe CX-101', 'Public Alias 1: Chuẩn hoá "Chủ xe Lộc Ninh #101" -> "Chủ xe CX-101"');
+    assert(toPublicAlias('Chủ xe Phan Thiết #103') === 'Chủ xe CX-103', 'Public Alias 2: Chuẩn hoá "Chủ xe Phan Thiết #103" -> "Chủ xe CX-103"');
+    assert(toPublicAlias('Khách đi khám Chợ Rẫy #201') === 'Khách KX-201', 'Public Alias 3: Chuẩn hoá "Khách đi khám Chợ Rẫy #201" -> "Khách KX-201"');
+    assert(toPublicAlias('Khách về quê #202') === 'Khách KX-202', 'Public Alias 4: Chuẩn hoá "Khách về quê #202" -> "Khách KX-202"');
+    assert(toPublicAlias('Chủ xe CX-101') === 'Chủ xe CX-101', 'Public Alias 5: Giữ nguyên chuẩn "Chủ xe CX-101"');
+    assert(toPublicAlias('Khách KX-201') === 'Khách KX-201', 'Public Alias 6: Giữ nguyên chuẩn "Khách KX-201"');
+    assert(toPublicAlias('Chủ xe Test E2E 999') === 'Chủ xe Test E2E 999', 'Public Alias 7: Bảo lưu tên bài đăng test E2E');
+
+    // 2. Kiểm thử đơn vị toPublicAlias với object trip
+    const driverTripObj = { id: 'DRV-101', type: 'driver_offer', maskedCode: 'CX-101' };
+    const paxTripObj = { id: 'REQ-201', type: 'passenger_request', maskedCode: 'KX-201' };
+    assert(toPublicAlias(driverTripObj) === 'Chủ xe CX-101', 'Public Alias 8: Đối tượng chuyến của Chủ xe -> "Chủ xe CX-101"');
+    assert(toPublicAlias(paxTripObj) === 'Khách KX-201', 'Public Alias 9: Đối tượng chuyến của Khách -> "Khách KX-201"');
+
+    // 3. Kiểm thử API /api/trips: 100% chuyến xe trả về tuân thủ chuẩn Chủ xe CX-xxx hoặc Khách KX-xxx
+    const tripsRes = await fetch(`${BASE_URL}/api/trips`);
+    const tripsData = await tripsRes.json();
+    const publicTrips = Array.isArray(tripsData.data) ? tripsData.data : (tripsData.data?.all || []);
+    assert(Array.isArray(publicTrips) && publicTrips.length > 0, 'Public Alias 10: API /api/trips phản hồi danh sách chuyến xe');
+
+    let allAliasesValid = true;
+    for (const trip of publicTrips) {
+      const pName = trip.publicName || '';
+      // Bỏ qua chuyến test E2E nếu có
+      if (pName.includes('Test E2E')) continue;
+      const isValidFormat =
+        /^(?:Chủ xe|Xe tiện chuyến)\s+CX-\d+/.test(pName) ||
+        /^Khách\s+KX-\d+/.test(pName);
+      if (!isValidFormat) {
+        allAliasesValid = false;
+        console.error(`Invalid publicName detected: "${pName}" for trip ID ${trip.id}`);
+        break;
+      }
+    }
+    assert(allAliasesValid, 'Public Alias 11: 100% chuyến xe trên sàn đều tuân thủ chuẩn "Chủ xe CX-xxx" hoặc "Khách KX-xxx"');
+
+    // 4. Kiểm thử API /api/trust/:memberId trả về chuẩn "Chủ xe CX-xxx"
+    const trustRes = await fetch(`${BASE_URL}/api/trust/USR-0900000019`);
+    if (trustRes.status === 200) {
+      const trustData = await trustRes.json();
+      const profile = trustData.data || trustData;
+      const validTrustName = /^(?:Chủ xe|Xe tiện chuyến)\s+CX-\d+/.test(profile.publicName || profile.name);
+      assert(validTrustName, 'Public Alias 12: Hồ sơ tin cậy công khai hiển thị chuẩn "Chủ xe CX-xxx"');
+    }
+  } catch (err) {
+    assert(false, '53. Kiểm thử Chuẩn Hoá Bí Danh Công Khai', err.message);
+  }
+
+  console.log('\n🛡️ 54. Kiểm thử Bộ Lọc AI PII & Giao Thức Bắt Tay 2 Pha (Two-Phase Commit)...');
+  try {
+    const { detectPiiLeak, maskPhoneNumber } = await import('@carmate/shared');
+
+    // 1. Kiểm thử Thuật toán AI PII phát hiện lách số điện thoại & mạng xã hội
+    assert(detectPiiLeak('0984883750').hasLeak === true, 'AI PII 1: Bắt số điện thoại thông thường');
+    assert(detectPiiLeak('0984.883.750').hasLeak === true, 'AI PII 2: Bắt số điện thoại chèn dấu chấm');
+    assert(detectPiiLeak('0 9 8 4 8 8 3 7 5 0').hasLeak === true, 'AI PII 3: Bắt số điện thoại chèn dấu cách');
+    assert(detectPiiLeak('Nhắn cho anh O98488375O').hasLeak === true, 'AI PII 4: Bắt thủ thuật đổi chữ O thành số 0');
+    assert(detectPiiLeak('Số em: ko chín tám bốn tám tám ba bảy năm không').hasLeak === true, 'AI PII 5: Bắt số viết bằng chữ tiếng Việt');
+    assert(detectPiiLeak('kết bạn z.a.l.o với anh').hasLeak === true, 'AI PII 6: Bắt từ khóa Zalo ngụy trang');
+    assert(detectPiiLeak('qua zl nói chuyện nhé').hasLeak === true, 'AI PII 7: Bắt từ khóa zl');
+    assert(detectPiiLeak('cho em xin số đt').hasLeak === true, 'AI PII 8: Bắt yêu cầu xin số điện thoại');
+    assert(detectPiiLeak('Alo em ơi đón ở đâu').hasLeak === false, 'AI PII 9: Tin nhắn hợp lệ không bị chặn nhầm');
+    assert(detectPiiLeak('giá 150k đón lúc 7h sáng').hasLeak === false, 'AI PII 10: Thỏa thuận giá và giờ đón hợp lệ không bị chặn nhầm');
+
+    // 2. Kiểm thử State Machine 2-Phase Commit qua API
+    // 2.1 Tạo booking mới -> trạng thái ban đầu là inquiring
+    const testPhone54 = '09' + Date.now().toString().slice(-8);
+    const bookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Sài Gòn',
+        to: 'Vũng Tàu',
+        seats: 1,
+        totalDeal: 150000,
+        passengerNote: 'Em có 1 vali nhỏ',
+        contactPhone: testPhone54
+      })
+    });
+    const bookingData = await bookingRes.json();
+    assert(bookingRes.status === 201 && bookingData.success, '2PC API 1: Tạo yêu cầu ghép chuyến thành công');
+    const bId = bookingData.data.escrowId || bookingData.data.id;
+    assert(bookingData.data.status === 'inquiring', '2PC API 2: Trạng thái ban đầu bắt buộc là inquiring (chưa chốt)');
+
+    // 2.2 Kiểm thử gửi tin nhắn trong khung chat
+    // Gửi tin nhắn hợp lệ -> Thành công
+    const msgOkRes = await fetch(`${BASE_URL}/api/bookings/${bId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Anh ơi em đón ở ngã tư nhé',
+        senderRole: 'passenger'
+      })
+    });
+    const msgOkData = await msgOkRes.json();
+    assert(msgOkRes.status === 200 && msgOkData.success, '2PC API 3: Gửi tin nhắn thỏa thuận điểm đón thành công');
+
+    // Gửi tin nhắn chứa SĐT khi chưa chốt -> BỊ CHẶN 400
+    const msgLeakRes = await fetch(`${BASE_URL}/api/bookings/${bId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Số anh nè 0984883750 gọi nhé',
+        senderRole: 'driver'
+      })
+    });
+    const msgLeakData = await msgLeakRes.json();
+    assert(msgLeakRes.status === 400 && !msgLeakData.success, '2PC API 4: Chặn đứng gửi SĐT khi chưa chốt chuyến (HTTP 400)');
+
+    // 2.3 Chủ xe Đề xuất chốt & Giữ chỗ 15 phút (Pre-confirm)
+    const preConfirmRes = await fetch(`${BASE_URL}/api/bookings/${bId}/pre-confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preConfirmedBy: 'driver' })
+    });
+    const preConfirmData = await preConfirmRes.json();
+    assert(preConfirmRes.status === 200 && preConfirmData.data.status === 'pre_confirmed', '2PC API 5: Đề xuất chốt chuyến chuyển trạng thái sang pre_confirmed');
+    assert(!!preConfirmData.data.preConfirmedExpiresAt, '2PC API 6: Thiết lập thời hạn đếm ngược 15 phút (Soft Lock TTL)');
+
+    // 2.4 Khách Xác nhận chốt chuyến (Final Confirm - Mutual Commit)
+    const finalConfirmRes = await fetch(`${BASE_URL}/api/bookings/${bId}/final-confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmedBy: 'passenger' })
+    });
+    const finalConfirmData = await finalConfirmRes.json();
+    assert(finalConfirmRes.status === 200 && finalConfirmData.data.status === 'confirmed', '2PC API 7: Khách xác nhận thành công chuyển sang confirmed (Both Confirmed)');
+    assert(finalConfirmData.data.bothConfirmed === true, '2PC API 8: Cờ bothConfirmed được kích hoạt');
+
+    // 3. Kiểm thử Frontend Components: InboxModal, Header, BookedTripList
+    const inboxModalContent = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxModalContent.includes('detectPiiLeak') && inboxModalContent.includes('preConfirmBooking'), '2PC UI 1: InboxModal tích hợp AI PII Filter và Pre-confirm');
+
+    const headerContent = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/common/Header.jsx'), 'utf8');
+    assert(headerContent.includes('onOpenInbox') && headerContent.includes('Bell'), '2PC UI 2: Header tích hợp icon Chuông Hộp Thư & badge đếm');
+
+    const bookedContent = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(!bookedContent.includes('0đ Phí sàn · Kết nối Zalo'), '2PC UI 3: Đã gỡ bỏ nhãn ép buộc Kết nối Zalo');
+    assert(bookedContent.includes('onOpenChat'), '2PC UI 4: BookedTripList hỗ trợ mở thẳng khung chat');
+  } catch (err) {
+    assert(false, '54. Kiểm thử Bộ Lọc AI PII & Giao Thức Bắt Tay 2 Pha', err.message);
+  }
+
+  // BÀI TEST 55: KIỂM THỬ HỆ THỐNG XỬ PHẠT BẬC THANG (3-STRIKE PROGRESSIVE SANCTIONS)
+  console.log('\n⚖️ 55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang: Lần 1 Cảnh Cáo, Lần 2 Hạ Điểm Tín Dụng, Lần 3 Ban Luôn...');
+  try {
+    // 1. Tạo một yêu cầu ghép chuyến để kiểm thử
+    const strikeTestPhone = '09' + (Date.now() + 100).toString().slice(-8);
+    const strikeBookRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'TP.HCM',
+        to: 'Vũng Tàu',
+        seats: 1,
+        totalDeal: 150000,
+        contactPhone: strikeTestPhone
+      })
+    });
+    const strikeBookData = await strikeBookRes.json();
+    const strikeBookingId = strikeBookData.data.escrowId || strikeBookData.data.id;
+
+    // 2. Vi phạm LẦN 1 (Strike 1): Cảnh cáo nhẹ, chặn gửi
+    const s1Res = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Alo số đt mình nè không chín bảy bảy một một hai hai ba ba',
+        senderRole: 'passenger'
+      })
+    });
+    const s1Data = await s1Res.json();
+    assert(s1Res.status === 400, '3-Strike 1: Vi phạm lần 1 bị chặn (HTTP 400)');
+    assert(s1Data.strike === 1, '3-Strike 2: Ghi nhận vi phạm Strike = 1');
+    assert(s1Data.violationLevel === 'warning', '3-Strike 3: Cấp độ vi phạm là warning');
+    assert(s1Data.error.includes('Lần 1/3'), '3-Strike 4: Thông báo cảnh báo vi phạm lần 1/3');
+
+    // 3. Vi phạm LẦN 2 (Strike 2): Cố tình tái phạm -> Cảnh cáo nghiêm trọng + HẠ ĐIỂM TÍN NHIỆM (-15đ)
+    const s2Res = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Nhắn qua za.lo số 0977.112.233 nha',
+        senderRole: 'passenger'
+      })
+    });
+    const s2Data = await s2Res.json();
+    assert(s2Res.status === 400, '3-Strike 5: Vi phạm lần 2 bị chặn (HTTP 400)');
+    assert(s2Data.strike === 2, '3-Strike 6: Ghi nhận vi phạm Strike = 2');
+    assert(s2Data.violationLevel === 'penalty', '3-Strike 7: Cấp độ vi phạm là penalty');
+    assert(s2Data.deductedPoints === 15, '3-Strike 8: Hệ thống trừ chính xác 15 điểm tín nhiệm');
+    assert(s2Data.error.includes('TRỪ -15 ĐIỂM TÍN NHIỆM') || s2Data.error.includes('Lần 2/3'), '3-Strike 9: Cảnh cáo trừ điểm tín nhiệm hiển thị rõ ràng');
+
+    // 4. Vi phạm LẦN 3 (Strike 3 - Liên tục): KHÓA TÀI KHOẢN VĨNH VIỄN (BAN)
+    const s3Res = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Cố tình nhắn zl 0977 112 233 nè',
+        senderRole: 'passenger'
+      })
+    });
+    const s3Data = await s3Res.json();
+    assert(s3Res.status === 403, '3-Strike 10: Vi phạm lần 3 bị từ chối truy cập (HTTP 403)');
+    assert(s3Data.isBanned === true, '3-Strike 11: Cờ isBanned = true kích hoạt');
+    assert(s3Data.error.includes('KHÓA VĨNH VIỄN') || s3Data.error.includes('BAN'), '3-Strike 12: Thông báo tài khoản bị khóa vĩnh viễn (BAN)');
+
+    // 5. Kiểm thử sau khi Ban: Thử gửi tin nhắn bình thường cũng bị chặn vĩnh viễn
+    const s4Res = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Em hỏi bình thường thôi mà',
+        senderRole: 'passenger'
+      })
+    });
+    const s4Data = await s4Res.json();
+    assert(s4Res.status === 403, '3-Strike 13: Tài khoản đã bị Ban không thể gửi bất kỳ tin nhắn nào (HTTP 403)');
+    assert(s4Data.isBanned === true, '3-Strike 14: Phản hồi cấm truy cập do tài khoản bị khóa');
+
+    // 6. Kiểm tra giao diện InboxModal có tích hợp ShieldAlert và xử lý khóa tài khoản
+    const inboxModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxModalSrc.includes('ShieldAlert') && inboxModalSrc.includes('violationInfo'), '3-Strike UI 1: InboxModal tích hợp cảnh báo vi phạm bậc thang');
+    assert(inboxModalSrc.includes('-15 Điểm Tín Nhiệm'), '3-Strike UI 2: InboxModal hiển thị huy hiệu trừ điểm tín nhiệm');
+    assert(inboxModalSrc.includes('Tài khoản của bạn đã bị khóa'), '3-Strike UI 3: InboxModal hiển thị trạng thái khóa tài khoản');
+  } catch (err) {
+    assert(false, '55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang (3-Strike Sanctions)', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

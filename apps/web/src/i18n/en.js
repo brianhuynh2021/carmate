@@ -1,7 +1,7 @@
 export default {
   common: {
     brand: 'CarMate',
-    tagline: 'Intercity Rideshare & Convenient Empty-Leg Trips',
+    tagline: 'Đi chung - tiện chuyến - sẻ chia',
     search: 'Search',
     filters: 'Filters',
     clear: 'Clear',
@@ -100,9 +100,8 @@ export default {
 
   hero: {
     eyebrow: 'Direct family rideshare & convenient intercity empty-leg network · 0% fee',
-    title: 'Intercity Ridesharing & Convenient Empty-Leg Matching',
-    subtitle:
-      'Travel comfortably like family, fairly share fuel & tolls. Direct connection between vehicle owners with empty seats and fellow travelers — 0% platform fee.',
+    title: 'Đi chung - tiện chuyến - sẻ chia',
+    subtitle: '',
     findTripCta: 'Find a ride',
     postTripCta: 'Post empty seats (Family & Empty-leg)',
     stat_members: 'verified members',
@@ -375,10 +374,10 @@ export default {
   },
 
   ticket: {
-    title: 'Share Trip',
-    subtitle: 'Share to Zalo or Facebook to quickly find travel companions',
+    title: 'Trip Information Pass',
+    subtitle: 'Save your privacy-protected trip card or share the trip link',
     stamp: 'CarMate Verified',
-    brandLine: 'Rideshare ticket',
+    brandLine: 'Family Carpool Pass',
     brandSub: 'Family car · Save up to 50%',
     pickup: 'Pickup',
     dropoff: 'Destination',
@@ -388,8 +387,18 @@ export default {
     seatsLeft: '{n} seats left',
     textLabel: 'Ready-to-paste text',
     copyBtn: 'Copy post',
-    openFacebook: 'Share Facebook',
-    openZalo: 'Open Zalo',
+    copyImage: 'Copy Card Image',
+    copyImageDone: 'Card Image Copied!',
+    copyingImage: 'Generating card...',
+    shareNow: 'Share Now',
+    sharing: 'Opening share...',
+    downloadStory: 'Download Story',
+    downloadCard: 'Download Card 4:5',
+    copyText: 'Copy Summary Text',
+    chatZaloOwner: 'Message Car Owner',
+    chatZaloPax: 'Message Passenger',
+    zaloGroup: 'Carpool Community Group',
+    zaloShareCopied: 'Trip card copied! Ready to share.',
     openWhatsApp: 'Send WhatsApp',
     openTelegram: 'Send Telegram'
   },
@@ -457,14 +466,14 @@ export default {
   },
 
   toast: {
-    postSuccess: 'Trip posted. Your share card is ready.',
-    bookSuccess: 'Connected. Code {id}. Phone & Zalo are now unlocked.',
+    postSuccess: 'Trip posted successfully! Visible now on the ride board.',
+    bookSuccess: 'Inquiry sent successfully! Awaiting host response.',
     cancelLate: 'Late cancellation. The 50k deposit compensates your partner.',
     cancelEarly: 'Cancelled more than 8h before. 100% deposit refunded.',
     delaySent: 'Delay notice of +{n} min sent to your partner.',
     completed: 'Trip completed. Thanks for riding responsibly.',
-    ticketCopied: 'Ticket text copied. Paste it into a Zalo or Facebook group.',
-    passportCopied: 'Trust card copied. Paste it into Zalo when you reach out.'
+    ticketCopied: 'Trip info text copied.',
+    passportCopied: 'Trust card copied. Paste it when you reach out.'
   },
 
   footer: {

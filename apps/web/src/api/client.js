@@ -23,7 +23,10 @@ async function request(endpoint, options = {}) {
     const response = await fetch(url, config);
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      const err = new Error(data.error || `HTTP error! status: ${response.status}`);
+      err.data = data;
+      err.status = response.status;
+      throw err;
     }
     return data;
   } catch (error) {
@@ -147,6 +150,27 @@ export const api = {
     return request(`/bookings/${id}/driver-confirm`, {
       method: 'POST',
       body: JSON.stringify({ ...payload, accessToken: token || payload.accessToken })
+    });
+  },
+
+  async sendBookingMessage(id, messageData = {}) {
+    return request(`/bookings/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  },
+
+  async preConfirmBooking(id, payload = {}) {
+    return request(`/bookings/${id}/pre-confirm`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async finalConfirmBooking(id, payload = {}) {
+    return request(`/bookings/${id}/final-confirm`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
     });
   },
 

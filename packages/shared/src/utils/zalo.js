@@ -33,12 +33,15 @@ export const toInternationalPhone = (phone = '') => {
 };
 
 /**
- * Tạo liên kết mở trực tiếp cuộc trò chuyện trên Zalo
+ * Tạo liên kết mở trực tiếp cuộc trò chuyện trên Zalo.
+ * Trả về chuỗi rỗng khi không có số hợp lệ, để nơi gọi tự quyết định
+ * hiển thị gì thay thế (không dùng '#' vì nó nhảy về đầu trang).
  */
-export const getZaloChatUrl = (phone = '') => {
+export const getZaloChatUrl = (phone = '', text = '') => {
   const cleaned = cleanPhoneNumber(phone);
-  if (!cleaned) return '#';
-  return `https://zalo.me/${cleaned}`;
+  if (!cleaned) return '';
+  const query = text ? `?text=${encodeURIComponent(text)}` : '';
+  return `https://zalo.me/${cleaned}${query}`;
 };
 
 export const getZaloChatLink = getZaloChatUrl;
@@ -63,6 +66,23 @@ export const getTelegramChatUrl = (phoneOrUsername = '') => {
   }
   const intl = toInternationalPhone(phoneOrUsername);
   return `https://t.me/+${intl}`;
+};
+
+/**
+ * Sinh liên kết chia sẻ trực tiếp chuyến đi qua Zalo Web
+ * Mở cửa sổ Zalo Web Share chính thức để người dùng chọn Bạn bè hoặc Nhóm Zalo gửi tin
+ */
+export const getZaloShareUrl = (trip) => {
+  if (!trip) return 'https://chat.zalo.me/';
+  const url = `https://carmate.vn/t/${trip.id}`;
+  return `https://sp.zalo.me/share_inline?link=${encodeURIComponent(url)}`;
+};
+
+/**
+ * Lấy liên kết nhóm Zalo tiện chuyến cộng đồng CarMate
+ */
+export const getZaloGroupUrl = () => {
+  return 'https://zalo.me/g/carmate';
 };
 
 /**

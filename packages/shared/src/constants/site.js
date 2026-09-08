@@ -23,6 +23,7 @@ export const SITE_INFO = {
   telegramSupport: 'https://t.me/brianhuynh91',
   email: 'hotro@carmate.vn',
   zaloOA: 'https://zalo.me/0984883750',
+  zaloGroup: 'https://zalo.me/g/carmate',
   facebook: 'https://www.facebook.com/profile.php?id=61593891160413',
   foundedYear: 2024,
   stats: {

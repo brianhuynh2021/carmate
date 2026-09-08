@@ -18,6 +18,20 @@ export default class ErrorBoundary extends React.Component {
   }
 
   handleReload = () => {
+    try {
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister().catch(() => {});
+          }
+        }).finally(() => {
+          window.location.href = window.location.origin + window.location.pathname + '?_r=' + Date.now();
+        });
+        return;
+      }
+    } catch {
+      // Fallback nếu có lỗi
+    }
     window.location.reload();
   };
 
@@ -33,6 +47,12 @@ export default class ErrorBoundary extends React.Component {
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
               Hệ thống đã tự động ghi nhận nhật ký để khắc phục. Vui lòng bấm tải lại để tiếp tục sử dụng.
             </p>
+            {this.state.error && (
+              <pre className="text-left text-[11px] p-3 rounded-lg bg-slate-100 dark:bg-slate-900 text-rose-600 overflow-auto max-h-48 font-mono">
+                {this.state.error?.message || String(this.state.error)}
+                {this.state.error?.stack ? `\n\n${this.state.error.stack}` : ''}
+              </pre>
+            )}
             <div className="pt-2">
               <button
                 type="button"

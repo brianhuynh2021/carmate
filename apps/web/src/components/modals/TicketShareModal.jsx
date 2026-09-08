@@ -7,14 +7,20 @@ import {
   ChevronUp,
   ExternalLink,
   Download,
-  Image as ImageIcon,
-  Loader2
+  Loader2,
+  MessageCircle,
+  QrCode
 } from 'lucide-react';
-import { generateSocialShareText, formatVND, getTimeSlotLabel, getFacebookShareUrl } from '@carmate/shared';
+import {
+  generateSocialShareText,
+  formatVND,
+  getTimeSlotLabel,
+  getZaloChatUrl,
+  cleanPhoneNumber
+} from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
-import { FacebookIcon, ZaloIcon } from '../ui/SocialIcons.jsx';
 import {
   generateTicketImage,
   downloadTicketImage,
@@ -25,13 +31,18 @@ import {
 export default function TicketShareModal({ trip, onClose, onShowToast, onViewInMarket }) {
   const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [copiedImage, setCopiedImage] = useState(false);
+  const [isCopyingImage, setIsCopyingImage] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
 
   if (!trip) return null;
   const shareText = generateSocialShareText(trip);
-  const fbUrl = getFacebookShareUrl(trip);
+  const contactPhone = cleanPhoneNumber(trip.phoneReal || trip.phone || '');
+  const zaloPersonalUrl = contactPhone ? getZaloChatUrl(contactPhone) : null;
+  const isDriverOffer = trip.type === 'driver_offer';
 
   const handleCopy = (customMsg) => {
     try {
@@ -48,11 +59,50 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
         document.body.removeChild(textarea);
       }
     } catch (err) {
-      console.warn('[Share] Lỗi sao chép:', err);
+      console.warn('[Share] Lỗi sao chép văn bản:', err);
     }
     setCopied(true);
     onShowToast?.(customMsg || t('toast.ticketCopied') || 'Đã sao chép nội dung bài đăng!');
     setTimeout(() => setCopied(false), 3000);
+  };
+
+  /**
+   * Sao chép trực tiếp file ảnh vé vào Clipboard hệ thống (1-Chạm dán ngay vào Zalo / Messenger / FB)
+   */
+  const handleCopyTicketImage = async () => {
+    try {
+      setIsCopyingImage(true);
+      const dataUrl = await generateTicketImage(trip, lang);
+      if (!dataUrl) throw new Error('Không tạo được ảnh vé');
+
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+
+      // Hỗ trợ ClipboardItem API trên Safari iOS 13.4+, Chrome, Edge, Safari macOS
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
+        try {
+          const item = new ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([item]);
+          setCopiedImage(true);
+          setTimeout(() => setCopiedImage(false), 3000);
+          onShowToast?.('Đã sao chép ảnh thẻ thông tin! Hãy mở Zalo, Messenger hoặc Facebook và chọn Dán (Paste).');
+          return;
+        } catch (clipErr) {
+          console.warn('[Clipboard] Không thể ghi ảnh vào clipboard:', clipErr);
+        }
+      }
+
+      // Dự phòng nếu trình duyệt di động hạn chế ghi ảnh vào clipboard:
+      // Tự động tải ảnh về máy và chép lời nhắn
+      downloadTicketImage(dataUrl, trip.id?.slice(0, 8) || 'the-thong-tin');
+      handleCopy('Đã lưu ảnh thẻ thông tin vào máy & sao chép lời nhắn! Hãy dán vào chat.');
+    } catch (err) {
+      console.warn('[Share] Lỗi sao chép ảnh:', err);
+      onShowToast?.('Chưa thể sao chép ảnh. Đang tải ảnh về máy cho bạn...');
+      handleDownloadTicket();
+    } finally {
+      setIsCopyingImage(false);
+    }
   };
 
   const handleDownloadTicket = async () => {
@@ -60,12 +110,12 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
       setIsGeneratingImage(true);
       const dataUrl = await generateTicketImage(trip, lang);
       if (dataUrl) {
-        downloadTicketImage(dataUrl, trip.id?.slice(0, 8) || 've-xe');
-        onShowToast?.('Đã tải ảnh vé xe chuẩn vuông 4:5! Thích hợp gửi nhóm Zalo / Messenger.');
+        downloadTicketImage(dataUrl, trip.id?.slice(0, 8) || 'the-thong-tin');
+        onShowToast?.('Đã tải ảnh thẻ thông tin chuẩn 4:5! Thích hợp gửi nhóm Zalo / Messenger.');
       }
     } catch (err) {
-      console.warn('[Share] Lỗi tạo ảnh vé:', err);
-      onShowToast?.('Không thể tạo file ảnh vé, vui lòng thử lại.');
+      console.warn('[Share] Lỗi tạo ảnh thẻ:', err);
+      onShowToast?.('Không thể tạo file ảnh thẻ thông tin, vui lòng thử lại.');
     } finally {
       setIsGeneratingImage(false);
     }
@@ -77,7 +127,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
       const dataUrl = await generateTicketStoryImage(trip, lang);
       if (dataUrl) {
         downloadTicketStoryImage(dataUrl, trip.id?.slice(0, 8) || 'story');
-        onShowToast?.('Đã tải ảnh Story 9:16 sắc nét! Đăng ngay lên Zalo Story, FB Story hoặc TikTok.');
+        onShowToast?.('Đã tải ảnh Story sắc nét! Đăng ngay lên Zalo Story, FB Story hoặc TikTok.');
       }
     } catch (err) {
       console.warn('[Share] Lỗi tạo ảnh story:', err);
@@ -87,130 +137,135 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
     }
   };
 
+  /**
+   * Kích hoạt Native Share Sheet của hệ điều hành (gửi thẳng File ảnh thẻ thông tin và Text vào Zalo, FB, v.v.)
+   */
   const handleNativeShare = async () => {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
+    try {
+      setIsSharing(true);
+      const dataUrl = await generateTicketImage(trip, lang);
+      if (dataUrl && typeof File !== 'undefined') {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], `the-thong-tin-carmate-${trip.id?.slice(0, 8) || 'chuyen-xe'}.png`, { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `CarMate: ${trip.from} ➔ ${trip.to}`,
+            text: shareText
+          });
+          return;
+        }
+      }
+
+      if (navigator.share) {
         await navigator.share({
           title: `CarMate: ${trip.from} ➔ ${trip.to}`,
           text: shareText,
           url: `https://carmate.vn/t/${trip.id}`
         });
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          handleCopy();
-        }
+        return;
       }
-    } else {
-      handleCopy();
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('[Share] Lỗi Native Share:', err);
+    } finally {
+      setIsSharing(false);
     }
+
+    // Dự phòng khi thiết bị không hỗ trợ navigator.share (ví dụ trình duyệt cũ trên PC)
+    handleCopy('Đã sao chép bài đăng! Hãy dán vào ứng dụng bạn muốn gửi.');
   };
+
+  // Tương thích ngược: Định danh hàm chia sẻ Zalo / Native Share
+  const handleZaloShare = handleNativeShare;
 
   return (
     <Modal
       onClose={onClose}
       size="md"
       icon={Share2}
-      title={t('ticket.title') || 'Chia sẻ chuyến đi'}
-      subtitle={t('ticket.subtitle') || 'Gửi vào Zalo hoặc Facebook để tìm bạn đồng hành cùng tuyến'}
+      title={t('ticket.title') || 'Thẻ thông tin chuyến đi'}
+      subtitle={t('ticket.subtitle') || 'Lưu thẻ thông tin hành trình bảo mật hoặc chia sẻ liên kết'}
       footer={
         <div className="space-y-2.5 w-full">
-          {/* Cặp đôi nút hành động đắc lực: Mở Zalo & Tải ảnh Story 9:16 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <a
-              href="https://zalo.me/"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => handleCopy('Đã sao chép bài đăng! Hãy dán (Paste) vào nhóm Zalo')}
-              className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0068ff] hover:bg-[#0055d4] active:scale-[0.99] text-white shadow-md shadow-blue-500/20 transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
+          {/* Nút hành động chính: Tải Thẻ Thông Tin (Bảo mật SĐT) */}
+          <button
+            type="button"
+            disabled={isGeneratingImage}
+            onClick={handleDownloadTicket}
+            className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-[#0071e3] to-[#0055d4] hover:from-[#0077ed] hover:to-[#004bbd] active:scale-[0.99] text-white shadow-md shadow-blue-500/25 transition-all inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+          >
+            {isGeneratingImage ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                <span>Đang tạo ảnh thẻ...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 shrink-0" />
+                <span>Tải Thẻ Thông Tin (Bảo mật SĐT)</span>
+              </>
+            )}
+          </button>
+
+          {/* Hàng nút phụ: Chia sẻ ngay & Tải Story */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={isSharing}
+              onClick={handleNativeShare}
+              className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-75"
             >
-              <ZaloIcon className="w-5 h-5 shrink-0" />
-              <span>Mở Zalo chia sẻ</span>
-            </a>
+              {isSharing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+              ) : (
+                <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+              )}
+              <span>{t('ticket.shareNow') || 'Chia sẻ ngay'}</span>
+            </button>
 
             <button
               type="button"
               disabled={isGeneratingStory}
               onClick={handleDownloadStory}
-              className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] text-white shadow-md shadow-emerald-500/20 transition-all inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+              className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-75"
             >
               {isGeneratingStory ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Đang kết xuất Story...</span>
-                </>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-500" />
               ) : (
-                <>
-                  <Download className="w-4 h-4 shrink-0" />
-                  <span>Tải ảnh Story 9:16</span>
-                </>
+                <Download className="w-3.5 h-3.5 text-sky-500" />
               )}
+              <span>{t('ticket.downloadStory') || 'Tải Story'}</span>
             </button>
           </div>
 
-          {/* 4 Lựa chọn bổ sung thanh lịch */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button
-              type="button"
-              disabled={isGeneratingImage}
-              onClick={handleDownloadTicket}
-              className="py-2.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-75"
-              title="Tải ảnh vé tỉ lệ vuông 4:5 thích hợp gửi tin nhắn nhóm chat"
-            >
-              {isGeneratingImage ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
-              ) : (
-                <Download className="w-3.5 h-3.5 text-slate-500" />
-              )}
-              <span>{isGeneratingImage ? 'Đang tạo...' : 'Ảnh vé 4:5'}</span>
-            </button>
-
-            <a
-              href={fbUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => handleCopy('Đã sao chép! Đang mở Facebook để đăng tin...')}
-              className="py-2.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-            >
-              <FacebookIcon className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
-              <span>Facebook</span>
-            </a>
-
+          {/* Hàng tiện ích: Sao chép tóm tắt & Xem bài trên Bảng tin */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <button
               type="button"
               onClick={() => handleCopy()}
-              className="py-2.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+              className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 inline-flex items-center gap-1 cursor-pointer transition-colors"
             >
-              {copied ? (
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-slate-500" />
-              )}
-              <span>{copied ? 'Đã chép' : 'Sao chép'}</span>
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? 'Đã sao chép lời nhắn' : 'Sao chép văn bản tóm tắt'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleNativeShare}
-              className="py-2.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-            >
-              <Share2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Khác</span>
-            </button>
+            {onViewInMarket && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose?.();
+                  onViewInMarket(trip);
+                }}
+                className="text-xs text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Xem trên Bảng tin</span>
+              </button>
+            )}
           </div>
-
-          {onViewInMarket && (
-            <button
-              type="button"
-              onClick={() => {
-                onClose?.();
-                onViewInMarket(trip);
-              }}
-              className="w-full py-2.5 px-3 rounded-xl border border-slate-200/80 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-              <span>Xem vị trí bài đăng trên Bảng tin công khai</span>
-            </button>
-          )}
         </div>
       }
     >
@@ -234,7 +289,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
               </div>
             </div>
             <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border border-white/20 text-slate-200">
-              {t('ticket.stamp') || 'VÉ ĐI CHUNG'}
+              {t('ticket.stamp') || 'THẺ CHUYẾN ĐI'}
             </span>
           </div>
 
@@ -255,16 +310,12 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
             </div>
           </div>
 
-          <div className="relative mt-5 pt-4 border-t border-dashed border-white/20 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[11px] text-slate-400">{t('ticket.cost') || 'Chi phí chia sẻ'}</p>
-              <p className="text-2xl font-bold tabular tracking-tight leading-none mt-1">
-                {formatVND(trip.basePricePerSeat || trip.expectedPrice || 180000)}
-                <span className="text-xs font-normal text-slate-400">{t('common.perSeat')}</span>
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">{t('ticket.incl') || 'Đã gồm xăng & vé cầu đường'}</p>
+          <div className="relative mt-5 pt-4 border-t border-dashed border-white/20 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-sky-400 font-semibold min-w-0">
+              <QrCode className="w-3.5 h-3.5 shrink-0" />
+              <span>Quét mã đặt chỗ</span>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <p className="text-[11px] text-slate-400">{t('ticket.seatStatus') || 'Tình trạng chỗ'}</p>
               <p className="text-sm font-semibold text-amber-400">
                 {t('ticket.seatsLeft', { n: trip.availableSeats || trip.seatsNeeded || 3 })}
@@ -277,7 +328,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
         {/* Khối gợi ý tinh tế & Xem trước có thể thu gọn (Collapsible) */}
         <div className="pt-0.5 text-center space-y-2">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            💬 Tin nhắn đã soạn sẵn đầy đủ giờ giấc, lộ trình & link gửi Zalo.
+            💬 Thẻ thông tin bảo mật lộ trình & mã QR tra cứu an toàn.
           </p>
           <button
             type="button"

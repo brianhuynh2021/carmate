@@ -1,35 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  ShieldCheck,
-  BadgePercent,
-  MessageCircle,
   Sparkles,
   MapPin,
   Navigation,
   ArrowLeftRight,
   Search,
-  Car,
-  Zap,
   X,
-  Package,
-  ArrowRight
+  Package
 } from 'lucide-react';
+import { parseLocation, computeHotRoutes, DEFAULT_FALLBACK_ROUTES } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Chip from '../ui/Chip.jsx';
 import Button from '../ui/Button.jsx';
 import { POPULAR_HIGHWAYS } from './FilterBar.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 
-const POPULAR_ROTATING_ROUTES = [
-  { from: 'Lộc Ninh (Bình Phước)', to: 'Sài Gòn (BX Miền Đông)' },
-  { from: 'Sài Gòn', to: 'Phan Thiết (Mũi Né)' },
-  { from: 'Sài Gòn', to: 'Vũng Tàu' },
-  { from: 'Hà Nội', to: 'Hải Phòng' },
-  { from: 'Sài Gòn', to: 'Đà Lạt' },
-  { from: 'Bù Đốp', to: 'TP. Hồ Chí Minh' }
-];
-
 export default function Hero({
+  trips = [],
   searchKeyword = '',
   setSearchKeyword,
   searchFrom = '',
@@ -66,24 +53,23 @@ export default function Hero({
 
   const hasSearch = Boolean(searchKeyword || searchFrom || searchTo);
 
+  // Tuyến xoay vòng động theo dữ liệu chuyến xe thực tế đang mở
+  const rotatingRoutes = useMemo(() => {
+    return computeHotRoutes(trips);
+  }, [trips]);
+
   // Hiệu ứng gợi ý cặp tuyến HOT xoay vòng tự động mỗi 3.2s
   const [routeCycleIndex, setRouteCycleIndex] = useState(0);
 
   useEffect(() => {
+    if (rotatingRoutes.length <= 1) return;
     const timer = setInterval(() => {
-      setRouteCycleIndex((prev) => (prev + 1) % POPULAR_ROTATING_ROUTES.length);
+      setRouteCycleIndex((prev) => (prev + 1) % rotatingRoutes.length);
     }, 3200);
     return () => clearInterval(timer);
-  }, []);
+  }, [rotatingRoutes.length]);
 
-  const activeRouteHint = POPULAR_ROTATING_ROUTES[routeCycleIndex];
-
-  const pills = [
-    { icon: BadgePercent, label: '0% phí trung gian' },
-    { icon: Zap, label: 'Xe gia đình & Tiện chuyến' },
-    { icon: MessageCircle, label: 'Zalo 1 chạm kết nối' },
-    { icon: ShieldCheck, label: 'Xác minh SĐT thật' }
-  ];
+  const activeRouteHint = rotatingRoutes[routeCycleIndex % rotatingRoutes.length] || DEFAULT_FALLBACK_ROUTES[0];
 
   return (
     <section className="relative z-20 border-b border-slate-200/80 dark:border-slate-800 hero-canvas overflow-hidden">
@@ -107,60 +93,46 @@ export default function Hero({
         <div className="absolute top-1/2 -left-20 w-[300px] h-[300px] rounded-full bg-emerald-500/10 blur-[120px]" />
       </div>
 
-      <div className="relative max-w-[1120px] mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-10 lg:py-12 text-center space-y-2 sm:space-y-4">
-        {/* Eyebrow badge with live pulse Apple status dot */}
-        <div className="hidden sm:inline-flex items-center gap-2 h-7 pl-3 pr-3.5 rounded-full bg-white border border-black/[0.08] text-[12px] font-semibold text-[#1d1d1f] shadow-xs backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0 animate-pulse" />
-          <span className="tracking-tight">{t('hero.eyebrow')}</span>
-        </div>
-
+      <div className="relative max-w-[1120px] mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-10 text-center space-y-2.5 sm:space-y-3.5">
         {/* Title */}
-        <h1 className="font-display text-xl sm:text-3xl lg:text-[44px] lg:leading-[1.14] font-black text-[#1d1d1f] tracking-tight max-w-3xl mx-auto leading-tight">
+        <h1 className="font-display text-xl sm:text-3xl lg:text-[42px] lg:leading-[1.15] font-black text-[#1d1d1f] tracking-tight max-w-3xl mx-auto leading-tight">
           {t('hero.title')}
         </h1>
 
-        {/* Subtitle: Đầy đủ trên Desktop/Tablet, cô đọng 1 dòng trên Mobile chuẩn Native App */}
-        <p className="hidden sm:block text-[14.5px] sm:text-[15.5px] text-[#515154] leading-relaxed max-w-2xl mx-auto font-normal">
-          {t('hero.subtitle')}
-        </p>
-        <p className="sm:hidden text-xs text-[#6e6e73] font-medium">
-          Xe gia đình · 0% phí trung gian · Đón trả linh hoạt
-        </p>
+        {t('hero.subtitle') ? (
+          <p className="text-[13.5px] sm:text-[15px] text-[#515154] dark:text-slate-400 font-medium max-w-xl mx-auto tracking-tight">
+            {t('hero.subtitle')}
+          </p>
+        ) : null}
 
-        {/* Core Value Pillars - Single definitive statement on fee */}
-        <div className="hidden sm:flex items-center justify-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pt-0.5">
-          {pills.map((p) => (
-            <span
-              key={p.label}
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white border border-black/[0.08] text-[12px] font-medium text-[#515154] whitespace-nowrap shrink-0 shadow-xs backdrop-blur-sm"
-            >
-              <p.icon className="w-3.5 h-3.5 text-[#107c41]" strokeWidth={2.2} />
-              <span>{p.label}</span>
-            </span>
-          ))}
-        </div>
-
-        {/* Dynamic Route Suggester Capsule (Hiệu ứng 1: Gợi ý cặp tuyến HOT tự động) */}
-        <div className="pt-0.5 sm:pt-2 flex items-center justify-center">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs">
+        {/* Dynamic Route Suggester Capsule (Hiệu ứng: Gợi ý cặp tuyến HOT tự động) */}
+        <div className="pt-0.5 sm:pt-1 flex items-center justify-center">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs">
             <span className="flex items-center gap-1 text-[11px] font-bold text-[#1d1d1f] dark:text-white shrink-0">
               <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
-              <span className="hidden xs:inline">Gợi ý tuyến HOT:</span>
+              <span className="hidden xs:inline">Tuyến HOT:</span>
               <span className="xs:hidden">HOT:</span>
             </span>
             <div
-              key={routeCycleIndex}
-              className="anim-fade-in flex items-center gap-1 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] truncate max-w-[160px] xs:max-w-none"
+              key={`${routeCycleIndex}-${activeRouteHint.from}-${activeRouteHint.to}`}
+              className="anim-fade-in flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] truncate max-w-[160px] xs:max-w-none"
             >
               <span className="truncate">{activeRouteHint.from}</span>
               <ArrowLeftRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
               <span className="truncate">{activeRouteHint.to}</span>
+              {activeRouteHint.count > 0 && (
+                <span className="hidden sm:inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                  {activeRouteHint.count} xe
+                </span>
+              )}
             </div>
             <button
               type="button"
               onClick={() => {
                 setSearchFrom?.(activeRouteHint.from);
                 setSearchTo?.(activeRouteHint.to);
+                const el = document.getElementById('market-results');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
               title="Điền nhanh cặp tuyến này"
               className="ml-0.5 sm:ml-1 text-[10.5px] sm:text-[11px] font-bold text-[#0071e3] hover:text-[#0077ed] dark:text-[#2997ff] bg-[#0071e3]/10 hover:bg-[#0071e3]/20 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-0.5 shrink-0"
@@ -171,7 +143,7 @@ export default function Hero({
         </div>
 
         {/* ── APPLE / CURSOR COMMAND OMNIBAR ── */}
-        <div className="pt-1 sm:pt-2 max-w-4xl mx-auto w-full relative z-40">
+        <div className="pt-1 max-w-4xl mx-auto w-full relative z-40">
           <div className="p-2 sm:p-2.5 rounded-2xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(0,113,227,0.14)] focus-within:ring-2 focus-within:ring-[#0071e3]/30 focus-within:border-[#0071e3] transition-all text-left relative z-40">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 sm:gap-1.5">
               {/* Điểm xuất phát */}
@@ -181,15 +153,14 @@ export default function Hero({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 leading-none mb-0.5">
-                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-600">Xuất phát</span>
-                    <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Tỉnh / Bến xe</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Nơi đi</span>
                   </div>
                   <LocationSuggestInput
                     id="search-from-input"
                     variant="omnibar"
                     value={searchFrom}
                     onChange={setSearchFrom}
-                    placeholder={`Tỉnh thành, bến xe đi (VD: ${activeRouteHint.from}...)`}
+                    placeholder={`Đi từ đâu? (VD: ${activeRouteHint.from})`}
                   />
                 </div>
                 {searchFrom && (
@@ -222,15 +193,14 @@ export default function Hero({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 leading-none mb-0.5">
-                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-rose-500">Điểm đến</span>
-                    <span className="text-[10.5px] text-[#86868b] hidden xl:inline">· Tỉnh / Bến xe</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Nơi đến</span>
                   </div>
                   <LocationSuggestInput
                     id="search-to-input"
                     variant="omnibar"
                     value={searchTo}
                     onChange={setSearchTo}
-                    placeholder={`Tỉnh thành, bến xe đến (VD: ${activeRouteHint.to}...)`}
+                    placeholder={`Đến đâu? (VD: ${activeRouteHint.to})`}
                   />
                 </div>
                 {searchTo && (
@@ -281,27 +251,10 @@ export default function Hero({
             </div>
           </div>
 
-          {/* Mẹo Đi Chung Xe & Ghép Tuyến (Giáo dục mô hình tinh thần chuẩn Stanford HCI & BlaBlaCar) */}
-          <div className="hidden sm:flex pt-2 px-2 items-center justify-center">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.04] dark:border-white/[0.06] text-[11px] text-[#515154] dark:text-slate-400 max-w-2xl text-center leading-snug">
-              <span className="text-amber-500 font-bold shrink-0">💡 Mẹo ghép xe:</span>
-              <span>
-                Nên chọn <strong>Tỉnh thành, Bến xe hoặc Quận/Huyện</strong> để tìm thấy nhiều xe nhất. Chi tiết ngõ
-                ngách sẽ chốt linh hoạt cùng Chủ xe qua Zalo!
-              </span>
-            </div>
-          </div>
-
           {/* ── SINGLE-LINE HIGHWAY RAIL & SEPARATE PARCEL AMENITY FILTER ── */}
           <div className="pt-2 max-w-4xl mx-auto w-full relative z-20">
-            <div className="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1 px-1">
-              {/* Micro label */}
-              <div className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-[#86868b] uppercase tracking-wider pr-1">
-                <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
-                <span className="hidden sm:inline">Tuyến:</span>
-              </div>
-
-              {/* Route Pills (Non-wrapping single horizontal rail) */}
+            <div className="flex items-center justify-start sm:justify-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-3 sm:px-1">
+              {/* Route Pills (Non-wrapping single horizontal rail, tinh giản chuẩn Apple) */}
               <div className="flex items-center gap-1.5 shrink-0">
                 {POPULAR_HIGHWAYS.map((hw) => {
                   const isSelected =
@@ -310,7 +263,7 @@ export default function Hero({
                       : searchKeyword.toLowerCase().includes(hw.id.toLowerCase()) ||
                         searchFrom.toLowerCase().includes(hw.id.toLowerCase());
                   const label =
-                    hw.id === 'all' ? t('market.allRoutes') : lang === 'en' && hw.labelEn ? hw.labelEn : hw.label;
+                    hw.id === 'all' ? (t('market.allRoutes') || 'Tất cả') : lang === 'en' && hw.labelEn ? hw.labelEn : hw.label;
                   return (
                     <Chip
                       key={hw.id}
@@ -349,24 +302,8 @@ export default function Hero({
                   className={`w-3.5 h-3.5 ${isParcelActive ? 'text-amber-600' : 'text-[#86868b]'}`}
                   strokeWidth={2}
                 />
-                <span>Nhận gửi đồ kèm xe</span>
+                <span>Gửi đồ kèm xe</span>
                 {isParcelActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Dòng dẫn nhẹ nhàng dành riêng cho chủ xe - Apple Micro Pill Banner (Ẩn trên mobile vì BottomNavBar đã có nút Đăng chuyến) */}
-          <div className="hidden sm:flex pt-2.5 items-center justify-center relative z-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-[#1c1c1e]/90 border border-black/[0.06] dark:border-white/[0.06] text-xs text-[#515154] dark:text-slate-300 shadow-xs backdrop-blur-sm">
-              <Car className="w-3.5 h-3.5 text-[#0071e3] shrink-0" strokeWidth={2.2} />
-              <span>Bạn là chủ xe còn ghế trống?</span>
-              <button
-                type="button"
-                onClick={onPostClick}
-                className="font-semibold text-[#0071e3] hover:text-[#0077ed] inline-flex items-center gap-1 cursor-pointer group transition-colors"
-              >
-                <span>Đăng chuyến chia sẻ chi phí ngay</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>

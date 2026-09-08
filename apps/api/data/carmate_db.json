@@ -15,7 +15,7 @@
       "status": "active",
       "phoneReal": "0984883750",
       "userId": "USR-0984883750",
-      "publicName": "Nguyễn Thành Huỳnh",
+      "publicName": "Chủ xe CX-483",
       "from": "trung tâm hành chính Tân Khai, Hớn Quản, Bình Phước",
       "to": "Đường Cống Quỳnh (Quận 1)",
       "routeCategory": "Tuyến QL13",
@@ -24,7 +24,7 @@
       "waypointNote": "Tiện đón dọc Quốc Lộ 13 (Tân Khai ➔ Chơn Thành ➔ Thủ Dầu Một ➔ Sài Gòn)",
       "date": "Ngày mai",
       "timeSlot": "16:00-18:00",
-      "timeSlotLabel": "16:00 – 18:00 Chiều",
+      "timeSlotLabel": "16:00 – 18:00",
       "carType": "Mitsubishi Xpander (Xe 7 chỗ)",
       "capacity": 6,
       "availableSeats": 1,
@@ -77,16 +77,16 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Xe gia đình 7 chỗ êm ái, giờ giấc thoải mái, đón tận nơi tiện đường QL13.",
-      "createdAt": 1788749973872
+      "createdAt": 1788842529363
     },
     {
       "id": "DRV-0984-MORNING",
-      "maskedCode": "CX-BP108",
+      "maskedCode": "CX-108",
       "type": "driver_offer",
       "status": "active",
       "phoneReal": "0984883750",
       "userId": "USR-0984883750",
-      "publicName": "Nguyễn Thành Huỳnh",
+      "publicName": "Chủ xe CX-108",
       "from": "Bù Đốp (Cây xăng Petrolimex 17, QL13)",
       "to": "Sài Gòn (Ngã 4 Hàng Xanh / Quận 1)",
       "routeCategory": "Tuyến QL13",
@@ -147,16 +147,16 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Mình chở gia đình đi khám bệnh sáng sớm, còn trống 3 ghế rộng rãi.",
-      "createdAt": 1788757173872
+      "createdAt": 1788849729363
     },
     {
       "id": "DRV-0984-RETURN",
-      "maskedCode": "CX-SG109",
+      "maskedCode": "CX-109",
       "type": "driver_offer",
       "status": "active",
       "phoneReal": "0984883750",
       "userId": "USR-0984883750",
-      "publicName": "Nguyễn Thành Huỳnh",
+      "publicName": "Chủ xe CX-109",
       "from": "Sài Gòn (Quận 1 / Ngã 4 Hàng Xanh)",
       "to": "Bù Đốp (QL13, Bình Phước)",
       "routeCategory": "Tuyến QL13",
@@ -165,7 +165,7 @@
       "waypointNote": "Về lại Bù Đốp đón dọc QL13 từ Hàng Xanh, Bình Dương",
       "date": "Hôm nay",
       "timeSlot": "17:00-19:00",
-      "timeSlotLabel": "17:00 – 19:00 Chiều",
+      "timeSlotLabel": "17:00 – 19:00",
       "carType": "Mitsubishi Xpander (Xe 7 chỗ)",
       "capacity": 6,
       "availableSeats": 3,
@@ -216,16 +216,16 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến về chiều tối sau khi xong việc tại Sài Gòn. Ghế sau ngả lưng thoải mái.",
-      "createdAt": 1788760773872
+      "createdAt": 1788853329363
     },
     {
       "id": "DRV-0984-FULL",
-      "maskedCode": "CX-DX111",
+      "maskedCode": "CX-111",
       "type": "driver_offer",
       "status": "full",
       "phoneReal": "0984883750",
       "userId": "USR-0984883750",
-      "publicName": "Nguyễn Thành Huỳnh",
+      "publicName": "Chủ xe CX-111",
       "from": "Đồng Xoài (Vòng xoay ngã 4 Hùng Vương)",
       "to": "Sài Gòn (Bến xe Miền Đông mới / Thủ Đức)",
       "routeCategory": "Tuyến QL14",
@@ -273,16 +273,16 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến xe đã kín chỗ.",
-      "createdAt": 1788735573872
+      "createdAt": 1788828129363
     },
     {
       "id": "DRV-0984-PAST",
-      "maskedCode": "CX-CT110",
+      "maskedCode": "CX-110",
       "type": "driver_offer",
       "status": "completed",
       "phoneReal": "0984883750",
       "userId": "USR-0984883750",
-      "publicName": "Nguyễn Thành Huỳnh",
+      "publicName": "Chủ xe CX-110",
       "from": "Chợ Chơn Thành (Bình Phước)",
       "to": "Sân bay Tân Sơn Nhất (Ga Quốc Nội)",
       "routeCategory": "Tuyến QL13",
@@ -342,16 +342,16 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến đi đã hoàn thành an toàn tốt đẹp.",
-      "createdAt": 1788656373872
+      "createdAt": 1788748929363
     },
     {
       "id": "DRV-101",
-      "maskedCode": "CX-BP101",
+      "maskedCode": "CX-101",
       "type": "driver_offer",
       "status": "active",
       "phoneReal": "0900000019",
       "userId": "USR-0900000019",
-      "publicName": "Chủ xe Lộc Ninh #101",
+      "publicName": "Chủ xe CX-101",
       "from": "Bù Đốp (Cây xăng Petrolimex 17, QL13)",
       "to": "Sài Gòn (Ngã tư Hàng Xanh / BX Miền Đông mới)",
       "routeCategory": "Tuyến QL13",
@@ -359,7 +359,7 @@
       "hometown": "Bình Phước",
       "date": "Hôm nay",
       "timeSlot": "05:00-06:00",
-      "timeSlotLabel": "05:00 - 06:00 Sáng",
+      "timeSlotLabel": "05:00 – 06:00 Sáng",
       "carType": "Mitsubishi Xpander (Xe 7 chỗ)",
       "capacity": 6,
       "availableSeats": 3,
@@ -368,7 +368,7 @@
       "depositPerSeat": 0,
       "carCategory": "family_car",
       "isVip": true,
-      "rating": 4.95,
+      "rating": 5,
       "completedCount": 142,
       "perks": [
         "Không khói thuốc",
@@ -410,16 +410,16 @@
       "hasCarPhotos": true,
       "plateMask": "93A - ***.86",
       "notes": "Xe gia đình sạch sẽ, đón dọc QL13 tiện đường, không hút thuốc.",
-      "createdAt": 1788757173872
+      "createdAt": 1788849729363
     },
     {
       "id": "DRV-102",
-      "maskedCode": "CX-BP102",
+      "maskedCode": "CX-102",
       "type": "driver_offer",
       "status": "active",
       "phoneReal": "0900000013",
       "userId": "USR-0900000013",
-      "publicName": "Chủ xe Lộc Ninh #102",
+      "publicName": "Chủ xe CX-102",
       "from": "Lộc Ninh (Chợ Ninh Thịnh / Ngã 3 Lộc Tấn)",
       "to": "Sài Gòn (Quận Tân Bình / Sân bay TSN)",
       "routeCategory": "Tuyến QL13",
@@ -427,7 +427,7 @@
       "hometown": "Lộc Ninh",
       "date": "Ngày mai",
       "timeSlot": "07:00-08:00",
-      "timeSlotLabel": "07:00 - 08:00 Sáng",
+      "timeSlotLabel": "07:00 – 08:00 Sáng",
       "carType": "Toyota Veloz Cross (Xe 7 chỗ)",
       "capacity": 6,
       "availableSeats": 2,
@@ -479,16 +479,16 @@
       ],
       "plateMask": "93A - ***.52",
       "notes": "Đi công việc cơ quan, còn 2 ghế ngồi êm ái, xe không chở đồ tanh.",
-      "createdAt": 1788746373872
+      "createdAt": 1788838929363
     },
     {
       "id": "DRV-103",
-      "maskedCode": "CX-PT103",
+      "maskedCode": "CX-103",
       "type": "driver_offer",
       "status": "active",
       "phoneReal": "0900000017",
       "userId": "USR-0900000017",
-      "publicName": "Chủ xe Phan Thiết #103",
+      "publicName": "Chủ xe CX-103",
       "from": "Phan Thiết (Mũi Né / Trung tâm TP)",
       "to": "Sài Gòn (Quận 1 / Quận 2 - Cao tốc Dầu Giây)",
       "routeCategory": "Tuyến Phan Thiết",
@@ -496,7 +496,7 @@
       "hometown": "Bình Thuận",
       "date": "Hôm nay",
       "timeSlot": "08:00-09:00",
-      "timeSlotLabel": "08:00 - 09:00 Sáng",
+      "timeSlotLabel": "08:00 – 09:00 Sáng",
       "carType": "Toyota Fortuner (Xe 7 chỗ gầm cao)",
       "capacity": 6,
       "availableSeats": 3,
@@ -514,16 +514,16 @@
       ],
       "hasCarPhotos": false,
       "notes": "Chạy thẳng cao tốc Phan Thiết - Dầu Giây chỉ mất 2 tiếng rưỡi.",
-      "createdAt": 1788753573872
+      "createdAt": 1788846129363
     },
     {
       "id": "DRV-104",
-      "maskedCode": "CX-VT104",
+      "maskedCode": "CX-104",
       "type": "driver_offer",
       "status": "active",
       "phoneReal": "0900000012",
       "userId": "USR-0900000012",
-      "publicName": "Chủ xe Vũng Tàu #104",
+      "publicName": "Chủ xe CX-104",
       "from": "Bãi Trước Vũng Tàu (TP. Vũng Tàu)",
       "to": "Sài Gòn (Quận 7 / Phú Mỹ Hưng - Cao tốc Long Thành)",
       "routeCategory": "Tuyến Vũng Tàu",
@@ -531,7 +531,7 @@
       "hometown": "Bà Rịa - Vũng Tàu",
       "date": "Ngày mai",
       "timeSlot": "14:00-15:00",
-      "timeSlotLabel": "14:00 - 15:00 Chiều",
+      "timeSlotLabel": "14:00 – 15:00",
       "carType": "Kia Carnival (Xe 7 chỗ VIP)",
       "capacity": 6,
       "availableSeats": 4,
@@ -581,16 +581,16 @@
         }
       ],
       "notes": "Xe Carnival rộng rãi bậc nhất, phù hợp gia đình có người lớn tuổi hoặc trẻ em.",
-      "createdAt": 1788760773872
+      "createdAt": 1788853329363
     },
     {
       "id": "DRV-105",
-      "maskedCode": "CX-MT105",
+      "maskedCode": "CX-105",
       "type": "driver_offer",
       "status": "active",
       "phoneReal": "0900000011",
       "userId": "USR-0900000011",
-      "publicName": "Chủ xe Mỹ Tho #105",
+      "publicName": "Chủ xe CX-105",
       "from": "TP. Mỹ Tho (Tiền Giang)",
       "to": "Sài Gòn (Bến xe Miền Tây / Quận 5)",
       "routeCategory": "Tuyến Miền Tây",
@@ -598,7 +598,7 @@
       "hometown": "Tiền Giang",
       "date": "Hôm nay",
       "timeSlot": "06:30-07:30",
-      "timeSlotLabel": "06:30 - 07:30 Sáng",
+      "timeSlotLabel": "06:30 – 07:30 Sáng",
       "carType": "Hyundai Accent (Xe 5 chỗ)",
       "capacity": 4,
       "availableSeats": 2,
@@ -635,78 +635,78 @@
         }
       ],
       "notes": "Đi làm việc Sài Gòn mỗi tuần, xe nhỏ gọn sạch sẽ.",
-      "createdAt": 1788742773872
+      "createdAt": 1788835329363
     }
   ],
   "passengerRequests": [
     {
       "id": "REQ-201",
-      "maskedCode": "KH-SG201",
+      "maskedCode": "KX-201",
       "type": "passenger_request",
       "status": "open",
       "phoneReal": "0900000015",
       "userId": "USR-0900000015",
-      "publicName": "Chị Mai (Khách đi cùng)",
+      "publicName": "Khách KX-201",
       "from": "Chợ Lộc Ninh (Bình Phước)",
       "to": "Bệnh Viện Chợ Rẫy / Quận 5 (Sài Gòn)",
       "routeCategory": "Tuyến QL13",
       "direction": "province_to_sg",
       "date": "Ngày mai",
       "timeSlot": "05:00-07:00",
-      "timeSlotLabel": "05:00 - 07:00 Sáng",
+      "timeSlotLabel": "05:00 – 07:00 Sáng",
       "seatsNeeded": 2,
       "seats": 2,
       "price": 360000,
       "expectedPrice": 360000,
       "depositPerSeat": 0,
       "notes": "Hai mẹ con đi khám bệnh Chợ Rẫy, xin ngồi ghế trước hoặc hàng 2 chống say xe.",
-      "createdAt": 1788753573872
+      "createdAt": 1788846129363
     },
     {
       "id": "REQ-202",
-      "maskedCode": "KH-SG202",
+      "maskedCode": "KX-202",
       "type": "passenger_request",
       "status": "open",
       "phoneReal": "0900000016",
       "userId": "USR-0900000016",
-      "publicName": "Anh Nam (Khách tìm xe)",
+      "publicName": "Khách KX-202",
       "from": "Ngã 4 Thủ Đức (Sài Gòn)",
       "to": "Bình Long - Lộc Ninh (Bình Phước)",
       "routeCategory": "Tuyến QL13",
       "direction": "sg_to_province",
       "date": "Hôm nay",
       "timeSlot": "17:00-19:00",
-      "timeSlotLabel": "17:00 - 19:00 Chiều",
+      "timeSlotLabel": "17:00 – 19:00",
       "seatsNeeded": 1,
       "seats": 1,
       "price": 180000,
       "expectedPrice": 180000,
       "depositPerSeat": 0,
       "notes": "Tan sở về quê cuối tuần, có 1 ba lô gọn nhẹ.",
-      "createdAt": 1788757173872
+      "createdAt": 1788849729363
     },
     {
       "id": "REQ-203",
-      "maskedCode": "KH-VT203",
+      "maskedCode": "KX-203",
       "type": "passenger_request",
       "status": "open",
       "phoneReal": "0900000014",
       "userId": "USR-0900000014",
-      "publicName": "Gia đình Chị Hà",
+      "publicName": "Khách KX-203",
       "from": "Quận 7 / Phú Mỹ Hưng (Sài Gòn)",
       "to": "Bãi Sau - Vũng Tàu",
       "routeCategory": "Tuyến Vũng Tàu",
       "direction": "sg_to_province",
       "date": "Ngày mai",
       "timeSlot": "08:00-09:30",
-      "timeSlotLabel": "08:00 - 09:30 Sáng",
+      "timeSlotLabel": "08:00 – 09:30 Sáng",
       "seatsNeeded": 3,
       "seats": 3,
       "price": 450000,
       "expectedPrice": 450000,
       "depositPerSeat": 0,
       "notes": "Đi nghỉ mát gia đình 3 người, tìm xe 7 chỗ rộng rãi đón tại chung cư.",
-      "createdAt": 1788749973872
+      "createdAt": 1788842529363
     }
   ],
   "bookings": [
@@ -769,7 +769,7 @@
       "from": "Chợ Chơn Thành (Bình Phước)",
       "to": "Sân bay Tân Sơn Nhất",
       "timeSlot": "08:00-10:00",
-      "completedAt": "2026-09-06T04:59:33.872Z",
+      "completedAt": "2026-09-07T06:42:09.363Z",
       "feedback": {
         "rating": 5,
         "review": "Chủ xe lái xe rất êm ái, xe gia đình sạch sẽ, không mùi thuốc lá, tới sân bay kịp giờ check-in!"
@@ -791,7 +791,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-09-01T08:00:00.000Z",
-      "updatedAt": "2026-09-07T06:59:33.871Z",
+      "updatedAt": "2026-09-08T08:42:09.362Z",
       "email": "huynh.nguyen@carmate.vn"
     },
     {
@@ -807,7 +807,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-08-15T08:00:00.000Z",
-      "updatedAt": "2026-09-07T06:59:33.872Z"
+      "updatedAt": "2026-09-08T08:42:09.363Z"
     },
     {
       "id": "USR-0900000013",
@@ -822,7 +822,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-08-20T08:00:00.000Z",
-      "updatedAt": "2026-09-07T06:59:33.872Z"
+      "updatedAt": "2026-09-08T08:42:09.363Z"
     },
     {
       "id": "USR-0900000018",
@@ -837,7 +837,7 @@
       "isGplxVerified": 0,
       "isBanned": 0,
       "createdAt": "2026-09-02T08:00:00.000Z",
-      "updatedAt": "2026-09-07T06:59:33.872Z"
+      "updatedAt": "2026-09-08T08:42:09.363Z"
     }
   ]
 }

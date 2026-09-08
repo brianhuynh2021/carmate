@@ -13,12 +13,12 @@ import {
   MessageSquare,
   User
 } from 'lucide-react';
-import { formatVND } from '@carmate/shared';
+import { formatVND, maskLicensePlate } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
-export default function TrustProfileModal({ item, onClose, onBook }) {
+export default function TrustProfileModal({ item, isOwner = false, onClose, onBook }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('driver'); // 'driver' | 'passenger' | 'verify'
@@ -29,9 +29,13 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
   const name = item.publicName || item.maskedCode || 'Nguyễn Anh Tuấn';
   const hometown = item.hometown || 'Bình Phước';
   const carModel = item.carModel || item.car?.model || 'Mitsubishi Xpander (7 chỗ)';
-  const plate = item.licensePlateMasked || item.car?.plate || '93A-289.xx (Đã đối soát)';
+  const plate = maskLicensePlate(item.licensePlateMasked || item.car?.plate || item.plateMask, item.from || hometown);
   const karmaScore = item.karmaScore ?? item.trustScore ?? 75;
-  const rating = item.rating || 4.95;
+  const rawRating = Number(item.rating);
+  const ratingValue = Number.isFinite(rawRating) && rawRating > 0
+    ? Math.round(rawRating * 10) / 10
+    : 5.0;
+  const rating = ratingValue % 1 === 0 ? `${ratingValue}.0` : String(ratingValue);
   const driverTrips =
     item.driverStats?.tripsCompleted || (isCurrentDriver ? item.safeTripsCount || item.tripsCompleted || 48 : 24);
   const passengerTrips = item.passengerStats?.tripsCompleted || 14;
@@ -75,15 +79,21 @@ export default function TrustProfileModal({ item, onClose, onBook }) {
               Đóng
             </Button>
             {onBook && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  onClose();
-                  onBook(item);
-                }}
-              >
-                {isCurrentDriver ? 'Ghép chuyến với bạn này' : 'Nhận đón bạn này'}
-              </Button>
+              isOwner ? (
+                <span className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200">
+                  Hồ sơ của bạn
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    onClose();
+                    onBook(item);
+                  }}
+                >
+                  {isCurrentDriver ? 'Ghép chuyến với bạn này' : 'Nhận đón bạn này'}
+                </Button>
+              )
             )}
           </div>
         </div>

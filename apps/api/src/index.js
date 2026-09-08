@@ -82,6 +82,16 @@ if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);
 }
 
+// 0.1. Chuẩn hóa tên miền Canonical (Redirect 301 www.carmate.vn -> carmate.vn để khớp 100% với Telegram OAuth)
+app.use((req, res, next) => {
+  const host = req.headers.host || '';
+  if (host.startsWith('www.')) {
+    const cleanHost = host.replace(/^www\./, '');
+    return res.redirect(301, `https://${cleanHost}${req.originalUrl}`);
+  }
+  next();
+});
+
 // 1. Cấu hình An Ninh & Middleware
 app.use(securityHeadersMiddleware);
 

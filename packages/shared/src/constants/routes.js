@@ -1,3 +1,67 @@
+import { parseLocation } from '../utils/geo.js';
+
+export const DEFAULT_FALLBACK_ROUTES = [
+  { from: 'Lộc Ninh', to: 'Sài Gòn', count: 0 },
+  { from: 'Bù Đốp', to: 'TP. Hồ Chí Minh', count: 0 },
+  { from: 'Bình Long', to: 'Sài Gòn', count: 0 },
+  { from: 'Đồng Xoài', to: 'TP. Hồ Chí Minh', count: 0 },
+  { from: 'Phan Thiết', to: 'Sài Gòn', count: 0 },
+  { from: 'Vũng Tàu', to: 'Sài Gòn', count: 0 },
+  { from: 'Hà Nội', to: 'Hải Phòng', count: 0 },
+  { from: 'Sài Gòn', to: 'Đà Lạt', count: 0 }
+];
+
+/**
+ * Trích xuất động các cặp tuyến HOT nhất từ dữ liệu chuyến xe thực tế đang mở.
+ * Phân tích và nhóm theo cự ly / địa danh vĩ mô, sắp xếp theo số lượng xe nhiều nhất.
+ */
+export function computeHotRoutes(trips = []) {
+  if (!Array.isArray(trips) || trips.length === 0) {
+    return DEFAULT_FALLBACK_ROUTES;
+  }
+
+  const routeMap = new Map();
+
+  for (const t of trips) {
+    if (!t || !t.from || !t.to) continue;
+    const fromP = parseLocation(t.from);
+    const toP = parseLocation(t.to);
+    const fromMain = (fromP.main || t.from).split(/[(/]/)[0].trim();
+    const toMain = (toP.main || t.to).split(/[(/]/)[0].trim();
+    if (!fromMain || !toMain || fromMain.toLowerCase() === toMain.toLowerCase()) continue;
+
+    const pair = [fromMain, toMain].sort((a, b) => a.localeCompare(b, 'vi'));
+    const key = `${pair[0]}:::${pair[1]}`;
+
+    if (!routeMap.has(key)) {
+      routeMap.set(key, {
+        from: fromMain,
+        to: toMain,
+        count: 0
+      });
+    }
+    routeMap.get(key).count += 1;
+  }
+
+  const dynamicRoutes = Array.from(routeMap.values()).sort((a, b) => b.count - a.count);
+
+  if (dynamicRoutes.length >= 3) {
+    return dynamicRoutes.slice(0, 8);
+  }
+
+  const existing = new Set(dynamicRoutes.map((r) => `${r.from}:::${r.to}`));
+  const merged = [...dynamicRoutes];
+  for (const def of DEFAULT_FALLBACK_ROUTES) {
+    const k = `${def.from}:::${def.to}`;
+    if (!existing.has(k)) {
+      merged.push({ ...def });
+    }
+    if (merged.length >= 6) break;
+  }
+
+  return merged;
+}
+
 // BẢNG ĐỊNH MỨC CHI PHÍ XĂNG & CẦU ĐƯỜNG THỰC TẾ THEO QUY CHUẨN KỸ THUẬT
 // Cơ sở tính toán: Định mức tiêu hao nhiên liệu xe 5-7 chỗ (6.5L - 7.5L RON 95/100km) + Phí cầu đường / trạm thu phí
 export const ROUTE_BENCHMARKS = {

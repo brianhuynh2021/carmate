@@ -1,33 +1,34 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  Phone,
   Users,
   ShieldCheck,
   MapPin,
-  Building2,
-  Bus,
-  Milestone,
   Check,
   Sparkles,
-  Navigation,
-  Copy,
-  CheckCheck
+  MessageSquare,
+  Clock,
+  Search,
+  CheckCircle2,
+  Calendar,
+  Info,
+  Zap,
+  Bell,
+  ArrowRight,
+  Loader2,
+  SlidersHorizontal
 } from 'lucide-react';
 import {
   formatVND,
   calculatePricing,
   getTimeSlotLabel,
-  getZaloChatUrl,
-  cleanPhoneNumber,
-  getCorridorWaypoints
+  getCorridorWaypoints,
+  toPublicAlias
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
-import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import { searchLocations, getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
-import { generateSmartZaloDraft } from '../../utils/nlpTripParser.js';
 import api from '../../api/client.js';
 
 // Điểm đón mốc nổi tiếng dọc trục QL13 & liên tỉnh (Hotspot Chips 1 chạm kiểu Grab)
@@ -43,14 +44,25 @@ const POPULAR_HOTSPOTS = [
   'Cổng chào Bình Long'
 ];
 
-export default function EscrowBookingModal({ item, currentUser, onClose, onConfirmBooking, onViewTrustProfile }) {
+export default function EscrowBookingModal({
+  item,
+  isOwner = false,
+  currentUser,
+  onClose,
+  onConfirmBooking,
+  onViewTrustProfile,
+  onViewBookedTab,
+  onAutoPostDemand,
+  onShowToast
+}) {
   const { lang } = useI18n();
   const [seats, setSeats] = useState(1);
   const [pickupPoint, setPickupPoint] = useState('');
-  const [commitOnTime, setCommitOnTime] = useState(true);
+  const [passengerNote, setPassengerNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [unmaskedPhone, setUnmaskedPhone] = useState(item?.phoneReal || '');
-  const [copiedDraft, setCopiedDraft] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [postedDemand, setPostedDemand] = useState(false);
+  const [isPostingDemand, setIsPostingDemand] = useState(false);
 
   const [bookingCode] = useState(() => `CX-${Math.floor(1000 + Math.random() * 9000)}`);
 
@@ -82,7 +94,7 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
   // Gợi ý điểm đón dọc trục theo chuyến đi cụ thể (Corridor Waypoints + Hotspots)
   const routeHotspots = useMemo(() => {
     if (!item) return POPULAR_HOTSPOTS;
-    const fromNote = item.waypointNote ? item.waypointNote.split(/[,;\n]/).map(s => s.trim()).filter(Boolean) : [];
+    const fromNote = item.waypointNote ? item.waypointNote.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean) : [];
     const corridorFrom = getCorridorWaypoints(item.from || '') || [];
     const corridorTo = getCorridorWaypoints(item.to || '') || [];
     const suggested = getSuggestedWaypoints(item.from || '', item.to || '') || [];
@@ -90,162 +102,341 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
     return combined.slice(0, 10);
   }, [item?.from, item?.to, item?.waypointNote]);
 
+  // Cửa sổ phản hồi động (Dynamic SLA) dựa trên thời gian tới lúc khởi hành
+  const dynamicSlaText = useMemo(() => {
+    if (!item) return 'khoảng 30 – 45 phút';
+    const dateStr = String(item.date || '');
+    const isTomorrow = dateStr && !dateStr.toLowerCase().includes('hôm nay');
+    if (isTomorrow) {
+      return 'khoảng 2 – 3 tiếng (hoặc trước 21:00 tối nay)';
+    }
+    if (item.timeSlot && /gấp|ngay/i.test(item.timeSlot)) {
+      return 'khoảng 15 – 20 phút';
+    }
+    return 'khoảng 30 – 45 phút';
+  }, [item?.date, item?.timeSlot]);
+
   if (!item) return null;
 
   const isDriverItem = item.type === 'driver_offer';
   const maxSeats = item.availableSeats || item.seatsNeeded || 4;
   const pricing = calculatePricing(item, seats);
   const timeSlot = getTimeSlotLabel(item, lang);
-  const activePhone = unmaskedPhone || item.phoneReal || '';
-  const phoneClean = cleanPhoneNumber(activePhone);
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://carmate.vn';
-  const confirmUrl = `${origin}/#confirm-${bookingCode}`;
-
-  // Soạn sẵn tin nhắn Zalo chuẩn văn hóa Việt Nam kèm Magic Link 1 chạm cho Chủ xe
-  const zaloMessage = generateSmartZaloDraft({
-    driverName: item.publicName || 'anh/chị',
-    from: item.from,
-    to: item.to,
-    timeSlot,
-    date: item.date || 'Hôm nay',
-    seats,
-    price: Math.round(pricing.total / (seats || 1)),
-    pickupPoint: pickupPoint.trim(),
-    isParcel: false,
-    hasRelatives: Boolean(item.hasRelatives),
-    bookingCode,
-    confirmUrl
-  });
-
-  const handleCopyDraft = async () => {
-    try {
-      await navigator.clipboard.writeText(zaloMessage);
-      setCopiedDraft(true);
-      setTimeout(() => setCopiedDraft(false), 2000);
-    } catch {
-      // Bỏ qua nếu không truy cập được clipboard
+  const handleSendInquiry = async () => {
+    if (isOwner) {
+      onShowToast?.('Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.');
+      onClose();
+      return;
     }
-  };
-
-  const handleConfirmAndZalo = async () => {
-    if (!commitOnTime || submitting) return;
+    if (submitting) return;
     setSubmitting(true);
 
+    const bookingData = {
+      escrowId: bookingCode,
+      tripId: item.id,
+      targetTripId: item.id,
+      from: item.from,
+      to: item.to,
+      pickupPoint: pickupPoint.trim() || undefined,
+      passengerNote: passengerNote.trim() || undefined,
+      seats,
+      totalDeal: pricing.total,
+      timeSlot,
+      contactPhone: item.phoneReal,
+      status: 'inquiring',
+      commitmentType: 'inquiry_chat',
+      partyRole: isDriverItem ? 'Người đi cùng Chủ Xe' : 'Chủ xe đón Người đi cùng',
+      contactName: toPublicAlias(item),
+      createdAt: 'Vừa xong'
+    };
+
     try {
-      // Gọi API tạo booking để ghi nhận giao dịch và nhận SĐT thật từ DB
-      let realPhone = item.phoneReal || '';
-      let secureConfirmUrl = confirmUrl;
-      let secureBookingMessage = zaloMessage;
       try {
-        const res = await api.createBooking({
-          escrowId: bookingCode,
-          tripId: item.id,
-          targetTripId: item.id,
-          from: item.from,
-          to: item.to,
-          pickupPoint: pickupPoint.trim() || undefined,
-          seats,
-          totalDeal: pricing.total,
-          timeSlot,
-          contactPhone: item.phoneReal
-        });
-
-        if (res?.success && res.data) {
-          const fetchedPhone = res.data.contactPhone || res.data.driverPhone || res.data.phoneReal;
-          if (fetchedPhone) {
-            realPhone = fetchedPhone;
-            setUnmaskedPhone(fetchedPhone);
-          }
-          // Magic Link an toàn: kèm access token bí mật do server cấp để chống IDOR.
-          // Không có token này, chủ xe khác không thể mở/xác nhận nhầm chuyến.
-          if (res.data.accessToken) {
-            secureConfirmUrl = `${origin}/#confirm-${res.data.escrowId || bookingCode}~${res.data.accessToken}`;
-            secureBookingMessage = zaloMessage.replace(confirmUrl, secureConfirmUrl);
-          }
-        }
-      } catch (err) {
-        console.warn('Ghi nhận booking qua API:', err.message);
+        await api.createBooking(bookingData);
+      } catch (apiErr) {
+        console.warn('[Booking] Lỗi gọi API ghi nhận:', apiErr.message);
       }
 
-      // Thông báo cho component cha lưu state
-      onConfirmBooking?.({
-        escrowId: bookingCode,
-        targetItem: item,
-        commitmentType: 'zalo_direct',
-        partyRole: isDriverItem ? 'Người đi cùng Chủ Xe' : 'Chủ xe đón Người đi cùng',
-        contactName: item.publicName,
-        contactPhone: realPhone || item.phoneReal,
-        seats,
-        pickupPoint: pickupPoint.trim() || undefined,
-        depositAmount: 0,
-        fullTripAmount: pricing.total,
-        paidToEscrow: 0,
-        remainingCash: pricing.total,
-        totalDeal: pricing.total,
-        timeSlot,
-        from: item.from,
-        to: item.to,
-        status: 'zalo_active',
-        bothConfirmed: false,
-        createdAt: 'Vừa xong'
-      });
-
-      // Mở liên kết Zalo trực tiếp với số điện thoại thật (kèm Magic Link có token)
-      const targetPhoneForZalo = realPhone || item.phoneReal || '0984883750';
-      const zaloUrl = getZaloChatUrl(targetPhoneForZalo, secureBookingMessage);
-
-      // Lưu trạng thái Zalo Re-entry vào localStorage để khi khách quay lại web hiển thị Apple Action Sheet
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(
-          'carmate_pending_zalo_booking',
-          JSON.stringify({
-            escrowId: bookingCode,
-            tripId: item.id,
-            driverName: item.publicName || 'Chủ xe',
-            driverPhone: targetPhoneForZalo,
-            from: item.from,
-            to: item.to,
-            seats,
-            totalDeal: pricing.total,
-            timeSlot,
-            timestamp: Date.now()
-          })
-        );
-      }
-
-      window.open(zaloUrl, '_blank', 'noopener,noreferrer');
+      onConfirmBooking?.(bookingData, { keepModalOpen: true });
+      setIsSubmitted(true);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const footer = (
-    <div className="space-y-2.5 w-full">
+  const handleAutoPostDemand = async () => {
+    if (isPostingDemand || postedDemand) return;
+    setIsPostingDemand(true);
+    try {
+      const isDriver = !isDriverItem;
+      const newPostPayload = isDriver
+        ? {
+            id: `TRIP-DRV-${Date.now()}`,
+            type: 'driver_offer',
+            from: item.from,
+            to: item.to,
+            waypointNote: item.waypointNote || '',
+            date: item.date || 'Hôm nay',
+            timeSlot: item.timeSlot || '07:00-09:00',
+            availableSeats: 3,
+            basePricePerSeat: pricing.total / seats || 150000,
+            carType: 'Xe ô tô gia đình',
+            note: 'Chủ xe tiện chuyến đón khách cùng lộ trình',
+            publicName: currentUser?.name || 'Chủ xe',
+            phoneReal: currentUser?.phone || '',
+            createdAt: 'Vừa xong'
+          }
+        : {
+            id: `TRIP-REQ-${Date.now()}`,
+            type: 'passenger_request',
+            from: item.from,
+            to: item.to,
+            pickupPoint: pickupPoint.trim() || undefined,
+            date: item.date || 'Hôm nay',
+            timeSlot: item.timeSlot || '07:00-09:00',
+            seatsNeeded: seats,
+            expectedPrice: Math.round(pricing.total / seats),
+            note: passengerNote ? `Ghi chú: ${passengerNote}` : `Cần tìm xe tiện chuyến ${item.from} về ${item.to}`,
+            publicName: currentUser?.name || 'Người đi cùng',
+            phoneReal: currentUser?.phone || '',
+            createdAt: 'Vừa xong'
+          };
+
+      await onAutoPostDemand?.(newPostPayload);
+      setPostedDemand(true);
+      onShowToast?.(
+        isDriver
+          ? '🎉 Đã đưa chuyến xe trống lên Sàn! Các hành khách khác sẽ liên hệ bạn.'
+          : '🎉 Đã đưa nhu cầu tìm xe lên Sàn! Các chủ xe khác cùng tuyến sẽ thấy để đón bạn.'
+      );
+    } catch (err) {
+      console.warn('[AutoPost] Lỗi tự động đăng:', err);
+    } finally {
+      setIsPostingDemand(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // TRẠNG THÁI 2: ĐÃ GỬI LỜI NHẮN (THẺ TIẾP NHẬN YÊU CẦU & DYNAMIC SLA)
+  // -------------------------------------------------------------
+  if (isSubmitted) {
+    return (
+      <Modal
+        onClose={onClose}
+        size="md"
+        icon={CheckCircle2}
+        iconTone="success"
+        title={isDriverItem ? 'Đã gửi lời nhắn ghép chuyến!' : 'Đã gửi đề xuất đón khách!'}
+        subtitle={`Đã chuyển tới ${toPublicAlias(item)} · Thông báo tức thì qua App & Telegram`}
+        footer={
+          <div className="w-full space-y-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-primary-600 hover:bg-primary-700 active:scale-[0.99] text-white shadow-md shadow-primary-500/25 cursor-pointer transition-all flex items-center justify-center gap-2"
+            >
+              <Check className="w-4 h-4" strokeWidth={2.5} />
+              <span>Đã hiểu & Tiếp tục tìm chuyến</span>
+            </button>
+            <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
+              💡 Bạn có thể kiểm tra tiến độ phản hồi bất kỳ lúc nào tại mục <strong className="text-slate-600 dark:text-slate-300">Chuyến đã hẹn</strong> trên menu.
+            </p>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {/* Apple Live Activity Stepper — Tiến trình sống động */}
+          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/60 border border-black/[0.04] dark:border-white/[0.05]">
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="flex flex-col items-center gap-1">
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                  ✓
+                </span>
+                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã gửi tin</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold animate-pulse shadow-xs">
+                  ⚡
+                </span>
+                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Đã rung chuông</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-xs font-bold">
+                  ⏳
+                </span>
+                <span className="text-[11px] font-medium text-slate-500">Chờ phản hồi</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card tóm tắt yêu cầu vừa gửi */}
+          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs text-emerald-800 dark:text-emerald-300 font-bold uppercase tracking-wider">
+                  Yêu cầu kết nối #{bookingCode}
+                </p>
+                <p className="font-bold text-slate-900 dark:text-white text-base mt-0.5">
+                  {toPublicAlias(item)}
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 text-xs font-bold tabular">
+                {timeSlot}
+              </span>
+            </div>
+
+            <RouteTimeline from={item.from} to={item.to} compact />
+
+            <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/40 grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Điểm đón đề xuất:</span>
+                <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  {pickupPoint || 'Thỏa thuận tiện đường'}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-500 dark:text-slate-400">Chi phí dự kiến ({seats} người):</span>
+                <p className="font-bold text-emerald-700 dark:text-emerald-400 tabular">
+                  {formatVND(pricing.total)}
+                </p>
+              </div>
+            </div>
+
+            {passengerNote && (
+              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-emerald-200/60 text-xs text-slate-700 dark:text-slate-300">
+                <span className="font-semibold text-slate-900 dark:text-white">Lời nhắn gửi kèm: </span>
+                {passengerNote}
+              </div>
+            )}
+          </div>
+
+          {/* Trigger Siêu Tốc 1-Chạm (Two-Sided Matching Liquidity) */}
+          <div className="p-4 rounded-3xl bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-white dark:from-blue-950/40 dark:via-indigo-950/20 dark:to-slate-900 border border-blue-200/80 dark:border-blue-800/60 shadow-xs space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+                <Zap className="w-5 h-5 fill-current text-amber-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    {isDriverItem ? 'Tăng 95% cơ hội có xe: Đăng tìm xe' : 'Tăng lấp đầy xe: Đăng chuyến trống'}
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300/40">
+                    Khuyên dùng
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                  {isDriverItem
+                    ? `Tại sao chỉ đợi 1 xe? Đưa luôn nhu cầu đi ${item.from} ➔ ${item.to} lên Sàn để các chủ xe khác cùng tuyến cũng thấy và chủ động liên hệ đón bạn!`
+                    : `Bạn còn ghế trống? Đưa chuyến ${item.from} ➔ ${item.to} lên Sàn để các người tìm xe khác tiện đường đặt chỗ ngay!`}
+                </p>
+              </div>
+            </div>
+
+            {postedDemand ? (
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Đã đưa lên Bảng tin CarMate! Các đối tác khác cùng tuyến đang thấy bài của bạn.</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isPostingDemand}
+                onClick={handleAutoPostDemand}
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#0071e3] to-[#0055d4] hover:from-[#0077ed] hover:to-[#004bbd] active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75"
+              >
+                {isPostingDemand ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang đưa bài lên Sàn...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 fill-current text-amber-300" />
+                    <span>
+                      {isDriverItem
+                        ? 'Đăng nhu cầu tìm xe lên Bảng tin'
+                        : 'Đăng chuyến xe trống lên Bảng tin'}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Hộp thoại SLA phản hồi động & Closed-loop Alert */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 text-amber-900 dark:text-amber-200 space-y-1.5">
+            <div className="flex items-center justify-between gap-2 font-bold text-xs flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
+                <span>Thời gian phản hồi dự kiến: {dynamicSlaText}</span>
+              </span>
+              <span className="text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/60 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <Bell className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                Báo qua Telegram/App
+              </span>
+            </div>
+            <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+              Khi chủ xe bấm Xác nhận hoặc có tin nhắn mới, CarMate sẽ báo ngay về Telegram/App của bạn. Bạn yên tâm tắt ứng dụng để làm việc khác mà không lo lỡ chuyến!
+            </p>
+          </div>
+
+          <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span>Chỉ khi 2 bên cùng bấm Xác nhận, chuyến đi mới chính thức chốt ghế.</span>
+          </p>
+        </div>
+      </Modal>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // TRẠNG THÁI 1: FORM GỬI LỜI NHẮN HỎI GHÉP CHUYẾN
+  // -------------------------------------------------------------
+  const footer = isOwner ? (
+    <div className="space-y-2 w-full">
       <Button
         fullWidth
         size="lg"
-        disabled={!commitOnTime || submitting}
-        onClick={handleConfirmAndZalo}
-        className="bg-[#0068ff] hover:bg-[#0055d4] disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-sm font-semibold text-base py-3 cursor-pointer transition-all duration-150 active:scale-[0.99]"
+        onClick={() => {
+          onClose();
+          onViewBookedTab?.('my_trips');
+        }}
+        className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-base py-3.5 cursor-pointer transition-all duration-150 active:scale-[0.99]"
       >
-        <ZaloIcon className="w-5 h-5 mr-2" />
-        {submitting
-          ? 'Đang kết nối...'
-          : isDriverItem
-            ? 'Xác nhận cam kết & Nhắn Zalo chốt điểm đón'
-            : 'Xác nhận cam kết & Nhắn Zalo hẹn giờ'}
+        <SlidersHorizontal className="w-4 h-4 mr-2" />
+        <span>Quản lý bài đăng của bạn</span>
       </Button>
-
-      {phoneClean && (
-        <a
-          href={`tel:${phoneClean}`}
-          className="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
-        >
-          <Phone className="w-4 h-4 text-emerald-600" />
-          <span>Gọi trực tiếp {activePhone}</span>
-        </a>
-      )}
+    </div>
+  ) : (
+    <div className="space-y-2 w-full">
+      <Button
+        fullWidth
+        size="lg"
+        disabled={submitting}
+        onClick={handleSendInquiry}
+        className="relative overflow-hidden bg-gradient-to-r from-primary-600 via-blue-600 to-primary-700 hover:from-primary-700 hover:to-blue-800 text-white shadow-md shadow-primary-500/25 font-bold text-base py-3.5 cursor-pointer transition-all duration-150 active:scale-[0.99] group"
+      >
+        <span className="relative z-10 flex items-center justify-center gap-2">
+          {submitting ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Đang gửi yêu cầu...</span>
+            </>
+          ) : (
+            <>
+              <Zap className="w-5 h-5 text-amber-300 animate-pulse fill-amber-300" />
+              <span>{isDriverItem ? 'Gửi yêu cầu ghép ngay' : 'Gửi đề xuất đón ngay'}</span>
+            </>
+          )}
+        </span>
+      </Button>
+      <p className="text-center text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5 pt-0.5">
+        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+        <span>0đ cọc · Rung chuông {isDriverItem ? 'Chủ xe' : 'Người tìm xe'} tức thì qua App & Telegram · Thoải mái đổi ý</span>
+      </p>
     </div>
   );
 
@@ -253,18 +444,26 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
     <Modal
       onClose={onClose}
       size="md"
-      icon={ZaloIcon}
-      iconTone="brand"
-      title={isDriverItem ? 'Ghép chuyến & Nhắn Zalo' : 'Nhận đón & Nhắn Zalo'}
-      subtitle="0% phí sàn · Không thu cọc · Kết nối Zalo · Giữ chỗ 15 phút"
+      icon={MessageSquare}
+      iconTone="primary"
+      title={isOwner ? 'Bài đăng chuyến đi của bạn' : (isDriverItem ? 'Hỏi ghép chuyến cùng Chủ xe' : 'Đề xuất đón Người tìm xe')}
+      subtitle={isOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : '0% phí sàn · Trao đổi điểm đón & hành lý trước khi chốt'}
       footer={footer}
     >
       <div className="space-y-4">
+        {/* Cảnh báo nếu mở nhầm chuyến của chính mình */}
+        {isOwner && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-center gap-2">
+            <Info className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.</span>
+          </div>
+        )}
+
         {/* Tóm tắt chuyến đi */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div>
-              <p className="font-bold text-slate-900 text-base leading-tight">{item.publicName}</p>
+              <p className="font-bold text-slate-900 text-base leading-tight">{toPublicAlias(item)}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-slate-500 font-medium">{item.carType || 'Xe ô tô gia đình'}</span>
                 {onViewTrustProfile && (
@@ -313,18 +512,18 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
           </div>
         )}
 
-        {/* Điểm đón mong muốn cụ thể với Hotspots & Dropdown Autocomplete kiểu Grab */}
+        {/* Điểm đón mong muốn cụ thể với Hotspots & Dropdown Autocomplete */}
         <div ref={dropdownRef} className="relative p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-              Điểm bạn muốn được đón dọc đường (tùy chọn):
+              Điểm hẹn đón mong muốn:
             </label>
             {pickupPoint && (
               <button
                 type="button"
                 onClick={() => setPickupPoint('')}
-                className="text-[11px] text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
+                className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 Xóa
               </button>
@@ -335,17 +534,16 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
             <input
               type="text"
               value={pickupPoint}
-              onFocus={() => setShowSuggestions(true)}
               onChange={(e) => {
                 setPickupPoint(e.target.value);
                 setShowSuggestions(true);
               }}
-              placeholder="VD: Cầu vượt Mai Dịch, Ngã 4 Hàng Xanh, Cây xăng..."
-              className="w-full h-10 px-3 pr-8 rounded-lg text-xs bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+              onFocus={() => setShowSuggestions(true)}
+              placeholder="VD: Cổng KCN VSIP 1, Cây xăng Petrolimex..."
+              className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
-            <Navigation className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
 
-            {/* Dropdown gợi ý địa điểm chuẩn kiểu Grab */}
+            {/* Dropdown gợi ý */}
             {showSuggestions && suggestions.length > 0 && (
               <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden py-1 max-h-48 overflow-y-auto anim-fade-in">
                 {suggestions.map((s, idx) => (
@@ -397,75 +595,92 @@ export default function EscrowBookingModal({ item, currentUser, onClose, onConfi
           </div>
         </div>
 
-        {/* Chi phí chia sẻ minh bạch - 0% phí sàn, KHÔNG THU CỌC */}
-        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden text-sm">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-            <span className="text-slate-600">Chi phí chia sẻ ({seats} người)</span>
-            <span className="font-bold text-slate-900 tabular text-base">{formatVND(pricing.total)}</span>
+        {/* Ghi chú thêm cho Chủ xe (Hành lý / Yêu cầu riêng) */}
+        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5 text-primary-600" />
+              Lời nhắn gửi {isDriverItem ? 'Chủ xe' : 'Người tìm xe'} (Hành lý / Thời gian):
+            </label>
+            {passengerNote && (
+              <button
+                type="button"
+                onClick={() => setPassengerNote('')}
+                className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                Xóa
+              </button>
+            )}
           </div>
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-emerald-50/50">
-            <span className="text-emerald-700 font-medium inline-flex items-center gap-1.5 text-xs">
-              <ShieldCheck className="w-4 h-4" />
-              Phí nền tảng CarMate
-            </span>
-            <span className="font-bold text-emerald-700 text-xs">0đ (Miễn phí 100%)</span>
-          </div>
-          <div className="px-4 py-3 bg-slate-50 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-800">Thanh toán khi lên xe</p>
-              <p className="text-[11px] text-slate-500">Trọn gói xăng & cầu đường · Không thu cọc</p>
-            </div>
-            <p className="font-display font-extrabold text-lg text-primary-700 tabular">{formatVND(pricing.total)}</p>
-          </div>
-        </div>
 
-        {/* Bản nháp tin nhắn Zalo tương tác (Cursor Preview & 1-Click Copy) */}
-        <div className="p-3.5 rounded-2xl bg-slate-900 text-slate-100 border border-slate-800 space-y-2 relative overflow-hidden shadow-inner">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-slate-300 inline-flex items-center gap-1.5">
-              <ZaloIcon className="w-3.5 h-3.5" />
-              Nội dung gửi qua Zalo:
-            </span>
-            <button
-              type="button"
-              onClick={handleCopyDraft}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white border border-white/10 inline-flex items-center gap-1 transition-all cursor-pointer active:scale-95"
-            >
-              {copiedDraft ? (
-                <>
-                  <CheckCheck className="w-3 h-3 text-emerald-400" />
-                  <span className="text-emerald-400 font-semibold">Đã chép</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3 text-slate-400" />
-                  <span>Sao chép</span>
-                </>
-              )}
-            </button>
+          {/* Quick Note Chips (1-chạm) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {[
+              '🧳 1 Vali nhỏ size 20',
+              '🎒 Ba lô gọn nhẹ',
+              '⏰ Đúng giờ 100%',
+              '📍 Tiện đường là đón được'
+            ].map((chip) => {
+              const isSelected = passengerNote.includes(chip);
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    if (isSelected) {
+                      setPassengerNote((prev) =>
+                        prev
+                          .replace(chip, '')
+                          .replace(/^,\s*|,\s*$/g, '')
+                          .replace(/,\s*,/g, ',')
+                          .trim()
+                      );
+                    } else {
+                      setPassengerNote((prev) =>
+                        prev ? `${prev}, ${chip}` : chip
+                      );
+                    }
+                  }}
+                  className={`shrink-0 text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary-50 text-primary-700 border-primary-300 font-bold shadow-2xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100/60'
+                  }`}
+                >
+                  {isSelected && <Check className="w-3 h-3 inline mr-1 text-primary-600 stroke-[3]" />}
+                  {chip}
+                </button>
+              );
+            })}
           </div>
-          <div className="p-2.5 rounded-xl bg-black/40 border border-slate-800 text-[11px] leading-relaxed text-slate-300 font-sans whitespace-pre-line select-all">
-            {zaloMessage}
-          </div>
-          <p className="text-[10px] text-slate-400 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-            <span>Tin nhắn tự động cập nhật theo điểm đón và số ghế bạn chọn.</span>
-          </p>
-        </div>
 
-        {/* Khối Cam Kết Văn Minh & Chống Bùng Kèo */}
-        <label className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={commitOnTime}
-            onChange={(e) => setCommitOnTime(e.target.checked)}
-            className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 shrink-0"
+          <textarea
+            rows={2}
+            value={passengerNote}
+            onChange={(e) => setPassengerNote(e.target.value)}
+            placeholder="VD: Em có 1 vali nhỏ size 20, đứng chờ trước cây xăng Petrolimex..."
+            className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
           />
-          <span className="text-xs text-amber-900 leading-relaxed font-medium">
-            <strong className="font-bold">Cam kết đi xe văn minh:</strong> Tôi cam kết có mặt đúng giờ tại điểm đón. Nếu
-            có việc bận đột xuất, tôi sẽ chủ động gọi điện hoặc nhắn Zalo trước ít nhất 1 giờ để chủ xe sắp xếp ghế.
-          </span>
-        </label>
+        </div>
+
+        {/* Chi phí chia sẻ minh bạch - 0% phí sàn, KHÔNG THU CỌC */}
+        <div className="p-3.5 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white flex items-center justify-between shadow-2xs">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-900">Chi phí chia sẻ ({seats} người)</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                0% phí sàn
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">Trọn gói xăng & cầu đường · Thanh toán khi lên xe</p>
+          </div>
+          <div className="text-right">
+            <p className="font-display font-black text-xl text-primary-700 tabular leading-none">
+              {formatVND(pricing.total)}
+            </p>
+            <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
+          </div>
+        </div>
       </div>
     </Modal>
   );

@@ -1,7 +1,7 @@
 export default {
   common: {
     brand: 'CarMate',
-    tagline: 'Đi chung xe & Ghép xe tiện chuyến liên tỉnh',
+    tagline: 'Đi chung - tiện chuyến - sẻ chia',
     search: 'Tìm kiếm',
     filters: 'Bộ lọc',
     clear: 'Xoá',
@@ -100,9 +100,8 @@ export default {
 
   hero: {
     eyebrow: 'Bảng tin kết nối chuyến đi trực tiếp toàn quốc',
-    title: 'Đi chung xe & Ghép xe tiện chuyến liên tỉnh',
-    subtitle:
-      'Kết nối trực tiếp xe còn ghế trống với người đi cùng hành trình — Chia sẻ công bằng chi phí xăng xe và cầu đường, liên hệ thẳng không qua trung gian.',
+    title: 'Đi chung - tiện chuyến - sẻ chia',
+    subtitle: '',
     findTripCta: 'Tìm chuyến ngay',
     postTripCta: 'Đăng chuyến chia sẻ chi phí',
     stat_members: 'thành viên xác minh',
@@ -375,10 +374,10 @@ export default {
   },
 
   ticket: {
-    title: 'Chia sẻ chuyến đi',
-    subtitle: 'Gửi vào Zalo hoặc Facebook để tìm bạn đồng hành cùng tuyến',
+    title: 'Thẻ thông tin chuyến đi',
+    subtitle: 'Lưu thẻ thông tin hành trình bảo mật hoặc chia sẻ liên kết',
     stamp: 'CarMate xác thực',
-    brandLine: 'Vé đi chung xe',
+    brandLine: 'Thẻ đi chung xe gia đình',
     brandSub: 'Xe gia đình · Tiết kiệm đến 50%',
     pickup: 'Điểm đón',
     dropoff: 'Điểm đến',
@@ -388,8 +387,18 @@ export default {
     seatsLeft: 'Còn {n} ghế',
     textLabel: 'Nội dung sẵn để dán',
     copyBtn: 'Sao chép bài đăng',
-    openFacebook: 'Đăng Facebook',
-    openZalo: 'Mở Zalo',
+    copyImage: 'Sao chép ảnh thẻ',
+    copyImageDone: 'Đã sao chép ảnh thẻ!',
+    copyingImage: 'Đang tạo ảnh thẻ...',
+    shareNow: 'Chia sẻ ngay',
+    sharing: 'Đang mở chia sẻ...',
+    downloadStory: 'Tải Story',
+    downloadCard: 'Tải thẻ thông tin 4:5',
+    copyText: 'Chép lời nhắn',
+    chatZaloOwner: 'Nhắn Zalo Chủ xe',
+    chatZaloPax: 'Nhắn Zalo Người tìm xe',
+    zaloGroup: 'Nhóm Zalo Tiện Chuyến',
+    zaloShareCopied: 'Đã sao chép thẻ thông tin! Hãy chọn bạn bè hoặc nhóm để gửi.',
     openWhatsApp: 'Gửi WhatsApp',
     openTelegram: 'Gửi Telegram'
   },
@@ -454,13 +463,13 @@ export default {
   },
 
   toast: {
-    postSuccess: 'Đăng chuyến thành công. Thẻ vé đã sẵn sàng để chia sẻ.',
-    bookSuccess: 'Kết nối thành công. Mã {id}. Đã mở SĐT & Zalo liên hệ trực tiếp.',
+    postSuccess: 'Đăng chuyến thành công! Chuyến xe đã sẵn sàng trên bảng tin.',
+    bookSuccess: 'Đã gửi yêu cầu ghép chuyến thành công! Đang chờ Chủ xe phản hồi.',
     cancelLate: 'Đã huỷ chuyến sát giờ. Cọc 50k được chuyển bồi thường cho đối tác.',
     cancelEarly: 'Đã huỷ chuyến trước 8 giờ. Hoàn 100% tiền cọc.',
     delaySent: 'Đã gửi thông báo trễ +{n} phút đến đối phương.',
     completed: 'Chuyến đi hoàn tất. Cảm ơn bạn đã đi chung văn minh.',
-    ticketCopied: 'Đã sao chép nội dung vé. Dán vào nhóm Zalo hoặc Facebook.',
+    ticketCopied: 'Đã sao chép nội dung thẻ thông tin chuyến đi.',
     passportCopied: 'Đã sao chép thẻ tín nhiệm. Dán vào Zalo khi liên hệ.'
   },
 
