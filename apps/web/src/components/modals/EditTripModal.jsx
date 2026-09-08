@@ -13,7 +13,11 @@ import {
   Navigation,
   Plus,
   Check,
-  CornerDownLeft
+  CornerDownLeft,
+  Lock,
+  Unlock,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot, VEHICLE_SEAT_CONFIGS } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -21,10 +25,13 @@ import Button from '../ui/Button.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
 
-export default function EditTripModal({ trip, onClose, onSave }) {
+export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, onDelete }) {
   // Hook phải gọi trước mọi early return (Rules of Hooks)
 
   const isDriver = trip?.type === 'driver_offer';
+  const [currentStatus, setCurrentStatus] = useState(trip?.status || 'active');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [fromLocation, setFromLocation] = useState(trip?.from || '');
   const [toLocation, setToLocation] = useState(trip?.to || '');
   const [price, setPrice] = useState(trip?.basePricePerSeat || trip?.expectedPrice || 150000);
@@ -43,6 +50,29 @@ export default function EditTripModal({ trip, onClose, onSave }) {
   const [waypointNote, setWaypointNote] = useState(trip?.waypointNote || '');
   const [notes, setNotes] = useState(trip?.notes || '');
   const [saving, setSaving] = useState(false);
+
+  // Chuyển đổi nhanh trạng thái nhận khách / đóng chỗ
+  const handleToggleCurrentStatus = async () => {
+    const newStatus = currentStatus === 'full' ? 'active' : 'full';
+    setCurrentStatus(newStatus);
+    if (onToggleStatus) {
+      await onToggleStatus(trip.id, newStatus);
+    }
+  };
+
+  // Thực thi xoá chuyến an toàn
+  const handleExecuteDelete = async () => {
+    if (!onDelete || deleting) return;
+    setDeleting(true);
+    try {
+      await onDelete(trip.id);
+      onClose();
+    } catch (err) {
+      console.error('Lỗi xoá chuyến đi:', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Đảo chiều điểm đi / điểm đến ⇄
   const handleSwapRoute = () => {
@@ -136,31 +166,103 @@ export default function EditTripModal({ trip, onClose, onSave }) {
       iconTone="brand"
       title={`Chỉnh Sửa Bài Đăng (${trip.maskedCode})`}
       subtitle={
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300">
             {isDriver ? 'Chủ xe' : 'Hành khách'}
           </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Cập nhật lộ trình, mốc đón trả & giá vé</span>
+          {onToggleStatus && (
+            <button
+              type="button"
+              onClick={handleToggleCurrentStatus}
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                currentStatus === 'full'
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-slate-100 hover:text-slate-700'
+              }`}
+              title={currentStatus === 'full' ? 'Bấm để mở lại nhận khách' : 'Bấm để tạm khóa (đã đủ người)'}
+            >
+              {currentStatus === 'full' ? (
+                <>
+                  <Lock className="w-3 h-3 text-slate-500" />
+                  <span>Đã đủ người (Bấm mở lại)</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Đang nhận khách (Bấm để khóa)</span>
+                </>
+              )}
+            </button>
+          )}
+          <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+            · Cập nhật lộ trình, mốc đón trả & giá vé
+          </span>
         </div>
       }
       footer={
-        <div className="flex items-center justify-end gap-2 w-full">
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={saving}>
-            Đóng
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSubmit}
-            disabled={saving}
-            className="px-5 font-bold shadow-md shadow-primary-600/20"
-          >
-            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </Button>
+        <div className="flex items-center justify-between gap-2 w-full">
+          {onDelete && !confirmDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              disabled={saving || deleting}
+              className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold px-2.5 py-1.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              title="Xoá bài đăng chuyến này"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Xóa chuyến</span>
+            </button>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={onClose} disabled={saving || deleting}>
+              Đóng
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSubmit}
+              disabled={saving || deleting}
+              className="px-5 font-bold shadow-md shadow-primary-600/20"
+            >
+              {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </Button>
+          </div>
         </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-left">
+        {/* ── BANNER XÁC NHẬN XOÁ BÀI ĐĂNG (ZERO BLOCKING MODAL) ── */}
+        {confirmDelete && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 space-y-2.5">
+            <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold text-xs">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Xác nhận xoá bài đăng chuyến này?</span>
+            </div>
+            <p className="text-[11.5px] text-rose-600 dark:text-rose-400 leading-relaxed">
+              Bài đăng sẽ được gỡ khỏi danh sách tìm kiếm trên toàn hệ thống và không thể hoàn tác.
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                Giữ lại chuyến
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={deleting}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{deleting ? 'Đang xoá...' : 'Xác nhận xoá vĩnh viễn'}</span>
+              </button>
+            </div>
+          </div>
+        )}
         {/* ── 1. LỘ TRÌNH ĐIỀU CHỈNH ĐƯỢC + GỢI Ý ĐỊA ĐIỂM ── */}
         <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-[#151c2e]/60 border border-slate-200/80 dark:border-white/[0.08] space-y-3">
           <div className="flex items-center justify-between">
