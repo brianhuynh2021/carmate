@@ -6,7 +6,7 @@ CarMate tuân thủ triệt để 4 trụ cột triết lý kỹ thuật và thi
 
 - Mọi trạng thái hệ thống phải thỏa mãn điều kiện bất biến (Invariants). State machine không bao giờ được rơi vào trạng thái lấp lửng hay mâu thuẫn (VD: xe 5 chỗ không bao giờ vượt quá 4 ghế khách, 7 chỗ không quá 6 ghế).
 - Idempotent: Các thao tác cập nhật, huỷ, xoá đều có thể gọi lặp lại an toàn mà không làm hỏng dữ liệu.
-- Định giá phụ xăng dựa trên công thức toán học cự ly Geodesic Haversine × 1.28 và dữ liệu trạm thu phí BOT chính xác, cục bộ 100%, không phụ thuộc vào LLM ảo giác.
+- Định giá phụ xăng dựa trên công thức toán học cự ly Geodesic Haversine × 1.28 và dữ liệu trạm thu phí cầu đường chính xác, cục bộ 100%, không phụ thuộc vào LLM ảo giác.
 
 ## 2. Tư duy Stanford (Stanford Ergonomics - Công thái học & Tải nhận thức = 0)
 

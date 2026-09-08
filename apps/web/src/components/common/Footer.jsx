@@ -31,7 +31,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
     },
     {
       key: 'benchmark',
-      label: lang === 'en' ? 'Fuel & Toll Benchmark' : 'Bảng định mức xăng & BOT',
+      label: lang === 'en' ? 'Fuel & Toll Benchmark' : 'Bảng định mức xăng & cầu đường',
       action: () => onNavigate?.('benchmark')
     }
   ];

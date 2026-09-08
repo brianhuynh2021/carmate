@@ -24,6 +24,7 @@ import { GoogleIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import api from '../../api/client.js';
 import { useTranslation } from '../../i18n/index.jsx';
 import { computeTrustScore, getTrustLevel, DEFAULT_TRUST_RULES } from '@carmate/shared';
+import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 
 // Danh sách hãng xe phổ biến tại Việt Nam
 const POPULAR_BRANDS = [
@@ -220,15 +221,20 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     }
 
     try {
-      const compressedWebP = await compressImageToWebP(file);
+      const slotType = index === 0 ? 'front' : index === 3 ? 'back' : 'other';
+      const result = await processCarPhotoUpload(file, slotType);
       setPhotos((prev) => {
         const next = [...prev];
-        next[index] = compressedWebP;
+        next[index] = result.maskedUrl;
         return next;
       });
-      onShowToast?.(`Đã tải ảnh ${PHOTO_SLOTS[index].label} thành công!`);
+      if (result.isMasked) {
+        onShowToast?.(`🔒 Đã tải và tự động che biển số ảnh ${PHOTO_SLOTS[index].label}!`);
+      } else {
+        onShowToast?.(`Đã tải ảnh ${PHOTO_SLOTS[index].label} thành công!`);
+      }
     } catch (err) {
-      console.warn('[ProfileModal] Lỗi nén ảnh:', err);
+      console.warn('[ProfileModal] Lỗi nén/che ảnh:', err);
       onShowToast?.('Không thể tải ảnh, vui lòng thử lại');
     }
   };

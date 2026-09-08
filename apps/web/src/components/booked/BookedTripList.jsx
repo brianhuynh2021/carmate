@@ -77,7 +77,7 @@ function TripProgressStepper({ status, delayedMinutes }) {
     {
       id: 1,
       label: 'Khớp xe tiện đường',
-      desc: 'Chi phí xăng & phí BOT',
+      desc: 'Chi phí xăng & phí cầu đường',
       state: 'completed'
     },
     {

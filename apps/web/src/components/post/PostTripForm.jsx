@@ -19,8 +19,11 @@ import {
   Trash2,
   ShieldCheck,
   Eye,
+  Crosshair,
   Image as ImageIcon
 } from 'lucide-react';
+import { processCarPhotoUpload } from '../../utils/plateMasker.js';
+import PlateMaskModal from '../modals/PlateMaskModal.jsx';
 import {
   ROUTE_BENCHMARKS,
   TIME_SLOTS,
@@ -282,6 +285,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
 
   // Ảnh thực tế xe (Tùy chọn - Tối thiểu 3 hình, tối đa 5 hình)
   const [carPhotos, setCarPhotos] = useState([]);
+  const [editingMaskIndex, setEditingMaskIndex] = useState(null);
 
   // Trí nhớ thói quen cá nhân hóa (Local Persona Memory - Zero LLM)
   const savedCarProfile = useMemo(() => getLastUsedCarProfile(), []);
@@ -439,45 +443,32 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     }
   };
 
-  const handlePhotoUpload = (slotIndex, file, slotDef) => {
+  const handlePhotoUpload = async (slotIndex, file, slotDef) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxDim = 900;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-
-        setCarPhotos((prev) => {
-          const next = [...prev];
-          next[slotIndex] = {
-            angle: slotDef.id,
-            label: slotDef.label,
-            url: dataUrl,
-            caption: slotDef.desc
-          };
-          return next;
-        });
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const result = await processCarPhotoUpload(file, slotDef.id);
+      setCarPhotos((prev) => {
+        const next = [...prev];
+        next[slotIndex] = {
+          angle: slotDef.id,
+          label: slotDef.label,
+          url: result.maskedUrl,
+          originalUrl: result.originalUrl,
+          isMasked: result.isMasked,
+          maskPos: result.maskPos,
+          caption: slotDef.desc
+        };
+        return next;
+      });
+      if (result.isMasked) {
+        onShowToast?.('🔒 Đã tự động che biển số bảo mật trên ảnh xe!');
+      } else {
+        onShowToast?.('Đã tải ảnh xe thành công!');
+      }
+    } catch (err) {
+      console.warn('[PostTripForm] Lỗi tải/che ảnh xe:', err);
+      onShowToast?.('⚠️ Không thể tải ảnh, vui lòng thử lại');
+    }
   };
 
   const handleRemovePhoto = (slotIndex) => {
@@ -1205,13 +1196,35 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                           <img
                             src={currentPhoto.url || currentPhoto}
                             alt={slot.label}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            onClick={() => setEditingMaskIndex(index)}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 cursor-pointer"
+                            title="Chạm để xem hoặc đổi vị trí che biển số"
                           />
                           {/* Masked plate badge */}
-                          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-[9px] font-mono font-bold text-white flex items-center gap-1">
+                          <div
+                            onClick={() => setEditingMaskIndex(index)}
+                            className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md backdrop-blur-xs text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-transform hover:scale-105 ${
+                              currentPhoto.isMasked !== false
+                                ? 'bg-black/75 text-white'
+                                : 'bg-slate-700/80 text-slate-300'
+                            }`}
+                            title="Chạm để chỉnh vị trí che"
+                          >
                             <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
-                            <span>93A - xxxxx</span>
+                            <span>{currentPhoto.isMasked !== false ? 'Đã che biển' : 'Gốc'}</span>
                           </div>
+
+                          {/* Quick tap-to-mask action button */}
+                          <button
+                            type="button"
+                            onClick={() => setEditingMaskIndex(index)}
+                            className="absolute bottom-6 right-1.5 px-1.5 py-0.5 rounded-md bg-black/75 hover:bg-black text-white text-[9px] font-semibold flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-all cursor-pointer shadow-xs"
+                            title="Chỉnh vị trí che biển số"
+                          >
+                            <Crosshair className="w-2.5 h-2.5 text-blue-400" />
+                            <span>Chỉnh</span>
+                          </button>
+
                           {/* Delete button */}
                           <button
                             type="button"
@@ -1261,7 +1274,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                 <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                   <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                   <span>
-                    Bảo mật biển số: Tự động gắn màng bảo vệ <code>93A - xxxxx</code>, giữ kín danh tính chủ xe.
+                    Bảo mật biển số: Tự động che biển số bằng công nghệ Canvas trên máy client, bảo vệ 100% riêng tư.
                   </span>
                 </div>
                 <div className="font-mono text-[11.5px] font-semibold text-right">
@@ -1708,6 +1721,23 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal chỉnh sửa vị trí che biển số xe tương tác */}
+      {editingMaskIndex !== null && carPhotos[editingMaskIndex] && (
+        <PlateMaskModal
+          isOpen={true}
+          photo={carPhotos[editingMaskIndex]}
+          onSave={(updatedPhoto) => {
+            setCarPhotos((prev) => {
+              const next = [...prev];
+              next[editingMaskIndex] = updatedPhoto;
+              return next;
+            });
+            onShowToast?.('✅ Đã cập nhật vị trí che biển số!');
+          }}
+          onClose={() => setEditingMaskIndex(null)}
+        />
       )}
     </div>
   );

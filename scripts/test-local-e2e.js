@@ -4120,6 +4120,65 @@ async function runTests() {
     assert(false, '55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang (3-Strike Sanctions)', err.message);
   }
 
+  // =========================================================================
+  // 56. KIỂM THỬ BẢO MẬT CHE BIỂN SỐ XE TỰ ĐỘNG & TRIỆT TIÊU TỪ VIẾT TẮT BOT
+  // =========================================================================
+  console.log('\n🛡️ 56. Kiểm thử Bảo Mật Che Biển Số Xe Tự Động & Triệt Tiêu Từ Viết Tắt BOT (Apple & MIT)...');
+  try {
+    // 1. Kiểm tra tiện ích plateMasker.js
+    const plateMaskerPath = path.join(process.cwd(), 'apps/web/src/utils/plateMasker.js');
+    assert(fs.existsSync(plateMaskerPath), 'Plate Mask 1: File plateMasker.js tồn tại');
+    const plateMaskerSrc = fs.readFileSync(plateMaskerPath, 'utf8');
+    assert(plateMaskerSrc.includes('drawPlateMaskOnCanvas'), 'Plate Mask 2: Có hàm vẽ che biển số squircle drawPlateMaskOnCanvas');
+    assert(plateMaskerSrc.includes('processCarPhotoUpload'), 'Plate Mask 3: Có hàm nạp và tự động che biển processCarPhotoUpload');
+    assert(plateMaskerSrc.includes('CARMATE · ĐÃ CHE BIỂN'), 'Plate Mask 4: Nhãn che biển sắc nét chuẩn Apple CARMATE · ĐÃ CHE BIỂN');
+
+    // 2. Kiểm tra modal chỉnh sửa tương tác PlateMaskModal.jsx
+    const plateMaskModalPath = path.join(process.cwd(), 'apps/web/src/components/modals/PlateMaskModal.jsx');
+    assert(fs.existsSync(plateMaskModalPath), 'Plate Mask 5: Modal tương tác PlateMaskModal.jsx tồn tại');
+    const plateMaskModalSrc = fs.readFileSync(plateMaskModalPath, 'utf8');
+    assert(plateMaskModalSrc.includes('handleImageClick') && plateMaskModalSrc.includes('Tọa độ che'), 'Plate Mask 6: Hỗ trợ 1-chạm dời tọa độ che biển số trên ảnh thật');
+
+    // 3. Kiểm tra PostTripForm.jsx tích hợp Auto-mask & Tap-to-mask
+    const postTripFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postTripFormSrc.includes('processCarPhotoUpload'), 'Plate Mask 7: PostTripForm tự động che biển số khi chủ xe tải ảnh');
+    assert(postTripFormSrc.includes('PlateMaskModal') && postTripFormSrc.includes('editingMaskIndex'), 'Plate Mask 8: PostTripForm tích hợp PlateMaskModal chỉnh vị trí che biển');
+    assert(postTripFormSrc.includes('Đã che biển'), 'Plate Mask 9: Thẻ ảnh hiển thị huy hiệu xác thực Đã che biển');
+
+    // 4. Kiểm tra UserProfileModal.jsx (Garage) tích hợp bảo mật biển số
+    const userProfileModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/profile/UserProfileModal.jsx'), 'utf8');
+    assert(userProfileModalSrc.includes('processCarPhotoUpload'), 'Plate Mask 10: Hồ sơ xe Garage tự động che biển số khi chủ xe cập nhật ảnh');
+
+    // 5. Kiểm tra TicketShareModal: Đã gỡ bỏ icon tròn thừa thãi theo yêu cầu người dùng
+    const ticketShareModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/TicketShareModal.jsx'), 'utf8');
+    assert(!ticketShareModalSrc.includes('icon={Share2}'), 'Zero Redundancy 1: TicketShareModal đã gỡ bỏ icon tròn thừa thãi trên tiêu đề');
+
+    // 6. Triệt tiêu 100% từ viết tắt "BOT" trên giao diện người dùng
+    const footerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/common/Footer.jsx'), 'utf8');
+    assert(!footerSrc.includes('Bảng định mức xăng & BOT'), 'Zero BOT 1: Footer đã thay Bảng định mức xăng & BOT thành cầu đường');
+    assert(footerSrc.includes('Bảng định mức xăng & cầu đường'), 'Zero BOT 2: Footer dùng cụm thuần Việt Bảng định mức xăng & cầu đường');
+
+    const benchmarkBarSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/market/RouteBenchmarkBar.jsx'), 'utf8');
+    assert(!benchmarkBarSrc.includes('Vé cầu đường / BOT'), 'Zero BOT 3: RouteBenchmarkBar đã loại bỏ chữ BOT');
+    assert(benchmarkBarSrc.includes('<span>Vé cầu đường</span>'), 'Zero BOT 4: RouteBenchmarkBar hiển thị Vé cầu đường');
+
+    const myTripsSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'), 'utf8');
+    assert(!myTripsSrc.includes('Định mức xăng + BOT:'), 'Zero BOT 5: MyTripsView không còn chữ BOT');
+    assert(myTripsSrc.includes('Định mức xăng & cầu đường:'), 'Zero BOT 6: MyTripsView hiển thị chuẩn Định mức xăng & cầu đường');
+
+    const bookedTripListSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(!bookedTripListSrc.includes('phí BOT'), 'Zero BOT 7: BookedTripList không còn chữ phí BOT');
+    assert(bookedTripListSrc.includes('Chi phí xăng & phí cầu đường'), 'Zero BOT 8: BookedTripList dùng Chi phí xăng & phí cầu đường');
+
+    const termsModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/TermsModal.jsx'), 'utf8');
+    assert(!termsModalSrc.includes('phí cầu đường BOT'), 'Zero BOT 9: TermsModal đã loại bỏ từ viết tắt BOT');
+
+    const viI18nSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/i18n/vi.js'), 'utf8');
+    assert(!viI18nSrc.includes('vé trạm BOT'), 'Zero BOT 10: Tệp ngôn ngữ tiếng Việt vi.js đã sạch hoàn toàn từ BOT');
+  } catch (err) {
+    assert(false, '56. Kiểm thử Bảo Mật Che Biển Số Xe Tự Động & Triệt Tiêu Từ Viết Tắt BOT', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

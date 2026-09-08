@@ -493,7 +493,7 @@ export default function MyTripsView({
                     trip.notes?.toLowerCase().includes('tiện chuyến') ||
                     trip.carType?.toLowerCase().includes('tiện chuyến'));
 
-                // Tra cứu định mức kỹ thuật xăng RON 95 + BOT tuyến này
+                // Tra cứu định mức kỹ thuật xăng RON 95 + vé cầu đường tuyến này
                 const corridor = getRouteCorridor(trip.from, trip.to);
                 const benchmark = corridor ? ROUTE_BENCHMARKS[corridor] : null;
                 const fuelBotRef = benchmark ? benchmark.suggestedRate : trip.suggestedContribution || price;
@@ -598,7 +598,7 @@ export default function MyTripsView({
                             title="Định mức chi phí nhiên liệu & vé trạm thu phí theo quy chuẩn kỹ thuật"
                           >
                             <Fuel className="w-3 h-3 text-slate-500" />
-                            <span>Định mức xăng + BOT: ~{formatVND(fuelBotRef)}</span>
+                            <span>Định mức xăng & cầu đường: ~{formatVND(fuelBotRef)}</span>
                           </span>
 
                           <span

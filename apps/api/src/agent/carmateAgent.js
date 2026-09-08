@@ -227,7 +227,7 @@ export function executeCheckMemberTrust(args = {}) {
 export function executeCalculateEstimatedFare(args = {}) {
   const km = Number(args.distanceKm) || 100;
   const seats = Number(args.seatsCount) || 1;
-  // Xăng trung bình 8L/100km (~22.000đ/L) = ~176.000đ + phí BOT cầu đường (~70.000đ)
+  // Xăng trung bình 8L/100km (~22.000đ/L) = ~176.000đ + vé cầu đường (~70.000đ)
   const totalCost = km * 1800 + 70000;
   const fairPerSeat = Math.round(totalCost / 3 / 10000) * 10000;
 
@@ -447,7 +447,7 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     prompt.includes('cầu đường') ||
     prompt.includes('bao nhiêu')
   ) {
-    reasoningSteps.push('[ACT] Tra cứu bảng định mức tiền xăng & vé trạm thu phí BOT.');
+    reasoningSteps.push('[ACT] Tra cứu bảng định mức tiền xăng & vé trạm thu phí cầu đường.');
     let routeName = 'QL13';
     if (prompt.includes('14') || prompt.includes('ql14')) routeName = 'QL14';
     if (prompt.includes('1a') || prompt.includes('ql1a')) routeName = 'QL1A';
@@ -466,7 +466,7 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
         `📊 **Bảng định mức chi phí tham chiếu CarMate (${match?.route || routeName}):**\n\n` +
         `• **Mức giá san sẻ khuyến nghị:** **${match?.suggestedRateFormatted || '150.000đ'}/ghế**\n` +
         `• **Biên độ thị trường hợp lý:** ${match?.marketRange || '120.000đ – 180.000đ/ghế'}\n` +
-        `• **Bao gồm:** Trọn gói tiền xăng thực tế & vé trạm thu phí BOT toàn tuyến.\n` +
+        `• **Bao gồm:** Trọn gói tiền xăng thực tế & vé trạm thu phí cầu đường toàn tuyến.\n` +
         `• **Đặc điểm:** ${match?.description || 'Tuyến liên tỉnh phổ biến, xe ô tô gia đình đón tận nơi tiện đường.'}\n\n` +
         `💡 *Lưu ý: CarMate hoàn toàn miễn phí 0% phí sàn, người đi gửi trực tiếp chủ xe tiền xăng xe khi lên xe.*`,
       reasoningSteps,
@@ -562,7 +562,7 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
     reasoningSteps.push('[RESOLVE] Hoàn tất: Gợi ý phương án đăng tin tìm xe ghép tiện chuyến.');
     textResponse =
       `Chào bạn! Hiện tại tuyến đường này đang chưa có chuyến khởi hành trùng khớp yêu cầu (${seatsRequested} người), nhưng bạn có thể đăng tin **[Tìm xe]** để các chủ xe tiện chuyến liên hệ.\n\n` +
-      `💡 **Mức giá tham khảo công bằng:** Tuyến liên tỉnh này thường dao động từ **120.000đ – 180.000đ/ghế** (đã bao gồm xăng xe & vé trạm BOT). Bạn có muốn mình hỗ trợ soạn tin đăng nhanh không?`;
+      `💡 **Mức giá tham khảo công bằng:** Tuyến liên tỉnh này thường dao động từ **120.000đ – 180.000đ/ghế** (đã bao gồm xăng xe & vé cầu đường). Bạn có muốn mình hỗ trợ soạn tin đăng nhanh không?`;
   }
 
   return {
@@ -622,7 +622,7 @@ Nhiệm vụ của bạn:
           reasoningSteps.push(`[REFLECT] Đánh giá chất lượng và độ tiện lợi của các chuyến xe vừa tìm thấy.`);
         } else if (call.name === 'getRouteBenchmarks') {
           const res = executeGetRouteBenchmarks(call.args);
-          reasoningSteps.push(`[ACT] Tra cứu: Rà soát bảng định mức chi phí xăng xe & vé trạm BOT.`);
+          reasoningSteps.push(`[ACT] Tra cứu: Rà soát bảng định mức chi phí xăng xe & vé cầu đường.`);
           reasoningSteps.push(`[REFLECT] Phản tư tính công bằng: Mức giá san sẻ theo định mức đã được xác định.`);
         } else if (call.name === 'checkMemberTrust') {
           const res = executeCheckMemberTrust(call.args);

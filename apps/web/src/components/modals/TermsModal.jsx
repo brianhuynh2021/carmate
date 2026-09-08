@@ -32,7 +32,7 @@ export default function TermsModal({ onClose, zIndex = 'z-50' }) {
             </li>
             <li>
               <strong>Chia sẻ chi phí xăng xe phi lợi nhuận:</strong> Số tiền đóng góp giữa hành khách và chủ xe được
-              thỏa thuận nhằm bù đắp chi phí nhiên liệu và phí cầu đường BOT của chuyến đi.
+              thỏa thuận nhằm bù đắp chi phí nhiên liệu và phí cầu đường của chuyến đi.
             </li>
             <li>
               <strong>Kết nối Zalo trực tiếp:</strong> Nền tảng không thu bất kỳ phí sàn, hoa hồng hay phí trung gian

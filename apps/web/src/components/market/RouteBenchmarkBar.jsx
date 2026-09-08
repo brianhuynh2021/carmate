@@ -237,7 +237,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                 <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
                   <p className="text-[11.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
                     <Milestone className="w-3.5 h-3.5 text-blue-500" />
-                    <span>Vé cầu đường / BOT</span>
+                    <span>Vé cầu đường</span>
                   </p>
                   <p className="text-sm font-bold text-slate-900 dark:text-white font-mono mt-1">
                     ~{formatVND(info.botFee)}
