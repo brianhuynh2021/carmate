@@ -1,11 +1,10 @@
 import React from 'react';
-import { MapPin, ExternalLink, Share2 } from 'lucide-react';
+import { MapPin, Share2 } from 'lucide-react';
 import {
   getRouteCorridor,
   formatVND,
   getZaloChatUrl,
   isGoogleMapsUrl,
-  getGoogleMapsUrl,
   decodeHtmlEntities,
   formatTripDateDisplay,
   getTimeSlotLabel
@@ -116,17 +115,6 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
                 </p>
               )}
             </div>
-            <a
-              href={getGoogleMapsUrl(tripFrom || corridor?.startLandmark?.name)}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11.5px] font-medium text-[#0071e3] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 transition-all cursor-pointer shrink-0 mt-0.5 select-none"
-              title="Mở Google Maps"
-            >
-              <span>Bản đồ</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
           </div>
 
           <div className="flex items-start gap-3 p-3.5">
@@ -144,17 +132,6 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
                 </p>
               )}
             </div>
-            <a
-              href={getGoogleMapsUrl(tripTo || corridor?.endLandmark?.name)}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11.5px] font-medium text-[#0071e3] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 transition-all cursor-pointer shrink-0 mt-0.5 select-none"
-              title="Mở Google Maps"
-            >
-              <span>Bản đồ</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
           </div>
         </div>
 
