@@ -19,6 +19,7 @@ import {
   getBookingPublicSummary,
   driverConfirmBooking,
   reportVehicleMismatch,
+  reportUnreachablePhone,
   addBookingMessageHandler,
   preConfirmBookingHandler,
   finalConfirmBookingHandler
@@ -105,6 +106,7 @@ router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBoo
 router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
 router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitReview);
 router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
+router.post('/bookings/:id/report-unreachable-phone', optionalAuth, reportUnreachablePhone);
 
 router.get('/escrows', optionalAuth, listBookings);
 router.post('/escrows', optionalAuth, createBooking);
@@ -118,6 +120,7 @@ router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBook
 router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);
 router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitReview);
 router.post('/escrows/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
+router.post('/escrows/:id/report-unreachable-phone', optionalAuth, reportUnreachablePhone);
 
 // --- Admin Management Portal Engine ---
 router.post('/admin/auth', adminAuth);

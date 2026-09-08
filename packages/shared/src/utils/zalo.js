@@ -20,6 +20,47 @@ export const isValidVietnamesePhone = (phone = '') => {
 };
 
 /**
+ * Nhận diện các số điện thoại có dấu hiệu giả mạo / số rác hiển nhiên:
+ * - Không đúng định dạng mạng viễn thông Việt Nam
+ * - Số dummy phổ biến (0123456789, 0987654321, 0900000000, ...)
+ * - Đuôi có từ 6 chữ số giống hệt nhau (VD: 0900000000, 0911111111, 0988888888)
+ * - Đuôi dãy số tuần tự tiến / lùi
+ */
+export const isLikelyFakePhone = (phone = '') => {
+  const cleaned = cleanPhoneNumber(phone);
+  let normalized = cleaned;
+  if (normalized.startsWith('84') && normalized.length === 11) {
+    normalized = '0' + normalized.slice(2);
+  }
+  if (!isValidVietnamesePhone(normalized)) return true;
+
+  // Danh sách các số ảo / số thử nghiệm hiển nhiên
+  const obviousDummies = [
+    '0123456789',
+    '0987654321',
+    '0912345678',
+    '0901234567',
+    '0923456789',
+    '0909090909',
+    '0919191919',
+    '0989898989',
+    '0123123123',
+    '0900000000'
+  ];
+  if (obviousDummies.includes(normalized)) return true;
+
+  const last7 = normalized.slice(3);
+  // Đuôi kết thúc bằng >= 6 chữ số giống hệt nhau (VD: 000000, 111111, 888888)
+  if (/(\d)\1{5,}$/.test(last7)) return true;
+
+  // Dãy tuần tự 7 số tiến / lùi
+  const fakeSequences = ['1234567', '7654321', '9876543', '2345678', '8765432', '0123456', '6543210'];
+  if (fakeSequences.some((seq) => last7.includes(seq))) return true;
+
+  return false;
+};
+
+/**
  * Xử lý số điện thoại sang định dạng quốc tế (ví dụ: 84988234567 cho WhatsApp / Telegram)
  */
 export const toInternationalPhone = (phone = '') => {

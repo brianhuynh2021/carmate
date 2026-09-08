@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Sparkles,
   MapPin,
@@ -6,14 +6,20 @@ import {
   ArrowLeftRight,
   Search,
   X,
-  Package
+  Package,
+  Zap,
+  ClipboardPaste,
+  Calculator
 } from 'lucide-react';
-import { parseLocation, computeHotRoutes, DEFAULT_FALLBACK_ROUTES } from '@carmate/shared';
+import { computeHotRoutes, DEFAULT_FALLBACK_ROUTES, formatVND } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Chip from '../ui/Chip.jsx';
-import Button from '../ui/Button.jsx';
 import { POPULAR_HIGHWAYS } from './FilterBar.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
+import { getContextualGhostRoute } from '../../utils/personaMemory.js';
+import Modal from '../ui/Modal.jsx';
+import SmartTripComposer from '../post/SmartTripComposer.jsx';
+import FairSplitModal from '../modals/FairSplitModal.jsx';
 
 export default function Hero({
   trips = [],
@@ -23,7 +29,9 @@ export default function Hero({
   setSearchFrom,
   searchTo = '',
   setSearchTo,
-  onPostClick
+  onPostClick,
+  currentUser,
+  onShowToast
 }) {
   const { t, lang } = useI18n();
 
@@ -68,6 +76,51 @@ export default function Hero({
     }, 3200);
     return () => clearInterval(timer);
   }, [rotatingRoutes.length]);
+
+  const [showQuickPasteModal, setShowQuickPasteModal] = useState(false);
+  const [showFairSplitModal, setShowFairSplitModal] = useState(false);
+
+  // Lộ trình ma (Ghost Route) tính toán cục bộ theo thói quen & thời gian thực
+  const ghostRoute = useMemo(() => {
+    return getContextualGhostRoute('passenger');
+  }, []);
+
+  const handleApplyGhostRoute = useCallback((route) => {
+    if (!route) return;
+    setSearchFrom?.(route.from);
+    setSearchTo?.(route.to);
+    onShowToast?.(`⚡ [Cursor Tab] Đã điền nhanh lộ trình: ${route.from} ➔ ${route.to}`);
+    const el = document.getElementById('market-results');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  }, [setSearchFrom, setSearchTo, onShowToast]);
+
+  // Phím tắt bàn phím: Tab (Ghost Route Fill) & Cmd+K / Ctrl+K (Quick Paste)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // 1. Phím Tab vật lý áp dụng Ghost Route khi không focus vào ô nhập liệu
+      if (e.key === 'Tab' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const activeTag = document.activeElement?.tagName?.toLowerCase();
+        const isInput =
+          activeTag === 'input' ||
+          activeTag === 'textarea' ||
+          activeTag === 'select' ||
+          document.activeElement?.isContentEditable;
+        if (!isInput && ghostRoute?.from && ghostRoute?.to) {
+          e.preventDefault();
+          handleApplyGhostRoute(ghostRoute);
+        }
+      }
+
+      // 2. Phím tắt Cmd+K hoặc Ctrl+K mở nhanh bảng dán bài đăng FB / Zalo
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowQuickPasteModal(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [ghostRoute, handleApplyGhostRoute]);
 
   const activeRouteHint = rotatingRoutes[routeCycleIndex % rotatingRoutes.length] || DEFAULT_FALLBACK_ROUTES[0];
 
@@ -140,6 +193,30 @@ export default function Hero({
               <span>Áp dụng ⚡</span>
             </button>
           </div>
+
+          {/* Capsule 2: Ghost Route (Cursor Tab AI) */}
+          {ghostRoute && (
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-slate-900/90 dark:bg-black/90 text-white border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all text-xs max-w-full">
+              <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400 shrink-0">
+                <Zap className="w-3 h-3 fill-current animate-pulse" />
+                <span className="hidden sm:inline">Tuyến quen:</span>
+              </span>
+              <div className="flex items-center gap-1 text-[11.5px] font-bold text-white shrink-0">
+                <span>{ghostRoute.from}</span>
+                <ArrowLeftRight className="w-2.5 h-2.5 text-slate-400" />
+                <span>{ghostRoute.to}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleApplyGhostRoute(ghostRoute)}
+                title="Nhấn phím Tab trên bàn phím hoặc bấm vào đây để điền ngay"
+                className="ml-0.5 text-[10.5px] sm:text-[11px] font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-1 shrink-0"
+              >
+                <kbd className="hidden sm:inline-block px-1 py-0.1 rounded bg-black/50 text-[9px] font-mono text-slate-300 border border-white/10">Tab</kbd>
+                <span>Tự điền ⚡</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── APPLE / CURSOR COMMAND OMNIBAR ── */}
@@ -305,10 +382,69 @@ export default function Hero({
                 <span>Gửi đồ kèm xe</span>
                 {isParcelActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />}
               </button>
+
+              {/* Subtle divider */}
+              <span className="h-4 w-px bg-black/[0.1] dark:bg-white/[0.1] shrink-0 mx-1" aria-hidden="true" />
+
+              {/* Nút 1-chạm Dán bài đăng Facebook/Zalo (Cursor Cmd+K) */}
+              <button
+                type="button"
+                onClick={() => setShowQuickPasteModal(true)}
+                title="Dán bài đăng từ Facebook/Zalo để AI bóc tách < 1ms và tạo vé đồ họa VIP (Phím tắt: ⌘K / Ctrl+K)"
+                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-semibold whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/40 hover:bg-blue-100/80"
+              >
+                <ClipboardPaste className="w-3.5 h-3.5 text-[#0071e3]" strokeWidth={2} />
+                <span>Dán tin FB / Zalo</span>
+                <kbd className="hidden sm:inline-block px-1.5 py-0.1 text-[9px] font-mono font-bold bg-white dark:bg-black/50 text-[#0071e3] rounded border border-blue-200/60 shadow-2xs">⌘K</kbd>
+              </button>
+
+              {/* Nút 1-chạm Mở Bảng Tính Định Mức Xăng & Cầu Đường */}
+              <button
+                type="button"
+                onClick={() => setShowFairSplitModal(true)}
+                title="Xem công thức tính toán minh bạch chi phí xăng cộ và vé cầu đường thực tế"
+                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-medium whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-black/[0.08] dark:border-white/[0.08] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+              >
+                <Calculator className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2} />
+                <span>Định mức xăng</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── MODAL CURSOR CMD+K: DÁN TIN BÀI BÓC TÁCH & XUẤT VÉ VIP ── */}
+      {showQuickPasteModal && (
+        <Modal
+          onClose={() => setShowQuickPasteModal(false)}
+          size="lg"
+          title="Dán Bài Viết Facebook / Zalo (Cursor Cmd+K)"
+          subtitle="Trí tuệ bản địa bóc tách lộ trình < 1ms — Tạo vé đồ họa VIP đăng ngược lại MXH"
+        >
+          <SmartTripComposer
+            currentUser={currentUser}
+            currentRole="driver"
+            onInstantSubmit={(parsed) => {
+              setShowQuickPasteModal(false);
+              onPostClick?.(parsed.role || 'driver');
+            }}
+            onApply={(parsed) => {
+              if (parsed.fromLocation) setSearchFrom?.(parsed.fromLocation);
+              if (parsed.toLocation) setSearchTo?.(parsed.toLocation);
+            }}
+          />
+        </Modal>
+      )}
+
+      {/* ── MODAL FAIR-SPLIT CALCULATOR: MINH BẠCH CHI PHÍ XĂNG & CẦU ĐƯỜNG ── */}
+      <FairSplitModal
+        isOpen={showFairSplitModal}
+        onClose={() => setShowFairSplitModal(false)}
+        initialRouteKey="hn_hp"
+        onSelectSuggestedPrice={(rate) => {
+          onShowToast?.(`Đã chọn mức phụ xăng công bằng ${formatVND(rate)}/ghế!`);
+        }}
+      />
     </section>
   );
 }

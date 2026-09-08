@@ -8,6 +8,7 @@ import TermsModal from './TermsModal.jsx';
 import PolicyModal from './PolicyModal.jsx';
 import api from '../../api/client.js';
 import { useI18n } from '../../i18n/index.jsx';
+import { isValidVietnamesePhone, isLikelyFakePhone, cleanPhoneNumber } from '@carmate/shared';
 
 export default function AuthModal({
   onClose,
@@ -133,6 +134,12 @@ export default function AuthModal({
             : digits.length === 9 && !digits.startsWith('0')
               ? '0' + digits
               : digits;
+
+        if (cleanPhone.length >= 10 && (!isValidVietnamesePhone(cleanPhone) || isLikelyFakePhone(cleanPhone))) {
+          setError('Số điện thoại không hợp lệ hoặc có dấu hiệu số ảo. Vui lòng nhập số thật của bạn.');
+          setLoading(false);
+          return;
+        }
         cleanUser = `user_${cleanPhone.slice(-4)}`;
       } else {
         cleanUser = inputVal.replace(/^@/, '');
@@ -253,11 +260,19 @@ export default function AuthModal({
     try {
       const cleanEmail = email.trim().toLowerCase();
       const mockSub = 'user_' + Math.abs(cleanEmail.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0));
+      const cleanPhone = phone.trim() ? cleanPhoneNumber(phone) : '';
+
+      if (cleanPhone && cleanPhone.length >= 10 && (!isValidVietnamesePhone(cleanPhone) || isLikelyFakePhone(cleanPhone))) {
+        setError('Số điện thoại không hợp lệ hoặc có dấu hiệu số ảo. Vui lòng nhập số thật của bạn.');
+        setLoading(false);
+        return;
+      }
+
       const res = await api.googleLogin({
         idToken: `TEST_GOOGLE_TOKEN_${cleanEmail}:${mockSub}`,
         email: cleanEmail,
         name: name.trim() || cleanEmail.split('@')[0],
-        phone: phone.trim() || undefined
+        phone: cleanPhone || undefined
       });
 
       if (res?.success && res?.user) {

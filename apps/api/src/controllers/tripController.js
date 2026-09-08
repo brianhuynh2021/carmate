@@ -10,7 +10,7 @@ import {
   getUserById,
   getUserByPhone
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias } from '@carmate/shared';
+import { cleanPhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
@@ -242,7 +242,14 @@ export async function createTrip(req, res) {
     if (!body.phoneReal) {
       return res.status(400).json({
         success: false,
-        error: 'Cần cung cấp số điện thoại Zalo để kết nối'
+        error: 'Cần cung cấp số điện thoại thật để liên hệ đón nhau'
+      });
+    }
+
+    if (!isValidVietnamesePhone(body.phoneReal) || isLikelyFakePhone(body.phoneReal)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Số điện thoại không hợp lệ hoặc có dấu hiệu số ảo. Vui lòng cung cấp số điện thoại thật để đối tác liên hệ đón bạn.'
       });
     }
 

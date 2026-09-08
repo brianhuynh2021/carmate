@@ -17,6 +17,7 @@ import {
   Lock,
   Shield,
   ShieldAlert,
+  PhoneOff,
   User
 } from 'lucide-react';
 import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber } from '@carmate/shared';
@@ -180,6 +181,7 @@ export default function BookedTripList({
   onFindTrip,
   onReview,
   onReportMismatch,
+  onReportUnreachablePhone,
   onOpenChat
 }) {
   const { t } = useI18n();
@@ -477,6 +479,20 @@ export default function BookedTripList({
                                 </a>
                               </div>
                             </div>
+
+                            {onReportUnreachablePhone && (
+                              <div className="flex justify-end pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => onReportUnreachablePhone(record)}
+                                  className="text-[11.5px] text-rose-600 dark:text-rose-400 hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                  title="Báo cáo nếu số điện thoại đối tác không liên lạc được hoặc là số ảo"
+                                >
+                                  <PhoneOff className="w-3.5 h-3.5" />
+                                  <span>Báo số ảo / Không nghe máy</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           // CHƯA CHỐT: Thương lượng hoặc Giữ chỗ mềm qua Khung Chat
@@ -576,6 +592,18 @@ export default function BookedTripList({
                           title="Báo cáo xe đón thực tế là Biển vàng hoặc sai mô tả"
                         >
                           Báo sai loại xe
+                        </Button>
+                      )}
+                      {onReportUnreachablePhone && (record.status === 'confirmed' || record.bothConfirmed) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={PhoneOff}
+                          onClick={() => onReportUnreachablePhone(record)}
+                          className="text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
+                          title="Báo cáo đối tác dùng số điện thoại ảo hoặc không liên lạc được"
+                        >
+                          Báo số ảo / Không nghe máy
                         </Button>
                       )}
                       <button

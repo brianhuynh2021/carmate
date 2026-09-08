@@ -149,6 +149,90 @@ export function getTopPredictedTrip(role = 'driver') {
 }
 
 /**
+ * Dự đoán Lộ Trình Ma (Ghost Route - Phong cách Cursor Tab)
+ * Kết hợp bộ nhớ lịch sử cá nhân (Recency/Frequency) với ngữ cảnh thời gian thực
+ * (Thứ trong tuần + Khung giờ sáng/chiều) để đưa tải nhận thức của người dùng về 0.
+ */
+export function getContextualGhostRoute(role = 'passenger') {
+  // 1. Nếu có trong lịch sử bộ nhớ cá nhân, ưu tiên số 1
+  const remembered = getTopPredictedTrip(role);
+  if (remembered) {
+    return {
+      ...remembered,
+      isPersonalHistory: true,
+      hintLabel: `${remembered.from} ➔ ${remembered.to}`
+    };
+  }
+
+  // 2. Dự đoán thông minh bản địa theo thời gian thực (Zero-LLM Edge Intelligence)
+  const now = new Date();
+  const day = now.getDay(); // 0: Chủ Nhật, 1: Thứ 2, ..., 5: Thứ 6, 6: Thứ 7
+  const hour = now.getHours();
+
+  // Sáng thứ 2 hoặc các buổi sáng đi làm (05h - 10h): Hải Phòng / Quảng Ninh đi Hà Nội
+  if (hour >= 5 && hour < 11) {
+    return {
+      from: 'Hải Phòng',
+      to: 'Hà Nội',
+      timeSlot: '07:00-09:00',
+      exactTime: '07:30',
+      price: 150000,
+      seats: role === 'driver' ? 3 : 1,
+      isPersonalHistory: false,
+      confidence: 'high',
+      reason: day === 1 ? 'Đầu tuần đi làm' : 'Đi làm sáng sớm',
+      hintLabel: 'Hải Phòng ➔ Hà Nội (07:30)'
+    };
+  }
+
+  // Chiều thứ 6 hoặc cuối tuần về quê (14h - 21h): Hà Nội về Hải Phòng hoặc Sài Gòn đi Vũng Tàu
+  if ((day === 5 && hour >= 14) || day === 6) {
+    return {
+      from: 'Hà Nội',
+      to: 'Hải Phòng',
+      timeSlot: '17:00-19:00',
+      exactTime: '17:30',
+      price: 150000,
+      seats: role === 'driver' ? 3 : 1,
+      isPersonalHistory: false,
+      confidence: 'high',
+      reason: 'Cuối tuần về quê',
+      hintLabel: 'Hà Nội ➔ Hải Phòng (17:30)'
+    };
+  }
+
+  // Chiều Chủ Nhật (13h - 21h): Trở lại thủ đô / trung tâm
+  if (day === 0 && hour >= 13) {
+    return {
+      from: 'Hải Phòng',
+      to: 'Hà Nội',
+      timeSlot: '17:00-19:00',
+      exactTime: '17:00',
+      price: 150000,
+      seats: role === 'driver' ? 3 : 1,
+      isPersonalHistory: false,
+      confidence: 'high',
+      reason: 'Trở lại thủ đô',
+      hintLabel: 'Hải Phòng ➔ Hà Nội (17:00)'
+    };
+  }
+
+  // Mặc định hành lang cao tốc huyết mạch
+  return {
+    from: 'Hà Nội',
+    to: 'Hải Phòng',
+    timeSlot: '07:00-09:00',
+    exactTime: '08:00',
+    price: 150000,
+    seats: role === 'driver' ? 3 : 1,
+    isPersonalHistory: false,
+    confidence: 'medium',
+    reason: 'Cao tốc HN - HP',
+    hintLabel: 'Hà Nội ➔ Hải Phòng (08:00)'
+  };
+}
+
+/**
  * Lấy hồ sơ xe và ảnh thật đã xác thực của Chủ xe từ các lần đăng trước
  */
 export function getLastUsedCarProfile() {

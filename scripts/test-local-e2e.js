@@ -4220,13 +4220,189 @@ async function runTests() {
     const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
     assert(postFormSrc.includes("index === 4 ? 'col-span-2 sm:col-span-1' : ''"), 'Mobile UX 8: Ô ảnh thứ 5 trong lưới 5 ảnh xe thật trải rộng cân đối trên mobile');
 
-    // 7. Driver In-transit Quick Reply Chips in InboxModal
+    // 7. Mở khóa số điện thoại & Thẻ liên hệ trực tiếp trong InboxModal
     const inboxSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
-    assert(inboxSrc.includes('Mình đang xuất phát đến điểm hẹn'), 'Driver UX 1: InboxModal có chip 1-chạm "Mình đang xuất phát đến điểm hẹn" cho Chủ xe');
-    assert(inboxSrc.includes('Xe sẽ đến sau khoảng 5-10 phút'), 'Driver UX 2: InboxModal có chip 1-chạm "Xe sẽ đến sau khoảng 5-10 phút" cho Chủ xe');
-    assert(inboxSrc.includes('Em đang đứng ở điểm hẹn rồi anh'), 'Passenger UX 1: InboxModal có chip 1-chạm "Em đang đứng ở điểm hẹn rồi anh" cho Khách');
+    assert(!inboxSrc.includes('Mình đang xuất phát đến điểm hẹn'), 'Clean Chat 1: Đã gỡ bỏ toàn bộ chip rườm rà khi chuyến đã chốt');
+    assert(inboxSrc.includes('Số điện thoại liên hệ {partnerAlias}:'), 'Clean Chat 2: InboxModal hiển thị trực tiếp SĐT đối tác trong luồng chat khi chốt');
+    assert(inboxSrc.includes('href={`tel:${partnerPhone}`}'), 'Clean Chat 3: Cung cấp nút gọi điện thoại trực tiếp cho đối tác');
+    assert(inboxSrc.includes('href={`sms:${partnerPhone}`}'), 'Clean Chat 4: Cung cấp nút nhắn tin SMS trực tiếp cho đối tác');
   } catch (err) {
     assert(false, '57. Kiểm thử Tự Động An Ninh Mạng & Trải Nghiệm Mobile Responsive', err.message);
+  }
+
+  // ==========================================
+  // 58. KIỂM THỬ PHÒNG CHỐNG & XỬ PHẠT SỐ ĐIỆN THOẠI ẢO (ANTI-FAKE PHONE & DETERRENCE)
+  // ==========================================
+  console.log('\n🛡️ 58. Kiểm thử Phòng Chống & Xử Phạt Số Điện Thoại Ảo (Anti-Fake Phone & Deterrence)...');
+  try {
+    const { isLikelyFakePhone, isValidVietnamesePhone } = await import(
+      path.join(process.cwd(), 'packages/shared/src/utils/zalo.js')
+    );
+
+    // 1. Kiểm thử hàm phát hiện số ảo
+    assert(isValidVietnamesePhone('0984883750') === true, 'Anti-Fake 0: Nhận diện định dạng mạng viễn thông Việt Nam hợp lệ');
+    assert(isLikelyFakePhone('0900000000') === true, 'Anti-Fake 1: Chặn số toàn số 0');
+    assert(isLikelyFakePhone('0988888888') === true, 'Anti-Fake 2: Chặn số toàn số 8 lặp lại');
+    assert(isLikelyFakePhone('0987654321') === true, 'Anti-Fake 3: Chặn dãy lùi 987654321');
+    assert(isLikelyFakePhone('0909090909') === true, 'Anti-Fake 4: Chặn số lặp nhịp 0909090909');
+    assert(isLikelyFakePhone('0900000019') === false, 'Anti-Fake 5: Bảo toàn số seed test 0900000019');
+    assert(isLikelyFakePhone('0984883750') === false, 'Anti-Fake 6: Nhận diện đúng số điện thoại thật');
+
+    // 2. Kiểm thử API Đăng Chuyến chặn số điện thoại ảo
+    const fakeTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Hà Nội',
+        to: 'Hải Phòng',
+        timeSlot: '08:00-09:00',
+        phoneReal: '0900000000',
+        price: 150000,
+        type: 'driver_offer'
+      })
+    });
+    assert(fakeTripRes.status === 400, 'Anti-Fake API 1: API đăng chuyến chặn số ảo 0900000000 (HTTP 400)');
+    const fakeTripJson = await fakeTripRes.json();
+    assert(fakeTripJson.error?.includes('số ảo'), 'Anti-Fake API 2: Phản hồi lỗi nêu rõ dấu hiệu số ảo');
+
+    // 3. Kiểm thử API Báo Cáo Số Ảo / Không Liên Lạc Được
+    // Tạo 1 booking test
+    const createBookRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Hà Nội',
+        to: 'Hạ Long',
+        date: 'Hôm nay',
+        time: '09:00',
+        passengerName: 'Khách Thử Nghiệm',
+        passengerPhone: '0981999888',
+        driverPhone: '0982777666',
+        driverName: 'Chủ xe Thử Nghiệm'
+      })
+    });
+    const createBookJson = await createBookRes.json();
+    const testBookingId = createBookJson.data?.id || createBookJson.data?.escrowId;
+    assert(Boolean(testBookingId), 'Anti-Fake API 3: Tạo chuyến test thành công');
+
+    // Gọi API báo số ảo
+    const reportRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-unreachable-phone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: 'fake_number',
+        note: 'Gọi 3 cuộc tổng đài báo số không có thực',
+        reporterRole: 'passenger'
+      })
+    });
+    assert(reportRes.status === 200, 'Anti-Fake API 4: API report-unreachable-phone phản hồi thành công (HTTP 200)');
+    const reportJson = await reportRes.json();
+    assert(reportJson.success === true, 'Anti-Fake API 5: Báo cáo thành công');
+    assert(reportJson.data?.booking?.status === 'cancelled', 'Anti-Fake API 6: Chuyến đi được huỷ an toàn');
+    assert(reportJson.data?.report?.penaltyApplied?.trustScoreDeducted === 30, 'Anti-Fake API 7: Tự động trừ 30 điểm tín nhiệm đối tác vi phạm');
+
+    // Kiểm thử báo cáo lần 2 kích hoạt Ban
+    const createBookRes2 = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Hà Nội',
+        to: 'Hải Dương',
+        date: 'Hôm nay',
+        passengerPhone: '0981999888',
+        driverPhone: '0982777666'
+      })
+    });
+    const createBookJson2 = await createBookRes2.json();
+    const testBookingId2 = createBookJson2.data?.id || createBookJson2.data?.escrowId;
+
+    const reportRes2 = await fetch(`${BASE_URL}/api/bookings/${testBookingId2}/report-unreachable-phone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: 'unreachable',
+        note: 'Tắt máy liên tục',
+        reporterRole: 'passenger'
+      })
+    });
+    const reportJson2 = await reportRes2.json();
+    assert(reportJson2.data?.report?.penaltyApplied?.isBanned === true, 'Anti-Fake API 8: Tái phạm số ảo lần 2 bị khóa tài khoản vĩnh viễn (BAN)');
+
+    // 4. Kiểm thử UI & Tệp Thành Phần
+    const unreachModalPath = path.join(process.cwd(), 'apps/web/src/components/modals/UnreachablePhoneModal.jsx');
+    assert(fs.existsSync(unreachModalPath), 'Anti-Fake UI 1: Tệp UnreachablePhoneModal.jsx tồn tại');
+    const unreachModalSrc = fs.readFileSync(unreachModalPath, 'utf8');
+    assert(unreachModalSrc.includes('UNREACHABLE_OPTIONS'), 'Anti-Fake UI 2: UnreachablePhoneModal có danh sách lý do');
+    assert(unreachModalSrc.includes('trừ 30 điểm tín nhiệm'), 'Anti-Fake UI 3: UnreachablePhoneModal có thông điệp răn đe');
+
+    const bookedTripListSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(bookedTripListSrc.includes('onReportUnreachablePhone'), 'Anti-Fake UI 4: BookedTripList hỗ trợ prop onReportUnreachablePhone');
+    assert(bookedTripListSrc.includes('Báo số ảo / Không nghe máy'), 'Anti-Fake UI 5: BookedTripList có nút Báo số ảo / Không nghe máy');
+
+    const postTripFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postTripFormSrc.includes('isLikelyFakePhone'), 'Anti-Fake UI 6: PostTripForm kiểm tra isLikelyFakePhone');
+    assert(postTripFormSrc.includes('Cảnh báo răn đe:'), 'Anti-Fake UI 7: PostTripForm hiển thị cảnh báo răn đe tâm lý');
+
+    const clientSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/api/client.js'), 'utf8');
+    assert(clientSrc.includes('reportUnreachablePhone'), 'Anti-Fake UI 8: api client có method reportUnreachablePhone');
+
+    const adminControllerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/api/src/controllers/adminController.js'), 'utf8');
+    assert(adminControllerSrc.includes('unreachablePhoneReports'), 'Anti-Fake Admin 1: adminController thu thập unreachablePhoneReports');
+  } catch (err) {
+    assert(false, '58. Kiểm thử Phòng Chống & Xử Phạt Số Điện Thoại Ảo', err.message);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 59. KIỂM THỬ TRÍ TUỆ BẢN ĐỊA PHONG CÁCH CURSOR (EDGE-AI & ZERO-THINKING UX)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  console.log('\n🤖 59. Kiểm thử Trí Tuệ Bản Địa Phong Cách Cursor (Edge-AI & Zero-Thinking UX)...');
+  try {
+    // 1. Ghost Route (Cursor Tab)
+    const personaMemorySrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/utils/personaMemory.js'), 'utf8');
+    assert(personaMemorySrc.includes('export function getContextualGhostRoute'), 'Cursor Tab 1: personaMemory.js có hàm getContextualGhostRoute');
+    assert(personaMemorySrc.includes('hintLabel') && personaMemorySrc.includes('isPersonalHistory'), 'Cursor Tab 2: getContextualGhostRoute trả về cấu trúc lộ trình ma hoàn chỉnh');
+
+    const heroSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/market/Hero.jsx'), 'utf8');
+    assert(heroSrc.includes('getContextualGhostRoute'), 'Cursor Tab 3: Hero.jsx tích hợp hàm dự đoán Ghost Route');
+    assert(heroSrc.includes("e.key === 'Tab'") && heroSrc.includes('handleApplyGhostRoute'), 'Cursor Tab 4: Hero.jsx bắt sự kiện phím Tab vật lý để tự điền lộ trình');
+    assert(heroSrc.includes('Tuyến quen:') && heroSrc.includes('Tự điền ⚡'), 'Cursor Tab 5: Hero.jsx hiển thị Capsule Tuyến quen thuộc chuẩn Apple HIG');
+
+    // 2. Cursor Cmd+K (Paste Facebook/Zalo Status & VIP Ticket)
+    assert(heroSrc.includes("e.key.toLowerCase() === 'k'") && heroSrc.includes('setShowQuickPasteModal'), 'Cmd+K 1: Hero.jsx bắt phím tắt Cmd+K / Ctrl+K mở nhanh dán tin bài');
+    assert(heroSrc.includes('Dán tin FB / Zalo') && heroSrc.includes('⌘K'), 'Cmd+K 2: Hero.jsx có nút 1-chạm Dán tin FB / Zalo kèm phím tắt ⌘K');
+    assert(heroSrc.includes('<SmartTripComposer'), 'Cmd+K 3: Hero.jsx tích hợp SmartTripComposer trong QuickPasteModal');
+
+    const composerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/SmartTripComposer.jsx'), 'utf8');
+    assert(composerSrc.includes('Xuất Vé VIP Đăng Zalo/FB'), 'VIP Ticket 1: SmartTripComposer có nút 1-chạm Xuất Vé VIP Đăng Zalo/FB');
+    assert(composerSrc.includes('synthesizedTrip'), 'VIP Ticket 2: SmartTripComposer tự tổng hợp dữ liệu thẻ vé chuyến từ kết quả bóc tách NLP');
+    assert(composerSrc.includes('<TicketShareModal'), 'VIP Ticket 3: SmartTripComposer kết nối trực tiếp với TicketShareModal');
+
+    // 3. Consensus Chat AI (Dynamic Context-Aware Smart Replies)
+    const inboxSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxSrc.includes('lastPartnerMsg'), 'Smart Replies 1: InboxModal phân tích tin nhắn gần nhất của đối tác');
+    assert(inboxSrc.includes('Cốp xe rộng') && inboxSrc.includes('vali size 20'), 'Smart Replies 2: Phản hồi thông minh theo Intent Hành lý / Vali');
+    assert(inboxSrc.includes('cây xăng') && inboxSrc.includes('ngã tư'), 'Smart Replies 3: Phản hồi thông minh theo Intent Điểm đón / Hẹn');
+    assert(inboxSrc.includes('xuất phát đúng giờ'), 'Smart Replies 4: Phản hồi thông minh theo Intent Giờ giấc / Thời gian');
+    assert(inboxSrc.includes('Xác nhận chuyến để trao đổi SĐT'), 'Smart Replies 5: Phản hồi thông minh theo Intent Đồng ý / Chốt giữ chỗ');
+    assert(!inboxSrc.includes('bác tài') && !inboxSrc.includes('Bác tài'), 'Smart Replies 6: Tuân thủ tuyệt đối quy tắc danh xưng Chủ xe / Người đi cùng (Zero bác tài)');
+
+    // 4. Autonomous Background Radar (24/7 Active Route Watcher)
+    const radarSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/radar/MatchRadarView.jsx'), 'utf8');
+    assert(radarSrc.includes('isRadarWatcherActive') && radarSrc.includes('setIsRadarWatcherActive'), 'AI Radar 1: MatchRadarView quản lý trạng thái Radar AI Săn Xe 24/7');
+    assert(radarSrc.includes('carmate_radar_watcher_active_v1'), 'AI Radar 2: Lưu cấu hình radar săn xe vào localStorage');
+    assert(radarSrc.includes('Radar AI Săn Xe 24/7') && radarSrc.includes('animate-ping'), 'AI Radar 3: MatchRadarView hiển thị hiệu ứng sóng radar phát xung chuẩn Apple');
+    assert(radarSrc.includes('Bật Radar Săn Xe') && radarSrc.includes('Tắt Radar'), 'AI Radar 4: Hỗ trợ 1-chạm bật/tắt radar săn xe');
+
+    // 5. Fair-Split Calculator (Minh Bạch Xăng Xe & Cầu Đường)
+    const fairSplitSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/FairSplitModal.jsx'), 'utf8');
+    assert(fairSplitSrc.includes('litersConsumed') && fairSplitSrc.includes('fuelCost'), 'Fair Split 1: Tính toán chi phí xăng xe toán học MIT theo cự ly thực tế');
+    assert(fairSplitSrc.includes('tollFee') && fairSplitSrc.includes('totalTripCost'), 'Fair Split 2: Tổng hợp chi phí lăn bánh gồm xăng và vé cầu đường');
+    assert(fairSplitSrc.includes('fairPricePerSeat') && fairSplitSrc.includes('taxiCost'), 'Fair Split 3: So sánh tiết kiệm minh bạch với taxi truyền thống');
+    assert(heroSrc.includes('<FairSplitModal') && heroSrc.includes('Định mức xăng'), 'Fair Split 4: Hero.jsx tích hợp FairSplitModal và nút mở 1-chạm');
+    const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postFormSrc.includes('<FairSplitModal') && postFormSrc.includes('Bảng tính chi phí xăng & cầu đường'), 'Fair Split 5: PostTripForm.jsx tích hợp FairSplitModal cho chủ xe tham khảo');
+  } catch (err) {
+    assert(false, '59. Kiểm thử Trí Tuệ Bản Địa Phong Cách Cursor', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

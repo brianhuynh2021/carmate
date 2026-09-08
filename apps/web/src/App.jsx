@@ -43,6 +43,7 @@ import ZaloReentryModal from './components/modals/ZaloReentryModal.jsx';
 import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal.jsx';
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
 import VehicleMismatchModal from './components/modals/VehicleMismatchModal.jsx';
+import UnreachablePhoneModal from './components/modals/UnreachablePhoneModal.jsx';
 import UserProfileModal from './components/profile/UserProfileModal.jsx';
 import InboxModal from './components/modals/InboxModal.jsx';
 
@@ -245,6 +246,8 @@ export default function App() {
     setReviewRecord,
     mismatchRecord,
     setMismatchRecord,
+    unreachablePhoneRecord,
+    setUnreachablePhoneRecord,
     selectedTripForRoute,
     setSelectedTripForRoute,
     editingTrip,
@@ -397,7 +400,8 @@ export default function App() {
     handleSendDelay,
     handleCompleteTrip,
     handleSubmitReview,
-    handleVehicleMismatchReport
+    handleVehicleMismatchReport,
+    handleUnreachablePhoneReport
   } = useTripsData({
     currentUser,
     updateMyTripsCount,
@@ -675,6 +679,8 @@ export default function App() {
               searchTo={searchTo}
               setSearchTo={setSearchTo}
               onPostClick={handleRequestPostTrip}
+              currentUser={currentUser}
+              onShowToast={showToast}
             />
 
             <div className={`${container} py-3.5 sm:py-6 space-y-3.5 sm:space-y-5 relative z-10`}>
@@ -957,6 +963,7 @@ export default function App() {
               passengerRequests={passengerRequests}
               onBook={handleInitiateBook}
               onViewTrustProfile={setSelectedDriverForTrust}
+              onShowToast={showToast}
             />
           </div>
         )}
@@ -1016,6 +1023,7 @@ export default function App() {
               onComplete={handleCompleteTrip}
               onReview={setReviewRecord}
               onReportMismatch={setMismatchRecord}
+              onReportUnreachablePhone={setUnreachablePhoneRecord}
               onFindTrip={() => setActiveTab('market')}
               onOpenChat={(id) => handleOpenInbox(id)}
             />
@@ -1064,6 +1072,7 @@ export default function App() {
           currentUser={currentUser}
           initialBookingId={inboxInitialBookingId}
           onRefreshBookings={refreshBookings}
+          onReportUnreachablePhone={setUnreachablePhoneRecord}
           onShowToast={showToast}
         />
       )}
@@ -1135,6 +1144,13 @@ export default function App() {
           record={mismatchRecord}
           onClose={() => setMismatchRecord(null)}
           onSubmitReport={handleVehicleMismatchReport}
+        />
+      )}
+      {unreachablePhoneRecord && (
+        <UnreachablePhoneModal
+          record={unreachablePhoneRecord}
+          onClose={() => setUnreachablePhoneRecord(null)}
+          onSubmitReport={handleUnreachablePhoneReport}
         />
       )}
       {selectedTripForRoute && (

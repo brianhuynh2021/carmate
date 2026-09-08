@@ -18,12 +18,16 @@ import {
   Upload,
   Trash2,
   ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
   Eye,
   Crosshair,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Calculator
 } from 'lucide-react';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import PlateMaskModal from '../modals/PlateMaskModal.jsx';
+import FairSplitModal from '../modals/FairSplitModal.jsx';
 import {
   ROUTE_BENCHMARKS,
   TIME_SLOTS,
@@ -35,7 +39,9 @@ import {
   formatTripDateDisplay,
   VEHICLE_SEAT_CONFIGS,
   formatVND,
-  getCorridorWaypoints
+  getCorridorWaypoints,
+  isValidVietnamesePhone,
+  isLikelyFakePhone
 } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
@@ -330,6 +336,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   }, [fromLocation, toLocation]);
 
   const [hasManuallyEditedPrice, setHasManuallyEditedPrice] = useState(false);
+  const [showFairSplitModal, setShowFairSplitModal] = useState(false);
   useEffect(() => {
     if (!hasManuallyEditedPrice && routePriceBenchmark?.suggestedPrice && fromLocation && toLocation) {
       setPrice(routePriceBenchmark.suggestedPrice);
@@ -491,7 +498,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
 
     const cleanPhone = phoneReal.replace(/[^0-9]/g, '');
     if (cleanPhone.length < 10 || !cleanPhone.startsWith('0')) {
-      triggerError('Bắt buộc: Vui lòng nhập số điện thoại Việt Nam hợp lệ (10 chữ số) đã kích hoạt Zalo.');
+      triggerError('Bắt buộc: Vui lòng nhập số điện thoại Việt Nam hợp lệ (10 chữ số) để liên hệ đón nhau.');
+      return;
+    }
+    if (!isValidVietnamesePhone(cleanPhone) || isLikelyFakePhone(cleanPhone)) {
+      triggerError('Số điện thoại không hợp lệ hoặc có dấu hiệu số ảo (dãy số trùng lặp / liên tiếp). Vui lòng nhập số điện thoại thật.');
       return;
     }
     if (!zaloConfirmed) {
@@ -1100,6 +1111,14 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     · {routePriceBenchmark.note}
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setShowFairSplitModal(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer ml-auto"
+                >
+                  <Calculator className="w-3 h-3 text-[#0071e3]" />
+                  <span>Bảng tính chi phí xăng & cầu đường</span>
+                </button>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">
                 * Định giá tham khảo theo hao phí lăn bánh. Mức chia sẻ thực tế do Chủ xe và Người đi cùng tự do thoả
@@ -1331,15 +1350,34 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   setFormError(null);
                 }}
                 placeholder="0984 883 750"
-                className="w-full h-12 px-4 rounded-xl border text-base font-mono font-bold tracking-wider text-slate-900 dark:text-white bg-white dark:bg-[#161a28] border-slate-200/90 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.16] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15 outline-none transition-all shadow-2xs"
+                className={`w-full h-12 px-4 rounded-xl border text-base font-mono font-bold tracking-wider text-slate-900 dark:text-white bg-white dark:bg-[#161a28] ${
+                  phoneReal.length === 10 && isLikelyFakePhone(phoneReal)
+                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/15'
+                    : 'border-slate-200/90 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.16] focus:border-blue-500 focus:ring-blue-500/15'
+                } outline-none transition-all shadow-2xs`}
               />
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-              <span>
-                Được bảo mật danh tính tự động bằng mã viết tắt ({isDriver ? 'CX-xxx' : 'HK-xxx'}) trước khi kết nối
-              </span>
+            {phoneReal.length === 10 && isLikelyFakePhone(phoneReal) && (
+              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Số điện thoại có dấu hiệu số ảo hoặc thử nghiệm. Vui lòng nhập số thật để đối tác liên hệ đón bạn.</span>
+              </div>
+            )}
+
+            <div className="space-y-1 pt-0.5">
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                <span>
+                  Được bảo mật danh tính tự động bằng mã viết tắt ({isDriver ? 'CX-xxx' : 'HK-xxx'}) trước khi kết nối
+                </span>
+              </div>
+              <div className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-400/90 leading-tight">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  <b>Cảnh báo răn đe:</b> SĐT chỉ hiển thị sau khi 2 bên cùng chốt chuyến. Cố tình nhập số ảo sẽ bị trừ 30 điểm tín nhiệm và khóa tài khoản vĩnh viễn.
+                </span>
+              </div>
             </div>
           </div>
 
@@ -1741,6 +1779,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
           onClose={() => setEditingMaskIndex(null)}
         />
       )}
+
+      {/* Modal Định mức xăng & Cầu đường minh bạch */}
+      <FairSplitModal
+        isOpen={showFairSplitModal}
+        onClose={() => setShowFairSplitModal(false)}
+        initialRouteKey="hn_hp"
+        onSelectSuggestedPrice={(rate) => {
+          setPrice(rate);
+          setHasManuallyEditedPrice(true);
+          onShowToast?.(`Đã áp dụng định mức phụ xăng ${formatVND(rate)}/ghế!`);
+        }}
+      />
     </div>
   );
 }
