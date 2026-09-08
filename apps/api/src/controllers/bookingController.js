@@ -11,7 +11,7 @@ import {
   getUserByPhone,
   updateUserStatus
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber, detectPiiLeak, maskPhoneNumber } from '@carmate/shared';
+import { cleanPhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
 import crypto from 'crypto';
 import { sendBusinessAlert, sendTelegramMessage } from '../utils/telegramAlert.js';
 
@@ -885,6 +885,153 @@ export async function reportVehicleMismatch(req, res) {
       success: true,
       message: 'Đã tiếp nhận báo cáo sai lệch xe. Ban Quản Trị CarMate sẽ xử lý ngay lập tức để bảo vệ bạn!',
       data: mismatchReport
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/bookings/:id/report-unreachable-phone - Báo cáo số điện thoại ảo / không liên lạc được
+ * Chế tài trừng phạt: Trừ 30 điểm tín nhiệm đối tác, khóa tài khoản nếu tái phạm.
+ * Huỷ chuyến an toàn cho người báo cáo (không ảnh hưởng điểm uy tín).
+ */
+export async function reportUnreachablePhone(req, res) {
+  try {
+    const { id } = req.params;
+    const { reason = 'fake_number', note = '', reporterRole } = req.body || {};
+
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy chuyến đi để báo cáo'
+      });
+    }
+
+    // Xác định vai trò người báo cáo
+    const reqPhone = cleanPhoneNumber(req.user?.phone || '');
+    const isDriverReporter =
+      reporterRole === 'driver' ||
+      (req.user?.id && booking.driverId && req.user.id === booking.driverId) ||
+      (reqPhone && booking.driverPhone && cleanPhoneNumber(booking.driverPhone) === reqPhone);
+
+    const effectiveReporterRole = isDriverReporter ? 'driver' : 'passenger';
+    const targetRole = effectiveReporterRole === 'driver' ? 'passenger' : 'driver';
+
+    const reporterName =
+      effectiveReporterRole === 'driver'
+        ? booking.driverName || req.user?.name || 'Chủ xe'
+        : booking.passengerName || booking.contactName || req.user?.name || 'Người đi cùng';
+
+    const reporterPhone =
+      effectiveReporterRole === 'driver'
+        ? booking.driverPhone || req.user?.phone || 'N/A'
+        : booking.passengerPhone || booking.userPhone || req.user?.phone || 'N/A';
+
+    const targetName =
+      effectiveReporterRole === 'driver'
+        ? booking.passengerName || booking.contactName || 'Người đi cùng'
+        : booking.driverName || 'Chủ xe';
+
+    const targetPhone =
+      effectiveReporterRole === 'driver'
+        ? booking.passengerPhone || booking.userPhone || ''
+        : booking.driverPhone || booking.contactPhone || '';
+
+    const targetUserId =
+      effectiveReporterRole === 'driver'
+        ? booking.passengerId || booking.userId || (targetPhone ? 'USR-' + cleanPhoneNumber(targetPhone) : null)
+        : booking.driverId || (targetPhone ? 'USR-' + cleanPhoneNumber(targetPhone) : null);
+
+    const reasonLabels = {
+      fake_number: 'Số điện thoại không có thực / Thuê bao không tồn tại',
+      unreachable: 'Gọi liên tục không liên lạc được / Tắt máy',
+      rejected: 'Nhầm số / Bị người lạ chửi bới / Không nhận đặt xe',
+      no_answer: 'Đổ chuông nhưng cố tình không nhấc máy'
+    };
+    const reasonText = reasonLabels[reason] || reason;
+
+    // Trừng phạt đối tượng bị báo cáo (Trừ 30 điểm tín nhiệm)
+    let punishedUser = null;
+    if (targetUserId || targetPhone) {
+      const db = getDB();
+      const cleanTargetPhone = cleanPhoneNumber(targetPhone);
+      const existingUser = (db.users || []).find(
+        (u) =>
+          (targetUserId && u.id === targetUserId) ||
+          (cleanTargetPhone && cleanPhoneNumber(u.phone || '') === cleanTargetPhone)
+      );
+
+      const currentTrust = existingUser ? existingUser.trustScore ?? 100 : 100;
+      const newTrustScore = Math.max(0, currentTrust - 30);
+      const strikes = (existingUser?.fakePhoneStrikes || 0) + 1;
+      const shouldBan = strikes >= 2 || newTrustScore <= 20;
+
+      punishedUser = await updateUserStatus(targetUserId || 'USR-' + cleanTargetPhone, {
+        phone: cleanTargetPhone || existingUser?.phone,
+        name: existingUser?.name || targetName,
+        trustScore: newTrustScore,
+        fakePhoneStrikes: strikes,
+        hasFakePhoneWarning: true,
+        lastReportedFakePhoneAt: new Date().toISOString(),
+        ...(shouldBan ? { isBanned: true, banReason: 'Bị báo cáo số điện thoại ảo / không liên lạc được nhiều lần' } : {})
+      });
+    }
+
+    const reportData = {
+      id: `UNREACHABLE-${Date.now()}`,
+      bookingId: id,
+      tripId: booking.tripId || null,
+      reporterRole: effectiveReporterRole,
+      reporterName,
+      reporterPhone,
+      targetRole,
+      targetName,
+      targetPhone,
+      targetUserId,
+      reason,
+      reasonText,
+      note: String(note || '').trim(),
+      penaltyApplied: {
+        trustScoreDeducted: 30,
+        punishedUserId: targetUserId,
+        isBanned: punishedUser?.isBanned || false
+      },
+      reportedAt: new Date().toISOString()
+    };
+
+    // Cập nhật trạng thái booking: Huỷ chuyến an toàn
+    const updated = await updateBookingStatus(id, 'cancelled', {
+      cancelReason: `Huỷ an toàn: ${reporterName} báo cáo đối tác dùng số điện thoại không liên lạc được (${reasonText})`,
+      cancelledAt: new Date().toISOString(),
+      unreachablePhoneReport: reportData
+    });
+
+    // Gửi cảnh báo Telegram tức thì (0đ chi phí)
+    const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const teleMsg =
+      `🚨 <b>[CARMATE PHÁT HIỆN SỐ ẢO / KHÔNG LIÊN LẠC ĐƯỢC]</b>\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `⚠️ <b>${reporterName} (${effectiveReporterRole === 'driver' ? 'Chủ xe' : 'Khách'}) vừa báo cáo đối tác!</b>\n` +
+      `⏰ <b>Thời gian:</b> ${timeStr}\n` +
+      `📋 <b>Mã chuyến:</b> <code>${id}</code>\n` +
+      `🎯 <b>Đối tượng bị phản ánh:</b> ${targetName} (<code>${targetPhone || 'Không rõ SĐT'}</code>)\n` +
+      `⚡ <b>Lý do:</b> <b>${reasonText}</b>\n` +
+      (note ? `📝 <b>Chi tiết:</b> <i>&ldquo;${note}&rdquo;</i>\n` : '') +
+      `⚖️ <b>Chế tài tự động:</b> Trừ 30đ tín nhiệm${punishedUser?.isBanned ? ' & ĐÃ KHÓA TÀI KHOẢN VI PHẠM' : ''}\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `👉 <b>Hệ thống CarMate</b> đã tự động huỷ chuyến an toàn bảo vệ người bị hại.`;
+
+    sendTelegramMessage(teleMsg, { parseMode: 'HTML', req }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã tiếp nhận báo cáo. Hệ thống đã trừ 30 điểm tín nhiệm đối tác và huỷ chuyến an toàn cho bạn.',
+      data: {
+        booking: updated,
+        report: reportData
+      }
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

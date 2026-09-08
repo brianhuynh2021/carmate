@@ -4230,6 +4230,128 @@ async function runTests() {
     assert(false, '57. Kiểm thử Tự Động An Ninh Mạng & Trải Nghiệm Mobile Responsive', err.message);
   }
 
+  // ==========================================
+  // 58. KIỂM THỬ PHÒNG CHỐNG & XỬ PHẠT SỐ ĐIỆN THOẠI ẢO (ANTI-FAKE PHONE & DETERRENCE)
+  // ==========================================
+  console.log('\n🛡️ 58. Kiểm thử Phòng Chống & Xử Phạt Số Điện Thoại Ảo (Anti-Fake Phone & Deterrence)...');
+  try {
+    const { isLikelyFakePhone, isValidVietnamesePhone } = await import(
+      path.join(process.cwd(), 'packages/shared/src/utils/zalo.js')
+    );
+
+    // 1. Kiểm thử hàm phát hiện số ảo
+    assert(isValidVietnamesePhone('0984883750') === true, 'Anti-Fake 0: Nhận diện định dạng mạng viễn thông Việt Nam hợp lệ');
+    assert(isLikelyFakePhone('0900000000') === true, 'Anti-Fake 1: Chặn số toàn số 0');
+    assert(isLikelyFakePhone('0988888888') === true, 'Anti-Fake 2: Chặn số toàn số 8 lặp lại');
+    assert(isLikelyFakePhone('0987654321') === true, 'Anti-Fake 3: Chặn dãy lùi 987654321');
+    assert(isLikelyFakePhone('0909090909') === true, 'Anti-Fake 4: Chặn số lặp nhịp 0909090909');
+    assert(isLikelyFakePhone('0900000019') === false, 'Anti-Fake 5: Bảo toàn số seed test 0900000019');
+    assert(isLikelyFakePhone('0984883750') === false, 'Anti-Fake 6: Nhận diện đúng số điện thoại thật');
+
+    // 2. Kiểm thử API Đăng Chuyến chặn số điện thoại ảo
+    const fakeTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Hà Nội',
+        to: 'Hải Phòng',
+        timeSlot: '08:00-09:00',
+        phoneReal: '0900000000',
+        price: 150000,
+        type: 'driver_offer'
+      })
+    });
+    assert(fakeTripRes.status === 400, 'Anti-Fake API 1: API đăng chuyến chặn số ảo 0900000000 (HTTP 400)');
+    const fakeTripJson = await fakeTripRes.json();
+    assert(fakeTripJson.error?.includes('số ảo'), 'Anti-Fake API 2: Phản hồi lỗi nêu rõ dấu hiệu số ảo');
+
+    // 3. Kiểm thử API Báo Cáo Số Ảo / Không Liên Lạc Được
+    // Tạo 1 booking test
+    const createBookRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Hà Nội',
+        to: 'Hạ Long',
+        date: 'Hôm nay',
+        time: '09:00',
+        passengerName: 'Khách Thử Nghiệm',
+        passengerPhone: '0981999888',
+        driverPhone: '0982777666',
+        driverName: 'Chủ xe Thử Nghiệm'
+      })
+    });
+    const createBookJson = await createBookRes.json();
+    const testBookingId = createBookJson.data?.id || createBookJson.data?.escrowId;
+    assert(Boolean(testBookingId), 'Anti-Fake API 3: Tạo chuyến test thành công');
+
+    // Gọi API báo số ảo
+    const reportRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-unreachable-phone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: 'fake_number',
+        note: 'Gọi 3 cuộc tổng đài báo số không có thực',
+        reporterRole: 'passenger'
+      })
+    });
+    assert(reportRes.status === 200, 'Anti-Fake API 4: API report-unreachable-phone phản hồi thành công (HTTP 200)');
+    const reportJson = await reportRes.json();
+    assert(reportJson.success === true, 'Anti-Fake API 5: Báo cáo thành công');
+    assert(reportJson.data?.booking?.status === 'cancelled', 'Anti-Fake API 6: Chuyến đi được huỷ an toàn');
+    assert(reportJson.data?.report?.penaltyApplied?.trustScoreDeducted === 30, 'Anti-Fake API 7: Tự động trừ 30 điểm tín nhiệm đối tác vi phạm');
+
+    // Kiểm thử báo cáo lần 2 kích hoạt Ban
+    const createBookRes2 = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Hà Nội',
+        to: 'Hải Dương',
+        date: 'Hôm nay',
+        passengerPhone: '0981999888',
+        driverPhone: '0982777666'
+      })
+    });
+    const createBookJson2 = await createBookRes2.json();
+    const testBookingId2 = createBookJson2.data?.id || createBookJson2.data?.escrowId;
+
+    const reportRes2 = await fetch(`${BASE_URL}/api/bookings/${testBookingId2}/report-unreachable-phone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: 'unreachable',
+        note: 'Tắt máy liên tục',
+        reporterRole: 'passenger'
+      })
+    });
+    const reportJson2 = await reportRes2.json();
+    assert(reportJson2.data?.report?.penaltyApplied?.isBanned === true, 'Anti-Fake API 8: Tái phạm số ảo lần 2 bị khóa tài khoản vĩnh viễn (BAN)');
+
+    // 4. Kiểm thử UI & Tệp Thành Phần
+    const unreachModalPath = path.join(process.cwd(), 'apps/web/src/components/modals/UnreachablePhoneModal.jsx');
+    assert(fs.existsSync(unreachModalPath), 'Anti-Fake UI 1: Tệp UnreachablePhoneModal.jsx tồn tại');
+    const unreachModalSrc = fs.readFileSync(unreachModalPath, 'utf8');
+    assert(unreachModalSrc.includes('UNREACHABLE_OPTIONS'), 'Anti-Fake UI 2: UnreachablePhoneModal có danh sách lý do');
+    assert(unreachModalSrc.includes('trừ 30 điểm tín nhiệm'), 'Anti-Fake UI 3: UnreachablePhoneModal có thông điệp răn đe');
+
+    const bookedTripListSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(bookedTripListSrc.includes('onReportUnreachablePhone'), 'Anti-Fake UI 4: BookedTripList hỗ trợ prop onReportUnreachablePhone');
+    assert(bookedTripListSrc.includes('Báo số ảo / Không nghe máy'), 'Anti-Fake UI 5: BookedTripList có nút Báo số ảo / Không nghe máy');
+
+    const postTripFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postTripFormSrc.includes('isLikelyFakePhone'), 'Anti-Fake UI 6: PostTripForm kiểm tra isLikelyFakePhone');
+    assert(postTripFormSrc.includes('Cảnh báo răn đe:'), 'Anti-Fake UI 7: PostTripForm hiển thị cảnh báo răn đe tâm lý');
+
+    const clientSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/api/client.js'), 'utf8');
+    assert(clientSrc.includes('reportUnreachablePhone'), 'Anti-Fake UI 8: api client có method reportUnreachablePhone');
+
+    const adminControllerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/api/src/controllers/adminController.js'), 'utf8');
+    assert(adminControllerSrc.includes('unreachablePhoneReports'), 'Anti-Fake Admin 1: adminController thu thập unreachablePhoneReports');
+  } catch (err) {
+    assert(false, '58. Kiểm thử Phòng Chống & Xử Phạt Số Điện Thoại Ảo', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

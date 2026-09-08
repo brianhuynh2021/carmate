@@ -181,6 +181,13 @@ export const api = {
     });
   },
 
+  async reportUnreachablePhone(id, data = {}) {
+    return request(`/bookings/${id}/report-unreachable-phone`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
   // Auth & Identity (0đ chi phí / Zalo & OTP)
   async requestOtp(phone) {
     return request('/auth/request-otp', {

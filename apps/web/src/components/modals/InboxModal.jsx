@@ -16,6 +16,7 @@ import {
   MessageSquare,
   AlertCircle,
   ShieldAlert,
+  PhoneOff,
   Ban
 } from 'lucide-react';
 import { formatVND, toPublicAlias, detectPiiLeak } from '@carmate/shared';
@@ -31,6 +32,7 @@ export default function InboxModal({
   currentUser = null,
   onRefreshBookings,
   initialBookingId = null,
+  onReportUnreachablePhone = null,
   onShowToast
 }) {
   const [selectedId, setSelectedId] = useState(initialBookingId);
@@ -656,6 +658,21 @@ export default function InboxModal({
                         <span>{copiedPhone ? 'Đã chép' : 'Chép'}</span>
                       </button>
                     </div>
+                    {onReportUnreachablePhone && (
+                      <div className="pt-1 text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onReportUnreachablePhone(activeBooking);
+                            onClose();
+                          }}
+                          className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <PhoneOff className="w-3 h-3" />
+                          <span>Báo số ảo / Không liên lạc được</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div ref={messagesEndRef} />

@@ -466,6 +466,19 @@ export function getAdminReports(req, res) {
         date: b.date
       }));
 
+    // Thu thập các báo cáo số điện thoại ảo / không liên lạc được
+    const unreachablePhoneReports = bookings
+      .filter((b) => b.unreachablePhoneReport)
+      .map((b) => ({
+        ...b.unreachablePhoneReport,
+        bookingId: b.id || b.escrowId,
+        tripId: b.tripId,
+        from: b.from,
+        to: b.to,
+        timeSlot: b.timeSlot,
+        date: b.date
+      }));
+
     return res.status(200).json({
       success: true,
       data: {
@@ -473,11 +486,13 @@ export function getAdminReports(req, res) {
         cancelled,
         reviewsWithFlags,
         vehicleMismatchReports,
+        unreachablePhoneReports,
         summary: {
           totalDelays: delayed.length,
           totalCancellations: cancelled.length,
           lowRatingFlags: reviewsWithFlags.length,
-          totalVehicleMismatches: vehicleMismatchReports.length
+          totalVehicleMismatches: vehicleMismatchReports.length,
+          totalUnreachablePhones: unreachablePhoneReports.length
         }
       }
     });
