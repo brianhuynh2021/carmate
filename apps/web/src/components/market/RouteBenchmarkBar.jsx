@@ -37,7 +37,14 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
     return 'Tuyến QL13';
   }, [searchKeyword, selectedRouteKey, routeKeys]);
 
-  const info = ROUTE_BENCHMARKS[activeRouteKey] || ROUTE_BENCHMARKS['Tuyến QL13'];
+  const defaultBenchmark = ROUTE_BENCHMARKS['Tuyến QL13'] || Object.values(ROUTE_BENCHMARKS)[0] || {
+    name: 'Tuyến QL13',
+    shortName: 'Bình Phước ⇄ Sài Gòn',
+    distanceKm: 140,
+    fuelCost: 210000,
+    botFee: 140000
+  };
+  const info = ROUTE_BENCHMARKS[activeRouteKey] || defaultBenchmark;
   const open = showDetail || forceOpen;
   const close = () => {
     setShowDetail(false);
@@ -46,7 +53,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
   };
 
   const applyFilterAndClose = () => {
-    const route = ROUTE_BENCHMARKS[activeRouteKey];
+    const route = ROUTE_BENCHMARKS[activeRouteKey] || info;
     if (route?.keyword) {
       setSearchKeyword?.(route.keyword);
     }
@@ -56,13 +63,13 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
   // Lọc tuyến theo miền đã chọn
   const routesInRegion = useMemo(() => {
     return routeKeys.filter((k) => {
-      const r = ROUTE_BENCHMARKS[k].region || 'south';
+      const r = ROUTE_BENCHMARKS[k]?.region || 'south';
       return r === selectedRegion;
     });
   }, [selectedRegion, routeKeys]);
 
   // Tổng chi phí vận hành xe thực tế
-  const totalOperatingCost = (info.fuelCost || 0) + (info.botFee || 0);
+  const totalOperatingCost = (info?.fuelCost || 0) + (info?.botFee || 0);
 
   return (
     <>
@@ -145,7 +152,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                 value={selectedRegion}
                 onChange={(reg) => {
                   setSelectedRegion(reg);
-                  const firstInRegion = routeKeys.find((k) => (ROUTE_BENCHMARKS[k].region || 'south') === reg);
+                  const firstInRegion = routeKeys.find((k) => (ROUTE_BENCHMARKS[k]?.region || 'south') === reg);
                   if (firstInRegion) {
                     setSelectedRouteKey(firstInRegion);
                   }
@@ -168,7 +175,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                     }}
                     className="h-8 px-3 text-xs"
                   >
-                    {ROUTE_BENCHMARKS[k].shortName}
+                    {ROUTE_BENCHMARKS[k]?.shortName || k}
                   </Chip>
                 ))}
               </div>
@@ -215,10 +222,10 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5">
                   <Route className="w-3.5 h-3.5 text-[#0071e3]" />
-                  <span>Bóc tách chi phí lăn bánh ({info.shortName})</span>
+                  <span>Bóc tách chi phí lăn bánh ({info?.shortName || ''})</span>
                 </span>
                 <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
-                  Cự ly: ~{info.distanceKm} km
+                  Cự ly: ~{info?.distanceKm || 0} km
                 </span>
               </div>
 
@@ -230,7 +237,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                     <span>Xăng RON 95</span>
                   </p>
                   <p className="text-sm font-bold text-slate-900 dark:text-white font-mono mt-1">
-                    ~{formatVND(info.fuelCost)}
+                    ~{formatVND(info?.fuelCost || 0)}
                   </p>
                 </div>
 
@@ -240,7 +247,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                     <span>Vé cầu đường</span>
                   </p>
                   <p className="text-sm font-bold text-slate-900 dark:text-white font-mono mt-1">
-                    ~{formatVND(info.botFee)}
+                    ~{formatVND(info?.botFee || 0)}
                   </p>
                 </div>
 

@@ -2,7 +2,7 @@
  * Xử lý số điện thoại sang định dạng chuẩn Zalo (ví dụ: 0900000019)
  */
 export const cleanPhoneNumber = (phone = '') => {
-  return phone.replace(/[^0-9]/g, '');
+  return String(phone || '').replace(/[^0-9]/g, '');
 };
 
 /**
