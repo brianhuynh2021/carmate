@@ -427,7 +427,7 @@ export default function EscrowBookingModal({
           ) : (
             <>
               <Zap className="w-5 h-5 text-amber-300 animate-pulse fill-amber-300" />
-              <span>{isDriverItem ? 'Gửi yêu cầu ghép ngay · Báo chuông liền' : 'Gửi đề xuất đón ngay · Báo chuông liền'}</span>
+              <span>{isDriverItem ? 'Gửi yêu cầu ghép ngay' : 'Gửi đề xuất đón ngay'}</span>
             </>
           )}
         </span>
