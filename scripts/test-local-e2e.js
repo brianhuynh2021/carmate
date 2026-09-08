@@ -3957,6 +3957,7 @@ async function runTests() {
 
     // 2. Kiểm thử State Machine 2-Phase Commit qua API
     // 2.1 Tạo booking mới -> trạng thái ban đầu là inquiring
+    const testPhone54 = '09' + Date.now().toString().slice(-8);
     const bookingRes = await fetch(`${BASE_URL}/api/bookings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3966,7 +3967,7 @@ async function runTests() {
         seats: 1,
         totalDeal: 150000,
         passengerNote: 'Em có 1 vali nhỏ',
-        contactPhone: '0984883750'
+        contactPhone: testPhone54
       })
     });
     const bookingData = await bookingRes.json();
@@ -4037,6 +4038,7 @@ async function runTests() {
   console.log('\n⚖️ 55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang: Lần 1 Cảnh Cáo, Lần 2 Hạ Điểm Tín Dụng, Lần 3 Ban Luôn...');
   try {
     // 1. Tạo một yêu cầu ghép chuyến để kiểm thử
+    const strikeTestPhone = '09' + (Date.now() + 100).toString().slice(-8);
     const strikeBookRes = await fetch(`${BASE_URL}/api/bookings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4045,7 +4047,7 @@ async function runTests() {
         to: 'Vũng Tàu',
         seats: 1,
         totalDeal: 150000,
-        contactPhone: '0977112233'
+        contactPhone: strikeTestPhone
       })
     });
     const strikeBookData = await strikeBookRes.json();

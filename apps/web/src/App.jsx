@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight } from 'lucide-react';
 import { TIME_SLOTS } from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
