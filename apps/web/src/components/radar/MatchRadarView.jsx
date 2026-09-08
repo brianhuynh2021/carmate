@@ -313,7 +313,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                 <option value="all">Tất cả các tuyến quốc lộ</option>
                 {routeKeys.map((key) => (
                   <option key={key} value={key}>
-                    {ROUTE_BENCHMARKS[key].shortName}
+                    {ROUTE_BENCHMARKS[key]?.shortName || key}
                   </option>
                 ))}
               </Select>

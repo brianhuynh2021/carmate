@@ -100,7 +100,8 @@ const defaultAllowedOrigins = [
   'https://carmate.vn',
   'https://www.carmate.vn',
   'https://ops.carmate.vn',
-  'https://admin.carmate.vn'
+  'https://admin.carmate.vn',
+  'https://carmate.fly.dev'
 ];
 const customAllowed = (process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN || '')
   .split(',')
@@ -114,6 +115,9 @@ app.use(
       // Cho phép request cùng nguồn (no origin), curl, mobile app hoặc local development
       if (!origin) return callback(null, true);
       if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      if (/^https:\/\/([a-z0-9-]+\.)*fly\.dev$/.test(origin)) {
         return callback(null, true);
       }
       if (allowedOrigins.has(origin)) {

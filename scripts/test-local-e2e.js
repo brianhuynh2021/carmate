@@ -4401,6 +4401,8 @@ async function runTests() {
     assert(heroSrc.includes('<FairSplitModal') && heroSrc.includes('Định mức xăng'), 'Fair Split 4: Hero.jsx tích hợp FairSplitModal và nút mở 1-chạm');
     const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
     assert(postFormSrc.includes('<FairSplitModal') && postFormSrc.includes('Bảng tính chi phí xăng & cầu đường'), 'Fair Split 5: PostTripForm.jsx tích hợp FairSplitModal cho chủ xe tham khảo');
+    assert(fairSplitSrc.includes('defaultRouteKey') && fairSplitSrc.includes('currentBenchmark?.distanceKm'), 'Fair Split 6: FairSplitModal có cơ chế fallback an toàn chống crash undefined distanceKm');
+    assert(fairSplitSrc.includes('ROUTE_BENCHMARKS[k]?.shortName || k'), 'Fair Split 7: FairSplitModal bảo vệ select dropdown an toàn với optional chaining');
   } catch (err) {
     assert(false, '59. Kiểm thử Trí Tuệ Bản Địa Phong Cách Cursor', err.message);
   }
