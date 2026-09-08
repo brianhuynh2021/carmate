@@ -185,37 +185,48 @@ export async function generateTicketImage(trip, lang = 'vi') {
     '#fbbf24'
   );
 
-  // Ô 3: Chi phí chia sẻ
-  const priceY = infoBoxY + boxH + 20;
-  const priceVal = formatVND(trip.basePricePerSeat || trip.expectedPrice || 180000);
-  drawInfoBox(
-    ctx,
-    cardX + 50,
-    priceY,
-    boxW,
-    boxH,
-    'CHI PHÍ CHIA SẺ',
-    `${priceVal} / ghế`,
-    'Đã gồm vé cầu đường & xăng',
-    '#34d399'
-  );
+  // 6. KHỐI QUÉT MÃ QR & CAM KẾT AN TÂM (Thay thế 2 ô Chi phí & SĐT đã gỡ bỏ)
+  const qrBoxY = infoBoxY + boxH + 20;
+  const qrBoxW = cardW - 100;
+  const qrBoxH = 190;
+  const qrBoxX = cardX + 50;
 
-  // Ô 4: Liên hệ Đón đã bảo mật
-  const phoneFormatted = formatPhoneForTicket(trip.phoneReal || trip.contactPhone || '0984883750');
-  drawInfoBox(
-    ctx,
-    cardX + 70 + boxW,
-    priceY,
-    boxW,
-    boxH,
-    'LIÊN HỆ ĐÓN (ĐÃ XÁC THỰC)',
-    phoneFormatted,
-    'Bảo mật danh tính · Không cọc',
-    '#60a5fa'
-  );
+  // Khung chứa nền kính mờ sang trọng
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+  ctx.lineWidth = 1.5;
+  drawRoundedRect(ctx, qrBoxX, qrBoxY, qrBoxW, qrBoxH, 24);
+  ctx.fill();
+  ctx.stroke();
 
-  // 6. TIỆN ÍCH & ĐẶC BIỆT (Gửi hàng / Bưu phẩm)
-  const perksY = priceY + boxH + 30;
+  // Vẽ mã QR thực tế ở bên trái khối
+  const qrSize = 146;
+  const qrX = qrBoxX + 22;
+  const qrY = qrBoxY + 22;
+  drawStylizedQRCode(ctx, qrX, qrY, qrSize, trip.id || 'carmate');
+
+  // Khối nội dung thông tin bên phải mã QR
+  const textLeft = qrX + qrSize + 28;
+
+  // Tiêu đề
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
+  ctx.fillText('QUÉT MÃ GIỮ CHỖ 0Đ TRỰC TUYẾN', textLeft, qrBoxY + 44);
+
+  // Hướng dẫn quét 1 chạm
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '500 16px system-ui, -apple-system, sans-serif';
+  ctx.fillText('Chạm giữ ảnh trên Zalo/FB hoặc quét camera để xem lộ trình', textLeft, qrBoxY + 74);
+
+  // Các huy hiệu bảo đảm an tâm
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '500 15px system-ui, -apple-system, sans-serif';
+  ctx.fillText('🛡️ 0đ tiền cọc · 0% phí sàn · Đổi ý linh hoạt', textLeft, qrBoxY + 108);
+  ctx.fillText('👤 Chủ xe đã đối soát CCCD & Giấy phép lái xe', textLeft, qrBoxY + 134);
+  ctx.fillText('💬 Thỏa thuận điểm đón trả tận nơi qua Zalo / App', textLeft, qrBoxY + 160);
+
+  // 7. TIỆN ÍCH & ĐẶC BIỆT (Gửi hàng / Bưu phẩm)
+  const perksY = qrBoxY + qrBoxH + 24;
   const hasParcel =
     trip.acceptsParcel || (Array.isArray(trip.perks) && trip.perks.some((p) => /hàng|đồ|bưu phẩm/i.test(p)));
 
@@ -492,32 +503,30 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
     '#fbbf24'
   );
 
-  // Ô 3: Chi phí chia sẻ
-  const priceY = infoBoxY + boxH + 20;
-  const priceVal = formatVND(trip.basePricePerSeat || trip.expectedPrice || 180000);
+  // Ô 3: Tiện nghi xe gia đình
+  const perksBoxY = infoBoxY + boxH + 20;
   drawInfoBox(
     ctx,
     cardX + 50,
-    priceY,
+    perksBoxY,
     boxW,
     boxH,
-    'CHI PHÍ CHIA SẺ',
-    `${priceVal} / ghế`,
-    'Xăng + vé cầu đường BOT minh bạch',
+    'TIỆN NGHI CHUYẾN ĐI',
+    'Xe gia đình mát lạnh',
+    'Không khói thuốc · Đi chung văn minh',
     '#34d399'
   );
 
-  // Ô 4: Liên hệ Đón đã bảo mật
-  const phoneFormatted = formatPhoneForTicket(trip.phoneReal || trip.contactPhone || '0984883750');
+  // Ô 4: Cam kết an tâm
   drawInfoBox(
     ctx,
     cardX + 70 + boxW,
-    priceY,
+    perksBoxY,
     boxW,
     boxH,
-    'LIÊN HỆ ĐÓN (ĐÃ XÁC THỰC)',
-    phoneFormatted,
-    'Bảo mật danh tính · Không thu cọc',
+    'CAM KẾT AN TÂM',
+    '0đ cọc · Đổi ý linh hoạt',
+    'Chủ xe đã đối soát CCCD & GPLX',
     '#60a5fa'
   );
 
