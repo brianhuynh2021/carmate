@@ -562,20 +562,104 @@ export function parseLocation(str) {
     return { main: 'Điểm hẹn đón dọc tuyến', sub: 'Thoả thuận điểm đón qua Zalo' };
   }
 
-  // Check if contains parentheses e.g. "Bù Đốp (Cây xăng Petrolimex 17, QL13)"
+  const isSaigon = (s) =>
+    /sài gòn|sai gon|tp\.hcm|tphcm|tp\s*hcm|hồ chí minh|ho chi minh|miền đông|miền tây|an sương|hàng xanh|thủ đức|quận\s*\d+|tân bình|bình tân|bình thạnh|gò vấp|phú nhuận|tân phú|bình chánh|hóc môn|củ chi|nhà bè|cần giờ|cống quỳnh|tân sơn nhất|chợ rẫy|từ dũ|bến thành|suối tiên/i.test(
+      s
+    );
+  const isBinhPhuoc = (s) => /bình phước|binh phuoc/i.test(s);
+
+  // 1. Phân tích ngoặc đơn: e.g. "Đường Cống Quỳnh (Quận 1)" hoặc "Bù Đốp (Cây xăng Petrolimex 17)"
   const parenMatch = cleanStr.match(/^(.*?)\s*\((.*?)\)$/);
   if (parenMatch) {
-    return { main: parenMatch[1].trim(), sub: parenMatch[2].trim() };
+    const partA = parenMatch[1].trim();
+    const partB = parenMatch[2].trim();
+
+    // Nếu partA là tên đường/địa điểm chi tiết ở Sài Gòn kèm Quận (VD: "Đường Cống Quỳnh (Quận 1)")
+    if (isSaigon(partB) || isSaigon(partA)) {
+      if (/^(đường|phố|hẻm|ngõ|số|cây xăng|chợ|bệnh viện|bv|trường|kcn|tòa|toà|chung cư|nhà khách|khách sạn)\b/i.test(partA)) {
+        return {
+          main: 'Sài Gòn',
+          sub: `${partA}, ${partB}`
+        };
+      }
+      if (/^(sài gòn|tp\.hcm|hồ chí minh|tp\s*hồ chí minh)$/i.test(partA)) {
+        return {
+          main: 'Sài Gòn',
+          sub: partB
+        };
+      }
+      return {
+        main: partA,
+        sub: partB
+      };
+    }
+
+    // Nếu partA là địa điểm chi tiết kèm Huyện/Tỉnh ở partB (VD: "Cây xăng 17 (Bù Đốp)")
+    if (/^(đường|phố|hẻm|ngõ|số|cây xăng|chợ|bệnh viện|bv|trường|kcn)\b/i.test(partA)) {
+      return {
+        main: partB,
+        sub: partA
+      };
+    }
+
+    return { main: partA, sub: partB };
   }
-  // Check if contains slash e.g. "Bù Đốp / Lộc Ninh"
+
+  // 2. Phân tích dấu phẩy hành chính: e.g. "trung tâm hành chính Tân Khai, Hớn Quản, Bình Phước"
+  if (cleanStr.includes(',')) {
+    const parts = cleanStr.split(',').map((s) => s.trim()).filter(Boolean);
+    const last = parts[parts.length - 1];
+
+    if (isSaigon(last) || isSaigon(cleanStr)) {
+      const spotParts = parts.filter((p) => !/^(sài gòn|tp\.hcm|tp\s*hồ chí minh|hồ chí minh)$/i.test(p));
+      return {
+        main: 'Sài Gòn',
+        sub: spotParts.join(', ') || cleanStr
+      };
+    }
+
+    if (isBinhPhuoc(last)) {
+      const spotParts = parts.slice(0, -1);
+      const sub = spotParts
+        .join(', ')
+        .replace(/trung tâm hành chính/gi, 'TT. Hành chính')
+        .replace(/bệnh viện/gi, 'BV.')
+        .replace(/cây xăng/gi, 'Cây xăng');
+      return {
+        main: 'Bình Phước',
+        sub: sub || cleanStr
+      };
+    }
+
+    // Các tỉnh thành khác có từ 2 cấp trở lên (VD: "Mũi Né, Phan Thiết")
+    if (parts.length >= 2) {
+      return {
+        main: last,
+        sub: parts.slice(0, -1).join(', ')
+      };
+    }
+  }
+
+  // 3. Phân tích dấu gạch chéo e.g. "Bù Đốp / Lộc Ninh"
   if (cleanStr.includes(' / ')) {
     const parts = cleanStr.split(' / ');
     return { main: parts[0].trim(), sub: parts.slice(1).join(' / ').trim() };
   }
+
+  // 4. Phân tích dấu chấm phẩy "; "
   if (cleanStr.includes('; ')) {
     const parts = cleanStr.split('; ');
     return { main: parts[0].trim(), sub: parts.slice(1).join('; ').trim() };
   }
+
+  // 5. Địa danh con thuộc Sài Gòn (VD: "Bến xe Miền Đông", "Ngã tư Hàng Xanh")
+  if (isSaigon(cleanStr) && !/^(sài gòn|tp\.hcm|hồ chí minh|tp\s*hồ chí minh)$/i.test(cleanStr)) {
+    return {
+      main: 'Sài Gòn',
+      sub: cleanStr
+    };
+  }
+
   return { main: cleanStr.trim(), sub: '' };
 }
 

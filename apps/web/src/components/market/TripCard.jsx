@@ -141,7 +141,12 @@ export default function TripCard({
   const toParsed = parseLocation(item.to);
 
   // Điểm hẹn cụ thể rút gọn
-  const briefSpot = (sub) => (sub ? String(sub).split(/\s*[/,;]\s*/)[0].trim() : '');
+  const briefSpot = (sub) => {
+    if (!sub) return '';
+    const s = String(sub).trim();
+    if (s.length <= 42) return s;
+    return s.split(/\s*[/;]\s*/)[0].trim();
+  };
   const rawFromSpot = briefSpot(fromParsed.sub);
   const rawToSpot = briefSpot(toParsed.sub);
 
