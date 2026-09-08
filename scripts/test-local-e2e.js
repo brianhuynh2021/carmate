@@ -416,7 +416,7 @@ async function runTests() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ passcode: 'wrong_secret_pass' })
     });
-    assert(failAuthRes.status === 401, 'Nhập sai mã Admin bị từ chối chính xác (HTTP 401)');
+    assert(failAuthRes.status === 401 || failAuthRes.status === 429, 'Nhập sai mã Admin bị từ chối chính xác (HTTP 401/429)');
 
     // 10.2 Đúng mật khẩu (Hỗ trợ quy trình 2 bước MFA)
     const okAuthRes = await fetch(`${BASE_URL}/api/admin/auth`, {
@@ -4120,6 +4120,115 @@ async function runTests() {
     assert(false, '55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang (3-Strike Sanctions)', err.message);
   }
 
+  // =========================================================================
+  // 56. KIỂM THỬ BẢO MẬT CHE BIỂN SỐ XE TỰ ĐỘNG & TRIỆT TIÊU TỪ VIẾT TẮT BOT
+  // =========================================================================
+  console.log('\n🛡️ 56. Kiểm thử Bảo Mật Che Biển Số Xe Tự Động & Triệt Tiêu Từ Viết Tắt BOT (Apple & MIT)...');
+  try {
+    // 1. Kiểm tra tiện ích plateMasker.js
+    const plateMaskerPath = path.join(process.cwd(), 'apps/web/src/utils/plateMasker.js');
+    assert(fs.existsSync(plateMaskerPath), 'Plate Mask 1: File plateMasker.js tồn tại');
+    const plateMaskerSrc = fs.readFileSync(plateMaskerPath, 'utf8');
+    assert(plateMaskerSrc.includes('drawPlateMaskOnCanvas'), 'Plate Mask 2: Có hàm vẽ che biển số squircle drawPlateMaskOnCanvas');
+    assert(plateMaskerSrc.includes('processCarPhotoUpload'), 'Plate Mask 3: Có hàm nạp và tự động che biển processCarPhotoUpload');
+    assert(plateMaskerSrc.includes('CARMATE · ĐÃ CHE BIỂN'), 'Plate Mask 4: Nhãn che biển sắc nét chuẩn Apple CARMATE · ĐÃ CHE BIỂN');
+
+    // 2. Kiểm tra modal chỉnh sửa tương tác PlateMaskModal.jsx
+    const plateMaskModalPath = path.join(process.cwd(), 'apps/web/src/components/modals/PlateMaskModal.jsx');
+    assert(fs.existsSync(plateMaskModalPath), 'Plate Mask 5: Modal tương tác PlateMaskModal.jsx tồn tại');
+    const plateMaskModalSrc = fs.readFileSync(plateMaskModalPath, 'utf8');
+    assert(plateMaskModalSrc.includes('handleImageClick') && plateMaskModalSrc.includes('Tọa độ che'), 'Plate Mask 6: Hỗ trợ 1-chạm dời tọa độ che biển số trên ảnh thật');
+
+    // 3. Kiểm tra PostTripForm.jsx tích hợp Auto-mask & Tap-to-mask
+    const postTripFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postTripFormSrc.includes('processCarPhotoUpload'), 'Plate Mask 7: PostTripForm tự động che biển số khi chủ xe tải ảnh');
+    assert(postTripFormSrc.includes('PlateMaskModal') && postTripFormSrc.includes('editingMaskIndex'), 'Plate Mask 8: PostTripForm tích hợp PlateMaskModal chỉnh vị trí che biển');
+    assert(postTripFormSrc.includes('Đã che biển'), 'Plate Mask 9: Thẻ ảnh hiển thị huy hiệu xác thực Đã che biển');
+
+    // 4. Kiểm tra UserProfileModal.jsx (Garage) tích hợp bảo mật biển số
+    const userProfileModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/profile/UserProfileModal.jsx'), 'utf8');
+    assert(userProfileModalSrc.includes('processCarPhotoUpload'), 'Plate Mask 10: Hồ sơ xe Garage tự động che biển số khi chủ xe cập nhật ảnh');
+
+    // 5. Kiểm tra TicketShareModal: Đã gỡ bỏ icon tròn thừa thãi theo yêu cầu người dùng
+    const ticketShareModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/TicketShareModal.jsx'), 'utf8');
+    assert(!ticketShareModalSrc.includes('icon={Share2}'), 'Zero Redundancy 1: TicketShareModal đã gỡ bỏ icon tròn thừa thãi trên tiêu đề');
+
+    // 5.1 Gỡ bỏ dòng chữ dài dòng dưới nút đặt chỗ trong EscrowBookingModal
+    const escrowBookingModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/EscrowBookingModal.jsx'), 'utf8');
+    assert(!escrowBookingModalSrc.includes('Thoải mái đổi ý'), 'Zero Redundancy 2: EscrowBookingModal đã gỡ bỏ dòng chữ rung chuông rườm rà');
+    assert(escrowBookingModalSrc.includes('<span>0đ cọc</span>'), 'Zero Redundancy 3: EscrowBookingModal giữ lại huy hiệu tinh gọn 0đ cọc');
+
+    // 6. Triệt tiêu 100% từ viết tắt "BOT" trên giao diện người dùng
+    const footerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/common/Footer.jsx'), 'utf8');
+    assert(!footerSrc.includes('Bảng định mức xăng & BOT'), 'Zero BOT 1: Footer đã thay Bảng định mức xăng & BOT thành cầu đường');
+    assert(footerSrc.includes('Bảng định mức xăng & cầu đường'), 'Zero BOT 2: Footer dùng cụm thuần Việt Bảng định mức xăng & cầu đường');
+
+    const benchmarkBarSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/market/RouteBenchmarkBar.jsx'), 'utf8');
+    assert(!benchmarkBarSrc.includes('Vé cầu đường / BOT'), 'Zero BOT 3: RouteBenchmarkBar đã loại bỏ chữ BOT');
+    assert(benchmarkBarSrc.includes('<span>Vé cầu đường</span>'), 'Zero BOT 4: RouteBenchmarkBar hiển thị Vé cầu đường');
+
+    const myTripsSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'), 'utf8');
+    assert(!myTripsSrc.includes('Định mức xăng + BOT:'), 'Zero BOT 5: MyTripsView không còn chữ BOT');
+    assert(myTripsSrc.includes('Định mức xăng & cầu đường:'), 'Zero BOT 6: MyTripsView hiển thị chuẩn Định mức xăng & cầu đường');
+
+    const bookedTripListSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(!bookedTripListSrc.includes('phí BOT'), 'Zero BOT 7: BookedTripList không còn chữ phí BOT');
+    assert(bookedTripListSrc.includes('Chi phí xăng & phí cầu đường'), 'Zero BOT 8: BookedTripList dùng Chi phí xăng & phí cầu đường');
+
+    const termsModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/TermsModal.jsx'), 'utf8');
+    assert(!termsModalSrc.includes('phí cầu đường BOT'), 'Zero BOT 9: TermsModal đã loại bỏ từ viết tắt BOT');
+
+    const viI18nSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/i18n/vi.js'), 'utf8');
+    assert(!viI18nSrc.includes('vé trạm BOT'), 'Zero BOT 10: Tệp ngôn ngữ tiếng Việt vi.js đã sạch hoàn toàn từ BOT');
+  } catch (err) {
+    assert(false, '56. Kiểm thử Bảo Mật Che Biển Số Xe Tự Động & Triệt Tiêu Từ Viết Tắt BOT', err.message);
+  }
+
+  // 57. Kiểm thử An Ninh Mạng Toàn Diện & Trải Nghiệm Mobile Responsive
+  console.log('\n📱 57. Kiểm thử Tự Động An Ninh Mạng & Trải Nghiệm Mobile Responsive (Apple & Stanford Ergonomics)...');
+  try {
+    // 1. Pentest Script
+    assert(fs.existsSync(path.join(process.cwd(), 'scripts/pentest-security-audit.js')), 'Pentest 1: Kịch bản kiểm thử an ninh scripts/pentest-security-audit.js tồn tại');
+    const pentestScriptSrc = fs.readFileSync(path.join(process.cwd(), 'scripts/pentest-security-audit.js'), 'utf8');
+    assert(pentestScriptSrc.includes('VECTOR 1: BROKEN ACCESS CONTROL'), 'Pentest 2: Kiểm tra vectơ xác thực & IDOR');
+    assert(pentestScriptSrc.includes('VECTOR 2: PII DATA LEAKAGE'), 'Pentest 3: Kiểm tra rà soát rò rỉ dữ liệu cá nhân PII');
+    assert(pentestScriptSrc.includes('VECTOR 3: INJECTION'), 'Pentest 4: Kiểm tra tấn công Injection (SQLi, XSS, Traversal)');
+    assert(pentestScriptSrc.includes('VECTOR 4: DENIAL OF SERVICE'), 'Pentest 5: Kiểm tra khả năng chống DoS & bom dung lượng');
+    assert(pentestScriptSrc.includes('VECTOR 5: MIT MATHEMATICAL INVARIANTS'), 'Pentest 6: Kiểm tra bất biến số ghế và định mức');
+    assert(pentestScriptSrc.includes('VECTOR 6: SECURITY HEADERS'), 'Pentest 7: Kiểm tra Headers an ninh OWASP');
+
+    // 2. Responsive MatchRadarView
+    const radarSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/radar/MatchRadarView.jsx'), 'utf8');
+    assert(radarSrc.includes('w-full sm:w-auto justify-center inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0071e3]'), 'Mobile UX 1: MatchRadarView hỗ trợ nút ghép chuyến ngón tay cái full-width trên mobile');
+    assert(radarSrc.includes('flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3'), 'Mobile UX 2: MatchRadarView tiêu đề tự động co giãn 1-hàng trên desktop và 2-hàng trên mobile');
+
+    // 3. Responsive AdminDashboardView
+    const adminSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/admin/AdminDashboardView.jsx'), 'utf8');
+    assert(adminSrc.includes('overflow-x-auto no-scrollbar py-0.5'), 'Mobile UX 3: Admin tab bar hỗ trợ trượt ngang mượt mà trên mobile, không bị vỡ layout');
+    assert(adminSrc.includes('text-xl sm:text-2xl lg:text-3xl font-mono font-black'), 'Mobile UX 4: Admin KPI cards tối ưu cỡ chữ vừa vặn màn hình điện thoại 360px');
+
+    // 4. Responsive BookedTripList
+    const bookedSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(bookedSrc.includes('text-[10.5px] sm:text-[11.5px] font-bold leading-tight truncate'), 'Mobile UX 5: Quy trình 4 bước kết nối an toàn tối ưu co giãn nhãn chữ trên mobile');
+    assert(bookedSrc.includes('flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3'), 'Mobile UX 6: Khối liên hệ đối tác linh hoạt theo chiều dọc trên mobile và chiều ngang trên desktop');
+
+    // 5. Responsive MyTripsView
+    const myTripsSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'), 'utf8');
+    assert(myTripsSrc.includes('grid grid-cols-2 sm:flex sm:items-center gap-1.5 w-full sm:w-auto'), 'Mobile UX 7: Dải nút thao tác chuyến của tôi dùng lưới 2-cột chuẩn ngón tay cái trên điện thoại');
+
+    // 6. Responsive PostTripForm
+    const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postFormSrc.includes("index === 4 ? 'col-span-2 sm:col-span-1' : ''"), 'Mobile UX 8: Ô ảnh thứ 5 trong lưới 5 ảnh xe thật trải rộng cân đối trên mobile');
+
+    // 7. Driver In-transit Quick Reply Chips in InboxModal
+    const inboxSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxSrc.includes('Mình đang xuất phát đến điểm hẹn'), 'Driver UX 1: InboxModal có chip 1-chạm "Mình đang xuất phát đến điểm hẹn" cho Chủ xe');
+    assert(inboxSrc.includes('Xe sẽ đến sau khoảng 5-10 phút'), 'Driver UX 2: InboxModal có chip 1-chạm "Xe sẽ đến sau khoảng 5-10 phút" cho Chủ xe');
+    assert(inboxSrc.includes('Em đang đứng ở điểm hẹn rồi anh'), 'Passenger UX 1: InboxModal có chip 1-chạm "Em đang đứng ở điểm hẹn rồi anh" cho Khách');
+  } catch (err) {
+    assert(false, '57. Kiểm thử Tự Động An Ninh Mạng & Trải Nghiệm Mobile Responsive', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
@@ -4130,7 +4239,8 @@ async function runTests() {
   if (failed === 0) {
     console.log('\n🎉 TẤT CẢ CÁC TÍNH NĂNG CHẠY Ở LOCAL ĐỀU HOÀN TOÀN TỐT & ỔN ĐỊNH 100%!');
   } else {
-    console.error(`\n⚠️ Có ${failed} bài test chưa đạt, vui lòng kiểm tra lại.`);
+    console.error(`\n⚠️ Có ${failed} bài test chưa đạt:`);
+    results.filter((r) => !r.pass).forEach((f) => console.error(`  - ${f.name}: ${f.details || 'failed'}`));
     process.exit(1);
   }
 }

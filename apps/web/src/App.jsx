@@ -497,20 +497,18 @@ export default function App() {
     setActiveTab('post');
   };
 
-  // Quản lý chuyến của chính mình (1-chạm chuyển sang tab Chuyến của tôi)
+  // Quản lý chuyến của chính mình: Mở trực tiếp Modal Quản lý / Chỉnh sửa tại chỗ (Stanford Ergonomics - Zero tab jump)
   const handleManageMyTrip = useCallback(
     (trip) => {
-      showToast('Chuyển sang mục "Chuyến của tôi" để bạn quản lý bài đăng này.');
-      setActiveTab('my-trips');
+      setEditingTrip(trip);
     },
-    [showToast, setActiveTab]
+    [setEditingTrip]
   );
 
-  // Ghép chuyến: Chặn tự ghép chuyến của chính mình (MIT Invariant); Chưa đăng nhập sẽ yêu cầu xác thực OTP trước
+  // Ghép chuyến: Nếu là bài đăng của chính mình thì mở Modal Quản lý tại chỗ thay vì chuyển tab
   const handleInitiateBook = (trip) => {
     if (checkIsMyTrip(trip)) {
-      showToast('Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.');
-      setActiveTab('my-trips');
+      setEditingTrip(trip);
       return;
     }
     trackViewTrip(trip.id, `${trip.from} - ${trip.to}`);
@@ -923,6 +921,7 @@ export default function App() {
                           onViewTrustProfile={setSelectedDriverForTrust}
                           onViewRoute={setSelectedTripForRoute}
                           onViewCarPhotos={setSelectedTripForPhotos}
+                          onShare={(trip) => setTicketToShare(trip)}
                         />
                       ))}
                     </div>
@@ -989,7 +988,7 @@ export default function App() {
         )}
 
         {activeTab === 'my-trips' && (
-          <div className={`${container} py-8`}>
+          <div className={`${container} pt-8 pb-28 sm:pb-8`}>
             <MyTripsView
               driverOffers={driverOffers}
               passengerRequests={passengerRequests}
@@ -1009,7 +1008,7 @@ export default function App() {
         )}
 
         {activeTab === 'booked' && (
-          <div className={`${container} py-8`}>
+          <div className={`${container} pt-8 pb-28 sm:pb-8`}>
             <BookedTripList
               bookedEscrows={bookedEscrows}
               onCancel={setCancelRecord}
@@ -1050,7 +1049,11 @@ export default function App() {
         )}
       </main>
 
-      <Footer onNavigate={handleFooterNavigate} onOpenTerms={() => setShowTermsModal(true)} />
+      <Footer
+        onNavigate={handleFooterNavigate}
+        onOpenTerms={() => setShowTermsModal(true)}
+        onOpenPolicy={() => setShowPolicyModal(true)}
+      />
 
       {/* Modals */}
       {showInboxModal && (
@@ -1099,7 +1102,15 @@ export default function App() {
           onViewInMarket={handleViewTripInMarket}
         />
       )}
-      {editingTrip && <EditTripModal trip={editingTrip} onClose={() => setEditingTrip(null)} onSave={handleEditTrip} />}
+      {editingTrip && (
+        <EditTripModal
+          trip={editingTrip}
+          onClose={() => setEditingTrip(null)}
+          onSave={handleEditTrip}
+          onToggleStatus={handleToggleTripStatus}
+          onDelete={handleDeleteTrip}
+        />
+      )}
       {showPolicyModal && <PolicyModal onClose={() => setShowPolicyModal(false)} />}
       {showTermsModal && <TermsModal onClose={() => setShowTermsModal(false)} />}
       {cancelRecord && (

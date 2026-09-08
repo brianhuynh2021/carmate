@@ -14,17 +14,26 @@ function FacebookIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
-export default function Footer({ onNavigate, onOpenTerms }) {
+export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
   const { t, lang } = useI18n();
   const year = new Date().getFullYear();
 
   const footerLinks = [
-    { key: 'market', label: lang === 'en' ? 'Explore Trips' : 'Khám phá chuyến' },
-    { key: 'post', label: lang === 'en' ? 'Post Trip' : 'Đăng chuyến' },
-    { key: 'benchmark', label: lang === 'en' ? 'Route Pricing' : 'Bảng giá tuyến' },
-    { key: 'terms', label: lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản', isTerms: true },
-    { key: 'help_zalo', label: lang === 'en' ? 'Zalo Support' : 'Hỗ trợ Zalo' },
-    { key: 'help_telegram', label: lang === 'en' ? 'Telegram Support' : 'Hỗ trợ Telegram' }
+    {
+      key: 'terms',
+      label: lang === 'en' ? 'Terms & Regulations' : 'Quy chế & Điều khoản',
+      action: onOpenTerms
+    },
+    {
+      key: 'policy',
+      label: lang === 'en' ? 'Safety Policy' : 'Chính sách an toàn',
+      action: onOpenPolicy
+    },
+    {
+      key: 'benchmark',
+      label: lang === 'en' ? 'Fuel & Toll Benchmark' : 'Bảng định mức xăng & cầu đường',
+      action: () => onNavigate?.('benchmark')
+    }
   ];
 
   return (
@@ -71,15 +80,25 @@ export default function Footer({ onNavigate, onOpenTerms }) {
             </a>
           </div>
 
-          {/* Quy chế, Ngôn ngữ & Bản quyền */}
-          <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[11px] text-[#86868b]">
-            <button
-              type="button"
-              onClick={onOpenTerms}
-              className="hover:text-[#0071e3] transition-colors cursor-pointer"
-            >
-              {lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản'}
-            </button>
+          {/* Quy chế, Chính sách, Ngôn ngữ & Bản quyền */}
+          <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[11px] text-[#86868b] flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onOpenTerms}
+                className="hover:text-[#0071e3] transition-colors cursor-pointer"
+              >
+                {lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản'}
+              </button>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={onOpenPolicy}
+                className="hover:text-[#0071e3] transition-colors cursor-pointer"
+              >
+                {lang === 'en' ? 'Safety Policy' : 'Chính sách an toàn'}
+              </button>
+            </div>
             <div className="flex items-center gap-1.5">
               <span>© CarMate</span>
               <span>·</span>
@@ -156,21 +175,7 @@ export default function Footer({ onNavigate, onOpenTerms }) {
               <button
                 key={l.key}
                 type="button"
-                onClick={() => {
-                  if (l.isTerms) {
-                    onOpenTerms?.();
-                  } else if (l.key === 'help_zalo') {
-                    window.open(SITE_INFO.zaloOA, '_blank', 'noopener,noreferrer');
-                  } else if (l.key === 'help_telegram') {
-                    window.open(
-                      SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91',
-                      '_blank',
-                      'noopener,noreferrer'
-                    );
-                  } else {
-                    onNavigate?.(l.key);
-                  }
-                }}
+                onClick={l.action}
                 className="text-[#515154] hover:text-[#0071e3] font-medium transition-colors cursor-pointer"
               >
                 {l.label}

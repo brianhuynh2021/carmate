@@ -622,54 +622,54 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
       {/* 4 Thẻ KPI Đo Lường Toàn Diện */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Chuyến Xe Đang Mở</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-mono font-black text-slate-900 dark:text-white tabular-nums">
+        <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
+          <p className="text-[10.5px] sm:text-[11px] font-mono font-bold uppercase text-slate-400">Chuyến Xe Đang Mở</p>
+          <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
+            <span className="text-xl sm:text-2xl lg:text-3xl font-mono font-black text-slate-900 dark:text-white tabular-nums">
               {overview.activeTripsCount || 0}
             </span>
-            <span className="text-xs text-slate-400 font-medium">/ {overview.totalTripsCount || 0} tổng</span>
+            <span className="text-[11px] sm:text-xs text-slate-400 font-medium">/ {overview.totalTripsCount || 0} tổng</span>
           </div>
           {overview.hiddenTripsCount > 0 && (
-            <p className="text-[10.5px] text-amber-600 dark:text-amber-400 font-semibold">
+            <p className="text-[10px] sm:text-[10.5px] text-amber-600 dark:text-amber-400 font-semibold truncate">
               ⚠️ Có {overview.hiddenTripsCount} bài đang bị ẩn/khoá
             </p>
           )}
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Chủ Xe & Thành Viên</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+        <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
+          <p className="text-[10.5px] sm:text-[11px] font-mono font-bold uppercase text-slate-400">Chủ Xe & Thành Viên</p>
+          <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
+            <span className="text-xl sm:text-2xl lg:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
               {overview.verifiedDriversCount || 0}
             </span>
-            <span className="text-xs text-slate-400 font-medium">đã duyệt CCCD/GPLX</span>
+            <span className="text-[11px] sm:text-xs text-slate-400 font-medium truncate">đã duyệt CCCD/GPLX</span>
           </div>
-          <p className="text-[10.5px] text-slate-400">Tổng {overview.totalMembersCount || 0} hồ sơ trong hệ thống</p>
+          <p className="text-[10px] sm:text-[10.5px] text-slate-400 truncate">Tổng {overview.totalMembersCount || 0} hồ sơ trong hệ thống</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Lượt Chốt Zalo</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-mono font-black text-primary-600 dark:text-primary-400 tabular-nums">
+        <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
+          <p className="text-[10.5px] sm:text-[11px] font-mono font-bold uppercase text-slate-400">Lượt Chốt Zalo</p>
+          <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
+            <span className="text-xl sm:text-2xl lg:text-3xl font-mono font-black text-primary-600 dark:text-primary-400 tabular-nums">
               {overview.totalBookingsCount || 0}
             </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+            <span className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-semibold truncate">
               ({overview.completedBookingsCount || 0} hoàn tất)
             </span>
           </div>
-          <p className="text-[10.5px] text-slate-400">Kết nối trực tiếp 0% phí sàn</p>
+          <p className="text-[10px] sm:text-[10.5px] text-slate-400 truncate">Kết nối trực tiếp 0% phí sàn</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Uptime & Tài Nguyên</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-mono font-black text-slate-900 dark:text-white tabular-nums">
+        <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
+          <p className="text-[10.5px] sm:text-[11px] font-mono font-bold uppercase text-slate-400">Uptime & Tài Nguyên</p>
+          <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
+            <span className="text-xl sm:text-2xl lg:text-3xl font-mono font-black text-slate-900 dark:text-white tabular-nums">
               {Math.floor((sysHealth.uptimeSeconds || 0) / 60)}p
             </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">100% Ổn định</span>
+            <span className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-semibold">100% Ổn định</span>
           </div>
-          <p className="text-[10.5px] text-slate-400 font-mono">
+          <p className="text-[10px] sm:text-[10.5px] text-slate-400 font-mono truncate">
             Heap: {sysHealth.heapUsedMB || 28}MB / Node {sysHealth.nodeVersion || 'v20'}
           </p>
         </div>
@@ -677,84 +677,86 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
       {/* Tabs Quản Trị & Bộ Tìm Kiếm */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div className="inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/60 dark:bg-[#151c2e] border border-black/5 dark:border-white/[0.08] flex-wrap">
-          <button
-            type="button"
-            onClick={() => setActiveTab('trips')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-              activeTab === 'trips'
-                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Car className="w-3.5 h-3.5 text-[#0071e3]" />
-            <span>Chuyến xe ({trips.length})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('users')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-              activeTab === 'users'
-                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Thành viên ({users.length})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('reports')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-              activeTab === 'reports'
-                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-            <span>Báo cáo sự cố</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('ai')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-              activeTab === 'ai'
-                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>AI Trajectories ({aiIntelligence?.summary?.totalQueries || 0})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('analytics')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-              activeTab === 'analytics'
-                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
-            <span>Phễu & Analytics</span>
-            {analyticsSummary?.totalEvents > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
-                {analyticsSummary.totalEvents}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('trust')}
-            className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-              activeTab === 'trust'
-                ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Quy Tắc Tín Nhiệm ({trustRules.length})</span>
-          </button>
+        <div className="w-full sm:w-auto overflow-x-auto no-scrollbar py-0.5">
+          <div className="inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/60 dark:bg-[#151c2e] border border-black/5 dark:border-white/[0.08] whitespace-nowrap min-w-max">
+            <button
+              type="button"
+              onClick={() => setActiveTab('trips')}
+              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === 'trips'
+                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Car className="w-3.5 h-3.5 text-[#0071e3]" />
+              <span>Chuyến xe ({trips.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('users')}
+              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === 'users'
+                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Thành viên ({users.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('reports')}
+              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === 'reports'
+                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+              <span>Báo cáo sự cố</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('ai')}
+              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === 'ai'
+                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>AI Trajectories ({aiIntelligence?.summary?.totalQueries || 0})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('analytics')}
+              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === 'analytics'
+                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Phễu & Analytics</span>
+              {analyticsSummary?.totalEvents > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                  {analyticsSummary.totalEvents}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('trust')}
+              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === 'trust'
+                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Quy Tắc Tín Nhiệm ({trustRules.length})</span>
+            </button>
+          </div>
         </div>
 
         <div className="relative w-full sm:w-72">

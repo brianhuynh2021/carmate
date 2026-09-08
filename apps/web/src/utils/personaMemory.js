@@ -180,7 +180,7 @@ export function getFrequentWaypoints(from, to, role = 'driver') {
 }
 
 /**
- * Định giá phụ xăng thông minh dựa trên cự ly km thực tế và trạm thu phí BOT
+ * Định giá phụ xăng thông minh dựa trên cự ly km thực tế và vé cầu đường
  * Xử lý cục bộ 100% trong 0.1ms theo chuẩn toán học MIT Invariants
  */
 export function getDynamicRoutePriceBenchmark(fromLocation, toLocation) {
@@ -218,7 +218,7 @@ export function getDynamicRoutePriceBenchmark(fromLocation, toLocation) {
         distanceKm: bm.distanceKm,
         fuelCost: bm.fuelCost,
         botFee: bm.botFee,
-        note: `Tuyến ~${bm.distanceKm}km (${bm.botFee ? 'đã gồm phí BOT' : 'tiêu chuẩn'})`
+        note: `Tuyến ~${bm.distanceKm}km (${bm.botFee ? 'đã gồm vé cầu đường' : 'tiêu chuẩn'})`
       };
     }
   }

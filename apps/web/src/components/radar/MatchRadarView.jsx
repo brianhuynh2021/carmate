@@ -179,12 +179,12 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
         {/* Thanh Tùy Chọn Lọc Phụ (Apple Filter Pills Bar) */}
         <div className="pt-2 px-1 border-t border-black/[0.05] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[#86868b] font-semibold">Chế độ xem:</span>
-            <div className="inline-flex p-0.5 rounded-full bg-[#ebebed] border border-black/[0.04]">
+            <span className="text-[#86868b] font-semibold shrink-0">Chế độ xem:</span>
+            <div className="inline-flex p-0.5 rounded-full bg-[#ebebed] border border-black/[0.04] max-w-full overflow-x-auto no-scrollbar">
               <button
                 type="button"
                 onClick={() => setRadarMode('smart')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 shrink-0 ${
                   radarMode === 'smart'
                     ? 'bg-white text-[#0071e3] shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
@@ -196,7 +196,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
               <button
                 type="button"
                 onClick={() => setRadarMode('manual')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 shrink-0 ${
                   radarMode === 'manual'
                     ? 'bg-white text-[#0071e3] shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
@@ -208,13 +208,13 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[#86868b] font-semibold whitespace-nowrap">Hành lang:</span>
-            <div className="relative min-w-[210px]">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+            <span className="text-[#86868b] font-semibold whitespace-nowrap shrink-0">Hành lang:</span>
+            <div className="relative flex-1 sm:w-60 min-w-0">
               <Select
                 value={selectedRouteKey}
                 onChange={(e) => setSelectedRouteKey(e.target.value)}
-                className="h-8.5 text-xs font-medium pl-3 pr-8 rounded-full bg-white border border-slate-200 shadow-2xs"
+                className="h-8.5 text-xs font-medium pl-3 pr-8 rounded-full bg-white border border-slate-200 shadow-2xs w-full"
               >
                 <option value="all">Tất cả các tuyến quốc lộ</option>
                 {routeKeys.map((key) => (
@@ -231,7 +231,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
       {/* ── CHẾ ĐỘ 1: RADAR KHỚP TỰ ĐỘNG (SMART PAIR MATCHING) ── */}
       {radarMode === 'smart' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3">
             <h3 className="text-base font-bold text-[#1d1d1f] flex items-center gap-2">
               <span>
                 {userRole === 'passenger' ? 'Các Chuyến Xe Chủ Xe Phù Hợp Nhất' : 'Các Hành Khách Cần Đi Cùng Tuyến'}
@@ -367,7 +367,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                           <button
                             type="button"
                             onClick={() => onBook(driver)}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0071e3] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                            className="w-full sm:w-auto justify-center inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0071e3] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
                           >
                             <span>Ghép Chuyến Với Chủ Xe</span>
                             <ArrowRight className="w-4 h-4" />
@@ -432,7 +432,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                               )}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                              className="w-full sm:w-auto justify-center inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
                             >
                               <ZaloIcon className="w-4 h-4" />
                               <span>Nhận Đón Khách Này (Nhắn Zalo)</span>
@@ -443,7 +443,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                               type="button"
                               onClick={() => onBook?.(passenger)}
                               title="Nhận chở khách này để mở khoá Zalo liên hệ"
-                              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                              className="w-full sm:w-auto justify-center inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-[#0068ff] hover:bg-[#0055d4] text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
                             >
                               <ZaloIcon className="w-4 h-4" />
                               <span>Nhận Đón Khách Này</span>

@@ -38,7 +38,7 @@
       "perks": [
         "Xe gia đình (Biển trắng)",
         "Không khói thuốc",
-        "Trọn gói vé BOT & xăng",
+        "Trọn gói vé cầu đường & xăng",
         "Bật máy lạnh",
         "Cốp rộng"
       ],
@@ -108,7 +108,7 @@
       "completedCount": 24,
       "perks": [
         "Không khói thuốc",
-        "Trọn gói vé BOT & xăng",
+        "Trọn gói vé cầu đường & xăng",
         "Bật máy lạnh",
         "Nhận gửi hàng"
       ],
@@ -178,7 +178,7 @@
       "completedCount": 24,
       "perks": [
         "Không khói thuốc",
-        "Trọn gói vé BOT & xăng",
+        "Trọn gói vé cầu đường & xăng",
         "Bật máy lạnh"
       ],
       "carPhotos": [
@@ -304,7 +304,7 @@
       "completedCount": 24,
       "perks": [
         "Không khói thuốc",
-        "Bao trọn vé BOT",
+        "Bao trọn vé cầu đường",
         "Cốp rộng"
       ],
       "carPhotos": [
@@ -509,7 +509,7 @@
       "completedCount": 65,
       "perks": [
         "Xe gầm cao êm ái",
-        "Bao vé cao tốc BOT",
+        "Bao vé cầu đường cao tốc",
         "Không khói thuốc"
       ],
       "hasCarPhotos": false,
@@ -545,7 +545,7 @@
       "perks": [
         "Xe VIP thương gia",
         "Không khói thuốc",
-        "Trọn gói vé BOT"
+        "Trọn gói vé cầu đường"
       ],
       "hasCarPhotos": true,
       "carPhotos": [

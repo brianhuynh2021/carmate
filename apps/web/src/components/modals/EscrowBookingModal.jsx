@@ -435,7 +435,7 @@ export default function EscrowBookingModal({
       </Button>
       <p className="text-center text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5 pt-0.5">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-        <span>0đ cọc · Rung chuông {isDriverItem ? 'Chủ xe' : 'Người tìm xe'} tức thì qua App & Telegram · Thoải mái đổi ý</span>
+        <span>0đ cọc</span>
       </p>
     </div>
   );

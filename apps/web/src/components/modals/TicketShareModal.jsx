@@ -100,7 +100,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
   /**
    * Kích hoạt Native Share Sheet của hệ điều hành (gửi thẳng File ảnh thẻ thông tin và Text vào Zalo, FB, v.v.)
    */
-  const handleNativeShare = async () => {
+  const handleZaloShare = async () => {
     try {
       setIsSharing(true);
       const dataUrl = await generateTicketImage(trip, lang);
@@ -138,14 +138,10 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
     handleCopy('Đã sao chép bài đăng! Hãy dán vào ứng dụng bạn muốn gửi.');
   };
 
-  // Tương thích ngược: Định danh hàm chia sẻ Zalo / Native Share
-  const handleZaloShare = handleNativeShare;
-
   return (
     <Modal
       onClose={onClose}
       size="md"
-      icon={Share2}
       title={t('ticket.title') || 'Thẻ thông tin chuyến đi'}
       subtitle={t('ticket.subtitle') || 'Lưu thẻ thông tin hành trình bảo mật hoặc chia sẻ liên kết'}
       footer={
@@ -175,7 +171,7 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
             <button
               type="button"
               disabled={isSharing}
-              onClick={handleNativeShare}
+              onClick={handleZaloShare}
               className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-75"
             >
               {isSharing ? (
