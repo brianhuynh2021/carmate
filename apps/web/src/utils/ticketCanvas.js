@@ -531,7 +531,7 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
   );
 
   // 6. CÁC ĐIỂM ĐÓN DỌC TUYẾN & TIỆN ÍCH
-  let currentExtraY = priceY + boxH + 30;
+  let currentExtraY = perksBoxY + boxH + 30;
 
   if (trip.waypointNote) {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
