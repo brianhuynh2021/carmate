@@ -4583,6 +4583,35 @@ async function runTests() {
     assert(false, '61. Kiểm thử Trạng Thái Trực Tuyến / Ngoại Tuyến', err.message);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n🚗 62. Kiểm thử Hiển Thị Dòng Xe & Số Chỗ Ngồi (Car Model & Seating Capacity)...');
+  try {
+    const tripCardPath = path.join(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
+    const tripCardSrc = fs.readFileSync(tripCardPath, 'utf8');
+
+    // 1. TripCard định nghĩa và export getCarDisplay
+    assert(tripCardSrc.includes('export function getCarDisplay'), 'Car Display 1: TripCard có hàm getCarDisplay');
+    assert(tripCardSrc.includes('const carDisplay = getCarDisplay'), 'Car Display 2: TripCard gọi getCarDisplay');
+    assert(tripCardSrc.includes('{carDisplay}'), 'Car Display 3: TripCard render carDisplay trên giao diện');
+
+    // 2. Kiểm thử logic bóc tách dòng xe và chỗ ngồi
+    // Dynamic import hoặc evaluation an toàn
+    const matchFn = tripCardSrc.match(/export function getCarDisplay\([\s\S]*?\n\}/);
+    assert(matchFn, 'Car Display 4: Trích xuất được hàm getCarDisplay');
+    const getCarDisplay = new Function(`${matchFn[0].replace('export function getCarDisplay', 'function getCarDisplay')}; return getCarDisplay;`)();
+
+    assert(getCarDisplay('Mazda 2', 5) === 'Mazda 2 · 5 chỗ', 'Car Display 5: Mazda 2 kèm 5 chỗ');
+    assert(getCarDisplay('Mazda 2 5 chỗ', 5) === 'Mazda 2 · 5 chỗ', 'Car Display 6: Mazda 2 5 chỗ khử trùng lặp');
+    assert(getCarDisplay('Mazda 2 (Xe 5 chỗ)', 5) === 'Mazda 2 · 5 chỗ', 'Car Display 7: Mazda 2 ngoặc đơn 5 chỗ');
+    assert(getCarDisplay('Mitsubishi Xpander (Xe 7 chỗ)', 7) === 'Mitsubishi Xpander · 7 chỗ', 'Car Display 8: Xpander kèm 7 chỗ');
+    assert(getCarDisplay('Toyota Vios (Xe 5 chỗ)', 5) === 'Toyota Vios · 5 chỗ', 'Car Display 9: Toyota Vios kèm 5 chỗ');
+    assert(getCarDisplay('Xe 7 chỗ', 7) === 'Xe 7 chỗ', 'Car Display 10: Xe 7 chỗ chung chung');
+    assert(getCarDisplay('Xe 5 chỗ', 5) === 'Xe 5 chỗ', 'Car Display 11: Xe 5 chỗ chung chung');
+    assert(getCarDisplay('', 5) === 'Xe 5 chỗ', 'Car Display 12: Fallback an toàn khi rỗng');
+  } catch (err) {
+    assert(false, '62. Kiểm thử Hiển Thị Dòng Xe & Số Chỗ Ngồi', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

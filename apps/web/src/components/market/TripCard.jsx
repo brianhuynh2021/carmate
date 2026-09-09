@@ -109,6 +109,33 @@ export function RouteTimeline({ from, to, compact = false }) {
  * - Điểm đón / trả cụ thể: Dòng 4
  * - Uy tín, Chủ xe, Phương tiện & Nút hành động: Dòng 5 & 6
  */
+
+/**
+ * Chuẩn hoá hiển thị dòng xe kèm số chỗ ngồi (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
+ */
+export function getCarDisplay(carType, capacity) {
+  const cap = Number(capacity) || Number(carType?.match(/(\d+)\s*chỗ/i)?.[1]) || 5;
+  if (!carType || !carType.trim()) return `Xe ${cap} chỗ`;
+
+  // Tách phần trong ngoặc đơn nếu có (vd "(Xe 7 chỗ)" hoặc "(Xe 5 chỗ gầm cao)")
+  let raw = carType.split('(')[0].trim();
+  // Bỏ các từ khoá phụ thừa
+  raw = raw.replace(/\s*(cá nhân|gia đình|tiện chuyến|biển vàng|biển trắng)\b/gi, '').trim();
+
+  // Kiểm tra nếu chuỗi chỉ là "Xe 7 chỗ", "7 chỗ", "Xe 5 chỗ"
+  if (!raw || /^(?:xe\s*)?\d+\s*chỗ$/i.test(raw) || raw.toLowerCase() === 'xe') {
+    return `Xe ${cap} chỗ`;
+  }
+
+  // Khử phần "... 5 chỗ" hoặc "xe 5 chỗ" ở cuối chuỗi nếu người dùng gõ liền (vd "Mazda 2 5 chỗ")
+  let cleanModel = raw.replace(/\s+(?:xe\s*)?\d+\s*chỗ.*$/i, '').trim();
+  if (!cleanModel || cleanModel.toLowerCase() === 'xe') {
+    return `Xe ${cap} chỗ`;
+  }
+
+  return `${cleanModel} · ${cap} chỗ`;
+}
+
 export default function TripCard({
   item,
   isOwner = false,
@@ -198,6 +225,9 @@ export default function TripCard({
   const photos = (item.carPhotos || []).filter(Boolean);
   const rawCover = photos.length > 0 ? normalizePhotoUrl(photos[0]) : null;
   const coverPhoto = coverFailed ? null : rawCover;
+
+  // Hiển thị tên xe & số chỗ ngồi đồng nhất (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
+  const carDisplay = getCarDisplay(item.carType, item.capacity);
 
   return (
     <article
@@ -356,22 +386,13 @@ export default function TripCard({
                 onViewCarPhotos?.(item);
               }}
               className="flex items-center gap-2 shrink-0 text-right cursor-pointer group/car rounded-xl p-1 -m-1 hover:bg-slate-100/80 dark:hover:bg-white/[0.06] transition-colors select-none"
-              title="Xem thông tin và hình ảnh xe"
+              title={`Xem thông tin và hình ảnh xe (${carDisplay})`}
             >
-              <div>
-                <div className="flex items-center justify-end gap-1 text-[11.5px] font-medium text-slate-600 dark:text-slate-300 group-hover/car:text-[#0071e3] transition-colors">
-                  <Car className="w-3 h-3 text-slate-400 group-hover/car:text-[#0071e3] transition-colors shrink-0" />
-                  <span className="truncate max-w-[120px]">
-                    {item.carType
-                      ? item.carType.split('(')[0].trim().replace(/\s*(cá nhân|gia đình)\b/gi, '')
-                      : `Xe ${item.capacity || 5} chỗ`}
-                  </span>
-                </div>
-                {item.carType && !item.carType.toLowerCase().includes('chỗ') && (
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                    {item.capacity || 5} chỗ
-                  </p>
-                )}
+              <div className="flex items-center justify-end gap-1 text-[11.5px] font-medium text-slate-600 dark:text-slate-300 group-hover/car:text-[#0071e3] transition-colors">
+                <Car className="w-3.5 h-3.5 text-slate-400 group-hover/car:text-[#0071e3] transition-colors shrink-0" />
+                <span className="truncate max-w-[140px] sm:max-w-[170px]" title={carDisplay}>
+                  {carDisplay}
+                </span>
               </div>
 
               {coverPhoto ? (
