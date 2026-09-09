@@ -4679,6 +4679,27 @@ async function runTests() {
     assert(false, '63. Kiểm thử Đồng Bộ Vai Trò Khách Tìm Xe', err.message);
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // 64. KIỂM THỬ THANH TẨY LOGO THƯƠNG HIỆU & CHẤM TRẠNG THÁI SỐNG
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n✨ 64. Kiểm thử Thanh Tẩy Logo Thương Hiệu & Hiệu Ứng Sóng Trực Tuyến...');
+  try {
+    const headerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/common/Header.jsx'), 'utf8');
+    const presenceSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/ui/PresenceDot.jsx'), 'utf8');
+
+    // 1. Header: Loại bỏ hoàn toàn phụ đề RIDESHARE rườm rà dưới logo
+    assert(!headerSrc.includes('Rideshare'), 'Header 1: Đã xóa bỏ hoàn toàn chữ RIDESHARE thừa thãi dưới logo CarMate');
+    assert(headerSrc.includes('LogoMark'), 'Header 2: LogoMark đồng trục với tên thương hiệu CarMate');
+
+    // 2. PresenceDot: Online phát sóng nhấp nháy, Offline đỏ sẫm tĩnh lặng
+    assert(presenceSrc.includes('animate-ping'), 'Presence 12: Đèn xanh trực tuyến có vòng sóng phát xung nhấp nháy (animate-ping)');
+    assert(presenceSrc.includes('bg-emerald-500'), 'Presence 13: Đèn xanh trực tuyến dùng màu emerald-500 sáng rõ');
+    assert(presenceSrc.includes('bg-rose-700'), 'Presence 14: Đèn đỏ ngoại tuyến dùng màu đỏ sẫm rose-700 trầm xuống');
+    assert(presenceSrc.includes('bg-slate-100/90'), 'Presence 15: Thẻ ngoại tuyến chìm xuống nhẹ nhàng, không gây báo động giả');
+  } catch (err) {
+    assert(false, '64. Kiểm thử Logo & Presence Pulse', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
