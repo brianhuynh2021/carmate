@@ -231,7 +231,9 @@ export default function TripCard({
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shrink-0 whitespace-nowrap">
               <span>Khách tìm xe</span>
             </span>
-          ) : null}
+          ) : (
+            <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
+          )}
         </div>
       </div>
 
@@ -266,12 +268,15 @@ export default function TripCard({
             <span>Đã kín chỗ</span>
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs">
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs"
+            title={seatsTotal ? `Xe ${seatsTotal} chỗ · Chủ xe cần tìm ${seatsLeft} người đi cùng` : `Chủ xe cần tìm ${seatsLeft} người`}
+          >
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             {isDriver ? (
               <span>
-                Còn <span className="tabular">{seatsLeft}</span>
-                {seatsTotal ? <span className="tabular opacity-75">/{seatsTotal}</span> : null} chỗ
+                Cần <span className="tabular">{seatsLeft}</span> người
+                {seatsTotal ? <span className="sr-only">/{seatsTotal}</span> : null}
               </span>
             ) : (
               <span>
@@ -326,7 +331,6 @@ export default function TripCard({
                   {driverDisplayName}
                 </span>
                 <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" title="Đã xác minh" />
-                <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
               </div>
 
               <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
