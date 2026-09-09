@@ -5305,16 +5305,16 @@ async function runTests() {
       'Seamless Route 1: Triệt tiêu hoàn toàn sự ngắt quãng giữa thẻ div đường kẻ và icon ArrowRight'
     );
 
-    // 71.2 Sử dụng bộ nối SVG liền mạch với M0 5h8.5
+    // 71.2 Sử dụng bộ nối SVG liền mạch Apple HIG (không kéo dãn vô tận gây mỏi mắt)
     assert(
-      cardSrc.includes('M0 5h8.5M5 1.5l3.5 3.5-3.5 3.5') || cardSrc.includes('d="M0 5h8.5'),
-      'Seamless Route 2: Tích hợp đường nối SVG với toạ độ nối chính xác 100% từ biên x=0 đến đỉnh mũi tên'
+      cardSrc.includes('M2 6h22.5M18.5 2.5L24.5 6L18.5 9.5') || cardSrc.includes('M0 5h8.5'),
+      'Seamless Route 2: Tích hợp đường nối SVG Apple HIG liền khối 100% không đứt gãy'
     );
 
-    // 71.3 Dùng currentColor và bg-current đảm bảo đồng bộ màu sắc tuyệt đối giữa thân và đầu mũi tên
+    // 71.3 Dùng currentColor và strokeWidth đảm bảo đồng bộ màu sắc và độ dày tuyệt đối
     assert(
-      cardSrc.includes('bg-current') && cardSrc.includes('stroke="currentColor"'),
-      'Seamless Route 3: Thân đường kẻ và đầu mũi tên dùng chung tone màu currentColor loại bỏ độ chênh màu'
+      !cardSrc.includes('flex-1 bg-current') && cardSrc.includes('stroke="currentColor"'),
+      'Seamless Route 3: Loại bỏ hoàn toàn đường line kéo dãn vô tận gây mỏi mắt, dùng currentColor đồng nhất'
     );
 
     // 71.4 Đồng bộ header thẻ chuyến: luôn hiển thị PresenceDot, không trùng lặp nhãn "Đã kín chỗ" 3 lần
