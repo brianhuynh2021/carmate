@@ -1156,6 +1156,7 @@ export default function App() {
           <div className={`${container} pt-8 pb-28 sm:pb-8`}>
             <BookedTripList
               bookedEscrows={bookedEscrows}
+              currentUser={currentUser}
               onCancel={setCancelRecord}
               onDelay={setDelayRecord}
               onComplete={handleCompleteTrip}

@@ -19,9 +19,10 @@ import {
   PhoneOff,
   Ban
 } from 'lucide-react';
-import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber } from '@carmate/shared';
+import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
+import PresenceDot from '../ui/PresenceDot.jsx';
 import api from '../../api/client.js';
 import { playMessageChime, playSuccessChime } from '../../utils/audioFeedback.js';
 
@@ -359,6 +360,9 @@ export default function InboxModal({
   const partnerPhone = activeBooking?.driverPhone || activeBooking?.contactPhone || activeBooking?.phoneReal || '';
   const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
   const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
+  const activePartnerOnline = activeBooking
+    ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
+    : { isOnline: false };
 
   return (
     <Modal
@@ -431,6 +435,7 @@ export default function InboxModal({
                   const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
                   return !isMe && new Date(m.timestamp).getTime() > lastRead;
                 });
+                const itemOnline = getUserOnlineStatus(item, currentUser?.phone || currentUser?.id);
 
                 return (
                   <button
@@ -451,6 +456,7 @@ export default function InboxModal({
                         {isUnread && !isSelected && (
                           <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0 animate-pulse" title="Tin nhắn mới chưa đọc" />
                         )}
+                        <PresenceDot isOnline={itemOnline.isOnline} size="xs" detail={itemOnline.detail} />
                         <span>{toPublicAlias(item)}</span>
                       </span>
                       {status === 'confirmed' ? (
@@ -500,6 +506,7 @@ export default function InboxModal({
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
                       {partnerAlias}
                     </h3>
+                    <PresenceDot isOnline={activePartnerOnline.isOnline} showLabel detail={activePartnerOnline.detail} />
                     <span className="text-[11px] text-slate-500 tabular">#{activeBooking.escrowId || activeBooking.id}</span>
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-400 truncate mt-0.5">

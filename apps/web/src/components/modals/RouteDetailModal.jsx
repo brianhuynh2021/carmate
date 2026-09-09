@@ -1,15 +1,18 @@
 import React from 'react';
-import { MapPin, Share2, SlidersHorizontal, ArrowRight } from 'lucide-react';
+import { MapPin, Share2, SlidersHorizontal, ArrowRight, User } from 'lucide-react';
 import {
   getRouteCorridor,
   formatVND,
   isGoogleMapsUrl,
   decodeHtmlEntities,
   formatTripDateDisplay,
-  getTimeSlotLabel
+  getTimeSlotLabel,
+  toPublicAlias,
+  getUserOnlineStatus
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
+import PresenceDot from '../ui/PresenceDot.jsx';
 
 export default function RouteDetailModal({ trip, isOwner = false, onClose, onManage, onBook, onShare }) {
   const { lang } = useI18n();
@@ -22,6 +25,9 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onMan
 
   // Mọi hook đã được gọi ở trên — an toàn để early return tại đây
   if (!trip) return null;
+
+  // Trạng thái trực tuyến của người đăng bài (Live Presence Telemetry: Đèn xanh / Đèn đỏ)
+  const onlineStatus = getUserOnlineStatus({ ...trip, isOwner });
 
   return (
     <Modal
@@ -105,6 +111,31 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onMan
       }
     >
       <div className="space-y-3">
+        {/* ── THÔNG TIN ĐỐI TÁC & TRẠNG THÁI HIỆN DIỆN (LIVE PRESENCE TELEMETRY: ĐÈN XANH / ĐÈN ĐỎ) ── */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10 relative shadow-2xs">
+              <User className="w-4 h-4" />
+              <PresenceDot isOnline={onlineStatus.isOnline} size="xs" className="absolute -bottom-0.5 -right-0.5" detail={onlineStatus.detail} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-xs sm:text-sm text-[#1d1d1f] dark:text-white truncate">
+                  {toPublicAlias(trip)}
+                </span>
+                <span className="text-[11px] text-[#86868b] font-mono">#{trip.maskedCode || trip.id?.slice(-4)}</span>
+              </div>
+              <p className="text-[11px] text-[#86868b] dark:text-slate-400 truncate mt-0.5">
+                {isDriver ? 'Chủ xe gia đình · Tuyến tiện chuyến' : 'Người cần tìm xe đi cùng'}
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0 text-right">
+            <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
+          </div>
+        </div>
+
         {/* ── ĐÓN & TRẢ: thông tin quyết định ghép được hay không ── */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
           <div className="flex items-start gap-3 p-3.5">

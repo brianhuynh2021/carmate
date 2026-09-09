@@ -20,13 +20,14 @@ import {
   PhoneOff,
   User
 } from 'lucide-react';
-import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber } from '@carmate/shared';
+import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 import EmptyState, { SectionHeader } from '../ui/EmptyState.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
 import { ZaloIcon, WhatsAppIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
+import PresenceDot from '../ui/PresenceDot.jsx';
 
 /**
  * Đồng hồ đếm ngược 15 phút theo chuẩn ARCHITECTURE.md:
@@ -175,6 +176,7 @@ function TripProgressStepper({ status, delayedMinutes }) {
 
 export default function BookedTripList({
   bookedEscrows = [],
+  currentUser = null,
   onCancel,
   onDelay,
   onComplete,
@@ -310,6 +312,7 @@ export default function BookedTripList({
             const isCompleted = record.status === 'completed';
             const isCancelled = record.status === 'cancelled';
             const isDelayed = record.status === 'delayed';
+            const partnerOnline = getUserOnlineStatus(record.targetItem || record, currentUser?.phone || currentUser?.id);
 
             return (
               <article
@@ -324,10 +327,11 @@ export default function BookedTripList({
                     </span>
                     <div>
                       <p className="text-xs text-[#86868b]">Mã chuyến xe</p>
-                      <p className="text-base font-bold text-[#1d1d1f]">
+                      <p className="text-base font-bold text-[#1d1d1f] flex items-center gap-1.5 flex-wrap">
                         <span className="tabular font-display tracking-tight text-[#0071e3]">{record.escrowId}</span>
                         <span className="text-[#86868b] mx-1.5">·</span>
                         <span>{toPublicAlias(record.contactName)}</span>
+                        <PresenceDot isOnline={partnerOnline.isOnline} size="xs" detail={partnerOnline.detail} />
                       </p>
                     </div>
                   </div>
@@ -391,6 +395,12 @@ export default function BookedTripList({
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
                               <User className="w-5 h-5 text-white" strokeWidth={2.2} />
                             </div>
+                            <PresenceDot
+                              isOnline={partnerOnline.isOnline}
+                              size="xs"
+                              className="absolute -top-0.5 -right-0.5 ring-2 ring-white dark:ring-slate-900"
+                              detail={partnerOnline.detail}
+                            />
                             <span
                               className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
                               title="Đã xác thực CCCD & GPLX"
@@ -399,8 +409,9 @@ export default function BookedTripList({
                             </span>
                           </div>
                           <div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="font-bold text-sm text-[#1d1d1f] dark:text-white">{record.contactName}</p>
+                              <PresenceDot isOnline={partnerOnline.isOnline} showLabel detail={partnerOnline.detail} />
                               <span className="text-[11px] font-semibold px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60">
                                 98đ Tín nhiệm
                               </span>

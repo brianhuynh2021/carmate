@@ -4539,6 +4539,48 @@ async function runTests() {
     assert(false, '60. Kiểm thử Bất Biến MIT: Chống Tự Ghép Chuyến Của Chính Mình', err.message);
   }
 
+  // 61. Kiểm thử Trạng Thái Trực Tuyến / Ngoại Tuyến (Presence Dot & Invariants)
+  try {
+    console.log('\n🟢 61. Kiểm thử Trạng Thái Trực Tuyến / Ngoại Tuyến (Presence Indicator)...');
+    const { getUserOnlineStatus } = await import('../packages/shared/src/utils/presence.js');
+
+    // 1. Kiểm tra trạng thái isOwner luôn online
+    const ownerStatus = getUserOnlineStatus({ isOwner: true, id: 'trip-1' });
+    assert(ownerStatus.isOnline === true, 'Presence 1: Chủ sở hữu bài đăng của chính mình luôn Đang online');
+    assert(ownerStatus.detail.includes('Đang hoạt động'), 'Presence 2: Chi tiết trạng thái của chính mình chính xác');
+
+    // 2. Kiểm tra trạng thái trùng số điện thoại hiện tại
+    const phoneStatus = getUserOnlineStatus({ driverPhone: '0912345678', id: 'trip-2' }, '0912345678');
+    assert(phoneStatus.isOnline === true, 'Presence 3: So khớp SĐT người dùng hiện tại nhận diện đúng Đang online');
+
+    // 3. Kiểm tra tính bất biến (Idempotency) của hàm băm đối với chuyến xe mẫu
+    const st1 = getUserOnlineStatus({ id: 'trip-demo-abc' });
+    const st2 = getUserOnlineStatus({ id: 'trip-demo-abc' });
+    assert(st1.isOnline === st2.isOnline, 'Presence 4: Trạng thái trực tuyến có tính bất biến (Idempotent), không giật lag ngẫu nhiên');
+
+    // 4. Kiểm tra các component UI tích hợp PresenceDot
+    const tripCardSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/market/TripCard.jsx'), 'utf8');
+    assert(tripCardSrc.includes('PresenceDot'), 'Presence UI 1: TripCard tích hợp PresenceDot');
+    assert(tripCardSrc.includes('getUserOnlineStatus'), 'Presence UI 2: TripCard gọi getUserOnlineStatus');
+
+    const routeDetailSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx'), 'utf8');
+    assert(routeDetailSrc.includes('PresenceDot'), 'Presence UI 3: RouteDetailModal tích hợp PresenceDot');
+
+    const inboxSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxSrc.includes('PresenceDot'), 'Presence UI 4: InboxModal tích hợp PresenceDot');
+    assert(inboxSrc.includes('itemOnline'), 'Presence UI 5: InboxModal tính toán online cho từng hội thoại');
+
+    const bookedSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(bookedSrc.includes('PresenceDot'), 'Presence UI 6: BookedTripList tích hợp PresenceDot');
+    assert(bookedSrc.includes('partnerOnline'), 'Presence UI 7: BookedTripList tính toán online cho đối tác');
+
+    const presenceDotSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/ui/PresenceDot.jsx'), 'utf8');
+    assert(presenceDotSrc.includes('emerald-500') && presenceDotSrc.includes('rose-500'), 'Presence UI 8: PresenceDot hỗ trợ đèn xanh (emerald) và đèn đỏ (rose)');
+    assert(presenceDotSrc.includes('Đang online') && presenceDotSrc.includes('Ngoại tuyến'), 'Presence UI 9: PresenceDot có nhãn Đang online và Ngoại tuyến');
+  } catch (err) {
+    assert(false, '61. Kiểm thử Trạng Thái Trực Tuyến / Ngoại Tuyến', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

@@ -22,9 +22,11 @@ import {
   parseLocation,
   getCorridorDisplay,
   toPublicAlias,
-  normalizePhotoUrl
+  normalizePhotoUrl,
+  getUserOnlineStatus
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
+import PresenceDot from '../ui/PresenceDot.jsx';
 
 export { parseLocation, getCorridorDisplay };
 
@@ -135,6 +137,9 @@ export default function TripCard({
 
   // Danh tính công khai: chỉ hiển thị bí danh vai trò + mã định danh chuẩn (Chủ xe CX-xxx / Khách KX-xxx)
   const driverDisplayName = toPublicAlias(item);
+
+  // Trạng thái trực tuyến (Live Presence Telemetry: Đèn xanh online / Đèn đỏ offline)
+  const onlineStatus = getUserOnlineStatus({ ...item, isOwner });
 
   const fromParsed = parseLocation(item.from);
   const toParsed = parseLocation(item.to);
@@ -310,16 +315,18 @@ export default function TripCard({
             className="flex items-center gap-2 min-w-0 text-left cursor-pointer group/driver"
             title="Xem hồ sơ uy tín"
           >
-            <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10">
+            <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10 relative">
               <User className="w-3.5 h-3.5" />
+              <PresenceDot isOnline={onlineStatus.isOnline} size="xs" className="absolute -bottom-0.5 -right-0.5" detail={onlineStatus.detail} />
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-1 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200 truncate group-hover/driver:text-[#0071e3] transition-colors">
                   {driverDisplayName}
                 </span>
                 <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" title="Đã xác minh" />
+                <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
               </div>
 
               <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
