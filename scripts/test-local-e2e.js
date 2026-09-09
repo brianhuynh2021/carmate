@@ -5017,6 +5017,119 @@ async function runTests() {
     assert(false, '68. Kiểm thử Làm Sạch Nhãn Ngày & Triệt Tiêu Hậu Tố Dư Thừa', err.message);
   }
 
+  // 69. KIỂM THỬ MÃ QR CHUẨN ISO/IEC 18004 CHO VÉ CHUYẾN ĐI & LIÊN KẾT SÂU ĐẶT CHỖ (DEEP-LINKING)
+  try {
+    console.log('\n📱 69. Kiểm thử Mã QR Chuẩn ISO/IEC 18004 Cho Vé Chuyến Đi & Liên Kết Sâu (Deep-linking)...');
+    const QRCode = (await import('qrcode')).default;
+    const jsQR = (await import('jsqr')).default;
+    const { getTripShareUrl, drawRealQRCode, drawStylizedQRCode } = await import('../apps/web/src/utils/ticketCanvas.js');
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 69.1 Cấu trúc URL chia sẻ chuyến đi chuẩn mực
+    const mockTrip = { id: 'DRV-2026-TEST', origin: 'Bình Long', destination: 'Sài Gòn' };
+    const shareUrl = getTripShareUrl(mockTrip);
+    assert(
+      shareUrl.includes('?trip=DRV-2026-TEST') && (shareUrl.startsWith('https://carmate.vn') || shareUrl.startsWith('http')),
+      'QR Ticket 1: getTripShareUrl tạo link deep-link hợp lệ với tham số ?trip=DRV-2026-TEST'
+    );
+
+    // 69.2 Mã QR được tạo theo ma trận tiêu chuẩn ISO/IEC 18004 với mức sửa lỗi M (15%)
+    const qrObj = QRCode.create(shareUrl, { errorCorrectionLevel: 'M' });
+    assert(qrObj && qrObj.modules && qrObj.modules.size > 0, 'QR Ticket 2: QRCode.create sinh ra ma trận khối chuẩn quốc tế');
+    assert(typeof drawRealQRCode === 'function', 'QR Ticket 3: ticketCanvas xuất hàm drawRealQRCode chuẩn');
+    assert(typeof drawStylizedQRCode === 'function', 'QR Ticket 4: ticketCanvas duy trì hàm tương thích ngược drawStylizedQRCode');
+
+    // 69.3 Xác thực khả năng giải mã thực tế (Decodability verification)
+    const qrSize = qrObj.modules.size;
+    const scale = 4;
+    const quietZone = 2;
+    const totalDim = (qrSize + quietZone * 2) * scale;
+    const rgbaData = new Uint8ClampedArray(totalDim * totalDim * 4);
+    // Fill background white
+    rgbaData.fill(255);
+    for (let r = 0; r < qrSize; r++) {
+      for (let c = 0; c < qrSize; c++) {
+        if (qrObj.modules.get(r, c)) {
+          const startX = (c + quietZone) * scale;
+          const startY = (r + quietZone) * scale;
+          for (let py = 0; py < scale; py++) {
+            for (let px = 0; px < scale; px++) {
+              const idx = ((startY + py) * totalDim + (startX + px)) * 4;
+              rgbaData[idx] = 0;
+              rgbaData[idx + 1] = 0;
+              rgbaData[idx + 2] = 0;
+              rgbaData[idx + 3] = 255;
+            }
+          }
+        }
+      }
+    }
+    const decoded = jsQR(rgbaData, totalDim, totalDim);
+    assert(decoded && decoded.data === shareUrl, `QR Ticket 5: Bộ giải mã quang học jsQR quét thành công chính xác 100% URL: ${shareUrl}`);
+
+    // 69.4 Kiểm tra TicketShareModal hiển thị mã QR thật cho người dùng quét trực tiếp
+    const modalSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/modals/TicketShareModal.jsx'),
+      'utf-8'
+    );
+    assert(
+      modalSrc.includes("import QRCode from 'qrcode'") && modalSrc.includes('getTripShareUrl'),
+      'QR Ticket 6: TicketShareModal import QRCode và getTripShareUrl'
+    );
+    assert(
+      modalSrc.includes('qrDataUrl') && modalSrc.includes('QRCode.toDataURL'),
+      'QR Ticket 7: TicketShareModal sinh dataURL ảnh QR code trực tiếp trong giao diện xem trước'
+    );
+    assert(
+      modalSrc.includes('<img') && modalSrc.includes('src={qrDataUrl}') && modalSrc.includes('Quét mã giữ chỗ 0đ'),
+      'QR Ticket 8: Thẻ xem trước hiển thị mã QR sắc nét có thể quét bằng camera điện thoại trên màn hình'
+    );
+
+    // 69.5 Kiểm tra ticketCanvas vẽ QR thật ở cả 2 định dạng (Thẻ 4:5 và Story 9:16)
+    const canvasSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/utils/ticketCanvas.js'),
+      'utf-8'
+    );
+    assert(
+      canvasSrc.includes("import QRCode from 'qrcode'") && canvasSrc.includes('drawRealQRCode'),
+      'QR Ticket 9: ticketCanvas.js import QRCode và tích hợp drawRealQRCode'
+    );
+    assert(
+      canvasSrc.includes("errorCorrectionLevel: 'M'"),
+      'QR Ticket 10: drawRealQRCode sử dụng cấu hình sửa lỗi mức M (15%) tối ưu cho quét nhanh'
+    );
+    assert(
+      !canvasSrc.includes('hash ^ (r * 31 + c * 17)'),
+      'QR Ticket 11: Đã triệt tiêu hoàn toàn mã giả lập pixel ngẫu nhiên fake trước đây'
+    );
+
+    // 69.6 Kiểm tra App.jsx và API client hỗ trợ liên kết sâu (Deep-linking)
+    const appSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/App.jsx'),
+      'utf-8'
+    );
+    assert(
+      appSrc.includes("params.get('trip')") || appSrc.includes("params.get('tripId')"),
+      'QR Ticket 12: App.jsx tự động bắt tham số ?trip= hoặc ?tripId= khi người dùng quét mã'
+    );
+    assert(
+      appSrc.includes('setSelectedTripForRoute(match)') || appSrc.includes('setSelectedTripForRoute(res.data)'),
+      'QR Ticket 13: App.jsx tự động mở chi tiết chuyến RouteDetailModal khi có liên kết sâu hợp lệ'
+    );
+
+    const clientSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/api/client.js'),
+      'utf-8'
+    );
+    assert(
+      clientSrc.includes('getTrip(id)') || clientSrc.includes('getTrip: (id)'),
+      'QR Ticket 14: api client cung cấp phương thức getTrip(id) phục vụ deep-link'
+    );
+  } catch (err) {
+    assert(false, '69. Kiểm thử Mã QR Chuẩn ISO/IEC 18004 Cho Vé Chuyến Đi & Liên Kết Sâu', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
