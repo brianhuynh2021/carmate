@@ -65,7 +65,7 @@ export default function Modal({
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         {/* Header */}
-        <div className="flex items-start gap-3 px-6 pt-6 pb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
+        <div className="flex items-start gap-3 px-4 sm:px-6 pt-5 sm:pt-6 pb-3.5 sm:pb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
           {Icon && (
             <div
               className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${ICON_TONES[iconTone] || ICON_TONES.primary}`}
@@ -90,11 +90,11 @@ export default function Modal({
         </div>
 
         {/* Body */}
-        <div className={`px-6 py-5 overflow-y-auto overscroll-contain flex-1 ${bodyClassName}`}>{children}</div>
+        <div className={`px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto overscroll-contain flex-1 ${bodyClassName}`}>{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-black/[0.06] dark:border-white/[0.06] bg-[#f5f5f7] dark:bg-[#15171e]">
+          <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-black/[0.06] dark:border-white/[0.06] bg-[#f5f5f7] dark:bg-[#15171e]">
             {footer}
           </div>
         )}
