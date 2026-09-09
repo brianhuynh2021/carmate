@@ -212,11 +212,26 @@ export default function App() {
     onNavigateTab: setActiveTab
   });
 
-  // State Người dùng đăng nhập
+  // State Người dùng đăng nhập (Đồng bộ đa tầng LocalStorage + First-Party Cookie)
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = localStorage.getItem(USER_KEY);
-      return saved ? JSON.parse(saved) : null;
+      if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem(USER_KEY);
+        if (saved) return JSON.parse(saved);
+      }
+      if (typeof document !== 'undefined') {
+        const match = document.cookie.match(/(?:^|; )carmate_user_cached=([^;]*)/);
+        if (match && match[1]) {
+          const parsed = JSON.parse(decodeURIComponent(match[1]));
+          if (parsed && typeof localStorage !== 'undefined') {
+            try {
+              localStorage.setItem(USER_KEY, JSON.stringify(parsed));
+            } catch {}
+          }
+          return parsed;
+        }
+      }
+      return null;
     } catch {
       return null;
     }
@@ -279,6 +294,11 @@ export default function App() {
       const updated = res.user || { ...currentUser, ...profileData };
       setCurrentUser(updated);
       localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      if (typeof document !== 'undefined') {
+        try {
+          document.cookie = `carmate_user_cached=${encodeURIComponent(JSON.stringify(updated))}; path=/; max-age=7776000; SameSite=Lax; secure`;
+        } catch {}
+      }
 
       // Đồng bộ hai tầng sang Persona Memory để Trợ lý AI và Form nạp tức thì 0ms
       if (updated.vehicle) {
@@ -481,6 +501,49 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setActiveTab, setShowAiModal]);
 
+  // Tự động khôi phục và đồng bộ phiên đăng nhập từ Token (Silent Session Restore - Stanford Ergonomics)
+  useEffect(() => {
+    const token =
+      (typeof localStorage !== 'undefined' && localStorage.getItem('carmate_auth_token')) ||
+      (typeof document !== 'undefined' && document.cookie.match(/(?:^|; )carmate_auth_token=([^;]*)/)?.[1]);
+
+    if (!token) return;
+
+    let isMounted = true;
+    api
+      .getMe()
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.success && res?.user) {
+          setCurrentUser(res.user);
+          try {
+            localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+            if (typeof document !== 'undefined') {
+              document.cookie = `carmate_user_cached=${encodeURIComponent(JSON.stringify(res.user))}; path=/; max-age=7776000; SameSite=Lax; secure`;
+            }
+            if (Array.isArray(res.tripIds) && res.tripIds.length > 0) {
+              const userKey = `carmate_my_trip_ids_${res.user.id || res.user.phone}`;
+              const stored = JSON.parse(localStorage.getItem(userKey) || '[]');
+              const merged = Array.from(new Set([...res.tripIds, ...stored]));
+              localStorage.setItem(userKey, JSON.stringify(merged));
+            }
+          } catch {}
+          updateMyTripsCount(res.user, driverOffers, passengerRequests);
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        // Chỉ dọn dẹp nếu token thực sự hết hạn hoặc bị từ chối 401
+        if (err?.status === 401) {
+          handleLogout();
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const [postTripInitialRole, setPostTripInitialRole] = useState('driver');
 
   // Guarded Action: Hỗ trợ linh hoạt 1-chạm cho cả Người tìm xe & Chủ xe
@@ -534,6 +597,11 @@ export default function App() {
     setCurrentUser(user);
     try {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+      if (typeof document !== 'undefined') {
+        try {
+          document.cookie = `carmate_user_cached=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=7776000; SameSite=Lax; secure`;
+        } catch {}
+      }
       const userKey = `carmate_my_trip_ids_${user.id || user.phone}`;
       const stored = JSON.parse(localStorage.getItem(userKey) || '[]');
       const guestStored = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
@@ -574,6 +642,11 @@ export default function App() {
     try {
       localStorage.removeItem(USER_KEY);
       localStorage.removeItem('carmate_my_trip_ids');
+      if (typeof document !== 'undefined') {
+        try {
+          document.cookie = 'carmate_user_cached=; path=/; max-age=0; SameSite=Lax; secure';
+        } catch {}
+      }
       api.logout();
     } catch {}
     setMyTripsCount(0);

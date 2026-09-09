@@ -3333,6 +3333,21 @@ async function runTests() {
     const ggReLoginData = await ggReLoginRes.json();
     assert(ggReLoginData.user.id === firstUserId, 'Account Merging 6: Đăng nhập lại Google trả về đúng tài khoản đã gộp');
     assert(ggReLoginData.user.telegramId === String(testTelegramId), 'Account Merging 7: Thông tin Telegram không bị ghi đè hay thất thoát');
+
+    // 6.4 Kiểm thử Lưu trữ phiên đa tầng & Khôi phục phiên ngầm (Session Persistence & Silent Restore)
+    const tokenModuleContent = fs.readFileSync(path.resolve(process.cwd(), 'apps/api/src/utils/token.js'), 'utf8');
+    assert(tokenModuleContent.includes("'90d'") || tokenModuleContent.includes('"90d"'), 'Session Persistence 1: JWT Token có thời hạn lưu 90 ngày (90d)');
+
+    const clientContent = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/api/client.js'), 'utf8');
+    assert(
+      clientContent.includes('getStoredAuthToken') && clientContent.includes('setStoredAuthToken') && clientContent.includes('carmate_auth_token'),
+      'Session Persistence 2: client.js hỗ trợ đồng bộ token đa tầng localStorage và cookie'
+    );
+
+    assert(
+      appCode.includes('carmate_user_cached') && appCode.includes('getMe'),
+      'Session Persistence 3: App.jsx có cơ chế Silent Session Restore tự động phục hồi phiên từ cookie/token'
+    );
   } catch (err) {
     assert(false, '41. Kiểm thử Xác thực Telegram 0đ & Bất biến Hai Vai Trò', err.message);
   }
