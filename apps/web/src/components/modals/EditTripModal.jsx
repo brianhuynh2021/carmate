@@ -23,7 +23,7 @@ import {
   ShieldCheck,
   Crosshair
 } from 'lucide-react';
-import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot, VEHICLE_SEAT_CONFIGS, normalizePhotoUrl } from '@carmate/shared';
+import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot, VEHICLE_SEAT_CONFIGS, normalizePhotoUrl, parseLocation } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
@@ -40,6 +40,12 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   const [deleting, setDeleting] = useState(false);
   const [fromLocation, setFromLocation] = useState(trip?.from || '');
   const [toLocation, setToLocation] = useState(trip?.to || '');
+  const [pickupSpot, setPickupSpot] = useState(
+    () => trip?.pickupSpot || parseLocation(trip?.from || '').sub || ''
+  );
+  const [dropoffSpot, setDropoffSpot] = useState(
+    () => trip?.dropoffSpot || parseLocation(trip?.to || '').sub || ''
+  );
   const [price, setPrice] = useState(trip?.basePricePerSeat || trip?.expectedPrice || 150000);
   const [vehicleCapacity, setVehicleCapacity] = useState(() => {
     if (trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4)) return 7;
@@ -145,6 +151,10 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     const temp = fromLocation;
     setFromLocation(toLocation);
     setToLocation(temp);
+
+    const tempSpot = pickupSpot;
+    setPickupSpot(dropoffSpot);
+    setDropoffSpot(tempSpot);
   };
 
   // Tính toán gợi ý mốc đón trả thông minh theo tuyến hiện tại
@@ -168,8 +178,19 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     setSaving(true);
 
     const slot = TIME_SLOTS.find((s) => s.id === timeSlot) || TIME_SLOTS[2];
-    const cleanFrom = fromLocation.trim();
-    const cleanTo = toLocation.trim();
+    
+    // Khử triệt để rò rỉ từ khoá xe / số ghế dính vào tên địa danh
+    const VEHICLE_LEAK_REGEX =
+      /(?:\s+|-|,|\/)?\s*(?:xe\s*)?(?:mazda\s*\d*|vios|xpander|innova|veloz|kia\s*\w*|hyundai\s*\w*|honda\s*\w*|toyota\s*\w*|ford\s*\w*|vinfast\s*\w*|carnival|accent|city|cerato|k3|cx-?\d+|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình|\d+\s*chỗ|chỗ).*/gi;
+    let cleanFrom = fromLocation.trim();
+    let cleanTo = toLocation.trim();
+    if (cleanFrom.replace(VEHICLE_LEAK_REGEX, '').trim().length >= 2) {
+      cleanFrom = cleanFrom.replace(VEHICLE_LEAK_REGEX, '').trim();
+    }
+    if (cleanTo.replace(VEHICLE_LEAK_REGEX, '').trim().length >= 2) {
+      cleanTo = cleanTo.replace(VEHICLE_LEAK_REGEX, '').trim();
+    }
+
     const fromCity = cleanFrom.split(/[,-]/)[0].trim() || cleanFrom;
     const toCity = cleanTo.split(/[,-]/)[0].trim() || cleanTo;
     const derivedRoute = `${fromCity} ⇄ ${toCity}`;
@@ -182,6 +203,8 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     const updates = {
       from: cleanFrom,
       to: cleanTo,
+      pickupSpot: pickupSpot.trim(),
+      dropoffSpot: dropoffSpot.trim(),
       route: derivedRoute,
       routeCategory: derivedRoute,
       capacity: isDriver ? vehicleCapacity : undefined,
@@ -221,7 +244,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     };
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
-  }, [fromLocation, toLocation, price, seats, vehicleCapacity, date, timeSlot, waypointNote, notes, saving]);
+  }, [fromLocation, toLocation, pickupSpot, dropoffSpot, price, seats, vehicleCapacity, date, timeSlot, waypointNote, notes, saving]);
 
   const quickDates = ['Hôm nay', 'Ngày mai', 'Thứ 7', 'Chủ nhật'];
   const currentSeatConfig = VEHICLE_SEAT_CONFIGS[vehicleCapacity] || VEHICLE_SEAT_CONFIGS[5];
@@ -380,6 +403,43 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 placeholder="VD: Hải Phòng (Cầu Rào), Sài Gòn..."
                 icon={Navigation}
                 iconColor="text-rose-500"
+              />
+            </div>
+          </div>
+
+          {/* Điểm đón cụ thể & Điểm trả cụ thể */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-slate-200/60 dark:border-white/[0.04]">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3 text-emerald-500" />
+                  <span>Điểm đón cụ thể:</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Tùy chọn</span>
+              </label>
+              <input
+                type="text"
+                value={pickupSpot}
+                onChange={(e) => setPickupSpot(e.target.value)}
+                placeholder="VD: Trung tâm hành chính, Cây xăng 17, Quận 3..."
+                className="w-full h-9 px-3 rounded-xl text-xs bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Navigation className="w-3 h-3 text-rose-500" />
+                  <span>Điểm trả cụ thể:</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Tùy chọn</span>
+              </label>
+              <input
+                type="text"
+                value={dropoffSpot}
+                onChange={(e) => setDropoffSpot(e.target.value)}
+                placeholder="VD: Bến xe Miền Đông, Bệnh viện Chợ Rẫy..."
+                className="w-full h-9 px-3 rounded-xl text-xs bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-2xs"
               />
             </div>
           </div>

@@ -146,16 +146,23 @@ export default function TripCard({
     if (s.length <= 42) return s;
     return s.split(/\s*[/;]\s*/)[0].trim();
   };
-  const rawFromSpot = briefSpot(fromParsed.sub);
-  const rawToSpot = briefSpot(toParsed.sub);
+  const rawFromSpot = briefSpot(
+    item.pickupSpot || fromParsed.sub || (item.waypointNote?.toLowerCase().includes('đón') ? item.waypointNote.replace(/^đón\s*(?:tại)?\s*/i, '') : '')
+  );
+  const rawToSpot = briefSpot(
+    item.dropoffSpot || toParsed.sub || (item.waypointNote?.toLowerCase().includes('trả') ? item.waypointNote.replace(/^trả\s*(?:tại)?\s*/i, '') : '')
+  );
 
-  // Khử lặp tên tỉnh/thành đã có ở tiêu đề trục lộ trình
+  // Khử lặp tên tỉnh/thành đã có ở tiêu đề trục lộ trình và từ khoá xe thừa
   const cleanSpot = (spot, city) => {
     if (!spot) return '';
-    if (!city) return spot;
+    const VEHICLE_LEAK_REGEX =
+      /(?:\s+|-|,|\/)?\s*(?:xe\s*)?(?:mazda\s*\d*|vios|xpander|innova|veloz|kia\s*\w*|hyundai\s*\w*|honda\s*\w*|toyota\s*\w*|ford\s*\w*|vinfast\s*\w*|carnival|accent|city|cerato|k3|cx-?\d+|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình|\d+\s*chỗ|chỗ).*/gi;
+    let s = spot.replace(VEHICLE_LEAK_REGEX, '').trim();
+    if (!city) return s;
     const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const cleaned = spot.replace(new RegExp(`,?\\s*${escaped}\\s*`, 'gi'), '').trim();
-    return cleaned || spot;
+    const cleaned = s.replace(new RegExp(`,?\\s*${escaped}\\s*`, 'gi'), '').trim();
+    return cleaned || s;
   };
 
   const fromSpot = cleanSpot(rawFromSpot, fromParsed.main);
@@ -276,7 +283,7 @@ export default function TripCard({
           <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
           <span className="text-slate-400 dark:text-slate-500 font-medium shrink-0">Đón:</span>
           <span className="truncate font-medium">
-            {fromSpot || fromParsed.main}
+            {fromSpot || item.pickupSpot || fromParsed.main}
           </span>
         </div>
 
@@ -284,7 +291,7 @@ export default function TripCard({
           <Navigation className="w-3.5 h-3.5 text-rose-500 shrink-0" />
           <span className="text-slate-400 dark:text-slate-500 font-medium shrink-0">Trả:</span>
           <span className="truncate font-medium">
-            {toSpot || toParsed.main}
+            {toSpot || item.dropoffSpot || toParsed.main}
           </span>
         </div>
       </div>

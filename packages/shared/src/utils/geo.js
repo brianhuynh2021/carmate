@@ -555,11 +555,21 @@ export function decodeHtmlEntities(str) {
 
 export function parseLocation(str) {
   if (!str || typeof str !== 'string') return { main: '', sub: '' };
-  const cleanStr = decodeHtmlEntities(str);
+  const rawClean = decodeHtmlEntities(str).trim();
 
   // Kháng dữ liệu pentest / HTML tags: không hiển thị thô ra giao diện người dùng
-  if (/<[a-z]|onerror|onload|script|&lt;|&gt;/i.test(cleanStr)) {
+  if (/<[a-z]|onerror|onload|script|&lt;|&gt;/i.test(rawClean)) {
     return { main: 'Điểm hẹn đón dọc tuyến', sub: 'Thoả thuận điểm đón qua Zalo' };
+  }
+
+  // 0. Khử rò rỉ từ khoá xe, số ghế thừa thãi bám vào địa danh (VD: "Hớn Quản xe Mazda 2 chỗ" -> "Hớn Quản")
+  const VEHICLE_LEAK_REGEX =
+    /(?:\s+|-|,|\/)?\s*(?:xe\s*)?(?:mazda\s*\d*|vios|xpander|innova|veloz|kia\s*\w*|hyundai\s*\w*|honda\s*\w*|toyota\s*\w*|ford\s*\w*|vinfast\s*\w*|carnival|accent|city|cerato|k3|cx-?\d+|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình|\d+\s*chỗ|chỗ|còn\s*\d*|giá|sđt|zalo|lúc|khoảng|đón|phụ|ai tiện|ai có).*/i;
+
+  let cleanStr = rawClean;
+  const strippedVehicle = rawClean.replace(VEHICLE_LEAK_REGEX, '').trim();
+  if (strippedVehicle && strippedVehicle.length >= 2) {
+    cleanStr = strippedVehicle;
   }
 
   const isSaigon = (s) =>
@@ -576,7 +586,11 @@ export function parseLocation(str) {
 
     // Nếu partA là tên đường/địa điểm chi tiết ở Sài Gòn kèm Quận (VD: "Đường Cống Quỳnh (Quận 1)")
     if (isSaigon(partB) || isSaigon(partA)) {
-      if (/^(đường|phố|hẻm|ngõ|số|cây xăng|chợ|bệnh viện|bv|trường|kcn|tòa|toà|chung cư|nhà khách|khách sạn)\b/i.test(partA)) {
+      if (
+        /^(?:đường|phố|hẻm|ngõ|số|cây xăng|chợ|bệnh viện|bv|trường|kcn|tòa|toà|chung cư|nhà khách|khách sạn)(?:\s+|$|[.,;])/i.test(
+          partA
+        )
+      ) {
         return {
           main: 'Sài Gòn',
           sub: `${partA}, ${partB}`
@@ -594,8 +608,12 @@ export function parseLocation(str) {
       };
     }
 
-    // Nếu partA là địa điểm chi tiết kèm Huyện/Tỉnh ở partB (VD: "Cây xăng 17 (Bù Đốp)")
-    if (/^(đường|phố|hẻm|ngõ|số|cây xăng|chợ|bệnh viện|bv|trường|kcn)\b/i.test(partA)) {
+    // Nếu partA là địa điểm chi tiết kèm Huyện/Tỉnh ở partB (VD: "Cây xăng 17 (Bù Đốp)", "Chợ Tân Khai (Hớn Quản)")
+    if (
+      /^(?:đường|phố|hẻm|ngõ|số|cây xăng|chợ|bệnh viện|bv|trường|kcn|trung tâm|tt\.?|ubnd)(?:\s+|$|[.,;])/i.test(
+        partA
+      )
+    ) {
       return {
         main: partB,
         sub: partA
@@ -652,7 +670,52 @@ export function parseLocation(str) {
     return { main: parts[0].trim(), sub: parts.slice(1).join('; ').trim() };
   }
 
-  // 5. Địa danh con thuộc Sài Gòn (VD: "Bến xe Miền Đông", "Ngã tư Hàng Xanh")
+  // 5. Phân tích Mốc địa danh + Quận/Huyện/Thị xã không có dấu phẩy (VD: "trung tâm hành chính Hớn Quản", "UBND Huyện Hớn Quản", "Chợ Tân Khai Hớn Quản")
+  const LANDMARK_PREFIX_REGEX =
+    /(?:trung tâm hành chính|tt\.?\s*hành chính|ubnd|ủy ban nhân dân|bệnh viện|bv|trung tâm y tế|chợ|cây xăng|bến xe|bx|cổng chào|ngã 3|ngã ba|ngã 4|ngã tư|vòng xoay|bùng binh|kcn|khu công nghiệp|trường|đại học|cao đẳng|toà nhà|tòa nhà|chung cư|siêu thị|khách sạn|nhà ga|ga|sân bay|cầu|nút giao)/i;
+
+  const KNOWN_AREAS = [
+    { name: 'Hớn Quản', regex: /hớn\s*quản/i },
+    { name: 'Tân Khai', regex: /tân\s*khai/i },
+    { name: 'Bù Đốp', regex: /bù\s*đốp/i },
+    { name: 'Lộc Ninh', regex: /lộc\s*ninh/i },
+    { name: 'Bình Long', regex: /bình\s*long/i },
+    { name: 'Chơn Thành', regex: /chơn\s*thành/i },
+    { name: 'Đồng Xoài', regex: /đồng\s*xoài/i },
+    { name: 'Bù Đăng', regex: /bù\s*đăng/i },
+    { name: 'Bù Gia Mập', regex: /bù\s*gia\s*mập/i },
+    { name: 'Phú Riềng', regex: /phú\s*riềng/i },
+    { name: 'Đồng Phú', regex: /đồng\s*phú/i },
+    { name: 'Bình Phước', regex: /bình\s*phước/i },
+    { name: 'Thủ Dầu Một', regex: /thủ\s*dầu\s*một/i },
+    { name: 'Bến Cát', regex: /bến\s*cát/i },
+    { name: 'Dĩ An', regex: /dĩ\s*an/i },
+    { name: 'Thuận An', regex: /thuận\s*an/i },
+    { name: 'Tân Uyên', regex: /tân\s*uyên/i },
+    { name: 'Bàu Bàng', regex: /bàu\s*bàng/i },
+    { name: 'Biên Hòa', regex: /biên\s*h[oò]a/i },
+    { name: 'Long Thành', regex: /long\s*thành/i },
+    { name: 'Nhơn Trạch', regex: /nhơn\s*trạch/i },
+    { name: 'Vũng Tàu', regex: /vũng\s*tàu/i },
+    { name: 'Bà Rịa', regex: /bà\s*rịa/i },
+    { name: 'Tây Ninh', regex: /tây\s*ninh/i },
+    { name: 'Trảng Bàng', regex: /trảng\s*bàng/i },
+    { name: 'Đà Lạt', regex: /đà\s*lạt/i },
+    { name: 'Bảo Lộc', regex: /bảo\s*lộc/i }
+  ];
+
+  if (LANDMARK_PREFIX_REGEX.test(cleanStr)) {
+    for (const area of KNOWN_AREAS) {
+      if (area.regex.test(cleanStr)) {
+        return {
+          main: area.name,
+          sub: cleanStr
+        };
+      }
+    }
+  }
+
+  // 6. Địa danh con thuộc Sài Gòn (VD: "Bến xe Miền Đông", "Ngã tư Hàng Xanh")
   if (isSaigon(cleanStr) && !/^(sài gòn|tp\.hcm|hồ chí minh|tp\s*hồ chí minh)$/i.test(cleanStr)) {
     return {
       main: 'Sài Gòn',

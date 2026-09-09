@@ -3753,6 +3753,38 @@ async function runTests() {
 
     const fallbackBP = maskLicensePlate(null, 'Bình Phước');
     assert(fallbackBP === '93A - xxxxx', 'Plate Privacy 5: Fallback theo tỉnh Bình Phước thành 93A - xxxxx');
+
+    // Test parseLocation Ambient Intelligence for landmark + district & vehicle stripping
+    const hqLoc = parseLocation('trung tâm hành chính Hớn Quản');
+    assert(hqLoc.main === 'Hớn Quản', 'Ambient Geo 5: Nhận diện trục chính Hớn Quản từ trung tâm hành chính Hớn Quản');
+    assert(hqLoc.sub.includes('hành chính'), 'Ambient Geo 6: Giữ điểm đón chi tiết trung tâm hành chính');
+
+    const hqCarLoc = parseLocation('Hớn Quản xe Mazda 2 chỗ');
+    assert(hqCarLoc.main === 'Hớn Quản', 'Ambient Geo 7: Tự động lọc sạch từ khoá xe Mazda 2 chỗ khỏi tên địa danh');
+    assert(hqCarLoc.sub === '', 'Ambient Geo 8: Không để rò rỉ tên xe vào sub spot');
+
+    const tkLoc = parseLocation('Chợ Tân Khai (Hớn Quản)');
+    assert(tkLoc.main === 'Hớn Quản', 'Ambient Geo 9: Bóc tách ngoặc đơn Chợ Tân Khai (Hớn Quản) chuẩn Hớn Quản');
+    assert(tkLoc.sub.includes('Tân Khai'), 'Ambient Geo 10: Giữ điểm đón vi mô Chợ Tân Khai');
+
+    // Test parseNaturalTrip với câu người dùng thực tế
+    const { parseNaturalTrip } = await import('../apps/web/src/utils/nlpTripParser.js');
+    const parsedUserTrip = parseNaturalTrip('17:00 Hôm nay Sài Gòn đi Hớn Quản xe Mazda 2 chỗ đón quận 3 120k');
+    assert(parsedUserTrip.fromLocation === 'Sài Gòn', 'Ambient NLP 1: Tách điểm đi Sài Gòn');
+    assert(parsedUserTrip.toLocation === 'Hớn Quản', 'Ambient NLP 2: Tách điểm đến Hớn Quản sạch từ khoá xe');
+    assert(parsedUserTrip.carType?.includes('Mazda 2'), 'Ambient NLP 3: Nhận diện chính xác dòng xe Mazda 2');
+    assert(parsedUserTrip.pickupSpot === 'quận 3', 'Ambient NLP 4: Tách điểm đón quận 3');
+    assert(parsedUserTrip.seats === 2, 'Ambient NLP 5: Nhận diện số ghế 2 chỗ');
+    assert(parsedUserTrip.price === 120000, 'Ambient NLP 6: Nhận diện giá 120k');
+
+    // Kiểm tra tính năng Điểm đón cụ thể và Điểm trả cụ thể trong EditTripModal & PostTripForm
+    const editModalCode = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/modals/EditTripModal.jsx'), 'utf8');
+    assert(editModalCode.includes('pickupSpot') && editModalCode.includes('dropoffSpot'), 'Spot UX 1: EditTripModal có trường pickupSpot và dropoffSpot');
+    assert(editModalCode.includes('Điểm đón cụ thể') && editModalCode.includes('Điểm trả cụ thể'), 'Spot UX 2: EditTripModal có nhãn Điểm đón cụ thể và Điểm trả cụ thể');
+
+    const postFormCode = fs.readFileSync(path.resolve(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
+    assert(postFormCode.includes('pickupSpot') && postFormCode.includes('dropoffSpot'), 'Spot UX 3: PostTripForm có trường pickupSpot và dropoffSpot');
+    assert(postFormCode.includes('Điểm đón cụ thể') && postFormCode.includes('Điểm trả cụ thể'), 'Spot UX 4: PostTripForm có nhãn Điểm đón cụ thể và Điểm trả cụ thể');
   } catch (err) {
     assert(false, '49. Kiểm thử Trí Tuệ Ambient Lộ Trình & Bảo Mật Biển Số Xe', err.message);
   }
