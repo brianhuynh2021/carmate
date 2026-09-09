@@ -274,17 +274,25 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                   ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
                   : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-slate-100 hover:text-slate-700'
               }`}
-              title={currentStatus === 'full' ? 'Bấm để mở lại nhận khách' : 'Bấm để tạm khóa (đã đủ người)'}
+              title={
+                currentStatus === 'full'
+                  ? isDriver
+                    ? 'Bấm để mở lại nhận khách'
+                    : 'Bấm để tiếp tục tìm xe'
+                  : isDriver
+                    ? 'Bấm để tạm khóa (đã đủ người)'
+                    : 'Bấm để tạm khóa (đã có xe)'
+              }
             >
               {currentStatus === 'full' ? (
                 <>
                   <Lock className="w-3 h-3 text-slate-500" />
-                  <span>Đã đủ người (Bấm mở lại)</span>
+                  <span>{isDriver ? 'Đã đủ người (Bấm mở lại)' : 'Đã có xe (Bấm mở lại)'}</span>
                 </>
               ) : (
                 <>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Đang nhận khách (Bấm để khóa)</span>
+                  <span>{isDriver ? 'Đang nhận khách (Bấm để khóa)' : 'Đang tìm xe (Bấm để khóa)'}</span>
                 </>
               )}
             </button>
@@ -302,10 +310,10 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
               onClick={() => setConfirmDelete(true)}
               disabled={saving || deleting}
               className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold px-2.5 py-1.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              title="Xoá bài đăng chuyến này"
+              title={isDriver ? 'Xoá bài đăng chuyến này' : 'Xoá bài tìm xe này'}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Xóa chuyến</span>
+              <span>{isDriver ? 'Xóa chuyến' : 'Xóa bài tìm xe'}</span>
             </button>
           ) : (
             <div />

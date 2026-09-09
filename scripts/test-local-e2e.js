@@ -2115,8 +2115,9 @@ async function runTests() {
       'Hash Sync 3: Lưu trữ tab vào sessionStorage bảo vệ phiên làm việc khi F5 / Reload'
     );
     assert(
-      appJsxCode.includes("window.history.replaceState(null, '', targetHash);"),
-      'Hash Sync 4: Đồng bộ êm dịu URL Hash qua replaceState không gây giật lag'
+      appJsxCode.includes("window.history.replaceState(null, '', targetPath + search);") &&
+        appJsxCode.includes("window.history.pushState(null, '', targetPath + search);"),
+      'Hash Sync 4: Đồng bộ êm dịu Clean URL Pathname (Zero #) qua History API pushState/replaceState'
     );
     assert(
       appJsxCode.includes("window.addEventListener('hashchange', handleHashOrPopState);") &&
@@ -4259,9 +4260,12 @@ async function runTests() {
     assert(bookedSrc.includes('text-[10.5px] sm:text-[11.5px] font-bold leading-tight truncate'), 'Mobile UX 5: Quy trình 4 bước kết nối an toàn tối ưu co giãn nhãn chữ trên mobile');
     assert(bookedSrc.includes('flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3'), 'Mobile UX 6: Khối liên hệ đối tác linh hoạt theo chiều dọc trên mobile và chiều ngang trên desktop');
 
-    // 5. Responsive MyTripsView
+    // 5. Responsive MyTripsView: Thiết kế dải nút chuẩn Apple Bento 2 tầng thoáng đãng
     const myTripsSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'), 'utf8');
-    assert(myTripsSrc.includes('grid grid-cols-2 sm:flex sm:items-center gap-1.5 w-full sm:w-auto'), 'Mobile UX 7: Dải nút thao tác chuyến của tôi dùng lưới 2-cột chuẩn ngón tay cái trên điện thoại');
+    assert(
+      myTripsSrc.includes('Xem thẻ vé & Chi tiết bài đăng') && myTripsSrc.includes('handleOpenDeleteModal'),
+      'Mobile UX 7: Dải nút thao tác chuyến của tôi thiết kế chuẩn Apple Bento 2 tầng thoáng đãng, không bị gãy dòng chữ'
+    );
 
     // 6. Responsive PostTripForm
     const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
@@ -4537,6 +4541,380 @@ async function runTests() {
     assert(selfBookUserData.error.includes('chính bài đăng của mình'), 'Anti Self API 5: Thông điệp phản hồi từ chối tự ghép');
   } catch (err) {
     assert(false, '60. Kiểm thử Bất Biến MIT: Chống Tự Ghép Chuyến Của Chính Mình', err.message);
+  }
+
+  // 61. Kiểm thử Trạng Thái Trực Tuyến / Ngoại Tuyến (Presence Dot & Invariants)
+  try {
+    console.log('\n🟢 61. Kiểm thử Trạng Thái Trực Tuyến / Ngoại Tuyến (Presence Indicator)...');
+    const { getUserOnlineStatus } = await import('../packages/shared/src/utils/presence.js');
+
+    // 1. Kiểm tra trạng thái isOwner luôn online
+    const ownerStatus = getUserOnlineStatus({ isOwner: true, id: 'trip-1' });
+    assert(ownerStatus.isOnline === true, 'Presence 1: Chủ sở hữu bài đăng của chính mình luôn Đang online');
+    assert(ownerStatus.detail.includes('Đang hoạt động'), 'Presence 2: Chi tiết trạng thái của chính mình chính xác');
+
+    // 2. Kiểm tra trạng thái trùng số điện thoại hiện tại
+    const phoneStatus = getUserOnlineStatus({ driverPhone: '0912345678', id: 'trip-2' }, '0912345678');
+    assert(phoneStatus.isOnline === true, 'Presence 3: So khớp SĐT người dùng hiện tại nhận diện đúng Đang online');
+
+    // 3. Kiểm tra tính bất biến (Idempotency) của hàm băm đối với chuyến xe mẫu
+    const st1 = getUserOnlineStatus({ id: 'trip-demo-abc' });
+    const st2 = getUserOnlineStatus({ id: 'trip-demo-abc' });
+    assert(st1.isOnline === st2.isOnline, 'Presence 4: Trạng thái trực tuyến có tính bất biến (Idempotent), không giật lag ngẫu nhiên');
+
+    // 4. Kiểm tra các component UI tích hợp PresenceDot
+    const tripCardSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/market/TripCard.jsx'), 'utf8');
+    assert(tripCardSrc.includes('PresenceDot'), 'Presence UI 1: TripCard tích hợp PresenceDot');
+    assert(tripCardSrc.includes('getUserOnlineStatus'), 'Presence UI 2: TripCard gọi getUserOnlineStatus');
+
+    const routeDetailSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx'), 'utf8');
+    assert(routeDetailSrc.includes('PresenceDot'), 'Presence UI 3: RouteDetailModal tích hợp PresenceDot');
+
+    const inboxSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+    assert(inboxSrc.includes('PresenceDot'), 'Presence UI 4: InboxModal tích hợp PresenceDot');
+    assert(inboxSrc.includes('itemOnline'), 'Presence UI 5: InboxModal tính toán online cho từng hội thoại');
+
+    const bookedSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/booked/BookedTripList.jsx'), 'utf8');
+    assert(bookedSrc.includes('PresenceDot'), 'Presence UI 6: BookedTripList tích hợp PresenceDot');
+    assert(bookedSrc.includes('partnerOnline'), 'Presence UI 7: BookedTripList tính toán online cho đối tác');
+
+    const presenceDotSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/ui/PresenceDot.jsx'), 'utf8');
+    assert(presenceDotSrc.includes('emerald-500') && presenceDotSrc.includes('rose-500'), 'Presence UI 8: PresenceDot hỗ trợ đèn xanh (emerald) và đèn đỏ (rose)');
+    assert(presenceDotSrc.includes('Đang online') && presenceDotSrc.includes('Ngoại tuyến'), 'Presence UI 9: PresenceDot có nhãn Đang online và Ngoại tuyến');
+    assert(presenceDotSrc.includes('Online') && presenceDotSrc.includes('Offline'), 'Presence UI 10: PresenceDot hỗ trợ nhãn compact Online và Offline');
+    assert(presenceDotSrc.includes('whitespace-nowrap') && presenceDotSrc.includes('shrink-0'), 'Presence UI 11: PresenceDot chống tràn vỡ hàng với whitespace-nowrap và shrink-0');
+  } catch (err) {
+    assert(false, '61. Kiểm thử Trạng Thái Trực Tuyến / Ngoại Tuyến', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('\n🚗 62. Kiểm thử Hiển Thị Dòng Xe & Số Chỗ Ngồi (Car Model & Seating Capacity)...');
+  try {
+    const tripCardPath = path.join(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
+    const tripCardSrc = fs.readFileSync(tripCardPath, 'utf8');
+
+    // 1. TripCard định nghĩa và export getCarDisplay
+    assert(tripCardSrc.includes('export function getCarDisplay'), 'Car Display 1: TripCard có hàm getCarDisplay');
+    assert(tripCardSrc.includes('const carDisplay = getCarDisplay'), 'Car Display 2: TripCard gọi getCarDisplay');
+    assert(tripCardSrc.includes('{carDisplay}'), 'Car Display 3: TripCard render carDisplay trên giao diện');
+
+    // 2. Kiểm thử logic bóc tách dòng xe và chỗ ngồi
+    // Dynamic import hoặc evaluation an toàn
+    const matchFn = tripCardSrc.match(/export function getCarDisplay\([\s\S]*?\n\}/);
+    assert(matchFn, 'Car Display 4: Trích xuất được hàm getCarDisplay');
+    const getCarDisplay = new Function(`${matchFn[0].replace('export function getCarDisplay', 'function getCarDisplay')}; return getCarDisplay;`)();
+
+    assert(getCarDisplay('Mazda 2', 5) === 'Mazda 2 · 5 chỗ', 'Car Display 5: Mazda 2 kèm 5 chỗ');
+    assert(getCarDisplay('Mazda 2 5 chỗ', 5) === 'Mazda 2 · 5 chỗ', 'Car Display 6: Mazda 2 5 chỗ khử trùng lặp');
+    assert(getCarDisplay('Mazda 2 (Xe 5 chỗ)', 5) === 'Mazda 2 · 5 chỗ', 'Car Display 7: Mazda 2 ngoặc đơn 5 chỗ');
+    assert(getCarDisplay('Mitsubishi Xpander (Xe 7 chỗ)', 7) === 'Mitsubishi Xpander · 7 chỗ', 'Car Display 8: Xpander kèm 7 chỗ');
+    assert(getCarDisplay('Toyota Vios (Xe 5 chỗ)', 5) === 'Toyota Vios · 5 chỗ', 'Car Display 9: Toyota Vios kèm 5 chỗ');
+    assert(getCarDisplay('Xe 7 chỗ', 7) === 'Xe 7 chỗ', 'Car Display 10: Xe 7 chỗ chung chung');
+    assert(getCarDisplay('Xe 5 chỗ', 5) === 'Xe 5 chỗ', 'Car Display 11: Xe 5 chỗ chung chung');
+    assert(getCarDisplay('', 5) === 'Xe 5 chỗ', 'Car Display 12: Fallback an toàn khi rỗng');
+  } catch (err) {
+    assert(false, '62. Kiểm thử Hiển Thị Dòng Xe & Số Chỗ Ngồi', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 63. KIỂM THỬ ĐỒNG BỘ DANH XƯNG & TRẠNG THÁI VAI TRÒ KHÁCH TÌM XE (PASSENGER SEMANTICS)
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n🧑‍🤝‍🧑 63. Kiểm thử Đồng Bộ Trạng Thái & Nút Thao Tác Chuẩn Vai Trò Khách Tìm Xe...');
+  try {
+    const myTripsSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'), 'utf8');
+    const editModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/EditTripModal.jsx'), 'utf8');
+    const tripDataSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/hooks/useTripsData.js'), 'utf8');
+    const tripCardSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/market/TripCard.jsx'), 'utf8');
+    const routeModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx'), 'utf8');
+
+    // 1. MyTripsView - Status Beacon
+    assert(
+      myTripsSrc.includes("isDriver ? 'Đang nhận khách' : 'Đang tìm xe'"),
+      'Passenger Semantics 1: Thẻ Khách tìm xe trong Chuyến của tôi hiển thị Đang tìm xe (không phải Đang nhận khách)'
+    );
+    assert(
+      myTripsSrc.includes("isDriver ? 'Đã đủ người' : 'Đã có xe'"),
+      'Passenger Semantics 2: Thẻ Khách tìm xe khi khóa hiển thị Đã có xe (không phải Đã đủ người)'
+    );
+
+    // 2. MyTripsView - Action Toolbar Buttons
+    assert(
+      myTripsSrc.includes("isDriver ? 'Báo đủ chỗ' : 'Đã có xe'"),
+      'Passenger Semantics 3: Nút khóa nhận của Khách tìm xe hiển thị Đã có xe (không phải Báo đủ chỗ)'
+    );
+    assert(
+      myTripsSrc.includes("isDriver ? 'Mở nhận khách' : 'Tiếp tục tìm xe'"),
+      'Passenger Semantics 4: Nút mở lại của Khách tìm xe hiển thị Tiếp tục tìm xe (không phải Mở nhận khách)'
+    );
+    assert(
+      myTripsSrc.includes("isDriver ? '⚡ Tái đăng chuyến này cho ngày mai' : '⚡ Đăng lại bài tìm xe cho ngày mai'"),
+      'Passenger Semantics 5: Nút tái đăng của Khách tìm xe hiển thị Đăng lại bài tìm xe'
+    );
+
+    // 3. EditTripModal - Status Toggle
+    assert(
+      editModalSrc.includes("isDriver ? 'Đang nhận khách (Bấm để khóa)' : 'Đang tìm xe (Bấm để khóa)'"),
+      'Passenger Semantics 6: Modal sửa chuyến hiển thị Đang tìm xe cho bài của hành khách'
+    );
+    assert(
+      editModalSrc.includes("isDriver ? 'Đã đủ người (Bấm mở lại)' : 'Đã có xe (Bấm mở lại)'"),
+      'Passenger Semantics 7: Modal sửa chuyến hiển thị Đã có xe cho bài của hành khách'
+    );
+
+    // 4. useTripsData - Contextual Toast
+    assert(
+      tripDataSrc.includes("newStatus === 'full' ? 'Đã đổi sang: Đã có xe' : 'Đã mở lại tìm xe'"),
+      'Passenger Semantics 8: Toast thông báo phân biệt Đã có xe / Đã mở lại tìm xe cho bài của hành khách'
+    );
+
+    // 5. TripCard & RouteDetailModal - Khách tìm xe khi kín
+    assert(
+      tripCardSrc.includes("isDriver ? 'Đã kín chỗ' : 'Đã có xe'"),
+      'Passenger Semantics 9: TripCard hiển thị Đã có xe cho bài của hành khách khi đã khóa'
+    );
+    assert(
+      routeModalSrc.includes("isDriver ? 'Đã kín chỗ' : 'Đã có xe'"),
+      'Passenger Semantics 10: RouteDetailModal hiển thị Đã có xe cho bài của hành khách khi đã khóa'
+    );
+  } catch (err) {
+    assert(false, '63. Kiểm thử Đồng Bộ Vai Trò Khách Tìm Xe', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 64. KIỂM THỬ THANH TẨY LOGO THƯƠNG HIỆU & CHẤM TRẠNG THÁI SỐNG
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n✨ 64. Kiểm thử Thanh Tẩy Logo Thương Hiệu & Hiệu Ứng Sóng Trực Tuyến...');
+  try {
+    const headerSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/common/Header.jsx'), 'utf8');
+    const presenceSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/ui/PresenceDot.jsx'), 'utf8');
+
+    // 1. Header: Loại bỏ hoàn toàn phụ đề RIDESHARE rườm rà dưới logo
+    assert(!headerSrc.includes('Rideshare'), 'Header 1: Đã xóa bỏ hoàn toàn chữ RIDESHARE thừa thãi dưới logo CarMate');
+    assert(headerSrc.includes('LogoMark'), 'Header 2: LogoMark đồng trục với tên thương hiệu CarMate');
+
+    // 2. PresenceDot: Online phát sóng nhấp nháy, Offline đỏ sẫm tĩnh lặng
+    assert(presenceSrc.includes('animate-ping'), 'Presence 12: Đèn xanh trực tuyến có vòng sóng phát xung nhấp nháy (animate-ping)');
+    assert(presenceSrc.includes('bg-emerald-500'), 'Presence 13: Đèn xanh trực tuyến dùng màu emerald-500 sáng rõ');
+    assert(presenceSrc.includes('bg-rose-700'), 'Presence 14: Đèn đỏ ngoại tuyến dùng màu đỏ sẫm rose-700 trầm xuống');
+    assert(presenceSrc.includes('bg-slate-100/90'), 'Presence 15: Thẻ ngoại tuyến chìm xuống nhẹ nhàng, không gây báo động giả');
+  } catch (err) {
+    assert(false, '64. Kiểm thử Logo & Presence Pulse', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 65. KIỂM THỬ ĐƯỜNG DẪN SẠCH CHUẨN CLEAN PATHNAME (ZERO #)
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n🔗 65. Kiểm thử Đường Dẫn Sạch Chuẩn Clean Pathname (Triệt Tiêu Hoàn Toàn /#)...');
+  try {
+    const appSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/App.jsx'), 'utf8');
+
+    // 1. Ánh xạ Clean Pathname chuẩn
+    assert(appSrc.includes('getPathForTab'), 'Clean URL 1: Có hàm getPathForTab ánh xạ tab sang đường dẫn sạch');
+    assert(appSrc.includes("if (tab === 'market') return '/'"), 'Clean URL 2: Tab market trỏ về trang chủ /');
+    assert(appSrc.includes("if (tab === 'match') return '/radar'"), 'Clean URL 3: Tab match trỏ về /radar sạch sẽ');
+    assert(appSrc.includes("return `/${tab}`"), 'Clean URL 4: Các tab /my-trips, /post, /booked trỏ trực tiếp không dấu #');
+
+    // 2. Nhận diện Clean URL khi người dùng truy cập trực tiếp
+    assert(appSrc.includes('rawPath === \'my-trips\''), 'Clean URL 5: Nhận diện trực tiếp URL pathname /my-trips');
+    assert(appSrc.includes('rawPath === \'booked\''), 'Clean URL 6: Nhận diện trực tiếp URL pathname /booked');
+    assert(appSrc.includes('rawPath === \'post\''), 'Clean URL 7: Nhận diện trực tiếp URL pathname /post');
+    assert(appSrc.includes('rawPath === \'radar\''), 'Clean URL 8: Nhận diện trực tiếp URL pathname /radar');
+
+    // 3. Tự động làm sạch URL hash cũ nếu người dùng mở link cũ (#my-trips)
+    assert(
+      appSrc.includes("if (currentHash && !currentHash.startsWith('#confirm-'))"),
+      'Clean URL 9: Tự động phát hiện và làm sạch triệt để hash cũ /#my-trips sang /my-trips'
+    );
+    assert(
+      appSrc.includes("window.history.pushState(null, '', targetPath + search)"),
+      'Clean URL 10: Đồng bộ chuyển trang êm dịu qua History API pushState'
+    );
+  } catch (err) {
+    assert(false, '65. Kiểm thử Clean URL Pathname', err.message);
+  }
+
+  // 66. Kiểm thử Chặn Bắn Cảnh Báo Telegram ở Môi Trường Localhost & Development
+  console.log('\n🔕 66. Kiểm thử Chặn Bắn Cảnh Báo Telegram ở Môi Trường Localhost & Development...');
+  try {
+    const { isLocalhostRequest, sendSystemErrorAlert, sendBusinessAlert, _resetDeduplicationCache } =
+      await import('../apps/api/src/utils/telegramAlert.js');
+
+    // 1. Kiểm tra helper isLocalhostRequest với các trường hợp IP & headers
+    assert(
+      isLocalhostRequest({ ip: '::1' }) === true,
+      'Alert Suppress 1: Nhận diện chính xác Client IP ::1 là Localhost'
+    );
+    assert(
+      isLocalhostRequest({ ip: '127.0.0.1' }) === true,
+      'Alert Suppress 2: Nhận diện chính xác Client IP 127.0.0.1 là Localhost'
+    );
+    assert(
+      isLocalhostRequest({ headers: { origin: 'http://localhost:5173' } }) === true,
+      'Alert Suppress 3: Nhận diện chính xác Origin http://localhost:5173 là Localhost'
+    );
+    assert(
+      isLocalhostRequest({ headers: { referer: 'http://localhost:5173/my-trips' } }) === true,
+      'Alert Suppress 4: Nhận diện chính xác Referer http://localhost:5173/my-trips là Localhost'
+    );
+    assert(
+      isLocalhostRequest({ headers: { host: 'localhost:5173' } }) === true,
+      'Alert Suppress 5: Nhận diện chính xác Host localhost:5173 là Localhost'
+    );
+    assert(
+      isLocalhostRequest(
+        null,
+        new Error('ReferenceError: useMemo is not defined\n    at TripCard (http://localhost:5173/src/components/market/TripCard.jsx:207:21)')
+      ) === true,
+      'Alert Suppress 6: Nhận diện Call Stack chứa http://localhost:5173 là lỗi phát triển'
+    );
+    assert(
+      isLocalhostRequest({ ip: '14.241.12.34', headers: { host: 'carmate.vn' } }, new Error('Database down')) === false,
+      'Alert Suppress 7: Cho phép IP production và host carmate.vn hợp lệ không bị chặn nhầm'
+    );
+
+    // 2. Kiểm tra sendSystemErrorAlert chặn triệt để khi NODE_ENV !== 'production'
+    const savedToken = process.env.TELEGRAM_BOT_TOKEN;
+    const savedChatId = process.env.TELEGRAM_LOG_CHAT_ID;
+    const savedNodeEnv = process.env.NODE_ENV;
+    const savedEnableDev = process.env.ENABLE_DEV_TELEGRAM_ALERTS;
+
+    _resetDeduplicationCache();
+    process.env.TELEGRAM_BOT_TOKEN = '123456789:ABCDEF_real_token_simulated';
+    process.env.TELEGRAM_LOG_CHAT_ID = '-100987654321';
+    process.env.NODE_ENV = 'development';
+    delete process.env.ENABLE_DEV_TELEGRAM_ALERTS;
+
+    let interceptedFetches = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (url, opts) => {
+      if (typeof url === 'string' && url.includes('api.telegram.org')) {
+        interceptedFetches.push({ url, opts });
+        return { ok: true, status: 200, json: async () => ({ ok: true }) };
+      }
+      return origFetch(url, opts);
+    };
+
+    const devResult = await sendSystemErrorAlert({
+      error: new Error('Local dev test error'),
+      req: { ip: '14.241.12.34', headers: { host: 'carmate.vn' } },
+      source: 'Frontend Browser'
+    });
+    assert(devResult === false, 'Alert Suppress 8: Chặn gửi Telegram khi NODE_ENV !== "production"');
+    assert(interceptedFetches.length === 0, 'Alert Suppress 9: Tuyệt đối không dispatch HTTP request tới api.telegram.org');
+
+    // 3. Kiểm tra khi NODE_ENV === 'production' nhưng request đến từ localhost / ::1
+    process.env.NODE_ENV = 'production';
+    const localhostResult = await sendSystemErrorAlert({
+      error: new Error('ReferenceError: useMemo is not defined'),
+      req: { ip: '::1', headers: { origin: 'http://localhost:5173' } },
+      source: 'Frontend Browser (Client Crash)'
+    });
+    assert(localhostResult === false, 'Alert Suppress 10: Chặn gửi Telegram khi request xuất phát từ localhost / ::1');
+    assert(interceptedFetches.length === 0, 'Alert Suppress 11: Không bắn tin nhắn rác về Telegram của Founder');
+
+    // 4. Kiểm tra khi chủ động bật ENABLE_DEV_TELEGRAM_ALERTS = 'true'
+    process.env.ENABLE_DEV_TELEGRAM_ALERTS = 'true';
+    const devAllowedResult = await sendSystemErrorAlert({
+      error: new Error('Explicitly tested dev error'),
+      req: { ip: '::1' },
+      source: 'Dev Test'
+    });
+    assert(devAllowedResult === true, 'Alert Suppress 12: Cho phép gửi Telegram khi có cờ ENABLE_DEV_TELEGRAM_ALERTS=true');
+    assert(interceptedFetches.length === 1, 'Alert Suppress 13: Đã dispatch đúng 1 thông báo cho test mode');
+
+    // 5. Kiểm tra analyticsController có bộ lọc isDevEvent
+    const analyticsCtrlSrc = fs.readFileSync(path.resolve('apps/api/src/controllers/analyticsController.js'), 'utf8');
+    assert(
+      analyticsCtrlSrc.includes('const isDevEvent =') && analyticsCtrlSrc.includes("properties?.stack?.includes('localhost')"),
+      'Alert Suppress 14: analyticsController có bộ lọc isDevEvent phòng vệ đa tầng'
+    );
+
+    // 6. Kiểm tra sentry.js có gắn cờ isDev
+    const sentrySrc = fs.readFileSync(path.resolve('apps/web/src/utils/sentry.js'), 'utf8');
+    assert(
+      sentrySrc.includes('const isDev = Boolean(') && sentrySrc.includes('isDev'),
+      'Alert Suppress 15: sentry.js tự động nhận diện và gắn cờ isDev cho các ngoại lệ ở localhost'
+    );
+
+    // Khôi phục môi trường
+    globalThis.fetch = origFetch;
+    if (savedToken) process.env.TELEGRAM_BOT_TOKEN = savedToken;
+    else delete process.env.TELEGRAM_BOT_TOKEN;
+    if (savedChatId) process.env.TELEGRAM_LOG_CHAT_ID = savedChatId;
+    else delete process.env.TELEGRAM_LOG_CHAT_ID;
+    if (savedNodeEnv) process.env.NODE_ENV = savedNodeEnv;
+    else delete process.env.NODE_ENV;
+    if (savedEnableDev) process.env.ENABLE_DEV_TELEGRAM_ALERTS = savedEnableDev;
+    else delete process.env.ENABLE_DEV_TELEGRAM_ALERTS;
+    _resetDeduplicationCache();
+  } catch (err) {
+    assert(false, '66. Kiểm thử Chặn Bắn Cảnh Báo Telegram ở Môi Trường Localhost & Development', err.message);
+  }
+
+  // 67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau (Mark as Unread / Read Later in Inbox)
+  console.log('\n✉️ 67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau (Mark as Unread / Read Later)...');
+  try {
+    const appSrc = fs.readFileSync(path.resolve('apps/web/src/App.jsx'), 'utf8');
+    const inboxModalSrc = fs.readFileSync(path.resolve('apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+
+    // 1. Kiểm tra App.jsx quản lý unreadBookingIds và markBookingAsUnread
+    assert(
+      appSrc.includes('const [unreadBookingIds, setUnreadBookingIds] = useState('),
+      'Mark as Unread 1: App.jsx quản lý state unreadBookingIds lưu trữ danh sách đọc sau'
+    );
+    assert(
+      appSrc.includes('const markBookingAsUnread = useCallback('),
+      'Mark as Unread 2: App.jsx cung cấp hàm markBookingAsUnread'
+    );
+    assert(
+      appSrc.includes('carmate_inbox_unread_ids'),
+      'Mark as Unread 3: App.jsx đồng bộ danh sách unreadBookingIds vào localStorage'
+    );
+    assert(
+      appSrc.includes('if (unreadBookingIds.includes(bId)) return true;'),
+      'Mark as Unread 4: inboxCount tự động tính các cuộc trao đổi được đánh dấu Đọc sau'
+    );
+    assert(
+      appSrc.includes('onMarkAsUnread={markBookingAsUnread}') && appSrc.includes('unreadBookingIds={unreadBookingIds}'),
+      'Mark as Unread 5: App.jsx truyền đầy đủ onMarkAsUnread và unreadBookingIds vào InboxModal'
+    );
+
+    // 2. Kiểm tra InboxModal.jsx hỗ trợ đầy đủ giao diện và logic Đọc sau
+    assert(
+      inboxModalSrc.includes('onMarkAsUnread = null') && inboxModalSrc.includes('unreadBookingIds = []'),
+      'Mark as Unread 6: InboxModal nhận props onMarkAsUnread và unreadBookingIds'
+    );
+    assert(
+      inboxModalSrc.includes('const isBookingUnread = useMemo(') && inboxModalSrc.includes('unreadBookingIds.includes(id)'),
+      'Mark as Unread 7: InboxModal có helper isBookingUnread nhận diện cờ Đọc sau'
+    );
+    assert(
+      inboxModalSrc.includes('const handleToggleUnread = (targetBookingId = null) => {'),
+      'Mark as Unread 8: InboxModal có hàm handleToggleUnread cho phép chuyển đổi trạng thái đọc linh hoạt'
+    );
+    assert(
+      inboxModalSrc.includes('title={isActiveUnread ? \'Đánh dấu đã đọc\' : \'Đánh dấu chưa đọc để xem lại sau\'}') ||
+      inboxModalSrc.includes('Chưa đọc (Đọc sau)'),
+      'Mark as Unread 9: Header chi tiết chuyến có nút Đọc sau / Chưa đọc (Đọc sau) 1-chạm'
+    );
+    assert(
+      inboxModalSrc.includes('title={isUnread ? \'Đánh dấu đã đọc\' : \'Đánh dấu chưa đọc để đọc sau\'}'),
+      'Mark as Unread 10: Từng thẻ trong danh sách cuộc trao đổi có icon Mail thao tác nhanh 1-chạm'
+    );
+    assert(
+      inboxModalSrc.includes('title="Chưa đọc (Đọc sau)"') && inboxModalSrc.includes('Đọc sau'),
+      'Mark as Unread 11: Thẻ hội thoại hiển thị chấm xanh animate-pulse và nhãn Đọc sau trực quan'
+    );
+    assert(
+      inboxModalSrc.includes('incomingUnreadCount > 0') && inboxModalSrc.includes('outgoingUnreadCount > 0'),
+      'Mark as Unread 12: Tabs Đến / Đi hiển thị chấm báo hiệu khi có tin nhắn chưa đọc'
+    );
+    assert(
+      inboxModalSrc.includes('if (bId && !unreadBookingIds.includes(bId)) {'),
+      'Mark as Unread 13: Bảo vệ không tự động đánh dấu đã đọc đè lên khi người dùng vừa chủ động chọn Đọc sau'
+    );
+  } catch (err) {
+    assert(false, '67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

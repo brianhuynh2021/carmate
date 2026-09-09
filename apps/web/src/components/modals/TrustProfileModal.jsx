@@ -13,13 +13,11 @@ import {
   MessageSquare,
   User
 } from 'lucide-react';
-import { formatVND, maskLicensePlate } from '@carmate/shared';
-import { useI18n } from '../../i18n/index.jsx';
+import { maskLicensePlate } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
 export default function TrustProfileModal({ item, isOwner = false, onClose, onBook }) {
-  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('driver'); // 'driver' | 'passenger' | 'verify'
 

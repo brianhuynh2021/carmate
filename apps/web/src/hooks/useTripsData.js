@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 // Bỏ hẳn đường import khiến dữ liệu mẫu không thể vô tình quay lại giao diện.
 import { getTomorrowISO, normalizePhoneNumber } from '@carmate/shared';
 import api from '../api/client.js';
-import { trackInitiateBooking, trackOpenZalo, trackDriverConfirm } from '../utils/analytics.js';
+import { trackInitiateBooking, trackDriverConfirm } from '../utils/analytics.js';
 
 /**
  * Custom Hook quản lý dữ liệu chuyến đi, kết nối Zalo / Escrow và đồng bộ Backend
@@ -289,9 +289,14 @@ export default function useTripsData({
   const handleToggleTripStatus = useCallback(
     async (tripId, newStatus) => {
       const updates = { status: newStatus };
+      const isDriverOffer = driverOffers.some((t) => t.id === tripId);
       setDriverOffers((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
       setPassengerRequests((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
-      showToast(newStatus === 'full' ? 'Đã đổi sang: Đã đủ người' : 'Đã mở lại nhận khách');
+
+      const toastMsg = isDriverOffer
+        ? (newStatus === 'full' ? 'Đã đổi sang: Đã đủ người' : 'Đã mở lại nhận khách')
+        : (newStatus === 'full' ? 'Đã đổi sang: Đã có xe' : 'Đã mở lại tìm xe');
+      showToast(toastMsg);
 
       try {
         await api.updateTrip(tripId, updates);
@@ -299,7 +304,7 @@ export default function useTripsData({
         console.warn('Lỗi cập nhật trạng thái chuyến đi:', err);
       }
     },
-    [showToast]
+    [driverOffers, showToast]
   );
 
   const handleDeleteTrip = useCallback(

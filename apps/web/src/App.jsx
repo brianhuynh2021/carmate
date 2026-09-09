@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight } from 'lucide-react';
-import { TIME_SLOTS, normalizePhoneNumber } from '@carmate/shared';
+import { TIME_SLOTS, normalizePhoneNumber, cleanPhoneNumber } from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
 import { useI18n } from './i18n/index.jsx';
 import api from './api/client.js';
@@ -92,47 +92,81 @@ export default function App() {
   // Danh mục Tab hợp lệ trên toàn hệ sinh thái CarMate
   const VALID_TABS = ['market', 'match', 'post', 'my-trips', 'booked', 'admin'];
 
+  // Ánh xạ Clean URL Pathname chuẩn Apple & Vercel (Zero #)
+  const getPathForTab = (tab) => {
+    if (tab === 'market') return '/';
+    if (tab === 'match') return '/radar';
+    if (tab === 'admin') return '/admin';
+    return `/${tab}`; // '/my-trips', '/post', '/booked'
+  };
+
+  const getTabFromUrl = useCallback(() => {
+    if (typeof window === 'undefined') return 'market';
+
+    // 1. Nhận diện Admin Portal chuyên dụng (Chuẩn MIT Invariant: cô lập trên admin.* / ops.*)
+    if (
+      isOpsPortal ||
+      (isLocalhost &&
+        (window.location.hash === '#admin' ||
+          window.location.pathname === '/admin' ||
+          window.location.pathname.startsWith('/admin')))
+    ) {
+      return 'admin';
+    }
+
+    // 2. Nhận diện Clean URL Pathname (/my-trips, /booked, /post, /radar, /match, /market, /admin)
+    const rawPath = window.location.pathname.replace(/^\/+/, '').split('/')[0].trim().toLowerCase();
+    if (rawPath === 'admin' && !canAccessAdmin) {
+      // Chặn truy cập /admin trên domain chính (MIT Zero Attack Surface)
+    } else if (rawPath === 'radar' || rawPath === 'match') {
+      return 'match';
+    } else if (rawPath === 'my-trips' || rawPath === 'my_trips' || rawPath === 'mytrips') {
+      return 'my-trips';
+    } else if (rawPath === 'booked') {
+      return 'booked';
+    } else if (rawPath === 'post') {
+      return 'post';
+    } else if (rawPath === 'market') {
+      return 'market';
+    }
+
+    // 3. Tương thích ngược với URL Hash cũ (#my-trips, #booked, #post, #match, #radar)
+    const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
+    if (rawHash === 'admin' && !canAccessAdmin) {
+      // Chặn truy cập #admin trên domain chính
+    } else if (rawHash === 'radar' || rawHash === 'match') {
+      return 'match';
+    } else if (rawHash === 'my-trips' || rawHash === 'my_trips' || rawHash === 'mytrips') {
+      return 'my-trips';
+    } else if (VALID_TABS.includes(rawHash)) {
+      return rawHash;
+    }
+
+    // 4. Nhận diện Search Query parameter (?tab=...)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const queryTab = params.get('tab');
+      if (queryTab === 'radar' || queryTab === 'match') return 'match';
+      if (queryTab === 'my_trips' || queryTab === 'my-trips') return 'my-trips';
+      if (queryTab && VALID_TABS.includes(queryTab)) {
+        return queryTab;
+      }
+    } catch {}
+
+    // 5. Khôi phục tab trước đó từ sessionStorage (Kháng văng trang chủ khi F5 / Reload)
+    try {
+      const savedTab = sessionStorage.getItem('carmate_active_tab');
+      if (savedTab && VALID_TABS.includes(savedTab) && savedTab !== 'admin') {
+        return savedTab;
+      }
+    } catch {}
+
+    return 'market';
+  }, [canAccessAdmin, isOpsPortal, VALID_TABS]);
+
   const [activeTab, _setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
-      // 1. Nhận diện Admin Portal chuyên dụng (Chuẩn MIT Invariant: cô lập trên admin.* / ops.*)
-      if (
-        isOpsPortal ||
-        (isLocalhost &&
-          (window.location.hash === '#admin' ||
-            window.location.pathname === '/admin' ||
-            window.location.pathname.startsWith('/admin')))
-      ) {
-        return 'admin';
-      }
-
-      // 2. Nhận diện URL Hash (#my-trips, #booked, #post, #match, #market)
-      const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
-      if (rawHash === 'admin' && !canAccessAdmin) {
-        // Chặn truy cập #admin trên domain chính (MIT Zero Attack Surface)
-      } else if (VALID_TABS.includes(rawHash)) {
-        return rawHash;
-      }
-      if (rawHash === 'my_trips' || rawHash === 'mytrips') {
-        return 'my-trips';
-      }
-
-      // 3. Nhận diện Search Query parameter (?tab=...)
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const queryTab = params.get('tab');
-        if (queryTab && VALID_TABS.includes(queryTab)) {
-          return queryTab;
-        }
-        if (queryTab === 'my_trips') return 'my-trips';
-      } catch {}
-
-      // 4. Khôi phục tab trước đó từ sessionStorage (Kháng văng trang chủ khi F5 / Reload)
-      try {
-        const savedTab = sessionStorage.getItem('carmate_active_tab');
-        if (savedTab && VALID_TABS.includes(savedTab) && savedTab !== 'admin') {
-          return savedTab;
-        }
-      } catch {}
+      return getTabFromUrl();
     }
     return 'market';
   });
@@ -154,57 +188,55 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
     trackPageView(activeTab);
 
-    // Đồng bộ URL Hash & SessionStorage 2 chiều để F5 / Reload không bao giờ mất tab
+    // Đồng bộ Clean URL Pathname & SessionStorage 2 chiều (Zero #, Chuẩn Apple & Vercel)
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem('carmate_active_tab', activeTab);
-        if (activeTab === 'market') {
-          if (window.location.hash && window.location.hash !== '#market') {
-            window.history.replaceState(null, '', window.location.pathname + window.location.search);
-          }
-        } else if (activeTab === 'admin') {
+        const targetPath = getPathForTab(activeTab);
+        const currentPath = window.location.pathname;
+        const currentHash = window.location.hash;
+        const search = window.location.search;
+
+        if (activeTab === 'admin') {
           if (isOpsPortal) {
-            // Trên Subdomain chuyên dụng (admin.carmate.vn / ops.carmate.vn), giữ URL sạch sẽ 100%, không gắn đuôi #admin
-            if (window.location.hash) {
-              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            if (currentHash) {
+              window.history.replaceState(null, '', currentPath + search);
             }
-          } else if (window.location.hash !== '#admin' && !window.location.pathname.startsWith('/admin')) {
-            window.history.replaceState(null, '', '#admin');
+          } else if (currentPath !== '/admin') {
+            window.history.pushState(null, '', '/admin' + search);
           }
         } else {
-          const targetHash = '#' + activeTab;
-          if (window.location.hash !== targetHash) {
-            window.history.replaceState(null, '', targetHash);
+          // Nếu URL còn vướng hash cũ (ví dụ #my-trips), làm sạch vĩnh viễn không để lại dấu #
+          if (currentHash && !currentHash.startsWith('#confirm-')) {
+            window.history.replaceState(null, '', targetPath + search);
+          } else if (currentPath !== targetPath && !isOpsPortal) {
+            window.history.pushState(null, '', targetPath + search);
           }
         }
       } catch (err) {
         console.warn('URL state sync error:', err);
       }
     }
-  }, [activeTab]);
+  }, [activeTab, isOpsPortal]);
 
-  // Lắng nghe sự kiện Back/Forward trình duyệt hoặc thay đổi URL Hash
+  // Lắng nghe sự kiện Back/Forward trình duyệt hoặc thay đổi URL
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handleHashOrPopState = () => {
-      const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
-      if (VALID_TABS.includes(rawHash) && rawHash !== activeTab) {
-        setActiveTab(rawHash);
-      } else if (rawHash === 'my_trips' && activeTab !== 'my-trips') {
-        setActiveTab('my-trips');
-      } else if (!rawHash && activeTab !== 'market' && activeTab !== 'admin') {
-        setActiveTab('market');
+      const nextTab = getTabFromUrl();
+      if (nextTab && nextTab !== activeTab) {
+        setActiveTab(nextTab);
       }
     };
 
-    window.addEventListener('hashchange', handleHashOrPopState);
     window.addEventListener('popstate', handleHashOrPopState);
+    window.addEventListener('hashchange', handleHashOrPopState);
     return () => {
-      window.removeEventListener('hashchange', handleHashOrPopState);
       window.removeEventListener('popstate', handleHashOrPopState);
+      window.removeEventListener('hashchange', handleHashOrPopState);
     };
-  }, [activeTab]);
+  }, [activeTab, getTabFromUrl, setActiveTab]);
 
   // Magic Link 1-Chạm Chủ xe & Apple Re-entry Card Khách quay lại web
   const { driverConfirmCode, setDriverConfirmCode, pendingZaloBooking, setPendingZaloBooking } = useZaloReentry({
@@ -464,12 +496,96 @@ export default function App() {
     t
   });
 
-  // Đếm số lượng yêu cầu đang chờ xử lý trong Hộp thư (inquiring hoặc pre_confirmed)
+  // Quản lý trạng thái Đã đọc / Chưa đọc (Read & Unread Tracking) của Hộp thư đến
+  const [readBookingTimestamps, setReadBookingTimestamps] = useState(() => {
+    try {
+      const saved = localStorage.getItem('carmate_inbox_read_timestamps');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [unreadBookingIds, setUnreadBookingIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('carmate_inbox_unread_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const markBookingAsRead = useCallback((bookingId) => {
+    if (!bookingId) return;
+    setUnreadBookingIds((prev) => {
+      if (!prev.includes(bookingId)) return prev;
+      const updated = prev.filter((id) => id !== bookingId);
+      try {
+        localStorage.setItem('carmate_inbox_unread_ids', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Lỗi lưu carmate_inbox_unread_ids:', err);
+      }
+      return updated;
+    });
+
+    setReadBookingTimestamps((prev) => {
+      if (prev[bookingId] && Date.now() - prev[bookingId] < 2000) return prev;
+      const updated = { ...prev, [bookingId]: Date.now() };
+      try {
+        localStorage.setItem('carmate_inbox_read_timestamps', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Lỗi lưu carmate_inbox_read_timestamps:', err);
+      }
+      return updated;
+    });
+  }, []);
+
+  const markBookingAsUnread = useCallback((bookingId) => {
+    if (!bookingId) return;
+    setUnreadBookingIds((prev) => {
+      if (prev.includes(bookingId)) return prev;
+      const updated = [...prev, bookingId];
+      try {
+        localStorage.setItem('carmate_inbox_unread_ids', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Lỗi lưu carmate_inbox_unread_ids:', err);
+      }
+      return updated;
+    });
+
+    setReadBookingTimestamps((prev) => {
+      const updated = { ...prev, [bookingId]: 0 };
+      try {
+        localStorage.setItem('carmate_inbox_read_timestamps', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Lỗi lưu carmate_inbox_read_timestamps:', err);
+      }
+      return updated;
+    });
+  }, []);
+
+  // Đếm số lượng yêu cầu CHƯA ĐỌC thực sự trong Hộp thư (inquiring hoặc pre_confirmed hoặc được chủ động đánh dấu Đọc sau)
   const inboxCount = useMemo(() => {
-    return (bookedEscrows || []).filter(
-      (b) => b.status === 'inquiring' || b.status === 'pre_confirmed'
-    ).length;
-  }, [bookedEscrows]);
+    const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
+    return (bookedEscrows || []).filter((b) => {
+      const bId = b.escrowId || b.id;
+      // 1. Nếu người dùng chủ động đánh dấu "Chưa đọc (Đọc sau)"
+      if (unreadBookingIds.includes(bId)) return true;
+
+      // 2. Chỉ tính các chuyến đang thương lượng hoặc giữ chỗ
+      if (b.status !== 'inquiring' && b.status !== 'pre_confirmed') return false;
+      const lastRead = readBookingTimestamps[bId] || 0;
+      if (!lastRead) return true; // Chưa mở bao giờ -> Chưa đọc
+
+      // 3. Nếu có tin nhắn mới từ đối phương sau lần đọc cuối cùng
+      const hasNewMessage = (b.messages || []).some((m) => {
+        const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
+        const msgTime = m.timestamp ? new Date(m.timestamp).getTime() : 0;
+        return !isMe && msgTime > lastRead;
+      });
+      return hasNewMessage;
+    }).length;
+  }, [bookedEscrows, readBookingTimestamps, unreadBookingIds, currentUser]);
 
   const [showInboxModal, setShowInboxModal] = useState(false);
   const [inboxInitialBookingId, setInboxInitialBookingId] = useState(null);
@@ -812,36 +928,30 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <div className="relative inline-flex items-center">
-                    <select
-                      value={selectedCarCategory}
-                      onChange={(e) => setSelectedCarCategory(e.target.value)}
-                      aria-label="Lọc loại xe"
-                      className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs hover:border-slate-400 dark:hover:border-slate-600 outline-none appearance-none transition-colors"
-                    >
-                      <option value="all">Mọi loại xe</option>
-                      <option value="family_car">Xe gia đình (Biển trắng)</option>
-                      <option value="convenient_trip">Xe tiện chuyến (Biển vàng)</option>
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-                  </div>
+                  <select
+                    value={selectedCarCategory}
+                    onChange={(e) => setSelectedCarCategory(e.target.value)}
+                    aria-label="Lọc loại xe"
+                    className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs hover:border-slate-400 dark:hover:border-slate-600 outline-none transition-colors"
+                  >
+                    <option value="all">Mọi loại xe</option>
+                    <option value="family_car">Xe gia đình (Biển trắng)</option>
+                    <option value="convenient_trip">Xe tiện chuyến (Biển vàng)</option>
+                  </select>
 
-                  <div className="relative inline-flex items-center">
-                    <select
-                      value={selectedTimeSlot}
-                      onChange={(e) => setSelectedTimeSlot(e.target.value)}
-                      aria-label="Chọn khung giờ"
-                      className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs hover:border-slate-400 dark:hover:border-slate-600 outline-none appearance-none transition-colors"
-                    >
-                      <option value="all">Tất cả khung giờ</option>
-                      {TIME_SLOTS.map((slot) => (
-                        <option key={slot.id} value={slot.id}>
-                          {slot.short}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-                  </div>
+                  <select
+                    value={selectedTimeSlot}
+                    onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                    aria-label="Chọn khung giờ"
+                    className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs hover:border-slate-400 dark:hover:border-slate-600 outline-none transition-colors"
+                  >
+                    <option value="all">Tất cả khung giờ</option>
+                    {TIME_SLOTS.map((slot) => (
+                      <option key={slot.id} value={slot.id}>
+                        {slot.short}
+                      </option>
+                    ))}
+                  </select>
 
                   {(selectedTimeSlot !== 'all' ||
                     marketViewMode !== 'all' ||
@@ -1120,6 +1230,7 @@ export default function App() {
           <div className={`${container} pt-8 pb-28 sm:pb-8`}>
             <BookedTripList
               bookedEscrows={bookedEscrows}
+              currentUser={currentUser}
               onCancel={setCancelRecord}
               onDelay={setDelayRecord}
               onComplete={handleCompleteTrip}
@@ -1176,6 +1287,10 @@ export default function App() {
           onRefreshBookings={refreshBookings}
           onReportUnreachablePhone={setUnreachablePhoneRecord}
           onShowToast={showToast}
+          onMarkAsRead={markBookingAsRead}
+          onMarkAsUnread={markBookingAsUnread}
+          readBookingTimestamps={readBookingTimestamps}
+          unreadBookingIds={unreadBookingIds}
         />
       )}
       {selectedItemForEscrow && (
@@ -1261,6 +1376,7 @@ export default function App() {
           isOwner={checkIsMyTrip(selectedTripForRoute)}
           onClose={() => setSelectedTripForRoute(null)}
           onShare={setTicketToShare}
+          onViewCarPhotos={setSelectedTripForPhotos}
           onManage={(item) => {
             setSelectedTripForRoute(null);
             handleManageMyTrip(item);

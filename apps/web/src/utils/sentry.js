@@ -31,6 +31,12 @@ export function initSentry() {
 export function captureException(error, errorInfo = {}) {
   console.error('[CarMate Crash Caught]:', error, errorInfo);
 
+  const isDev = Boolean(
+    import.meta.env?.DEV ||
+    (typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+  );
+
   // 1. Gửi tới Sentry nếu có
   if (isSentryReady && typeof window !== 'undefined' && window.Sentry) {
     try {
@@ -40,12 +46,13 @@ export function captureException(error, errorInfo = {}) {
     }
   }
 
-  // 2. Tự động ghi nhận vào Analytics SQLite Store để dev kiểm tra được ngay
+  // 2. Tự động ghi nhận vào Analytics SQLite Store với cờ isDev (để backend không gửi alert Telegram)
   try {
     trackEvent('error_unhandled', {
       message: error?.message || String(error),
       stack: error?.stack ? error.stack.slice(0, 500) : null,
-      componentStack: errorInfo?.componentStack ? errorInfo.componentStack.slice(0, 500) : null
+      componentStack: errorInfo?.componentStack ? errorInfo.componentStack.slice(0, 500) : null,
+      isDev
     });
   } catch {
     // Silent

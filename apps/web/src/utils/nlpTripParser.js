@@ -357,7 +357,7 @@ export function parseNaturalTrip(text) {
   // 5. Loại xe & Phân loại Biển Trắng / Biển Vàng & Xe Gia Đình Có Người Thân
   const hasRelatives = /(vợ con|vợ|con nhỏ|người nhà|gia đình mình|chở vợ|chở con)/i.test(lower);
   let carCategory = 'family_car';
-  let carType = 'Xe 7 chỗ';
+  let carType = 'Xe du lịch 5-7 chỗ';
 
   if (/(tiện chuyến|biển vàng|xe dịch vụ|xe ghép)/i.test(lower)) {
     carCategory = 'convenient_trip';

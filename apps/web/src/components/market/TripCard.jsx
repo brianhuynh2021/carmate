@@ -22,9 +22,11 @@ import {
   parseLocation,
   getCorridorDisplay,
   toPublicAlias,
-  normalizePhotoUrl
+  normalizePhotoUrl,
+  getUserOnlineStatus
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
+import PresenceDot from '../ui/PresenceDot.jsx';
 
 export { parseLocation, getCorridorDisplay };
 
@@ -107,6 +109,33 @@ export function RouteTimeline({ from, to, compact = false }) {
  * - Điểm đón / trả cụ thể: Dòng 4
  * - Uy tín, Chủ xe, Phương tiện & Nút hành động: Dòng 5 & 6
  */
+
+/**
+ * Chuẩn hoá hiển thị dòng xe kèm số chỗ ngồi (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
+ */
+export function getCarDisplay(carType, capacity) {
+  const cap = Number(capacity) || Number(carType?.match(/(\d+)\s*chỗ/i)?.[1]) || 5;
+  if (!carType || !carType.trim()) return `Xe ${cap} chỗ`;
+
+  // Tách phần trong ngoặc đơn nếu có (vd "(Xe 7 chỗ)" hoặc "(Xe 5 chỗ gầm cao)")
+  let raw = carType.split('(')[0].trim();
+  // Bỏ các từ khoá phụ thừa
+  raw = raw.replace(/\s*(cá nhân|gia đình|tiện chuyến|biển vàng|biển trắng)\b/gi, '').trim();
+
+  // Kiểm tra nếu chuỗi chỉ là "Xe 7 chỗ", "7 chỗ", "Xe 5 chỗ"
+  if (!raw || /^(?:xe\s*)?\d+\s*chỗ$/i.test(raw) || raw.toLowerCase() === 'xe') {
+    return `Xe ${cap} chỗ`;
+  }
+
+  // Khử phần "... 5 chỗ" hoặc "xe 5 chỗ" ở cuối chuỗi nếu người dùng gõ liền (vd "Mazda 2 5 chỗ")
+  let cleanModel = raw.replace(/\s+(?:xe\s*)?\d+\s*chỗ.*$/i, '').trim();
+  if (!cleanModel || cleanModel.toLowerCase() === 'xe') {
+    return `Xe ${cap} chỗ`;
+  }
+
+  return `${cleanModel} · ${cap} chỗ`;
+}
+
 export default function TripCard({
   item,
   isOwner = false,
@@ -123,18 +152,15 @@ export default function TripCard({
   if (!item) return null;
 
   const isDriver = item.type === 'driver_offer';
-  const isConvenient =
-    isDriver &&
-    (item.carCategory === 'convenient_trip' ||
-      item.notes?.toLowerCase().includes('tiện chuyến') ||
-      item.notes?.toLowerCase().includes('biển vàng') ||
-      item.carType?.toLowerCase().includes('tiện chuyến'));
 
   const price = item.basePricePerSeat || item.expectedPrice || item.suggestedContribution || item.price || 180000;
   const formattedPrice = `${Number(price || 0).toLocaleString('vi-VN')}đ`;
 
   // Danh tính công khai: chỉ hiển thị bí danh vai trò + mã định danh chuẩn (Chủ xe CX-xxx / Khách KX-xxx)
   const driverDisplayName = toPublicAlias(item);
+
+  // Trạng thái trực tuyến (Live Presence Telemetry: Đèn xanh online / Đèn đỏ offline)
+  const onlineStatus = getUserOnlineStatus({ ...item, isOwner });
 
   const fromParsed = parseLocation(item.from);
   const toParsed = parseLocation(item.to);
@@ -194,6 +220,9 @@ export default function TripCard({
   const rawCover = photos.length > 0 ? normalizePhotoUrl(photos[0]) : null;
   const coverPhoto = coverFailed ? null : rawCover;
 
+  // Hiển thị tên xe & số chỗ ngồi đồng nhất (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
+  const carDisplay = getCarDisplay(item.carType, item.capacity);
+
   return (
     <article
       id={`trip-${item.id}`}
@@ -220,13 +249,15 @@ export default function TripCard({
           ) : isTripFull ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap">
               <Lock className="w-3 h-3" />
-              <span>Đã kín chỗ</span>
+              <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>
             </span>
           ) : !isDriver ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shrink-0 whitespace-nowrap">
               <span>Khách tìm xe</span>
             </span>
-          ) : null}
+          ) : (
+            <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
+          )}
         </div>
       </div>
 
@@ -258,15 +289,24 @@ export default function TripCard({
         {isTripFull ? (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0 whitespace-nowrap">
             <Lock className="w-3 h-3 text-slate-400" />
-            <span>Đã kín chỗ</span>
+            <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs">
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs"
+            title={
+              isDriver
+                ? seatsTotal
+                  ? `Xe ${seatsTotal} chỗ · Chủ xe cần tìm ${seatsLeft} người đi cùng`
+                  : `Chủ xe cần tìm ${seatsLeft} người`
+                : `Khách cần tìm ${seatsLeft} chỗ đi cùng`
+            }
+          >
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             {isDriver ? (
               <span>
-                Còn <span className="tabular">{seatsLeft}</span>
-                {seatsTotal ? <span className="tabular opacity-75">/{seatsTotal}</span> : null} chỗ
+                Cần <span className="tabular">{seatsLeft}</span> người
+                {seatsTotal ? <span className="sr-only">/{seatsTotal}</span> : null}
               </span>
             ) : (
               <span>
@@ -310,12 +350,13 @@ export default function TripCard({
             className="flex items-center gap-2 min-w-0 text-left cursor-pointer group/driver"
             title="Xem hồ sơ uy tín"
           >
-            <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10">
+            <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10 relative">
               <User className="w-3.5 h-3.5" />
+              <PresenceDot isOnline={onlineStatus.isOnline} size="xs" className="absolute -bottom-0.5 -right-0.5" detail={onlineStatus.detail} />
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-1 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200 truncate group-hover/driver:text-[#0071e3] transition-colors">
                   {driverDisplayName}
                 </span>
@@ -345,22 +386,13 @@ export default function TripCard({
                 onViewCarPhotos?.(item);
               }}
               className="flex items-center gap-2 shrink-0 text-right cursor-pointer group/car rounded-xl p-1 -m-1 hover:bg-slate-100/80 dark:hover:bg-white/[0.06] transition-colors select-none"
-              title="Xem thông tin và hình ảnh xe"
+              title={`Xem thông tin và hình ảnh xe (${carDisplay})`}
             >
-              <div>
-                <div className="flex items-center justify-end gap-1 text-[11.5px] font-medium text-slate-600 dark:text-slate-300 group-hover/car:text-[#0071e3] transition-colors">
-                  <Car className="w-3 h-3 text-slate-400 group-hover/car:text-[#0071e3] transition-colors shrink-0" />
-                  <span className="truncate max-w-[120px]">
-                    {item.carType
-                      ? item.carType.split('(')[0].trim().replace(/\s*(cá nhân|gia đình)\b/gi, '')
-                      : `Xe ${item.capacity || 5} chỗ`}
-                  </span>
-                </div>
-                {item.carType && !item.carType.toLowerCase().includes('chỗ') && (
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                    {item.capacity || 5} chỗ
-                  </p>
-                )}
+              <div className="flex items-center justify-end gap-1 text-[11.5px] font-medium text-slate-600 dark:text-slate-300 group-hover/car:text-[#0071e3] transition-colors">
+                <Car className="w-3.5 h-3.5 text-slate-400 group-hover/car:text-[#0071e3] transition-colors shrink-0" />
+                <span className="truncate max-w-[140px] sm:max-w-[170px]" title={carDisplay}>
+                  {carDisplay}
+                </span>
               </div>
 
               {coverPhoto ? (

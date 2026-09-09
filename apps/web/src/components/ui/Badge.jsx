@@ -47,14 +47,15 @@ export function Avatar({ label = '', tone = 'primary', size = 'md', className = 
 }
 
 /** Icon vuông bo mềm Google Material Tile (dùng cho tiêu đề section) */
-export function IconTile({ icon: Icon, tone = 'primary', size = 'md', className = '' }) {
+export function IconTile({ icon, tone = 'primary', size = 'md', className = '' }) {
+  const Icon = icon;
   const dims = size === 'sm' ? 'w-8 h-8 rounded-xl' : size === 'lg' ? 'w-12 h-12 rounded-2xl' : 'w-10 h-10 rounded-2xl';
   const ico = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
   return (
     <span
       className={`inline-flex items-center justify-center shrink-0 ${dims} ${TONES[tone] || TONES.primary} ${className}`}
     >
-      <Icon className={ico} />
+      {Icon ? <Icon className={ico} /> : null}
     </span>
   );
 }

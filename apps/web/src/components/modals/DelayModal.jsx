@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Timer, Send, Clock, Sparkles } from 'lucide-react';
-import { useI18n } from '../../i18n/index.jsx';
 import { getZaloChatUrl } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -9,7 +8,6 @@ import { Field, Input } from '../ui/Field.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
 
 export default function DelayModal({ record, onClose, onSendDelay }) {
-  const { t } = useI18n();
   const [minutes, setMinutes] = useState(15);
   const [note, setNote] = useState('Do kẹt xe / việc bận đột xuất');
 

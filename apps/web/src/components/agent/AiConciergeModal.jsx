@@ -225,18 +225,33 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                                 <Clock className="w-3 h-3 text-slate-400" />
                                 <span>{trip.timeSlot}</span>
                               </span>
-                              <a
-                                href={getZaloChatLink(
-                                  trip.phoneReal || '0984883750',
-                                  `Chào bạn, mình thấy chuyến xe ${trip.from} đi ${trip.to} của bạn trên CarMate, mình muốn đăng ký ghép chỗ!`
+                              <div className="flex items-center gap-1.5">
+                                {onSelectTrip && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onSelectTrip(trip);
+                                      onClose?.();
+                                    }}
+                                    className="h-7 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold inline-flex items-center text-[11px] transition-all cursor-pointer"
+                                    title="Xem chi tiết hành trình chuyến này"
+                                  >
+                                    Xem chi tiết
+                                  </button>
                                 )}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="h-7 px-3 rounded-lg bg-[#0068ff] text-white hover:bg-[#0055d4] font-bold inline-flex items-center gap-1 text-[11px] transition-all cursor-pointer shadow-2xs"
-                              >
-                                <ZaloIcon className="w-3.5 h-3.5 mr-0.5" />
-                                <span>Nhắn Zalo đón</span>
-                              </a>
+                                <a
+                                  href={getZaloChatLink(
+                                    trip.phoneReal || '0984883750',
+                                    `Chào bạn, mình thấy chuyến xe ${trip.from} đi ${trip.to} của bạn trên CarMate, mình muốn đăng ký ghép chỗ!`
+                                  )}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="h-7 px-3 rounded-lg bg-[#0068ff] text-white hover:bg-[#0055d4] font-bold inline-flex items-center gap-1 text-[11px] transition-all cursor-pointer shadow-2xs"
+                                >
+                                  <ZaloIcon className="w-3.5 h-3.5 mr-0.5" />
+                                  <span>Nhắn Zalo</span>
+                                </a>
+                              </div>
                             </div>
                           </div>
                         ))}

@@ -141,25 +141,25 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
   }, [parsedResult, currentUser]);
 
   return (
-    <div className="rounded-2xl bg-gradient-to-b from-slate-900 via-[#16181d] to-[#0f1013] text-white p-4 sm:p-5 border border-slate-800 shadow-xl relative overflow-hidden mb-6">
-      {/* Glow Effect phong cách Cursor & Apple */}
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 text-[#1d1d1f] dark:text-white p-4 sm:p-5 border border-black/[0.08] dark:border-white/[0.08] shadow-sm relative overflow-hidden mb-6 backdrop-blur-xl">
+      {/* Ambient subtle glow */}
+      <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#0071e3]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-2 mb-3 relative z-10">
         <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-primary-500/20 text-primary-400 border border-primary-500/30 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-primary-400 animate-pulse" />
+          <span className="w-7 h-7 rounded-lg bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4 text-[#0071e3] animate-pulse" />
           </span>
           <div>
-            <h4 className="text-xs sm:text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+            <h4 className="text-xs sm:text-sm font-bold tracking-tight text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
               <span>Đăng chuyến nhanh bằng một câu</span>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-medium tracking-wide">
+              <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 text-[10px] font-semibold tracking-wide">
                 Tự động điền
               </span>
             </h4>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-[#6e6e73] dark:text-slate-400">
               {currentRole === 'passenger'
                 ? 'Dán nhu cầu tìm xe hoặc gõ 1 câu tự nhiên — Hệ thống tự điền điểm đón, giờ đi và ngân sách'
                 : 'Dán bài đăng Zalo/Facebook hoặc gõ 1 câu tự nhiên — Hệ thống tự điền lộ trình, giờ chạy và giá vé'}
@@ -173,7 +173,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
               type="button"
               onClick={handleSwapDirection}
               title={`Đảo chiều: ${parsedResult.toLocation} ➔ ${parsedResult.fromLocation}`}
-              className="text-[11px] text-amber-300 hover:text-amber-200 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 cursor-pointer inline-flex items-center gap-1 transition-all active:scale-95 shadow-xs"
+              className="text-[11px] text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50 cursor-pointer inline-flex items-center gap-1 transition-all active:scale-95 shadow-xs font-medium"
             >
               <ArrowLeftRight className="w-3 h-3" />
               <span>Đảo chiều</span>
@@ -183,16 +183,16 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
             type="button"
             onClick={handlePasteClipboard}
             title="Dán nhanh nội dung vừa copy"
-            className="text-[11px] text-slate-300 hover:text-white px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer inline-flex items-center gap-1 transition-all"
+            className="text-[11px] text-[#1d1d1f] dark:text-slate-300 hover:text-black dark:hover:text-white px-2.5 py-1 rounded-lg bg-[#f5f5f7] dark:bg-white/5 hover:bg-[#e8e8ed] dark:hover:bg-white/10 border border-black/[0.08] dark:border-white/10 cursor-pointer inline-flex items-center gap-1 transition-all font-medium"
           >
-            <ClipboardPaste className="w-3 h-3 text-emerald-400" />
+            <ClipboardPaste className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             <span className="hidden sm:inline">Dán tin</span>
           </button>
           {inputText && (
             <button
               type="button"
               onClick={() => setInputText('')}
-              className="text-[11px] text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-white/5 cursor-pointer inline-flex items-center gap-1"
+              className="text-[11px] text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer inline-flex items-center gap-1"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Làm mới</span>
@@ -213,16 +213,16 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
               ? 'Ví dụ: Sáng mai 8h em cần tìm xe ghép 1 người từ Bù Đốp đi Bệnh viện Chợ Rẫy Sài Gòn đón ở QL13 phụ xăng 120k sđt 0984883750...'
               : 'Ví dụ: Chiều nay 17h mình chở vợ con từ Bù Đốp về Sài Gòn xe 7 chỗ còn 1 ghế sau đón QL13 phụ xăng 120k sđt 0984883750...'
           }
-          className="w-full rounded-xl bg-black/40 border border-slate-700/80 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25 p-3 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 outline-none resize-none transition-all font-sans leading-relaxed"
+          className="w-full rounded-xl bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.08] dark:border-white/[0.08] focus:border-[#0071e3] focus:bg-white dark:focus:bg-[#1c1c1e] focus:ring-2 focus:ring-[#0071e3]/20 p-3 text-xs sm:text-sm text-[#1d1d1f] dark:text-slate-100 placeholder:text-[#86868b] outline-none resize-none transition-all font-sans leading-relaxed shadow-inner"
         />
       </div>
 
       {/* ── THƯ VIỆN MẪU ĐA DẠNG: LUÔN HIỂN THỊ ĐỂ ĐỔI MẪU 1-CHẠM (APPLE HIG RIBBON) ── */}
-      <div className="mt-2.5 pt-2.5 border-t border-slate-800/60 relative z-10 space-y-2">
+      <div className="mt-2.5 pt-2.5 border-t border-black/[0.06] dark:border-white/[0.08] relative z-10 space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
             {/* Segmented Controller chuyển tab Mẫu Chủ xe / Mẫu Khách */}
-            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/[0.08]">
+            <div className="flex items-center p-1 rounded-xl bg-[#f5f5f7] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.08]">
               <button
                 type="button"
                 onClick={() => {
@@ -231,8 +231,8 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 }}
                 className={`px-2.5 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeCategory === 'driver'
-                    ? 'bg-primary-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#0071e3] text-white shadow-xs'
+                    : 'text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-slate-200'
                 }`}
               >
                 <Car className="w-3 h-3 shrink-0" />
@@ -247,7 +247,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 className={`px-2.5 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeCategory === 'passenger'
                     ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-slate-200'
                 }`}
               >
                 <Users className="w-3 h-3 shrink-0" />
@@ -256,14 +256,14 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
             </div>
 
             {/* Segmented Filter Chiều đi / Chiều về */}
-            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/[0.08] text-xs">
+            <div className="flex items-center p-1 rounded-xl bg-[#f5f5f7] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.08] text-xs">
               <button
                 type="button"
                 onClick={() => setDirectionFilter('all')}
                 className={`px-2 py-1 rounded-md transition-all cursor-pointer font-medium ${
                   directionFilter === 'all'
-                    ? 'bg-white/20 text-white font-bold'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-white dark:bg-white/20 text-[#1d1d1f] dark:text-white font-bold shadow-xs'
+                    : 'text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-slate-200'
                 }`}
               >
                 Tất cả
@@ -273,8 +273,8 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 onClick={() => setDirectionFilter('outbound')}
                 className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 font-medium ${
                   directionFilter === 'outbound'
-                    ? 'bg-blue-600 text-white font-bold shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#0071e3] text-white font-bold shadow-xs'
+                    : 'text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-slate-200'
                 }`}
               >
                 <span>➔ Chiều đi</span>
@@ -285,7 +285,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 font-medium ${
                   directionFilter === 'return'
                     ? 'bg-purple-600 text-white font-bold shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-slate-200'
                 }`}
               >
                 <span>⬅ Chiều về</span>
@@ -298,9 +298,9 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
             type="button"
             onClick={handleCycleNextSample}
             title="Bấm để thử lần lượt các mẫu có sẵn"
-            className="text-[11px] text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer inline-flex items-center gap-1 transition-all"
+            className="text-[11px] text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white px-2 py-1 rounded bg-[#f5f5f7] dark:bg-white/5 hover:bg-[#e8e8ed] dark:hover:bg-white/10 border border-black/[0.06] dark:border-white/5 cursor-pointer inline-flex items-center gap-1 transition-all"
           >
-            <RefreshCw className="w-3 h-3 text-amber-400" />
+            <RefreshCw className="w-3 h-3 text-amber-500" />
             <span>Đổi mẫu khác</span>
           </button>
         </div>
@@ -317,20 +317,20 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 title={tmpl.desc}
                 className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-left shrink-0 inline-flex items-center gap-1.5 select-none ${
                   isSelected
-                    ? 'border-emerald-400/80 bg-emerald-500/20 text-emerald-200 ring-2 ring-emerald-500/20 font-bold'
-                    : 'border-slate-800 bg-slate-800/60 hover:bg-slate-700/80 hover:border-slate-700 text-slate-300 hover:text-white'
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20 font-bold'
+                    : 'border-black/[0.08] dark:border-white/[0.08] bg-[#f5f5f7] dark:bg-slate-800/60 hover:bg-[#e8e8ed] dark:hover:bg-slate-700/80 text-[#424245] dark:text-slate-300 hover:text-[#1d1d1f] dark:hover:text-white'
                 }`}
               >
                 {tmpl.badge.includes('Gia đình') ? (
-                  <HeartHandshake className="w-3 h-3 text-pink-400 shrink-0" />
+                  <HeartHandshake className="w-3 h-3 text-pink-500 shrink-0" />
                 ) : tmpl.badge.includes('Gửi hàng') ? (
-                  <Package className="w-3 h-3 text-amber-400 shrink-0" />
+                  <Package className="w-3 h-3 text-amber-500 shrink-0" />
                 ) : tmpl.badge.includes('sân bay') ? (
-                  <Plane className="w-3 h-3 text-sky-400 shrink-0" />
+                  <Plane className="w-3 h-3 text-sky-500 shrink-0" />
                 ) : tmpl.role === 'passenger' ? (
-                  <Users className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <Users className="w-3 h-3 text-emerald-600 shrink-0" />
                 ) : (
-                  <Car className="w-3 h-3 text-primary-400 shrink-0" />
+                  <Car className="w-3 h-3 text-[#0071e3] shrink-0" />
                 )}
                 <span>{tmpl.title}</span>
               </button>
@@ -341,9 +341,9 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
 
       {/* Real-time Extracted Entity Pills (Chuẩn Cursor & Apple) */}
       {parsedResult && (
-        <div className="mt-3.5 pt-3 border-t border-slate-800/80 space-y-2.5 relative z-10 animate-in fade-in duration-200">
+        <div className="mt-3.5 pt-3 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2.5 relative z-10 animate-in fade-in duration-200">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-            <span className="flex items-center gap-1 text-emerald-400 font-semibold text-xs">
+            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
               <Check className="w-3.5 h-3.5" />
               <span>Đã nhận diện và tự điền biểu mẫu:</span>
             </span>
@@ -351,9 +351,9 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
               <button
                 type="button"
                 onClick={() => setShowTicketShare(true)}
-                className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+                className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] dark:bg-white/10 dark:hover:bg-white/20 border border-black/[0.08] dark:border-white/15 text-[#1d1d1f] dark:text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
               >
-                <Share2 className="w-3.5 h-3.5 text-sky-400" />
+                <Share2 className="w-3.5 h-3.5 text-sky-500" />
                 <span>Xuất Vé VIP Đăng Zalo/FB</span>
               </button>
               <button
@@ -363,9 +363,9 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                     onInstantSubmit(parsedResult);
                   }
                 }}
-                className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all cursor-pointer active:scale-95 shrink-0"
+                className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white text-xs font-bold shadow-md shadow-[#0071e3]/20 transition-all cursor-pointer active:scale-95 shrink-0"
               >
-                <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
+                <Zap className="w-3.5 h-3.5 fill-current text-white" />
                 <span>Đăng chuyến ngay</span>
               </button>
             </div>
@@ -373,55 +373,55 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
 
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {/* Vai trò */}
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
               {parsedResult.role === 'driver' ? <Car className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
               <span>{parsedResult.role === 'driver' ? 'Chủ xe' : 'Người cần tìm xe'}</span>
             </span>
 
             {/* Điểm đón */}
             {parsedResult.fromLocation && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Đi: {parsedResult.fromLocation}</span>
               </span>
             )}
 
             {/* Điểm đến */}
             {parsedResult.toLocation && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold">
-                <Navigation className="w-3.5 h-3.5 text-rose-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs font-semibold">
+                <Navigation className="w-3.5 h-3.5 text-rose-500" />
                 <span>Đến: {parsedResult.toLocation}</span>
               </span>
             )}
 
             {/* Điểm hẹn đón cụ thể (nếu có) */}
             {parsedResult.waypointNote && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teal-500/15 border border-teal-500/30 text-teal-300 text-xs font-medium">
-                <MapPin className="w-3.5 h-3.5 text-teal-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teal-50 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/30 text-teal-700 dark:text-teal-300 text-xs font-medium">
+                <MapPin className="w-3.5 h-3.5 text-teal-600" />
                 <span>{parsedResult.waypointNote}</span>
               </span>
             )}
 
             {/* Giờ đi */}
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-mono font-medium">
+              <Clock className="w-3.5 h-3.5 text-amber-600" />
               <span>
                 {parsedResult.timeSlot} · {parsedResult.scheduleDay}
               </span>
             </span>
 
             {/* Số ghế */}
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold">
-              <Users className="w-3.5 h-3.5 text-purple-400" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-50 dark:bg-purple-500/15 border border-purple-200 dark:border-purple-500/30 text-purple-700 dark:text-purple-300 text-xs font-semibold">
+              <Users className="w-3.5 h-3.5 text-purple-600" />
               <span>
-                {parsedResult.role === 'driver' ? `Còn ${parsedResult.seats} chỗ` : `Cần ${parsedResult.seats} ghế`}
+                {parsedResult.role === 'driver' ? `Cần ${parsedResult.seats} người` : `Cần ${parsedResult.seats} chỗ`}
               </span>
             </span>
 
             {/* Giá chia sẻ hoặc Ngân sách khách phụ xăng */}
             {parsedResult.price && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold font-mono">
-                <Coins className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-bold font-mono">
+                <Coins className="w-3.5 h-3.5 text-emerald-600" />
                 <span>
                   {parsedResult.role === 'driver' ? 'Phụ xăng: ' : 'Ngân sách: '}
                   {formatVND(parsedResult.price)}/ghế
@@ -431,8 +431,8 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
 
             {/* Số điện thoại Zalo */}
             {parsedResult.phoneReal && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-semibold">
-                <Phone className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-50 dark:bg-cyan-500/15 border border-cyan-200 dark:border-cyan-500/30 text-cyan-800 dark:text-cyan-300 text-xs font-mono font-semibold">
+                <Phone className="w-3.5 h-3.5 text-cyan-600" />
                 <span>Zalo: {parsedResult.phoneReal}</span>
               </span>
             )}
@@ -441,14 +441,14 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
             {parsedResult.role === 'driver' && (
               <>
                 {parsedResult.hasRelatives && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-medium">
-                    <HeartHandshake className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium">
+                    <HeartHandshake className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Xe chở người thân · Nhận {parsedResult.seats} khách</span>
                   </span>
                 )}
 
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-xs">
-                  <Car className="w-3.5 h-3.5 text-slate-400" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs">
+                  <Car className="w-3.5 h-3.5 text-slate-500" />
                   <span>
                     {parsedResult.carCategory === 'convenient_trip' ? 'Xe tiện chuyến' : 'Xe gia đình'}
                     {parsedResult.capacity ? ` · ${parsedResult.capacity} chỗ` : ''}
@@ -459,8 +459,8 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
 
             {/* Nhận gửi đồ / bưu phẩm */}
             {parsedResult.acceptsParcel && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-                <Package className="w-3.5 h-3.5 text-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                <Package className="w-3.5 h-3.5 text-amber-600" />
                 <span>{parsedResult.role === 'driver' ? 'Nhận kèm bưu phẩm' : 'Gửi bưu phẩm/hàng'}</span>
               </span>
             )}

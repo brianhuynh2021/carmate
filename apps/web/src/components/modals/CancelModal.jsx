@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle, HeartHandshake, Sparkles, Send } from 'lucide-react';
 import { getZaloChatUrl } from '@carmate/shared';
-import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import Chip from '../ui/Chip.jsx';
@@ -16,7 +15,6 @@ const PRESET_CANCEL_REASONS = [
 ];
 
 export default function CancelModal({ record, onClose, onConfirmCancel }) {
-  const { t } = useI18n();
   const [reason, setReason] = useState(PRESET_CANCEL_REASONS[0]);
 
   if (!record) return null;

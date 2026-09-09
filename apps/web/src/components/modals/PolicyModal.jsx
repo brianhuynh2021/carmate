@@ -4,12 +4,13 @@ import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
-function PolicySection({ icon: Icon, title, children }) {
+function PolicySection({ icon, title, children }) {
+  const Icon = icon;
   return (
     <section>
       <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-3">
         <span className="w-7 h-7 rounded-lg bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 inline-flex items-center justify-center shrink-0">
-          <Icon className="w-4 h-4" />
+          {Icon ? <Icon className="w-4 h-4" /> : null}
         </span>
         {title}
       </h4>

@@ -27,15 +27,30 @@ export function recordEvent(req, res) {
       createdAt: Date.now()
     });
 
-    // Nếu là sự kiện crash từ trình duyệt người dùng, tự động bắn cảnh báo Telegram
+    // Nếu là sự kiện crash từ trình duyệt người dùng, tự động bắn cảnh báo Telegram (chỉ trên môi trường Production)
     if (trimmedEventName === 'error_unhandled') {
-      const clientError = new Error(properties?.message || 'Sự cố ngoại lệ trình duyệt (Client Crash)');
-      if (properties?.stack) clientError.stack = properties.stack;
-      sendSystemErrorAlert({
-        error: clientError,
-        req,
-        source: 'Frontend Browser (Client Crash)'
-      }).catch(() => {});
+      const isDevEvent =
+        properties?.isDev ||
+        properties?.stack?.includes('localhost') ||
+        properties?.stack?.includes('127.0.0.1') ||
+        req?.headers?.origin?.includes('localhost') ||
+        req?.headers?.referer?.includes('localhost') ||
+        req?.ip === '::1' ||
+        req?.ip === '127.0.0.1';
+
+      if (!isDevEvent || process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true') {
+        const clientError = new Error(properties?.message || 'Sự cố ngoại lệ trình duyệt (Client Crash)');
+        if (properties?.stack) clientError.stack = properties.stack;
+        sendSystemErrorAlert({
+          error: clientError,
+          req,
+          source: 'Frontend Browser (Client Crash)'
+        }).catch(() => {});
+      } else {
+        console.warn(
+          `[Analytics Local Crash Ignored for Telegram]: ${properties?.message || 'Client Crash'} (Localhost/Dev)`
+        );
+      }
     }
 
     return res.status(201).json({ success: true, message: 'Ghi nhận sự kiện thành công' });

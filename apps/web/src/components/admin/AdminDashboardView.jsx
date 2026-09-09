@@ -1732,7 +1732,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 {trustRules.find((r) => r.id === 'no_avatar_cap')?.points || 65}
                 <span className="text-sm font-normal text-slate-400"> điểm</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Bất biến toán học MIT</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Quy chuẩn hệ thống</p>
             </div>
           </div>
 

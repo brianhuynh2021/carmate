@@ -12,9 +12,58 @@ function escapeHtml(text = '') {
 }
 
 /**
+ * Kiểm tra xem request hoặc lỗi có xuất phát từ môi trường phát triển cục bộ (localhost/dev) hay không
+ * @param {object} req - Express Request object
+ * @param {Error|object} error - Error object
+ * @returns {boolean}
+ */
+export function isLocalhostRequest(req = null, error = null) {
+  if (!req && !error) return false;
+
+  // 1. Kiểm tra IP của máy khách (Client IP)
+  const clientIp = req?.ip || req?.headers?.['x-forwarded-for'] || req?.socket?.remoteAddress;
+  if (clientIp) {
+    const ipStr = String(clientIp).toLowerCase().trim();
+    if (
+      ipStr === '::1' ||
+      ipStr === '127.0.0.1' ||
+      ipStr === '::ffff:127.0.0.1' ||
+      ipStr.startsWith('127.') ||
+      ipStr.includes('localhost')
+    ) {
+      return true;
+    }
+  }
+
+  // 2. Kiểm tra Host, Origin, Referer header
+  const host = req?.headers?.host || req?.hostname;
+  if (host && (host.includes('localhost') || host.includes('127.0.0.1'))) {
+    return true;
+  }
+
+  const origin = req?.headers?.origin;
+  if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+    return true;
+  }
+
+  const referer = req?.headers?.referer;
+  if (referer && (referer.includes('localhost') || referer.includes('127.0.0.1'))) {
+    return true;
+  }
+
+  // 3. Kiểm tra Error stack trace (ví dụ lỗi client crash từ http://localhost:5173/src/...)
+  const stack = error?.stack || (typeof error === 'string' ? error : '');
+  if (stack && (stack.includes('localhost:') || stack.includes('127.0.0.1:'))) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Gửi tin nhắn thô tới Telegram Bot
  * @param {string} text - Nội dung tin nhắn
- * @param {object} options - Tuỳ chọn { parseMode: 'HTML', disableNotification: false }
+ * @param {object} options - Tuỳ chọn { parseMode: 'HTML', disableNotification: false, req, error }
  * @returns {Promise<boolean>}
  */
 export async function sendTelegramMessage(text, options = {}) {
@@ -27,7 +76,10 @@ export async function sendTelegramMessage(text, options = {}) {
 
   const isMockToken = token.startsWith('mock_');
 
-  // 1. Tuyệt đối KHÔNG gửi tin nhắn ra Telegram thật khi đang chạy bộ kiểm thử tự động
+  // 1. Tuyệt đối KHÔNG gửi tin nhắn ra Telegram thật khi đang chạy bộ kiểm thử tự động,
+  // hoặc khi đang phát triển / debug ở môi trường local / localhost.
+  // Chỉ bắn cảnh báo Telegram khi ở môi trường Production thật sự,
+  // hoặc khi chủ động bật ENABLE_DEV_TELEGRAM_ALERTS=true để lập trình viên test bot.
   if (!isMockToken) {
     if (
       options.isTest ||
@@ -36,6 +88,19 @@ export async function sendTelegramMessage(text, options = {}) {
       process.env.CARMATE_DISABLE_TELEGRAM === 'true' ||
       process.env.NODE_ENV === 'test'
     ) {
+      return false;
+    }
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    const enableDevAlerts = process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true';
+
+    // Nếu không phải production và không bật ENABLE_DEV_TELEGRAM_ALERTS
+    if (!isProduction && !enableDevAlerts) {
+      return false;
+    }
+
+    // Nếu request xuất phát từ localhost / 127.0.0.1 / ::1
+    if (!enableDevAlerts && isLocalhostRequest(options.req, options.error)) {
       return false;
     }
   }
@@ -79,6 +144,19 @@ export async function sendSystemErrorAlert({ error, req = null, source = 'API Se
   const errorMessage = error?.message || String(error || 'Lỗi không xác định');
   const path = req ? `${req.method || 'GET'} ${req.originalUrl || req.url || '/'}` : 'Hệ thống';
 
+  // Chống spam trong môi trường dev / localhost: Tuyệt đối không gửi Telegram khi ở localhost hoặc dev
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const isMockToken = token?.startsWith('mock_');
+  const isProduction = process.env.NODE_ENV === 'production';
+  const enableDevAlerts = process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true';
+
+  if (!isMockToken && !enableDevAlerts) {
+    if (!isProduction || isLocalhostRequest(req, error)) {
+      console.warn(`[Local/Dev Error Suppressed]: [${source}] ${path} - ${errorMessage} (Không gửi lên Telegram)`);
+      return false;
+    }
+  }
+
   // Chống spam: Nếu cùng 1 lỗi trên cùng 1 path xảy ra liên tục trong 60s, bỏ qua
   const dedupKey = `${source}:${path}:${errorMessage}`;
   const now = Date.now();
@@ -115,7 +193,7 @@ export async function sendSystemErrorAlert({ error, req = null, source = 'API Se
   }
   message += `━━━━━━━━━━━━━━━━━━━━`;
 
-  return sendTelegramMessage(message, { parseMode: 'HTML', req });
+  return sendTelegramMessage(message, { parseMode: 'HTML', req, error });
 }
 
 /**
@@ -142,6 +220,11 @@ export async function sendBusinessAlert({ title, details = {}, req = null }) {
     const isProduction = process.env.NODE_ENV === 'production';
     const enableDevAlerts = process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true';
     if (!isProduction && !enableDevAlerts) {
+      return false;
+    }
+
+    // 3. Nếu request xuất phát từ localhost / 127.0.0.1 / ::1
+    if (!enableDevAlerts && isLocalhostRequest(req)) {
       return false;
     }
   }

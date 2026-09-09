@@ -85,19 +85,21 @@ export default function Hero({
     return getContextualGhostRoute('passenger');
   }, []);
 
+  const activeRouteHint = rotatingRoutes[routeCycleIndex % rotatingRoutes.length] || DEFAULT_FALLBACK_ROUTES[0];
+
   const handleApplyGhostRoute = useCallback((route) => {
     if (!route) return;
     setSearchFrom?.(route.from);
     setSearchTo?.(route.to);
-    onShowToast?.(`⚡ [Cursor Tab] Đã điền nhanh lộ trình: ${route.from} ➔ ${route.to}`);
+    onShowToast?.(`⚡ Đã điền nhanh lộ trình: ${route.from} ➔ ${route.to}`);
     const el = document.getElementById('market-results');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   }, [setSearchFrom, setSearchTo, onShowToast]);
 
-  // Phím tắt bàn phím: Tab (Ghost Route Fill) & Cmd+K / Ctrl+K (Quick Paste)
+  // Phím tắt bàn phím: Tab (Điền lộ trình gợi ý) & Cmd+K / Ctrl+K (Quick Paste)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // 1. Phím Tab vật lý áp dụng Ghost Route khi không focus vào ô nhập liệu
+      // 1. Phím Tab vật lý áp dụng lộ trình gợi ý khi không focus vào ô nhập liệu
       if (e.key === 'Tab' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const activeTag = document.activeElement?.tagName?.toLowerCase();
         const isInput =
@@ -105,9 +107,10 @@ export default function Hero({
           activeTag === 'textarea' ||
           activeTag === 'select' ||
           document.activeElement?.isContentEditable;
-        if (!isInput && ghostRoute?.from && ghostRoute?.to) {
+        const target = ghostRoute?.isPersonalHistory ? ghostRoute : activeRouteHint;
+        if (!isInput && target?.from && target?.to) {
           e.preventDefault();
-          handleApplyGhostRoute(ghostRoute);
+          handleApplyGhostRoute(target);
         }
       }
 
@@ -120,9 +123,7 @@ export default function Hero({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [ghostRoute, handleApplyGhostRoute]);
-
-  const activeRouteHint = rotatingRoutes[routeCycleIndex % rotatingRoutes.length] || DEFAULT_FALLBACK_ROUTES[0];
+  }, [ghostRoute, activeRouteHint, handleApplyGhostRoute]);
 
   return (
     <section className="relative z-20 border-b border-slate-200/80 dark:border-slate-800 hero-canvas overflow-hidden">
@@ -158,62 +159,62 @@ export default function Hero({
           </p>
         ) : null}
 
-        {/* Dynamic Route Suggester Capsule (Hiệu ứng: Gợi ý cặp tuyến HOT tự động) */}
-        <div className="pt-0.5 sm:pt-1 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-2 max-w-full">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs max-w-full overflow-hidden">
-            <span className="flex items-center gap-1 text-[11px] font-bold text-[#1d1d1f] dark:text-white shrink-0">
-              <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
-              <span className="hidden xs:inline">Tuyến HOT:</span>
-              <span className="xs:hidden">HOT:</span>
-            </span>
-            <div
-              key={`${routeCycleIndex}-${activeRouteHint.from}-${activeRouteHint.to}`}
-              className="anim-fade-in flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] min-w-0 shrink"
-            >
-              <span className="max-w-[90px] sm:max-w-none truncate">{activeRouteHint.from}</span>
-              <ArrowLeftRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
-              <span className="max-w-[90px] sm:max-w-none truncate">{activeRouteHint.to}</span>
-              {activeRouteHint.count > 0 && (
-                <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
-                  {activeRouteHint.count} xe
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchFrom?.(activeRouteHint.from);
-                setSearchTo?.(activeRouteHint.to);
-                const el = document.getElementById('market-results');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              title="Điền nhanh cặp tuyến này"
-              className="ml-0.5 sm:ml-1 text-[10.5px] sm:text-[11px] font-bold text-[#0071e3] hover:text-[#0077ed] dark:text-[#2997ff] bg-[#0071e3]/10 hover:bg-[#0071e3]/20 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-0.5 shrink-0 whitespace-nowrap"
-            >
-              <span>Áp dụng ⚡</span>
-            </button>
-          </div>
-
-          {/* Capsule 2: Ghost Route (Cursor Tab AI) */}
-          {ghostRoute && (
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-slate-900/90 dark:bg-black/90 text-white border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all text-xs max-w-full overflow-hidden">
-              <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400 shrink-0">
-                <Zap className="w-3 h-3 fill-current animate-pulse" />
-                <span className="hidden sm:inline">Tuyến quen:</span>
+        {/* Dynamic Route Suggester Capsule (DUY NHẤT 1 Capsule thông minh, đồng bộ màu sắc Apple Liquid, triệt tiêu màu đen) */}
+        <div className="pt-0.5 sm:pt-1 flex items-center justify-center px-2 max-w-full">
+          {ghostRoute?.isPersonalHistory ? (
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs max-w-full overflow-hidden">
+              <span className="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 shrink-0">
+                <Zap className="w-3 h-3 fill-current text-amber-500 animate-pulse" />
+                <span className="hidden xs:inline">Tuyến quen:</span>
+                <span className="xs:hidden">Quen:</span>
               </span>
-              <div className="flex items-center gap-1 text-[11.5px] font-bold text-white min-w-0 shrink">
-                <span className="max-w-[90px] sm:max-w-none truncate">{ghostRoute.from}</span>
-                <ArrowLeftRight className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                <span className="max-w-[90px] sm:max-w-none truncate">{ghostRoute.to}</span>
+              <div className="flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] min-w-0 shrink">
+                <span className="max-w-[110px] sm:max-w-none truncate">{ghostRoute.from}</span>
+                <ArrowLeftRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
+                <span className="max-w-[110px] sm:max-w-none truncate">{ghostRoute.to}</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleApplyGhostRoute(ghostRoute)}
                 title="Nhấn phím Tab trên bàn phím hoặc bấm vào đây để điền ngay"
-                className="ml-0.5 text-[10.5px] sm:text-[11px] font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-1 shrink-0 whitespace-nowrap"
+                className="ml-0.5 sm:ml-1 text-[10.5px] sm:text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-1 shrink-0 whitespace-nowrap"
               >
-                <kbd className="hidden sm:inline-block px-1 py-0.1 rounded bg-black/50 text-[9px] font-mono text-slate-300 border border-white/10">Tab</kbd>
+                <kbd className="hidden sm:inline-block px-1 py-0.1 rounded bg-black/5 dark:bg-white/10 text-[9px] font-mono text-emerald-800 dark:text-emerald-200">Tab</kbd>
                 <span>Tự điền ⚡</span>
+              </button>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all text-xs max-w-full overflow-hidden">
+              <span className="flex items-center gap-1 text-[11px] font-bold text-[#1d1d1f] dark:text-white shrink-0">
+                <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
+                <span className="hidden xs:inline">Tuyến HOT:</span>
+                <span className="xs:hidden">HOT:</span>
+              </span>
+              <div
+                key={`${routeCycleIndex}-${activeRouteHint.from}-${activeRouteHint.to}`}
+                className="anim-fade-in flex items-center gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12px] font-bold text-[#0071e3] dark:text-[#2997ff] min-w-0 shrink"
+              >
+                <span className="max-w-[110px] sm:max-w-none truncate">{activeRouteHint.from}</span>
+                <ArrowLeftRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
+                <span className="max-w-[110px] sm:max-w-none truncate">{activeRouteHint.to}</span>
+                {activeRouteHint.count > 0 && (
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    {activeRouteHint.count} xe
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchFrom?.(activeRouteHint.from);
+                  setSearchTo?.(activeRouteHint.to);
+                  const el = document.getElementById('market-results');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                title="Điền nhanh cặp tuyến này"
+                className="ml-0.5 sm:ml-1 text-[10.5px] sm:text-[11px] font-bold text-[#0071e3] hover:text-[#0077ed] dark:text-[#2997ff] bg-[#0071e3]/10 hover:bg-[#0071e3]/20 px-2 sm:px-2.5 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 flex items-center gap-0.5 shrink-0 whitespace-nowrap"
+              >
+                <span>Áp dụng ⚡</span>
               </button>
             </div>
           )}
@@ -383,43 +384,64 @@ export default function Hero({
                 {isParcelActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />}
               </button>
             </div>
+          </div>
 
-            {/* ── CÔNG CỤ THÔNG MINH BẢN ĐỊA (CURSOR CMD+K & BẢNG ĐỊNH MỨC XĂNG) ── */}
-            <div className="pt-1.5 flex flex-wrap items-center justify-center gap-2 px-2">
-              {/* Nút 1-chạm Dán bài đăng Facebook/Zalo (Cursor Cmd+K) */}
-              <button
-                type="button"
-                onClick={() => setShowQuickPasteModal(true)}
-                title="Dán bài đăng từ Facebook/Zalo để AI bóc tách < 1ms và tạo vé đồ họa VIP (Phím tắt: ⌘K / Ctrl+K)"
-                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-semibold whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/40 hover:bg-blue-100/80 hover:border-blue-300"
-              >
-                <ClipboardPaste className="w-3.5 h-3.5 text-[#0071e3]" strokeWidth={2} />
-                <span>Dán tin FB / Zalo</span>
-                <kbd className="hidden sm:inline-block px-1.5 py-0.1 text-[9px] font-mono font-bold bg-white dark:bg-black/50 text-[#0071e3] rounded border border-blue-200/60 shadow-2xs">⌘K</kbd>
-              </button>
+          {/* ── CARD CÔNG CỤ TIỆN ÍCH ĐỘC LẬP DÀNH CHO CHỦ XE & ĐỐI TÁC (TÁCH BIỆT KHỎI DẢI LỌC) ── */}
+          <div className="pt-3.5 sm:pt-4.5 max-w-4xl mx-auto w-full relative z-20 text-left">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl border border-black/[0.06] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-tr from-[#0071e3]/15 via-blue-500/10 to-[#5ac8fa]/20 flex items-center justify-center shrink-0 border border-[#0071e3]/20">
+                  <Sparkles className="w-4 h-4 text-[#0071e3]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs sm:text-[13px] font-bold text-[#1d1d1f] dark:text-white">Công cụ kết nối thông minh</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0071e3]/10 text-[#0071e3] dark:text-[#2997ff]">
+                      Dành cho Chủ xe & Đối tác
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
+                    Tự động nhận diện bài đăng FB/Zalo và định mức chi phí xăng xe minh bạch
+                  </p>
+                </div>
+              </div>
 
-              {/* Nút 1-chạm Mở Bảng Tính Định Mức Xăng & Cầu Đường */}
-              <button
-                type="button"
-                onClick={() => setShowFairSplitModal(true)}
-                title="Xem công thức tính toán minh bạch chi phí xăng cộ và vé cầu đường thực tế"
-                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-medium whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-black/[0.08] dark:border-white/[0.08] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
-              >
-                <Calculator className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2} />
-                <span>Định mức xăng & cầu đường</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
+                {/* Nút 1-chạm Dán bài đăng Facebook/Zalo (Phím tắt ⌘K) */}
+                <button
+                  type="button"
+                  onClick={() => setShowQuickPasteModal(true)}
+                  title="Dán bài đăng từ Facebook/Zalo để tự động tạo chuyến nhanh và xuất vé chia sẻ (Phím tắt: ⌘K / Ctrl+K)"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap select-none cursor-pointer transition-all shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white hover:shadow-sm"
+                >
+                  <ClipboardPaste className="w-3.5 h-3.5 text-white" strokeWidth={2.2} />
+                  <span>Dán tin FB / Zalo</span>
+                  <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono font-bold bg-white/20 text-white rounded">⌘K</kbd>
+                </button>
+
+                {/* Nút 1-chạm Mở Bảng Tính Định Mức Xăng & Cầu Đường */}
+                <button
+                  type="button"
+                  onClick={() => setShowFairSplitModal(true)}
+                  title="Xem công thức tính toán minh bạch chi phí xăng cộ và vé cầu đường thực tế"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-xs font-medium whitespace-nowrap select-none cursor-pointer transition-all shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-slate-200 border border-black/[0.08] dark:border-white/[0.08] hover:bg-[#f5f5f7] dark:hover:bg-slate-700"
+                >
+                  <Calculator className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2} />
+                  <span>Định mức xăng</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── MODAL CURSOR CMD+K: DÁN TIN BÀI BÓC TÁCH & XUẤT VÉ VIP ── */}
+      {/* ── MODAL DÁN TIN BÀI BÓC TÁCH & XUẤT VÉ CHIA SẺ ── */}
       {showQuickPasteModal && (
         <Modal
           onClose={() => setShowQuickPasteModal(false)}
           size="lg"
-          title="Dán Bài Viết Facebook / Zalo (Cursor Cmd+K)"
-          subtitle="Trí tuệ bản địa bóc tách lộ trình < 1ms — Tạo vé đồ họa VIP đăng ngược lại MXH"
+          title="Dán Bài Viết Facebook / Zalo (⌘K)"
+          subtitle="Tự động nhận diện lộ trình, thời gian, giá tiền — Tạo vé đồ họa chia sẻ nhanh"
         >
           <SmartTripComposer
             currentUser={currentUser}

@@ -15,7 +15,7 @@ function FacebookIcon({ className = 'w-3.5 h-3.5' }) {
 }
 
 export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
-  const { t, lang } = useI18n();
+  const { lang } = useI18n();
   const year = new Date().getFullYear();
 
   const footerLinks = [

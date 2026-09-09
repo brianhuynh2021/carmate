@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Car, Users, Sparkles, CheckCircle2, MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap, User, Radio, BellRing } from 'lucide-react';
-import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, cleanPhoneNumber, isTripExpired } from '@carmate/shared';
-import { useI18n } from '../../i18n/index.jsx';
+import { Car, Users, Sparkles, CheckCircle2, MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap, User, Radio, BellRing, Star } from 'lucide-react';
+import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, isTripExpired } from '@carmate/shared';
 import { Segmented } from '../ui/Chip.jsx';
 import { Field, Select } from '../ui/Field.jsx';
 import Button from '../ui/Button.jsx';
@@ -12,7 +11,6 @@ import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import api from '../../api/client.js';
 
 export default function MatchRadarView({ driverOffers = [], passengerRequests = [], onBook, onViewTrustProfile, onShowToast }) {
-  const { t, lang } = useI18n();
   const [radarMode, setRadarMode] = useState('smart'); // 'smart' | 'manual'
   const [userRole, setUserRole] = useState('passenger'); // 'driver' | 'passenger'
   const [selectedRouteKey, setSelectedRouteKey] = useState('all');
@@ -609,13 +607,14 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{item.publicName}</p>
-                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 shrink-0">
-                            98đ
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 shrink-0 inline-flex items-center gap-0.5">
+                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                            <span>5.0</span>
                           </span>
                         </div>
                         <p className="text-[11px] text-[#86868b] truncate">
-                          {item.hometown || 'Đồng hương'} · {item.carType || 'Xe 7 chỗ'} (Còn {item.availableSeats || 1}{' '}
-                          ghế)
+                          {item.hometown || 'Đồng hương'} · {item.carType || 'Xe du lịch 5-7 chỗ'} (Cần {item.availableSeats || 1}{' '}
+                          người)
                         </p>
                       </div>
                     </div>

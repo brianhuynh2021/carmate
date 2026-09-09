@@ -44,7 +44,7 @@ import {
   isLikelyFakePhone,
   normalizePhotoUrl
 } from '@carmate/shared';
-import { useI18n, useDataLabel } from '../../i18n/index.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
 import Chip from '../ui/Chip.jsx';
 import Button from '../ui/Button.jsx';
@@ -228,11 +228,12 @@ function TimeSlotPicker({ value, onChange, exactTime, onExactTimeChange }) {
   );
 }
 
-function FormSection({ icon: Icon, title, children }) {
+function FormSection({ icon, title, children }) {
+  const Icon = icon;
   return (
     <section className="pt-6 first:pt-0 border-t first:border-t-0 border-slate-100 dark:border-slate-800">
       <h3 className="text-sm font-semibold text-slate-900 dark:white flex items-center gap-2 mb-4">
-        <Icon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+        {Icon && <Icon className="w-4 h-4 text-primary-600 dark:text-primary-400" />}
         {title}
       </h3>
       <div className="space-y-4">{children}</div>
@@ -274,8 +275,7 @@ const normalizeVehiclePhotos = (photos) => {
 };
 
 export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initialRole = 'driver', onShowToast }) {
-  const { t, lang } = useI18n();
-  const data = useDataLabel();
+  const { t } = useI18n();
 
   const upcomingDays = useMemo(() => getUpcomingDays(7), []);
 
@@ -292,7 +292,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   const [pickupSpot, setPickupSpot] = useState('');
   const [dropoffSpot, setDropoffSpot] = useState('');
   const [waypointNote, setWaypointNote] = useState('');
-  const [date, setDate] = useState(() => upcomingDays[0]?.iso || '');
   const [timeSlot, setTimeSlot] = useState('07:00-09:00');
   const [exactTime, setExactTime] = useState('');
   const [vehicleCapacity, setVehicleCapacity] = useState(5); // 5 | 7 (Mặc định xe 4-5 chỗ)
@@ -301,7 +300,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   const [seats, setSeats] = useState(3);
   const [price, setPrice] = useState(150000);
   const [phoneReal, setPhoneReal] = useState(() => currentUser?.phone || '');
-  const [zaloConfirmed, setZaloConfirmed] = useState(true);
   const [formError, setFormError] = useState(null);
   const errorBannerRef = useRef(null);
 
@@ -412,7 +410,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   const [customPerk, setCustomPerk] = useState('');
 
   const isDriver = role === 'driver';
-  const days = t('post.days');
 
   // Gợi ý mốc đón trả thông minh dọc tuyến theo điểm đi & đến kết hợp Corridor Waypoints
   const suggestedWaypoints = useMemo(() => {
@@ -540,10 +537,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     }
     if (!isValidVietnamesePhone(cleanPhone) || isLikelyFakePhone(cleanPhone)) {
       triggerError('Số điện thoại không hợp lệ hoặc có dấu hiệu số ảo (dãy số trùng lặp / liên tiếp). Vui lòng nhập số điện thoại thật.');
-      return;
-    }
-    if (!zaloConfirmed) {
-      triggerError('Bắt buộc: Bạn phải cam kết số điện thoại này đang sử dụng Zalo để chốt điểm đón.');
       return;
     }
 
@@ -1826,7 +1819,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
             </div>
 
             {/* Hành động */}
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2.5 pt-2">
+              {isDriver && (
+                <button
+                  type="button"
+                  onClick={handleCreateRoundtrip}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-[#0071e3]/10 hover:from-emerald-500/20 hover:to-[#0071e3]/20 text-[#0071e3] dark:text-[#2997ff] border border-[#0071e3]/25 font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
+                  title="Đăng chuyến hiện tại và tự động điền sẵn chiều về khứ hồi"
+                >
+                  <ArrowLeftRight className="w-3.5 h-3.5" />
+                  <span>Đăng chuyến này & Tạo luôn chiều về (Khứ hồi)</span>
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
