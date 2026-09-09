@@ -41,7 +41,8 @@ import {
   formatVND,
   getCorridorWaypoints,
   isValidVietnamesePhone,
-  isLikelyFakePhone
+  isLikelyFakePhone,
+  normalizePhotoUrl
 } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
@@ -247,6 +248,31 @@ const CAR_PHOTO_SLOTS = [
   { id: 'trunk', label: 'Khoang hành lý', required: false, desc: 'Cốp rộng để đồ thoải mái' }
 ];
 
+const normalizeVehiclePhotos = (photos) => {
+  if (!Array.isArray(photos)) return [];
+  return photos.map((photo, idx) => {
+    if (!photo) return null;
+    if (typeof photo === 'string') {
+      const norm = normalizePhotoUrl(photo);
+      return {
+        angle: idx === 0 ? 'front' : idx === 1 ? 'back' : 'side',
+        label: idx === 0 ? 'Góc Trước' : idx === 1 ? 'Góc Sau' : `Góc ${idx + 1}`,
+        url: norm,
+        originalUrl: norm,
+        isMasked: false,
+        caption: `Ảnh ${idx === 0 ? 'Góc Trước' : idx === 1 ? 'Góc Sau' : `Góc ${idx + 1}`}`
+      };
+    }
+    const normUrl = normalizePhotoUrl(photo?.url);
+    const normOrig = normalizePhotoUrl(photo?.originalUrl || photo?.url);
+    return {
+      ...photo,
+      url: normUrl,
+      originalUrl: normOrig || normUrl
+    };
+  }).filter(Boolean);
+};
+
 export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initialRole = 'driver', onShowToast }) {
   const { t, lang } = useI18n();
   const data = useDataLabel();
@@ -312,7 +338,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
         if (userVehicle.carCategory) setCarCategory(userVehicle.carCategory);
         const validPics = (userVehicle.photos || []).filter(Boolean);
         if (validPics.length > 0 && carPhotos.length === 0) {
-          setCarPhotos(validPics);
+          setCarPhotos(normalizeVehiclePhotos(validPics));
         }
         if (Array.isArray(userVehicle.perks)) {
           if (userVehicle.perks.includes('Không hút thuốc')) setNoSmoking(true);
@@ -324,7 +350,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
         if (savedCarProfile.carType) setCarType(savedCarProfile.carType);
         if (savedCarProfile.carCategory) setCarCategory(savedCarProfile.carCategory);
         if (savedCarProfile.hasVerifiedPhotos && carPhotos.length === 0) {
-          setCarPhotos(savedCarProfile.carPhotos);
+          setCarPhotos(normalizeVehiclePhotos(savedCarProfile.carPhotos));
         }
       }
     }
@@ -434,7 +460,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       if (parsed.carCategory) setCarCategory(parsed.carCategory);
       if (parsed.carType) setCarType(parsed.carType);
       if (Array.isArray(parsed.carPhotos) && parsed.carPhotos.length > 0) {
-        setCarPhotos(parsed.carPhotos);
+        setCarPhotos(normalizeVehiclePhotos(parsed.carPhotos));
       }
     }
     if (parsed.detectedPerks) {
@@ -1177,9 +1203,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     onClick={() => {
                       const garagePics = currentUser?.vehicle?.photos?.filter(Boolean) || [];
                       if (garagePics.length > 0) {
-                        setCarPhotos(garagePics);
+                        setCarPhotos(normalizeVehiclePhotos(garagePics));
                       } else if (savedCarProfile?.carPhotos) {
-                        setCarPhotos(savedCarProfile.carPhotos);
+                        setCarPhotos(normalizeVehiclePhotos(savedCarProfile.carPhotos));
                       }
                     }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
@@ -1218,7 +1244,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                       {currentPhoto ? (
                         <div className="relative aspect-[4/3] w-full group overflow-hidden bg-black/40">
                           <img
-                            src={currentPhoto.url || currentPhoto}
+                            src={normalizePhotoUrl(currentPhoto?.url || currentPhoto) || currentPhoto?.url || currentPhoto}
                             alt={slot.label}
                             onClick={() => setEditingMaskIndex(index)}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 cursor-pointer"

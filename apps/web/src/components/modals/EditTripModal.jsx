@@ -63,7 +63,28 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     () => trip?.plateMask || trip?.plate || trip?.licensePlate || ''
   );
   const [carPhotos, setCarPhotos] = useState(() => {
-    return Array.isArray(trip?.carPhotos) ? trip.carPhotos : [];
+    if (!Array.isArray(trip?.carPhotos)) return [];
+    return trip.carPhotos.map((photo, idx) => {
+      if (!photo) return null;
+      if (typeof photo === 'string') {
+        const norm = normalizePhotoUrl(photo);
+        return {
+          angle: idx === 0 ? 'front' : idx === 1 ? 'back' : 'side',
+          label: idx === 0 ? 'Góc Trước' : idx === 1 ? 'Góc Sau' : `Góc ${idx + 1}`,
+          url: norm,
+          originalUrl: norm,
+          isMasked: false,
+          caption: `Ảnh ${idx === 0 ? 'Góc Trước' : idx === 1 ? 'Góc Sau' : `Góc ${idx + 1}`}`
+        };
+      }
+      const normUrl = normalizePhotoUrl(photo?.url);
+      const normOrig = normalizePhotoUrl(photo?.originalUrl || photo?.url);
+      return {
+        ...photo,
+        url: normUrl,
+        originalUrl: normOrig || normUrl
+      };
+    }).filter(Boolean);
   });
   const [editingMaskIndex, setEditingMaskIndex] = useState(null);
 
