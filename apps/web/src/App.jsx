@@ -1294,6 +1294,7 @@ export default function App() {
           isOwner={checkIsMyTrip(selectedTripForRoute)}
           onClose={() => setSelectedTripForRoute(null)}
           onShare={setTicketToShare}
+          onViewCarPhotos={setSelectedTripForPhotos}
           onManage={(item) => {
             setSelectedTripForRoute(null);
             handleManageMyTrip(item);
