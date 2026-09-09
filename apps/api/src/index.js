@@ -132,9 +132,9 @@ app.use(
   })
 );
 
-// Giới hạn gói tin 1MB chống tấn công DDoS làm tràn RAM
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+// Giới hạn gói tin 10MB để hỗ trợ tải ảnh xe Base64 đã nén an toàn
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(sanitizeInput);
 
 // 2. Request Correlation ID & Structured Logging (Khả năng quan sát & Dễ debug theo review)

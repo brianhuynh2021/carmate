@@ -17,13 +17,19 @@ import {
   Lock,
   Unlock,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Camera,
+  Upload,
+  ShieldCheck,
+  Crosshair
 } from 'lucide-react';
-import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot, VEHICLE_SEAT_CONFIGS } from '@carmate/shared';
+import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot, VEHICLE_SEAT_CONFIGS, normalizePhotoUrl } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
+import { processCarPhotoUpload } from '../../utils/plateMasker.js';
+import PlateMaskModal from './PlateMaskModal.jsx';
 
 export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, onDelete }) {
   // Hook phải gọi trước mọi early return (Rules of Hooks)
@@ -50,6 +56,45 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   const [waypointNote, setWaypointNote] = useState(trip?.waypointNote || '');
   const [notes, setNotes] = useState(trip?.notes || '');
   const [saving, setSaving] = useState(false);
+  const [carType, setCarType] = useState(
+    () => trip?.carType || (trip?.capacity === 7 ? 'Mitsubishi Xpander (Xe 7 chỗ)' : 'Toyota Vios (Xe 5 chỗ)')
+  );
+  const [plateMask, setPlateMask] = useState(
+    () => trip?.plateMask || trip?.plate || trip?.licensePlate || ''
+  );
+  const [carPhotos, setCarPhotos] = useState(() => {
+    return Array.isArray(trip?.carPhotos) ? trip.carPhotos : [];
+  });
+  const [editingMaskIndex, setEditingMaskIndex] = useState(null);
+
+  const handlePhotoUpload = async (file) => {
+    if (!file) return;
+    if (carPhotos.length >= 5) return;
+    try {
+      const nextIndex = carPhotos.length;
+      const slotId = nextIndex === 0 ? 'front' : nextIndex === 1 ? 'back' : 'side';
+      const slotLabel = nextIndex === 0 ? 'Góc Trước' : nextIndex === 1 ? 'Góc Sau' : `Góc ${nextIndex + 1}`;
+      const result = await processCarPhotoUpload(file, slotId);
+      setCarPhotos((prev) => [
+        ...prev,
+        {
+          angle: slotId,
+          label: slotLabel,
+          url: result.maskedUrl,
+          originalUrl: result.originalUrl,
+          isMasked: result.isMasked,
+          maskPos: result.maskPos,
+          caption: `Ảnh ${slotLabel}`
+        }
+      ]);
+    } catch (err) {
+      console.warn('[EditTripModal] Lỗi tải ảnh:', err);
+    }
+  };
+
+  const handleRemovePhoto = (slotIndex) => {
+    setCarPhotos((prev) => prev.filter((_, idx) => idx !== slotIndex));
+  };
 
   // Chuyển đổi nhanh trạng thái nhận khách / đóng chỗ
   const handleToggleCurrentStatus = async () => {
@@ -112,12 +157,17 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     const validExactTime = isExactTimeValid ? exactTime.trim() : undefined;
     const timeSlotLabel = validExactTime ? `${validExactTime} (${slot.short})` : slot.short;
 
+    const validPhotos = (carPhotos || []).filter(Boolean);
     const updates = {
       from: cleanFrom,
       to: cleanTo,
       route: derivedRoute,
       routeCategory: derivedRoute,
       capacity: isDriver ? vehicleCapacity : undefined,
+      carType: isDriver ? carType.trim() : undefined,
+      carPhotos: isDriver ? validPhotos : undefined,
+      hasCarPhotos: isDriver && validPhotos.length > 0,
+      plateMask: isDriver && plateMask.trim() ? plateMask.trim() : undefined,
       basePricePerSeat: isDriver ? Number(price) : undefined,
       expectedPrice: !isDriver ? Number(price) : undefined,
       availableSeats: isDriver ? Number(seats) : undefined,
@@ -159,7 +209,8 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   if (!trip) return null;
 
   return (
-    <Modal
+    <>
+      <Modal
       onClose={onClose}
       size="lg"
       icon={Edit3}
@@ -362,24 +413,29 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           </div>
         </div>
 
-        {/* ── 2.5. QUY MÔ DÒNG XE (CHO CHỦ XE: 4-5 CHỖ VS 7 CHỖ) ── */}
+        {/* ── 2.5. QUY MÔ, DÒNG XE & HÌNH ẢNH XE THỰC TẾ ── */}
         {isDriver && (
-          <div className="space-y-2 p-3 rounded-2xl bg-[#f5f5f7] dark:bg-slate-900 border border-black/[0.04] dark:border-white/[0.06]">
+          <div className="space-y-3 p-4 rounded-2xl bg-[#f5f5f7] dark:bg-slate-900 border border-black/[0.04] dark:border-white/[0.06]">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
                 <Car className="w-3.5 h-3.5 text-[#0071e3]" />
-                <span>Quy mô dòng xe:</span>
+                <span>Phương tiện di chuyển:</span>
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                 {vehicleCapacity === 5 ? '🚗 Xe 4–5 chỗ (Tối đa 4 khách)' : '🚙 Xe 7 chỗ (Tối đa 6 khách)'}
               </span>
             </div>
+
+            {/* Quy mô 4-5 chỗ vs 7 chỗ */}
             <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06]">
               <button
                 type="button"
                 onClick={() => {
                   setVehicleCapacity(5);
                   if (seats > 4) setSeats(4);
+                  if (carType.includes('Xpander') || carType.includes('7 chỗ')) {
+                    setCarType('Toyota Vios (Xe 5 chỗ)');
+                  }
                 }}
                 className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none ${
                   vehicleCapacity === 5
@@ -394,6 +450,9 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 type="button"
                 onClick={() => {
                   setVehicleCapacity(7);
+                  if (carType.includes('Vios') || carType.includes('5 chỗ')) {
+                    setCarType('Mitsubishi Xpander (Xe 7 chỗ)');
+                  }
                 }}
                 className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none ${
                   vehicleCapacity === 7
@@ -404,6 +463,126 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 <span>🚙 Xe 7 chỗ</span>
                 <span className="text-[10px] font-normal opacity-70 hidden sm:inline">(MPV/SUV)</span>
               </button>
+            </div>
+
+            {/* Dòng xe cụ thể + Biển số */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                  Dòng xe cụ thể:
+                </label>
+                <input
+                  type="text"
+                  value={carType}
+                  onChange={(e) => setCarType(e.target.value)}
+                  placeholder="VD: Mazda 3, Veloz Cross, Xpander..."
+                  className="w-full h-9 px-3 rounded-xl text-xs bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-primary-500 shadow-2xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                  Biển kiểm soát (Bảo mật):
+                </label>
+                <input
+                  type="text"
+                  value={plateMask}
+                  onChange={(e) => setPlateMask(e.target.value)}
+                  placeholder="VD: 51K - 123.45 hoặc 93A - 541.86"
+                  className="w-full h-9 px-3 rounded-xl text-xs font-mono bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-primary-500 shadow-2xs"
+                />
+              </div>
+            </div>
+
+            {/* Preset chips */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10.5px] text-slate-400">Chọn nhanh:</span>
+              {(vehicleCapacity === 7
+                ? ['Mitsubishi Xpander', 'Toyota Veloz Cross', 'Toyota Innova', 'Kia Carnival', 'VinFast VF8']
+                : ['Toyota Vios', 'Mazda 3', 'Hyundai Accent', 'Honda City', 'Kia K3', 'VinFast VF5']
+              ).map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setCarType(`${preset} (Xe ${vehicleCapacity} chỗ)`)}
+                  className="px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+
+            {/* Quản lý ảnh xe thật */}
+            <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Hình ảnh xe thực tế ({carPhotos.filter(Boolean).length}/5):</span>
+                </span>
+                <span className="text-[10.5px] text-slate-400">
+                  Tự động che biển số bảo mật
+                </span>
+              </div>
+
+              {/* Danh sách ảnh hiện tại & Nút tải thêm */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {carPhotos.map((photo, idx) => {
+                  if (!photo) return null;
+                  const photoUrl = normalizePhotoUrl(photo);
+                  return (
+                    <div
+                      key={idx}
+                      className="relative w-20 aspect-[4/3] rounded-xl overflow-hidden border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-slate-800 group"
+                    >
+                      <img
+                        src={photoUrl}
+                        alt={`Ảnh xe ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Badge che biển */}
+                      <span className="absolute bottom-0 inset-x-0 bg-black/75 text-white text-[8.5px] text-center font-bold truncate px-0.5">
+                        {photo.label ? photo.label.replace('Góc ', '') : `${idx + 1}`}
+                      </span>
+                      {/* Action buttons */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => setEditingMaskIndex(idx)}
+                          className="w-6 h-6 rounded-md bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center cursor-pointer"
+                          title="Chỉnh vị trí che biển"
+                        >
+                          <Crosshair className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="w-6 h-6 rounded-md bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer"
+                          title="Xóa hình này"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {carPhotos.length < 5 && (
+                  <label className="w-20 aspect-[4/3] rounded-xl border-2 border-dashed border-slate-300 dark:border-white/20 hover:border-primary-500 flex flex-col items-center justify-center text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer select-none">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handlePhotoUpload(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    <Upload className="w-4 h-4 mb-0.5" />
+                    <span className="text-[9.5px] font-bold">Thêm ảnh</span>
+                  </label>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -570,5 +749,23 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
         </div>
       </form>
     </Modal>
-  );
+
+    {/* Modal chỉnh sửa vị trí che biển số xe tương tác */}
+    {editingMaskIndex !== null && carPhotos[editingMaskIndex] && (
+      <PlateMaskModal
+        isOpen={true}
+        photo={carPhotos[editingMaskIndex]}
+        onSave={(updatedPhoto) => {
+          setCarPhotos((prev) => {
+            const next = [...prev];
+            next[editingMaskIndex] = updatedPhoto;
+            return next;
+          });
+          setEditingMaskIndex(null);
+        }}
+        onClose={() => setEditingMaskIndex(null)}
+      />
+    )}
+  </>
+);
 }

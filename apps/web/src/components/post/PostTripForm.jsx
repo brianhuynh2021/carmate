@@ -433,6 +433,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       }
       if (parsed.carCategory) setCarCategory(parsed.carCategory);
       if (parsed.carType) setCarType(parsed.carType);
+      if (Array.isArray(parsed.carPhotos) && parsed.carPhotos.length > 0) {
+        setCarPhotos(parsed.carPhotos);
+      }
     }
     if (parsed.detectedPerks) {
       const dp = parsed.detectedPerks;
@@ -579,7 +582,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       exactTime: validExactTime,
       timeSlotLabel,
       carType: isDriver ? carType : undefined,
-      carPhotos: isDriver && validPhotos.length >= 3 ? validPhotos : undefined,
+      carPhotos: isDriver && validPhotos.length >= 1 ? validPhotos : undefined,
       hasCarPhotos: isDriver && validPhotos.length >= 3,
       capacity: isDriver ? Number(vehicleCapacity) : undefined,
       availableSeats: isDriver ? Number(seats) : undefined,

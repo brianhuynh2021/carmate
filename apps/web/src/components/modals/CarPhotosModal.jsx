@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, ShieldCheck, Camera, Check, Car, Package } from 'lucide-react';
-import { maskLicensePlate } from '@carmate/shared';
+import { maskLicensePlate, normalizePhotoUrl } from '@carmate/shared';
 import Button from '../ui/Button.jsx';
 
 export default function CarPhotosModal({ trip, isOpen, onClose }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [failedImages, setFailedImages] = useState({});
 
   useEffect(() => {
     setMounted(true);
@@ -15,6 +16,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
   const photos = Array.isArray(trip?.carPhotos) && trip.carPhotos.length >= 1 ? trip.carPhotos : [];
   const total = photos.length;
   const currentPhoto = photos[activeIndex] || photos[0];
+  const currentPhotoUrl = normalizePhotoUrl(currentPhoto);
 
   // Đóng bằng phím Escape & điều hướng bằng phím mũi tên
   useEffect(() => {
@@ -45,9 +47,10 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
 
   // Trích xuất mã biển số che bảo mật (VD: 93A - ***.86 hoặc 51K - ***.24)
   const plateMask = maskLicensePlate(trip.plateMask || trip.plate || trip.licensePlate, trip.from);
+  const effectiveCapacity = (trip.carType && trip.carType.includes('7')) ? 7 : (trip.capacity || 5);
   const cleanCarName = trip.carType
     ? trip.carType.split('(')[0].trim().replace(/\s*(cá nhân|gia đình)\b/gi, '')
-    : `Xe ${trip.capacity || 5} chỗ`;
+    : `Xe ${effectiveCapacity} chỗ`;
 
   const modalNode = (
     <div
@@ -72,7 +75,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                 </span>
               </h3>
               <p className="text-xs text-slate-400 truncate mt-0.5">
-                Xe {trip.capacity || 5} chỗ{trip.maskedCode ? ` · Mã chuyến ${trip.maskedCode}` : ''}
+                Xe {effectiveCapacity} chỗ{trip.maskedCode ? ` · Mã chuyến ${trip.maskedCode}` : ''}
               </p>
             </div>
           </div>
@@ -92,11 +95,26 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
           <>
             {/* Main Photo Display Area */}
             <div className="relative aspect-[16/10] sm:aspect-[16/9] bg-black/40 flex items-center justify-center overflow-hidden select-none group">
-              <img
-                src={currentPhoto.url || currentPhoto}
-                alt={currentPhoto.label || `Ảnh xe ${activeIndex + 1}`}
-                className="w-full h-full object-cover transition-transform duration-300"
-              />
+              {currentPhotoUrl && !failedImages[activeIndex] ? (
+                <img
+                  src={currentPhotoUrl}
+                  alt={currentPhoto.label || `Ảnh xe ${activeIndex + 1}`}
+                  onError={() => setFailedImages((prev) => ({ ...prev, [activeIndex]: true }))}
+                  className="w-full h-full object-cover transition-transform duration-300"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 text-slate-400 p-6 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
+                    <Car className="w-7 h-7" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-300">
+                    {currentPhoto.label || `Góc ${activeIndex + 1}`}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    (Ảnh tạm thời chưa sẵn sàng)
+                  </p>
+                </div>
+              )}
 
               {/* Privacy Plate Badge Watermark */}
               <div className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center gap-2 shadow-lg">
@@ -146,6 +164,8 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
               <div className="p-3 bg-black/30 flex items-center justify-center gap-2 overflow-x-auto custom-scrollbar">
                 {photos.map((p, idx) => {
                   const isSel = idx === activeIndex;
+                  const thumbUrl = normalizePhotoUrl(p);
+                  const isFailed = failedImages[idx];
                   return (
                     <button
                       key={idx}
@@ -157,7 +177,18 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                           : 'border-white/15 opacity-60 hover:opacity-100 hover:border-white/40'
                       }`}
                     >
-                      <img src={p.url || p} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                      {thumbUrl && !isFailed ? (
+                        <img
+                          src={thumbUrl}
+                          alt={`Thumbnail ${idx + 1}`}
+                          onError={() => setFailedImages((prev) => ({ ...prev, [idx]: true }))}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-400">
+                          <Car className="w-4 h-4" />
+                        </div>
+                      )}
                       <span className="absolute bottom-0 inset-x-0 bg-black/70 text-[9px] text-white text-center py-0.5 font-bold truncate px-1">
                         {p.label ? p.label.replace('Góc ', '') : `${idx + 1}`}
                       </span>
@@ -191,7 +222,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
 
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">
             <span className="text-[10.5px] text-slate-400 font-medium">Sức chứa</span>
-            <span className="text-xs font-bold text-white mt-0.5">{trip.capacity || 5} chỗ</span>
+            <span className="text-xs font-bold text-white mt-0.5">{effectiveCapacity} chỗ</span>
           </div>
 
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">

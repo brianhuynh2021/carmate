@@ -413,6 +413,7 @@ export default function App() {
     setReviewRecord,
     setPendingPostTrip,
     setShowAuthModal,
+    onSaveProfile: handleSaveProfile,
     t
   });
 

@@ -107,10 +107,12 @@ const KNOWN_LOCATIONS = [
 
 export const SMART_TRIP_TEMPLATES = {
   driver: [
+    // Chiều đi (Outbound: Tỉnh ➔ Sài Gòn / Tỉnh ➔ Tỉnh)
     {
       id: 'drv-family-7',
       role: 'driver',
       category: 'driver',
+      direction: 'outbound',
       badge: 'Gia đình 7 chỗ',
       title: 'Bù Đốp ➔ Sài Gòn (Chở vợ con)',
       desc: 'Xe 7 chỗ chở người nhà, còn 1 ghế sau, phụ xăng 120k',
@@ -120,6 +122,7 @@ export const SMART_TRIP_TEMPLATES = {
       id: 'drv-sedan-5',
       role: 'driver',
       category: 'driver',
+      direction: 'outbound',
       badge: 'Xe 4–5 chỗ tiện chuyến',
       title: 'Bình Long ➔ Sài Gòn (Vios 5 chỗ)',
       desc: 'Xe 5 chỗ còn 3 ghế êm ái, đón dọc QL13, phụ xăng 150k',
@@ -129,6 +132,7 @@ export const SMART_TRIP_TEMPLATES = {
       id: 'drv-suv-7',
       role: 'driver',
       category: 'driver',
+      direction: 'outbound',
       badge: 'MPV 7 chỗ rộng rãi',
       title: 'Đồng Xoài ➔ Sài Gòn (Xpander 7 chỗ)',
       desc: 'Xe 7 chỗ còn 4 chỗ rộng rãi, nhận gửi kèm bưu phẩm',
@@ -138,17 +142,71 @@ export const SMART_TRIP_TEMPLATES = {
       id: 'drv-central',
       role: 'driver',
       category: 'driver',
+      direction: 'outbound',
       badge: 'Tuyến Miền Trung',
       title: 'Đà Nẵng ➔ Huế (Xe 5 chỗ)',
       desc: 'Xe 5 chỗ còn 2 ghế, đón Nguyễn Văn Linh, phụ xăng 100k',
       text: 'Chiều nay 14h xe 5 chỗ chạy Đà Nẵng ra Huế còn 2 ghế đón Nguyễn Văn Linh phụ 100k sđt 0905556677'
+    },
+    // Chiều về (Return: Sài Gòn ➔ Tỉnh / Huế ➔ Đà Nẵng)
+    {
+      id: 'drv-ret-budop-7',
+      role: 'driver',
+      category: 'driver',
+      direction: 'return',
+      badge: 'Chiều về Bù Đốp',
+      title: 'Sài Gòn ➔ Bù Đốp (Xe 7 chỗ)',
+      desc: 'Xe 7 chỗ từ Sài Gòn về Bù Đốp, còn 3 ghế, đón Hàng Xanh QL13',
+      text: 'Chiều nay 18h mình từ Sài Gòn về Bù Đốp xe 7 chỗ còn 3 ghế đón Hàng Xanh QL13 phụ xăng 120k sđt 0984883750'
+    },
+    {
+      id: 'drv-ret-binhlong-5',
+      role: 'driver',
+      category: 'driver',
+      direction: 'return',
+      badge: 'Chiều về Bình Long',
+      title: 'Sài Gòn ➔ Bình Long (Mazda 5 chỗ)',
+      desc: 'Xe Mazda 5 chỗ từ Sài Gòn về Bình Long, còn 2 ghế, phụ xăng 150k',
+      text: 'Sáng mai 8h mình chạy xe Mazda 5 chỗ từ Sài Gòn về Bình Long còn 2 ghế đón Bến xe Miền Đông phụ xăng 150k sđt 0900000013'
+    },
+    {
+      id: 'drv-ret-dongxoai-7',
+      role: 'driver',
+      category: 'driver',
+      direction: 'return',
+      badge: 'Chiều về Đồng Xoài',
+      title: 'Sài Gòn ➔ Đồng Xoài (Xpander 7 chỗ)',
+      desc: 'Xe 7 chỗ từ Sài Gòn về Đồng Xoài, cốp rộng, nhận gửi kèm đồ',
+      text: 'Trưa nay 13h mình chạy Xpander 7 chỗ từ Sài Gòn về Đồng Xoài còn 3 ghế nhận gửi kèm bưu phẩm phụ 130k sđt 0988112233'
+    },
+    {
+      id: 'drv-ret-locninh-5',
+      role: 'driver',
+      category: 'driver',
+      direction: 'return',
+      badge: 'Chiều về Lộc Ninh',
+      title: 'Sài Gòn ➔ Lộc Ninh (Vios 5 chỗ)',
+      desc: 'Xe 5 chỗ từ Sài Gòn về Lộc Ninh đón dọc QL13, phụ xăng 140k',
+      text: 'Tối nay 19h mình lái xe Vios 5 chỗ từ Sài Gòn về Lộc Ninh đón dọc QL13 còn 2 chỗ phụ xăng 140k sđt 0977223344'
+    },
+    {
+      id: 'drv-ret-central',
+      role: 'driver',
+      category: 'driver',
+      direction: 'return',
+      badge: 'Huế ➔ Đà Nẵng',
+      title: 'Huế ➔ Đà Nẵng (Xe 5 chỗ)',
+      desc: 'Xe 5 chỗ từ Huế về Đà Nẵng, còn 2 ghế, phụ xăng 100k',
+      text: 'Chiều mai 15h xe 5 chỗ chạy từ Huế về Đà Nẵng còn 2 ghế đón trung tâm Huế phụ 100k sđt 0905556677'
     }
   ],
   passenger: [
+    // Chiều đi (Outbound: Tỉnh ➔ Sài Gòn)
     {
       id: 'pax-single-urgent',
       role: 'passenger',
       category: 'passenger',
+      direction: 'outbound',
       badge: 'Khách đi 1 mình',
       title: 'Bù Đốp ➔ BV Chợ Rẫy (1 người)',
       desc: 'Cần 1 ghế sáng mai đi khám bệnh, đón QL13, phụ 120k',
@@ -158,6 +216,7 @@ export const SMART_TRIP_TEMPLATES = {
       id: 'pax-family-3',
       role: 'passenger',
       category: 'passenger',
+      direction: 'outbound',
       badge: 'Gia đình 2-3 người',
       title: 'Đồng Xoài ➔ BX Miền Đông (3 ghế)',
       desc: 'Nhà 2 người lớn 1 bé cần tìm xe chiều nay, phụ 300k',
@@ -167,6 +226,7 @@ export const SMART_TRIP_TEMPLATES = {
       id: 'pax-parcel',
       role: 'passenger',
       category: 'passenger',
+      direction: 'outbound',
       badge: 'Gửi hàng / Bưu phẩm',
       title: 'Lộc Ninh ➔ Thủ Đức (Gửi bưu phẩm)',
       desc: 'Thùng sầu riêng 10kg gửi kèm xe chiều nay, phụ 80k',
@@ -176,10 +236,52 @@ export const SMART_TRIP_TEMPLATES = {
       id: 'pax-airport',
       role: 'passenger',
       category: 'passenger',
+      direction: 'outbound',
       badge: 'Đi sân bay',
       title: 'Biên Hòa ➔ Sân bay Tân Sơn Nhất',
       desc: 'Cần ghép 1 ghế sáng sớm, hành lý gọn, phụ 150k',
       text: 'Sáng sớm mai 5h mình cần tìm xe ghép 1 ghế từ Biên Hòa lên sân bay Tân Sơn Nhất phụ 150k sđt 0905112233'
+    },
+    // Chiều về (Return: Sài Gòn ➔ Tỉnh)
+    {
+      id: 'pax-ret-budop',
+      role: 'passenger',
+      category: 'passenger',
+      direction: 'return',
+      badge: 'Về Bù Đốp',
+      title: 'Sài Gòn ➔ Bù Đốp (1 người)',
+      desc: 'Cần tìm xe ghép chiều nay từ Sài Gòn về Bù Đốp, phụ 120k',
+      text: 'Chiều nay 16h em cần tìm xe ghép 1 người từ Sài Gòn về Bù Đốp đón ở Bến xe Miền Đông hoặc QL13 phụ xăng 120k sđt 0984883750'
+    },
+    {
+      id: 'pax-ret-binhlong',
+      role: 'passenger',
+      category: 'passenger',
+      direction: 'return',
+      badge: 'Về Bình Long',
+      title: 'Sài Gòn ➔ Bình Long (2 người)',
+      desc: 'Nhà 2 người cần xe từ Sài Gòn về Bình Long sáng mai, phụ 300k',
+      text: 'Sáng mai 9h nhà mình 2 người lớn cần tìm xe từ Sài Gòn về Bình Long đón ở Ngã tư Bình Phước phụ 300k sđt 0912345678'
+    },
+    {
+      id: 'pax-ret-dongxoai',
+      role: 'passenger',
+      category: 'passenger',
+      direction: 'return',
+      badge: 'Gửi hàng về tỉnh',
+      title: 'Thủ Đức ➔ Đồng Xoài (Gửi bưu phẩm)',
+      desc: 'Kiện hàng 5kg gửi từ Thủ Đức về Đồng Xoài chiều nay, phụ 70k',
+      text: 'Chiều nay em có kiện hàng 5kg cần gửi từ Thủ Đức về Đồng Xoài ai tiện xe cho em gửi phụ xăng 70k sđt 0977223344'
+    },
+    {
+      id: 'pax-ret-airport',
+      role: 'passenger',
+      category: 'passenger',
+      direction: 'return',
+      badge: 'Sân bay về',
+      title: 'Tân Sơn Nhất ➔ Biên Hòa (1 người)',
+      desc: 'Hạ cánh 20h cần ghép xe về Biên Hòa, hành lý gọn, phụ 150k',
+      text: 'Tối nay 20h mình hạ cánh sân bay Tân Sơn Nhất cần tìm xe ghép 1 người về Biên Hòa hành lý gọn phụ 150k sđt 0905112233'
     }
   ]
 };
@@ -255,7 +357,26 @@ export function parseNaturalTrip(text) {
   else if (/veloz/i.test(lower)) carType = 'Toyota Veloz Cross (Xe 7 chỗ)';
   else if (/innova/i.test(lower)) carType = 'Toyota Innova (Xe 7 chỗ)';
   else if (/carnival/i.test(lower)) carType = 'Kia Carnival (Xe 7 chỗ)';
+  else if (/cx-?8/i.test(lower)) carType = 'Mazda CX-8 (Xe 7 chỗ)';
+  else if (/cx-?5/i.test(lower)) carType = 'Mazda CX-5 (Xe 5 chỗ)';
+  else if (/mazda\s*3/i.test(lower)) carType = 'Mazda 3 (Xe 5 chỗ)';
+  else if (/mazda\s*6/i.test(lower)) carType = 'Mazda 6 (Xe 5 chỗ)';
+  else if (/mazda/i.test(lower)) carType = 'Mazda (Xe 5 chỗ)';
+  else if (/vios/i.test(lower)) carType = 'Toyota Vios (Xe 5 chỗ)';
+  else if (/accent/i.test(lower)) carType = 'Hyundai Accent (Xe 5 chỗ)';
+  else if (/city/i.test(lower)) carType = 'Honda City (Xe 5 chỗ)';
+  else if (/cerato|k3/i.test(lower)) carType = 'Kia K3 (Xe 5 chỗ)';
+  else if (/vf\s*9/i.test(lower)) carType = 'VinFast VF9 (Xe 7 chỗ)';
+  else if (/vf\s*8/i.test(lower)) carType = 'VinFast VF8 (Xe 5 chỗ)';
+  else if (/vf\s*5/i.test(lower)) carType = 'VinFast VF5 (Xe 5 chỗ)';
+  else if (/vf\s*3/i.test(lower)) carType = 'VinFast VF3 (Xe 4 chỗ)';
+  else if (/vinfast/i.test(lower)) carType = 'VinFast (Xe 5 chỗ)';
   else if (/cross|corolla/i.test(lower)) carType = 'Toyota Corolla Cross (Xe 5 chỗ)';
+  else if (/fortuner/i.test(lower)) carType = 'Toyota Fortuner (Xe 7 chỗ)';
+  else if (/everest/i.test(lower)) carType = 'Ford Everest (Xe 7 chỗ)';
+  else if (/santafe|santa fe/i.test(lower)) carType = 'Hyundai Santa Fe (Xe 7 chỗ)';
+  else if (/sorento/i.test(lower)) carType = 'Kia Sorento (Xe 7 chỗ)';
+  else if (/crv|cr-v/i.test(lower)) carType = 'Honda CR-V (Xe 7 chỗ)';
   else if (/7\s*chỗ/i.test(lower)) carType = hasRelatives ? 'Xe 7 chỗ gia đình (chở người thân)' : 'Xe 7 chỗ rộng rãi';
   else if (/5\s*chỗ|4\s*chỗ/i.test(lower))
     carType = hasRelatives ? 'Xe 5 chỗ gia đình (chở người thân)' : 'Xe 5 chỗ cá nhân';
@@ -379,26 +500,35 @@ export function parseNaturalTrip(text) {
   const isDriver = role === 'driver';
   let capacity = undefined;
   if (isDriver) {
-    if (/(?:5\s*chỗ|4\s*chỗ|vios|city|accent|cerato|k3|mazda\s*3|civic|elantra|morning|i10|fadil)/i.test(lower)) {
-      capacity = 5;
-    } else if (
-      /(?:7\s*chỗ|xpander|veloz|innova|carnival|santafe|fortuner|everest|custin|sorento|crv|cr-v)/i.test(lower) ||
+    if (
+      /(?:7\s*chỗ|xpander|veloz|innova|carnival|santafe|santa fe|fortuner|everest|custin|sorento|crv|cr-v|cx-?8|vf\s*9)/i.test(
+        lower
+      ) ||
       (seats && seats > 4)
     ) {
       capacity = 7;
+    } else if (
+      /(?:5\s*chỗ|4\s*chỗ|vios|city|accent|cerato|k3|mazda|civic|elantra|morning|i10|fadil|cx-?5|cx-?30|vf\s*3|vf\s*5|vf\s*6|vf\s*7|vf\s*8)/i.test(
+        lower
+      )
+    ) {
+      capacity = 5;
     } else {
       capacity = 5;
     }
   }
 
+  const carAndGarbageRegex =
+    /\s+(?:xe\s*(?:\d|vios|xpander|innova|veloz|mazda|kia|hyundai|honda|toyota|ford|vinfast|carnival|accent|city|cx-?\d|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình)|còn|giá|sđt|zalo|lúc|khoảng|đón|phụ|ai tiện|ai có).*/i;
+
   return {
     role,
-    fromLocation: fromLocation.replace(/^(mình|tôi|em|anh|chúng tôi)\s+/i, '').trim(),
+    fromLocation: fromLocation
+      .replace(/^(mình|tôi|em|anh|chúng tôi)\s+/i, '')
+      .replace(carAndGarbageRegex, '')
+      .trim(),
     toLocation: toLocation
-      .replace(
-        /\s+(?:xe\s*(?:\d|vios|xpander|innova|veloz|nhà|oto|ô tô|hơi|ghép|gia đình)|còn|giá|sđt|zalo|lúc|khoảng|đón|phụ|ai tiện|ai có).*/i,
-        ''
-      )
+      .replace(carAndGarbageRegex, '')
       .trim(),
     waypointNote,
     scheduleDay,

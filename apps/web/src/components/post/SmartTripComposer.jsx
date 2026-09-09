@@ -16,7 +16,8 @@ import {
   HeartHandshake,
   Plane,
   RefreshCw,
-  Share2
+  Share2,
+  ArrowLeftRight
 } from 'lucide-react';
 import { parseNaturalTrip, SMART_TRIP_TEMPLATES } from '../../utils/nlpTripParser.js';
 import { formatVND } from '@carmate/shared';
@@ -26,6 +27,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
   const [inputText, setInputText] = useState('');
   const [parsedResult, setParsedResult] = useState(null);
   const [activeCategory, setActiveCategory] = useState(currentRole === 'passenger' ? 'passenger' : 'driver');
+  const [directionFilter, setDirectionFilter] = useState('all'); // 'all' | 'outbound' | 'return'
   const [showTicketShare, setShowTicketShare] = useState(false);
 
   // Đồng bộ tab danh mục mẫu khi vai trò ở Form cha thay đổi
@@ -68,10 +70,27 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
   };
 
   const handleCycleNextSample = () => {
-    const list = SMART_TRIP_TEMPLATES[activeCategory] || SMART_TRIP_TEMPLATES.driver;
+    const list = currentTemplates.length > 0 ? currentTemplates : (SMART_TRIP_TEMPLATES[activeCategory] || SMART_TRIP_TEMPLATES.driver);
     const currentIndex = list.findIndex((t) => t.text.trim() === inputText.trim());
     const nextIndex = (currentIndex + 1) % list.length;
     handleApplyTemplate(list[nextIndex]);
+  };
+
+  // Đảo chiều lộ trình 1-chạm (Điểm đón ⇄ Điểm đến) trực tiếp trong câu nhập liệu
+  const handleSwapDirection = () => {
+    if (!parsedResult?.fromLocation || !parsedResult?.toLocation) return;
+    const from = parsedResult.fromLocation;
+    const to = parsedResult.toLocation;
+
+    const placeholder = `__SWAP_${Date.now()}__`;
+    const fromRegex = new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const toRegex = new RegExp(to.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+    let newText = inputText.replace(fromRegex, placeholder);
+    newText = newText.replace(toRegex, from);
+    newText = newText.replace(placeholder, to);
+
+    setInputText(newText);
   };
 
   const handlePasteClipboard = async () => {
@@ -94,7 +113,11 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
     }
   };
 
-  const currentTemplates = SMART_TRIP_TEMPLATES[activeCategory] || SMART_TRIP_TEMPLATES.driver;
+  const currentTemplates = useMemo(() => {
+    const list = SMART_TRIP_TEMPLATES[activeCategory] || SMART_TRIP_TEMPLATES.driver;
+    if (directionFilter === 'all') return list;
+    return list.filter((t) => t.direction === directionFilter);
+  }, [activeCategory, directionFilter]);
 
   const synthesizedTrip = useMemo(() => {
     if (!parsedResult) return null;
@@ -145,6 +168,17 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {parsedResult?.fromLocation && parsedResult?.toLocation && (
+            <button
+              type="button"
+              onClick={handleSwapDirection}
+              title={`Đảo chiều: ${parsedResult.toLocation} ➔ ${parsedResult.fromLocation}`}
+              className="text-[11px] text-amber-300 hover:text-amber-200 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 cursor-pointer inline-flex items-center gap-1 transition-all active:scale-95 shadow-xs"
+            >
+              <ArrowLeftRight className="w-3 h-3" />
+              <span>Đảo chiều</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handlePasteClipboard}
@@ -186,38 +220,77 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
       {/* ── THƯ VIỆN MẪU ĐA DẠNG: LUÔN HIỂN THỊ ĐỂ ĐỔI MẪU 1-CHẠM (APPLE HIG RIBBON) ── */}
       <div className="mt-2.5 pt-2.5 border-t border-slate-800/60 relative z-10 space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          {/* Segmented Controller chuyển tab Mẫu Chủ xe / Mẫu Khách */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/[0.08] w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('driver');
-                if (onRoleChange) onRoleChange('driver');
-              }}
-              className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeCategory === 'driver'
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Car className="w-3 h-3 shrink-0" />
-              <span>Mẫu Chủ xe ({SMART_TRIP_TEMPLATES.driver.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('passenger');
-                if (onRoleChange) onRoleChange('passenger');
-              }}
-              className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeCategory === 'passenger'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Users className="w-3 h-3 shrink-0" />
-              <span>Mẫu Khách ({SMART_TRIP_TEMPLATES.passenger.length})</span>
-            </button>
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            {/* Segmented Controller chuyển tab Mẫu Chủ xe / Mẫu Khách */}
+            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory('driver');
+                  if (onRoleChange) onRoleChange('driver');
+                }}
+                className={`px-2.5 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeCategory === 'driver'
+                    ? 'bg-primary-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Car className="w-3 h-3 shrink-0" />
+                <span>Mẫu Chủ xe ({SMART_TRIP_TEMPLATES.driver.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory('passenger');
+                  if (onRoleChange) onRoleChange('passenger');
+                }}
+                className={`px-2.5 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeCategory === 'passenger'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Users className="w-3 h-3 shrink-0" />
+                <span>Mẫu Khách ({SMART_TRIP_TEMPLATES.passenger.length})</span>
+              </button>
+            </div>
+
+            {/* Segmented Filter Chiều đi / Chiều về */}
+            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/[0.08] text-xs">
+              <button
+                type="button"
+                onClick={() => setDirectionFilter('all')}
+                className={`px-2 py-1 rounded-md transition-all cursor-pointer font-medium ${
+                  directionFilter === 'all'
+                    ? 'bg-white/20 text-white font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Tất cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setDirectionFilter('outbound')}
+                className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 font-medium ${
+                  directionFilter === 'outbound'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>➔ Chiều đi</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDirectionFilter('return')}
+                className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 font-medium ${
+                  directionFilter === 'return'
+                    ? 'bg-purple-600 text-white font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>⬅ Chiều về</span>
+              </button>
+            </div>
           </div>
 
           {/* Nút đổi mẫu nhanh tuần tự */}
