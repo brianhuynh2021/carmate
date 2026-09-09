@@ -810,7 +810,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-slate-400">Hai bên trao đổi hẹn giờ chính xác qua Zalo</p>
+            <p className="text-[11px] text-slate-400">Hai bên trao đổi hẹn giờ chính xác khi ghép chuyến</p>
           </div>
         </div>
 

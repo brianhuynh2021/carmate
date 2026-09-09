@@ -4273,6 +4273,13 @@ async function runTests() {
     assert(inboxSrc.includes('Số điện thoại liên hệ {partnerAlias}:'), 'Clean Chat 2: InboxModal hiển thị trực tiếp SĐT đối tác trong luồng chat khi chốt');
     assert(inboxSrc.includes('href={`tel:${partnerPhone}`}'), 'Clean Chat 3: Cung cấp nút gọi điện thoại trực tiếp cho đối tác');
     assert(inboxSrc.includes('href={`sms:${partnerPhone}`}'), 'Clean Chat 4: Cung cấp nút nhắn tin SMS trực tiếp cho đối tác');
+
+    // 8. Responsive & Clean Flow RouteDetailModal
+    const routeModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx'), 'utf8');
+    assert(routeModalSrc.includes('flex flex-col sm:flex-row items-stretch sm:items-center justify-between'), 'Mobile UX 9: RouteDetailModal có footer responsive hai tầng trên mobile và desktop');
+    assert(routeModalSrc.includes('Quản lý / Chỉnh sửa chuyến') && routeModalSrc.includes('onManage'), 'Mobile UX 10: RouteDetailModal hỗ trợ chủ xe Quản lý / Chỉnh sửa chuyến 1-chạm');
+    assert(!routeModalSrc.includes('Nhắn Zalo') && !routeModalSrc.includes('ZaloIcon'), 'Clean Flow 1: RouteDetailModal loại bỏ hoàn toàn nút Nhắn Zalo');
+    assert(!routeModalSrc.includes('thỏa thuận qua Zalo'), 'Clean Flow 2: RouteDetailModal loại bỏ hoàn toàn câu tự thỏa thuận qua Zalo');
   } catch (err) {
     assert(false, '57. Kiểm thử Tự Động An Ninh Mạng & Trải Nghiệm Mobile Responsive', err.message);
   }

@@ -1,9 +1,8 @@
 import React from 'react';
-import { MapPin, Share2 } from 'lucide-react';
+import { MapPin, Share2, SlidersHorizontal, ArrowRight } from 'lucide-react';
 import {
   getRouteCorridor,
   formatVND,
-  getZaloChatUrl,
   isGoogleMapsUrl,
   decodeHtmlEntities,
   formatTripDateDisplay,
@@ -11,9 +10,8 @@ import {
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
-import { ZaloIcon } from '../ui/SocialIcons.jsx';
 
-export default function RouteDetailModal({ trip, isOwner = false, onClose, onBook, onShare }) {
+export default function RouteDetailModal({ trip, isOwner = false, onClose, onManage, onBook, onShare }) {
   const { lang } = useI18n();
   const corridor = trip ? getRouteCorridor(trip.routeCategory) : null;
   const isDriver = trip?.type === 'driver_offer';
@@ -25,13 +23,6 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
   // Mọi hook đã được gọi ở trên — an toàn để early return tại đây
   if (!trip) return null;
 
-  // Tin nhắn mở đầu khi đã ghép chuyến và có số Zalo
-  const zaloProposalMsg = `Chào bạn, tôi vừa ghép chuyến ${tripFrom} ➔ ${tripTo} trên CarMate. Mình trao đổi chốt điểm đón nhé!`;
-  // Số điện thoại chỉ được cấp SAU khi ghép chuyến thành công (qua booking),
-  // nên ở màn xem trước này thường không có. Khi đó nút Zalo phải dẫn người dùng
-  // vào luồng ghép chuyến thay vì trỏ tới link chết.
-  const zaloUrl = getZaloChatUrl(trip.phoneReal || trip.contactPhone, zaloProposalMsg);
-
   return (
     <Modal
       onClose={onClose}
@@ -40,16 +31,16 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
       title={`${tripFrom} → ${tripTo}`}
       subtitle={corridor ? `Hành lang ${corridor.name}` : waypointNote || 'Lộ trình di chuyển trực tiếp'}
       footer={
-        <div className="flex items-center justify-between gap-3 w-full">
-          <div className="flex items-baseline gap-1 shrink-0">
-            <span className="text-xl font-bold text-[#1d1d1f] dark:text-white tracking-tight leading-none">
-              {formatVND(price)}
-            </span>
-            <span className="text-xs text-[#86868b] dark:text-slate-400">/người</span>
-          </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 w-full">
+          <div className="flex items-center justify-between sm:justify-start gap-2 shrink-0">
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-bold text-[#1d1d1f] dark:text-white tracking-tight leading-none">
+                {formatVND(price)}
+              </span>
+              <span className="text-xs text-[#86868b] dark:text-slate-400">/người</span>
+            </div>
 
-          <div className="flex items-center gap-2">
-            {/* Chia sẻ chuyến đi */}
+            {/* Nút chia sẻ vé trên Mobile */}
             {onShare && (
               <button
                 type="button"
@@ -57,31 +48,45 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
                   onClose();
                   onShare(trip);
                 }}
-                title="Chia sẻ chuyến đi qua Zalo / Facebook"
-                className="h-10 px-3.5 rounded-xl font-semibold text-xs text-[#0071e3] dark:text-blue-400 bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/25 shadow-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] shrink-0"
+                title="Tạo vé điện tử & chia sẻ chuyến đi"
+                className="sm:hidden h-9 px-3 rounded-xl font-semibold text-xs text-[#0071e3] dark:text-blue-400 bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/25 shadow-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98]"
               >
                 <Share2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Chia sẻ</span>
+                <span>Chia sẻ vé</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Nút chia sẻ vé trên Desktop */}
+            {onShare && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onShare(trip);
+                }}
+                title="Tạo vé điện tử & chia sẻ chuyến đi"
+                className="hidden sm:inline-flex h-10 px-3.5 rounded-xl font-semibold text-xs text-[#0071e3] dark:text-blue-400 bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/25 shadow-xs items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] shrink-0"
+              >
+                <Share2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Chia sẻ vé</span>
               </button>
             )}
 
-            {zaloUrl ? (
-              <a
-                href={zaloUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Nhắn tin trao đổi qua Zalo"
-                className="h-10 px-3.5 rounded-xl font-medium text-xs text-[#0068ff] bg-[#0068ff]/10 hover:bg-[#0068ff]/15 border border-[#0068ff]/20 inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98]"
-              >
-                <ZaloIcon className="w-3.5 h-3.5 shrink-0" />
-                <span>Nhắn Zalo</span>
-              </a>
-            ) : null}
-
             {isOwner ? (
-              <span className="h-10 px-4 rounded-xl font-bold text-xs inline-flex items-center text-amber-800 bg-amber-50 border border-amber-200 shrink-0">
-                Chuyến của bạn
-              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onManage) onManage(trip);
+                  else if (onBook) onBook(trip);
+                }}
+                className="h-10 px-4.5 rounded-xl font-semibold text-xs text-amber-900 bg-amber-100 hover:bg-amber-200 active:bg-amber-300 border border-amber-300 shadow-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] w-full sm:w-auto shrink-0"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-800" />
+                <span>Quản lý / Chỉnh sửa chuyến</span>
+              </button>
             ) : (
               <button
                 type="button"
@@ -89,9 +94,10 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
                   onClose();
                   onBook(trip);
                 }}
-                className="h-10 px-5 rounded-xl font-semibold text-xs text-white bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] shadow-sm shadow-[#0071e3]/20 transition-all cursor-pointer active:scale-[0.98] shrink-0"
+                className="h-10 px-5 rounded-xl font-semibold text-xs text-white bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] shadow-sm shadow-[#0071e3]/20 transition-all cursor-pointer active:scale-[0.98] w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5"
               >
-                {isDriver ? 'Ghép chuyến này' : 'Đón khách này'}
+                <span>{isDriver ? 'Ghép chuyến này' : 'Đón khách này'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -110,9 +116,9 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
               <p className="text-[15px] font-semibold text-slate-900 dark:text-white mt-0.5">
                 {isGoogleMapsUrl(tripFrom) ? 'Vị trí ghim trên Google Maps' : tripFrom || corridor?.startLandmark?.name}
               </p>
-              {(corridor?.startLandmark?.address || waypointNote) && (
+              {(trip?.pickupSpot || corridor?.startLandmark?.address || waypointNote) && (
                 <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {corridor?.startLandmark?.address || waypointNote}
+                  {trip?.pickupSpot ? `Đón tại: ${trip.pickupSpot}` : (corridor?.startLandmark?.address || waypointNote)}
                 </p>
               )}
             </div>
@@ -127,9 +133,9 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
               <p className="text-[15px] font-semibold text-slate-900 dark:text-white mt-0.5">
                 {isGoogleMapsUrl(tripTo) ? 'Vị trí ghim trên Google Maps' : tripTo || corridor?.endLandmark?.name}
               </p>
-              {corridor?.endLandmark?.address && (
+              {(trip?.dropoffSpot || corridor?.endLandmark?.address) && (
                 <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {corridor.endLandmark.address}
+                  {trip?.dropoffSpot ? `Trả tại: ${trip.dropoffSpot}` : corridor?.endLandmark?.address}
                 </p>
               )}
             </div>
@@ -193,7 +199,9 @@ export default function RouteDetailModal({ trip, isOwner = false, onClose, onBoo
         )}
 
         <p className="text-[12px] text-slate-400 dark:text-slate-500 text-center pt-1">
-          Điểm đón chính xác do hai bên tự thỏa thuận qua Zalo sau khi ghép chuyến.
+          {isOwner
+            ? 'Chuyến đi do bạn đăng. Bạn có thể chỉnh sửa thông tin hoặc xuất vé điện tử bất kỳ lúc nào.'
+            : 'Chủ xe và Người đi cùng kết nối trực tiếp trên CarMate để thuận tiện hẹn điểm đón.'}
         </p>
       </div>
     </Modal>

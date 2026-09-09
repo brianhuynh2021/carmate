@@ -1233,6 +1233,10 @@ export default function App() {
           isOwner={checkIsMyTrip(selectedTripForRoute)}
           onClose={() => setSelectedTripForRoute(null)}
           onShare={setTicketToShare}
+          onManage={(item) => {
+            setSelectedTripForRoute(null);
+            handleManageMyTrip(item);
+          }}
           onBook={(item) => {
             setSelectedTripForRoute(null);
             handleInitiateBook(item);
