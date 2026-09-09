@@ -72,25 +72,6 @@ export default function InboxModal({
 
   const messagesEndRef = useRef(null);
 
-  // Cập nhật selectedId khi initialBookingId thay đổi
-  useEffect(() => {
-    if (initialBookingId) {
-      if (initialBookingId === 'support') {
-        setIsSupportChannelActive(true);
-      } else {
-        setIsSupportChannelActive(false);
-        setSelectedId(initialBookingId);
-        const isOut = outgoingBookings.some((b) => (b.escrowId || b.id) === initialBookingId);
-        if (isOut) {
-          setActiveTab('outgoing');
-        } else {
-          setActiveTab('incoming');
-        }
-      }
-      setMobileShowChat(true);
-    }
-  }, [initialBookingId, outgoingBookings]);
-
   // Phân loại danh sách booking: Đến (Chủ xe nhận) và Đi (Khách gửi)
   const { incomingBookings, outgoingBookings } = useMemo(() => {
     const userPhone = currentUser?.phone || '';
@@ -120,6 +101,25 @@ export default function InboxModal({
 
     return { incomingBookings: incoming, outgoingBookings: outgoing };
   }, [bookings, currentUser]);
+
+  // Cập nhật selectedId khi initialBookingId thay đổi
+  useEffect(() => {
+    if (initialBookingId) {
+      if (initialBookingId === 'support') {
+        setIsSupportChannelActive(true);
+      } else {
+        setIsSupportChannelActive(false);
+        setSelectedId(initialBookingId);
+        const isOut = outgoingBookings.some((b) => (b.escrowId || b.id) === initialBookingId);
+        if (isOut) {
+          setActiveTab('outgoing');
+        } else {
+          setActiveTab('incoming');
+        }
+      }
+      setMobileShowChat(true);
+    }
+  }, [initialBookingId, outgoingBookings]);
 
   const currentList = activeTab === 'incoming' ? incomingBookings : outgoingBookings;
   const activeBooking = useMemo(() => {
@@ -182,9 +182,6 @@ export default function InboxModal({
       onShowToast?.('✉️ Đã đánh dấu chưa đọc để bạn xem lại sau', 'info');
     }
   };
-
-  const activeBookingId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
-  const isActiveUnread = activeBookingId ? isBookingUnread(activeBooking) : false;
 
   // Chuột phải mở menu ngữ cảnh chuẩn Cursor / Apple
   const handleContextMenu = (e, item) => {
@@ -416,7 +413,7 @@ export default function InboxModal({
       }
       onShowToast?.('✓ Đã khôi phục tài khoản và mở khóa trò chuyện thành công.', 'success');
       onRefreshBookings?.();
-    } catch (err) {
+    } catch {
       setIsBannedState(false);
       setViolationInfo(null);
       if (activeBooking) {
@@ -1672,19 +1669,21 @@ export default function InboxModal({
         }}
         booking={activeBooking}
         violationNotice={disputeTargetNotice}
-        onResolved={(updatedBooking) => {
-          if (onUpdateBooking && updatedBooking) {
-            onUpdateBooking(updatedBooking);
+        onResolved={(_updatedBooking) => {
+          if (onRefreshBookings) {
+            onRefreshBookings();
           }
-          if (user) {
-            user.isBanned = false;
-            user.bannedAt = null;
-            user.deactivateAt = null;
-            user.status = 'active';
-            user.trustScore = Math.max(user.trustScore || 80, 85);
+          if (currentUser) {
+            currentUser.isBanned = false;
+            currentUser.bannedAt = null;
+            currentUser.deactivateAt = null;
+            currentUser.status = 'active';
+            currentUser.trustScore = Math.max(currentUser.trustScore || 80, 85);
             try {
-              localStorage.setItem('carmate_user', JSON.stringify(user));
-            } catch (e) {}
+              localStorage.setItem('carmate_user', JSON.stringify(currentUser));
+            } catch {
+              // ignore
+            }
           }
           setIsSupportChannelActive(true);
           loadSupportMessages();

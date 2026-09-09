@@ -5706,6 +5706,12 @@ async function runTests() {
     assert(inboxCode.includes('initialBookingId') && inboxCode.includes('setIsSupportChannelActive'),
       'InboxModal 2: Tự động chuyển thẳng tab hoặc kênh CSKH khi initialBookingId được kích hoạt');
 
+    // Kiểm tra Bất biến Lexical Scope TDZ: incomingBookings/outgoingBookings phải được khai báo trước useEffect
+    const useMemoIdx = inboxCode.indexOf('const { incomingBookings, outgoingBookings } = useMemo');
+    const useEffectIdx = inboxCode.indexOf('useEffect(() => {\n    if (initialBookingId)');
+    assert(useMemoIdx !== -1 && useEffectIdx !== -1 && useMemoIdx < useEffectIdx,
+      'InboxModal 3: MIT Lexical Invariant: incomingBookings/outgoingBookings được khai báo trước useEffect (Zero TDZ Error)');
+
     // 74.5 Kiểm tra sqliteStore.js: Bất biến MIT khi mở khóa tài khoản
     const storePath = path.resolve(process.cwd(), 'apps/api/src/db/sqliteStore.js');
     const storeCode = fs.readFileSync(storePath, 'utf8');

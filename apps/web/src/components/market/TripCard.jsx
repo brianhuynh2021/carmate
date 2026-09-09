@@ -143,7 +143,8 @@ export default function TripCard({
   onViewTrustProfile,
   onViewRoute,
   onViewCarPhotos,
-  onShare
+  onShare,
+  onSelect = null
 }) {
   const { lang } = useI18n();
   const [coverFailed, setCoverFailed] = useState(false);
@@ -464,6 +465,7 @@ export default function TripCard({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (onSelect) onSelect(item);
+                  else if (onViewRoute) onViewRoute(item);
                   else if (onBook) onBook(item);
                 }}
                 className="h-9 px-3.5 rounded-full text-[12px] font-semibold tracking-tight inline-flex items-center justify-center whitespace-nowrap bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-[0.96] transition-all cursor-pointer shrink-0"
