@@ -5666,20 +5666,28 @@ async function runTests() {
     assert(macNotifCode.includes('createPortal') && macNotifCode.includes('document.body'), 'macOS Notify 5: Dùng React Portal gắn vào document.body');
     assert(macNotifCode.includes('CARMATE') && macNotifCode.includes('vừa xong'), 'macOS Notify 6: Header thông báo chuẩn macOS (CARMATE · vừa xong)');
 
-    // 74.2 Kiểm tra Header.jsx: Chuông đặt ở góc phải trên cùng & Dropdown Notification Center
+    // 74.2 Kiểm tra Header.jsx & NotificationDropdown.jsx: Chuông góc phải và dropdown chuẩn YouTube
     const headerPath = path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx');
     const headerCode = fs.readFileSync(headerPath, 'utf8');
     assert(headerCode.includes('notificationCenterRef'), 'Header Bell 1: Tích hợp ref notificationCenterRef');
     assert(headerCode.includes('isNotificationCenterOpen'), 'Header Bell 2: State quản lý mở/đóng Notification Center');
-    assert(headerCode.includes('Trung tâm thông báo'), 'Header Bell 3: Popover tiêu đề Trung tâm thông báo macOS');
-    assert(headerCode.includes('onMarkAllRead') && headerCode.includes('Đọc hết'), 'Header Bell 4: Nút Đọc hết 1-chạm dọn sạch badge');
-    assert(headerCode.includes('Thử thông báo macOS'), 'Header Bell 5: Nút tương tác Thử thông báo macOS');
-    assert(headerCode.includes('Mở Hộp thư'), 'Header Bell 6: Nút dẫn đến Hộp thư đầy đủ');
+    assert(headerCode.includes('NotificationDropdown'), 'Header Bell 3: Tích hợp component NotificationDropdown chuẩn YouTube');
+
+    const notifDropPath = path.resolve(process.cwd(), 'apps/web/src/components/common/NotificationDropdown.jsx');
+    assert(fs.existsSync(notifDropPath), 'YouTube Notif 1: File NotificationDropdown.jsx tồn tại');
+    const notifDropCode = fs.readFileSync(notifDropPath, 'utf8');
+    assert(notifDropCode.includes('formatRelativeTimeVi'), 'YouTube Notif 2: Hàm định dạng thời gian tương đối chuẩn YouTube');
+    assert(notifDropCode.includes('Tất cả') && notifDropCode.includes('Chưa đọc'), 'YouTube Notif 3: Thanh Filter Chips (Tất cả / Chưa đọc)');
+    assert(notifDropCode.includes('onMarkAllRead') && notifDropCode.includes('Đọc hết'), 'YouTube Notif 4: Nút Đọc hết 1-chạm dọn sạch badge');
+    assert(notifDropCode.includes('Thử thông báo macOS'), 'YouTube Notif 5: Nút tương tác Thử thông báo macOS');
+    assert(notifDropCode.includes('Mở Hộp thư'), 'YouTube Notif 6: Nút dẫn đến Hộp thư đầy đủ');
+    assert(notifDropCode.includes('handleItemClick') && notifDropCode.includes('onSelectBooking'), 'YouTube Notif 7: Nhấp vào thông báo xem kỹ trực tiếp (handleItemClick)');
+    assert(notifDropCode.includes('Ẩn thông báo này'), 'YouTube Notif 8: Menu 3 chấm hỗ trợ ẩn thông báo');
 
     // Kiểm tra vị trí chuông ở góc phải trên cùng (notificationCenterRef xuất hiện sau userMenuRef hoặc sau các nút khác)
     const userMenuIdx = headerCode.indexOf('userMenuRef');
     const notifIdx = headerCode.lastIndexOf('notificationCenterRef');
-    assert(notifIdx > userMenuIdx, 'Header Bell 7: Chuông thông báo nằm ở góc phải ngoài cùng sau User Profile/Login');
+    assert(notifIdx > userMenuIdx, 'Header Bell 4: Chuông thông báo nằm ở góc phải ngoài cùng sau User Profile/Login');
 
     // 74.3 Kiểm tra App.jsx: Import và mount AppleMacNotification, truyền props cho Header
     const appPath = path.resolve(process.cwd(), 'apps/web/src/App.jsx');
@@ -5689,11 +5697,14 @@ async function runTests() {
     assert(appCode.includes('handleMarkAllRead'), 'App.jsx 3: Định nghĩa hàm handleMarkAllRead làm sạch unread');
     assert(appCode.includes('onMarkAllRead={handleMarkAllRead}'), 'App.jsx 4: Truyền onMarkAllRead vào Header');
     assert(appCode.includes('onSelectBooking='), 'App.jsx 5: Truyền onSelectBooking vào Header');
+    assert(appCode.includes('onSelectTrip='), 'App.jsx 6: Truyền onSelectTrip vào Header để xem kỹ bài đăng chuyến');
 
-    // 74.4 Kiểm tra InboxModal.jsx: Đã gỡ nút [✉ Đọc sau U] thừa ở header bên phải
+    // 74.4 Kiểm tra InboxModal.jsx: Đã gỡ nút [✉ Đọc sau U] thừa ở header bên phải & hỗ trợ mở thẳng kênh chi tiết
     const inboxModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx');
     const inboxCode = fs.readFileSync(inboxModalPath, 'utf8');
-    assert(!inboxCode.includes('Đọc sau U'), 'InboxModal: Đã gỡ bỏ hoàn toàn nút thừa [Đọc sau U] ở header');
+    assert(!inboxCode.includes('Đọc sau U'), 'InboxModal 1: Đã gỡ bỏ hoàn toàn nút thừa [Đọc sau U] ở header');
+    assert(inboxCode.includes('initialBookingId') && inboxCode.includes('setIsSupportChannelActive'),
+      'InboxModal 2: Tự động chuyển thẳng tab hoặc kênh CSKH khi initialBookingId được kích hoạt');
 
     // 74.5 Kiểm tra sqliteStore.js: Bất biến MIT khi mở khóa tài khoản
     const storePath = path.resolve(process.cwd(), 'apps/api/src/db/sqliteStore.js');
@@ -5701,9 +5712,9 @@ async function runTests() {
     assert(storeCode.includes("status = 'active'") && storeCode.includes('bannedAt = null') && storeCode.includes('piiStrikes = 0'),
       'Backend MIT Invariant: Mở khóa tài khoản tự động dọn sạch bannedAt, deactivateAt và piiStrikes');
 
-    assert(true, '74. Hoàn tất kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Banner macOS');
+    assert(true, '74. Hoàn tất kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Dropdown Chuẩn YouTube');
   } catch (err) {
-    assert(false, '74. Kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Banner macOS', err.message);
+    assert(false, '74. Kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Dropdown Chuẩn YouTube', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

@@ -28,6 +28,7 @@ import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
 import { triggerMacNotification } from './AppleMacNotification.jsx';
+import NotificationDropdown from './NotificationDropdown.jsx';
 
 export function LanguageToggle({ className = '' } = {}) {
   const { lang, setLang } = useI18n();
@@ -65,7 +66,10 @@ export default function Header({
   onOpenDeleteAccount,
   bookedEscrows = [],
   onSelectBooking,
+  onSelectTrip,
   onMarkAllRead,
+  onMarkAsRead,
+  onMarkAsUnread,
   readBookingTimestamps = {},
   unreadBookingIds = []
 }) {
@@ -551,147 +555,21 @@ export default function Header({
               )}
             </button>
 
-            {/* Apple macOS Notification Center Popover */}
-            {isNotificationCenterOpen && (
-              <div
-                className="absolute right-0 top-[calc(100%+8px)] w-[320px] sm:w-[380px] max-h-[82vh] flex flex-col rounded-3xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_20px_60px_rgba(0,0,0,0.22)] p-3 z-50 animate-in fade-in zoom-in-95 duration-150 text-left select-none overflow-hidden"
-              >
-                {/* Popover Header */}
-                <div className="flex items-center justify-between pb-2.5 mb-1.5 border-b border-black/[0.05] dark:border-white/[0.06] px-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-2xs">
-                      <Bell className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white leading-tight">
-                        Trung tâm thông báo
-                      </h3>
-                      <p className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">
-                        Apple macOS Style
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    {inboxCount > 0 && onMarkAllRead && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onMarkAllRead();
-                        }}
-                        title="Đánh dấu tất cả đã đọc"
-                        className="px-2 py-1 rounded-full text-[11px] font-medium text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1 cursor-pointer"
-                      >
-                        <CheckCheck className="w-3 h-3" />
-                        <span>Đọc hết</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Danh sách thông báo chuyến & yêu cầu */}
-                <div className="flex-1 overflow-y-auto space-y-1.5 max-h-[380px] pr-0.5 custom-scrollbar">
-                  {recentBookings.length > 0 ? (
-                    recentBookings.map((b) => {
-                      const bId = b.escrowId || b.id;
-                      const isUnread = unreadBookingIds.includes(bId) || !readBookingTimestamps?.[bId];
-                      const lastMsg = b.messages && b.messages.length > 0 ? b.messages[b.messages.length - 1] : null;
-
-                      return (
-                        <div
-                          key={bId}
-                          onClick={() => {
-                            setIsNotificationCenterOpen(false);
-                            if (onSelectBooking) {
-                              onSelectBooking(bId);
-                            } else if (onOpenInbox) {
-                              onOpenInbox(bId);
-                            }
-                          }}
-                          className={`group relative p-2.5 rounded-2xl transition-all cursor-pointer border ${
-                            isUnread
-                              ? 'bg-[#0071e3]/5 hover:bg-[#0071e3]/10 border-[#0071e3]/20 shadow-2xs'
-                              : 'bg-black/[0.02] hover:bg-black/[0.05] dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-transparent'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className={`w-2 h-2 rounded-full shrink-0 ${isUnread ? 'bg-[#0071e3] ring-2 ring-[#0071e3]/30 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} />
-                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                                {b.partnerName || b.passengerName || b.driverName || 'Chuyến đi CarMate'}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 font-medium shrink-0">
-                              {b.status === 'pre_confirmed' ? (
-                                <span className="text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.2 rounded-full">Giữ chỗ 15p</span>
-                              ) : b.status === 'confirmed' ? (
-                                <span className="text-emerald-500 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded-full">Đã chốt</span>
-                              ) : (
-                                <span className="text-blue-500 font-semibold bg-blue-500/10 px-1.5 py-0.2 rounded-full">Trao đổi</span>
-                              )}
-                            </span>
-                          </div>
-
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium line-clamp-1">
-                            {b.pickup || b.tripOrigin || 'Điểm đón'} ➔ {b.destination || b.tripDestination || 'Điểm đến'}
-                          </p>
-
-                          {lastMsg && (
-                            <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-1 group-hover:text-slate-900 dark:group-hover:text-white">
-                              {lastMsg.text || 'Tin nhắn mới...'}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="py-8 text-center px-4">
-                      <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.05] flex items-center justify-center mx-auto mb-2 text-slate-400">
-                        <Bell className="w-5 h-5 opacity-60" />
-                      </div>
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                        Không có thông báo mới
-                      </p>
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                        Mọi yêu cầu ghép xe và tin nhắn sẽ xuất hiện tại đây
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Popover Footer */}
-                <div className="pt-2.5 mt-1.5 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerMacNotification({
-                        title: 'Tin nhắn từ Chủ xe Mai Anh',
-                        message: 'Mình đã tới điểm đón tại Trạm thu phí, xe Mazda đỏ 51H-982.xx bạn nhé!',
-                        type: 'message',
-                        actionLabel: 'Xem ngay'
-                      });
-                    }}
-                    title="Bấm để kích hoạt thông báo macOS mẫu"
-                    className="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Sparkles className="w-3 h-3 text-[#0071e3]" />
-                    <span>Thử thông báo macOS</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsNotificationCenterOpen(false);
-                      onOpenInbox?.();
-                    }}
-                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-2xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <Inbox className="w-3 h-3" />
-                    <span>Mở Hộp thư</span>
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* YouTube Style Notification Dropdown */}
+            <NotificationDropdown
+              isOpen={isNotificationCenterOpen}
+              onClose={() => setIsNotificationCenterOpen(false)}
+              bookedEscrows={bookedEscrows}
+              currentUser={currentUser}
+              readBookingTimestamps={readBookingTimestamps}
+              unreadBookingIds={unreadBookingIds}
+              onSelectBooking={onSelectBooking}
+              onSelectTrip={onSelectTrip}
+              onMarkAllRead={onMarkAllRead}
+              onMarkAsRead={onMarkAsRead}
+              onMarkAsUnread={onMarkAsUnread}
+              onOpenInbox={onOpenInbox}
+            />
           </div>
         </div>
       </div>

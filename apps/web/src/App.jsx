@@ -941,7 +941,10 @@ export default function App() {
         onOpenDeleteAccount={() => setShowDeleteAccountModal(true)}
         bookedEscrows={bookedEscrows}
         onSelectBooking={(id) => handleOpenInbox(id)}
+        onSelectTrip={setSelectedTripForRoute}
         onMarkAllRead={handleMarkAllRead}
+        onMarkAsRead={markBookingAsRead}
+        onMarkAsUnread={markBookingAsUnread}
         readBookingTimestamps={readBookingTimestamps}
         unreadBookingIds={unreadBookingIds}
       />

@@ -75,10 +75,21 @@ export default function InboxModal({
   // Cập nhật selectedId khi initialBookingId thay đổi
   useEffect(() => {
     if (initialBookingId) {
-      setSelectedId(initialBookingId);
+      if (initialBookingId === 'support') {
+        setIsSupportChannelActive(true);
+      } else {
+        setIsSupportChannelActive(false);
+        setSelectedId(initialBookingId);
+        const isOut = outgoingBookings.some((b) => (b.escrowId || b.id) === initialBookingId);
+        if (isOut) {
+          setActiveTab('outgoing');
+        } else {
+          setActiveTab('incoming');
+        }
+      }
       setMobileShowChat(true);
     }
-  }, [initialBookingId]);
+  }, [initialBookingId, outgoingBookings]);
 
   // Phân loại danh sách booking: Đến (Chủ xe nhận) và Đi (Khách gửi)
   const { incomingBookings, outgoingBookings } = useMemo(() => {
