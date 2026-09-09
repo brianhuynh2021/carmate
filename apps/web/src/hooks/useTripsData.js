@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 // Không import dữ liệu mẫu vào đây: sàn chỉ được hiển thị chuyến từ máy chủ.
 // Bỏ hẳn đường import khiến dữ liệu mẫu không thể vô tình quay lại giao diện.
-import { getTomorrowISO } from '@carmate/shared';
+import { getTomorrowISO, normalizePhoneNumber } from '@carmate/shared';
 import api from '../api/client.js';
 import { trackInitiateBooking, trackOpenZalo, trackDriverConfirm } from '../utils/analytics.js';
 
@@ -329,6 +329,15 @@ export default function useTripsData({
 
   const handleConfirmBooking = useCallback(
     async (newEscrow, { keepModalOpen = false } = {}) => {
+      if (currentUser && newEscrow) {
+        const uPhone = currentUser.phone ? normalizePhoneNumber(currentUser.phone) : '';
+        const dPhone = newEscrow.driverPhone ? normalizePhoneNumber(newEscrow.driverPhone) : '';
+        if (uPhone && dPhone && uPhone === dPhone) {
+          showToast('Bạn không thể gửi yêu cầu ghép cho chính bài đăng của mình.');
+          return;
+        }
+      }
+
       setBookedEscrows((prev) => [newEscrow, ...prev]);
       if (!keepModalOpen) {
         setSelectedItemForEscrow?.(null);
@@ -338,14 +347,8 @@ export default function useTripsData({
 
       // Funnel Analytics
       trackInitiateBooking(newEscrow.tripId, newEscrow.seats || 1);
-
-      try {
-        await api.createBooking(newEscrow);
-      } catch (err) {
-        console.warn('Booking sync to backend failed:', err);
-      }
     },
-    [setActiveTab, setSelectedItemForEscrow, showToast, t]
+    [currentUser, setActiveTab, setSelectedItemForEscrow, showToast, t]
   );
 
   const handleConfirmCancel = useCallback(

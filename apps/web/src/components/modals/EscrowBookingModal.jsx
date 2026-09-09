@@ -22,7 +22,8 @@ import {
   calculatePricing,
   getTimeSlotLabel,
   getCorridorWaypoints,
-  toPublicAlias
+  toPublicAlias,
+  normalizePhoneNumber
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -118,13 +119,39 @@ export default function EscrowBookingModal({
 
   if (!item) return null;
 
+  // BẤT BIẾN MIT: Kiểm tra quyền sở hữu bài đăng để ngăn chặn 100% việc tự ghép chuyến cho chính mình
+  const isTripOwner = useMemo(() => {
+    if (isOwner) return true;
+    if (!item) return false;
+    if (currentUser) {
+      const cId = currentUser.id || currentUser.userId;
+      if (cId && (item.userId === cId || item.creatorId === cId || item.driverId === cId)) return true;
+      const uPhone = currentUser.phone ? normalizePhoneNumber(currentUser.phone) : '';
+      const tPhone = (item.phoneReal || item.phone) ? normalizePhoneNumber(item.phoneReal || item.phone) : '';
+      if (uPhone && tPhone && uPhone === tPhone) return true;
+      if (currentUser.telegramId && item.telegramId && String(currentUser.telegramId) === String(item.telegramId)) return true;
+    }
+    try {
+      const guestStored = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
+      if (Array.isArray(guestStored) && guestStored.includes(item.id)) return true;
+      const legacyStored = JSON.parse(localStorage.getItem('carmate_my_trip_ids') || '[]');
+      if (Array.isArray(legacyStored) && legacyStored.includes(item.id)) return true;
+      if (currentUser) {
+        const userKey = `carmate_my_trip_ids_${currentUser.id || currentUser.userId || currentUser.phone}`;
+        const userStored = JSON.parse(localStorage.getItem(userKey) || '[]');
+        if (Array.isArray(userStored) && userStored.includes(item.id)) return true;
+      }
+    } catch {}
+    return false;
+  }, [isOwner, item, currentUser]);
+
   const isDriverItem = item.type === 'driver_offer';
   const maxSeats = item.availableSeats || item.seatsNeeded || 4;
   const pricing = calculatePricing(item, seats);
   const timeSlot = getTimeSlotLabel(item, lang);
 
   const handleSendInquiry = async () => {
-    if (isOwner) {
+    if (isTripOwner) {
       onShowToast?.('Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.');
       onClose();
       return;
@@ -143,7 +170,9 @@ export default function EscrowBookingModal({
       seats,
       totalDeal: pricing.total,
       timeSlot,
-      contactPhone: item.phoneReal,
+      passengerPhone: currentUser?.phone || undefined,
+      driverPhone: item.phoneReal,
+      contactPhone: currentUser?.phone || item.phoneReal,
       status: 'inquiring',
       commitmentType: 'inquiry_chat',
       partyRole: isDriverItem ? 'Người đi cùng Chủ Xe' : 'Chủ xe đón Người đi cùng',
@@ -152,14 +181,17 @@ export default function EscrowBookingModal({
     };
 
     try {
-      try {
-        await api.createBooking(bookingData);
-      } catch (apiErr) {
-        console.warn('[Booking] Lỗi gọi API ghi nhận:', apiErr.message);
+      const res = await api.createBooking(bookingData);
+      if (res?.error || res?.success === false) {
+        throw new Error(res?.error || 'Không thể tạo yêu cầu ghép chuyến');
       }
 
       onConfirmBooking?.(bookingData, { keepModalOpen: true });
       setIsSubmitted(true);
+    } catch (apiErr) {
+      const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể gửi yêu cầu ghép chuyến';
+      onShowToast?.(errMsg);
+      return;
     } finally {
       setSubmitting(false);
     }
@@ -395,7 +427,7 @@ export default function EscrowBookingModal({
   // -------------------------------------------------------------
   // TRẠNG THÁI 1: FORM GỬI LỜI NHẮN HỎI GHÉP CHUYẾN
   // -------------------------------------------------------------
-  const footer = isOwner ? (
+  const footer = isTripOwner ? (
     <div className="space-y-2 w-full">
       <Button
         fullWidth
@@ -446,13 +478,13 @@ export default function EscrowBookingModal({
       size="md"
       icon={MessageSquare}
       iconTone="primary"
-      title={isOwner ? 'Bài đăng chuyến đi của bạn' : (isDriverItem ? 'Hỏi ghép chuyến cùng Chủ xe' : 'Đề xuất đón Người tìm xe')}
-      subtitle={isOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : '0% phí sàn · Trao đổi điểm đón & hành lý trước khi chốt'}
+      title={isTripOwner ? 'Bài đăng chuyến đi của bạn' : (isDriverItem ? 'Hỏi ghép chuyến cùng Chủ xe' : 'Đề xuất đón Người tìm xe')}
+      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : '0% phí sàn · Trao đổi điểm đón & hành lý trước khi chốt'}
       footer={footer}
     >
       <div className="space-y-4">
         {/* Cảnh báo nếu mở nhầm chuyến của chính mình */}
-        {isOwner && (
+        {isTripOwner && (
           <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-600 shrink-0" />
             <span>Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.</span>

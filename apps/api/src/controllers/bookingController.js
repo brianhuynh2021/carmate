@@ -11,7 +11,7 @@ import {
   getUserByPhone,
   updateUserStatus
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
+import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
 import crypto from 'crypto';
 import { sendBusinessAlert, sendTelegramMessage } from '../utils/telegramAlert.js';
 
@@ -145,10 +145,13 @@ export async function createBooking(req, res) {
       const targetTrip = getTripById(targetTripId);
       if (targetTrip) {
         // BẤT BIẾN MIT: Chặn tự đặt/gửi yêu cầu cho chuyến của chính mình
-        const reqPhone = cleanPhoneNumber(req.user?.phone || body.contactPhone || body.phone || body.passengerPhone || body.userPhone || '');
-        const tripPhone = cleanPhoneNumber(targetTrip.phoneReal || targetTrip.phone || '');
-        const isSelfBooking = (req.user?.id && targetTrip.userId && req.user.id === targetTrip.userId) ||
-                              (reqPhone && tripPhone && reqPhone === tripPhone);
+        const reqUserId = req.user?.id || req.user?.userId || body.userId;
+        const reqPhone = normalizePhoneNumber(req.user?.phone || body.passengerPhone || body.userPhone || body.phone || '');
+        const tripPhone = normalizePhoneNumber(targetTrip.phoneReal || targetTrip.phone || '');
+        const isSelfBooking =
+          (reqUserId && targetTrip.userId && reqUserId === targetTrip.userId) ||
+          (reqPhone && tripPhone && reqPhone === tripPhone) ||
+          (req.user?.telegramId && targetTrip.telegramId && String(req.user.telegramId) === String(targetTrip.telegramId));
         if (isSelfBooking) {
           return res.status(400).json({
             success: false,

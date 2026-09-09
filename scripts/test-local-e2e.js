@@ -4461,6 +4461,84 @@ async function runTests() {
     assert(false, '59. Kiểm thử Trí Tuệ Bản Địa Phong Cách Cursor', err.message);
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 60. KIỂM THỬ BẤT BIẾN MIT: CHỐNG TỰ GHÉP CHUYẾN CỦA CHÍNH MÌNH (ANTI SELF-BOOKING)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  console.log('\n🛡️ 60. Kiểm thử Bất Biến MIT: Chống Tự Ghép Chuyến Của Chính Mình (Anti Self-Booking)...');
+  try {
+    const { normalizePhoneNumber: normPhone } = await import('../packages/shared/src/utils/zalo.js');
+    assert(normPhone('84912345678') === '0912345678', 'Anti Self 1: Chuẩn hóa tiền tố 84 về 0912345678');
+    assert(normPhone('+84912345678') === '0912345678', 'Anti Self 2: Chuẩn hóa tiền tố +84 về 0912345678');
+    assert(normPhone('0912345678') === '0912345678', 'Anti Self 3: Giữ nguyên số 0 chuẩn Việt Nam');
+
+    const escrowModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/EscrowBookingModal.jsx'), 'utf8');
+    assert(escrowModalSrc.includes('isTripOwner'), 'Anti Self UI 1: EscrowBookingModal tính toán chuẩn isTripOwner');
+    assert(escrowModalSrc.includes('Bạn không thể gửi yêu cầu ghép cho chính mình'), 'Anti Self UI 2: EscrowBookingModal có rào chắn thông báo cấm tự ghép');
+    assert(escrowModalSrc.includes('throw new Error') && escrowModalSrc.includes('setIsSubmitted(true)'), 'Anti Self UI 3: EscrowBookingModal không nuốt lỗi API và chỉ confirm khi thành công');
+
+    const appSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/App.jsx'), 'utf8');
+    assert(appSrc.includes('allStoredIds = new Set()'), 'Anti Self UI 4: App.jsx checkIsMyTrip quét toàn diện allStoredIds');
+    assert(appSrc.includes('normalizePhoneNumber(currentUser.phone)'), 'Anti Self UI 5: App.jsx checkIsMyTrip so khớp SĐT chuẩn hóa');
+
+    const useTripsDataSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/hooks/useTripsData.js'), 'utf8');
+    assert(useTripsDataSrc.includes('uPhone === dPhone') && useTripsDataSrc.includes('Bạn không thể gửi yêu cầu ghép cho chính bài đăng của mình'), 'Anti Self UI 6: useTripsData handleConfirmBooking phòng vệ đa tầng');
+
+    // Kiểm tra API: Tạo chuyến của chủ xe rồi thử tự gửi yêu cầu ghép cho chính mình
+    const testOwnerTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Bến xe Miền Đông',
+        to: 'Đồng Xoài, Bình Phước',
+        phoneReal: '0900000019',
+        type: 'driver_offer',
+        date: 'Hôm nay',
+        timeSlot: '08:00-09:00',
+        availableSeats: 3,
+        basePricePerSeat: 150000,
+        userId: 'USR-TEST-OWNER-60'
+      })
+    });
+    const testOwnerTripData = await testOwnerTripRes.json();
+    assert(testOwnerTripRes.status === 201 && testOwnerTripData?.data?.id, 'Anti Self API 1: Tạo chuyến xe test thành công');
+    const createdTripId = testOwnerTripData.data.id;
+
+    // 1. Thử tự đặt khi SĐT người đặt trùng (+84900000019 vs 0900000019)
+    const selfBookPhoneRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tripId: createdTripId,
+        from: 'Bến xe Miền Đông',
+        to: 'Đồng Xoài, Bình Phước',
+        passengerPhone: '+84900000019',
+        seats: 1
+      })
+    });
+    const selfBookPhoneData = await selfBookPhoneRes.json();
+    assert(selfBookPhoneRes.status === 400, 'Anti Self API 2: Backend chặn tự đặt chuyến trùng SĐT chuẩn hóa (HTTP 400)');
+    assert(selfBookPhoneData.error.includes('chính bài đăng của mình'), 'Anti Self API 3: Thông điệp phản hồi nêu rõ cấm tự ghép');
+
+    // 2. Thử tự đặt khi userId trùng
+    const selfBookUserRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tripId: createdTripId,
+        from: 'Bến xe Miền Đông',
+        to: 'Đồng Xoài, Bình Phước',
+        userId: 'USR-TEST-OWNER-60',
+        passengerPhone: '0912345679',
+        seats: 1
+      })
+    });
+    const selfBookUserData = await selfBookUserRes.json();
+    assert(selfBookUserRes.status === 400, 'Anti Self API 4: Backend chặn tự đặt chuyến trùng userId (HTTP 400)');
+    assert(selfBookUserData.error.includes('chính bài đăng của mình'), 'Anti Self API 5: Thông điệp phản hồi từ chối tự ghép');
+  } catch (err) {
+    assert(false, '60. Kiểm thử Bất Biến MIT: Chống Tự Ghép Chuyến Của Chính Mình', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
