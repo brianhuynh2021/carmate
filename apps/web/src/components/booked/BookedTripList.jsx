@@ -395,12 +395,6 @@ export default function BookedTripList({
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
                               <User className="w-5 h-5 text-white" strokeWidth={2.2} />
                             </div>
-                            <PresenceDot
-                              isOnline={partnerOnline.isOnline}
-                              size="xs"
-                              className="absolute -top-0.5 -right-0.5 ring-2 ring-white dark:ring-slate-900"
-                              detail={partnerOnline.detail}
-                            />
                             <span
                               className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
                               title="Đã xác thực CCCD & GPLX"

@@ -212,9 +212,8 @@ export default function RouteDetailModal({
         {/* ── 1. THÔNG TIN ĐỐI TÁC (APPLE LIQUID CARD + LIVE PRESENCE + RATING) ── */}
         <div className="p-3 sm:p-3.5 rounded-2xl bg-white/80 dark:bg-white/[0.04] backdrop-blur-md border border-slate-200/80 dark:border-white/[0.08] shadow-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10 relative shadow-2xs">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10 shadow-2xs">
               <User className="w-5 h-5" />
-              <PresenceDot isOnline={onlineStatus.isOnline} size="xs" className="absolute -bottom-0.5 -right-0.5" detail={onlineStatus.detail} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">

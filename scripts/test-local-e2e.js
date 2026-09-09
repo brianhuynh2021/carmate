@@ -5230,6 +5230,12 @@ async function runTests() {
       !radarSrc.includes("'Xe du lịch 5-7 chỗ'"),
       'Car Label 13: MatchRadarView loại bỏ fallback "Xe du lịch 5-7 chỗ"'
     );
+
+    // 70.6 Không trùng lặp chấm xanh ở avatar khi đã có nhãn [• Online] bên phải
+    assert(
+      !modalSrc.includes('<PresenceDot isOnline={onlineStatus.isOnline} size="xs"'),
+      'Car Label 14: RouteDetailModal triệt tiêu chấm xanh micro-dot trùng lặp trên avatar khi đã có badge [• Online]'
+    );
   } catch (err) {
     assert(false, '70. Kiểm thử Tối Giản Nhãn Phương Tiện (Triệt Tiêu "Xe Du Lịch 5 Chỗ" -> "5 Chỗ")', err.message);
   }
