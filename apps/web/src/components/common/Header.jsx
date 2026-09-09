@@ -17,12 +17,17 @@ import {
   Users,
   MessageCircle,
   Bell,
-  Inbox
+  Inbox,
+  CheckCheck,
+  Zap,
+  CheckCircle2,
+  ArrowRight
 } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
+import { triggerMacNotification } from './AppleMacNotification.jsx';
 
 export function LanguageToggle({ className = '' } = {}) {
   const { lang, setLang } = useI18n();
@@ -57,7 +62,12 @@ export default function Header({
   onLogout,
   onOpenAi,
   onOpenProfile,
-  onOpenDeleteAccount
+  onOpenDeleteAccount,
+  bookedEscrows = [],
+  onSelectBooking,
+  onMarkAllRead,
+  readBookingTimestamps = {},
+  unreadBookingIds = []
 }) {
   const { t, lang, setLang } = useI18n();
   const tabs = [
@@ -75,8 +85,10 @@ export default function Header({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPostMenuOpen, setIsPostMenuOpen] = useState(false);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const userMenuRef = useRef(null);
   const postMenuRef = useRef(null);
+  const notificationCenterRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -95,10 +107,26 @@ export default function Header({
       if (postMenuRef.current && !postMenuRef.current.contains(e.target)) {
         setIsPostMenuOpen(false);
       }
+      if (notificationCenterRef.current && !notificationCenterRef.current.contains(e.target)) {
+        setIsNotificationCenterOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsUserMenuOpen(false);
+        setIsPostMenuOpen(false);
+        setIsNotificationCenterOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
+
+  const recentBookings = (bookedEscrows || []).slice(0, 6);
 
   return (
     <header
@@ -172,21 +200,89 @@ export default function Header({
             </kbd>
           </button>
 
-          {/* Nút Chuông Hộp Thư / Yêu Cầu Ghép Chuyến */}
-          <button
-            type="button"
-            onClick={onOpenInbox}
-            title="Hộp thư yêu cầu ghép chuyến"
-            aria-label="Mở Hộp thư yêu cầu"
-            className="relative inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-[#f5f5f7] dark:hover:bg-slate-700 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0"
-          >
-            <Bell className="w-4 h-4 text-slate-700 dark:text-slate-200" />
-            {inboxCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center shadow-xs animate-pulse">
-                {inboxCount > 9 ? '9+' : inboxCount}
-              </span>
+          <div className="hidden sm:block relative" ref={postMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsPostMenuOpen((prev) => !prev)}
+              aria-expanded={isPostMenuOpen}
+              aria-haspopup="true"
+              className="h-9 pl-3.5 pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white shadow-[0_2px_8px_rgba(0,113,227,0.28)] hover:shadow-[0_4px_16px_rgba(0,113,227,0.38)] active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 group"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-white/90 group-hover:rotate-90 transition-transform duration-200" strokeWidth={2.4} />
+              <span>{t('nav.post')}</span>
+              <ChevronDown
+                className={`w-3 h-3 text-white/80 transition-transform duration-200 ${isPostMenuOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {isPostMenuOpen && (
+              <div className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.16)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
+                <div className="px-2.5 py-1 mb-1">
+                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#86868b]">{t('postMenu.title')}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPostMenuOpen(false);
+                    if (onRequestPostTrip) {
+                      onRequestPostTrip('driver');
+                    } else {
+                      setActiveTab('post');
+                    }
+                  }}
+                  className="w-full p-2.5 rounded-xl flex items-start gap-3 hover:bg-[#0071e3]/8 dark:hover:bg-[#0071e3]/15 transition-all text-left group cursor-pointer border border-transparent hover:border-[#0071e3]/20"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <Car className="w-4 h-4 text-[#0071e3]" strokeWidth={2.2} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-[#0071e3] transition-colors">
+                        {t('postMenu.driverTitle')}
+                      </span>
+                      <span className="text-[10px] font-semibold text-[#0071e3] bg-[#0071e3]/10 px-1.5 py-0.5 rounded-full">
+                        {t('postMenu.driverBadge')}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
+                      {t('postMenu.driverDesc')}
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPostMenuOpen(false);
+                    if (onRequestPostTrip) {
+                      onRequestPostTrip('passenger');
+                    } else {
+                      setActiveTab('post');
+                    }
+                  }}
+                  className="w-full p-2.5 rounded-xl flex items-start gap-3 hover:bg-emerald-500/8 dark:hover:bg-emerald-500/15 transition-all text-left group cursor-pointer border border-transparent hover:border-emerald-500/20 mt-1"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <Users className="w-4 h-4 text-emerald-600" strokeWidth={2.2} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-emerald-600 transition-colors">
+                        {t('postMenu.passengerTitle')}
+                      </span>
+                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                        {t('postMenu.passengerBadge')}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
+                      {t('postMenu.passengerDesc')}
+                    </p>
+                  </div>
+                </button>
+              </div>
             )}
-          </button>
+          </div>
 
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>
@@ -432,86 +528,168 @@ export default function Header({
             </button>
           )}
 
-          <div className="hidden sm:block relative ml-1" ref={postMenuRef}>
+          {/* Nút Chuông Thông Báo macOS - Góc phải trên cùng */}
+          <div className="relative" ref={notificationCenterRef}>
             <button
               type="button"
-              onClick={() => setIsPostMenuOpen((prev) => !prev)}
-              aria-expanded={isPostMenuOpen}
+              onClick={() => setIsNotificationCenterOpen((prev) => !prev)}
+              aria-expanded={isNotificationCenterOpen}
               aria-haspopup="true"
-              className="h-9 pl-3.5 pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white shadow-[0_2px_8px_rgba(0,113,227,0.28)] hover:shadow-[0_4px_16px_rgba(0,113,227,0.38)] active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 group"
+              title="Trung tâm thông báo (Apple macOS)"
+              aria-label="Mở Trung tâm thông báo"
+              className={`relative inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold border cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0 ${
+                isNotificationCenterOpen
+                  ? 'bg-[#0071e3]/10 dark:bg-[#0071e3]/20 border-[#0071e3]/30 text-[#0071e3]'
+                  : 'bg-white dark:bg-slate-800 hover:bg-[#f5f5f7] dark:hover:bg-slate-700 text-[#1d1d1f] dark:text-white border-black/[0.08] dark:border-white/[0.08]'
+              }`}
             >
-              <PlusCircle className="w-3.5 h-3.5 text-white/90 group-hover:rotate-90 transition-transform duration-200" strokeWidth={2.4} />
-              <span>{t('nav.post')}</span>
-              <ChevronDown
-                className={`w-3 h-3 text-white/80 transition-transform duration-200 ${isPostMenuOpen ? 'rotate-180' : ''}`}
-              />
+              <Bell className={`w-4 h-4 transition-transform ${isNotificationCenterOpen ? 'rotate-12 text-[#0071e3]' : 'text-slate-700 dark:text-slate-200'}`} />
+              {inboxCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center shadow-xs animate-pulse">
+                  {inboxCount > 9 ? '9+' : inboxCount}
+                </span>
+              )}
             </button>
 
-            {isPostMenuOpen && (
-              <div className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.16)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
-                <div className="px-2.5 py-1 mb-1">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#86868b]">{t('postMenu.title')}</p>
+            {/* Apple macOS Notification Center Popover */}
+            {isNotificationCenterOpen && (
+              <div
+                className="absolute right-0 top-[calc(100%+8px)] w-[320px] sm:w-[380px] max-h-[82vh] flex flex-col rounded-3xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_20px_60px_rgba(0,0,0,0.22)] p-3 z-50 animate-in fade-in zoom-in-95 duration-150 text-left select-none overflow-hidden"
+              >
+                {/* Popover Header */}
+                <div className="flex items-center justify-between pb-2.5 mb-1.5 border-b border-black/[0.05] dark:border-white/[0.06] px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-2xs">
+                      <Bell className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white leading-tight">
+                        Trung tâm thông báo
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">
+                        Apple macOS Style
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {inboxCount > 0 && onMarkAllRead && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onMarkAllRead();
+                        }}
+                        title="Đánh dấu tất cả đã đọc"
+                        className="px-2 py-1 rounded-full text-[11px] font-medium text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <CheckCheck className="w-3 h-3" />
+                        <span>Đọc hết</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPostMenuOpen(false);
-                    if (onRequestPostTrip) {
-                      onRequestPostTrip('driver');
-                    } else {
-                      setActiveTab('post');
-                    }
-                  }}
-                  className="w-full p-2.5 rounded-xl flex items-start gap-3 hover:bg-[#0071e3]/8 dark:hover:bg-[#0071e3]/15 transition-all text-left group cursor-pointer border border-transparent hover:border-[#0071e3]/20"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Car className="w-4 h-4 text-[#0071e3]" strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-[#0071e3] transition-colors">
-                        {t('postMenu.driverTitle')}
-                      </span>
-                      <span className="text-[10px] font-semibold text-[#0071e3] bg-[#0071e3]/10 px-1.5 py-0.5 rounded-full">
-                        {t('postMenu.driverBadge')}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                      {t('postMenu.driverDesc')}
-                    </p>
-                  </div>
-                </button>
+                {/* Danh sách thông báo chuyến & yêu cầu */}
+                <div className="flex-1 overflow-y-auto space-y-1.5 max-h-[380px] pr-0.5 custom-scrollbar">
+                  {recentBookings.length > 0 ? (
+                    recentBookings.map((b) => {
+                      const bId = b.escrowId || b.id;
+                      const isUnread = unreadBookingIds.includes(bId) || !readBookingTimestamps?.[bId];
+                      const lastMsg = b.messages && b.messages.length > 0 ? b.messages[b.messages.length - 1] : null;
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPostMenuOpen(false);
-                    if (onRequestPostTrip) {
-                      onRequestPostTrip('passenger');
-                    } else {
-                      setActiveTab('post');
-                    }
-                  }}
-                  className="w-full p-2.5 rounded-xl flex items-start gap-3 hover:bg-emerald-500/8 dark:hover:bg-emerald-500/15 transition-all text-left group cursor-pointer border border-transparent hover:border-emerald-500/20 mt-1"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Users className="w-4 h-4 text-emerald-600" strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-emerald-600 transition-colors">
-                        {t('postMenu.passengerTitle')}
-                      </span>
-                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
-                        {t('postMenu.passengerBadge')}
-                      </span>
+                      return (
+                        <div
+                          key={bId}
+                          onClick={() => {
+                            setIsNotificationCenterOpen(false);
+                            if (onSelectBooking) {
+                              onSelectBooking(bId);
+                            } else if (onOpenInbox) {
+                              onOpenInbox(bId);
+                            }
+                          }}
+                          className={`group relative p-2.5 rounded-2xl transition-all cursor-pointer border ${
+                            isUnread
+                              ? 'bg-[#0071e3]/5 hover:bg-[#0071e3]/10 border-[#0071e3]/20 shadow-2xs'
+                              : 'bg-black/[0.02] hover:bg-black/[0.05] dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${isUnread ? 'bg-[#0071e3] ring-2 ring-[#0071e3]/30 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                {b.partnerName || b.passengerName || b.driverName || 'Chuyến đi CarMate'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                              {b.status === 'pre_confirmed' ? (
+                                <span className="text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.2 rounded-full">Giữ chỗ 15p</span>
+                              ) : b.status === 'confirmed' ? (
+                                <span className="text-emerald-500 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded-full">Đã chốt</span>
+                              ) : (
+                                <span className="text-blue-500 font-semibold bg-blue-500/10 px-1.5 py-0.2 rounded-full">Trao đổi</span>
+                              )}
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium line-clamp-1">
+                            {b.pickup || b.tripOrigin || 'Điểm đón'} ➔ {b.destination || b.tripDestination || 'Điểm đến'}
+                          </p>
+
+                          {lastMsg && (
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-1 group-hover:text-slate-900 dark:group-hover:text-white">
+                              {lastMsg.text || 'Tin nhắn mới...'}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="py-8 text-center px-4">
+                      <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.05] flex items-center justify-center mx-auto mb-2 text-slate-400">
+                        <Bell className="w-5 h-5 opacity-60" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                        Không có thông báo mới
+                      </p>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                        Mọi yêu cầu ghép xe và tin nhắn sẽ xuất hiện tại đây
+                      </p>
                     </div>
-                    <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                      {t('postMenu.passengerDesc')}
-                    </p>
-                  </div>
-                </button>
+                  )}
+                </div>
+
+                {/* Popover Footer */}
+                <div className="pt-2.5 mt-1.5 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerMacNotification({
+                        title: 'Tin nhắn từ Chủ xe Mai Anh',
+                        message: 'Mình đã tới điểm đón tại Trạm thu phí, xe Mazda đỏ 51H-982.xx bạn nhé!',
+                        type: 'message',
+                        actionLabel: 'Xem ngay'
+                      });
+                    }}
+                    title="Bấm để kích hoạt thông báo macOS mẫu"
+                    className="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3 text-[#0071e3]" />
+                    <span>Thử thông báo macOS</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNotificationCenterOpen(false);
+                      onOpenInbox?.();
+                    }}
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-2xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Inbox className="w-3 h-3" />
+                    <span>Mở Hộp thư</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

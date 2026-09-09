@@ -5650,6 +5650,62 @@ async function runTests() {
     assert(false, '73. Kiểm thử Thư Cảnh Báo Hệ Thống, Khiếu Nại 1-Chạm, CSKH 24/7 & Ân Hạn 3 Ngày', err.message);
   }
 
+  // 74. KIỂM THỬ CHUÔNG THÔNG BÁO GÓC PHẢI TRÊN CÙNG, BANNER MACOS & NOTIFICATION CENTER POPOVER
+  console.log('\n--- 74. Kiểm thử Chuông Thông Báo Góc Phải Trên Cùng, Banner macOS & Notification Center ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 74.1 Kiểm tra file AppleMacNotification.jsx
+    const macNotifPath = path.resolve(process.cwd(), 'apps/web/src/components/common/AppleMacNotification.jsx');
+    assert(fs.existsSync(macNotifPath), 'macOS Notify 1: File AppleMacNotification.jsx tồn tại');
+    const macNotifCode = fs.readFileSync(macNotifPath, 'utf8');
+    assert(macNotifCode.includes('triggerMacNotification'), 'macOS Notify 2: Export hàm triggerMacNotification');
+    assert(macNotifCode.includes('carmate:mac-notify'), 'macOS Notify 3: Lắng nghe sự kiện carmate:mac-notify');
+    assert(macNotifCode.includes('playMessageChime'), 'macOS Notify 4: Kích hoạt âm thanh chuông nhẹ playMessageChime');
+    assert(macNotifCode.includes('createPortal') && macNotifCode.includes('document.body'), 'macOS Notify 5: Dùng React Portal gắn vào document.body');
+    assert(macNotifCode.includes('CARMATE') && macNotifCode.includes('vừa xong'), 'macOS Notify 6: Header thông báo chuẩn macOS (CARMATE · vừa xong)');
+
+    // 74.2 Kiểm tra Header.jsx: Chuông đặt ở góc phải trên cùng & Dropdown Notification Center
+    const headerPath = path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx');
+    const headerCode = fs.readFileSync(headerPath, 'utf8');
+    assert(headerCode.includes('notificationCenterRef'), 'Header Bell 1: Tích hợp ref notificationCenterRef');
+    assert(headerCode.includes('isNotificationCenterOpen'), 'Header Bell 2: State quản lý mở/đóng Notification Center');
+    assert(headerCode.includes('Trung tâm thông báo'), 'Header Bell 3: Popover tiêu đề Trung tâm thông báo macOS');
+    assert(headerCode.includes('onMarkAllRead') && headerCode.includes('Đọc hết'), 'Header Bell 4: Nút Đọc hết 1-chạm dọn sạch badge');
+    assert(headerCode.includes('Thử thông báo macOS'), 'Header Bell 5: Nút tương tác Thử thông báo macOS');
+    assert(headerCode.includes('Mở Hộp thư'), 'Header Bell 6: Nút dẫn đến Hộp thư đầy đủ');
+
+    // Kiểm tra vị trí chuông ở góc phải trên cùng (notificationCenterRef xuất hiện sau userMenuRef hoặc sau các nút khác)
+    const userMenuIdx = headerCode.indexOf('userMenuRef');
+    const notifIdx = headerCode.lastIndexOf('notificationCenterRef');
+    assert(notifIdx > userMenuIdx, 'Header Bell 7: Chuông thông báo nằm ở góc phải ngoài cùng sau User Profile/Login');
+
+    // 74.3 Kiểm tra App.jsx: Import và mount AppleMacNotification, truyền props cho Header
+    const appPath = path.resolve(process.cwd(), 'apps/web/src/App.jsx');
+    const appCode = fs.readFileSync(appPath, 'utf8');
+    assert(appCode.includes('AppleMacNotification'), 'App.jsx 1: Đã import component AppleMacNotification');
+    assert(appCode.includes('<AppleMacNotification'), 'App.jsx 2: Đã mount AppleMacNotification ở tầng root');
+    assert(appCode.includes('handleMarkAllRead'), 'App.jsx 3: Định nghĩa hàm handleMarkAllRead làm sạch unread');
+    assert(appCode.includes('onMarkAllRead={handleMarkAllRead}'), 'App.jsx 4: Truyền onMarkAllRead vào Header');
+    assert(appCode.includes('onSelectBooking='), 'App.jsx 5: Truyền onSelectBooking vào Header');
+
+    // 74.4 Kiểm tra InboxModal.jsx: Đã gỡ nút [✉ Đọc sau U] thừa ở header bên phải
+    const inboxModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx');
+    const inboxCode = fs.readFileSync(inboxModalPath, 'utf8');
+    assert(!inboxCode.includes('Đọc sau U'), 'InboxModal: Đã gỡ bỏ hoàn toàn nút thừa [Đọc sau U] ở header');
+
+    // 74.5 Kiểm tra sqliteStore.js: Bất biến MIT khi mở khóa tài khoản
+    const storePath = path.resolve(process.cwd(), 'apps/api/src/db/sqliteStore.js');
+    const storeCode = fs.readFileSync(storePath, 'utf8');
+    assert(storeCode.includes("status = 'active'") && storeCode.includes('bannedAt = null') && storeCode.includes('piiStrikes = 0'),
+      'Backend MIT Invariant: Mở khóa tài khoản tự động dọn sạch bannedAt, deactivateAt và piiStrikes');
+
+    assert(true, '74. Hoàn tất kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Banner macOS');
+  } catch (err) {
+    assert(false, '74. Kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Banner macOS', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

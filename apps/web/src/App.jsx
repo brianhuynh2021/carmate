@@ -11,6 +11,7 @@ import Footer from './components/common/Footer.jsx';
 import BottomNavBar from './components/common/BottomNavBar.jsx';
 import Toast from './components/common/Toast.jsx';
 import PwaInstallPrompt from './components/common/PwaInstallPrompt.jsx';
+import AppleMacNotification from './components/common/AppleMacNotification.jsx';
 
 // Market
 import Hero from './components/market/Hero.jsx';
@@ -602,6 +603,24 @@ export default function App() {
     });
   }, []);
 
+  // Đánh dấu toàn bộ thông báo / yêu cầu trong Hộp thư là đã đọc
+  const handleMarkAllRead = useCallback(() => {
+    const now = Date.now();
+    const updated = { ...readBookingTimestamps };
+    (bookedEscrows || []).forEach((b) => {
+      const bId = b.escrowId || b.id;
+      if (bId) updated[bId] = now;
+    });
+    setReadBookingTimestamps(updated);
+    setUnreadBookingIds([]);
+    try {
+      localStorage.setItem('carmate_inbox_read_timestamps', JSON.stringify(updated));
+      localStorage.removeItem('carmate_inbox_unread_ids');
+    } catch (err) {
+      console.error('Lỗi lưu carmate_inbox_read_timestamps:', err);
+    }
+  }, [bookedEscrows, readBookingTimestamps]);
+
   // Đếm số lượng yêu cầu CHƯA ĐỌC thực sự trong Hộp thư (inquiring hoặc pre_confirmed hoặc được chủ động đánh dấu Đọc sau)
   const inboxCount = useMemo(() => {
     const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
@@ -920,6 +939,11 @@ export default function App() {
         onOpenAi={() => setShowAiModal(true)}
         onOpenProfile={() => setShowProfileModal(true)}
         onOpenDeleteAccount={() => setShowDeleteAccountModal(true)}
+        bookedEscrows={bookedEscrows}
+        onSelectBooking={(id) => handleOpenInbox(id)}
+        onMarkAllRead={handleMarkAllRead}
+        readBookingTimestamps={readBookingTimestamps}
+        unreadBookingIds={unreadBookingIds}
       />
 
       <main className="flex-1 pb-24 md:pb-0">
@@ -1501,6 +1525,7 @@ export default function App() {
         myTripsCount={myTripsCount}
       />
       <PwaInstallPrompt />
+      <AppleMacNotification onOpenInbox={handleOpenInbox} onSelectBooking={handleOpenInbox} />
       <Toast message={toastMessage} />
     </div>
   );
