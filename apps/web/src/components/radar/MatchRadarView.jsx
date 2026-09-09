@@ -613,7 +613,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                           </span>
                         </div>
                         <p className="text-[11px] text-[#86868b] truncate">
-                          {item.hometown || 'Đồng hương'} · {item.carType || 'Xe du lịch 5-7 chỗ'} (Cần {item.availableSeats || 1}{' '}
+                          {item.hometown || 'Đồng hương'} · {item.carType?.replace(/du\s*lịch\s*/gi, '') || `Xe ${item.capacity || 5} chỗ`} (Cần {item.availableSeats || 1}{' '}
                           người)
                         </p>
                       </div>

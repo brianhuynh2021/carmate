@@ -87,28 +87,28 @@ export default function RouteDetailModal({
       ? `Cần ${seatsCount} người`
       : `Cần ${seatsCount} chỗ`;
 
-  // Phương tiện: Chuẩn hóa theo tôn chỉ "Xe du lịch 5-7 chỗ"
+  // Phương tiện: Chuẩn hóa hiển thị dòng xe và số chỗ ngồi
   const rawCar = trip.carType || '';
+  const cap = Number(trip.capacity) || Number(rawCar.match(/(\d+)\s*chỗ/i)?.[1]) || 5;
   const isGenericCar =
     !rawCar ||
     /^(?:xe\s*)?\d+\s*chỗ$/i.test(rawCar.trim()) ||
     rawCar.toLowerCase() === 'xe' ||
-    /^(?:xe\s*)?du\s*lịch(?:\s*5-7\s*chỗ)?$/i.test(rawCar.trim());
+    /^(?:xe\s*)?(?:du\s*lịch|ô\s*tô|gia\s*đình)?(?:\s*[4-7]\s*chỗ|\s*5-7\s*chỗ)?$/i.test(rawCar.trim());
 
-  let carDisplay = 'Xe du lịch 5-7 chỗ';
-  let carSub = '5-7 chỗ tiện chuyến';
+  let carDisplay = `Xe ${cap} chỗ`;
+  let carSub = `${cap} chỗ`;
 
   if (!isGenericCar) {
     const cleanBrand = rawCar
       .split('(')[0]
       .trim()
-      .replace(/\s*(cá nhân|gia đình|tiện chuyến|biển vàng|biển trắng)\b/gi, '')
+      .replace(/\s*(du\s*lịch|cá nhân|gia đình|tiện chuyến|biển vàng|biển trắng)\b/gi, '')
       .replace(/\s+(?:xe\s*)?\d+\s*chỗ.*$/i, '')
       .trim();
-    const cap = Number(trip.capacity) || Number(rawCar.match(/(\d+)\s*chỗ/i)?.[1]) || 5;
     if (cleanBrand && cleanBrand.toLowerCase() !== 'xe') {
       carDisplay = cleanBrand;
-      carSub = `Xe du lịch ${cap} chỗ`;
+      carSub = `${cap} chỗ`;
     }
   }
 
@@ -232,7 +232,7 @@ export default function RouteDetailModal({
                 <span>·</span>
                 <span>{completedTrips > 0 ? `${completedTrips} chuyến` : 'Chuyến đầu'}</span>
                 <span>·</span>
-                <span className="truncate">{isDriver ? 'Chủ xe du lịch 5-7 chỗ' : 'Khách tìm xe'}</span>
+                <span className="truncate">{isDriver ? (cap ? `Chủ xe ${cap} chỗ` : 'Chủ xe gia đình') : 'Khách tìm xe'}</span>
               </div>
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function RouteDetailModal({
           </div>
         </div>
 
-        {/* ── 2. BENTO GLANCE BAR: LỊCH TRÌNH · NHU CẦU · XE DU LỊCH 5-7 CHỖ ── */}
+        {/* ── 2. BENTO GLANCE BAR: LỊCH TRÌNH · NHU CẦU · PHƯƠNG TIỆN ── */}
         <div className="grid grid-cols-3 gap-2">
           {/* Lịch khởi hành */}
           <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] flex flex-col items-center text-center justify-center min-w-0">
@@ -272,14 +272,14 @@ export default function RouteDetailModal({
             </span>
           </div>
 
-          {/* Phương tiện (Xe du lịch 5-7 chỗ) */}
+          {/* Phương tiện */}
           <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] flex flex-col items-center text-center justify-center min-w-0">
             <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               <Car className="w-3 h-3 text-indigo-500" />
               <span>{isDriver ? 'Phương tiện' : 'Nhu cầu xe'}</span>
             </div>
             <span className="text-[12px] sm:text-[13px] font-bold text-slate-900 dark:text-white mt-1 truncate max-w-full" title={carDisplay}>
-              {isDriver ? carDisplay : 'Xe 5-7 chỗ'}
+              {isDriver ? carDisplay : `${cap} chỗ`}
             </span>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-full">
               {isDriver ? carSub : 'Tìm xe đi cùng'}

@@ -182,7 +182,7 @@ export async function generateTicketImage(trip, lang = 'vi') {
     boxH,
     'NHU CẦU GHÉP XE',
     seatsLabel,
-    trip.carType || 'Xe du lịch 5-7 chỗ',
+    trip.carType?.replace(/du\s*lịch\s*/gi, '') || `Xe ${trip.capacity || 5} chỗ`,
     '#fbbf24'
   );
 
@@ -501,7 +501,7 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
     boxH,
     'NHU CẦU GHÉP XE',
     seatsLabel,
-    trip.carType || 'Xe du lịch 5-7 chỗ',
+    trip.carType?.replace(/du\s*lịch\s*/gi, '') || `Xe ${trip.capacity || 5} chỗ`,
     '#fbbf24'
   );
 

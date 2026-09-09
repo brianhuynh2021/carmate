@@ -5130,6 +5130,110 @@ async function runTests() {
     assert(false, '69. Kiểm thử Mã QR Chuẩn ISO/IEC 18004 Cho Vé Chuyến Đi & Liên Kết Sâu', err.message);
   }
 
+  // 70. KIỂM THỬ TỐI GIẢN NHÃN PHƯƠNG TIỆN (TRIỆT TIÊU 'XE DU LỊCH 5 CHỖ' -> '5 CHỖ')
+  console.log("\n--- 70. Kiểm thử Tối Giản Nhãn Phương Tiện (Triệt Tiêu 'Xe Du Lịch 5 Chỗ' -> '5 Chỗ') ---");
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const { parseNaturalTrip } = await import('../apps/web/src/utils/nlpTripParser.js');
+
+    // 70.1 TripCard getCarDisplay triệt tiêu hoàn toàn "du lịch"
+    const cardSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx'),
+      'utf-8'
+    );
+    assert(
+      cardSrc.includes('du\\s*lịch'),
+      'Car Label 1: TripCard.jsx tích hợp bộ lọc triệt tiêu tiền tố "du lịch"'
+    );
+
+    // Trích xuất hàm getCarDisplay để kiểm thử hành vi thực tế
+    const fnBody = cardSrc.substring(
+      cardSrc.indexOf('export function getCarDisplay'),
+      cardSrc.indexOf('export default function TripCard')
+    );
+    assert(fnBody, 'Car Label 2: Trích xuất thành công hàm getCarDisplay từ TripCard.jsx');
+    const getCarDisplay = new Function(
+      fnBody.replace('export function getCarDisplay', 'return function getCarDisplay')
+    )();
+
+    assert(
+      getCarDisplay('Xe du lịch 5 chỗ', 5) === 'Xe 5 chỗ',
+      'Car Label 3: "Xe du lịch 5 chỗ" được lọc bỏ chữ du lịch thành "Xe 5 chỗ"'
+    );
+    assert(
+      getCarDisplay('Xe du lịch 7 chỗ', 7) === 'Xe 7 chỗ',
+      'Car Label 4: "Xe du lịch 7 chỗ" được lọc bỏ chữ du lịch thành "Xe 7 chỗ"'
+    );
+    assert(
+      getCarDisplay('Mazda 2 du lịch', 5) === 'Mazda 2 · 5 chỗ',
+      'Car Label 5: Tên xe kèm chữ "du lịch" được làm sạch chính xác thành "Mazda 2 · 5 chỗ"'
+    );
+
+    // 70.2 RouteDetailModal không còn chứa cụm "Xe du lịch ${cap} chỗ" hay "Chủ xe du lịch 5-7 chỗ"
+    const modalSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx'),
+      'utf-8'
+    );
+    assert(
+      !modalSrc.includes('Xe du lịch ${cap} chỗ'),
+      'Car Label 5: RouteDetailModal loại bỏ hoàn toàn tiền tố "Xe du lịch ${cap} chỗ"'
+    );
+    assert(
+      modalSrc.includes('carSub = `${cap} chỗ`'),
+      'Car Label 6: RouteDetailModal carSub hiển thị ngắn gọn "${cap} chỗ"'
+    );
+    assert(
+      !modalSrc.includes('Chủ xe du lịch 5-7 chỗ'),
+      'Car Label 7: RouteDetailModal triệt tiêu danh xưng thương mại "Chủ xe du lịch 5-7 chỗ"'
+    );
+    assert(
+      modalSrc.includes('Chủ xe ${cap} chỗ') || modalSrc.includes('Chủ xe gia đình'),
+      'Car Label 8: RouteDetailModal hiển thị danh xưng chuẩn mực "Chủ xe ${cap} chỗ" / "Chủ xe gia đình"'
+    );
+
+    // 70.3 nlpTripParser mặc định là "Xe 5-7 chỗ", không dùng "Xe du lịch 5-7 chỗ"
+    const nlpSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/utils/nlpTripParser.js'),
+      'utf-8'
+    );
+    assert(
+      !nlpSrc.includes("'Xe du lịch 5-7 chỗ'"),
+      'Car Label 9: nlpTripParser không còn fallback sang "Xe du lịch 5-7 chỗ"'
+    );
+    const parsedDefault = parseNaturalTrip('Chiều nay mình chạy từ Thủ Dầu Một về Sài Gòn còn 2 chỗ');
+    assert(
+      parsedDefault.carType && !parsedDefault.carType.includes('du lịch'),
+      'Car Label 10: NLP parse kết quả không chứa cụm thương mại "du lịch"'
+    );
+
+    // 70.4 ticketCanvas loại bỏ tiền tố "du lịch" khi vẽ vé
+    const ticketSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/utils/ticketCanvas.js'),
+      'utf-8'
+    );
+    assert(
+      !ticketSrc.includes("'Xe du lịch 5-7 chỗ'"),
+      'Car Label 11: ticketCanvas loại bỏ hoàn toàn fallback "Xe du lịch 5-7 chỗ"'
+    );
+    assert(
+      ticketSrc.includes("replace(/du\\s*lịch\\s*/gi, '')"),
+      'Car Label 12: ticketCanvas tự động lọc bỏ chữ "du lịch" khỏi nhãn phương tiện'
+    );
+
+    // 70.5 MatchRadarView loại bỏ tiền tố "du lịch"
+    const radarSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/radar/MatchRadarView.jsx'),
+      'utf-8'
+    );
+    assert(
+      !radarSrc.includes("'Xe du lịch 5-7 chỗ'"),
+      'Car Label 13: MatchRadarView loại bỏ fallback "Xe du lịch 5-7 chỗ"'
+    );
+  } catch (err) {
+    assert(false, '70. Kiểm thử Tối Giản Nhãn Phương Tiện (Triệt Tiêu "Xe Du Lịch 5 Chỗ" -> "5 Chỗ")', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

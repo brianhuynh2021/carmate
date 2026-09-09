@@ -119,7 +119,7 @@ export function getCarDisplay(carType, capacity) {
   // Tách phần trong ngoặc đơn nếu có (vd "(Xe 7 chỗ)" hoặc "(Xe 5 chỗ gầm cao)")
   let raw = carType.split('(')[0].trim();
   // Bỏ các từ khoá phụ thừa
-  raw = raw.replace(/\s*(cá nhân|gia đình|tiện chuyến|biển vàng|biển trắng)\b/gi, '').trim();
+  raw = raw.replace(/\s*(du\s*lịch|cá nhân|gia đình|tiện chuyến|biển vàng|biển trắng)\b/gi, '').trim();
 
   // Kiểm tra nếu chuỗi chỉ là "Xe 7 chỗ", "7 chỗ", "Xe 5 chỗ"
   if (!raw || /^(?:xe\s*)?\d+\s*chỗ$/i.test(raw) || raw.toLowerCase() === 'xe') {
