@@ -7,7 +7,6 @@ import {
   getUserByTelegramId,
   getUserByGoogleId,
   saveUser,
-  getTripsByPhone,
   getTripsForUser,
   deleteUserAccount
 } from '../db/sqliteStore.js';

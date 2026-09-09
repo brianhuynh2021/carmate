@@ -117,8 +117,6 @@ export default function EscrowBookingModal({
     return 'khoảng 30 – 45 phút';
   }, [item?.date, item?.timeSlot]);
 
-  if (!item) return null;
-
   // BẤT BIẾN MIT: Kiểm tra quyền sở hữu bài đăng để ngăn chặn 100% việc tự ghép chuyến cho chính mình
   const isTripOwner = useMemo(() => {
     if (isOwner) return true;
@@ -144,6 +142,8 @@ export default function EscrowBookingModal({
     } catch {}
     return false;
   }, [isOwner, item, currentUser]);
+
+  if (!item) return null;
 
   const isDriverItem = item.type === 'driver_offer';
   const maxSeats = item.availableSeats || item.seatsNeeded || 4;
