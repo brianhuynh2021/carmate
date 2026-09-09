@@ -1541,10 +1541,11 @@ async function runTests() {
     );
 
     // 22.7 Kiểm tra An Toàn Luồng OTP Phone
+    const testOtpPhone = `0900${Math.floor(100000 + Math.random() * 900000)}`;
     const otpReqRes = await fetch(`${BASE_URL}/api/auth/request-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0977223344' })
+      body: JSON.stringify({ phone: testOtpPhone })
     });
     const otpReqData = await otpReqRes.json();
     assert(otpReqRes.status === 200 && otpReqData.success === true, 'OTP Flow: Gửi mã OTP SMS thành công');
@@ -1553,7 +1554,7 @@ async function runTests() {
     const wrongOtpRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0977223344', otp: '000000' })
+      body: JSON.stringify({ phone: testOtpPhone, otp: '000000' })
     });
     assert(wrongOtpRes.status === 400, 'OTP Flow: Mã OTP sai bị từ chối chính xác (HTTP 400)');
 
@@ -1562,11 +1563,11 @@ async function runTests() {
     const validOtpRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0977223344', otp: correctOtp, name: 'Người Dùng OTP Test' })
+      body: JSON.stringify({ phone: testOtpPhone, otp: correctOtp, name: 'Người Dùng OTP Test' })
     });
     const validOtpData = await validOtpRes.json();
     assert(validOtpRes.status === 200 && validOtpData.success === true, 'OTP Flow: Xác thực OTP thành công và cấp JWT');
-    assert(validOtpData.user.phone === '0977223344', 'OTP Flow: Số điện thoại được kích hoạt chính xác');
+    assert(validOtpData.user.phone === testOtpPhone, 'OTP Flow: Số điện thoại được kích hoạt chính xác');
   } catch (err) {
     assert(false, '22. Pentest Chống Chiếm Đoạt Tài Khoản & Index Email', err.message);
   }
@@ -4898,7 +4899,8 @@ async function runTests() {
       'Mark as Unread 9: Header chi tiết chuyến có nút Đọc sau / Chưa đọc (Đọc sau) 1-chạm'
     );
     assert(
-      inboxModalSrc.includes('title={isUnread ? \'Đánh dấu đã đọc\' : \'Đánh dấu chưa đọc để đọc sau\'}'),
+      inboxModalSrc.includes('handleToggleUnread(id)') &&
+      (inboxModalSrc.includes('Đánh dấu đã đọc') || inboxModalSrc.includes('Đánh dấu chưa đọc')),
       'Mark as Unread 10: Từng thẻ trong danh sách cuộc trao đổi có icon Mail thao tác nhanh 1-chạm'
     );
     assert(
@@ -4912,6 +4914,14 @@ async function runTests() {
     assert(
       inboxModalSrc.includes('if (bId && !unreadBookingIds.includes(bId)) {'),
       'Mark as Unread 13: Bảo vệ không tự động đánh dấu đã đọc đè lên khi người dùng vừa chủ động chọn Đọc sau'
+    );
+    assert(
+      inboxModalSrc.includes('handleContextMenu') && inboxModalSrc.includes('onContextMenu='),
+      'Mark as Unread 14: Hỗ trợ Chuột phải (Context Menu) chuẩn Cursor cho phép Đánh dấu chưa đọc tức thì'
+    );
+    assert(
+      inboxModalSrc.includes("e.key === 'u' || e.key === 'U'"),
+      'Mark as Unread 15: Hỗ trợ Phím tắt U Ambient Cursor chuyển đổi Chưa đọc / Đọc sau cực nhanh không cần rê chuột'
     );
   } catch (err) {
     assert(false, '67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau', err.message);

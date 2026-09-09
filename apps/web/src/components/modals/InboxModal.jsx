@@ -19,7 +19,8 @@ import {
   PhoneOff,
   Ban,
   Mail,
-  MailOpen
+  MailOpen,
+  MapPin
 } from 'lucide-react';
 import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -54,6 +55,7 @@ export default function InboxModal({
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [timeLeftStr, setTimeLeftStr] = useState('');
   const [remainingSecs, setRemainingSecs] = useState(900);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, booking }
   const messagesEndRef = useRef(null);
 
   // Cập nhật selectedId khi initialBookingId thay đổi
@@ -158,6 +160,52 @@ export default function InboxModal({
 
   const activeBookingId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
   const isActiveUnread = activeBookingId ? isBookingUnread(activeBooking) : false;
+
+  // Chuột phải mở menu ngữ cảnh chuẩn Cursor / Apple
+  const handleContextMenu = (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const menuWidth = 220;
+    const menuHeight = 190;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 12);
+    const y = Math.min(e.clientY, window.innerHeight - menuHeight - 12);
+    setContextMenu({ x, y, booking: item });
+  };
+
+  // Tự động đóng menu ngữ cảnh khi click ra ngoài, cuộn trang hoặc bấm Esc
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClose = () => setContextMenu(null);
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+    window.addEventListener('click', handleClose);
+    window.addEventListener('contextmenu', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('click', handleClose);
+      window.removeEventListener('contextmenu', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [contextMenu]);
+
+  // Phím tắt Ambient Cursor: Phím U chuyển đổi trạng thái Chưa đọc / Đọc sau
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable) {
+        return;
+      }
+      if (e.key === 'u' || e.key === 'U') {
+        e.preventDefault();
+        handleToggleUnread();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeBooking, unreadBookingIds, readBookingTimestamps]);
 
   // Cuộn xuống tin nhắn mới nhất
   useEffect(() => {
@@ -524,6 +572,31 @@ export default function InboxModal({
             </button>
           </div>
 
+          {/* Gợi ý Ambient Cursor: Chuột phải / Phím U để đổi trạng thái & Đọc hết */}
+          <div className="px-3 py-1.5 bg-slate-100/70 dark:bg-slate-800/50 text-[10.5px] text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.05]">
+            <span className="flex items-center gap-1 truncate">
+              <span>Chuột phải hoặc bấm</span>
+              <kbd className="px-1 py-0.2 rounded bg-white dark:bg-slate-700 font-mono text-[9.5px] border border-black/10 dark:border-white/10 shadow-2xs font-bold text-slate-700 dark:text-slate-200">U</kbd>
+              <span>để Đọc sau</span>
+            </span>
+            {currentList.some((b) => isBookingUnread(b)) && (
+              <button
+                type="button"
+                onClick={() => {
+                  currentList.forEach((b) => {
+                    const bId = b.escrowId || b.id;
+                    if (isBookingUnread(b)) onMarkAsRead?.(bId);
+                  });
+                  onShowToast?.('✓ Đã đánh dấu tất cả hội thoại là đã đọc', 'success');
+                }}
+                className="text-[10px] text-primary-600 dark:text-primary-400 hover:underline shrink-0 font-medium cursor-pointer"
+                title="Đánh dấu tất cả hội thoại trong danh sách là đã đọc"
+              >
+                Đọc hết
+              </button>
+            )}
+          </div>
+
           {/* Danh sách yêu cầu */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
             {currentList.length === 0 ? (
@@ -552,6 +625,7 @@ export default function InboxModal({
                       }
                       setMobileShowChat(true);
                     }}
+                    onContextMenu={(e) => handleContextMenu(e, item)}
                     className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer border relative group ${
                       isSelected
                         ? 'bg-white dark:bg-slate-800 border-primary-500/40 shadow-xs ring-1 ring-primary-500/20'
@@ -559,12 +633,21 @@ export default function InboxModal({
                     }`}
                   >
                     <div className="flex items-start gap-2.5">
-                      {/* Avatar với Presence dot góc dưới & Unread dot góc trên */}
-                      <div className="relative shrink-0 mt-0.5">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-colors ${
-                          isSelected
-                            ? 'bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                      {/* Avatar với Presence dot góc dưới & Unread dot góc trên: Bấm 1-chạm để đổi trạng thái */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleUnread(id);
+                        }}
+                        className="relative shrink-0 mt-0.5 cursor-pointer group/avatar"
+                        title={isUnread ? 'Bấm để đánh dấu ĐÃ ĐỌC (hoặc phím U / chuột phải)' : 'Bấm để đánh dấu CHƯA ĐỌC / ĐỌC SAU (hoặc phím U / chuột phải)'}
+                      >
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all group-hover/avatar:scale-105 active:scale-95 ${
+                          isUnread
+                            ? 'bg-blue-50 dark:bg-blue-950/80 text-[#0071e3] ring-1 ring-blue-500/30 shadow-2xs'
+                            : isSelected
+                              ? 'bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                         }`}>
                           {isUnread ? (
                             <Mail className="w-4 h-4 text-[#0071e3]" />
@@ -573,13 +656,13 @@ export default function InboxModal({
                           )}
                         </div>
                         {/* Chấm trực tuyến gắn góc dưới avatar */}
-                        <div className="absolute -bottom-0.5 -right-0.5">
+                        <div className="absolute -bottom-0.5 -right-0.5 pointer-events-none">
                           <PresenceDot isOnline={itemOnline.isOnline} size="xs" detail={itemOnline.detail} />
                         </div>
                         {/* Chấm xanh chưa đọc gắn góc trên avatar */}
                         {isUnread && (
                           <span
-                            className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-[#0071e3] ring-2 ring-white dark:ring-slate-900 shadow-xs animate-pulse"
+                            className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-[#0071e3] ring-2 ring-white dark:ring-slate-900 shadow-xs animate-pulse pointer-events-none"
                             title="Chưa đọc (Đọc sau)"
                           />
                         )}
@@ -597,20 +680,22 @@ export default function InboxModal({
                             )}
                           </span>
                           <div className="shrink-0 flex items-center gap-1">
+                            {/* Nút Chưa đọc / Đọc sau: Hiển thị rõ ràng, không ẩn opacity-0 */}
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleToggleUnread(id);
                               }}
-                              className={`p-1 rounded-full transition-all cursor-pointer ${
+                              className={`p-1.5 rounded-xl transition-all cursor-pointer ${
                                 isUnread
-                                  ? 'text-[#0071e3] bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 ring-1 ring-blue-500/20'
-                                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 opacity-0 group-hover:opacity-100'
+                                  ? 'text-[#0071e3] bg-blue-50 dark:bg-blue-950/80 ring-1 ring-blue-500/30'
+                                  : 'text-slate-400 hover:text-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-950/40'
                               }`}
-                              title={isUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc để đọc sau'}
+                              title={isUnread ? 'Đánh dấu đã đọc (Phím U)' : 'Đánh dấu chưa đọc để đọc sau (Phím U / Chuột phải)'}
+                              aria-label={isUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc'}
                             >
-                              {isUnread ? <Mail className="w-3 h-3" /> : <MailOpen className="w-3 h-3" />}
+                              {isUnread ? <Mail className="w-3.5 h-3.5" /> : <MailOpen className="w-3.5 h-3.5" />}
                             </button>
                             {status === 'confirmed' ? (
                               <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
@@ -671,11 +756,34 @@ export default function InboxModal({
                   </button>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white truncate shrink-0 max-w-[160px] sm:max-w-none">
                         {partnerAlias}
                       </h3>
                       <PresenceDot isOnline={activePartnerOnline.isOnline} showLabel detail={activePartnerOnline.detail} />
+                      
+                      {/* Nút 1-chạm Đánh dấu chưa đọc / Đọc sau: Đặt NGAY CẠNH TÊN trong tầm mắt */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleUnread()}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 border shrink-0 ${
+                          isActiveUnread
+                            ? 'bg-blue-50 dark:bg-blue-950/80 text-[#0071e3] dark:text-blue-300 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20 font-bold'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-blue-300'
+                        }`}
+                        title={isActiveUnread ? 'Đánh dấu đã đọc (Phím U)' : 'Đánh dấu chưa đọc để xem lại sau (Phím U hoặc chuột phải)'}
+                      >
+                        {isActiveUnread ? (
+                          <Mail className="w-3.5 h-3.5 text-[#0071e3]" />
+                        ) : (
+                          <MailOpen className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                        <span>{isActiveUnread ? 'Chưa đọc' : 'Đọc sau'}</span>
+                        <kbd className="hidden sm:inline-block px-1 py-0.2 rounded bg-black/5 dark:bg-white/10 text-[9.5px] font-mono font-normal text-slate-400">
+                          U
+                        </kbd>
+                      </button>
+
                       <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
                         #{activeBooking.escrowId || activeBooking.id}
                       </span>
@@ -689,24 +797,6 @@ export default function InboxModal({
                 </div>
 
                 <div className="shrink-0 flex items-center gap-2">
-                  {/* Nút 1-chạm Đánh dấu chưa đọc / Đọc sau */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleUnread()}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 border ${
-                      isActiveUnread
-                        ? 'bg-blue-50 dark:bg-blue-950/70 text-[#0071e3] dark:text-blue-300 border-blue-300/60 dark:border-blue-700/60 ring-1 ring-blue-500/20'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}
-                    title={isActiveUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc để xem lại sau'}
-                  >
-                    {isActiveUnread ? (
-                      <Mail className="w-3.5 h-3.5 text-[#0071e3]" />
-                    ) : (
-                      <MailOpen className="w-3.5 h-3.5 text-slate-500" />
-                    )}
-                    <span className="hidden sm:inline">{isActiveUnread ? 'Chưa đọc' : 'Đọc sau'}</span>
-                  </button>
 
                   {isConfirmed ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1.5 rounded-full border border-emerald-300/50">
@@ -1108,6 +1198,82 @@ export default function InboxModal({
           )}
         </div>
       </div>
+
+      {/* MENU NGỮ CẢNH CHUỘT PHẢI (CURSOR / APPLE CONTEXT MENU) */}
+      {contextMenu && (
+        <div
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+          className="fixed z-[99999] w-[230px] rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-2xl p-1.5 text-xs text-slate-700 dark:text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100"
+          onClick={(e) => e.stopPropagation()}
+          role="menu"
+        >
+          {/* Header mini */}
+          <div className="px-2.5 py-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 border-b border-black/5 dark:border-white/5 truncate flex items-center justify-between">
+            <span className="truncate">{toPublicAlias(contextMenu.booking)}</span>
+            <span className="font-mono text-[10px] text-slate-400 shrink-0">
+              #{contextMenu.booking.escrowId || contextMenu.booking.id}
+            </span>
+          </div>
+
+          <div className="py-1 space-y-0.5">
+            {/* Đánh dấu chưa đọc / Đã đọc */}
+            <button
+              type="button"
+              onClick={() => {
+                const bId = contextMenu.booking.escrowId || contextMenu.booking.id;
+                handleToggleUnread(bId);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left hover:bg-blue-50 dark:hover:bg-blue-950/60 hover:text-[#0071e3] dark:hover:text-blue-400 transition-colors cursor-pointer font-semibold group"
+              role="menuitem"
+            >
+              <div className="flex items-center gap-2">
+                {isBookingUnread(contextMenu.booking) ? (
+                  <MailOpen className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#0071e3]" />
+                ) : (
+                  <Mail className="w-3.5 h-3.5 text-[#0071e3]" />
+                )}
+                <span>{isBookingUnread(contextMenu.booking) ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc'}</span>
+              </div>
+              <kbd className="text-[10px] font-mono px-1 py-0.2 rounded bg-black/5 dark:bg-white/10 text-slate-400 font-normal">
+                U
+              </kbd>
+            </button>
+
+            {/* Sao chép mã chuyến */}
+            <button
+              type="button"
+              onClick={() => {
+                const bId = contextMenu.booking.escrowId || contextMenu.booking.id;
+                navigator.clipboard.writeText(bId);
+                onShowToast?.(`✓ Đã sao chép mã chuyến #${bId}`);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer text-slate-600 dark:text-slate-300"
+              role="menuitem"
+            >
+              <Copy className="w-3.5 h-3.5 text-slate-400" />
+              <span>Sao chép mã chuyến</span>
+            </button>
+
+            {/* Sao chép lộ trình */}
+            <button
+              type="button"
+              onClick={() => {
+                const routeTxt = `${contextMenu.booking.from} ➔ ${contextMenu.booking.to}`;
+                navigator.clipboard.writeText(routeTxt);
+                onShowToast?.(`✓ Đã sao chép lộ trình: ${routeTxt}`);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer text-slate-600 dark:text-slate-300"
+              role="menuitem"
+            >
+              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+              <span>Sao chép lộ trình</span>
+            </button>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
