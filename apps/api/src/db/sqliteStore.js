@@ -1117,6 +1117,18 @@ export async function updateUserStatus(userId, updates = {}) {
     Object.assign(found, updates, { updatedAt: new Date().toISOString() });
   }
 
+  if (updates.isBanned === false) {
+    found.isBanned = false;
+    found.status = 'active';
+    found.bannedAt = null;
+    found.deactivateAt = null;
+    found.piiStrikes = 0;
+    found.banReason = null;
+    if ((found.trustScore || 0) < 85) {
+      found.trustScore = 95;
+    }
+  }
+
   await saveUser(found);
 
   if (updates.isBanned !== undefined) {

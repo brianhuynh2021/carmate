@@ -1025,29 +1025,6 @@ export default function InboxModal({
                         {partnerAlias}
                       </h3>
                       <PresenceDot isOnline={activePartnerOnline.isOnline} showLabel detail={activePartnerOnline.detail} />
-                      
-                      {/* Nút 1-chạm Đánh dấu chưa đọc / Đọc sau: Đặt NGAY CẠNH TÊN trong tầm mắt */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleUnread()}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 border shrink-0 ${
-                          isActiveUnread
-                            ? 'bg-blue-50 dark:bg-blue-950/80 text-[#0071e3] dark:text-blue-300 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20 font-bold'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-blue-300'
-                        }`}
-                        title={isActiveUnread ? 'Đánh dấu đã đọc (Phím U)' : 'Đánh dấu chưa đọc để xem lại sau (Phím U hoặc chuột phải)'}
-                      >
-                        {isActiveUnread ? (
-                          <Mail className="w-3.5 h-3.5 text-[#0071e3]" />
-                        ) : (
-                          <MailOpen className="w-3.5 h-3.5 text-slate-500" />
-                        )}
-                        <span>{isActiveUnread ? 'Chưa đọc' : 'Đọc sau'}</span>
-                        <kbd className="hidden sm:inline-block px-1 py-0.2 rounded bg-black/5 dark:bg-white/10 text-[9.5px] font-mono font-normal text-slate-400">
-                          U
-                        </kbd>
-                      </button>
-
                       <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
                         #{activeBooking.escrowId || activeBooking.id}
                       </span>
