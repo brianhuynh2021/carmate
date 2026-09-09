@@ -105,6 +105,10 @@ export const api = {
     return request(`/trips${queryString}`);
   },
 
+  async getTrip(id) {
+    return request(`/trips/${id}`);
+  },
+
   async createTrip(tripData) {
     return request('/trips', {
       method: 'POST',

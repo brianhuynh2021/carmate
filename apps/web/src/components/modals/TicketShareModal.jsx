@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Share2,
   Copy,
@@ -20,11 +20,13 @@ import {
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
+import QRCode from 'qrcode';
 import {
   generateTicketImage,
   downloadTicketImage,
   generateTicketStoryImage,
-  downloadTicketStoryImage
+  downloadTicketStoryImage,
+  getTripShareUrl
 } from '../../utils/ticketCanvas.js';
 
 export default function TicketShareModal({ trip, onClose, onShowToast, onViewInMarket }) {
@@ -34,6 +36,23 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+
+  useEffect(() => {
+    if (!trip) return;
+    const url = getTripShareUrl(trip);
+    QRCode.toDataURL(url, {
+      width: 140,
+      margin: 1,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      },
+      errorCorrectionLevel: 'M'
+    })
+      .then(setQrDataUrl)
+      .catch((err) => console.warn('[QR] Lỗi tạo preview:', err));
+  }, [trip]);
 
   if (!trip) return null;
   const shareText = generateSocialShareText(trip);
@@ -267,9 +286,22 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
           </div>
 
           <div className="relative mt-5 pt-4 border-t border-dashed border-white/20 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-sky-400 font-semibold min-w-0">
-              <QrCode className="w-3.5 h-3.5 shrink-0" />
-              <span>Quét mã đặt chỗ</span>
+            <div className="flex items-center gap-3 min-w-0">
+              {qrDataUrl ? (
+                <div className="w-13 h-13 rounded-xl bg-white p-1 shadow-md shrink-0 flex items-center justify-center">
+                  <img src={qrDataUrl} alt="Mã QR tra cứu chuyến đi" className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div className="w-13 h-13 rounded-xl bg-white/10 p-2 shrink-0 flex items-center justify-center">
+                  <QrCode className="w-5 h-5 text-sky-400" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-sky-400 leading-tight">Quét mã giữ chỗ 0đ</p>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                  Dùng Camera hoặc Zalo quét để xem lộ trình
+                </p>
+              </div>
             </div>
             <div className="text-right shrink-0">
               <p className="text-[11px] text-slate-400">{t('ticket.seatStatus') || 'Tình trạng chỗ'}</p>

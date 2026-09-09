@@ -496,6 +496,44 @@ export default function App() {
     t
   });
 
+  // Quét mã QR & Liên kết sâu trực tiếp chuyến xe (?trip=... hoặc /t/...)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      let targetTripId = params.get('trip') || params.get('tripId') || params.get('t');
+
+      if (!targetTripId && window.location.pathname.startsWith('/t/')) {
+        targetTripId = window.location.pathname.replace(/^\/t\//, '').split('/')[0].trim();
+      }
+
+      if (!targetTripId) return;
+
+      const allTrips = [...(driverOffers || []), ...(passengerRequests || [])];
+      const match = allTrips.find(
+        (t) => String(t.id) === String(targetTripId) || String(t.maskedCode) === String(targetTripId)
+      );
+
+      if (match) {
+        setSelectedTripForRoute(match);
+      } else {
+        api
+          .getTrip(targetTripId)
+          .then((res) => {
+            if (res?.data) {
+              setSelectedTripForRoute(res.data);
+            }
+          })
+          .catch((err) => {
+            console.warn('[DeepLink] Không tìm thấy chuyến xe:', targetTripId, err.message);
+          });
+      }
+    } catch (err) {
+      console.warn('[DeepLink] Lỗi xử lý liên kết sâu:', err);
+    }
+  }, [driverOffers, passengerRequests, setSelectedTripForRoute]);
+
   // Quản lý trạng thái Đã đọc / Chưa đọc (Read & Unread Tracking) của Hộp thư đến
   const [readBookingTimestamps, setReadBookingTimestamps] = useState(() => {
     try {
