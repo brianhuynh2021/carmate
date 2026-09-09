@@ -4917,61 +4917,61 @@ async function runTests() {
     assert(false, '67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau', err.message);
   }
 
-  // 68. KIỂM THỬ LÀM SẠCH NHÃN NGÀY & TRIỆT TIÊU HẬU TỐ DƯ THỪA (CLEAN DATE LABEL)
+  // 68. KIỂM THỬ HIỂN THỊ CHÍNH XÁC NGÀY & TRIỆT TIÊU NHÃN MƠ HỒ (EXACT DATE DISPLAY)
   try {
-    console.log('\n📅 68. Kiểm thử Làm Sạch Nhãn Ngày & Triệt Tiêu Hậu Tố Dư Thừa (Clean Date Label)...');
+    console.log('\n📅 68. Kiểm thử Hiển Thị Chính Xác Ngày & Triệt Tiêu Nhãn Mơ Hồ (Exact Date Display)...');
     const { formatCleanDateLabel } = await import('../packages/shared/src/utils/date.js');
     const fs = await import('fs');
     const path = await import('path');
 
-    const mockBaseDate = new Date(2026, 8, 9, 14, 0, 0); // 09/09/2026
+    const mockBaseDate = new Date(2026, 8, 9, 14, 0, 0); // 09/09/2026 (Thứ 4)
 
-    // 68.1 Triệt tiêu hậu tố dd/mm khi là Hôm nay
+    // 68.1 Hiển thị chính xác Thứ và Ngày/Tháng khi là Hôm nay (không để "Hôm nay" mơ hồ trên thẻ)
     assert(
-      formatCleanDateLabel('Hôm nay', mockBaseDate) === 'Hôm nay',
-      'Clean Date 1: "Hôm nay" giữ nguyên nhãn sang trọng không hậu tố thừa'
+      formatCleanDateLabel('Hôm nay', mockBaseDate) === 'Thứ 4, 09/09',
+      'Clean Date 1: "Hôm nay" định dạng chính xác Thứ 4, 09/09 giúp người dùng nắm rõ lịch trình'
     );
     assert(
-      formatCleanDateLabel('Hôm nay (09/09)', mockBaseDate) === 'Hôm nay',
-      'Clean Date 2: "Hôm nay (09/09)" triệt tiêu hoàn toàn "(09/09)" thừa thãi, trả về "Hôm nay"'
+      formatCleanDateLabel('Hôm nay (09/09)', mockBaseDate) === 'Thứ 4, 09/09',
+      'Clean Date 2: "Hôm nay (09/09)" chuyển thành "Thứ 4, 09/09" chuẩn xác'
     );
     assert(
-      formatCleanDateLabel('2026-09-09', mockBaseDate) === 'Hôm nay',
-      'Clean Date 3: Chuỗi ISO trùng ngày hôm nay tự động định dạng thành "Hôm nay"'
+      formatCleanDateLabel('2026-09-09', mockBaseDate) === 'Thứ 4, 09/09',
+      'Clean Date 3: Chuỗi ISO trùng ngày hôm nay tự động định dạng thành "Thứ 4, 09/09"'
     );
 
-    // 68.2 Triệt tiêu hậu tố dd/mm khi là Ngày mai
+    // 68.2 Hiển thị chính xác Thứ và Ngày/Tháng khi là Ngày mai
     assert(
-      formatCleanDateLabel('Ngày mai', mockBaseDate) === 'Ngày mai',
-      'Clean Date 4: "Ngày mai" giữ nguyên nhãn tinh tế không hậu tố thừa'
+      formatCleanDateLabel('Ngày mai', mockBaseDate) === 'Thứ 5, 10/09',
+      'Clean Date 4: "Ngày mai" định dạng chính xác Thứ 5, 10/09'
     );
     assert(
-      formatCleanDateLabel('Ngày mai (10/09)', mockBaseDate) === 'Ngày mai',
-      'Clean Date 5: "Ngày mai (10/09)" triệt tiêu hoàn toàn "(10/09)", trả về "Ngày mai"'
+      formatCleanDateLabel('Ngày mai (10/09)', mockBaseDate) === 'Thứ 5, 10/09',
+      'Clean Date 5: "Ngày mai (10/09)" định dạng chuẩn xác "Thứ 5, 10/09"'
     );
     assert(
-      formatCleanDateLabel('2026-09-10', mockBaseDate) === 'Ngày mai',
-      'Clean Date 6: Chuỗi ISO ngày mai tự động định dạng thành "Ngày mai"'
+      formatCleanDateLabel('2026-09-10', mockBaseDate) === 'Thứ 5, 10/09',
+      'Clean Date 6: Chuỗi ISO ngày mai tự động định dạng thành "Thứ 5, 10/09"'
     );
 
     // 68.3 Bất biến toán học & Tự phục hồi dữ liệu cũ (MIT Invariant / Self-healing)
     assert(
-      formatCleanDateLabel('Ngày mai (09/09)', mockBaseDate) === 'Hôm nay',
-      'Clean Date 7: Bài đăng cũ lưu "Ngày mai (09/09)" khi đến ngày 09/09 tự sửa thành "Hôm nay", chống mâu thuẫn'
+      formatCleanDateLabel('Ngày mai (09/09)', mockBaseDate) === 'Thứ 4, 09/09',
+      'Clean Date 7: Bài đăng cũ lưu "Ngày mai (09/09)" khi đến ngày 09/09 tự sửa thành "Thứ 4, 09/09", chống mâu thuẫn'
     );
 
-    // 68.4 Các ngày xa hơn hiển thị rõ ràng Thứ · dd/mm
+    // 68.4 Các ngày xa hơn hiển thị rõ ràng Thứ, dd/mm
     const dateFri = formatCleanDateLabel('2026-09-11', mockBaseDate);
     assert(
-      dateFri.includes('Thứ 6') && dateFri.includes('11/09') && !dateFri.includes('('),
-      'Clean Date 8: Ngày xa hơn định dạng chuẩn "Thứ 6 · 11/09" thanh lịch'
+      dateFri.includes('Thứ 6') && dateFri.includes('11/09'),
+      'Clean Date 8: Ngày xa hơn định dạng chuẩn "Thứ 6, 11/09" thanh lịch'
     );
 
-    // 68.5 Chuyến lặp hàng tuần
+    // 68.5 Chuyến lặp hàng tuần: trên dashboard hiển thị như chuyến bình thường, không chèn chữ "Lặp lại hàng tuần"
     const recurringLabel = formatCleanDateLabel('Thứ 2 (Lặp lại hàng tuần)', mockBaseDate);
     assert(
-      recurringLabel.includes('Thứ 2') && recurringLabel.includes('Lặp hàng tuần'),
-      'Clean Date 9: Chuyến lặp lại hiển thị "Thứ 2 · Lặp hàng tuần" chuẩn xác'
+      recurringLabel.includes('Thứ 2') && !recurringLabel.includes('Lặp hàng tuần') && !recurringLabel.includes('Lặp lại'),
+      'Clean Date 9: Chuyến lặp lại trên dashboard hiển thị như bình thường (Thứ 2, 14/09), triệt tiêu hoàn toàn nhãn Lặp lại hàng tuần'
     );
 
     // 68.6 Tích hợp vào các component UI
@@ -5128,6 +5128,120 @@ async function runTests() {
     );
   } catch (err) {
     assert(false, '69. Kiểm thử Mã QR Chuẩn ISO/IEC 18004 Cho Vé Chuyến Đi & Liên Kết Sâu', err.message);
+  }
+
+  // 70. KIỂM THỬ TỐI GIẢN NHÃN PHƯƠNG TIỆN (TRIỆT TIÊU 'XE DU LỊCH 5 CHỖ' -> '5 CHỖ')
+  console.log("\n--- 70. Kiểm thử Tối Giản Nhãn Phương Tiện (Triệt Tiêu 'Xe Du Lịch 5 Chỗ' -> '5 Chỗ') ---");
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const { parseNaturalTrip } = await import('../apps/web/src/utils/nlpTripParser.js');
+
+    // 70.1 TripCard getCarDisplay triệt tiêu hoàn toàn "du lịch"
+    const cardSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx'),
+      'utf-8'
+    );
+    assert(
+      cardSrc.includes('du\\s*lịch'),
+      'Car Label 1: TripCard.jsx tích hợp bộ lọc triệt tiêu tiền tố "du lịch"'
+    );
+
+    // Trích xuất hàm getCarDisplay để kiểm thử hành vi thực tế
+    const fnBody = cardSrc.substring(
+      cardSrc.indexOf('export function getCarDisplay'),
+      cardSrc.indexOf('export default function TripCard')
+    );
+    assert(fnBody, 'Car Label 2: Trích xuất thành công hàm getCarDisplay từ TripCard.jsx');
+    const getCarDisplay = new Function(
+      fnBody.replace('export function getCarDisplay', 'return function getCarDisplay')
+    )();
+
+    assert(
+      getCarDisplay('Xe du lịch 5 chỗ', 5) === 'Xe 5 chỗ',
+      'Car Label 3: "Xe du lịch 5 chỗ" được lọc bỏ chữ du lịch thành "Xe 5 chỗ"'
+    );
+    assert(
+      getCarDisplay('Xe du lịch 7 chỗ', 7) === 'Xe 7 chỗ',
+      'Car Label 4: "Xe du lịch 7 chỗ" được lọc bỏ chữ du lịch thành "Xe 7 chỗ"'
+    );
+    assert(
+      getCarDisplay('Mazda 2 du lịch', 5) === 'Mazda 2 · 5 chỗ',
+      'Car Label 5: Tên xe kèm chữ "du lịch" được làm sạch chính xác thành "Mazda 2 · 5 chỗ"'
+    );
+
+    // 70.2 RouteDetailModal không còn chứa cụm "Xe du lịch ${cap} chỗ" hay "Chủ xe du lịch 5-7 chỗ"
+    const modalSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx'),
+      'utf-8'
+    );
+    assert(
+      !modalSrc.includes('Xe du lịch ${cap} chỗ'),
+      'Car Label 5: RouteDetailModal loại bỏ hoàn toàn tiền tố "Xe du lịch ${cap} chỗ"'
+    );
+    assert(
+      modalSrc.includes('carSub = `${cap} chỗ`'),
+      'Car Label 6: RouteDetailModal carSub hiển thị ngắn gọn "${cap} chỗ"'
+    );
+    assert(
+      !modalSrc.includes('Chủ xe du lịch 5-7 chỗ'),
+      'Car Label 7: RouteDetailModal triệt tiêu danh xưng thương mại "Chủ xe du lịch 5-7 chỗ"'
+    );
+    assert(
+      !modalSrc.includes('Chủ xe du lịch') && !modalSrc.includes('Chủ xe ${cap} chỗ'),
+      'Car Label 8: RouteDetailModal loại bỏ hoàn toàn nhãn vai trò/số chỗ dư thừa ở phụ đề người đăng'
+    );
+
+    // 70.3 nlpTripParser mặc định là "Xe 5-7 chỗ", không dùng "Xe du lịch 5-7 chỗ"
+    const nlpSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/utils/nlpTripParser.js'),
+      'utf-8'
+    );
+    assert(
+      !nlpSrc.includes("'Xe du lịch 5-7 chỗ'"),
+      'Car Label 9: nlpTripParser không còn fallback sang "Xe du lịch 5-7 chỗ"'
+    );
+    const parsedDefault = parseNaturalTrip('Chiều nay mình chạy từ Thủ Dầu Một về Sài Gòn còn 2 chỗ');
+    assert(
+      parsedDefault.carType && !parsedDefault.carType.includes('du lịch'),
+      'Car Label 10: NLP parse kết quả không chứa cụm thương mại "du lịch"'
+    );
+
+    // 70.4 ticketCanvas loại bỏ tiền tố "du lịch" khi vẽ vé
+    const ticketSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/utils/ticketCanvas.js'),
+      'utf-8'
+    );
+    assert(
+      !ticketSrc.includes("'Xe du lịch 5-7 chỗ'"),
+      'Car Label 11: ticketCanvas loại bỏ hoàn toàn fallback "Xe du lịch 5-7 chỗ"'
+    );
+    assert(
+      ticketSrc.includes("replace(/du\\s*lịch\\s*/gi, '')"),
+      'Car Label 12: ticketCanvas tự động lọc bỏ chữ "du lịch" khỏi nhãn phương tiện'
+    );
+
+    // 70.5 MatchRadarView loại bỏ tiền tố "du lịch"
+    const radarSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/radar/MatchRadarView.jsx'),
+      'utf-8'
+    );
+    assert(
+      !radarSrc.includes("'Xe du lịch 5-7 chỗ'"),
+      'Car Label 13: MatchRadarView loại bỏ fallback "Xe du lịch 5-7 chỗ"'
+    );
+
+    // 70.6 Không trùng lặp chấm xanh ở avatar khi đã có nhãn [• Online]
+    assert(
+      !modalSrc.includes('<PresenceDot isOnline={onlineStatus.isOnline} size="xs"'),
+      'Car Label 14: RouteDetailModal triệt tiêu chấm xanh micro-dot trùng lặp trên avatar khi đã có badge [• Online]'
+    );
+    assert(
+      !cardSrc.includes('<PresenceDot isOnline={onlineStatus.isOnline} size="xs"'),
+      'Car Label 15: TripCard triệt tiêu chấm xanh micro-dot trùng lặp trên avatar khi đã có badge [• Online] ở đầu thẻ'
+    );
+  } catch (err) {
+    assert(false, '70. Kiểm thử Tối Giản Nhãn Phương Tiện (Triệt Tiêu "Xe Du Lịch 5 Chỗ" -> "5 Chỗ")', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

@@ -20,7 +20,7 @@ import {
   PhoneOff,
   User
 } from 'lucide-react';
-import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus } from '@carmate/shared';
+import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -378,7 +378,7 @@ export default function BookedTripList({
                   <div className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06]">
                     <div className="flex items-center justify-between gap-3 mb-3 text-xs sm:text-[13px]">
                       <span className="font-semibold text-[#1d1d1f] tabular">
-                        {record.timeSlot} {record.targetItem?.date ? `(${record.targetItem.date})` : ''}
+                        {record.timeSlot} {record.targetItem?.date ? `· ${formatCleanDateLabel(record.targetItem.date)}` : ''}
                       </span>
                       <span className="text-[#86868b] font-medium">{record.seats} người đồng hành</span>
                     </div>
@@ -395,12 +395,6 @@ export default function BookedTripList({
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
                               <User className="w-5 h-5 text-white" strokeWidth={2.2} />
                             </div>
-                            <PresenceDot
-                              isOnline={partnerOnline.isOnline}
-                              size="xs"
-                              className="absolute -top-0.5 -right-0.5 ring-2 ring-white dark:ring-slate-900"
-                              detail={partnerOnline.detail}
-                            />
                             <span
                               className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
                               title="Đã xác thực CCCD & GPLX"

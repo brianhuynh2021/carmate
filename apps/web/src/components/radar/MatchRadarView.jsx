@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Car, Users, Sparkles, CheckCircle2, MapPin, Clock, ArrowRight, ShieldCheck, Phone, Zap, User, Radio, BellRing, Star } from 'lucide-react';
-import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, isTripExpired } from '@carmate/shared';
+import { ROUTE_BENCHMARKS, formatVND, getZaloChatUrl, isTripExpired, formatCleanDateLabel } from '@carmate/shared';
 import { Segmented } from '../ui/Chip.jsx';
 import { Field, Select } from '../ui/Field.jsx';
 import Button from '../ui/Button.jsx';
@@ -593,7 +593,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#0071e3] tabular">
                       <Clock className="w-3.5 h-3.5" />
                       <span>
-                        {item.date || 'Hôm nay'} · {item.timeSlot || item.timeSlotLabel || '07:00 – 08:00'}
+                        {formatCleanDateLabel(item.date)} · {item.timeSlot || item.timeSlotLabel || '07:00 – 08:00'}
                       </span>
                     </div>
                   </div>
@@ -613,7 +613,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                           </span>
                         </div>
                         <p className="text-[11px] text-[#86868b] truncate">
-                          {item.hometown || 'Đồng hương'} · {item.carType || 'Xe du lịch 5-7 chỗ'} (Cần {item.availableSeats || 1}{' '}
+                          {item.hometown || 'Đồng hương'} · {item.carType?.replace(/du\s*lịch\s*/gi, '') || `Xe ${item.capacity || 5} chỗ`} (Cần {item.availableSeats || 1}{' '}
                           người)
                         </p>
                       </div>
