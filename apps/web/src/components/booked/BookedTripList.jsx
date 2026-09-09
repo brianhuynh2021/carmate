@@ -20,7 +20,7 @@ import {
   PhoneOff,
   User
 } from 'lucide-react';
-import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus } from '@carmate/shared';
+import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -378,7 +378,7 @@ export default function BookedTripList({
                   <div className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06]">
                     <div className="flex items-center justify-between gap-3 mb-3 text-xs sm:text-[13px]">
                       <span className="font-semibold text-[#1d1d1f] tabular">
-                        {record.timeSlot} {record.targetItem?.date ? `(${record.targetItem.date})` : ''}
+                        {record.timeSlot} {record.targetItem?.date ? `· ${formatCleanDateLabel(record.targetItem.date)}` : ''}
                       </span>
                       <span className="text-[#86868b] font-medium">{record.seats} người đồng hành</span>
                     </div>

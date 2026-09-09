@@ -231,8 +231,12 @@ export default function RouteDetailModal({
                 </span>
                 <span>·</span>
                 <span>{completedTrips > 0 ? `${completedTrips} chuyến` : 'Chuyến đầu'}</span>
-                <span>·</span>
-                <span className="truncate">{isDriver ? (cap ? `Chủ xe ${cap} chỗ` : 'Chủ xe gia đình') : 'Khách tìm xe'}</span>
+                {trip.hometown && (
+                  <>
+                    <span>·</span>
+                    <span className="truncate">{trip.hometown}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>

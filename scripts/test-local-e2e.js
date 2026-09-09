@@ -5188,8 +5188,8 @@ async function runTests() {
       'Car Label 7: RouteDetailModal triệt tiêu danh xưng thương mại "Chủ xe du lịch 5-7 chỗ"'
     );
     assert(
-      modalSrc.includes('Chủ xe ${cap} chỗ') || modalSrc.includes('Chủ xe gia đình'),
-      'Car Label 8: RouteDetailModal hiển thị danh xưng chuẩn mực "Chủ xe ${cap} chỗ" / "Chủ xe gia đình"'
+      !modalSrc.includes('Chủ xe du lịch') && !modalSrc.includes('Chủ xe ${cap} chỗ'),
+      'Car Label 8: RouteDetailModal loại bỏ hoàn toàn nhãn vai trò/số chỗ dư thừa ở phụ đề người đăng'
     );
 
     // 70.3 nlpTripParser mặc định là "Xe 5-7 chỗ", không dùng "Xe du lịch 5-7 chỗ"
