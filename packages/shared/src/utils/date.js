@@ -83,7 +83,7 @@ export const formatTripDateDisplay = (dateStr, baseDate = new Date()) => {
 
   // 1. Nếu đã có sẵn định dạng dd/mm (ví dụ "Thứ 3 (08/09)" hoặc "08/09")
   if (/\d{1,2}\/\d{1,2}/.test(cleanStr)) {
-    return isRecurring ? `${cleanStr} · Lặp hàng tuần` : cleanStr;
+    return cleanStr;
   }
 
   // 2. Nếu là chuỗi ISO YYYY-MM-DD
@@ -91,8 +91,7 @@ export const formatTripDateDisplay = (dateStr, baseDate = new Date()) => {
     const parts = cleanStr.split('-');
     const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
     const weekday = WEEKDAY_NAMES[d.getDay()];
-    const formatted = `${weekday} (${formatDateDayMonth(d)})`;
-    return isRecurring ? `${formatted} · Lặp hàng tuần` : formatted;
+    return `${weekday} (${formatDateDayMonth(d)})`;
   }
 
   // 3. Xử lý các từ khóa tương đối
@@ -100,22 +99,19 @@ export const formatTripDateDisplay = (dateStr, baseDate = new Date()) => {
   const today = new Date(baseDate);
 
   if (lower.includes('hôm nay')) {
-    const res = `Hôm nay (${formatDateDayMonth(today)})`;
-    return isRecurring ? `${res} · Lặp hàng tuần` : res;
+    return `Hôm nay (${formatDateDayMonth(today)})`;
   }
 
   if (lower.includes('ngày mai') || lower.includes('mai')) {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    const res = `Ngày mai (${formatDateDayMonth(tomorrow)})`;
-    return isRecurring ? `${res} · Lặp hàng tuần` : res;
+    return `Ngày mai (${formatDateDayMonth(tomorrow)})`;
   }
 
   if (lower.includes('cuối tuần')) {
     // Tìm Thứ 7 gần nhất
     const sat = getNextWeekdayDate(6, today);
-    const res = `Cuối tuần (${formatDateDayMonth(sat)})`;
-    return isRecurring ? `${res} · Lặp hàng tuần` : res;
+    return `Cuối tuần (${formatDateDayMonth(sat)})`;
   }
 
   // 4. Xử lý các thứ trong tuần: Thứ 2 -> Chủ nhật
@@ -132,19 +128,18 @@ export const formatTripDateDisplay = (dateStr, baseDate = new Date()) => {
   for (const item of dayMap) {
     if (item.regex.test(lower)) {
       const nextDate = getNextWeekdayDate(item.day, today);
-      const res = `${item.name} (${formatDateDayMonth(nextDate)})`;
-      return isRecurring ? `${res} · Lặp hàng tuần` : res;
+      return `${item.name} (${formatDateDayMonth(nextDate)})`;
     }
   }
 
-  return isRecurring ? `${cleanStr} · Lặp hàng tuần` : cleanStr;
+  return cleanStr;
 };
 
 /**
  * Định dạng nhãn ngày chính xác, chuẩn xác 100% cho Thẻ Chuyến Đi và Modal:
  * - Luôn hiển thị chính xác Thứ và Ngày/Tháng: "Thứ 4, 09/09", "Thứ 5, 10/09", "Thứ 6, 11/09"...
  * - Không để "Hôm nay", "Ngày mai" mơ hồ trên thẻ giúp người dùng và chủ xe biết chuẩn xác lịch trình.
- * - Chuyến lặp lại hàng tuần: "Thứ 2 · Lặp hàng tuần"
+ * - Chuyến lặp lại: hiển thị đúng ngày của đợt chạy cụ thể như bình thường, không chèn chữ "Lặp lại hàng tuần" làm rối thẻ dashboard.
  * - Cơ chế tự phục hồi (Self-healing Invariant):
  *   Nếu bài đăng cũ lưu chuỗi tương đối như "Ngày mai (09/09)" mà hôm nay là 09/09,
  *   hệ thống tự động phát hiện 09/09 là ngày hôm nay và hiển thị chính xác "Thứ 4, 09/09"!
@@ -160,7 +155,6 @@ export const formatCleanDateLabel = (dateStr, baseDate = new Date()) => {
   }
 
   const str = String(dateStr).trim();
-  const isRecurring = str.includes('Lặp lại hàng tuần') || str.includes('hàng tuần');
   const cleanStr = str
     .replace(/\(Lặp lại hàng tuần\)/gi, '')
     .replace(/hàng tuần/gi, '')
@@ -171,18 +165,7 @@ export const formatCleanDateLabel = (dateStr, baseDate = new Date()) => {
 
   const weekday = WEEKDAY_NAMES[targetDate.getDay()];
   const dm = formatDateDayMonth(targetDate);
-  const label = `${weekday}, ${dm}`;
-
-  if (isRecurring) {
-    const weekdayMatch = cleanStr.match(/thứ\s*[2-7]|chủ nhật|cn/i);
-    if (weekdayMatch) {
-      const weekdayName = WEEKDAY_NAMES[targetDate.getDay()];
-      return `${weekdayName} · Lặp hàng tuần`;
-    }
-    return `${label} · Lặp hàng tuần`;
-  }
-
-  return label;
+  return `${weekday}, ${dm}`;
 };
 
 /** Dung sai sau giờ khởi hành trước khi bài đăng hết hạn (30 phút) */

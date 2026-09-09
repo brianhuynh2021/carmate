@@ -4967,11 +4967,11 @@ async function runTests() {
       'Clean Date 8: Ngày xa hơn định dạng chuẩn "Thứ 6, 11/09" thanh lịch'
     );
 
-    // 68.5 Chuyến lặp hàng tuần
+    // 68.5 Chuyến lặp hàng tuần: trên dashboard hiển thị như chuyến bình thường, không chèn chữ "Lặp lại hàng tuần"
     const recurringLabel = formatCleanDateLabel('Thứ 2 (Lặp lại hàng tuần)', mockBaseDate);
     assert(
-      recurringLabel.includes('Thứ 2') && recurringLabel.includes('Lặp hàng tuần'),
-      'Clean Date 9: Chuyến lặp lại hiển thị "Thứ 2 · Lặp hàng tuần" chuẩn xác'
+      recurringLabel.includes('Thứ 2') && !recurringLabel.includes('Lặp hàng tuần') && !recurringLabel.includes('Lặp lại'),
+      'Clean Date 9: Chuyến lặp lại trên dashboard hiển thị như bình thường (Thứ 2, 14/09), triệt tiêu hoàn toàn nhãn Lặp lại hàng tuần'
     );
 
     // 68.6 Tích hợp vào các component UI
