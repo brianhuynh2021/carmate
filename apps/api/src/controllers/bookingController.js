@@ -478,6 +478,8 @@ export async function addBookingMessageHandler(req, res) {
     }
 
     const isConfirmed = booking.status === 'confirmed' || booking.bothConfirmed === true;
+    const isPreConfirmed = booking.status === 'pre_confirmed';
+    const isDealCommitted = isConfirmed || isPreConfirmed;
 
     // 1. Xác định danh tính người gửi (User ID hoặc Số điện thoại)
     let senderUser = null;
@@ -506,7 +508,9 @@ export async function addBookingMessageHandler(req, res) {
     }
 
     // 3. THUẬT TOÁN AI PII & CHẾ TÀI BẬC THANG (3-Strike Progressive Sanction)
-    if (!isConfirmed) {
+    // Khi chuyến đi đã được một bên đề xuất chốt / giữ chỗ 15p (pre_confirmed) hoặc đã chốt chính thức (confirmed),
+    // hai bên hoàn toàn được phép trao đổi số điện thoại, Zalo, địa chỉ đón chi tiết mà không bị chặn hay phạt.
+    if (!isDealCommitted) {
       const piiCheck = detectPiiLeak(text);
       if (piiCheck.hasLeak) {
         const currentStrikes = Number(senderUser?.piiStrikes || booking?.piiStrikes?.[senderRole] || 0);
@@ -1040,3 +1044,49 @@ export async function reportUnreachablePhone(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
+
+/**
+ * Đặt lại trạng thái vi phạm và gỡ bỏ khóa (Unban / Reset Strikes)
+ * Dành cho người dùng khôi phục tài khoản hoặc môi trường thử nghiệm
+ */
+export async function resetBanHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const booking = getBookingById(id);
+    if (booking) {
+      await updateBookingStatus(id, booking.status, { isBanned: false, piiStrikes: {} });
+      if (booking.driverPhone) {
+        await updateUserStatus(booking.driverPhone, { isBanned: false, piiStrikes: 0, status: 'active' });
+      }
+      if (booking.passengerPhone) {
+        await updateUserStatus(booking.passengerPhone, { isBanned: false, piiStrikes: 0, status: 'active' });
+      }
+      if (booking.contactPhone) {
+        await updateUserStatus(booking.contactPhone, { isBanned: false, piiStrikes: 0, status: 'active' });
+      }
+      if (booking.userPhone) {
+        await updateUserStatus(booking.userPhone, { isBanned: false, piiStrikes: 0, status: 'active' });
+      }
+      if (booking.phoneReal) {
+        await updateUserStatus(booking.phoneReal, { isBanned: false, piiStrikes: 0, status: 'active' });
+      }
+      if (booking.userId) {
+        await updateUserStatus(booking.userId, { isBanned: false, piiStrikes: 0, status: 'active' });
+      }
+      if (booking.driverId) {
+        await updateUserStatus(booking.driverId, { isBanned: false, piiStrikes: 0, status: 'active' });
+      }
+    }
+    const user = req.user;
+    if (user?.id || user?.phone) {
+      await updateUserStatus(user.id || user.phone, { isBanned: false, piiStrikes: 0, status: 'active' });
+    }
+    return res.status(200).json({
+      success: true,
+      message: 'Đã mở khóa tài khoản và thiết lập lại trạng thái vi phạm.'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+

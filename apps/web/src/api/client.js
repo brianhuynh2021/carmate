@@ -232,6 +232,12 @@ export const api = {
     });
   },
 
+  async resetBookingBan(id) {
+    return request(`/bookings/${id}/reset-ban`, {
+      method: 'POST'
+    });
+  },
+
   // Auth & Identity (0đ chi phí / Zalo & OTP)
   async requestOtp(phone) {
     return request('/auth/request-otp', {

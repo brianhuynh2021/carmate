@@ -4165,6 +4165,35 @@ async function runTests() {
     assert(inboxModalSrc.includes('ShieldAlert') && inboxModalSrc.includes('violationInfo'), '3-Strike UI 1: InboxModal tích hợp cảnh báo vi phạm bậc thang');
     assert(inboxModalSrc.includes('-15 Điểm Tín Nhiệm'), '3-Strike UI 2: InboxModal hiển thị huy hiệu trừ điểm tín nhiệm');
     assert(inboxModalSrc.includes('Tài khoản của bạn đã bị khóa'), '3-Strike UI 3: InboxModal hiển thị trạng thái khóa tài khoản');
+
+    // 7. Kiểm thử Khôi phục / Reset Ban: endpoint reset-ban mở khóa thành công
+    const resetRes = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/reset-ban`, { method: 'POST' });
+    const resetData = await resetRes.json();
+    assert(resetRes.status === 200 && resetData.success === true, '3-Strike 15: reset-ban mở khóa thành công tài khoản và booking');
+
+    // 8. Kiểm thử Cho phép gửi SĐT khi chuyến đã chốt (pre_confirmed / confirmed)
+    await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/pre-confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preConfirmedBy: 'driver' })
+    });
+    const preConfirmMsgRes = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Alo số anh nè 0988112233 em lưu nha',
+        senderRole: 'driver'
+      })
+    });
+    const preConfirmMsgData = await preConfirmMsgRes.json();
+    assert(preConfirmMsgRes.status === 200 && preConfirmMsgData.success === true, '3-Strike 16: Khi đã ấn chốt/giữ chỗ, hoàn toàn được phép chat số điện thoại');
+
+    // Dọn dẹp test booking
+    await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Dọn dẹp bài test 55' })
+    });
   } catch (err) {
     assert(false, '55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang (3-Strike Sanctions)', err.message);
   }
@@ -4386,6 +4415,14 @@ async function runTests() {
     });
     const reportJson2 = await reportRes2.json();
     assert(reportJson2.data?.report?.penaltyApplied?.isBanned === true, 'Anti-Fake API 8: Tái phạm số ảo lần 2 bị khóa tài khoản vĩnh viễn (BAN)');
+
+    // Dọn dẹp dữ liệu kiểm thử để database không bị ô nhiễm trạng thái Ban
+    await fetch(`${BASE_URL}/api/bookings/${testBookingId2}/reset-ban`, { method: 'POST' });
+    await fetch(`${BASE_URL}/api/bookings/${testBookingId2}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'E2E test cleanup', cancelledBy: 'passenger' })
+    }).catch(() => {});
 
     // 4. Kiểm thử UI & Tệp Thành Phần
     const unreachModalPath = path.join(process.cwd(), 'apps/web/src/components/modals/UnreachablePhoneModal.jsx');

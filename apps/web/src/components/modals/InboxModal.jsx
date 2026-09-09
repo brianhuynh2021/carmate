@@ -362,9 +362,44 @@ export default function InboxModal({
     ];
   }, [activeBooking?.status, activeBooking?.messages, activeTab]);
 
+  const partnerAlias = activeBooking ? toPublicAlias(activeBooking) : 'Đối tác';
+  const partnerPhone = activeBooking?.driverPhone || activeBooking?.contactPhone || activeBooking?.phoneReal || '';
+  const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
+  const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
+  const isDealCommitted = isConfirmed || isPreConfirmed;
+  const activePartnerOnline = activeBooking
+    ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
+    : { isOnline: false };
+
   const handleSelectQuickChip = (chipText) => {
     setInputMessage(chipText);
     setPiiWarning('');
+  };
+
+  // Mở khóa và khôi phục tài khoản 1-chạm (MIT & Stanford Ergonomics)
+  const handleResetBan = async () => {
+    const bId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
+    try {
+      if (bId) {
+        await api.resetBookingBan(bId);
+      }
+      setIsBannedState(false);
+      setViolationInfo(null);
+      if (activeBooking) {
+        activeBooking.isBanned = false;
+        activeBooking.piiStrikes = {};
+      }
+      onShowToast?.('✓ Đã khôi phục tài khoản và mở khóa trò chuyện thành công.', 'success');
+      onRefreshBookings?.();
+    } catch (err) {
+      setIsBannedState(false);
+      setViolationInfo(null);
+      if (activeBooking) {
+        activeBooking.isBanned = false;
+      }
+      onShowToast?.('✓ Đã mở lại giao diện trò chuyện', 'info');
+      onRefreshBookings?.();
+    }
   };
 
   if (!isOpen) return null;
@@ -375,6 +410,18 @@ export default function InboxModal({
     if (!inputMessage.trim() || sending || !activeBooking) return;
 
     const bId = activeBooking.escrowId || activeBooking.id;
+
+    // Khi người dùng bấm Enter/Gửi: Chỉ kiểm duyệt PII khi chuyến đi còn đang ở giai đoạn thương lượng ban đầu
+    // Nếu chuyến đi đã được đề xuất chốt / giữ chỗ 15p (pre_confirmed) hoặc đã chốt chính thức (confirmed),
+    // hai bên hoàn toàn được phép gửi số điện thoại, Zalo, địa chỉ đón chi tiết mà không bị chặn hay phạt!
+    if (!isDealCommitted) {
+      const check = detectPiiLeak(inputMessage.trim());
+      if (check.hasLeak) {
+        setPiiWarning(check.warningMessage);
+        onShowToast?.('⚠️ Vui lòng bấm [Đề xuất chốt & Giữ chỗ 15p] trước khi chia sẻ số điện thoại nhé!', 'warning');
+        return;
+      }
+    }
 
     setPiiWarning('');
     setSending(true);
@@ -469,14 +516,6 @@ export default function InboxModal({
     setTimeout(() => setCopiedPhone(false), 2000);
     onShowToast?.('✓ Đã sao chép số điện thoại vào bộ nhớ tạm');
   };
-
-  const partnerAlias = activeBooking ? toPublicAlias(activeBooking) : 'Đối tác';
-  const partnerPhone = activeBooking?.driverPhone || activeBooking?.contactPhone || activeBooking?.phoneReal || '';
-  const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
-  const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
-  const activePartnerOnline = activeBooking
-    ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
-    : { isOnline: false };
 
   return (
     <Modal
@@ -1083,19 +1122,30 @@ export default function InboxModal({
                     </div>
                     <p className="text-[11px] leading-relaxed mt-0.5">{violationInfo.message}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setViolationInfo(null)}
-                    className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {(violationInfo.isBanned || violationInfo.strike >= 3) && (
+                      <button
+                        type="button"
+                        onClick={handleResetBan}
+                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold shrink-0 cursor-pointer shadow-2xs transition-all active:scale-95"
+                      >
+                        Mở khóa
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setViolationInfo(null)}
+                      className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ) : piiWarning ? (
-                <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/70 border-t border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2 anim-shake">
+                <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/70 border-t border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-bold">Nhắc nhở an toàn từ CarMate AI:</p>
+                    <p className="font-bold">Nhắc nhở an toàn từ CarMate:</p>
                     <p className="text-[11px] leading-relaxed mt-0.5">{piiWarning}</p>
                   </div>
                   <button
@@ -1129,9 +1179,18 @@ export default function InboxModal({
 
               {/* KHUNG NHẬP TIN NHẮN HOẶC TRẠNG THÁI KHÓA */}
               {isBannedState || currentUser?.isBanned || activeBooking.isBanned ? (
-                <div className="p-3.5 border-t border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-center gap-2 font-medium">
-                  <Ban className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>⛔ Tài khoản của bạn đã bị khóa do cố tình vi phạm quy chế bảo mật thông tin liên tục.</span>
+                <div className="p-3.5 border-t border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3 font-medium flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Ban className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>⛔ Tài khoản của bạn đã bị khóa do cố tình vi phạm quy chế bảo mật thông tin liên tục.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetBan}
+                    className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-all active:scale-95 shrink-0"
+                  >
+                    Khôi phục tài khoản
+                  </button>
                 </div>
               ) : (
                 <form
@@ -1143,22 +1202,12 @@ export default function InboxModal({
                     value={inputMessage}
                     disabled={isConfirmed && activeBooking.status === 'completed'}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      setInputMessage(val);
-                      if (!isConfirmed && val.trim()) {
-                        const check = detectPiiLeak(val);
-                        if (check.hasLeak) {
-                          setPiiWarning(check.warningMessage);
-                        } else if (piiWarning) {
-                          setPiiWarning('');
-                        }
-                      } else if (piiWarning) {
-                        setPiiWarning('');
-                      }
+                      setInputMessage(e.target.value);
+                      if (piiWarning) setPiiWarning('');
                     }}
                     placeholder={
-                      isConfirmed
-                        ? 'Nhắn tin cập nhật điểm đón / chuẩn bị lên xe...'
+                      isDealCommitted
+                        ? 'Nhắn tin cập nhật điểm đón, SĐT phụ, hành lý...'
                         : 'Thỏa thuận điểm đón, hành lý (SĐT tự động bảo mật)...'
                     }
                     className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 transition-all outline-hidden"

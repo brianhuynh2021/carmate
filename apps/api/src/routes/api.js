@@ -22,7 +22,8 @@ import {
   reportUnreachablePhone,
   addBookingMessageHandler,
   preConfirmBookingHandler,
-  finalConfirmBookingHandler
+  finalConfirmBookingHandler,
+  resetBanHandler
 } from '../controllers/bookingController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
 import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, getMe, updateProfile, deleteAccount, getAuthConfigHandler } from '../controllers/authController.js';
@@ -107,6 +108,7 @@ router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, complet
 router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitReview);
 router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
 router.post('/bookings/:id/report-unreachable-phone', optionalAuth, reportUnreachablePhone);
+router.post('/bookings/:id/reset-ban', optionalAuth, resetBanHandler);
 
 router.get('/escrows', optionalAuth, listBookings);
 router.post('/escrows', optionalAuth, createBooking);
@@ -121,6 +123,7 @@ router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, complete
 router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitReview);
 router.post('/escrows/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
 router.post('/escrows/:id/report-unreachable-phone', optionalAuth, reportUnreachablePhone);
+router.post('/escrows/:id/reset-ban', optionalAuth, resetBanHandler);
 
 // --- Admin Management Portal Engine ---
 router.post('/admin/auth', adminAuth);
