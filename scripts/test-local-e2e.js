@@ -4577,6 +4577,8 @@ async function runTests() {
     const presenceDotSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/ui/PresenceDot.jsx'), 'utf8');
     assert(presenceDotSrc.includes('emerald-500') && presenceDotSrc.includes('rose-500'), 'Presence UI 8: PresenceDot hỗ trợ đèn xanh (emerald) và đèn đỏ (rose)');
     assert(presenceDotSrc.includes('Đang online') && presenceDotSrc.includes('Ngoại tuyến'), 'Presence UI 9: PresenceDot có nhãn Đang online và Ngoại tuyến');
+    assert(presenceDotSrc.includes('Online') && presenceDotSrc.includes('Offline'), 'Presence UI 10: PresenceDot hỗ trợ nhãn compact Online và Offline');
+    assert(presenceDotSrc.includes('whitespace-nowrap') && presenceDotSrc.includes('shrink-0'), 'Presence UI 11: PresenceDot chống tràn vỡ hàng với whitespace-nowrap và shrink-0');
   } catch (err) {
     assert(false, '61. Kiểm thử Trạng Thái Trực Tuyến / Ngoại Tuyến', err.message);
   }

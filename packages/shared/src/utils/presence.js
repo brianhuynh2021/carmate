@@ -10,6 +10,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     return {
       isOnline: false,
       label: 'Ngoại tuyến',
+      compactLabel: 'Offline',
       detail: 'Chưa online',
       dotColor: 'red'
     };
@@ -36,6 +37,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     return {
       isOnline: true,
       label: 'Đang online',
+      compactLabel: 'Online',
       detail: 'Đang hoạt động (Bạn)',
       dotColor: 'green'
     };
@@ -46,6 +48,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     return {
       isOnline: entity.isOnline,
       label: entity.isOnline ? 'Đang online' : 'Ngoại tuyến',
+      compactLabel: entity.isOnline ? 'Online' : 'Offline',
       detail: entity.isOnline ? 'Sẵn sàng phản hồi' : (entity.lastActiveText || 'Ngoại tuyến'),
       dotColor: entity.isOnline ? 'green' : 'red'
     };
@@ -60,6 +63,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
       return {
         isOnline: true,
         label: 'Đang online',
+        compactLabel: 'Online',
         detail: 'Hoạt động vừa xong',
         dotColor: 'green'
       };
@@ -69,6 +73,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
       return {
         isOnline: false,
         label: 'Ngoại tuyến',
+        compactLabel: 'Offline',
         detail: text,
         dotColor: 'red'
       };
@@ -82,6 +87,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
       return {
         isOnline: true,
         label: 'Đang online',
+        compactLabel: 'Online',
         detail: 'Vừa đăng chuyến',
         dotColor: 'green'
       };
@@ -102,6 +108,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     return {
       isOnline: true,
       label: 'Đang online',
+      compactLabel: 'Online',
       detail: 'Sẵn sàng phản hồi',
       dotColor: 'green'
     };
@@ -110,6 +117,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
   return {
     isOnline: false,
     label: 'Ngoại tuyến',
+    compactLabel: 'Offline',
     detail: 'Chưa online',
     dotColor: 'red'
   };
