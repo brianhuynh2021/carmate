@@ -162,8 +162,8 @@ export default {
   },
 
   card: {
-    seatsLeft: 'Còn {n} chỗ',
-    seatsNeeded: 'Cần {n} ghế',
+    seatsLeft: 'Nhận ghép {n} ghế',
+    seatsNeeded: 'Cần ghép {n} ghế',
     searching: 'Đang tìm xe',
     book: 'Ghép chuyến',
     offer: 'Đón đi cùng',
@@ -228,8 +228,8 @@ export default {
     emptyDesc: 'Thử chọn "Tất cả tuyến" hoặc đăng chuyến mới để người khác ghép với bạn.',
     pickup: 'Đón',
     dropoff: 'Trả',
-    seatsLeft: 'Còn {n} chỗ',
-    needSeats: 'Cần {n} ghế',
+    seatsLeft: 'Nhận ghép {n} ghế',
+    needSeats: 'Cần ghép {n} ghế',
     willPay: 'Sẵn sàng gửi',
     footnote: 'Hẹn giờ trực tiếp qua Zalo',
     messageZalo: 'Nhắn Zalo',

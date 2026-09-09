@@ -78,14 +78,14 @@ export default function RouteDetailModal({
   const rawTime = getTimeSlotLabel(trip, lang) || '';
   const timeLabel = (rawTime.match(/^([^()]+)\s*\(/)?.[1] || rawTime).trim() || 'Linh hoạt';
 
-  // Nhu cầu ghế (Stanford Ergonomics: "Cần X người" / "Cần X chỗ")
+  // Nhu cầu ghế (Stanford Ergonomics: "Nhận ghép X ghế" / "Cần ghép X ghế")
   const seatsCount = isDriver ? Number(trip.availableSeats) || 0 : Number(trip.seatsNeeded) || 1;
   const isTripFull = trip.status === 'full' || Boolean(trip.isFull) || (isDriver && seatsCount === 0);
   const seatsLabel = isTripFull
     ? (isDriver ? 'Đã kín chỗ' : 'Đã có xe')
     : isDriver
-      ? `Cần ${seatsCount} người`
-      : `Cần ${seatsCount} chỗ`;
+      ? `Nhận ghép ${seatsCount} ghế`
+      : `Cần ghép ${seatsCount} ghế`;
 
   // Phương tiện: Chuẩn hóa hiển thị dòng xe và số chỗ ngồi
   const rawCar = trip.carType || '';

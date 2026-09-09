@@ -173,7 +173,7 @@ export async function generateTicketImage(trip, lang = 'vi') {
 
   // Ô 2: Số chỗ trống
   const isDriver = trip.type === 'driver_offer';
-  const seatsLabel = isDriver ? `Cần ${trip.availableSeats || 3} người` : `Cần ${trip.seatsNeeded || 1} chỗ`;
+  const seatsLabel = isDriver ? `Nhận ghép ${trip.availableSeats || 3} ghế` : `Cần ghép ${trip.seatsNeeded || 1} ghế`;
   drawInfoBox(
     ctx,
     cardX + 70 + boxW,
@@ -492,7 +492,7 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
 
   // Ô 2: Ghế trống
   const isDriver = trip.type === 'driver_offer';
-  const seatsLabel = isDriver ? `Cần ${trip.availableSeats || 3} người` : `Cần ${trip.seatsNeeded || 1} chỗ`;
+  const seatsLabel = isDriver ? `Nhận ghép ${trip.availableSeats || 3} ghế` : `Cần ghép ${trip.seatsNeeded || 1} ghế`;
   drawInfoBox(
     ctx,
     cardX + 70 + boxW,

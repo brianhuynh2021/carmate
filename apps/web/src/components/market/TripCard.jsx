@@ -290,20 +290,20 @@ export default function TripCard({
             title={
               isDriver
                 ? seatsTotal
-                  ? `Xe ${seatsTotal} chỗ · Chủ xe cần tìm ${seatsLeft} người đi cùng`
-                  : `Chủ xe cần tìm ${seatsLeft} người`
-                : `Khách cần tìm ${seatsLeft} chỗ đi cùng`
+                  ? `Xe ${seatsTotal} chỗ · Chủ xe nhận ghép ${seatsLeft} ghế`
+                  : `Chủ xe nhận ghép ${seatsLeft} ghế`
+                : `Người đi cùng cần ghép ${seatsLeft} ghế`
             }
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             {isDriver ? (
               <span>
-                Cần <span className="tabular">{seatsLeft}</span> người
+                Nhận ghép <span className="tabular">{seatsLeft}</span> ghế
                 {seatsTotal ? <span className="sr-only">/{seatsTotal}</span> : null}
               </span>
             ) : (
               <span>
-                Cần <span className="tabular">{seatsLeft}</span> chỗ
+                Cần ghép <span className="tabular">{seatsLeft}</span> ghế
               </span>
             )}
           </span>

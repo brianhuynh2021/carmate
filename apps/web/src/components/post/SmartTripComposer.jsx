@@ -462,7 +462,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-50 dark:bg-purple-500/15 border border-purple-200 dark:border-purple-500/30 text-purple-700 dark:text-purple-300 text-xs font-semibold">
               <Users className="w-3.5 h-3.5 text-purple-600" />
               <span>
-                {parsedResult.role === 'driver' ? `Cần ${parsedResult.seats} người` : `Cần ${parsedResult.seats} chỗ`}
+                {parsedResult.role === 'driver' ? `Nhận ghép ${parsedResult.seats} ghế` : `Cần ghép ${parsedResult.seats} ghế`}
               </span>
             </span>
 
