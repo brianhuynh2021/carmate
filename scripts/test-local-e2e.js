@@ -2115,8 +2115,9 @@ async function runTests() {
       'Hash Sync 3: Lưu trữ tab vào sessionStorage bảo vệ phiên làm việc khi F5 / Reload'
     );
     assert(
-      appJsxCode.includes("window.history.replaceState(null, '', targetHash);"),
-      'Hash Sync 4: Đồng bộ êm dịu URL Hash qua replaceState không gây giật lag'
+      appJsxCode.includes("window.history.replaceState(null, '', targetPath + search);") &&
+        appJsxCode.includes("window.history.pushState(null, '', targetPath + search);"),
+      'Hash Sync 4: Đồng bộ êm dịu Clean URL Pathname (Zero #) qua History API pushState/replaceState'
     );
     assert(
       appJsxCode.includes("window.addEventListener('hashchange', handleHashOrPopState);") &&
@@ -4698,6 +4699,38 @@ async function runTests() {
     assert(presenceSrc.includes('bg-slate-100/90'), 'Presence 15: Thẻ ngoại tuyến chìm xuống nhẹ nhàng, không gây báo động giả');
   } catch (err) {
     assert(false, '64. Kiểm thử Logo & Presence Pulse', err.message);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 65. KIỂM THỬ ĐƯỜNG DẪN SẠCH CHUẨN CLEAN PATHNAME (ZERO #)
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n🔗 65. Kiểm thử Đường Dẫn Sạch Chuẩn Clean Pathname (Triệt Tiêu Hoàn Toàn /#)...');
+  try {
+    const appSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/App.jsx'), 'utf8');
+
+    // 1. Ánh xạ Clean Pathname chuẩn
+    assert(appSrc.includes('getPathForTab'), 'Clean URL 1: Có hàm getPathForTab ánh xạ tab sang đường dẫn sạch');
+    assert(appSrc.includes("if (tab === 'market') return '/'"), 'Clean URL 2: Tab market trỏ về trang chủ /');
+    assert(appSrc.includes("if (tab === 'match') return '/radar'"), 'Clean URL 3: Tab match trỏ về /radar sạch sẽ');
+    assert(appSrc.includes("return `/${tab}`"), 'Clean URL 4: Các tab /my-trips, /post, /booked trỏ trực tiếp không dấu #');
+
+    // 2. Nhận diện Clean URL khi người dùng truy cập trực tiếp
+    assert(appSrc.includes('rawPath === \'my-trips\''), 'Clean URL 5: Nhận diện trực tiếp URL pathname /my-trips');
+    assert(appSrc.includes('rawPath === \'booked\''), 'Clean URL 6: Nhận diện trực tiếp URL pathname /booked');
+    assert(appSrc.includes('rawPath === \'post\''), 'Clean URL 7: Nhận diện trực tiếp URL pathname /post');
+    assert(appSrc.includes('rawPath === \'radar\''), 'Clean URL 8: Nhận diện trực tiếp URL pathname /radar');
+
+    // 3. Tự động làm sạch URL hash cũ nếu người dùng mở link cũ (#my-trips)
+    assert(
+      appSrc.includes("if (currentHash && !currentHash.startsWith('#confirm-'))"),
+      'Clean URL 9: Tự động phát hiện và làm sạch triệt để hash cũ /#my-trips sang /my-trips'
+    );
+    assert(
+      appSrc.includes("window.history.pushState(null, '', targetPath + search)"),
+      'Clean URL 10: Đồng bộ chuyển trang êm dịu qua History API pushState'
+    );
+  } catch (err) {
+    assert(false, '65. Kiểm thử Clean URL Pathname', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;
