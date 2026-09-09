@@ -328,9 +328,9 @@ export default function Hero({
             </div>
           </div>
 
-          {/* ── SINGLE-LINE HIGHWAY RAIL & SEPARATE PARCEL AMENITY FILTER ── */}
+          {/* ── HIGHWAY ROUTE PILLS & SEPARATE PARCEL AMENITY FILTER ── */}
           <div className="pt-2 max-w-4xl mx-auto w-full relative z-20">
-            <div className="flex items-center justify-start sm:justify-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-3 sm:px-1">
+            <div className="flex items-center justify-start md:justify-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-3 sm:px-1">
               {/* Route Pills (Non-wrapping single horizontal rail, tinh giản chuẩn Apple) */}
               <div className="flex items-center gap-1.5 shrink-0">
                 {POPULAR_HIGHWAYS.map((hw) => {
@@ -382,16 +382,16 @@ export default function Hero({
                 <span>Gửi đồ kèm xe</span>
                 {isParcelActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />}
               </button>
+            </div>
 
-              {/* Subtle divider */}
-              <span className="h-4 w-px bg-black/[0.1] dark:bg-white/[0.1] shrink-0 mx-1" aria-hidden="true" />
-
+            {/* ── CÔNG CỤ THÔNG MINH BẢN ĐỊA (CURSOR CMD+K & BẢNG ĐỊNH MỨC XĂNG) ── */}
+            <div className="pt-1.5 flex flex-wrap items-center justify-center gap-2 px-2">
               {/* Nút 1-chạm Dán bài đăng Facebook/Zalo (Cursor Cmd+K) */}
               <button
                 type="button"
                 onClick={() => setShowQuickPasteModal(true)}
                 title="Dán bài đăng từ Facebook/Zalo để AI bóc tách < 1ms và tạo vé đồ họa VIP (Phím tắt: ⌘K / Ctrl+K)"
-                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-semibold whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/40 hover:bg-blue-100/80"
+                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-semibold whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/40 hover:bg-blue-100/80 hover:border-blue-300"
               >
                 <ClipboardPaste className="w-3.5 h-3.5 text-[#0071e3]" strokeWidth={2} />
                 <span>Dán tin FB / Zalo</span>
@@ -406,7 +406,7 @@ export default function Hero({
                 className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-medium whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-black/[0.08] dark:border-white/[0.08] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
               >
                 <Calculator className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2} />
-                <span>Định mức xăng</span>
+                <span>Định mức xăng & cầu đường</span>
               </button>
             </div>
           </div>

@@ -1,8 +1,24 @@
 /**
- * Xử lý số điện thoại sang định dạng chuẩn Zalo (ví dụ: 0900000019)
+ * Xử lý số điện thoại sang định dạng chỉ gồm chữ số
  */
 export const cleanPhoneNumber = (phone = '') => {
   return String(phone || '').replace(/[^0-9]/g, '');
+};
+
+/**
+ * Chuẩn hóa số điện thoại di động Việt Nam về dạng thống nhất 10 số bắt đầu bằng 0 (VD: 0912345678)
+ * Xử lý các tiền tố: +84, 84, hoặc 9 chữ số thiếu số 0 ở đầu.
+ */
+export const normalizePhoneNumber = (phone = '') => {
+  const cleaned = cleanPhoneNumber(phone);
+  if (!cleaned) return '';
+  if (cleaned.startsWith('84') && cleaned.length === 11) {
+    return '0' + cleaned.slice(2);
+  }
+  if (cleaned.length === 9 && !cleaned.startsWith('0')) {
+    return '0' + cleaned;
+  }
+  return cleaned;
 };
 
 /**
@@ -11,11 +27,7 @@ export const cleanPhoneNumber = (phone = '') => {
  * Mobifone (070-079, 089, 090, 093), Vietnamobile/Wintel/Itelecom/Gmobile (052-059, 087, 092, 099)
  */
 export const isValidVietnamesePhone = (phone = '') => {
-  const cleaned = cleanPhoneNumber(phone);
-  let normalized = cleaned;
-  if (normalized.startsWith('84') && normalized.length === 11) {
-    normalized = '0' + normalized.slice(2);
-  }
+  const normalized = normalizePhoneNumber(phone);
   return /^(0)(3[2-9]|5[25689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$/.test(normalized);
 };
 
@@ -27,11 +39,7 @@ export const isValidVietnamesePhone = (phone = '') => {
  * - Đuôi dãy số tuần tự tiến / lùi
  */
 export const isLikelyFakePhone = (phone = '') => {
-  const cleaned = cleanPhoneNumber(phone);
-  let normalized = cleaned;
-  if (normalized.startsWith('84') && normalized.length === 11) {
-    normalized = '0' + normalized.slice(2);
-  }
+  const normalized = normalizePhoneNumber(phone);
   if (!isValidVietnamesePhone(normalized)) return true;
 
   // Danh sách các số ảo / số thử nghiệm hiển nhiên

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight } from 'lucide-react';
-import { TIME_SLOTS } from '@carmate/shared';
+import { TIME_SLOTS, normalizePhoneNumber } from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
 import { useI18n } from './i18n/index.jsx';
 import api from './api/client.js';
@@ -330,37 +330,44 @@ export default function App() {
   const updateMyTripsCount = useCallback(
     (user = currentUser, offers = null, requests = null) => {
       try {
-        let storedIds = [];
-        if (!user) {
-          if (localStorage.getItem('carmate_my_trip_ids')) {
-            localStorage.removeItem('carmate_my_trip_ids');
+        const allStoredIds = new Set();
+        try {
+          const guestIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
+          if (Array.isArray(guestIds)) guestIds.forEach((id) => allStoredIds.add(id));
+        } catch {}
+        try {
+          const legacyIds = JSON.parse(localStorage.getItem('carmate_my_trip_ids') || '[]');
+          if (Array.isArray(legacyIds)) legacyIds.forEach((id) => allStoredIds.add(id));
+        } catch {}
+        if (user) {
+          try {
+            const userKey = `carmate_my_trip_ids_${user.id || user.userId || user.phone}`;
+            const userIds = JSON.parse(localStorage.getItem(userKey) || '[]');
+            if (Array.isArray(userIds)) userIds.forEach((id) => allStoredIds.add(id));
+          } catch {}
+          if (user.phone) {
+            try {
+              const phoneKey = `carmate_my_trip_ids_${user.phone}`;
+              const phoneIds = JSON.parse(localStorage.getItem(phoneKey) || '[]');
+              if (Array.isArray(phoneIds)) phoneIds.forEach((id) => allStoredIds.add(id));
+            } catch {}
           }
-          storedIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
-        } else {
-          const userKey = `carmate_my_trip_ids_${user.id || user.phone}`;
-          storedIds = JSON.parse(localStorage.getItem(userKey) || localStorage.getItem('carmate_my_trip_ids') || '[]');
         }
-        if (!Array.isArray(storedIds)) storedIds = [];
 
         const all = [...(offers || []), ...(requests || [])];
-        const userPhoneClean = user?.phone ? String(user.phone).replace(/\D/g, '') : '';
+        const userPhoneNorm = user?.phone ? normalizePhoneNumber(user.phone) : '';
+        const userId = user?.id || user?.userId;
 
         const validTrips = all.filter((t) => {
+          if (allStoredIds.has(t.id)) return true;
           if (user) {
-            if (t.userId && t.userId === user.id) return true;
-            if (userPhoneClean && t.phoneReal && String(t.phoneReal).replace(/\D/g, '') === userPhoneClean) return true;
-            return storedIds.includes(t.id);
+            if (userId && (t.userId === userId || t.creatorId === userId || t.driverId === userId)) return true;
+            const tripPhoneNorm = (t.phoneReal || t.phone) ? normalizePhoneNumber(t.phoneReal || t.phone) : '';
+            if (userPhoneNorm && tripPhoneNorm && userPhoneNorm === tripPhoneNorm) return true;
+            if (user.telegramId && t.telegramId && String(user.telegramId) === String(t.telegramId)) return true;
           }
-          return storedIds.includes(t.id);
+          return false;
         });
-
-        if (all.length > 0 && storedIds.length > 0) {
-          const cleanIds = storedIds.filter((id) => all.some((t) => t.id === id));
-          if (cleanIds.length !== storedIds.length) {
-            const storageKey = user ? `carmate_my_trip_ids_${user.id || user.phone}` : 'carmate_guest_trip_ids';
-            localStorage.setItem(storageKey, JSON.stringify(cleanIds));
-          }
-        }
 
         setMyTripsCount(validTrips.length);
       } catch {
@@ -375,22 +382,42 @@ export default function App() {
     (trip) => {
       if (!trip) return false;
       try {
-        let storedIds = [];
-        if (!currentUser) {
-          storedIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
-        } else {
-          const userKey = `carmate_my_trip_ids_${currentUser.id || currentUser.phone}`;
-          storedIds = JSON.parse(localStorage.getItem(userKey) || localStorage.getItem('carmate_my_trip_ids') || '[]');
-        }
-        if (!Array.isArray(storedIds)) storedIds = [];
-        if (storedIds.includes(trip.id)) return true;
-
+        // 1. Quét tất cả ID bài đăng đã lưu trong localStorage (Bảo tồn cả phiên khách + phiên đăng nhập)
+        const allStoredIds = new Set();
+        try {
+          const guestIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
+          if (Array.isArray(guestIds)) guestIds.forEach((id) => allStoredIds.add(id));
+        } catch {}
+        try {
+          const legacyIds = JSON.parse(localStorage.getItem('carmate_my_trip_ids') || '[]');
+          if (Array.isArray(legacyIds)) legacyIds.forEach((id) => allStoredIds.add(id));
+        } catch {}
         if (currentUser) {
-          if (trip.userId && trip.userId === currentUser.id) return true;
-          const userPhoneClean = currentUser.phone ? String(currentUser.phone).replace(/\D/g, '') : '';
-          const tripPhone = trip.phoneReal || trip.phone;
-          const tripPhoneClean = tripPhone ? String(tripPhone).replace(/\D/g, '') : '';
-          if (userPhoneClean && tripPhoneClean && userPhoneClean === tripPhoneClean) return true;
+          try {
+            const userKey = `carmate_my_trip_ids_${currentUser.id || currentUser.userId || currentUser.phone}`;
+            const userIds = JSON.parse(localStorage.getItem(userKey) || '[]');
+            if (Array.isArray(userIds)) userIds.forEach((id) => allStoredIds.add(id));
+          } catch {}
+          if (currentUser.phone) {
+            try {
+              const phoneKey = `carmate_my_trip_ids_${currentUser.phone}`;
+              const phoneIds = JSON.parse(localStorage.getItem(phoneKey) || '[]');
+              if (Array.isArray(phoneIds)) phoneIds.forEach((id) => allStoredIds.add(id));
+            } catch {}
+          }
+        }
+        if (allStoredIds.has(trip.id)) return true;
+
+        // 2. So khớp định danh người dùng đăng nhập (User ID / SĐT chuẩn hóa / Telegram ID)
+        if (currentUser) {
+          const cId = currentUser.id || currentUser.userId;
+          if (cId && (trip.userId === cId || trip.creatorId === cId || trip.driverId === cId)) return true;
+
+          const userPhoneNorm = currentUser.phone ? normalizePhoneNumber(currentUser.phone) : '';
+          const tripPhoneNorm = (trip.phoneReal || trip.phone) ? normalizePhoneNumber(trip.phoneReal || trip.phone) : '';
+          if (userPhoneNorm && tripPhoneNorm && userPhoneNorm === tripPhoneNorm) return true;
+
+          if (currentUser.telegramId && trip.telegramId && String(currentUser.telegramId) === String(trip.telegramId)) return true;
         }
       } catch {}
       return false;
@@ -576,6 +603,7 @@ export default function App() {
   // Ghép chuyến: Nếu là bài đăng của chính mình thì mở Modal Quản lý tại chỗ thay vì chuyển tab
   const handleInitiateBook = (trip) => {
     if (checkIsMyTrip(trip)) {
+      showToast('Đây là bài đăng của bạn. Bạn đang ở chế độ Quản lý chuyến xe.');
       setEditingTrip(trip);
       return;
     }
@@ -1233,6 +1261,10 @@ export default function App() {
           isOwner={checkIsMyTrip(selectedTripForRoute)}
           onClose={() => setSelectedTripForRoute(null)}
           onShare={setTicketToShare}
+          onManage={(item) => {
+            setSelectedTripForRoute(null);
+            handleManageMyTrip(item);
+          }}
           onBook={(item) => {
             setSelectedTripForRoute(null);
             handleInitiateBook(item);

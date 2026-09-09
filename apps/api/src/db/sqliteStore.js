@@ -10,6 +10,7 @@ import {
   INITIAL_BOOKED_ESCROWS,
   SITE_INFO,
   cleanPhoneNumber,
+  normalizePhoneNumber,
   isTripExpired,
   getTomorrowISO,
   DEFAULT_TRUST_RULES,
@@ -563,10 +564,12 @@ export async function addTrip(tripData) {
   }
   if (!timeSlotVal) timeSlotVal = '07:00-08:00';
 
+  const assignedUserId = tripData.userId || (cleanPhone ? 'USR-' + cleanPhone : null);
   const completeTrip = {
     ...tripData,
     id,
     maskedCode,
+    userId: assignedUserId,
     phoneReal: cleanPhone,
     date: dateVal,
     timeSlot: timeSlotVal,
@@ -992,23 +995,43 @@ export async function deleteUserAccount(userId, phone) {
   return { success: true, userDeleted: deleted };
 }
 
-export function getTripsByPhone(phone) {
+export function getTripsForUser(userOrPhoneOrId) {
   const database = getRawDB();
+  if (!userOrPhoneOrId) return [];
+
+  let userId = '';
+  let phone = '';
+  if (typeof userOrPhoneOrId === 'object') {
+    userId = userOrPhoneOrId.id || userOrPhoneOrId.userId || '';
+    phone = userOrPhoneOrId.phone || '';
+  } else if (String(userOrPhoneOrId).startsWith('USR-')) {
+    userId = String(userOrPhoneOrId);
+  } else {
+    phone = String(userOrPhoneOrId);
+  }
+
   const clean = cleanPhoneNumber(phone);
-  if (!clean) return [];
+  const norm = normalizePhoneNumber(phone);
 
   const rows = database
-    .prepare('SELECT payload FROM trips WHERE phoneReal = ? OR userId = ? ORDER BY createdAt DESC')
-    .all(clean, 'USR-' + clean);
-  return rows
-    .map((r) => {
-      try {
-        return JSON.parse(r.payload);
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
+    .prepare(
+      `SELECT * FROM trips
+       WHERE (@userId != '' AND userId = @userId)
+          OR (@norm != '' AND (phoneReal = @norm OR phoneReal = @clean OR userId = @usrNorm))
+       ORDER BY createdAt DESC`
+    )
+    .all({
+      userId: userId || '',
+      norm: norm || '',
+      clean: clean || '',
+      usrNorm: norm ? 'USR-' + norm : ''
+    });
+
+  return rows.map(rowToTrip).filter(Boolean);
+}
+
+export function getTripsByPhone(phone) {
+  return getTripsForUser(phone);
 }
 
 export function getAllUsers() {

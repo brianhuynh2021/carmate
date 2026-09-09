@@ -1,14 +1,28 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 let resolvedJwtSecret = process.env.JWT_SECRET;
 if (!resolvedJwtSecret || resolvedJwtSecret.trim() === '') {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('FATAL SECURITY ERROR: JWT_SECRET environment variable is missing in production mode!');
   }
-  // Môi trường dev/test: Tự động sinh chuỗi bí mật ngẫu nhiên 256-bit an toàn
-  resolvedJwtSecret = crypto.randomBytes(32).toString('hex');
-  console.warn('[Security Notice] JWT_SECRET chưa được cấu hình. Đã tạo secret ngẫu nhiên cho phiên dev.');
+  // Môi trường dev/test: Lưu secret vào file để tránh mất phiên đăng nhập khi nodemon reload
+  const secretPath = path.resolve(process.cwd(), 'apps/api/data/.dev_jwt_secret');
+  try {
+    if (fs.existsSync(secretPath)) {
+      resolvedJwtSecret = fs.readFileSync(secretPath, 'utf8').trim();
+    } else {
+      resolvedJwtSecret = crypto.randomBytes(32).toString('hex');
+      try {
+        fs.mkdirSync(path.dirname(secretPath), { recursive: true });
+        fs.writeFileSync(secretPath, resolvedJwtSecret, 'utf8');
+      } catch {}
+    }
+  } catch {
+    resolvedJwtSecret = 'carmate_dev_secret_key_2026_safe_fallback';
+  }
 }
 
 export const JWT_SECRET = resolvedJwtSecret;
@@ -21,7 +35,12 @@ const TOKEN_EXPIRY = '90d';
  * Sinh mã JWT Token bảo mật phiên đăng nhập
  */
 export function generateToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+  const normalizedPayload = {
+    ...payload,
+    id: payload.id || payload.userId,
+    userId: payload.userId || payload.id
+  };
+  return jwt.sign(normalizedPayload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
 }
 
 /**
@@ -29,7 +48,12 @@ export function generateToken(payload) {
  */
 export function verifyToken(token) {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded && typeof decoded === 'object') {
+      if (decoded.userId && !decoded.id) decoded.id = decoded.userId;
+      if (decoded.id && !decoded.userId) decoded.userId = decoded.id;
+    }
+    return decoded;
   } catch {
     return null;
   }

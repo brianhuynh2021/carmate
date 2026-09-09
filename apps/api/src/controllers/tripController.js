@@ -8,9 +8,10 @@ import {
   deleteTrip,
   getDB,
   getUserById,
-  getUserByPhone
+  getUserByPhone,
+  saveUser
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
+import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
@@ -270,6 +271,24 @@ export async function createTrip(req, res) {
       const { capacity, seats } = sanitizeVehicleCapacityAndSeats(rawCapacity, body.availableSeats);
       body.capacity = capacity;
       body.availableSeats = seats;
+    }
+
+    if (req.user) {
+      body.userId = req.user.id || req.user.userId || body.userId;
+      if (req.user.telegramId) body.telegramId = req.user.telegramId;
+      if (!req.user.phone && body.phoneReal) {
+        try {
+          const normP = normalizePhoneNumber(body.phoneReal);
+          req.user.phone = normP;
+          const u = getUserById(req.user.id || req.user.userId);
+          if (u && !u.phone) {
+            u.phone = normP;
+            await saveUser(u);
+          }
+        } catch (e) {
+          console.warn('[createTrip] Auto-link phone warning:', e);
+        }
+      }
     }
 
     const newTrip = await addTrip(body);

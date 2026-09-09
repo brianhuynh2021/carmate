@@ -7,7 +7,7 @@ import {
   getUserByTelegramId,
   getUserByGoogleId,
   saveUser,
-  getTripsByPhone,
+  getTripsForUser,
   deleteUserAccount
 } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
@@ -138,14 +138,14 @@ export async function verifyOtp(req, res) {
       await saveUser(user);
     }
 
-    const myTrips = getTripsByPhone(cleaned);
+    const myTrips = getTripsForUser(user || cleaned);
     const tripIds = myTrips.map((t) => t.id);
 
     // Cấp mã JWT Token bảo mật 7 ngày
     const token = generateToken({
       userId: user.id,
       phone: user.phone,
-      role: user.role,
+      role: user.role || 'passenger',
       name: user.name
     });
 
@@ -162,7 +162,6 @@ export async function verifyOtp(req, res) {
   }
 }
 
-/**
 /**
  * POST /api/auth/zalo-login
  * Đăng nhập / Đăng ký qua Zalo Open API Token (OAuth / Mini App)
@@ -245,7 +244,7 @@ export async function zaloLogin(req, res) {
       await saveUser(user);
     }
 
-    const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
+    const myTrips = getTripsForUser(user);
     const tripIds = myTrips.map((t) => t.id);
 
     const jwtToken = generateToken({
@@ -413,7 +412,7 @@ export async function googleLogin(req, res) {
       }
     }
 
-    const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
+    const myTrips = getTripsForUser(user);
     const tripIds = myTrips.map((t) => t.id);
 
     // Cấp mã JWT Token bảo mật 7 ngày
@@ -457,7 +456,7 @@ export async function getMe(req, res) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy hồ sơ thành viên' });
     }
 
-    const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
+    const myTrips = getTripsForUser(user);
     const tripIds = myTrips.map((t) => t.id);
 
     return res.status(200).json({
@@ -780,7 +779,7 @@ export async function telegramLogin(req, res) {
       }
     }
 
-    const myTrips = user.phone ? getTripsByPhone(user.phone) : [];
+    const myTrips = getTripsForUser(user);
     const tripIds = myTrips.map((t) => t.id);
 
     const jwtToken = generateToken({

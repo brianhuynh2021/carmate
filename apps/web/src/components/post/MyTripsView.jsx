@@ -603,10 +603,10 @@ export default function MyTripsView({
 
                           <span
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 font-medium"
-                            title="Kết nối trực tiếp qua Zalo không mất phí viễn thông"
+                            title="Kết nối trực tiếp an toàn, không qua trung gian"
                           >
                             <ShieldCheck className="w-3 h-3 text-blue-600" />
-                            <span>Kết nối qua Zalo</span>
+                            <span>Kết nối trực tiếp</span>
                           </span>
 
                           {trip.carPhotos && trip.carPhotos.length >= 3 && (
@@ -759,7 +759,7 @@ export default function MyTripsView({
 
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               Bài đăng chuyến đi này sẽ được gỡ khỏi danh sách tìm kiếm trên toàn hệ thống và không thể hoàn tác. Nếu đã
-              có người đi cùng hẹn trước qua Zalo, bạn vui lòng chủ động thông báo cho họ biết nhé.
+              có người đi cùng hẹn trước, bạn vui lòng chủ động thông báo cho họ biết nhé.
             </p>
           </div>
         </Modal>

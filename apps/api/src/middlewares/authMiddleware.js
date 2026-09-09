@@ -24,6 +24,8 @@ export function requireAuth(req, res, next) {
     });
   }
 
+  if (decoded.userId && !decoded.id) decoded.id = decoded.userId;
+  if (decoded.id && !decoded.userId) decoded.userId = decoded.id;
   req.user = decoded;
   next();
 }
@@ -37,6 +39,8 @@ export function optionalAuth(req, res, next) {
     const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
     if (decoded) {
+      if (decoded.userId && !decoded.id) decoded.id = decoded.userId;
+      if (decoded.id && !decoded.userId) decoded.userId = decoded.id;
       req.user = decoded;
     }
   }
