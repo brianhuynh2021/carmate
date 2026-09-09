@@ -21,7 +21,8 @@ import {
   formatTripDateDisplay,
   parseLocation,
   getCorridorDisplay,
-  toPublicAlias
+  toPublicAlias,
+  normalizePhotoUrl
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 
@@ -183,7 +184,7 @@ export default function TripCard({
 
   // Ảnh xe thật — hiển thị thumbnail thanh lịch nếu có
   const photos = (item.carPhotos || []).filter(Boolean);
-  const rawCover = photos.length > 0 ? photos[0].url || photos[0] : null;
+  const rawCover = photos.length > 0 ? normalizePhotoUrl(photos[0]) : null;
   const coverPhoto = coverFailed ? null : rawCover;
 
   return (

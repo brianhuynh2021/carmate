@@ -19,6 +19,7 @@ export default function useTripsData({
   setReviewRecord,
   setPendingPostTrip,
   setShowAuthModal,
+  onSaveProfile,
   t
 }) {
   // BẤT BIẾN SÀN THẬT: sàn chỉ hiển thị chuyến do máy chủ trả về.
@@ -167,6 +168,43 @@ export default function useTripsData({
         updateMyTripsCount?.(authUser);
       } catch {}
 
+      // Tự động đồng bộ thông tin xe vào Garage / Hồ sơ cá nhân của Chủ xe (Stanford Ergonomics - Zero extra step)
+      if (newTrip.type === 'driver_offer' && onSaveProfile && authUser && (newTrip.carType || (newTrip.carPhotos && newTrip.carPhotos.length > 0))) {
+        try {
+          const rawCar = (newTrip.carType || '').trim();
+          const cleanCar = rawCar.replace(/\s*\(.*?\)/, '').trim();
+          const words = cleanCar ? cleanCar.split(/\s+/) : [];
+          const brand = words[0] || authUser.vehicle?.brand || '';
+          const model = words.slice(1).join(' ') || authUser.vehicle?.model || cleanCar;
+          const photos = Array.isArray(newTrip.carPhotos) && newTrip.carPhotos.length > 0
+            ? newTrip.carPhotos
+            : (authUser.vehicle?.photos || []);
+
+          const existingPlate = authUser.vehicle?.plate || '';
+          const tripPlate = newTrip.plate || newTrip.licensePlate || newTrip.plateMask || '';
+          const plate = (existingPlate && !existingPlate.includes('*')) ? existingPlate : (tripPlate || existingPlate);
+
+          const vehicleUpdate = {
+            ...(authUser.vehicle || {}),
+            brand: brand || authUser.vehicle?.brand || '',
+            model: model || authUser.vehicle?.model || '',
+            capacity: Number(newTrip.capacity || authUser.vehicle?.capacity || 5),
+            carCategory: newTrip.carCategory || authUser.vehicle?.carCategory || 'family_car',
+            plate,
+            photos,
+            hasVerifiedPhotos: photos.length >= 1,
+            perks: Array.isArray(newTrip.perks) && newTrip.perks.length > 0
+              ? newTrip.perks
+              : (authUser.vehicle?.perks || [])
+          };
+          onSaveProfile({ vehicle: vehicleUpdate }).catch((err) => {
+            console.warn('[useTripsData] Auto-sync garage warning:', err);
+          });
+        } catch (err) {
+          console.warn('[useTripsData] Auto vehicle profile sync error:', err);
+        }
+      }
+
       try {
         const res = await api.createTrip(newTrip);
         if (res?.success && res?.data) {
@@ -197,7 +235,8 @@ export default function useTripsData({
       setTicketToShare,
       showToast,
       t,
-      updateMyTripsCount
+      updateMyTripsCount,
+      onSaveProfile
     ]
   );
 
@@ -207,13 +246,44 @@ export default function useTripsData({
       setPassengerRequests((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
       showToast('Đã lưu thay đổi thông tin chuyến xe!');
 
+      // Nếu Chủ xe sửa thông tin xe hoặc ảnh, tự động đồng bộ vào Garage cá nhân
+      if (onSaveProfile && currentUser && (updates.carType || updates.carPhotos || updates.capacity || updates.plateMask)) {
+        try {
+          const rawCar = (updates.carType || '').trim();
+          const cleanCar = rawCar.replace(/\s*\(.*?\)/, '').trim();
+          const words = cleanCar ? cleanCar.split(/\s+/) : [];
+          const brand = words[0] || currentUser.vehicle?.brand || '';
+          const model = words.slice(1).join(' ') || currentUser.vehicle?.model || cleanCar;
+          const photos = Array.isArray(updates.carPhotos) && updates.carPhotos.length > 0
+            ? updates.carPhotos
+            : (currentUser.vehicle?.photos || []);
+
+          const existingPlate = currentUser.vehicle?.plate || '';
+          const editPlate = updates.plate || updates.licensePlate || updates.plateMask || '';
+          const plate = (existingPlate && !existingPlate.includes('*')) ? existingPlate : (editPlate || existingPlate);
+
+          const vehicleUpdate = {
+            ...(currentUser.vehicle || {}),
+            brand: brand || currentUser.vehicle?.brand || '',
+            model: model || currentUser.vehicle?.model || '',
+            capacity: Number(updates.capacity || currentUser.vehicle?.capacity || 5),
+            plate,
+            photos,
+            hasVerifiedPhotos: photos.length >= 1
+          };
+          onSaveProfile({ vehicle: vehicleUpdate }).catch(() => {});
+        } catch (err) {
+          console.warn('[useTripsData] Edit sync garage error:', err);
+        }
+      }
+
       try {
         await api.updateTrip(tripId, updates);
       } catch (err) {
         console.warn('Lỗi cập nhật chuyến đi lên backend:', err);
       }
     },
-    [showToast]
+    [showToast, onSaveProfile, currentUser]
   );
 
   const handleToggleTripStatus = useCallback(

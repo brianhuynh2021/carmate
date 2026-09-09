@@ -155,8 +155,9 @@ export function stripXssVectors(str) {
       .replace(/<\/?(?:iframe|object|embed|svg|math|link|meta|base)\b[^>]*>/gi, '')
       // 3. Loại bỏ event handler nội tuyến: onerror=, onload=, onmouseover=, onclick=...
       .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-      // 4. Loại bỏ scheme nguy hiểm dù có chèn khoảng trắng/tab: javascript:, vbscript:, data:
-      .replace(/(?:javascript|vbscript|data)\s*:/gi, '')
+      // 4. Loại bỏ scheme nguy hiểm: javascript:, vbscript:, và data: (ngoại trừ data:image/...)
+      .replace(/(?:javascript|vbscript)\s*:/gi, '')
+      .replace(/data\s*:(?!image\/(?:png|jpeg|jpg|webp|gif);base64,)/gi, '')
   );
 }
 
@@ -169,9 +170,14 @@ export function sanitizeInput(req, res, next) {
     const cleanObject = (obj) => {
       for (const key of Object.keys(obj)) {
         if (typeof obj[key] === 'string') {
-          // Strip vector độc hại trước, sau đó escape < > còn sót và cắt khoảng trắng.
-          const stripped = stripXssVectors(obj[key]).trim();
-          obj[key] = escapeHtml(stripped);
+          const isSafeDataImg = /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,/i.test(obj[key].trim());
+          if (isSafeDataImg) {
+            obj[key] = obj[key].trim();
+          } else {
+            // Strip vector độc hại trước, sau đó escape < > còn sót và cắt khoảng trắng.
+            const stripped = stripXssVectors(obj[key]).trim();
+            obj[key] = escapeHtml(stripped);
+          }
         } else if (typeof obj[key] === 'object' && obj[key] !== null) {
           cleanObject(obj[key]);
         }

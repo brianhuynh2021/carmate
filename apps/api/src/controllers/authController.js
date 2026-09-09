@@ -542,19 +542,25 @@ export async function updateProfile(req, res) {
         // MIT Invariant 2: Định dạng Biển số xe Việt Nam
         let formattedPlate = rawPlate;
         if (rawPlate) {
-          const cleanPlate = rawPlate.replace(/[^0-9A-Z]/g, '');
-          const plateRegex = /^[0-9]{2}[A-Z]{1,2}[0-9]{4,5}$/;
-          if (!plateRegex.test(cleanPlate)) {
-            return res.status(400).json({
-              success: false,
-              error: 'Biển số xe không đúng định dạng Việt Nam (Ví dụ: 51K-892.41, 29A-456.78)'
-            });
-          }
-          if (!rawPlate.includes('-')) {
-            const prefixLen = cleanPlate.length >= 7 && cleanPlate[2] >= 'A' && cleanPlate[2] <= 'Z' && cleanPlate[3] >= 'A' && cleanPlate[3] <= 'Z' ? 4 : 3;
-            const prefix = cleanPlate.slice(0, prefixLen);
-            const suffix = cleanPlate.slice(prefixLen);
-            formattedPlate = `${prefix}-${suffix}`;
+          const isMaskedPlate = /[*xX]/.test(rawPlate);
+          if (isMaskedPlate) {
+            // Biển số đã che bảo mật một phần (VD: 51K-892.** hoặc 51K-***.**)
+            formattedPlate = rawPlate;
+          } else {
+            const cleanPlate = rawPlate.replace(/[^0-9A-Z]/g, '');
+            const plateRegex = /^[0-9]{2}[A-Z]{1,2}[0-9]{4,5}$/;
+            if (cleanPlate && !plateRegex.test(cleanPlate)) {
+              return res.status(400).json({
+                success: false,
+                error: 'Biển số xe không đúng định dạng Việt Nam (Ví dụ: 51K-892.41, 29A-456.78)'
+              });
+            }
+            if (cleanPlate && !rawPlate.includes('-')) {
+              const prefixLen = cleanPlate.length >= 7 && cleanPlate[2] >= 'A' && cleanPlate[2] <= 'Z' && cleanPlate[3] >= 'A' && cleanPlate[3] <= 'Z' ? 4 : 3;
+              const prefix = cleanPlate.slice(0, prefixLen);
+              const suffix = cleanPlate.slice(prefixLen);
+              formattedPlate = `${prefix}-${suffix}`;
+            }
           }
         }
 

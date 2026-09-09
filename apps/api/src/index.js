@@ -132,7 +132,7 @@ app.use(
   })
 );
 
-// Giới hạn gói tin 1MB chống tấn công DDoS làm tràn RAM
+// Giới hạn gói tin 1MB chống Payload Bomb (Tràn RAM DoS)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(sanitizeInput);

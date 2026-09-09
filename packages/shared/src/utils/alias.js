@@ -91,3 +91,18 @@ export function toPublicAlias(trip) {
   for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 900;
   return isDriver ? `${role} CX-${100 + hash}` : `Khách KX-${200 + (hash % 100)}`;
 }
+
+/**
+ * Chuẩn hóa URL ảnh xe: Tự động khôi phục tiền tố data: nếu chuỗi base64
+ * bị strip mất data: (chữa lành dữ liệu cũ trên database an toàn).
+ */
+export function normalizePhotoUrl(photo) {
+  if (!photo) return null;
+  const rawUrl = typeof photo === 'string' ? photo : photo?.url;
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  const trimmed = rawUrl.trim();
+  if (trimmed.startsWith('image/')) {
+    return `data:${trimmed}`;
+  }
+  return trimmed;
+}
