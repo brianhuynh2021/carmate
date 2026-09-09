@@ -18,7 +18,12 @@ import {
   ShieldAlert,
   PhoneOff,
   Ban,
-  Mail
+  Mail,
+  MailOpen,
+  MapPin,
+  Headphones,
+  LifeBuoy,
+  HelpCircle
 } from 'lucide-react';
 import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -26,6 +31,7 @@ import Button from '../ui/Button.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
 import api from '../../api/client.js';
 import { playMessageChime, playSuccessChime } from '../../utils/audioFeedback.js';
+import DisputeNoticeModal from './DisputeNoticeModal.jsx';
 
 export default function InboxModal({
   isOpen,
@@ -42,6 +48,7 @@ export default function InboxModal({
   unreadBookingIds = []
 }) {
   const [selectedId, setSelectedId] = useState(initialBookingId);
+  const [mobileShowChat, setMobileShowChat] = useState(Boolean(initialBookingId));
   const [activeTab, setActiveTab] = useState('incoming'); // 'incoming' (Đến) | 'outgoing' (Đi)
   const [inputMessage, setInputMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -52,14 +59,37 @@ export default function InboxModal({
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [timeLeftStr, setTimeLeftStr] = useState('');
   const [remainingSecs, setRemainingSecs] = useState(900);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, booking }
+
+  // Kênh Hỗ Trợ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
+  const [isSupportChannelActive, setIsSupportChannelActive] = useState(false);
+  const [supportMessages, setSupportMessages] = useState([]);
+  const [supportInput, setSupportInput] = useState('');
+  const [loadingSupport, setLoadingSupport] = useState(false);
+  const [sendingSupport, setSendingSupport] = useState(false);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeTargetNotice, setDisputeTargetNotice] = useState(null);
+
   const messagesEndRef = useRef(null);
 
   // Cập nhật selectedId khi initialBookingId thay đổi
   useEffect(() => {
     if (initialBookingId) {
-      setSelectedId(initialBookingId);
+      if (initialBookingId === 'support') {
+        setIsSupportChannelActive(true);
+      } else {
+        setIsSupportChannelActive(false);
+        setSelectedId(initialBookingId);
+        const isOut = outgoingBookings.some((b) => (b.escrowId || b.id) === initialBookingId);
+        if (isOut) {
+          setActiveTab('outgoing');
+        } else {
+          setActiveTab('incoming');
+        }
+      }
+      setMobileShowChat(true);
     }
-  }, [initialBookingId]);
+  }, [initialBookingId, outgoingBookings]);
 
   // Phân loại danh sách booking: Đến (Chủ xe nhận) và Đi (Khách gửi)
   const { incomingBookings, outgoingBookings } = useMemo(() => {
@@ -94,8 +124,8 @@ export default function InboxModal({
   const currentList = activeTab === 'incoming' ? incomingBookings : outgoingBookings;
   const activeBooking = useMemo(() => {
     if (!selectedId) return currentList[0] || null;
-    return bookings.find((b) => (b.escrowId || b.id) === selectedId) || currentList[0] || null;
-  }, [bookings, selectedId, currentList]);
+    return currentList.find((b) => (b.escrowId || b.id) === selectedId) || currentList[0] || null;
+  }, [currentList, selectedId]);
 
   // Helper kiểm tra xem 1 cuộc trao đổi có đang ở trạng thái Chưa đọc / Đọc sau hay không
   const isBookingUnread = useMemo(() => {
@@ -111,10 +141,15 @@ export default function InboxModal({
         ? itemOrId
         : bookings.find((b) => (b.escrowId || b.id) === id);
 
+      // 2. Chuyến đã hoàn thành hoặc hủy trong quá khứ không tính là chưa đọc (trừ khi chủ động gắn cờ Đọc sau)
+      if (booking?.status === 'completed' || booking?.status === 'cancelled') {
+        return false;
+      }
+
       const lastRead = readBookingTimestamps?.[id] || 0;
       if (!lastRead) return true; // Chưa từng mở -> Chưa đọc
 
-      // 2. Có tin nhắn mới từ đối phương sau lần đọc cuối
+      // 3. Có tin nhắn mới từ đối phương sau lần đọc cuối
       const hasNewMessage = (booking?.messages || []).some((m) => {
         const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
         return !isMe && new Date(m.timestamp).getTime() > lastRead;
@@ -150,6 +185,52 @@ export default function InboxModal({
 
   const activeBookingId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
   const isActiveUnread = activeBookingId ? isBookingUnread(activeBooking) : false;
+
+  // Chuột phải mở menu ngữ cảnh chuẩn Cursor / Apple
+  const handleContextMenu = (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const menuWidth = 220;
+    const menuHeight = 190;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 12);
+    const y = Math.min(e.clientY, window.innerHeight - menuHeight - 12);
+    setContextMenu({ x, y, booking: item });
+  };
+
+  // Tự động đóng menu ngữ cảnh khi click ra ngoài, cuộn trang hoặc bấm Esc
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClose = () => setContextMenu(null);
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+    window.addEventListener('click', handleClose);
+    window.addEventListener('contextmenu', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('click', handleClose);
+      window.removeEventListener('contextmenu', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [contextMenu]);
+
+  // Phím tắt Ambient Cursor: Phím U chuyển đổi trạng thái Chưa đọc / Đọc sau
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable) {
+        return;
+      }
+      if (e.key === 'u' || e.key === 'U') {
+        e.preventDefault();
+        handleToggleUnread();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeBooking, unreadBookingIds, readBookingTimestamps]);
 
   // Cuộn xuống tin nhắn mới nhất
   useEffect(() => {
@@ -306,9 +387,122 @@ export default function InboxModal({
     ];
   }, [activeBooking?.status, activeBooking?.messages, activeTab]);
 
+  const partnerAlias = activeBooking ? toPublicAlias(activeBooking) : 'Đối tác';
+  const partnerPhone = activeBooking?.driverPhone || activeBooking?.contactPhone || activeBooking?.phoneReal || '';
+  const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
+  const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
+  const isDealCommitted = isConfirmed || isPreConfirmed;
+  const activePartnerOnline = activeBooking
+    ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
+    : { isOnline: false };
+
   const handleSelectQuickChip = (chipText) => {
     setInputMessage(chipText);
     setPiiWarning('');
+  };
+
+  // Mở khóa và khôi phục tài khoản 1-chạm (MIT & Stanford Ergonomics)
+  const handleResetBan = async () => {
+    const bId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
+    try {
+      if (bId) {
+        await api.resetBookingBan(bId);
+      }
+      setIsBannedState(false);
+      setViolationInfo(null);
+      if (activeBooking) {
+        activeBooking.isBanned = false;
+        activeBooking.piiStrikes = {};
+      }
+      onShowToast?.('✓ Đã khôi phục tài khoản và mở khóa trò chuyện thành công.', 'success');
+      onRefreshBookings?.();
+    } catch (err) {
+      setIsBannedState(false);
+      setViolationInfo(null);
+      if (activeBooking) {
+        activeBooking.isBanned = false;
+      }
+      onShowToast?.('✓ Đã mở lại giao diện trò chuyện', 'info');
+      onRefreshBookings?.();
+    }
+  };
+
+  // Tải danh sách tin nhắn Kênh Hỗ Trợ CSKH Platform
+  const loadSupportMessages = async () => {
+    setLoadingSupport(true);
+    try {
+      const bId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : undefined;
+      const res = await api.getSupportMessages({
+        userId: currentUser?.id,
+        phone: currentUser?.phone,
+        bookingId: bId
+      });
+      if (res?.data && Array.isArray(res.data)) {
+        setSupportMessages(res.data);
+      }
+    } catch {
+      setSupportMessages([
+        {
+          id: 'SUP-LOCAL',
+          senderRole: 'platform',
+          senderName: 'CSKH CarMate (Trực tuyến 24/7)',
+          message: '👋 Xin chào bạn! Kênh Hỗ Trợ Khẩn Cấp CarMate sẵn sàng 24/7. Nếu tài khoản của bạn bị khóa nhầm ("khóa lộn") hoặc có khiếu nại về cảnh báo PII, hãy nhắn tin trực tiếp tại đây nhé!',
+          createdAt: Date.now()
+        }
+      ]);
+    } finally {
+      setLoadingSupport(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isSupportChannelActive) {
+      loadSupportMessages();
+    }
+  }, [isSupportChannelActive]);
+
+  // Gửi tin nhắn đến Platform CSKH & Tự động xử lý khiếu nại (Ambient Resolution)
+  const handleSendSupportMessage = async (e, customText = null) => {
+    e?.preventDefault();
+    const textToSend = (customText || supportInput).trim();
+    if (!textToSend || sendingSupport) return;
+
+    setSendingSupport(true);
+    try {
+      const bId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
+      const res = await api.sendSupportMessage({
+        text: textToSend,
+        bookingId: bId,
+        userId: currentUser?.id,
+        phone: currentUser?.phone,
+        senderName: currentUser?.name || 'Thành viên'
+      });
+
+      if (res?.data) {
+        setSupportMessages((prev) => [
+          ...prev,
+          res.data.userMessage,
+          ...(res.data.platformReply ? [res.data.platformReply] : [])
+        ]);
+
+        if (res.data.isUnbanned) {
+          setIsBannedState(false);
+          setViolationInfo(null);
+          if (activeBooking) {
+            activeBooking.isBanned = false;
+            activeBooking.piiStrikes = {};
+          }
+          onShowToast?.('✓ Đã khôi phục tài khoản thành công qua Kênh CSKH Platform!', 'success');
+          onRefreshBookings?.();
+        }
+      }
+      setSupportInput('');
+      playMessageChime();
+    } catch (err) {
+      onShowToast?.(err.message || 'Không thể gửi tin nhắn hỗ trợ', 'error');
+    } finally {
+      setSendingSupport(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -319,6 +513,18 @@ export default function InboxModal({
     if (!inputMessage.trim() || sending || !activeBooking) return;
 
     const bId = activeBooking.escrowId || activeBooking.id;
+
+    // Khi người dùng bấm Enter/Gửi: Chỉ kiểm duyệt PII khi chuyến đi còn đang ở giai đoạn thương lượng ban đầu
+    // Nếu chuyến đi đã được đề xuất chốt / giữ chỗ 15p (pre_confirmed) hoặc đã chốt chính thức (confirmed),
+    // hai bên hoàn toàn được phép gửi số điện thoại, Zalo, địa chỉ đón chi tiết mà không bị chặn hay phạt!
+    if (!isDealCommitted) {
+      const check = detectPiiLeak(inputMessage.trim());
+      if (check.hasLeak) {
+        setPiiWarning(check.warningMessage);
+        onShowToast?.('⚠️ Vui lòng bấm [Đề xuất chốt & Giữ chỗ 15p] trước khi chia sẻ số điện thoại nhé!', 'warning');
+        return;
+      }
+    }
 
     setPiiWarning('');
     setSending(true);
@@ -414,74 +620,146 @@ export default function InboxModal({
     onShowToast?.('✓ Đã sao chép số điện thoại vào bộ nhớ tạm');
   };
 
-  const partnerAlias = activeBooking ? toPublicAlias(activeBooking) : 'Đối tác';
-  const partnerPhone = activeBooking?.driverPhone || activeBooking?.contactPhone || activeBooking?.phoneReal || '';
-  const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
-  const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
-  const activePartnerOnline = activeBooking
-    ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
-    : { isOnline: false };
-
   return (
     <Modal
       onClose={onClose}
-      size="xl"
+      size="5xl"
       icon={Inbox}
       iconTone="brand"
       title="Hộp Thư Yêu Cầu & Trao Đổi"
       subtitle="Bảo mật PII 100% · Trao đổi ẩn danh · Khóa mềm 2 pha trước khi chốt"
     >
-      <div className="flex flex-col md:flex-row h-[560px] max-h-[75vh] -mx-6 -my-4 overflow-hidden border-t border-black/[0.06] dark:border-white/[0.06]">
+      <div className="flex flex-col md:flex-row h-[600px] max-h-[78vh] -mx-6 -my-4 overflow-hidden border-t border-black/[0.06] dark:border-white/[0.06]">
         {/* CỘT TRÁI: DANH SÁCH CUỘC HỘI THOẠI */}
-        <div className="w-full md:w-[260px] shrink-0 border-r border-black/[0.06] dark:border-white/[0.06] flex flex-col bg-slate-50/70 dark:bg-slate-900/40">
-          {/* Tabs Đến / Đi */}
-          <div className="p-3 border-b border-black/[0.04] dark:border-white/[0.05] grid grid-cols-2 gap-1.5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab('incoming')}
-              className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === 'incoming'
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
-              }`}
-            >
-              <span>Yêu cầu Đến</span>
-              {incomingBookings.length > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 ${
-                  activeTab === 'incoming' ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                }`}>
-                  {incomingUnreadCount > 0 && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-blue-400 animate-pulse" title="Có tin chưa đọc" />
-                  )}
-                  <span>{incomingBookings.length}</span>
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('outgoing')}
-              className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === 'outgoing'
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
-              }`}
-            >
-              <span>Yêu cầu Đi</span>
-              {outgoingBookings.length > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 ${
-                  activeTab === 'outgoing' ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                }`}>
-                  {outgoingUnreadCount > 0 && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-blue-400 animate-pulse" title="Có tin chưa đọc" />
-                  )}
-                  <span>{outgoingBookings.length}</span>
-                </span>
-              )}
-            </button>
+        <div className={`w-full md:w-[320px] lg:w-[340px] shrink-0 border-r border-black/[0.06] dark:border-white/[0.06] flex flex-col bg-slate-50/70 dark:bg-slate-900/40 ${
+          mobileShowChat ? 'hidden md:flex' : 'flex'
+        }`}>
+          {/* Tabs Đến / Đi: Apple Liquid Segmented Control */}
+          <div className="p-2.5 border-b border-black/[0.04] dark:border-white/[0.05] bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm">
+            <div className="p-1 rounded-2xl bg-black/[0.05] dark:bg-white/[0.06] grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('incoming');
+                  setSelectedId(null);
+                  setMobileShowChat(false);
+                }}
+                className={`py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                  activeTab === 'incoming'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>Yêu cầu Đến</span>
+                {incomingUnreadCount > 0 ? (
+                  <span
+                    className="text-[10.5px] font-mono px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 bg-[#0071e3] text-white shadow-2xs"
+                    title={`${incomingUnreadCount} tin chưa đọc`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
+                    <span>{incomingUnreadCount}</span>
+                  </span>
+                ) : incomingBookings.length > 0 ? (
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium bg-black/[0.05] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400">
+                    {incomingBookings.length}
+                  </span>
+                ) : null}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('outgoing');
+                  setSelectedId(null);
+                  setMobileShowChat(false);
+                }}
+                className={`py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                  activeTab === 'outgoing'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>Yêu cầu Đi</span>
+                {outgoingUnreadCount > 0 ? (
+                  <span
+                    className="text-[10.5px] font-mono px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 bg-[#0071e3] text-white shadow-2xs"
+                    title={`${outgoingUnreadCount} tin chưa đọc`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
+                    <span>{outgoingUnreadCount}</span>
+                  </span>
+                ) : outgoingBookings.length > 0 ? (
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium bg-black/[0.05] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400">
+                    {outgoingBookings.length}
+                  </span>
+                ) : null}
+              </button>
+            </div>
+          </div>
+
+          {/* Gợi ý Ambient Cursor: Chuột phải / Phím U để đổi trạng thái & Đọc hết */}
+          <div className="px-3.5 py-1.5 bg-black/[0.02] dark:bg-white/[0.02] text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.05]">
+            <span className="flex items-center gap-1.5 truncate">
+              <span>Chuột phải hoặc</span>
+              <kbd className="px-1.5 py-0.2 rounded-md bg-white dark:bg-slate-700 font-mono text-[9.5px] border border-black/10 dark:border-white/10 shadow-2xs font-bold text-slate-700 dark:text-slate-200">
+                U
+              </kbd>
+              <span>đổi trạng thái</span>
+            </span>
+            {currentList.some((b) => isBookingUnread(b)) && (
+              <button
+                type="button"
+                onClick={() => {
+                  currentList.forEach((b) => {
+                    const bId = b.escrowId || b.id;
+                    if (isBookingUnread(b)) onMarkAsRead?.(bId);
+                  });
+                  onShowToast?.('✓ Đã đánh dấu tất cả hội thoại là đã đọc', 'success');
+                }}
+                className="text-[10px] text-primary-600 dark:text-primary-400 hover:underline shrink-0 font-medium cursor-pointer"
+                title="Đánh dấu tất cả hội thoại trong danh sách là đã đọc"
+              >
+                Đọc hết
+              </button>
+            )}
           </div>
 
           {/* Danh sách yêu cầu */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            {/* KÊNH GHIM: CSKH CARMATE TRỰC TUYẾN 24/7 (PLATFORM SUPPORT) */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSupportChannelActive(true);
+                setMobileShowChat(true);
+              }}
+              className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer border relative group mb-1 ${
+                isSupportChannelActive
+                  ? 'bg-gradient-to-r from-primary-50 to-indigo-50 dark:from-primary-950/50 dark:to-indigo-950/50 border-primary-500 shadow-xs ring-1 ring-primary-500/30'
+                  : 'bg-primary-50/40 dark:bg-primary-950/20 border-primary-500/20 hover:bg-primary-50/70 hover:border-primary-500/40'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#0071e3] to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Headphones className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
+                      <span>CSKH CarMate</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Trực tuyến" />
+                    </span>
+                    <span className="text-[9.5px] font-bold text-primary-600 dark:text-primary-400 bg-primary-100/80 dark:bg-primary-900/50 px-1.5 py-0.2 rounded-full font-mono">
+                      24/7
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    Hỗ trợ khẩn cấp, gỡ khóa nhầm
+                  </p>
+                </div>
+              </div>
+            </button>
+
             {currentList.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-400">
                 <MessageSquare className="w-8 h-8 stroke-1 text-slate-300 dark:text-slate-600 mb-2" />
@@ -491,7 +769,7 @@ export default function InboxModal({
             ) : (
               currentList.map((item) => {
                 const id = item.escrowId || item.id;
-                const isSelected = activeBooking && (activeBooking.escrowId || activeBooking.id) === id;
+                const isSelected = !isSupportChannelActive && activeBooking && (activeBooking.escrowId || activeBooking.id) === id;
                 const status = item.status || 'inquiring';
                 const isUnread = isBookingUnread(item);
                 const isManuallyUnread = unreadBookingIds.includes(id);
@@ -502,71 +780,106 @@ export default function InboxModal({
                     key={id}
                     type="button"
                     onClick={() => {
+                      setIsSupportChannelActive(false);
                       if (selectedId !== id) {
                         setSelectedId(id);
                         onMarkAsRead?.(id);
                       }
+                      setMobileShowChat(true);
                     }}
+                    onContextMenu={(e) => handleContextMenu(e, item)}
                     className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer border relative group ${
                       isSelected
-                        ? 'bg-white dark:bg-slate-800 border-primary-500/40 shadow-xs ring-1 ring-primary-500/20'
-                        : 'bg-white/40 dark:bg-slate-800/30 border-transparent hover:bg-white/80 dark:hover:bg-slate-800/60'
+                        ? 'bg-white dark:bg-slate-800/90 border-[#0071e3]/40 shadow-xs ring-1 ring-[#0071e3]/25'
+                        : 'bg-white/50 dark:bg-slate-800/25 border-black/[0.04] dark:border-white/[0.04] hover:bg-white dark:hover:bg-slate-800/60 hover:shadow-xs'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-1.5 mb-1">
-                      <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
+                    <div className="flex items-start gap-2.5">
+                      {/* Avatar: 38x38 squircle with Presence dot & Unread pulse: Bấm 1-chạm Cursor toggle */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleUnread(id);
+                        }}
+                        className="relative shrink-0 mt-0.5 cursor-pointer group/avatar"
+                        title={isUnread ? 'Bấm để đánh dấu ĐÃ ĐỌC (Phím U / Chuột phải)' : 'Bấm để đánh dấu ĐỌC SAU (Phím U / Chuột phải)'}
+                        aria-label={isUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc'}
+                      >
+                        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all group-hover/avatar:scale-105 active:scale-95 shadow-2xs ${
+                          isUnread
+                            ? 'bg-blue-500/15 text-[#0071e3] ring-1 ring-blue-500/30'
+                            : isSelected
+                              ? 'bg-primary-500/15 text-primary-600 dark:text-primary-400'
+                              : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'
+                        }`}>
+                          {isUnread ? (
+                            <Mail className="w-4 h-4 text-[#0071e3]" />
+                          ) : (
+                            <MailOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                          )}
+                        </div>
+                        {/* Chấm trực tuyến gắn góc dưới avatar */}
+                        <div className="absolute -bottom-0.5 -right-0.5 pointer-events-none">
+                          <PresenceDot isOnline={itemOnline.isOnline} size="xs" detail={itemOnline.detail} />
+                        </div>
+                        {/* Chấm xanh chưa đọc gắn góc trên avatar */}
                         {isUnread && (
-                          <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0 animate-pulse shadow-xs shadow-primary-500/50" title="Chưa đọc (Đọc sau)" />
-                        )}
-                        <PresenceDot isOnline={itemOnline.isOnline} size="xs" detail={itemOnline.detail} />
-                        <span>{toPublicAlias(item)}</span>
-                        {isManuallyUnread && (
-                          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50 shrink-0">
-                            Đọc sau
-                          </span>
-                        )}
-                      </span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleUnread(id);
-                          }}
-                          className={`p-1 rounded-full transition-all cursor-pointer ${
-                            isUnread
-                              ? 'text-[#0071e3] bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 ring-1 ring-blue-500/20'
-                              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
-                          }`}
-                          title={isUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc để đọc sau'}
-                        >
-                          <Mail className="w-3.5 h-3.5" />
-                        </button>
-                        {status === 'confirmed' ? (
-                          <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
-                            Đã chốt
-                          </span>
-                        ) : status === 'pre_confirmed' ? (
-                          <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-300/40 shrink-0 animate-pulse">
-                            Giữ chỗ 15p
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300/40 shrink-0">
-                            Đang hỏi
-                          </span>
+                          <span
+                            className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-[#0071e3] ring-2 ring-white dark:ring-slate-900 shadow-xs animate-pulse pointer-events-none"
+                            title="Chưa đọc (Đọc sau)"
+                          />
                         )}
                       </div>
-                    </div>
 
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium truncate">
-                      {item.from} ➔ {item.to}
-                    </p>
+                      {/* Nội dung tóm tắt chuẩn 3 dòng Apple / Cursor */}
+                      <div className="flex-1 min-w-0">
+                        {/* Dòng 1: Tên đối tác (trái) + Thời gian (phải) */}
+                        <div className="flex items-center justify-between gap-1.5 mb-0.5">
+                          <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                            {toPublicAlias(item)}
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 shrink-0 tabular">
+                            {formatCleanDateLabel(item.date)}
+                          </span>
+                        </div>
 
-                    <div className="flex items-center justify-between text-[10.5px] text-slate-400 mt-1.5 pt-1.5 border-t border-black/[0.04] dark:border-white/[0.05]">
-                      <span className="tabular font-semibold text-primary-600 dark:text-primary-400">
-                        {item.totalDeal ? formatVND(item.totalDeal) : 'Thỏa thuận'}
-                      </span>
-                      <span>{formatCleanDateLabel(item.date)}</span>
+                        {/* Dòng 2: Lộ trình */}
+                        <p className="text-[11.5px] text-slate-600 dark:text-slate-300 font-medium truncate mb-1">
+                          {item.from} ➔ {item.to}
+                        </p>
+
+                        {/* Dòng 3: Giá thỏa thuận (trái) + Badges trạng thái & Đọc sau (phải) */}
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="tabular font-bold text-xs text-primary-600 dark:text-primary-400">
+                            {item.totalDeal ? formatVND(item.totalDeal) : 'Thỏa thuận'}
+                          </span>
+
+                          <div className="shrink-0 flex items-center gap-1">
+                            {/* Chip Chưa đọc / Đọc sau (nếu đang unread) */}
+                            {isUnread && (
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950/80 text-[#0071e3] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 shrink-0 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3] animate-pulse" />
+                                <span>{isManuallyUnread ? 'Đọc sau' : 'Chưa đọc'}</span>
+                              </span>
+                            )}
+
+                            {/* Status badge */}
+                            {status === 'confirmed' ? (
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
+                                Đã chốt
+                              </span>
+                            ) : status === 'pre_confirmed' ? (
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-300/40 shrink-0 animate-pulse">
+                                Giữ 15p
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/40 shrink-0">
+                                Đang hỏi
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </button>
                 );
@@ -576,58 +889,183 @@ export default function InboxModal({
         </div>
 
         {/* CỘT PHẢI: KHUNG TRAO ĐỔI & ĐIỀU PHỐI 2 PHA */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-[#1c1c1e] min-w-0">
-          {!activeBooking ? (
+        <div className={`flex-1 flex flex-col bg-white dark:bg-[#1c1c1e] min-w-0 ${
+          !mobileShowChat ? 'hidden md:flex' : 'flex'
+        }`}>
+          {isSupportChannelActive ? (
+            /* KÊNH HỖ TRỢ TRỰC TIẾP CSKH CARMATE (PLATFORM SUPPORT DESK) */
+            <div className="flex-1 flex flex-col min-w-0 h-full">
+              {/* Header CSKH */}
+              <div className="px-4 sm:px-6 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-3 bg-gradient-to-r from-primary-50/70 to-indigo-50/70 dark:from-primary-950/40 dark:to-indigo-950/40 backdrop-blur-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setMobileShowChat(false)}
+                    className="md:hidden p-1.5 -ml-1 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors shrink-0 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#0071e3] to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Headphones className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        Ban Quản Trị & CSKH CarMate
+                      </h3>
+                      <ShieldCheck className="w-4 h-4 text-[#0071e3] shrink-0" title="Kênh chính thức từ nền tảng" />
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      Kênh giải quyết khiếu nại & hỗ trợ mở khóa nhầm 24/7
+                    </p>
+                  </div>
+                </div>
+
+                {(isBannedState || currentUser?.isBanned || activeBooking?.isBanned) && (
+                  <button
+                    type="button"
+                    onClick={handleResetBan}
+                    className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer shrink-0"
+                  >
+                    Mở khóa ngay
+                  </button>
+                )}
+              </div>
+
+              {/* Danh sách tin nhắn CSKH */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/20">
+                <div className="flex justify-center my-1">
+                  <span className="px-3 py-1 rounded-full text-[10.5px] font-semibold bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200/50">
+                    🎧 Cuộc trò chuyện được theo dõi và hỗ trợ trực tiếp bởi Ban Quản Trị CarMate
+                  </span>
+                </div>
+
+                {loadingSupport ? (
+                  <div className="text-center py-8 text-xs text-slate-400">Đang tải lịch sử hỗ trợ...</div>
+                ) : (
+                  supportMessages.map((msg, idx) => {
+                    const isPlatform = msg.senderRole === 'platform' || msg.senderRole === 'admin';
+                    return (
+                      <div
+                        key={msg.id || idx}
+                        className={`flex flex-col ${isPlatform ? 'items-start' : 'items-end'}`}
+                      >
+                        <span className="text-[10px] text-slate-400 mb-0.5 px-1">
+                          {isPlatform ? 'CSKH CarMate' : (currentUser?.name || 'Tôi')}
+                        </span>
+                        <div
+                          className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
+                            isPlatform
+                              ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-black/[0.06] dark:border-white/[0.06] rounded-tl-xs shadow-2xs'
+                              : 'bg-primary-600 text-white rounded-tr-xs shadow-xs'
+                          }`}
+                        >
+                          {msg.message || msg.text}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Quick Reply Chips CSKH */}
+              <div className="px-3 pt-2 pb-1 bg-slate-50/90 dark:bg-[#181920] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <span className="text-[10.5px] font-bold text-slate-400 shrink-0 mr-0.5 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-primary-500" /> Nhanh:
+                </span>
+                {[
+                  '🙏 Tôi bị khóa nhầm, xin mở khóa giúp tôi',
+                  '📍 Tôi chỉ gõ số nhà / biển số chứ không phải SĐT',
+                  '❓ Tôi cần hỗ trợ quy định an toàn'
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSendSupportMessage(null, chip)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-slate-800 border border-black/[0.06] dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:border-primary-500/50 hover:text-primary-600 dark:hover:text-primary-400 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+
+              {/* Input Form CSKH */}
+              <form
+                onSubmit={handleSendSupportMessage}
+                className="p-3 border-t border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#1c1c1e] flex items-center gap-2"
+              >
+                <input
+                  type="text"
+                  value={supportInput}
+                  onChange={(e) => setSupportInput(e.target.value)}
+                  placeholder="Nhắn tin với CSKH CarMate (nhập 'mở khóa' nếu bị khóa lộn)..."
+                  className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 transition-all outline-hidden"
+                />
+                <button
+                  type="submit"
+                  disabled={!supportInput.trim() || sendingSupport}
+                  className="p-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            </div>
+          ) : !activeBooking ? (
             <div className="flex-1 flex items-center justify-center p-8 text-center text-slate-400">
               <p className="text-xs">Chọn một cuộc trao đổi để xem chi tiết</p>
             </div>
           ) : (
             <>
               {/* Header chi tiết chuyến */}
-              <div className="px-4 py-3 border-b border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/30">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                      {partnerAlias}
-                    </h3>
-                    <PresenceDot isOnline={activePartnerOnline.isOnline} showLabel detail={activePartnerOnline.detail} />
-                    <span className="text-[11px] text-slate-500 tabular">#{activeBooking.escrowId || activeBooking.id}</span>
+              <div className="px-4 sm:px-6 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/40 backdrop-blur-sm">
+                <div className="min-w-0 flex-1 flex items-center gap-2.5">
+                  {/* Nút quay lại trên mobile */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileShowChat(false)}
+                    className="md:hidden p-1.5 -ml-1 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors shrink-0 cursor-pointer"
+                    title="Quay lại danh sách yêu cầu"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white truncate shrink-0 max-w-[160px] sm:max-w-none">
+                        {partnerAlias}
+                      </h3>
+                      <PresenceDot isOnline={activePartnerOnline.isOnline} showLabel detail={activePartnerOnline.detail} />
+                      <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
+                        #{activeBooking.escrowId || activeBooking.id}
+                      </span>
+                    </div>
+                    <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                      {activeBooking.from} ➔ {activeBooking.to}
+                      {activeBooking.seats ? ` · ${activeBooking.seats} chỗ` : ''}
+                      {activeBooking.totalDeal ? ` · ${formatVND(activeBooking.totalDeal)}` : ''}
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 truncate mt-0.5">
-                    {activeBooking.from} ➔ {activeBooking.to} · {activeBooking.seats || 1} ghế · {activeBooking.totalDeal ? formatVND(activeBooking.totalDeal) : ''}
-                  </p>
                 </div>
 
                 <div className="shrink-0 flex items-center gap-2">
-                  {/* Nút 1-chạm Đánh dấu chưa đọc / Đọc sau */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleUnread()}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 border ${
-                      isActiveUnread
-                        ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-300/60 dark:border-blue-700/60 ring-1 ring-blue-500/20'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary-600 dark:hover:text-primary-400'
-                    }`}
-                    title={isActiveUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc để xem lại sau'}
-                  >
-                    <Mail className={`w-3.5 h-3.5 ${isActiveUnread ? 'text-[#0071e3]' : 'text-slate-500'}`} />
-                    <span>{isActiveUnread ? 'Chưa đọc (Đọc sau)' : 'Đọc sau'}</span>
-                  </button>
 
                   {isConfirmed ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-300/40">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1.5 rounded-full border border-emerald-300/50">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Đã chốt chính thức</span>
+                      <span className="hidden sm:inline">Đã chốt chính thức</span>
+                      <span className="sm:hidden">Đã chốt</span>
                     </span>
                   ) : isPreConfirmed ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-300/40 animate-pulse">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1.5 rounded-full border border-blue-300/50 animate-pulse">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>Giữ chỗ: {timeLeftStr}</span>
+                      <span>{timeLeftStr || 'Giữ chỗ 15p'}</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1 rounded-full border border-amber-300/40">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1.5 rounded-full border border-amber-300/50">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Thương lượng ẩn danh</span>
+                      <span className="hidden sm:inline">Thương lượng ẩn danh</span>
+                      <span className="sm:hidden">Ẩn danh</span>
                     </span>
                   )}
                 </div>
@@ -788,6 +1226,109 @@ export default function InboxModal({
                                  (activeTab === 'outgoing' && msg.senderRole === 'passenger');
 
                     if (isSystem) {
+                      if (msg.isWarningNotice) {
+                        const isStrike3 = msg.strike >= 3 || msg.noticeType === 'strike_ban';
+                        const isStrike2 = msg.strike === 2 || msg.noticeType === 'strike_penalty';
+                        return (
+                          <div
+                            key={msg.id || idx}
+                            className={`my-3 p-4 rounded-3xl border shadow-xs transition-all ${
+                              isStrike3
+                                ? 'bg-rose-50/90 dark:bg-rose-950/60 border-rose-300 dark:border-rose-900 text-rose-900 dark:text-rose-100'
+                                : isStrike2
+                                  ? 'bg-amber-50/90 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+                                  : 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
+                                  isStrike3
+                                    ? 'bg-rose-200/80 dark:bg-rose-900 text-rose-700 dark:text-rose-300'
+                                    : isStrike2
+                                      ? 'bg-amber-200/80 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
+                                      : 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400'
+                                }`}
+                              >
+                                {isStrike3 ? (
+                                  <Ban className="w-5 h-5 text-rose-600" />
+                                ) : isStrike2 ? (
+                                  <ShieldAlert className="w-5 h-5 text-amber-600" />
+                                ) : (
+                                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <span className="font-bold text-xs">
+                                    {isStrike3
+                                      ? '📜 THÔNG BÁO TẠM ĐÌNH CHỈ TÀI KHOẢN (Cấp 3)'
+                                      : isStrike2
+                                        ? '🚨 QUYẾT ĐỊNH XỬ PHẠT TÍN NHIỆM (Lần 2/3)'
+                                        : '📜 THƯ CẢNH BÁO QUY CHẾ BẢO MẬT (Lần 1/3)'}
+                                  </span>
+                                  <span className="text-[10px] font-mono opacity-60">
+                                    {msg.createdAt
+                                      ? new Date(msg.createdAt).toLocaleTimeString('vi-VN', {
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })
+                                      : ''}
+                                  </span>
+                                </div>
+
+                                <p className="text-xs leading-relaxed mt-1.5 opacity-90">{msg.text}</p>
+
+                                {msg.detectedSample && (
+                                  <div className="mt-2 px-3 py-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] font-mono text-[11px] break-all border border-black/[0.05] dark:border-white/[0.05]">
+                                    Nội dung phát hiện: "{msg.detectedSample}"
+                                  </div>
+                                )}
+
+                                {msg.canDispute && (
+                                  <div className="mt-3 pt-2.5 border-t border-black/[0.08] dark:border-white/[0.08] flex items-center gap-2 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setDisputeTargetNotice(msg);
+                                        setShowDisputeModal(true);
+                                      }}
+                                      className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs"
+                                    >
+                                      <HelpCircle className="w-3.5 h-3.5" />
+                                      <span>Khiếu nại / Kháng nghị</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsSupportChannelActive(true);
+                                        setMobileShowChat(true);
+                                      }}
+                                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 transition-all active:scale-95"
+                                    >
+                                      <Headphones className="w-3.5 h-3.5 text-primary-500" />
+                                      <span>Chat với CSKH 24/7</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (msg.isDisputeResolved) {
+                        return (
+                          <div key={msg.id || idx} className="flex justify-center my-2">
+                            <div className="max-w-[85%] p-3 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-300/80 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200 text-xs leading-relaxed text-left flex items-start gap-2 shadow-2xs">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                              <div>{msg.text}</div>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div key={msg.id || idx} className="flex justify-center my-2">
                           <div className="max-w-[85%] p-2.5 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50 text-indigo-900 dark:text-indigo-200 text-xs leading-relaxed text-center">
@@ -918,19 +1459,30 @@ export default function InboxModal({
                     </div>
                     <p className="text-[11px] leading-relaxed mt-0.5">{violationInfo.message}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setViolationInfo(null)}
-                    className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {(violationInfo.isBanned || violationInfo.strike >= 3) && (
+                      <button
+                        type="button"
+                        onClick={handleResetBan}
+                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold shrink-0 cursor-pointer shadow-2xs transition-all active:scale-95"
+                      >
+                        Mở khóa
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setViolationInfo(null)}
+                      className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ) : piiWarning ? (
-                <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/70 border-t border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2 anim-shake">
+                <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/70 border-t border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-bold">Nhắc nhở an toàn từ CarMate AI:</p>
+                    <p className="font-bold">Nhắc nhở an toàn từ CarMate:</p>
                     <p className="text-[11px] leading-relaxed mt-0.5">{piiWarning}</p>
                   </div>
                   <button
@@ -962,11 +1514,43 @@ export default function InboxModal({
                 </div>
               )}
 
-              {/* KHUNG NHẬP TIN NHẮN HOẶC TRẠNG THÁI KHÓA */}
+              {/* KHUNG NHẬP TIN NHẮN HOẶC TRẠNG THÁI KHÓA (3-DAY GRACE BANNER) */}
               {isBannedState || currentUser?.isBanned || activeBooking.isBanned ? (
-                <div className="p-3.5 border-t border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-center gap-2 font-medium">
-                  <Ban className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>⛔ Tài khoản của bạn đã bị khóa do cố tình vi phạm quy chế bảo mật thông tin liên tục.</span>
+                <div className="p-3.5 border-t border-rose-200 dark:border-rose-900 bg-rose-50/90 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3 font-medium flex-wrap">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <Ban className="w-4 h-4 text-rose-600 shrink-0" />
+                    <div>
+                      <p className="font-bold text-rose-900 dark:text-rose-200">
+                        Tài khoản tạm khóa đăng bài (Thời hạn ân hạn khiếu nại: 3 ngày)
+                      </p>
+                      <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
+                        Nếu bị khóa nhầm, hãy bấm Chat với CSKH hoặc Kháng nghị để mở lại ngay lập tức.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSupportChannelActive(true);
+                        setMobileShowChat(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                    >
+                      <Headphones className="w-3.5 h-3.5" />
+                      <span>Chat với CSKH</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDisputeTargetNotice({ strike: 3, detectedSample: 'Khóa tài khoản 3-Strike' });
+                        setShowDisputeModal(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-white dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 font-bold text-xs shadow-2xs cursor-pointer transition-all active:scale-95"
+                    >
+                      Kháng nghị
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <form
@@ -978,22 +1562,12 @@ export default function InboxModal({
                     value={inputMessage}
                     disabled={isConfirmed && activeBooking.status === 'completed'}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      setInputMessage(val);
-                      if (!isConfirmed && val.trim()) {
-                        const check = detectPiiLeak(val);
-                        if (check.hasLeak) {
-                          setPiiWarning(check.warningMessage);
-                        } else if (piiWarning) {
-                          setPiiWarning('');
-                        }
-                      } else if (piiWarning) {
-                        setPiiWarning('');
-                      }
+                      setInputMessage(e.target.value);
+                      if (piiWarning) setPiiWarning('');
                     }}
                     placeholder={
-                      isConfirmed
-                        ? 'Nhắn tin cập nhật điểm đón / chuẩn bị lên xe...'
+                      isDealCommitted
+                        ? 'Nhắn tin cập nhật điểm đón, SĐT phụ, hành lý...'
                         : 'Thỏa thuận điểm đón, hành lý (SĐT tự động bảo mật)...'
                     }
                     className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 transition-all outline-hidden"
@@ -1012,6 +1586,115 @@ export default function InboxModal({
           )}
         </div>
       </div>
+
+      {/* MENU NGỮ CẢNH CHUỘT PHẢI (CURSOR / APPLE CONTEXT MENU) */}
+      {contextMenu && (
+        <div
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+          className="fixed z-[99999] w-[230px] rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-2xl p-1.5 text-xs text-slate-700 dark:text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100"
+          onClick={(e) => e.stopPropagation()}
+          role="menu"
+        >
+          {/* Header mini */}
+          <div className="px-2.5 py-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 border-b border-black/5 dark:border-white/5 truncate flex items-center justify-between">
+            <span className="truncate">{toPublicAlias(contextMenu.booking)}</span>
+            <span className="font-mono text-[10px] text-slate-400 shrink-0">
+              #{contextMenu.booking.escrowId || contextMenu.booking.id}
+            </span>
+          </div>
+
+          <div className="py-1 space-y-0.5">
+            {/* Đánh dấu chưa đọc / Đã đọc */}
+            <button
+              type="button"
+              onClick={() => {
+                const bId = contextMenu.booking.escrowId || contextMenu.booking.id;
+                handleToggleUnread(bId);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left hover:bg-blue-50 dark:hover:bg-blue-950/60 hover:text-[#0071e3] dark:hover:text-blue-400 transition-colors cursor-pointer font-semibold group"
+              role="menuitem"
+            >
+              <div className="flex items-center gap-2">
+                {isBookingUnread(contextMenu.booking) ? (
+                  <MailOpen className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#0071e3]" />
+                ) : (
+                  <Mail className="w-3.5 h-3.5 text-[#0071e3]" />
+                )}
+                <span>{isBookingUnread(contextMenu.booking) ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc'}</span>
+              </div>
+              <kbd className="text-[10px] font-mono px-1 py-0.2 rounded bg-black/5 dark:bg-white/10 text-slate-400 font-normal">
+                U
+              </kbd>
+            </button>
+
+            {/* Sao chép mã chuyến */}
+            <button
+              type="button"
+              onClick={() => {
+                const bId = contextMenu.booking.escrowId || contextMenu.booking.id;
+                navigator.clipboard.writeText(bId);
+                onShowToast?.(`✓ Đã sao chép mã chuyến #${bId}`);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer text-slate-600 dark:text-slate-300"
+              role="menuitem"
+            >
+              <Copy className="w-3.5 h-3.5 text-slate-400" />
+              <span>Sao chép mã chuyến</span>
+            </button>
+
+            {/* Sao chép lộ trình */}
+            <button
+              type="button"
+              onClick={() => {
+                const routeTxt = `${contextMenu.booking.from} ➔ ${contextMenu.booking.to}`;
+                navigator.clipboard.writeText(routeTxt);
+                onShowToast?.(`✓ Đã sao chép lộ trình: ${routeTxt}`);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer text-slate-600 dark:text-slate-300"
+              role="menuitem"
+            >
+              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+              <span>Sao chép lộ trình</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Dispute Notice Modal */}
+      <DisputeNoticeModal
+        isOpen={showDisputeModal}
+        onClose={() => {
+          setShowDisputeModal(false);
+          setDisputeTargetNotice(null);
+        }}
+        booking={activeBooking}
+        violationNotice={disputeTargetNotice}
+        onResolved={(updatedBooking) => {
+          if (onUpdateBooking && updatedBooking) {
+            onUpdateBooking(updatedBooking);
+          }
+          if (user) {
+            user.isBanned = false;
+            user.bannedAt = null;
+            user.deactivateAt = null;
+            user.status = 'active';
+            user.trustScore = Math.max(user.trustScore || 80, 85);
+            try {
+              localStorage.setItem('carmate_user', JSON.stringify(user));
+            } catch (e) {}
+          }
+          setIsSupportChannelActive(true);
+          loadSupportMessages();
+        }}
+        onOpenSupportChat={() => {
+          setIsSupportChannelActive(true);
+          loadSupportMessages();
+        }}
+        onShowToast={onShowToast}
+      />
     </Modal>
   );
 }

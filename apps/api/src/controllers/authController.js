@@ -8,7 +8,8 @@ import {
   getUserByGoogleId,
   saveUser,
   getTripsForUser,
-  deleteUserAccount
+  deleteUserAccount,
+  isUserDeactivated
 } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
 import { isAdminPhone } from '../utils/adminIdentity.js';
@@ -120,6 +121,14 @@ export async function verifyOtp(req, res) {
     let user = getUserByPhone(cleaned);
     let isNewUser = false;
 
+    if (user && isUserDeactivated(user)) {
+      return res.status(403).json({
+        success: false,
+        isDeactivated: true,
+        error: '⛔ TÀI KHOẢN ĐÃ BỊ VÔ HIỆU HÓA VĨNH VIỄN: Thời hạn ân hạn khiếu nại (3 ngày) đã kết thúc. Bạn không thể truy cập hệ thống nữa.'
+      });
+    }
+
     if (!user) {
       isNewUser = true;
       user = {
@@ -221,6 +230,12 @@ export async function zaloLogin(req, res) {
     const userId = `USR-ZALO-${verifiedZaloId || cleaned || Date.now()}`;
 
     let user = getUserById(userId) || (cleaned ? getUserByPhone(cleaned) : null);
+    if (user && isUserDeactivated(user)) {
+      return res.status(403).json({
+        success: false,
+        error: '⛔ Tài khoản của bạn đã bị vô hiệu hóa vĩnh viễn sau thời gian ân hạn 3 ngày. Không thể đăng nhập vào hệ thống.'
+      });
+    }
     let isNewUser = false;
 
     if (!user) {

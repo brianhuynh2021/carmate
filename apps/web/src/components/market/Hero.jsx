@@ -439,13 +439,14 @@ export default function Hero({
       {showQuickPasteModal && (
         <Modal
           onClose={() => setShowQuickPasteModal(false)}
-          size="lg"
+          size="2xl"
           title="Dán Bài Viết Facebook / Zalo (⌘K)"
           subtitle="Tự động nhận diện lộ trình, thời gian, giá tiền — Tạo vé đồ họa chia sẻ nhanh"
         >
           <SmartTripComposer
             currentUser={currentUser}
             currentRole="driver"
+            isModal={true}
             onInstantSubmit={(parsed) => {
               setShowQuickPasteModal(false);
               onPostClick?.(parsed.role || 'driver');

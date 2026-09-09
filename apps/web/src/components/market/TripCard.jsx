@@ -239,28 +239,31 @@ export default function TripCard({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {isTripFull ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap">
-              <Lock className="w-3 h-3" />
-              <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>
-            </span>
-          ) : (
-            <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
-          )}
+          <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
         </div>
       </div>
 
-      {/* ── 2. ĐI ĐÂU → ĐÂU? (WHERE - MŨI TÊN Ở CUỐI ĐƯỜNG KẺ) ── */}
+      {/* ── 2. ĐI ĐÂU → ĐÂU? (WHERE - LỘ TRÌNH CHUẨN APPLE HIG & KHÔNG GÃY/DÃN) ── */}
       <div className="px-5 pt-2 pb-1.5">
         <div className="flex items-center gap-2 text-slate-900 dark:text-white">
           <span className="text-[16.5px] font-bold tracking-tight truncate max-w-[44%]">
             {fromParsed.main}
           </span>
-          <div className="flex-1 flex items-center min-w-[32px] px-1">
-            <div className="h-[1.5px] flex-1 bg-slate-200 dark:bg-slate-700 rounded-full" />
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0 -ml-0.5" />
+          <div className="shrink-0 flex items-center px-0.5 text-slate-400 dark:text-slate-500 group-hover:text-[#0071e3] dark:group-hover:text-sky-400 transition-colors">
+            <svg
+              className="w-7 h-3 text-current shrink-0 group-hover:translate-x-0.5 transition-transform duration-200"
+              viewBox="0 0 28 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2 6h22.5M18.5 2.5L24.5 6L18.5 9.5" />
+            </svg>
           </div>
-          <span className="text-[16.5px] font-bold tracking-tight truncate max-w-[44%] text-right">
+          <span className="text-[16.5px] font-bold tracking-tight truncate max-w-[44%]">
             {toParsed.main}
           </span>
         </div>
@@ -458,11 +461,15 @@ export default function TripCard({
             ) : isTripFull ? (
               <button
                 type="button"
-                disabled
-                className="h-9 px-3.5 rounded-full text-[12px] font-semibold tracking-tight inline-flex items-center justify-center whitespace-nowrap bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 cursor-not-allowed shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSelect) onSelect(item);
+                  else if (onBook) onBook(item);
+                }}
+                className="h-9 px-3.5 rounded-full text-[12px] font-semibold tracking-tight inline-flex items-center justify-center whitespace-nowrap bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-[0.96] transition-all cursor-pointer shrink-0"
+                title="Chuyến đã đủ người. Bấm để xem thông tin chi tiết"
               >
-                <Lock className="w-3 h-3 mr-1.5" />
-                <span>Đã kín chỗ</span>
+                <span>Xem chi tiết</span>
               </button>
             ) : (
               <button

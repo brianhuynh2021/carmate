@@ -1541,10 +1541,11 @@ async function runTests() {
     );
 
     // 22.7 Kiểm tra An Toàn Luồng OTP Phone
+    const testOtpPhone = `0900${Math.floor(100000 + Math.random() * 900000)}`;
     const otpReqRes = await fetch(`${BASE_URL}/api/auth/request-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0977223344' })
+      body: JSON.stringify({ phone: testOtpPhone })
     });
     const otpReqData = await otpReqRes.json();
     assert(otpReqRes.status === 200 && otpReqData.success === true, 'OTP Flow: Gửi mã OTP SMS thành công');
@@ -1553,7 +1554,7 @@ async function runTests() {
     const wrongOtpRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0977223344', otp: '000000' })
+      body: JSON.stringify({ phone: testOtpPhone, otp: '000000' })
     });
     assert(wrongOtpRes.status === 400, 'OTP Flow: Mã OTP sai bị từ chối chính xác (HTTP 400)');
 
@@ -1562,11 +1563,11 @@ async function runTests() {
     const validOtpRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '0977223344', otp: correctOtp, name: 'Người Dùng OTP Test' })
+      body: JSON.stringify({ phone: testOtpPhone, otp: correctOtp, name: 'Người Dùng OTP Test' })
     });
     const validOtpData = await validOtpRes.json();
     assert(validOtpRes.status === 200 && validOtpData.success === true, 'OTP Flow: Xác thực OTP thành công và cấp JWT');
-    assert(validOtpData.user.phone === '0977223344', 'OTP Flow: Số điện thoại được kích hoạt chính xác');
+    assert(validOtpData.user.phone === testOtpPhone, 'OTP Flow: Số điện thoại được kích hoạt chính xác');
   } catch (err) {
     assert(false, '22. Pentest Chống Chiếm Đoạt Tài Khoản & Index Email', err.message);
   }
@@ -4164,6 +4165,35 @@ async function runTests() {
     assert(inboxModalSrc.includes('ShieldAlert') && inboxModalSrc.includes('violationInfo'), '3-Strike UI 1: InboxModal tích hợp cảnh báo vi phạm bậc thang');
     assert(inboxModalSrc.includes('-15 Điểm Tín Nhiệm'), '3-Strike UI 2: InboxModal hiển thị huy hiệu trừ điểm tín nhiệm');
     assert(inboxModalSrc.includes('Tài khoản của bạn đã bị khóa'), '3-Strike UI 3: InboxModal hiển thị trạng thái khóa tài khoản');
+
+    // 7. Kiểm thử Khôi phục / Reset Ban: endpoint reset-ban mở khóa thành công
+    const resetRes = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/reset-ban`, { method: 'POST' });
+    const resetData = await resetRes.json();
+    assert(resetRes.status === 200 && resetData.success === true, '3-Strike 15: reset-ban mở khóa thành công tài khoản và booking');
+
+    // 8. Kiểm thử Cho phép gửi SĐT khi chuyến đã chốt (pre_confirmed / confirmed)
+    await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/pre-confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preConfirmedBy: 'driver' })
+    });
+    const preConfirmMsgRes = await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Alo số anh nè 0988112233 em lưu nha',
+        senderRole: 'driver'
+      })
+    });
+    const preConfirmMsgData = await preConfirmMsgRes.json();
+    assert(preConfirmMsgRes.status === 200 && preConfirmMsgData.success === true, '3-Strike 16: Khi đã ấn chốt/giữ chỗ, hoàn toàn được phép chat số điện thoại');
+
+    // Dọn dẹp test booking
+    await fetch(`${BASE_URL}/api/bookings/${strikeBookingId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Dọn dẹp bài test 55' })
+    });
   } catch (err) {
     assert(false, '55. Kiểm thử Hệ Thống Xử Phạt Bậc Thang (3-Strike Sanctions)', err.message);
   }
@@ -4385,6 +4415,14 @@ async function runTests() {
     });
     const reportJson2 = await reportRes2.json();
     assert(reportJson2.data?.report?.penaltyApplied?.isBanned === true, 'Anti-Fake API 8: Tái phạm số ảo lần 2 bị khóa tài khoản vĩnh viễn (BAN)');
+
+    // Dọn dẹp dữ liệu kiểm thử để database không bị ô nhiễm trạng thái Ban
+    await fetch(`${BASE_URL}/api/bookings/${testBookingId2}/reset-ban`, { method: 'POST' });
+    await fetch(`${BASE_URL}/api/bookings/${testBookingId2}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'E2E test cleanup', cancelledBy: 'passenger' })
+    }).catch(() => {});
 
     // 4. Kiểm thử UI & Tệp Thành Phần
     const unreachModalPath = path.join(process.cwd(), 'apps/web/src/components/modals/UnreachablePhoneModal.jsx');
@@ -4898,7 +4936,8 @@ async function runTests() {
       'Mark as Unread 9: Header chi tiết chuyến có nút Đọc sau / Chưa đọc (Đọc sau) 1-chạm'
     );
     assert(
-      inboxModalSrc.includes('title={isUnread ? \'Đánh dấu đã đọc\' : \'Đánh dấu chưa đọc để đọc sau\'}'),
+      inboxModalSrc.includes('handleToggleUnread(id)') &&
+      (inboxModalSrc.includes('Đánh dấu đã đọc') || inboxModalSrc.includes('Đánh dấu chưa đọc')),
       'Mark as Unread 10: Từng thẻ trong danh sách cuộc trao đổi có icon Mail thao tác nhanh 1-chạm'
     );
     assert(
@@ -4912,6 +4951,14 @@ async function runTests() {
     assert(
       inboxModalSrc.includes('if (bId && !unreadBookingIds.includes(bId)) {'),
       'Mark as Unread 13: Bảo vệ không tự động đánh dấu đã đọc đè lên khi người dùng vừa chủ động chọn Đọc sau'
+    );
+    assert(
+      inboxModalSrc.includes('handleContextMenu') && inboxModalSrc.includes('onContextMenu='),
+      'Mark as Unread 14: Hỗ trợ Chuột phải (Context Menu) chuẩn Cursor cho phép Đánh dấu chưa đọc tức thì'
+    );
+    assert(
+      inboxModalSrc.includes("e.key === 'u' || e.key === 'U'"),
+      'Mark as Unread 15: Hỗ trợ Phím tắt U Ambient Cursor chuyển đổi Chưa đọc / Đọc sau cực nhanh không cần rê chuột'
     );
   } catch (err) {
     assert(false, '67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau', err.message);
@@ -5242,6 +5289,432 @@ async function runTests() {
     );
   } catch (err) {
     assert(false, '70. Kiểm thử Tối Giản Nhãn Phương Tiện (Triệt Tiêu "Xe Du Lịch 5 Chỗ" -> "5 Chỗ")', err.message);
+  }
+
+  // 71. KIỂM THỬ ĐƯỜNG KẺ MŨI TÊN LIỀN MẠCH & ĐỒNG BỘ HEADER THẺ CHUYẾN (SEAMLESS ROUTE CONNECTOR)
+  console.log('\n--- 71. Kiểm thử Đường Kẻ Mũi Tên Liền Mạch & Đồng Bộ Header Thẻ Chuyến ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const cardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
+    const cardSrc = fs.readFileSync(cardPath, 'utf8');
+
+    // 71.1 Không còn đoạn ngắt quãng / đứt đoạn giữa line và arrow
+    assert(
+      !cardSrc.includes('bg-slate-200 dark:bg-slate-700 rounded-full" />\n            <ArrowRight'),
+      'Seamless Route 1: Triệt tiêu hoàn toàn sự ngắt quãng giữa thẻ div đường kẻ và icon ArrowRight'
+    );
+
+    // 71.2 Sử dụng bộ nối SVG liền mạch Apple HIG (không kéo dãn vô tận gây mỏi mắt)
+    assert(
+      cardSrc.includes('M2 6h22.5M18.5 2.5L24.5 6L18.5 9.5') || cardSrc.includes('M0 5h8.5'),
+      'Seamless Route 2: Tích hợp đường nối SVG Apple HIG liền khối 100% không đứt gãy'
+    );
+
+    // 71.3 Dùng currentColor và strokeWidth đảm bảo đồng bộ màu sắc và độ dày tuyệt đối
+    assert(
+      !cardSrc.includes('flex-1 bg-current') && cardSrc.includes('stroke="currentColor"'),
+      'Seamless Route 3: Loại bỏ hoàn toàn đường line kéo dãn vô tận gây mỏi mắt, dùng currentColor đồng nhất'
+    );
+
+    // 71.4 Đồng bộ header thẻ chuyến: luôn hiển thị PresenceDot, không trùng lặp nhãn "Đã kín chỗ" 3 lần
+    assert(
+      !cardSrc.includes('{isTripFull ? (\n            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500'),
+      'Seamless Route 4: Header thẻ chuyến luôn đồng bộ PresenceDot, không xuất hiện thừa thãi nhãn Đã kín chỗ'
+    );
+
+    // 71.5 Nút hành động khi chuyến đầy chuyển sang Xem chi tiết, không lặp lại nhãn Đã kín chỗ
+    assert(
+      cardSrc.includes('<span>Xem chi tiết</span>'),
+      'Seamless Route 5: Nút hành động chuyển sang "Xem chi tiết", triệt tiêu 100% sự lặp lại của nhãn Đã kín chỗ'
+    );
+  } catch (err) {
+    assert(false, '71. Kiểm thử Đường Kẻ Mũi Tên Liền MẠch & Đồng Bộ Header Thẻ Chuyến', err.message);
+  }
+
+  // 72. KIỂM THỬ GIAO DIỆN HỘP THƯ CHUẨN APPLE & CÔNG THÁI HỌC CURSOR (INBOX APPLE HIG & ZERO TRUNCATION)
+  console.log('\n--- 72. Kiểm thử Giao Diện Hộp Thư Chuẩn Apple HIG & Công Thái Học Cursor ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const inboxPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx');
+    const inboxSrc = fs.readFileSync(inboxPath, 'utf8');
+
+    // 72.1 Modal kích thước 5xl và cột danh sách rộng rãi w-full md:w-[320px] lg:w-[340px]
+    assert(
+      inboxSrc.includes('size="5xl"') && inboxSrc.includes('md:w-[320px]'),
+      'Inbox Apple HIG 1: Modal chuẩn 5xl và cột danh sách mở rộng md:w-[320px] cho không gian thở'
+    );
+
+    // 72.2 Tabs Đến / Đi thiết kế Apple Liquid Segmented Control với bo cong và track âm
+    assert(
+      inboxSrc.includes('p-1 rounded-2xl bg-black/[0.05] dark:bg-white/[0.06] grid grid-cols-2 gap-1'),
+      'Inbox Apple HIG 2: Tabs Đến / Đi dạng Apple Liquid Segmented Control squircle'
+    );
+
+    // 72.3 Thẻ hội thoại bố trí phân tầng 3 dòng Apple: Dòng 1 (Tên + Ngày), Dòng 2 (Lộ trình), Dòng 3 (Giá + Trạng thái)
+    assert(
+      inboxSrc.includes('Dòng 1: Tên đối tác (trái) + Thời gian (phải)') &&
+      inboxSrc.includes('Dòng 2: Lộ trình') &&
+      inboxSrc.includes('Dòng 3: Giá thỏa thuận (trái) + Badges trạng thái & Đọc sau (phải)'),
+      'Inbox Apple HIG 3: Thẻ hội thoại cấu trúc 3 dòng phân tầng Apple, triệt tiêu hoàn toàn dồn nén text'
+    );
+
+    // 72.4 Không còn hiện tượng ép 4 phần tử vào dòng 1 khiến "Đọc sau" bị cắt thành "Đọ"
+    assert(
+      !inboxSrc.includes('truncate flex items-center gap-1">\n                            <span>{toPublicAlias(item)}</span>\n                            {isManuallyUnread && (\n                              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50 shrink-0">\n                                Đọc sau'),
+      'Inbox Apple HIG 4: Triệt tiêu vĩnh viễn lỗi cắt chữ "Đọc sau" thành "Đọ"'
+    );
+
+    // 72.5 Avatar squircle tương tác 1-chạm Cursor toggle Chưa đọc / Đã đọc
+    assert(
+      inboxSrc.includes('rounded-2xl flex items-center justify-center transition-all group-hover/avatar:scale-105') &&
+      inboxSrc.includes('handleToggleUnread(id)'),
+      'Inbox Apple HIG 5: Avatar squircle hỗ trợ thao tác 1-chạm chuyển đổi trạng thái đọc tức thì'
+    );
+
+    // 72.6 Menu ngữ cảnh chuột phải và phím tắt U Ambient Cursor
+    assert(
+      inboxSrc.includes('handleContextMenu') && inboxSrc.includes("e.key === 'u' || e.key === 'U'"),
+      'Inbox Apple HIG 6: Hỗ trợ chuột phải Context Menu và phím tắt U Ambient Cursor'
+    );
+  } catch (err) {
+    assert(false, '72. Kiểm thử Giao Diện Hộp Thư Chuẩn Apple HIG & Công Thái Học Cursor', err.message);
+  }
+
+  // 73. KIỂM THỬ THƯ CẢNH BÁO HỆ THỐNG, KHIẾU NẠI 1-CHẠM, CSKH TRỰC TUYẾN 24/7 & ÂN HẠN 3 NGÀY KHI KHÓA TÀI KHOẢN
+  console.log('\n--- 73. Kiểm thử Thư Cảnh Báo Hệ Thống, Khiếu Nại 1-Chạm, CSKH 24/7 & Ân Hạn 3 Ngày ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 73.1 Kiểm tra file mã nguồn Frontend & Backend
+    const disputeModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/DisputeNoticeModal.jsx');
+    assert(fs.existsSync(disputeModalPath), 'Dispute Modal 1: File DisputeNoticeModal.jsx tồn tại');
+    const disputeModalSrc = fs.readFileSync(disputeModalPath, 'utf8');
+    assert(
+      disputeModalSrc.includes('PRESET_DISPUTE_REASONS') &&
+      disputeModalSrc.includes('Gõ nhầm số nhà / địa chỉ đón trả') &&
+      disputeModalSrc.includes('Khóa nhầm / Hệ thống hiểu sai ngữ cảnh'),
+      'Dispute Modal 2: Tích hợp đầy đủ danh sách lý do khiếu nại 1-chạm (Preset chips)'
+    );
+
+    const inboxModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx');
+    const inboxModalSrc = fs.readFileSync(inboxModalPath, 'utf8');
+    assert(
+      inboxModalSrc.includes('CSKH CarMate') &&
+      inboxModalSrc.includes('Trực tuyến 24/7') &&
+      inboxModalSrc.includes('isSupportChannelActive') &&
+      inboxModalSrc.includes('<DisputeNoticeModal'),
+      'Inbox Support 1: Hộp thư tích hợp kênh CSKH CarMate 24/7 và modal khiếu nại'
+    );
+    assert(
+      inboxModalSrc.includes('isWarningNotice') &&
+      inboxModalSrc.includes('Khiếu nại / Kháng nghị'),
+      'Inbox Warning Letter: Tin nhắn cảnh báo render dạng Thư cảnh báo chính thức kèm nút Khiếu nại'
+    );
+
+    const supportCtrlPath = path.resolve(process.cwd(), 'apps/api/src/controllers/supportController.js');
+    assert(fs.existsSync(supportCtrlPath), 'Support API: Controller supportController.js tồn tại');
+
+    // 73.2 Tạo tài khoản test, đăng chuyến và đặt chỗ kiểm thử
+    const userTestPhone = '0915882341';
+    const driverTestPhone = '0977224466';
+
+    const loginUserRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: `TEST_ZALO_TOKEN_${userTestPhone}`, phone: userTestPhone, name: 'Khách Test 73' })
+    });
+    const userAuth73 = await loginUserRes.json();
+    const tokenUser73 = userAuth73.token;
+
+    const loginDriverRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: `TEST_ZALO_TOKEN_${driverTestPhone}`, phone: driverTestPhone, name: 'Chủ Xe Test 73' })
+    });
+    const driverAuth73 = await loginDriverRes.json();
+    const tokenDriver73 = driverAuth73.token;
+
+    // Chủ xe tạo chuyến đi
+    const createTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenDriver73}`
+      },
+      body: JSON.stringify({
+        id: `DRV-73-${Date.now()}`,
+        type: 'driver_offer',
+        from: 'Bù Đốp',
+        to: 'Sài Gòn',
+        phoneReal: driverTestPhone,
+        userId: driverAuth73?.user?.id || `USR-${driverTestPhone}`,
+        timeSlot: '07:00-08:00',
+        basePricePerSeat: 150000
+      })
+    });
+    const tripData = await createTripRes.json();
+    const tripId = tripData.data?.id;
+    assert(createTripRes.status === 201 && tripId, 'Trip 73: Chủ xe tạo chuyến thành công');
+
+    // Khách đặt chỗ
+    const bookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        tripId,
+        from: 'Bù Đốp',
+        to: 'Sài Gòn',
+        seats: 1,
+        totalDeal: 150000,
+        passengerNote: 'Test booking 73',
+        contactPhone: userTestPhone,
+        passengerPhone: userTestPhone,
+        driverPhone: driverTestPhone
+      })
+    });
+    const bookingData = await bookingRes.json();
+    const bookingId = bookingData.data?.escrowId || bookingData.data?.id;
+    assert(bookingRes.status === 201 && bookingId, 'Booking 73: Khách đặt chỗ thành công');
+
+    // 73.3 Gửi tin nhắn chứa SĐT khi CHƯA chốt: Nhận thư cảnh báo chính thức Strike 1
+    const strike1Res = await fetch(`${BASE_URL}/api/bookings/${bookingId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({ message: `Alo gọi cho tôi số ${userTestPhone} nha` })
+    });
+    const strike1Data = await strike1Res.json();
+    assert(strike1Res.status === 400, 'Strike 1 HTTP: Chặn gửi tin nhắn chứa PII khi chưa chốt (HTTP 400)');
+    assert(strike1Data.strike === 1, 'Strike 1 Value: Ghi nhận vi phạm mức 1');
+    assert(strike1Data.warningNotice?.isWarningNotice === true, 'Strike 1 Notice: Tạo thư cảnh báo chính thức vào tin nhắn');
+    assert(strike1Data.warningNotice?.canDispute === true, 'Strike 1 Dispute: Kèm cờ canDispute cho phép khiếu nại');
+
+    // Strike 2
+    const strike2Res = await fetch(`${BASE_URL}/api/bookings/${bookingId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({ message: `Nhắn lại số điện thoại ${userTestPhone} lần nữa nhé` })
+    });
+    const strike2Data = await strike2Res.json();
+    assert(strike2Res.status === 400, 'Strike 2 HTTP: Chặn gửi tin nhắn lần 2');
+    assert(strike2Data.strike === 2, 'Strike 2 Value: Ghi nhận vi phạm mức 2 (-15 điểm tín nhiệm)');
+
+    // Strike 3: Tạm khóa tài khoản & Thiết lập ân hạn 3 ngày (72 giờ)
+    const strike3Res = await fetch(`${BASE_URL}/api/bookings/${bookingId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({ message: `Cố tình gửi số ${userTestPhone} lần thứ 3` })
+    });
+    const strike3Data = await strike3Res.json();
+    assert(strike3Res.status === 403, 'Strike 3 HTTP: Khóa tài khoản trả về HTTP 403');
+    assert(strike3Data.strike === 3 && strike3Data.isBanned === true, 'Strike 3 Ban: Tài khoản bị tạm khóa đăng bài/đặt chuyến');
+    assert(strike3Data.deactivateAt > Date.now(), 'Grace Period Invariant: Thiết lập thời gian ân hạn 3 ngày trước khi vô hiệu hóa');
+
+    // 73.4 Kiểm tra quy chế Khóa tài khoản: KHÔNG được đăng bài mới nhưng VẪN đăng nhập & chat hỗ trợ được
+    const postBlockedRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        id: `DRV-BLOCKED-${Date.now()}`,
+        type: 'driver_offer',
+        from: 'Hà Nội',
+        to: 'Hải Phòng',
+        phoneReal: userTestPhone,
+        timeSlot: '08:00-09:00',
+        basePricePerSeat: 100000
+      })
+    });
+    assert(
+      postBlockedRes.status === 403,
+      'Ban Restriction 1: Người dùng bị khóa không được phép đăng bài chuyến mới (HTTP 403)'
+    );
+
+    // Người dùng bị khóa VẪN đăng nhập được trong thời gian ân hạn 3 ngày
+    const loginWhileBannedRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: `TEST_ZALO_TOKEN_${userTestPhone}`, phone: userTestPhone })
+    });
+    assert(
+      loginWhileBannedRes.status === 200,
+      'Grace Period 1: Người dùng bị khóa vẫn đăng nhập được trong 3 ngày ân hạn để khiếu nại (HTTP 200)'
+    );
+
+    // 73.5 Kiểm thử Khiếu nại 1-chạm (Dispute Booking API)
+    const disputeRes = await fetch(`${BASE_URL}/api/bookings/${bookingId}/dispute`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        reason: 'Gõ nhầm số nhà / địa chỉ đón trả',
+        note: 'Em gõ số nhà 123 mà hệ thống tưởng SĐT',
+        reporterRole: 'passenger'
+      })
+    });
+    const disputeData = await disputeRes.json();
+    assert(disputeRes.status === 200 && disputeData.success === true, 'Dispute API: Tiếp nhận và giải quyết khiếu nại thành công');
+
+    // Sau khi khiếu nại gỡ khóa, người dùng đăng bài lại bình thường
+    const postAfterUnbanRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        id: `DRV-UNBAN-${Date.now()}`,
+        type: 'driver_offer',
+        from: 'Hà Nội',
+        to: 'Hải Phòng',
+        phoneReal: userTestPhone,
+        timeSlot: '08:00-09:00',
+        basePricePerSeat: 100000
+      })
+    });
+    const postAfterData = await postAfterUnbanRes.json();
+    assert(
+      postAfterUnbanRes.status === 201,
+      'Dispute Restore: Người dùng đăng bài lại hoàn toàn bình thường sau khi gỡ khóa (HTTP 201)'
+    );
+    if (postAfterData.data?.id) {
+      await fetch(`${BASE_URL}/api/trips/${postAfterData.data.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${tokenUser73}` }
+      }).catch(() => {});
+    }
+
+    // 73.6 Kiểm thử Kênh CSKH CarMate 24/7 (Support Chat Desk)
+    // Gửi tin nhắn hỗ trợ yêu cầu mở khóa
+    const sendSupportRes = await fetch(`${BASE_URL}/api/support/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        message: 'Admin ơi em bị khóa lộn tài khoản rồi, mở khóa giúp em với',
+        bookingId
+      })
+    });
+    const sendSupportData = await sendSupportRes.json();
+    assert(sendSupportRes.status === 201, 'Support Chat 1: Gửi tin nhắn tới CSKH CarMate 24/7 thành công');
+    assert(
+      sendSupportData.data?.isUnbanned === true,
+      'Support Chat 2: Trí tuệ bản địa CarMate Ambient AI nhận diện yêu cầu khóa lộn và tự động gỡ khóa tức thì'
+    );
+
+    // Đọc lịch sử tin nhắn CSKH
+    const getSupportRes = await fetch(`${BASE_URL}/api/support/messages?bookingId=${bookingId}`, {
+      headers: { Authorization: `Bearer ${tokenUser73}` }
+    });
+    const getSupportData = await getSupportRes.json();
+    assert(
+      Array.isArray(getSupportData.data) && getSupportData.data.length >= 2,
+      'Support Chat 3: Trả về đầy đủ luồng trao đổi 2 chiều giữa người dùng và CSKH CarMate'
+    );
+
+    // 73.7 Dọn dẹp chuyến và booking test
+    if (bookingId) {
+      await fetch(`${BASE_URL}/api/bookings/${bookingId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${tokenDriver73}` }
+      }).catch(() => {});
+    }
+    if (tripId) {
+      await fetch(`${BASE_URL}/api/trips/${tripId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${tokenDriver73}` }
+      }).catch(() => {});
+    }
+    assert(true, '73. Hoàn tất kiểm thử Thư Cảnh Báo, Khiếu Nại 1-Chạm, CSKH 24/7 & Ân Hạn 3 Ngày');
+  } catch (err) {
+    assert(false, '73. Kiểm thử Thư Cảnh Báo Hệ Thống, Khiếu Nại 1-Chạm, CSKH 24/7 & Ân Hạn 3 Ngày', err.message);
+  }
+
+  // 74. KIỂM THỬ CHUÔNG THÔNG BÁO GÓC PHẢI TRÊN CÙNG, BANNER MACOS & NOTIFICATION CENTER POPOVER
+  console.log('\n--- 74. Kiểm thử Chuông Thông Báo Góc Phải Trên Cùng, Banner macOS & Notification Center ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 74.1 Kiểm tra file AppleMacNotification.jsx
+    const macNotifPath = path.resolve(process.cwd(), 'apps/web/src/components/common/AppleMacNotification.jsx');
+    assert(fs.existsSync(macNotifPath), 'macOS Notify 1: File AppleMacNotification.jsx tồn tại');
+    const macNotifCode = fs.readFileSync(macNotifPath, 'utf8');
+    assert(macNotifCode.includes('triggerMacNotification'), 'macOS Notify 2: Export hàm triggerMacNotification');
+    assert(macNotifCode.includes('carmate:mac-notify'), 'macOS Notify 3: Lắng nghe sự kiện carmate:mac-notify');
+    assert(macNotifCode.includes('playMessageChime'), 'macOS Notify 4: Kích hoạt âm thanh chuông nhẹ playMessageChime');
+    assert(macNotifCode.includes('createPortal') && macNotifCode.includes('document.body'), 'macOS Notify 5: Dùng React Portal gắn vào document.body');
+    assert(macNotifCode.includes('CARMATE') && macNotifCode.includes('vừa xong'), 'macOS Notify 6: Header thông báo chuẩn macOS (CARMATE · vừa xong)');
+
+    // 74.2 Kiểm tra Header.jsx & NotificationDropdown.jsx: Chuông góc phải và dropdown chuẩn YouTube
+    const headerPath = path.resolve(process.cwd(), 'apps/web/src/components/common/Header.jsx');
+    const headerCode = fs.readFileSync(headerPath, 'utf8');
+    assert(headerCode.includes('notificationCenterRef'), 'Header Bell 1: Tích hợp ref notificationCenterRef');
+    assert(headerCode.includes('isNotificationCenterOpen'), 'Header Bell 2: State quản lý mở/đóng Notification Center');
+    assert(headerCode.includes('NotificationDropdown'), 'Header Bell 3: Tích hợp component NotificationDropdown chuẩn YouTube');
+
+    const notifDropPath = path.resolve(process.cwd(), 'apps/web/src/components/common/NotificationDropdown.jsx');
+    assert(fs.existsSync(notifDropPath), 'YouTube Notif 1: File NotificationDropdown.jsx tồn tại');
+    const notifDropCode = fs.readFileSync(notifDropPath, 'utf8');
+    assert(notifDropCode.includes('formatRelativeTimeVi'), 'YouTube Notif 2: Hàm định dạng thời gian tương đối chuẩn YouTube');
+    assert(notifDropCode.includes('Tất cả') && notifDropCode.includes('Chưa đọc'), 'YouTube Notif 3: Thanh Filter Chips (Tất cả / Chưa đọc)');
+    assert(notifDropCode.includes('onMarkAllRead') && notifDropCode.includes('Đọc hết'), 'YouTube Notif 4: Nút Đọc hết 1-chạm dọn sạch badge');
+    assert(notifDropCode.includes('Thử thông báo macOS'), 'YouTube Notif 5: Nút tương tác Thử thông báo macOS');
+    assert(notifDropCode.includes('Mở Hộp thư'), 'YouTube Notif 6: Nút dẫn đến Hộp thư đầy đủ');
+    assert(notifDropCode.includes('handleItemClick') && notifDropCode.includes('onSelectBooking'), 'YouTube Notif 7: Nhấp vào thông báo xem kỹ trực tiếp (handleItemClick)');
+    assert(notifDropCode.includes('Ẩn thông báo này'), 'YouTube Notif 8: Menu 3 chấm hỗ trợ ẩn thông báo');
+
+    // Kiểm tra vị trí chuông ở góc phải trên cùng (notificationCenterRef xuất hiện sau userMenuRef hoặc sau các nút khác)
+    const userMenuIdx = headerCode.indexOf('userMenuRef');
+    const notifIdx = headerCode.lastIndexOf('notificationCenterRef');
+    assert(notifIdx > userMenuIdx, 'Header Bell 4: Chuông thông báo nằm ở góc phải ngoài cùng sau User Profile/Login');
+
+    // 74.3 Kiểm tra App.jsx: Import và mount AppleMacNotification, truyền props cho Header
+    const appPath = path.resolve(process.cwd(), 'apps/web/src/App.jsx');
+    const appCode = fs.readFileSync(appPath, 'utf8');
+    assert(appCode.includes('AppleMacNotification'), 'App.jsx 1: Đã import component AppleMacNotification');
+    assert(appCode.includes('<AppleMacNotification'), 'App.jsx 2: Đã mount AppleMacNotification ở tầng root');
+    assert(appCode.includes('handleMarkAllRead'), 'App.jsx 3: Định nghĩa hàm handleMarkAllRead làm sạch unread');
+    assert(appCode.includes('onMarkAllRead={handleMarkAllRead}'), 'App.jsx 4: Truyền onMarkAllRead vào Header');
+    assert(appCode.includes('onSelectBooking='), 'App.jsx 5: Truyền onSelectBooking vào Header');
+    assert(appCode.includes('onSelectTrip='), 'App.jsx 6: Truyền onSelectTrip vào Header để xem kỹ bài đăng chuyến');
+
+    // 74.4 Kiểm tra InboxModal.jsx: Đã gỡ nút [✉ Đọc sau U] thừa ở header bên phải & hỗ trợ mở thẳng kênh chi tiết
+    const inboxModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx');
+    const inboxCode = fs.readFileSync(inboxModalPath, 'utf8');
+    assert(!inboxCode.includes('Đọc sau U'), 'InboxModal 1: Đã gỡ bỏ hoàn toàn nút thừa [Đọc sau U] ở header');
+    assert(inboxCode.includes('initialBookingId') && inboxCode.includes('setIsSupportChannelActive'),
+      'InboxModal 2: Tự động chuyển thẳng tab hoặc kênh CSKH khi initialBookingId được kích hoạt');
+
+    // 74.5 Kiểm tra sqliteStore.js: Bất biến MIT khi mở khóa tài khoản
+    const storePath = path.resolve(process.cwd(), 'apps/api/src/db/sqliteStore.js');
+    const storeCode = fs.readFileSync(storePath, 'utf8');
+    assert(storeCode.includes("status = 'active'") && storeCode.includes('bannedAt = null') && storeCode.includes('piiStrikes = 0'),
+      'Backend MIT Invariant: Mở khóa tài khoản tự động dọn sạch bannedAt, deactivateAt và piiStrikes');
+
+    assert(true, '74. Hoàn tất kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Dropdown Chuẩn YouTube');
+  } catch (err) {
+    assert(false, '74. Kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Dropdown Chuẩn YouTube', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

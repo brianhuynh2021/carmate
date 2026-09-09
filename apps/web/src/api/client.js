@@ -232,6 +232,31 @@ export const api = {
     });
   },
 
+  async resetBookingBan(id) {
+    return request(`/bookings/${id}/reset-ban`, {
+      method: 'POST'
+    });
+  },
+
+  async disputeBooking(id, payload = {}) {
+    return request(`/bookings/${id}/dispute`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getSupportMessages(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/support/messages${query ? '?' + query : ''}`);
+  },
+
+  async sendSupportMessage(payload = {}) {
+    return request('/support/messages', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
   // Auth & Identity (0đ chi phí / Zalo & OTP)
   async requestOtp(phone) {
     return request('/auth/request-otp', {

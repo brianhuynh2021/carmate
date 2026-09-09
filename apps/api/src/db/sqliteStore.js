@@ -159,6 +159,27 @@ export async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
   `);
 
+  // 7. Bảng Trò Chuyện & Khiếu Nại Với Platform CSKH (support_messages)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS support_messages (
+      id TEXT PRIMARY KEY,
+      bookingId TEXT,
+      userId TEXT,
+      phone TEXT,
+      senderRole TEXT NOT NULL,
+      senderName TEXT,
+      message TEXT NOT NULL,
+      type TEXT DEFAULT 'support',
+      status TEXT DEFAULT 'open',
+      createdAt INTEGER NOT NULL,
+      metadata TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_support_booking ON support_messages(bookingId);
+    CREATE INDEX IF NOT EXISTS idx_support_user ON support_messages(userId);
+    CREATE INDEX IF NOT EXISTS idx_support_phone ON support_messages(phone);
+    CREATE INDEX IF NOT EXISTS idx_support_created ON support_messages(createdAt);
+  `);
+
   // 7. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
   //
   // BẤT BIẾN SÀN GIAO DỊCH: mọi chuyến hiển thị trên sàn phải liên hệ được với
@@ -1096,6 +1117,18 @@ export async function updateUserStatus(userId, updates = {}) {
     Object.assign(found, updates, { updatedAt: new Date().toISOString() });
   }
 
+  if (updates.isBanned === false) {
+    found.isBanned = false;
+    found.status = 'active';
+    found.bannedAt = null;
+    found.deactivateAt = null;
+    found.piiStrikes = 0;
+    found.banReason = null;
+    if ((found.trustScore || 0) < 85) {
+      found.trustScore = 95;
+    }
+  }
+
   await saveUser(found);
 
   if (updates.isBanned !== undefined) {
@@ -1396,4 +1429,139 @@ export function resetTrustRules() {
   const database = getRawDB();
   database.prepare('DELETE FROM key_values WHERE key = ?').run('trust_policy_rules');
   return DEFAULT_TRUST_RULES;
+}
+
+/**
+ * Kiểm tra xem người dùng có bị vô hiệu hóa hoàn toàn hay không (hết hạn ân hạn 3 ngày)
+ */
+export function isUserDeactivated(user) {
+  if (!user) return false;
+  if (user.isDeactivated || user.status === 'deactivated') return true;
+  if (user.isBanned && user.deactivateAt && Date.now() >= user.deactivateAt) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Lưu tin nhắn hỗ trợ giữa Người dùng và Platform Support / CSKH CarMate
+ */
+export function saveSupportMessage({
+  id = `SUP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  bookingId = null,
+  userId = null,
+  phone = null,
+  senderRole = 'user', // 'user' | 'platform' | 'admin'
+  senderName = 'Thành viên',
+  message = '',
+  type = 'support', // 'support' | 'ban_dispute' | 'strike_dispute'
+  status = 'open', // 'open' | 'resolved' | 'dismissed'
+  createdAt = Date.now(),
+  metadata = null
+}) {
+  const database = getRawDB();
+  const metaStr = metadata ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null;
+  database
+    .prepare(
+      `
+    INSERT INTO support_messages (id, bookingId, userId, phone, senderRole, senderName, message, type, status, createdAt, metadata)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `
+    )
+    .run(id, bookingId, userId, phone, senderRole, senderName, message, type, status, createdAt, metaStr);
+
+  return {
+    id,
+    bookingId,
+    userId,
+    phone,
+    senderRole,
+    senderName,
+    message,
+    type,
+    status,
+    createdAt,
+    metadata: metadata ? (typeof metadata === 'string' ? JSON.parse(metadata) : metadata) : null
+  };
+}
+
+/**
+ * Lấy lịch sử tin nhắn trò chuyện với Platform Support
+ */
+export function getSupportMessages({ bookingId, userId, phone, limit = 50 } = {}) {
+  const database = getRawDB();
+  const conditions = [];
+  const params = [];
+
+  if (bookingId) {
+    conditions.push('bookingId = ?');
+    params.push(bookingId);
+  }
+  if (userId) {
+    conditions.push('userId = ?');
+    params.push(userId);
+  }
+  if (phone) {
+    conditions.push('phone = ?');
+    params.push(phone);
+  }
+
+  let sql = 'SELECT * FROM support_messages';
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' OR ');
+  }
+  sql += ' ORDER BY createdAt ASC LIMIT ?';
+  params.push(limit);
+
+  const rows = database.prepare(sql).all(...params);
+  return rows.map((r) => ({
+    ...r,
+    metadata: r.metadata ? JSON.parse(r.metadata) : null
+  }));
+}
+
+/**
+ * Xử lý khiếu nại (Dispute) và gỡ khóa tài khoản (Unban) tự động hoặc theo phê duyệt
+ */
+export async function resolveDisputeAndUnban({ bookingId, userId, phone, reason = '', note = '' } = {}) {
+  const database = getRawDB();
+  // 1. Mở khóa booking nếu có
+  if (bookingId) {
+    const booking = getBookingById(bookingId);
+    if (booking) {
+      await updateBookingStatus(bookingId, booking.status, {
+        isBanned: false,
+        piiStrikes: {},
+        disputeStatus: 'resolved',
+        disputeResolvedAt: new Date().toISOString()
+      });
+    }
+  }
+
+  // 2. Mở khóa người dùng
+  const targetKey = userId || phone;
+  if (targetKey) {
+    await updateUserStatus(targetKey, {
+      isBanned: false,
+      status: 'active',
+      piiStrikes: 0,
+      bannedAt: null,
+      deactivateAt: null,
+      trustScore: 98 // Phục hồi điểm tín nhiệm an toàn
+    });
+  }
+
+  // 3. Đánh dấu các tin nhắn khiếu nại liên quan là resolved
+  if (bookingId || userId || phone) {
+    database
+      .prepare(
+        `
+      UPDATE support_messages SET status = 'resolved'
+      WHERE (bookingId = ? AND bookingId IS NOT NULL) OR (userId = ? AND userId IS NOT NULL) OR (phone = ? AND phone IS NOT NULL)
+    `
+      )
+      .run(bookingId || null, userId || null, phone || null);
+  }
+
+  return { success: true, message: 'Đã xử lý khiếu nại và khôi phục tài khoản thành công.' };
 }
