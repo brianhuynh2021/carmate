@@ -3563,10 +3563,10 @@ async function runTests() {
     const tripCardPath = './apps/web/src/components/market/TripCard.jsx';
     const tripCardContent = fs.readFileSync(tripCardPath, 'utf8');
 
-    // 1. TripCard có prop isOwner và huy hiệu Chuyến của bạn
+    // 1. TripCard có prop isOwner và loại bỏ chip "Chuyến của bạn" dư thừa
     assert(
-      tripCardContent.includes('isOwner') && tripCardContent.includes('Chuyến của bạn'),
-      'TripCard Invariant 1: TripCard tích hợp thuộc tính isOwner và hiển thị huy hiệu Chuyến của bạn'
+      tripCardContent.includes('isOwner') && !tripCardContent.includes('<UserCheck'),
+      'TripCard Invariant 1: TripCard tích hợp thuộc tính isOwner và đã loại bỏ chip Chuyến của bạn dư thừa'
     );
 
     // 2. TripCard đổi nút CTA thành "Quản lý chuyến của bạn" cho chủ bài đăng
@@ -5007,6 +5007,11 @@ async function runTests() {
       myTripsSrc.includes('formatCleanDateLabel') &&
       myTripsSrc.includes('formatCleanDateLabel(trip.date)'),
       'Clean Date 13: MyTripsView.jsx tích hợp formatCleanDateLabel'
+    );
+
+    assert(
+      !tripCardSrc.includes('Chuyến của bạn') && tripCardSrc.includes('Quản lý chuyến của bạn'),
+      'Clean Date 14: TripCard đã triệt tiêu hoàn toàn chip Chuyến của bạn dư thừa ở header'
     );
   } catch (err) {
     assert(false, '68. Kiểm thử Làm Sạch Nhãn Ngày & Triệt Tiêu Hậu Tố Dư Thừa', err.message);
