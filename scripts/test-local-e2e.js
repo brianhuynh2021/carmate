@@ -4259,9 +4259,12 @@ async function runTests() {
     assert(bookedSrc.includes('text-[10.5px] sm:text-[11.5px] font-bold leading-tight truncate'), 'Mobile UX 5: Quy trình 4 bước kết nối an toàn tối ưu co giãn nhãn chữ trên mobile');
     assert(bookedSrc.includes('flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3'), 'Mobile UX 6: Khối liên hệ đối tác linh hoạt theo chiều dọc trên mobile và chiều ngang trên desktop');
 
-    // 5. Responsive MyTripsView
+    // 5. Responsive MyTripsView: Thiết kế dải nút chuẩn Apple Bento 2 tầng thoáng đãng
     const myTripsSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'), 'utf8');
-    assert(myTripsSrc.includes('grid grid-cols-2 sm:flex sm:items-center gap-1.5 w-full sm:w-auto'), 'Mobile UX 7: Dải nút thao tác chuyến của tôi dùng lưới 2-cột chuẩn ngón tay cái trên điện thoại');
+    assert(
+      myTripsSrc.includes('Xem thẻ vé & Chi tiết bài đăng') && myTripsSrc.includes('handleOpenDeleteModal'),
+      'Mobile UX 7: Dải nút thao tác chuyến của tôi thiết kế chuẩn Apple Bento 2 tầng thoáng đãng, không bị gãy dòng chữ'
+    );
 
     // 6. Responsive PostTripForm
     const postFormSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/PostTripForm.jsx'), 'utf8');
