@@ -289,9 +289,14 @@ export default function useTripsData({
   const handleToggleTripStatus = useCallback(
     async (tripId, newStatus) => {
       const updates = { status: newStatus };
+      const isDriverOffer = driverOffers.some((t) => t.id === tripId);
       setDriverOffers((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
       setPassengerRequests((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
-      showToast(newStatus === 'full' ? 'Đã đổi sang: Đã đủ người' : 'Đã mở lại nhận khách');
+
+      const toastMsg = isDriverOffer
+        ? (newStatus === 'full' ? 'Đã đổi sang: Đã đủ người' : 'Đã mở lại nhận khách')
+        : (newStatus === 'full' ? 'Đã đổi sang: Đã có xe' : 'Đã mở lại tìm xe');
+      showToast(toastMsg);
 
       try {
         await api.updateTrip(tripId, updates);
@@ -299,7 +304,7 @@ export default function useTripsData({
         console.warn('Lỗi cập nhật trạng thái chuyến đi:', err);
       }
     },
-    [showToast]
+    [driverOffers, showToast]
   );
 
   const handleDeleteTrip = useCallback(

@@ -249,7 +249,7 @@ export default function TripCard({
           ) : isTripFull ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap">
               <Lock className="w-3 h-3" />
-              <span>Đã kín chỗ</span>
+              <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>
             </span>
           ) : !isDriver ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shrink-0 whitespace-nowrap">
@@ -289,12 +289,18 @@ export default function TripCard({
         {isTripFull ? (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0 whitespace-nowrap">
             <Lock className="w-3 h-3 text-slate-400" />
-            <span>Đã kín chỗ</span>
+            <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>
           </span>
         ) : (
           <span
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs"
-            title={seatsTotal ? `Xe ${seatsTotal} chỗ · Chủ xe cần tìm ${seatsLeft} người đi cùng` : `Chủ xe cần tìm ${seatsLeft} người`}
+            title={
+              isDriver
+                ? seatsTotal
+                  ? `Xe ${seatsTotal} chỗ · Chủ xe cần tìm ${seatsLeft} người đi cùng`
+                  : `Chủ xe cần tìm ${seatsLeft} người`
+                : `Khách cần tìm ${seatsLeft} chỗ đi cùng`
+            }
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             {isDriver ? (

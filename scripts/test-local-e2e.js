@@ -4615,6 +4615,70 @@ async function runTests() {
     assert(false, '62. Kiểm thử Hiển Thị Dòng Xe & Số Chỗ Ngồi', err.message);
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // 63. KIỂM THỬ ĐỒNG BỘ DANH XƯNG & TRẠNG THÁI VAI TRÒ KHÁCH TÌM XE (PASSENGER SEMANTICS)
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n🧑‍🤝‍🧑 63. Kiểm thử Đồng Bộ Trạng Thái & Nút Thao Tác Chuẩn Vai Trò Khách Tìm Xe...');
+  try {
+    const myTripsSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'), 'utf8');
+    const editModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/EditTripModal.jsx'), 'utf8');
+    const tripDataSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/hooks/useTripsData.js'), 'utf8');
+    const tripCardSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/market/TripCard.jsx'), 'utf8');
+    const routeModalSrc = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx'), 'utf8');
+
+    // 1. MyTripsView - Status Beacon
+    assert(
+      myTripsSrc.includes("isDriver ? 'Đang nhận khách' : 'Đang tìm xe'"),
+      'Passenger Semantics 1: Thẻ Khách tìm xe trong Chuyến của tôi hiển thị Đang tìm xe (không phải Đang nhận khách)'
+    );
+    assert(
+      myTripsSrc.includes("isDriver ? 'Đã đủ người' : 'Đã có xe'"),
+      'Passenger Semantics 2: Thẻ Khách tìm xe khi khóa hiển thị Đã có xe (không phải Đã đủ người)'
+    );
+
+    // 2. MyTripsView - Action Toolbar Buttons
+    assert(
+      myTripsSrc.includes("isDriver ? 'Báo đủ chỗ' : 'Đã có xe'"),
+      'Passenger Semantics 3: Nút khóa nhận của Khách tìm xe hiển thị Đã có xe (không phải Báo đủ chỗ)'
+    );
+    assert(
+      myTripsSrc.includes("isDriver ? 'Mở nhận khách' : 'Tiếp tục tìm xe'"),
+      'Passenger Semantics 4: Nút mở lại của Khách tìm xe hiển thị Tiếp tục tìm xe (không phải Mở nhận khách)'
+    );
+    assert(
+      myTripsSrc.includes("isDriver ? '⚡ Tái đăng chuyến này cho ngày mai' : '⚡ Đăng lại bài tìm xe cho ngày mai'"),
+      'Passenger Semantics 5: Nút tái đăng của Khách tìm xe hiển thị Đăng lại bài tìm xe'
+    );
+
+    // 3. EditTripModal - Status Toggle
+    assert(
+      editModalSrc.includes("isDriver ? 'Đang nhận khách (Bấm để khóa)' : 'Đang tìm xe (Bấm để khóa)'"),
+      'Passenger Semantics 6: Modal sửa chuyến hiển thị Đang tìm xe cho bài của hành khách'
+    );
+    assert(
+      editModalSrc.includes("isDriver ? 'Đã đủ người (Bấm mở lại)' : 'Đã có xe (Bấm mở lại)'"),
+      'Passenger Semantics 7: Modal sửa chuyến hiển thị Đã có xe cho bài của hành khách'
+    );
+
+    // 4. useTripsData - Contextual Toast
+    assert(
+      tripDataSrc.includes("newStatus === 'full' ? 'Đã đổi sang: Đã có xe' : 'Đã mở lại tìm xe'"),
+      'Passenger Semantics 8: Toast thông báo phân biệt Đã có xe / Đã mở lại tìm xe cho bài của hành khách'
+    );
+
+    // 5. TripCard & RouteDetailModal - Khách tìm xe khi kín
+    assert(
+      tripCardSrc.includes("isDriver ? 'Đã kín chỗ' : 'Đã có xe'"),
+      'Passenger Semantics 9: TripCard hiển thị Đã có xe cho bài của hành khách khi đã khóa'
+    );
+    assert(
+      routeModalSrc.includes("isDriver ? 'Đã kín chỗ' : 'Đã có xe'"),
+      'Passenger Semantics 10: RouteDetailModal hiển thị Đã có xe cho bài của hành khách khi đã khóa'
+    );
+  } catch (err) {
+    assert(false, '63. Kiểm thử Đồng Bộ Vai Trò Khách Tìm Xe', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

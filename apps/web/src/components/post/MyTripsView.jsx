@@ -169,7 +169,7 @@ export default function MyTripsView({
           title="Chuyến Đi Của Tôi"
           description={
             currentUser
-              ? `Tài khoản: ${currentUser.name} (${currentUser.phone || 'Đã xác thực'}) · Quản lý trạng thái nhận khách thời gian thực.`
+              ? `Tài khoản: ${currentUser.name} (${currentUser.phone || 'Đã xác thực'}) · Quản lý trạng thái chuyến đi thời gian thực.`
               : 'Quản lý, cập nhật giờ khởi hành, giá vé hoặc tái đăng bài khi hết hạn.'
           }
         />
@@ -348,7 +348,7 @@ export default function MyTripsView({
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                 Bạn đang duyệt ở chế độ <strong>Khách</strong> (Chưa đăng nhập). Hãy đăng nhập bằng Số điện thoại Zalo
-                hoặc Google để tự động đồng bộ tất cả chuyến xe của bạn trên mọi thiết bị và quản lý nhận khách an toàn.
+                hoặc Google để tự động đồng bộ tất cả chuyến xe của bạn trên mọi thiết bị và quản lý liên hệ an toàn.
               </p>
             </div>
 
@@ -436,8 +436,8 @@ export default function MyTripsView({
                 </span>
                 <p className="text-slate-700 dark:text-slate-300 font-medium leading-snug">
                   Các chuyến xe đã qua giờ khởi hành được lưu trữ tại đây. Nhấn{' '}
-                  <strong>⚡ Tái đăng cho ngày mai</strong> để tiếp tục nhận khách trong 2 giây mà không cần nhập lại lộ
-                  trình hay mức giá.
+                  <strong>⚡ Tái đăng cho ngày mai</strong> để tiếp tục kết nối trong 2 giây mà không cần nhập lại lộ
+                  trình.
                 </p>
               </div>
             </div>
@@ -446,7 +446,7 @@ export default function MyTripsView({
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 font-medium">
             <span>
               Đang hiển thị {filteredTrips.length}{' '}
-              {mainTab === 'history' ? 'chuyến trong lịch sử' : 'chuyến đang tìm khách'}
+              {mainTab === 'history' ? 'chuyến trong lịch sử' : 'chuyến đang hoạt động'}
             </span>
             <span>Tự động đồng bộ với bảng tin cộng đồng</span>
           </div>
@@ -456,7 +456,7 @@ export default function MyTripsView({
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                 {mainTab === 'history'
                   ? 'Chưa có chuyến xe nào trong lịch sử'
-                  : 'Không có chuyến đi nào đang nhận khách'}
+                  : 'Không có chuyến đi nào đang hoạt động'}
               </p>
               {mainTab === 'history' ? (
                 <button
@@ -541,12 +541,12 @@ export default function MyTripsView({
                         ) : isFull ? (
                           <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11.5px] font-bold inline-flex items-center gap-1.5 border border-slate-200 dark:border-slate-700">
                             <Lock className="w-3 h-3 text-slate-500" />
-                            <span>Đã đủ người</span>
+                            <span>{isDriver ? 'Đã đủ người' : 'Đã có xe'}</span>
                           </span>
                         ) : (
                           <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[11.5px] font-bold inline-flex items-center gap-1.5 border border-emerald-200/90 dark:border-emerald-800/60">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#107c41] animate-pulse" />
-                            <span>Đang nhận khách</span>
+                            <span>{isDriver ? 'Đang nhận khách' : 'Đang tìm xe'}</span>
                           </span>
                         )}
                       </div>
@@ -635,7 +635,7 @@ export default function MyTripsView({
                           title="Tái đăng chuyến này cho ngày mai trong 2 giây"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-amber-100" />
-                          <span>⚡ Tái đăng chuyến này cho ngày mai</span>
+                          <span>{isDriver ? '⚡ Tái đăng chuyến này cho ngày mai' : '⚡ Đăng lại bài tìm xe cho ngày mai'}</span>
                         </button>
                       ) : (
                         <button
@@ -645,11 +645,11 @@ export default function MyTripsView({
                           title="Xem chi tiết thẻ vé & chia sẻ bài đăng"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Xem thẻ vé & Chi tiết bài đăng</span>
+                          <span>{isDriver ? 'Xem thẻ vé & Chi tiết bài đăng' : 'Xem thẻ vé & Chi tiết bài tìm xe'}</span>
                         </button>
                       )}
 
-                      {/* Tầng 2: Thanh công cụ quản trị (Chỉnh sửa - Báo đủ chỗ - Xóa) */}
+                      {/* Tầng 2: Thanh công cụ quản trị (Chỉnh sửa - Báo đủ chỗ/Đã có xe - Xóa) */}
                       <div className="flex items-center gap-2 w-full">
                         <button
                           type="button"
@@ -672,19 +672,23 @@ export default function MyTripsView({
                             }`}
                             title={
                               isFull
-                                ? 'Mở lại bài đăng để tiếp tục nhận khách'
-                                : 'Đánh dấu đã đủ người để không nhận thêm liên hệ Zalo'
+                                ? isDriver
+                                  ? 'Mở lại bài đăng để tiếp tục nhận khách'
+                                  : 'Mở lại bài đăng để tiếp tục tìm xe'
+                                : isDriver
+                                  ? 'Đánh dấu đã đủ người để không nhận thêm liên hệ Zalo'
+                                  : 'Đánh dấu đã tìm được xe để không nhận thêm liên hệ'
                             }
                           >
                             {isFull ? (
                               <>
                                 <Unlock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                <span>Mở nhận khách</span>
+                                <span>{isDriver ? 'Mở nhận khách' : 'Tiếp tục tìm xe'}</span>
                               </>
                             ) : (
                               <>
                                 <Lock className="w-3.5 h-3.5 text-slate-500" />
-                                <span>Báo đủ chỗ</span>
+                                <span>{isDriver ? 'Báo đủ chỗ' : 'Đã có xe'}</span>
                               </>
                             )}
                           </button>
@@ -694,7 +698,7 @@ export default function MyTripsView({
                           type="button"
                           onClick={() => handleOpenDeleteModal(trip)}
                           className="w-9 h-9 rounded-xl text-rose-600 dark:text-rose-400 bg-rose-50/60 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/60 border border-rose-200/60 dark:border-rose-900/50 active:scale-95 transition-all inline-flex items-center justify-center cursor-pointer shrink-0"
-                          title="Xóa bài đăng này"
+                          title={isDriver ? 'Xóa bài đăng này' : 'Xóa bài tìm xe này'}
                           aria-label="Xóa bài đăng"
                         >
                           <Trash2 className="w-4 h-4 text-rose-500" />

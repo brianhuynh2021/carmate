@@ -83,7 +83,7 @@ export default function RouteDetailModal({
   const seatsCount = isDriver ? Number(trip.availableSeats) || 0 : Number(trip.seatsNeeded) || 1;
   const isTripFull = trip.status === 'full' || Boolean(trip.isFull) || (isDriver && seatsCount === 0);
   const seatsLabel = isTripFull
-    ? 'Đã kín chỗ'
+    ? (isDriver ? 'Đã kín chỗ' : 'Đã có xe')
     : isDriver
       ? `Cần ${seatsCount} người`
       : `Cần ${seatsCount} chỗ`;
@@ -201,7 +201,7 @@ export default function RouteDetailModal({
                     : 'text-white bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] shadow-sm shadow-[#0071e3]/20'
                 }`}
               >
-                <span>{isTripFull ? 'Đã kín chỗ' : isDriver ? 'Ghép chuyến này' : 'Đón khách này'}</span>
+                <span>{isTripFull ? (isDriver ? 'Đã kín chỗ' : 'Đã có xe') : isDriver ? 'Ghép chuyến này' : 'Đón khách này'}</span>
                 {!isTripFull && <ArrowRight className="w-3.5 h-3.5" />}
               </button>
             )}
@@ -277,13 +277,13 @@ export default function RouteDetailModal({
           <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] flex flex-col items-center text-center justify-center min-w-0">
             <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               <Car className="w-3 h-3 text-indigo-500" />
-              <span>Phương tiện</span>
+              <span>{isDriver ? 'Phương tiện' : 'Nhu cầu xe'}</span>
             </div>
             <span className="text-[12px] sm:text-[13px] font-bold text-slate-900 dark:text-white mt-1 truncate max-w-full" title={carDisplay}>
-              {carDisplay}
+              {isDriver ? carDisplay : 'Xe 5-7 chỗ'}
             </span>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-full">
-              {carSub}
+              {isDriver ? carSub : 'Tìm xe đi cùng'}
             </span>
           </div>
         </div>
@@ -336,7 +336,9 @@ export default function RouteDetailModal({
             <div className="mt-3.5 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Xe đi ngang qua ({transitWaypoints.length} trạm đón trả dọc tuyến)
+                  {isDriver
+                    ? `Xe đi ngang qua (${transitWaypoints.length} trạm đón trả dọc tuyến)`
+                    : `Lộ trình mong muốn (${transitWaypoints.length} trạm đón trả dọc tuyến)`}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
