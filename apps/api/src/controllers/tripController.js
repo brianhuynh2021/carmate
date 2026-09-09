@@ -9,7 +9,8 @@ import {
   getDB,
   getUserById,
   getUserByPhone,
-  saveUser
+  saveUser,
+  isUserDeactivated
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
@@ -252,6 +253,26 @@ export async function createTrip(req, res) {
         success: false,
         error: 'Số điện thoại không hợp lệ hoặc có dấu hiệu số ảo. Vui lòng cung cấp số điện thoại thật để đối tác liên hệ đón bạn.'
       });
+    }
+
+    // Kiểm tra tài khoản có bị hạn chế đăng bài hoặc bị vô hiệu hóa hay không (Quy tắc Ân hạn 3 ngày)
+    const posterPhone = cleanPhoneNumber(body.phoneReal || '');
+    const posterUser = (req.user?.id ? getUserById(req.user.id) : null) || (posterPhone ? getUserByPhone(posterPhone) : null);
+    if (posterUser) {
+      if (isUserDeactivated(posterUser)) {
+        return res.status(403).json({
+          success: false,
+          isDeactivated: true,
+          error: '⛔ Tài khoản của bạn đã bị vô hiệu hóa vĩnh viễn do hết thời hạn ân hạn khiếu nại (3 ngày).'
+        });
+      }
+      if (posterUser.isBanned) {
+        return res.status(403).json({
+          success: false,
+          isBanned: true,
+          error: '⛔ Tài khoản của bạn đang bị hạn chế đăng bài do vi phạm quy chế. Bạn có 3 ngày ân hạn để mở Hộp thư khiếu nại với CSKH trước khi tài khoản bị vô hiệu hóa.'
+        });
+      }
     }
 
     // Đảm bảo mức giá luôn được chuẩn hoá, tránh trường hợp bị render 0đ

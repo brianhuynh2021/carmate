@@ -5382,6 +5382,274 @@ async function runTests() {
     assert(false, '72. Kiểm thử Giao Diện Hộp Thư Chuẩn Apple HIG & Công Thái Học Cursor', err.message);
   }
 
+  // 73. KIỂM THỬ THƯ CẢNH BÁO HỆ THỐNG, KHIẾU NẠI 1-CHẠM, CSKH TRỰC TUYẾN 24/7 & ÂN HẠN 3 NGÀY KHI KHÓA TÀI KHOẢN
+  console.log('\n--- 73. Kiểm thử Thư Cảnh Báo Hệ Thống, Khiếu Nại 1-Chạm, CSKH 24/7 & Ân Hạn 3 Ngày ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 73.1 Kiểm tra file mã nguồn Frontend & Backend
+    const disputeModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/DisputeNoticeModal.jsx');
+    assert(fs.existsSync(disputeModalPath), 'Dispute Modal 1: File DisputeNoticeModal.jsx tồn tại');
+    const disputeModalSrc = fs.readFileSync(disputeModalPath, 'utf8');
+    assert(
+      disputeModalSrc.includes('PRESET_DISPUTE_REASONS') &&
+      disputeModalSrc.includes('Gõ nhầm số nhà / địa chỉ đón trả') &&
+      disputeModalSrc.includes('Khóa nhầm / Hệ thống hiểu sai ngữ cảnh'),
+      'Dispute Modal 2: Tích hợp đầy đủ danh sách lý do khiếu nại 1-chạm (Preset chips)'
+    );
+
+    const inboxModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx');
+    const inboxModalSrc = fs.readFileSync(inboxModalPath, 'utf8');
+    assert(
+      inboxModalSrc.includes('CSKH CarMate') &&
+      inboxModalSrc.includes('Trực tuyến 24/7') &&
+      inboxModalSrc.includes('isSupportChannelActive') &&
+      inboxModalSrc.includes('<DisputeNoticeModal'),
+      'Inbox Support 1: Hộp thư tích hợp kênh CSKH CarMate 24/7 và modal khiếu nại'
+    );
+    assert(
+      inboxModalSrc.includes('isWarningNotice') &&
+      inboxModalSrc.includes('Khiếu nại / Kháng nghị'),
+      'Inbox Warning Letter: Tin nhắn cảnh báo render dạng Thư cảnh báo chính thức kèm nút Khiếu nại'
+    );
+
+    const supportCtrlPath = path.resolve(process.cwd(), 'apps/api/src/controllers/supportController.js');
+    assert(fs.existsSync(supportCtrlPath), 'Support API: Controller supportController.js tồn tại');
+
+    // 73.2 Tạo tài khoản test, đăng chuyến và đặt chỗ kiểm thử
+    const userTestPhone = '0915882341';
+    const driverTestPhone = '0977224466';
+
+    const loginUserRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: `TEST_ZALO_TOKEN_${userTestPhone}`, phone: userTestPhone, name: 'Khách Test 73' })
+    });
+    const userAuth73 = await loginUserRes.json();
+    const tokenUser73 = userAuth73.token;
+
+    const loginDriverRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: `TEST_ZALO_TOKEN_${driverTestPhone}`, phone: driverTestPhone, name: 'Chủ Xe Test 73' })
+    });
+    const driverAuth73 = await loginDriverRes.json();
+    const tokenDriver73 = driverAuth73.token;
+
+    // Chủ xe tạo chuyến đi
+    const createTripRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenDriver73}`
+      },
+      body: JSON.stringify({
+        id: `DRV-73-${Date.now()}`,
+        type: 'driver_offer',
+        from: 'Bù Đốp',
+        to: 'Sài Gòn',
+        phoneReal: driverTestPhone,
+        userId: driverAuth73?.user?.id || `USR-${driverTestPhone}`,
+        timeSlot: '07:00-08:00',
+        basePricePerSeat: 150000
+      })
+    });
+    const tripData = await createTripRes.json();
+    const tripId = tripData.data?.id;
+    assert(createTripRes.status === 201 && tripId, 'Trip 73: Chủ xe tạo chuyến thành công');
+
+    // Khách đặt chỗ
+    const bookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        tripId,
+        from: 'Bù Đốp',
+        to: 'Sài Gòn',
+        seats: 1,
+        totalDeal: 150000,
+        passengerNote: 'Test booking 73',
+        contactPhone: userTestPhone,
+        passengerPhone: userTestPhone,
+        driverPhone: driverTestPhone
+      })
+    });
+    const bookingData = await bookingRes.json();
+    const bookingId = bookingData.data?.escrowId || bookingData.data?.id;
+    assert(bookingRes.status === 201 && bookingId, 'Booking 73: Khách đặt chỗ thành công');
+
+    // 73.3 Gửi tin nhắn chứa SĐT khi CHƯA chốt: Nhận thư cảnh báo chính thức Strike 1
+    const strike1Res = await fetch(`${BASE_URL}/api/bookings/${bookingId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({ message: `Alo gọi cho tôi số ${userTestPhone} nha` })
+    });
+    const strike1Data = await strike1Res.json();
+    assert(strike1Res.status === 400, 'Strike 1 HTTP: Chặn gửi tin nhắn chứa PII khi chưa chốt (HTTP 400)');
+    assert(strike1Data.strike === 1, 'Strike 1 Value: Ghi nhận vi phạm mức 1');
+    assert(strike1Data.warningNotice?.isWarningNotice === true, 'Strike 1 Notice: Tạo thư cảnh báo chính thức vào tin nhắn');
+    assert(strike1Data.warningNotice?.canDispute === true, 'Strike 1 Dispute: Kèm cờ canDispute cho phép khiếu nại');
+
+    // Strike 2
+    const strike2Res = await fetch(`${BASE_URL}/api/bookings/${bookingId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({ message: `Nhắn lại số điện thoại ${userTestPhone} lần nữa nhé` })
+    });
+    const strike2Data = await strike2Res.json();
+    assert(strike2Res.status === 400, 'Strike 2 HTTP: Chặn gửi tin nhắn lần 2');
+    assert(strike2Data.strike === 2, 'Strike 2 Value: Ghi nhận vi phạm mức 2 (-15 điểm tín nhiệm)');
+
+    // Strike 3: Tạm khóa tài khoản & Thiết lập ân hạn 3 ngày (72 giờ)
+    const strike3Res = await fetch(`${BASE_URL}/api/bookings/${bookingId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({ message: `Cố tình gửi số ${userTestPhone} lần thứ 3` })
+    });
+    const strike3Data = await strike3Res.json();
+    assert(strike3Res.status === 403, 'Strike 3 HTTP: Khóa tài khoản trả về HTTP 403');
+    assert(strike3Data.strike === 3 && strike3Data.isBanned === true, 'Strike 3 Ban: Tài khoản bị tạm khóa đăng bài/đặt chuyến');
+    assert(strike3Data.deactivateAt > Date.now(), 'Grace Period Invariant: Thiết lập thời gian ân hạn 3 ngày trước khi vô hiệu hóa');
+
+    // 73.4 Kiểm tra quy chế Khóa tài khoản: KHÔNG được đăng bài mới nhưng VẪN đăng nhập & chat hỗ trợ được
+    const postBlockedRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        id: `DRV-BLOCKED-${Date.now()}`,
+        type: 'driver_offer',
+        from: 'Hà Nội',
+        to: 'Hải Phòng',
+        phoneReal: userTestPhone,
+        timeSlot: '08:00-09:00',
+        basePricePerSeat: 100000
+      })
+    });
+    assert(
+      postBlockedRes.status === 403,
+      'Ban Restriction 1: Người dùng bị khóa không được phép đăng bài chuyến mới (HTTP 403)'
+    );
+
+    // Người dùng bị khóa VẪN đăng nhập được trong thời gian ân hạn 3 ngày
+    const loginWhileBannedRes = await fetch(`${BASE_URL}/api/auth/zalo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: `TEST_ZALO_TOKEN_${userTestPhone}`, phone: userTestPhone })
+    });
+    assert(
+      loginWhileBannedRes.status === 200,
+      'Grace Period 1: Người dùng bị khóa vẫn đăng nhập được trong 3 ngày ân hạn để khiếu nại (HTTP 200)'
+    );
+
+    // 73.5 Kiểm thử Khiếu nại 1-chạm (Dispute Booking API)
+    const disputeRes = await fetch(`${BASE_URL}/api/bookings/${bookingId}/dispute`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        reason: 'Gõ nhầm số nhà / địa chỉ đón trả',
+        note: 'Em gõ số nhà 123 mà hệ thống tưởng SĐT',
+        reporterRole: 'passenger'
+      })
+    });
+    const disputeData = await disputeRes.json();
+    assert(disputeRes.status === 200 && disputeData.success === true, 'Dispute API: Tiếp nhận và giải quyết khiếu nại thành công');
+
+    // Sau khi khiếu nại gỡ khóa, người dùng đăng bài lại bình thường
+    const postAfterUnbanRes = await fetch(`${BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        id: `DRV-UNBAN-${Date.now()}`,
+        type: 'driver_offer',
+        from: 'Hà Nội',
+        to: 'Hải Phòng',
+        phoneReal: userTestPhone,
+        timeSlot: '08:00-09:00',
+        basePricePerSeat: 100000
+      })
+    });
+    const postAfterData = await postAfterUnbanRes.json();
+    assert(
+      postAfterUnbanRes.status === 201,
+      'Dispute Restore: Người dùng đăng bài lại hoàn toàn bình thường sau khi gỡ khóa (HTTP 201)'
+    );
+    if (postAfterData.data?.id) {
+      await fetch(`${BASE_URL}/api/trips/${postAfterData.data.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${tokenUser73}` }
+      }).catch(() => {});
+    }
+
+    // 73.6 Kiểm thử Kênh CSKH CarMate 24/7 (Support Chat Desk)
+    // Gửi tin nhắn hỗ trợ yêu cầu mở khóa
+    const sendSupportRes = await fetch(`${BASE_URL}/api/support/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenUser73}`
+      },
+      body: JSON.stringify({
+        message: 'Admin ơi em bị khóa lộn tài khoản rồi, mở khóa giúp em với',
+        bookingId
+      })
+    });
+    const sendSupportData = await sendSupportRes.json();
+    assert(sendSupportRes.status === 201, 'Support Chat 1: Gửi tin nhắn tới CSKH CarMate 24/7 thành công');
+    assert(
+      sendSupportData.data?.isUnbanned === true,
+      'Support Chat 2: Trí tuệ bản địa CarMate Ambient AI nhận diện yêu cầu khóa lộn và tự động gỡ khóa tức thì'
+    );
+
+    // Đọc lịch sử tin nhắn CSKH
+    const getSupportRes = await fetch(`${BASE_URL}/api/support/messages?bookingId=${bookingId}`, {
+      headers: { Authorization: `Bearer ${tokenUser73}` }
+    });
+    const getSupportData = await getSupportRes.json();
+    assert(
+      Array.isArray(getSupportData.data) && getSupportData.data.length >= 2,
+      'Support Chat 3: Trả về đầy đủ luồng trao đổi 2 chiều giữa người dùng và CSKH CarMate'
+    );
+
+    // 73.7 Dọn dẹp chuyến và booking test
+    if (bookingId) {
+      await fetch(`${BASE_URL}/api/bookings/${bookingId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${tokenDriver73}` }
+      }).catch(() => {});
+    }
+    if (tripId) {
+      await fetch(`${BASE_URL}/api/trips/${tripId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${tokenDriver73}` }
+      }).catch(() => {});
+    }
+    assert(true, '73. Hoàn tất kiểm thử Thư Cảnh Báo, Khiếu Nại 1-Chạm, CSKH 24/7 & Ân Hạn 3 Ngày');
+  } catch (err) {
+    assert(false, '73. Kiểm thử Thư Cảnh Báo Hệ Thống, Khiếu Nại 1-Chạm, CSKH 24/7 & Ân Hạn 3 Ngày', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

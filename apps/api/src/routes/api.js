@@ -23,8 +23,10 @@ import {
   addBookingMessageHandler,
   preConfirmBookingHandler,
   finalConfirmBookingHandler,
-  resetBanHandler
+  resetBanHandler,
+  disputeBookingHandler
 } from '../controllers/bookingController.js';
+import { getSupportMessagesHandler, sendSupportMessageHandler } from '../controllers/supportController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
 import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, getMe, updateProfile, deleteAccount, getAuthConfigHandler } from '../controllers/authController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
@@ -109,6 +111,7 @@ router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitRev
 router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
 router.post('/bookings/:id/report-unreachable-phone', optionalAuth, reportUnreachablePhone);
 router.post('/bookings/:id/reset-ban', optionalAuth, resetBanHandler);
+router.post('/bookings/:id/dispute', optionalAuth, disputeBookingHandler);
 
 router.get('/escrows', optionalAuth, listBookings);
 router.post('/escrows', optionalAuth, createBooking);
@@ -124,6 +127,11 @@ router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitRevi
 router.post('/escrows/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
 router.post('/escrows/:id/report-unreachable-phone', optionalAuth, reportUnreachablePhone);
 router.post('/escrows/:id/reset-ban', optionalAuth, resetBanHandler);
+router.post('/escrows/:id/dispute', optionalAuth, disputeBookingHandler);
+
+// --- Kênh Hỗ Trợ & Kháng Nghị Trực Tiếp Platform CSKH CarMate ---
+router.get('/support/messages', optionalAuth, getSupportMessagesHandler);
+router.post('/support/messages', optionalAuth, sendSupportMessageHandler);
 
 // --- Admin Management Portal Engine ---
 router.post('/admin/auth', adminAuth);

@@ -20,7 +20,10 @@ import {
   Ban,
   Mail,
   MailOpen,
-  MapPin
+  MapPin,
+  Headphones,
+  LifeBuoy,
+  HelpCircle
 } from 'lucide-react';
 import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -28,6 +31,7 @@ import Button from '../ui/Button.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
 import api from '../../api/client.js';
 import { playMessageChime, playSuccessChime } from '../../utils/audioFeedback.js';
+import DisputeNoticeModal from './DisputeNoticeModal.jsx';
 
 export default function InboxModal({
   isOpen,
@@ -56,6 +60,16 @@ export default function InboxModal({
   const [timeLeftStr, setTimeLeftStr] = useState('');
   const [remainingSecs, setRemainingSecs] = useState(900);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, booking }
+
+  // Kênh Hỗ Trợ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
+  const [isSupportChannelActive, setIsSupportChannelActive] = useState(false);
+  const [supportMessages, setSupportMessages] = useState([]);
+  const [supportInput, setSupportInput] = useState('');
+  const [loadingSupport, setLoadingSupport] = useState(false);
+  const [sendingSupport, setSendingSupport] = useState(false);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeTargetNotice, setDisputeTargetNotice] = useState(null);
+
   const messagesEndRef = useRef(null);
 
   // Cập nhật selectedId khi initialBookingId thay đổi
@@ -402,6 +416,84 @@ export default function InboxModal({
     }
   };
 
+  // Tải danh sách tin nhắn Kênh Hỗ Trợ CSKH Platform
+  const loadSupportMessages = async () => {
+    setLoadingSupport(true);
+    try {
+      const bId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : undefined;
+      const res = await api.getSupportMessages({
+        userId: currentUser?.id,
+        phone: currentUser?.phone,
+        bookingId: bId
+      });
+      if (res?.data && Array.isArray(res.data)) {
+        setSupportMessages(res.data);
+      }
+    } catch {
+      setSupportMessages([
+        {
+          id: 'SUP-LOCAL',
+          senderRole: 'platform',
+          senderName: 'CSKH CarMate (Trực tuyến 24/7)',
+          message: '👋 Xin chào bạn! Kênh Hỗ Trợ Khẩn Cấp CarMate sẵn sàng 24/7. Nếu tài khoản của bạn bị khóa nhầm ("khóa lộn") hoặc có khiếu nại về cảnh báo PII, hãy nhắn tin trực tiếp tại đây nhé!',
+          createdAt: Date.now()
+        }
+      ]);
+    } finally {
+      setLoadingSupport(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isSupportChannelActive) {
+      loadSupportMessages();
+    }
+  }, [isSupportChannelActive]);
+
+  // Gửi tin nhắn đến Platform CSKH & Tự động xử lý khiếu nại (Ambient Resolution)
+  const handleSendSupportMessage = async (e, customText = null) => {
+    e?.preventDefault();
+    const textToSend = (customText || supportInput).trim();
+    if (!textToSend || sendingSupport) return;
+
+    setSendingSupport(true);
+    try {
+      const bId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
+      const res = await api.sendSupportMessage({
+        text: textToSend,
+        bookingId: bId,
+        userId: currentUser?.id,
+        phone: currentUser?.phone,
+        senderName: currentUser?.name || 'Thành viên'
+      });
+
+      if (res?.data) {
+        setSupportMessages((prev) => [
+          ...prev,
+          res.data.userMessage,
+          ...(res.data.platformReply ? [res.data.platformReply] : [])
+        ]);
+
+        if (res.data.isUnbanned) {
+          setIsBannedState(false);
+          setViolationInfo(null);
+          if (activeBooking) {
+            activeBooking.isBanned = false;
+            activeBooking.piiStrikes = {};
+          }
+          onShowToast?.('✓ Đã khôi phục tài khoản thành công qua Kênh CSKH Platform!', 'success');
+          onRefreshBookings?.();
+        }
+      }
+      setSupportInput('');
+      playMessageChime();
+    } catch (err) {
+      onShowToast?.(err.message || 'Không thể gửi tin nhắn hỗ trợ', 'error');
+    } finally {
+      setSendingSupport(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   // Gửi tin nhắn có bảo vệ AI PII và Chế tài Bậc thang (Warning -> -15đ Tín nhiệm -> Ban)
@@ -623,6 +715,40 @@ export default function InboxModal({
 
           {/* Danh sách yêu cầu */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            {/* KÊNH GHIM: CSKH CARMATE TRỰC TUYẾN 24/7 (PLATFORM SUPPORT) */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSupportChannelActive(true);
+                setMobileShowChat(true);
+              }}
+              className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer border relative group mb-1 ${
+                isSupportChannelActive
+                  ? 'bg-gradient-to-r from-primary-50 to-indigo-50 dark:from-primary-950/50 dark:to-indigo-950/50 border-primary-500 shadow-xs ring-1 ring-primary-500/30'
+                  : 'bg-primary-50/40 dark:bg-primary-950/20 border-primary-500/20 hover:bg-primary-50/70 hover:border-primary-500/40'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#0071e3] to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Headphones className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
+                      <span>CSKH CarMate</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Trực tuyến" />
+                    </span>
+                    <span className="text-[9.5px] font-bold text-primary-600 dark:text-primary-400 bg-primary-100/80 dark:bg-primary-900/50 px-1.5 py-0.2 rounded-full font-mono">
+                      24/7
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    Hỗ trợ khẩn cấp, gỡ khóa nhầm
+                  </p>
+                </div>
+              </div>
+            </button>
+
             {currentList.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-400">
                 <MessageSquare className="w-8 h-8 stroke-1 text-slate-300 dark:text-slate-600 mb-2" />
@@ -632,7 +758,7 @@ export default function InboxModal({
             ) : (
               currentList.map((item) => {
                 const id = item.escrowId || item.id;
-                const isSelected = activeBooking && (activeBooking.escrowId || activeBooking.id) === id;
+                const isSelected = !isSupportChannelActive && activeBooking && (activeBooking.escrowId || activeBooking.id) === id;
                 const status = item.status || 'inquiring';
                 const isUnread = isBookingUnread(item);
                 const isManuallyUnread = unreadBookingIds.includes(id);
@@ -643,6 +769,7 @@ export default function InboxModal({
                     key={id}
                     type="button"
                     onClick={() => {
+                      setIsSupportChannelActive(false);
                       if (selectedId !== id) {
                         setSelectedId(id);
                         onMarkAsRead?.(id);
@@ -754,7 +881,126 @@ export default function InboxModal({
         <div className={`flex-1 flex flex-col bg-white dark:bg-[#1c1c1e] min-w-0 ${
           !mobileShowChat ? 'hidden md:flex' : 'flex'
         }`}>
-          {!activeBooking ? (
+          {isSupportChannelActive ? (
+            /* KÊNH HỖ TRỢ TRỰC TIẾP CSKH CARMATE (PLATFORM SUPPORT DESK) */
+            <div className="flex-1 flex flex-col min-w-0 h-full">
+              {/* Header CSKH */}
+              <div className="px-4 sm:px-6 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-3 bg-gradient-to-r from-primary-50/70 to-indigo-50/70 dark:from-primary-950/40 dark:to-indigo-950/40 backdrop-blur-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setMobileShowChat(false)}
+                    className="md:hidden p-1.5 -ml-1 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors shrink-0 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#0071e3] to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Headphones className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        Ban Quản Trị & CSKH CarMate
+                      </h3>
+                      <ShieldCheck className="w-4 h-4 text-[#0071e3] shrink-0" title="Kênh chính thức từ nền tảng" />
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      Kênh giải quyết khiếu nại & hỗ trợ mở khóa nhầm 24/7
+                    </p>
+                  </div>
+                </div>
+
+                {(isBannedState || currentUser?.isBanned || activeBooking?.isBanned) && (
+                  <button
+                    type="button"
+                    onClick={handleResetBan}
+                    className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer shrink-0"
+                  >
+                    Mở khóa ngay
+                  </button>
+                )}
+              </div>
+
+              {/* Danh sách tin nhắn CSKH */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/20">
+                <div className="flex justify-center my-1">
+                  <span className="px-3 py-1 rounded-full text-[10.5px] font-semibold bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200/50">
+                    🎧 Cuộc trò chuyện được theo dõi và hỗ trợ trực tiếp bởi Ban Quản Trị CarMate
+                  </span>
+                </div>
+
+                {loadingSupport ? (
+                  <div className="text-center py-8 text-xs text-slate-400">Đang tải lịch sử hỗ trợ...</div>
+                ) : (
+                  supportMessages.map((msg, idx) => {
+                    const isPlatform = msg.senderRole === 'platform' || msg.senderRole === 'admin';
+                    return (
+                      <div
+                        key={msg.id || idx}
+                        className={`flex flex-col ${isPlatform ? 'items-start' : 'items-end'}`}
+                      >
+                        <span className="text-[10px] text-slate-400 mb-0.5 px-1">
+                          {isPlatform ? 'CSKH CarMate' : (currentUser?.name || 'Tôi')}
+                        </span>
+                        <div
+                          className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
+                            isPlatform
+                              ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-black/[0.06] dark:border-white/[0.06] rounded-tl-xs shadow-2xs'
+                              : 'bg-primary-600 text-white rounded-tr-xs shadow-xs'
+                          }`}
+                        >
+                          {msg.message || msg.text}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Quick Reply Chips CSKH */}
+              <div className="px-3 pt-2 pb-1 bg-slate-50/90 dark:bg-[#181920] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <span className="text-[10.5px] font-bold text-slate-400 shrink-0 mr-0.5 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-primary-500" /> Nhanh:
+                </span>
+                {[
+                  '🙏 Tôi bị khóa nhầm, xin mở khóa giúp tôi',
+                  '📍 Tôi chỉ gõ số nhà / biển số chứ không phải SĐT',
+                  '❓ Tôi cần hỗ trợ quy định an toàn'
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSendSupportMessage(null, chip)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-slate-800 border border-black/[0.06] dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:border-primary-500/50 hover:text-primary-600 dark:hover:text-primary-400 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+
+              {/* Input Form CSKH */}
+              <form
+                onSubmit={handleSendSupportMessage}
+                className="p-3 border-t border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#1c1c1e] flex items-center gap-2"
+              >
+                <input
+                  type="text"
+                  value={supportInput}
+                  onChange={(e) => setSupportInput(e.target.value)}
+                  placeholder="Nhắn tin với CSKH CarMate (nhập 'mở khóa' nếu bị khóa lộn)..."
+                  className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 transition-all outline-hidden"
+                />
+                <button
+                  type="submit"
+                  disabled={!supportInput.trim() || sendingSupport}
+                  className="p-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            </div>
+          ) : !activeBooking ? (
             <div className="flex-1 flex items-center justify-center p-8 text-center text-slate-400">
               <p className="text-xs">Chọn một cuộc trao đổi để xem chi tiết</p>
             </div>
@@ -992,6 +1238,109 @@ export default function InboxModal({
                                  (activeTab === 'outgoing' && msg.senderRole === 'passenger');
 
                     if (isSystem) {
+                      if (msg.isWarningNotice) {
+                        const isStrike3 = msg.strike >= 3 || msg.noticeType === 'strike_ban';
+                        const isStrike2 = msg.strike === 2 || msg.noticeType === 'strike_penalty';
+                        return (
+                          <div
+                            key={msg.id || idx}
+                            className={`my-3 p-4 rounded-3xl border shadow-xs transition-all ${
+                              isStrike3
+                                ? 'bg-rose-50/90 dark:bg-rose-950/60 border-rose-300 dark:border-rose-900 text-rose-900 dark:text-rose-100'
+                                : isStrike2
+                                  ? 'bg-amber-50/90 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+                                  : 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
+                                  isStrike3
+                                    ? 'bg-rose-200/80 dark:bg-rose-900 text-rose-700 dark:text-rose-300'
+                                    : isStrike2
+                                      ? 'bg-amber-200/80 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
+                                      : 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400'
+                                }`}
+                              >
+                                {isStrike3 ? (
+                                  <Ban className="w-5 h-5 text-rose-600" />
+                                ) : isStrike2 ? (
+                                  <ShieldAlert className="w-5 h-5 text-amber-600" />
+                                ) : (
+                                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <span className="font-bold text-xs">
+                                    {isStrike3
+                                      ? '📜 THÔNG BÁO TẠM ĐÌNH CHỈ TÀI KHOẢN (Cấp 3)'
+                                      : isStrike2
+                                        ? '🚨 QUYẾT ĐỊNH XỬ PHẠT TÍN NHIỆM (Lần 2/3)'
+                                        : '📜 THƯ CẢNH BÁO QUY CHẾ BẢO MẬT (Lần 1/3)'}
+                                  </span>
+                                  <span className="text-[10px] font-mono opacity-60">
+                                    {msg.createdAt
+                                      ? new Date(msg.createdAt).toLocaleTimeString('vi-VN', {
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })
+                                      : ''}
+                                  </span>
+                                </div>
+
+                                <p className="text-xs leading-relaxed mt-1.5 opacity-90">{msg.text}</p>
+
+                                {msg.detectedSample && (
+                                  <div className="mt-2 px-3 py-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] font-mono text-[11px] break-all border border-black/[0.05] dark:border-white/[0.05]">
+                                    Nội dung phát hiện: "{msg.detectedSample}"
+                                  </div>
+                                )}
+
+                                {msg.canDispute && (
+                                  <div className="mt-3 pt-2.5 border-t border-black/[0.08] dark:border-white/[0.08] flex items-center gap-2 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setDisputeTargetNotice(msg);
+                                        setShowDisputeModal(true);
+                                      }}
+                                      className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs"
+                                    >
+                                      <HelpCircle className="w-3.5 h-3.5" />
+                                      <span>Khiếu nại / Kháng nghị</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsSupportChannelActive(true);
+                                        setMobileShowChat(true);
+                                      }}
+                                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 transition-all active:scale-95"
+                                    >
+                                      <Headphones className="w-3.5 h-3.5 text-primary-500" />
+                                      <span>Chat với CSKH 24/7</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (msg.isDisputeResolved) {
+                        return (
+                          <div key={msg.id || idx} className="flex justify-center my-2">
+                            <div className="max-w-[85%] p-3 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-300/80 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200 text-xs leading-relaxed text-left flex items-start gap-2 shadow-2xs">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                              <div>{msg.text}</div>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div key={msg.id || idx} className="flex justify-center my-2">
                           <div className="max-w-[85%] p-2.5 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50 text-indigo-900 dark:text-indigo-200 text-xs leading-relaxed text-center">
@@ -1177,20 +1526,43 @@ export default function InboxModal({
                 </div>
               )}
 
-              {/* KHUNG NHẬP TIN NHẮN HOẶC TRẠNG THÁI KHÓA */}
+              {/* KHUNG NHẬP TIN NHẮN HOẶC TRẠNG THÁI KHÓA (3-DAY GRACE BANNER) */}
               {isBannedState || currentUser?.isBanned || activeBooking.isBanned ? (
-                <div className="p-3.5 border-t border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3 font-medium flex-wrap">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="p-3.5 border-t border-rose-200 dark:border-rose-900 bg-rose-50/90 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3 font-medium flex-wrap">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <Ban className="w-4 h-4 text-rose-600 shrink-0" />
-                    <span>⛔ Tài khoản của bạn đã bị khóa do cố tình vi phạm quy chế bảo mật thông tin liên tục.</span>
+                    <div>
+                      <p className="font-bold text-rose-900 dark:text-rose-200">
+                        Tài khoản tạm khóa đăng bài (Thời hạn ân hạn khiếu nại: 3 ngày)
+                      </p>
+                      <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
+                        Nếu bị khóa nhầm, hãy bấm Chat với CSKH hoặc Kháng nghị để mở lại ngay lập tức.
+                      </p>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleResetBan}
-                    className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-all active:scale-95 shrink-0"
-                  >
-                    Khôi phục tài khoản
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSupportChannelActive(true);
+                        setMobileShowChat(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                    >
+                      <Headphones className="w-3.5 h-3.5" />
+                      <span>Chat với CSKH</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDisputeTargetNotice({ strike: 3, detectedSample: 'Khóa tài khoản 3-Strike' });
+                        setShowDisputeModal(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-white dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 font-bold text-xs shadow-2xs cursor-pointer transition-all active:scale-95"
+                    >
+                      Kháng nghị
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <form
@@ -1302,6 +1674,39 @@ export default function InboxModal({
           </div>
         </div>
       )}
+
+      {/* Dispute Notice Modal */}
+      <DisputeNoticeModal
+        isOpen={showDisputeModal}
+        onClose={() => {
+          setShowDisputeModal(false);
+          setDisputeTargetNotice(null);
+        }}
+        booking={activeBooking}
+        violationNotice={disputeTargetNotice}
+        onResolved={(updatedBooking) => {
+          if (onUpdateBooking && updatedBooking) {
+            onUpdateBooking(updatedBooking);
+          }
+          if (user) {
+            user.isBanned = false;
+            user.bannedAt = null;
+            user.deactivateAt = null;
+            user.status = 'active';
+            user.trustScore = Math.max(user.trustScore || 80, 85);
+            try {
+              localStorage.setItem('carmate_user', JSON.stringify(user));
+            } catch (e) {}
+          }
+          setIsSupportChannelActive(true);
+          loadSupportMessages();
+        }}
+        onOpenSupportChat={() => {
+          setIsSupportChannelActive(true);
+          loadSupportMessages();
+        }}
+        onShowToast={onShowToast}
+      />
     </Modal>
   );
 }

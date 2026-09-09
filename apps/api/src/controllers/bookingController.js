@@ -9,7 +9,10 @@ import {
   updateTrip,
   getUserById,
   getUserByPhone,
-  updateUserStatus
+  updateUserStatus,
+  saveSupportMessage,
+  resolveDisputeAndUnban,
+  isUserDeactivated
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
 import crypto from 'crypto';
@@ -460,9 +463,10 @@ export async function driverConfirmBooking(req, res) {
 export async function addBookingMessageHandler(req, res) {
   try {
     const { id } = req.params;
-    const { text = '', senderRole = 'passenger', senderName = '' } = req.body || {};
+    const { senderRole = 'passenger', senderName = '' } = req.body || {};
+    const text = (req.body?.text || req.body?.message || '').trim();
 
-    if (!text || !text.trim()) {
+    if (!text) {
       return res.status(400).json({
         success: false,
         error: 'Nội dung tin nhắn không được để trống'
@@ -499,11 +503,21 @@ export async function addBookingMessageHandler(req, res) {
     }
 
     // 2. Kiểm tra nếu tài khoản hoặc phiên đã bị cấm (Banned Check)
+    if (senderUser && isUserDeactivated(senderUser)) {
+      return res.status(403).json({
+        success: false,
+        isBanned: true,
+        isDeactivated: true,
+        error: '⛔ TÀI KHOẢN ĐÃ BỊ VÔ HIỆU HÓA VĨNH VIỄN: Thời hạn ân hạn khiếu nại (3 ngày) đã kết thúc. Bạn không thể sử dụng hệ thống nữa.'
+      });
+    }
+
     if (senderUser?.isBanned || booking.isBanned) {
       return res.status(403).json({
         success: false,
         isBanned: true,
-        error: '⛔ Tài khoản của bạn đã bị khóa do vi phạm quy chế bảo mật cộng đồng.'
+        deactivateAt: senderUser?.deactivateAt,
+        error: '⛔ Tài khoản của bạn đang bị tạm khóa đăng bài/đặt chuyến do vi phạm quy chế. Bạn có 3 ngày ân hạn để mở Kênh CSKH khiếu nại trước khi tài khoản bị vô hiệu hóa hoàn toàn.'
       });
     }
 
@@ -516,24 +530,46 @@ export async function addBookingMessageHandler(req, res) {
         const currentStrikes = Number(senderUser?.piiStrikes || booking?.piiStrikes?.[senderRole] || 0);
         const newStrikes = currentStrikes + 1;
         const bookingStrikes = { ...(booking.piiStrikes || {}), [senderRole]: newStrikes };
+        const existingMsgs = Array.isArray(booking.messages) ? booking.messages : [];
 
         if (newStrikes === 1) {
-          // LẦN 1: Cảnh báo nhẹ, chặn gửi tin
+          // LẦN 1: Cảnh báo nhẹ, chặn gửi tin + GỬI THƯ CẢNH BÁO HỆ THỐNG
           if (senderKey) {
             await updateUserStatus(senderKey, { piiStrikes: 1 });
           }
-          await updateBookingStatus(id, booking.status, { piiStrikes: bookingStrikes });
+
+          const warningNoticeMsg = {
+            id: `SYS-WARN-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            senderRole: 'system',
+            senderName: 'Hệ thống CarMate',
+            isSystem: true,
+            isWarningNotice: true,
+            noticeType: 'strike_warning',
+            strike: 1,
+            detectedSample: piiCheck.detectedSample || '',
+            warningMessage: piiCheck.warningMessage,
+            canDispute: true,
+            text: `⚠️ THƯ CẢNH BÁO QUY CHẾ (Lần 1/3): Hệ thống phát hiện nội dung có chứa số điện thoại hoặc kênh liên lạc ngoài luồng khi chưa chốt chuyến: "${piiCheck.detectedSample || ''}". Vui lòng trao đổi trên CarMate và bấm [Đề xuất chốt & Giữ chỗ 15p] để mở khóa SĐT an toàn. Nếu bạn gõ nhầm địa chỉ hoặc số nhà, hãy bấm nút [Khiếu nại / Kháng nghị] bên dưới.`,
+            createdAt: new Date().toISOString()
+          };
+
+          await updateBookingStatus(id, booking.status, {
+            piiStrikes: bookingStrikes,
+            messages: [...existingMsgs, warningNoticeMsg],
+            lastMessageAt: warningNoticeMsg.createdAt
+          });
 
           return res.status(400).json({
             success: false,
             strike: 1,
             violationLevel: 'warning',
+            warningNotice: warningNoticeMsg,
             error: `⚠️ CẢNH BÁO VI PHẠM (Lần 1/3): ${piiCheck.warningMessage} Vui lòng thỏa thuận trên CarMate và bấm [Đề xuất chốt] để mở khóa an toàn.`,
             reason: piiCheck.reason,
             detectedSample: piiCheck.detectedSample
           });
         } else if (newStrikes === 2) {
-          // LẦN 2: Cảnh cáo nghiêm trọng + HẠ ĐIỂM TÍN NHIỆM (-15 ĐIỂM)
+          // LẦN 2: Cảnh cáo nghiêm trọng + HẠ ĐIỂM TÍN NHIỆM (-15 ĐIỂM) + THƯ XỬ PHẠT
           const currentTrust = Number(senderUser?.trustScore ?? 98);
           const newTrustScore = Math.max(0, currentTrust - 15);
 
@@ -543,7 +579,30 @@ export async function addBookingMessageHandler(req, res) {
               piiStrikes: 2
             });
           }
-          await updateBookingStatus(id, booking.status, { piiStrikes: bookingStrikes });
+
+          const penaltyNoticeMsg = {
+            id: `SYS-WARN-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            senderRole: 'system',
+            senderName: 'Hệ thống CarMate',
+            isSystem: true,
+            isWarningNotice: true,
+            noticeType: 'strike_penalty',
+            strike: 2,
+            deductedPoints: 15,
+            trustScore: newTrustScore,
+            detectedSample: piiCheck.detectedSample || '',
+            warningMessage: piiCheck.warningMessage,
+            canDispute: true,
+            text: `🚨 QUYẾT ĐỊNH XỬ PHẠT TÍN NHIỆM (Lần 2/3): Bạn tiếp tục cố tình chia sẻ thông tin liên lạc ngoài luồng: "${piiCheck.detectedSample || ''}". Hệ thống đã TRỪ -15 ĐIỂM TÍN NHIỆM (còn ${newTrustScore}/100). Vi phạm thêm lần nữa, tài khoản sẽ bị KHÓA CẤM VĨNH VIỄN (BAN)! Nếu đây là sự nhầm lẫn, hãy bấm [Khiếu nại / Kháng nghị] ngay.`,
+            createdAt: new Date().toISOString()
+          };
+
+          await updateBookingStatus(id, booking.status, {
+            piiStrikes: bookingStrikes,
+            trustScore: newTrustScore,
+            messages: [...existingMsgs, penaltyNoticeMsg],
+            lastMessageAt: penaltyNoticeMsg.createdAt
+          });
 
           // Báo động Telegram cho Founder
           sendBusinessAlert({
@@ -565,33 +624,60 @@ export async function addBookingMessageHandler(req, res) {
             violationLevel: 'penalty',
             trustScore: newTrustScore,
             deductedPoints: 15,
+            warningNotice: penaltyNoticeMsg,
             error: `🚨 CẢNH CÁO VI PHẠM NGHIÊM TRỌNG (Lần 2/3): Bạn tiếp tục cố tình luồn lách thông tin liên lạc! Hệ thống đã TRỪ -15 ĐIỂM TÍN NHIỆM (còn ${newTrustScore}/100). Vi phạm thêm lần nữa, tài khoản sẽ bị KHÓA CẤM VĨNH VIỄN (BAN)!`,
             reason: piiCheck.reason,
             detectedSample: piiCheck.detectedSample
           });
         } else {
-          // LẦN 3 TRỞ ĐI: KHÓA TÀI KHOẢN VĨNH VIỄN (BAN)
+          // LẦN 3 TRỞ ĐI: KHÓA TÀI KHOẢN VỚI THỜI HẠN ÂN HẠN 3 NGÀY (72H GRACE PERIOD)
+          const bannedAt = Date.now();
+          const deactivateAt = bannedAt + 3 * 24 * 60 * 60 * 1000; // 3 ngày ân hạn
+
           if (senderKey) {
             await updateUserStatus(senderKey, {
               isBanned: true,
-              status: 'banned',
+              status: 'suspended',
+              bannedAt,
+              deactivateAt,
               piiStrikes: newStrikes,
               banReason: 'Cố tình chia sẻ SĐT/kênh liên lạc ngoài luồng 3 lần liên tiếp'
             });
           }
+
+          const banNoticeMsg = {
+            id: `SYS-WARN-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            senderRole: 'system',
+            senderName: 'Hệ thống CarMate',
+            isSystem: true,
+            isWarningNotice: true,
+            noticeType: 'strike_ban',
+            strike: 3,
+            bannedAt,
+            deactivateAt,
+            detectedSample: piiCheck.detectedSample || '',
+            warningMessage: piiCheck.warningMessage,
+            canDispute: true,
+            text: `⛔ THÔNG BÁO TẠM ĐÌNH CHỈ TÀI KHOẢN (Cấp 3): Tài khoản của bạn đã bị hạn chế đăng bài và đặt chuyến do vi phạm quy chế 3 lần liên tiếp. Bạn có thời gian ân hạn 3 ngày để bấm [Khiếu nại / Chat CSKH] giải trình trước khi tài khoản bị vô hiệu hóa hoàn toàn.`,
+            createdAt: new Date().toISOString()
+          };
+
           await updateBookingStatus(id, booking.status, {
             piiStrikes: bookingStrikes,
-            isBanned: true
+            isBanned: true,
+            messages: [...existingMsgs, banNoticeMsg],
+            lastMessageAt: banNoticeMsg.createdAt
           });
 
           // Báo động Telegram Khẩn Cấp
           sendBusinessAlert({
-            title: '⛔ TÀI KHOẢN BỊ KHÓA (AUTO-BAN): Vi phạm PII 3 lần liên tiếp',
+            title: '⛔ TÀI KHOẢN BỊ KHÓA (AUTO-BAN): Vi phạm PII 3 lần liên tiếp (Ân hạn 3 ngày)',
             details: {
               'Mã yêu cầu': id,
               'Thành viên bị khóa': senderUser?.name || senderName || 'Thành viên',
               'SĐT/ID': senderKey || 'N/A',
               'Lý do': 'Chia sẻ thông tin ngoài luồng 3 lần liên tiếp',
+              'Thời hạn ân hạn': '72 giờ (3 ngày) trước khi vô hiệu hóa vĩnh viễn',
               'Nội dung vi phạm': text
             },
             req
@@ -602,7 +688,10 @@ export async function addBookingMessageHandler(req, res) {
             strike: newStrikes,
             violationLevel: 'banned',
             isBanned: true,
-            error: '⛔ TÀI KHOẢN ĐÃ BỊ KHÓA VĨNH VIỄN (BAN): Bạn đã vi phạm chính sách bảo mật thông tin liên tục 3 lần. Toàn bộ chuyến xe và quyền truy cập đã bị đình chỉ.',
+            bannedAt,
+            deactivateAt,
+            warningNotice: banNoticeMsg,
+            error: '⛔ TÀI KHOẢN ĐÃ BỊ KHÓA VĨNH VIỄN (BAN): Bạn đã vi phạm chính sách bảo mật thông tin liên tục 3 lần. Tính năng đăng bài đã bị đình chỉ (Thời gian ân hạn khiếu nại: 3 ngày).',
             reason: piiCheck.reason,
             detectedSample: piiCheck.detectedSample
           });
@@ -1084,6 +1173,83 @@ export async function resetBanHandler(req, res) {
     return res.status(200).json({
       success: true,
       message: 'Đã mở khóa tài khoản và thiết lập lại trạng thái vi phạm.'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/bookings/:id/dispute - Tiếp nhận khiếu nại (Dispute) cảnh báo hoặc ban
+ */
+export async function disputeBookingHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { reason = 'Gõ nhầm địa chỉ / số nhà', note = '', reporterRole = 'user' } = req.body || {};
+
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi để khiếu nại' });
+    }
+
+    const senderKey = req.user?.id || req.user?.phone || booking.passengerPhone || booking.driverPhone || booking.contactPhone;
+
+    // 1. Lưu vào support_messages
+    saveSupportMessage({
+      bookingId: id,
+      userId: req.user?.id || booking.userId || booking.driverId,
+      phone: req.user?.phone || booking.passengerPhone || booking.driverPhone || booking.contactPhone,
+      senderRole: 'user',
+      senderName: req.user?.name || (reporterRole === 'driver' ? 'Chủ xe' : 'Người đi cùng'),
+      message: `[KHIẾU NẠI CHUYẾN #${id}] Lý do: ${reason}. Ghi chú: ${note || 'Không có'}`,
+      type: 'strike_dispute',
+      status: 'resolved'
+    });
+
+    // 2. Mở khóa và gỡ bỏ vi phạm ngay lập tức (Stanford Ergonomics & Instant Relief)
+    await resolveDisputeAndUnban({
+      bookingId: id,
+      userId: req.user?.id || booking.userId || booking.driverId,
+      phone: senderKey,
+      reason,
+      note
+    });
+
+    // 3. Tạo tin nhắn xác nhận giải quyết từ Ban Quản Trị trong chat
+    const resolutionMsg = {
+      id: `SYS-DISPUTE-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      senderRole: 'system',
+      senderName: 'Ban Quản Trị CarMate',
+      isSystem: true,
+      isDisputeResolved: true,
+      text: `✅ KHIẾU NẠI ĐÃ ĐƯỢC CHẤP THUẬN: Hệ thống đã kiểm tra nội dung giải trình của bạn ("${reason}${note ? ' - ' + note : ''}"). Cảnh báo vi phạm đã được gỡ bỏ và tài khoản được phục hồi quyền hoạt động bình thường.`,
+      createdAt: new Date().toISOString()
+    };
+
+    const existingMsgs = Array.isArray(booking.messages) ? booking.messages : [];
+    const updated = await updateBookingStatus(id, booking.status, {
+      isBanned: false,
+      piiStrikes: {},
+      messages: [...existingMsgs, resolutionMsg],
+      lastMessageAt: resolutionMsg.createdAt
+    });
+
+    // 4. Gửi thông báo Telegram cho Admin
+    sendBusinessAlert({
+      title: '✅ KHIẾU NẠI PII THÀNH CÔNG: Đã gỡ cảnh báo / mở khóa tài khoản',
+      details: {
+        'Mã chuyến': id,
+        'Thành viên khiếu nại': req.user?.name || senderKey || 'Thành viên',
+        'Lý do khiếu nại': reason,
+        'Ghi chú giải trình': note || 'N/A'
+      },
+      req
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Khiếu nại đã được ghi nhận và xử lý thành công. Tài khoản đã được khôi phục.',
+      data: { booking: updated, resolutionMessage: resolutionMsg }
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
