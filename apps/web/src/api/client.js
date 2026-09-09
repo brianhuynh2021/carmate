@@ -5,10 +5,50 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+export function getStoredAuthToken() {
+  if (typeof localStorage !== 'undefined') {
+    const token = localStorage.getItem('carmate_auth_token');
+    if (token) return token;
+  }
+  if (typeof document !== 'undefined') {
+    const match = document.cookie.match(/(?:^|; )carmate_auth_token=([^;]*)/);
+    if (match && match[1]) return decodeURIComponent(match[1]);
+  }
+  return null;
+}
+
+export function setStoredAuthToken(token) {
+  if (!token) return;
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('carmate_auth_token', token);
+    } catch {}
+  }
+  if (typeof document !== 'undefined') {
+    try {
+      document.cookie = `carmate_auth_token=${encodeURIComponent(token)}; path=/; max-age=7776000; SameSite=Lax; secure`;
+    } catch {}
+  }
+}
+
+export function removeStoredAuthToken() {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.removeItem('carmate_auth_token');
+    } catch {}
+  }
+  if (typeof document !== 'undefined') {
+    try {
+      document.cookie = 'carmate_auth_token=; path=/; max-age=0; SameSite=Lax; secure';
+      document.cookie = 'carmate_user_cached=; path=/; max-age=0; SameSite=Lax; secure';
+    } catch {}
+  }
+}
+
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const adminToken = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('carmate_admin_token') : null;
-  const authToken = typeof localStorage !== 'undefined' ? localStorage.getItem('carmate_auth_token') : null;
+  const authToken = getStoredAuthToken();
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -201,8 +241,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    if (res?.token && typeof localStorage !== 'undefined') {
-      localStorage.setItem('carmate_auth_token', res.token);
+    if (res?.token) {
+      setStoredAuthToken(res.token);
     }
     return res;
   },
@@ -221,8 +261,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    if (res?.token && typeof localStorage !== 'undefined') {
-      localStorage.setItem('carmate_auth_token', res.token);
+    if (res?.token) {
+      setStoredAuthToken(res.token);
     }
     return res;
   },
@@ -232,8 +272,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    if (res?.token && typeof localStorage !== 'undefined') {
-      localStorage.setItem('carmate_auth_token', res.token);
+    if (res?.token) {
+      setStoredAuthToken(res.token);
     }
     return res;
   },
@@ -243,8 +283,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    if (res?.token && typeof localStorage !== 'undefined') {
-      localStorage.setItem('carmate_auth_token', res.token);
+    if (res?.token) {
+      setStoredAuthToken(res.token);
     }
     return res;
   },
@@ -264,18 +304,18 @@ export const api = {
     const res = await request('/auth/me', {
       method: 'DELETE'
     });
+    removeStoredAuthToken();
     if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('carmate_auth_token');
-      localStorage.removeItem('carmate_user');
-      localStorage.removeItem('carmate_my_trip_ids');
+      try {
+        localStorage.removeItem('carmate_user');
+        localStorage.removeItem('carmate_my_trip_ids');
+      } catch {}
     }
     return res;
   },
 
   logout() {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('carmate_auth_token');
-    }
+    removeStoredAuthToken();
   },
 
   // --- Admin Engine Calls ---

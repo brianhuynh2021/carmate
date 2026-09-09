@@ -8,6 +8,7 @@
  * 3. Cursor Zero-Blocking: Xử lý 100% trên client trong <10ms, không round-trip máy chủ hay gọi AI chậm chạp.
  * 4. Apple Liquid Aesthetics: Thanh che squircle đen graphite sang trọng, viền sáng mảnh, chữ sắc nét.
  */
+import { normalizePhotoUrl } from '@carmate/shared';
 
 /**
  * Vẽ thanh che bảo mật squircle lên canvas
@@ -160,11 +161,25 @@ export function renderMaskedImageFromSource(imgOrSrc, options = {}) {
     };
 
     if (typeof imgOrSrc === 'string') {
+      const normalizedSrc = normalizePhotoUrl(imgOrSrc) || imgOrSrc;
       const image = new window.Image();
-      image.crossOrigin = 'anonymous';
+      // Không đặt crossOrigin cho data: URL hoặc blob: URL vì trình duyệt có thể từ chối render
+      if (!normalizedSrc.startsWith('data:') && !normalizedSrc.startsWith('blob:')) {
+        image.crossOrigin = 'anonymous';
+      }
       image.onload = () => apply(image);
-      image.onerror = (e) => reject(e);
-      image.src = imgOrSrc;
+      image.onerror = (e) => {
+        if (image.crossOrigin) {
+          // Thử lại không dùng crossOrigin phòng khi máy chủ ảnh ngoài không hỗ trợ CORS
+          const fallbackImage = new window.Image();
+          fallbackImage.onload = () => apply(fallbackImage);
+          fallbackImage.onerror = () => reject(e);
+          fallbackImage.src = normalizedSrc;
+        } else {
+          reject(e);
+        }
+      };
+      image.src = normalizedSrc;
     } else {
       apply(imgOrSrc);
     }

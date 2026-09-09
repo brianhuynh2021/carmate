@@ -41,7 +41,8 @@ import {
   formatVND,
   getCorridorWaypoints,
   isValidVietnamesePhone,
-  isLikelyFakePhone
+  isLikelyFakePhone,
+  normalizePhotoUrl
 } from '@carmate/shared';
 import { useI18n, useDataLabel } from '../../i18n/index.jsx';
 import { Field, Input, Select, Textarea, Checkbox, OptionCard } from '../ui/Field.jsx';
@@ -247,6 +248,31 @@ const CAR_PHOTO_SLOTS = [
   { id: 'trunk', label: 'Khoang hành lý', required: false, desc: 'Cốp rộng để đồ thoải mái' }
 ];
 
+const normalizeVehiclePhotos = (photos) => {
+  if (!Array.isArray(photos)) return [];
+  return photos.map((photo, idx) => {
+    if (!photo) return null;
+    if (typeof photo === 'string') {
+      const norm = normalizePhotoUrl(photo);
+      return {
+        angle: idx === 0 ? 'front' : idx === 1 ? 'back' : 'side',
+        label: idx === 0 ? 'Góc Trước' : idx === 1 ? 'Góc Sau' : `Góc ${idx + 1}`,
+        url: norm,
+        originalUrl: norm,
+        isMasked: false,
+        caption: `Ảnh ${idx === 0 ? 'Góc Trước' : idx === 1 ? 'Góc Sau' : `Góc ${idx + 1}`}`
+      };
+    }
+    const normUrl = normalizePhotoUrl(photo?.url);
+    const normOrig = normalizePhotoUrl(photo?.originalUrl || photo?.url);
+    return {
+      ...photo,
+      url: normUrl,
+      originalUrl: normOrig || normUrl
+    };
+  }).filter(Boolean);
+};
+
 export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initialRole = 'driver', onShowToast }) {
   const { t, lang } = useI18n();
   const data = useDataLabel();
@@ -263,6 +289,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   // Lộ trình hoàn toàn tự do toàn quốc (Hà Nội, Hải Phòng, Đà Nẵng, Bình Phước, Sài Gòn...)
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
+  const [pickupSpot, setPickupSpot] = useState('');
+  const [dropoffSpot, setDropoffSpot] = useState('');
   const [waypointNote, setWaypointNote] = useState('');
   const [date, setDate] = useState(() => upcomingDays[0]?.iso || '');
   const [timeSlot, setTimeSlot] = useState('07:00-09:00');
@@ -312,7 +340,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
         if (userVehicle.carCategory) setCarCategory(userVehicle.carCategory);
         const validPics = (userVehicle.photos || []).filter(Boolean);
         if (validPics.length > 0 && carPhotos.length === 0) {
-          setCarPhotos(validPics);
+          setCarPhotos(normalizeVehiclePhotos(validPics));
         }
         if (Array.isArray(userVehicle.perks)) {
           if (userVehicle.perks.includes('Không hút thuốc')) setNoSmoking(true);
@@ -324,7 +352,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
         if (savedCarProfile.carType) setCarType(savedCarProfile.carType);
         if (savedCarProfile.carCategory) setCarCategory(savedCarProfile.carCategory);
         if (savedCarProfile.hasVerifiedPhotos && carPhotos.length === 0) {
-          setCarPhotos(savedCarProfile.carPhotos);
+          setCarPhotos(normalizeVehiclePhotos(savedCarProfile.carPhotos));
         }
       }
     }
@@ -413,6 +441,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     if (parsed.role) setRole(parsed.role);
     if (parsed.fromLocation) setFromLocation(parsed.fromLocation);
     if (parsed.toLocation) setToLocation(parsed.toLocation);
+    if (parsed.pickupSpot) setPickupSpot(parsed.pickupSpot);
+    if (parsed.dropoffSpot) setDropoffSpot(parsed.dropoffSpot);
     if (parsed.waypointNote) setWaypointNote(parsed.waypointNote);
     if (parsed.scheduleDay) setScheduleDay(parsed.scheduleDay);
     if (parsed.timeSlot) setTimeSlot(parsed.timeSlot);
@@ -434,7 +464,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       if (parsed.carCategory) setCarCategory(parsed.carCategory);
       if (parsed.carType) setCarType(parsed.carType);
       if (Array.isArray(parsed.carPhotos) && parsed.carPhotos.length > 0) {
-        setCarPhotos(parsed.carPhotos);
+        setCarPhotos(normalizeVehiclePhotos(parsed.carPhotos));
       }
     }
     if (parsed.detectedPerks) {
@@ -493,6 +523,10 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     const temp = fromLocation;
     setFromLocation(toLocation);
     setToLocation(temp);
+
+    const tempSpot = pickupSpot;
+    setPickupSpot(dropoffSpot);
+    setDropoffSpot(tempSpot);
   };
 
   const handleSubmit = (e) => {
@@ -552,8 +586,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       perks.push(customPerk.trim());
     }
 
-    const cleanFrom = fromLocation.trim();
-    const cleanTo = toLocation.trim();
+    // Khử triệt để từ khoá xe / số ghế dính vào địa danh
+    const VEHICLE_LEAK_REGEX =
+      /(?:\s+|-|,|\/)?\s*(?:xe\s*)?(?:mazda\s*\d*|vios|xpander|innova|veloz|kia\s*\w*|hyundai\s*\w*|honda\s*\w*|toyota\s*\w*|ford\s*\w*|vinfast\s*\w*|carnival|accent|city|cerato|k3|cx-?\d+|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình|\d+\s*chỗ|chỗ).*/gi;
+    let cleanFrom = fromLocation.trim();
+    let cleanTo = toLocation.trim();
+    if (cleanFrom.replace(VEHICLE_LEAK_REGEX, '').trim().length >= 2) {
+      cleanFrom = cleanFrom.replace(VEHICLE_LEAK_REGEX, '').trim();
+    }
+    if (cleanTo.replace(VEHICLE_LEAK_REGEX, '').trim().length >= 2) {
+      cleanTo = cleanTo.replace(VEHICLE_LEAK_REGEX, '').trim();
+    }
+
     const fromCity = cleanFrom.split(/[,-]/)[0].trim() || cleanFrom;
     const toCity = cleanTo.split(/[,-]/)[0].trim() || cleanTo;
     const derivedRoute = `${fromCity} ⇄ ${toCity}`;
@@ -573,6 +617,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       direction: 'both',
       from: cleanFrom,
       to: cleanTo,
+      pickupSpot: pickupSpot.trim() || undefined,
+      dropoffSpot: dropoffSpot.trim() || undefined,
       route: derivedRoute,
       routeCategory: derivedRoute,
       hometown: fromCity,
@@ -817,6 +863,43 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
               <ArrowLeftRight className="w-3 h-3" />
               <span>Đổi chiều đi / về</span>
             </button>
+          </div>
+
+          {/* Điểm đón cụ thể & Điểm trả cụ thể (Tùy chọn) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Điểm đón cụ thể</span>
+                </label>
+                <span className="text-[11px] text-slate-400">Tùy chọn</span>
+              </div>
+              <input
+                type="text"
+                value={pickupSpot}
+                onChange={(e) => setPickupSpot(e.target.value)}
+                placeholder="VD: Trung tâm hành chính, Cây xăng 17, Quận 3..."
+                className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Điểm trả cụ thể</span>
+                </label>
+                <span className="text-[11px] text-slate-400">Tùy chọn</span>
+              </div>
+              <input
+                type="text"
+                value={dropoffSpot}
+                onChange={(e) => setDropoffSpot(e.target.value)}
+                placeholder="VD: Bến xe Miền Đông, Bệnh viện Chợ Rẫy, Chợ Tân Khai..."
+                className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-2xs"
+              />
+            </div>
           </div>
 
           {/* TIỆN ĐÓN TRẢ DỌC ĐƯỜNG (TÙY CHỌN - TỰ DO CHO CHỦ XE) */}
@@ -1177,9 +1260,9 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     onClick={() => {
                       const garagePics = currentUser?.vehicle?.photos?.filter(Boolean) || [];
                       if (garagePics.length > 0) {
-                        setCarPhotos(garagePics);
+                        setCarPhotos(normalizeVehiclePhotos(garagePics));
                       } else if (savedCarProfile?.carPhotos) {
-                        setCarPhotos(savedCarProfile.carPhotos);
+                        setCarPhotos(normalizeVehiclePhotos(savedCarProfile.carPhotos));
                       }
                     }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
@@ -1218,7 +1301,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                       {currentPhoto ? (
                         <div className="relative aspect-[4/3] w-full group overflow-hidden bg-black/40">
                           <img
-                            src={currentPhoto.url || currentPhoto}
+                            src={normalizePhotoUrl(currentPhoto?.url || currentPhoto) || currentPhoto?.url || currentPhoto}
                             alt={slot.label}
                             onClick={() => setEditingMaskIndex(index)}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 cursor-pointer"

@@ -65,14 +65,23 @@ const KNOWN_LOCATIONS = [
   'TP HCM',
   'Hồ Chí Minh',
   'Bình Phước',
+  'Hớn Quản',
+  'Tân Khai',
   'Lộc Ninh',
   'Bù Đốp',
   'Bình Long',
   'Chơn Thành',
   'Đồng Xoài',
+  'Bù Đăng',
+  'Bù Gia Mập',
+  'Phú Riềng',
+  'Đồng Phú',
   'Bình Dương',
   'Thủ Dầu Một',
   'Bến Cát',
+  'Bàu Bàng',
+  'Dầu Tiếng',
+  'Phú Giáo',
   'Dĩ An',
   'Thuận An',
   'Đồng Nai',
@@ -336,7 +345,10 @@ export function parseNaturalTrip(text) {
     const seatsMatch =
       lower.match(
         /(?:còn|trống|cần|ghép|chỉ nhận|nhận|dư|còn lại|chở thêm|chỉ chở)\s*([1-7])\s*(?:ghế\s*sau|ghế|chỗ|người|vé|khách)/i
-      ) || lower.match(/([1-7])\s*(?:ghế|chỗ|người|khách)\b/);
+      ) ||
+      lower.match(
+        /(?:xe\s*(?:mazda|vios|kia|hyundai|honda|toyota|ford|vinfast|xpander|innova|veloz)?\s*)?([1-7])\s*(?:ghế\s*sau|ghế|chỗ|người|vé|khách)(?:\s+|$|[.,;])/i
+      );
     if (seatsMatch) {
       seats = parseInt(seatsMatch[1], 10);
     }
@@ -359,6 +371,7 @@ export function parseNaturalTrip(text) {
   else if (/carnival/i.test(lower)) carType = 'Kia Carnival (Xe 7 chỗ)';
   else if (/cx-?8/i.test(lower)) carType = 'Mazda CX-8 (Xe 7 chỗ)';
   else if (/cx-?5/i.test(lower)) carType = 'Mazda CX-5 (Xe 5 chỗ)';
+  else if (/mazda\s*2/i.test(lower)) carType = 'Mazda 2 (Xe 5 chỗ)';
   else if (/mazda\s*3/i.test(lower)) carType = 'Mazda 3 (Xe 5 chỗ)';
   else if (/mazda\s*6/i.test(lower)) carType = 'Mazda 6 (Xe 5 chỗ)';
   else if (/mazda/i.test(lower)) carType = 'Mazda (Xe 5 chỗ)';
@@ -437,14 +450,20 @@ export function parseNaturalTrip(text) {
   const routePatterns = [
     /(?:từ|chạy từ|đón tại|xuất phát từ)\s+([^,.\n]+?)\s+(?:đi|về|đến|tới|sang)\s+([^,.\n]+)/i,
     /([^,.\n]+?)\s*(?:->|=>|➔|⇄|–|-)\s*([^,.\n]+)/i,
-    /(?:chạy|đi|tuyến)\s+([^,.\n]+?)\s+(?:về|đi|đến|tới|sang)\s+([^,.\n]+)/i
+    /(?:chạy|đi|tuyến)\s+([^,.\n]+?)\s+(?:về|đi|đến|tới|sang)\s+([^,.\n]+)/i,
+    /([A-Za-zÀ-ỹ0-9\s]{2,30}?)\s+(?:đi|về|đến|tới|sang)\s+([A-Za-zÀ-ỹ0-9\s]{2,30}?)(?:\s+(?:xe|còn|giá|sđt|zalo|lúc|đón|trả|phụ|khoảng)|$|[.,;])/i
   ];
 
   for (const pattern of routePatterns) {
     const match = raw.match(pattern);
     if (match && match[1] && match[2]) {
-      const candidateFrom = match[1].trim();
-      const candidateTo = match[2].trim();
+      let candidateFrom = match[1].trim();
+      let candidateTo = match[2].trim();
+      // Khử tiền tố thời gian / từ xưng hô thừa ở đầu điểm xuất phát
+      candidateFrom = candidateFrom
+        .replace(/^[0-9:.\s-]+/g, '')
+        .replace(/^(?:hôm nay|ngày mai|sáng mai|chiều mai|tối mai|chiều nay|sáng nay|trưa nay|tối nay|thứ\s*\d|chủ nhật|mình|tôi|em|anh|chúng tôi)\s+/gi, '')
+        .trim();
       if (candidateFrom.length >= 2 && candidateTo.length >= 2) {
         fromLocation = candidateFrom;
         toLocation = candidateTo;
@@ -472,15 +491,28 @@ export function parseNaturalTrip(text) {
     }
   }
 
-  // Tiện đón dọc đường hoặc điểm hẹn đón cụ thể (Waypoints)
+  // Tiện đón dọc đường hoặc điểm hẹn đón cụ thể (Waypoints & Pickup/Dropoff Spots)
   let waypointNote = '';
-  const waypointMatch = raw.match(
-    /(?:đón tại|đón ở|đón dọc|đón ngã tư|đón cây xăng|đón tận nơi|tiện đường|dọc theo|dọc)\s+([^,.\n]+)/i
+  let pickupSpot = '';
+  let dropoffSpot = '';
+
+  const pickupMatch = raw.match(
+    /(?:đón tại|đón ở|đón dọc|đón ngã tư|đón cây xăng|đón tận nơi|tiện đường|dọc theo|dọc|đón)\s+([^,.\n]+?)(?:\s+(?:trả|giá|sđt|zalo|phụ|còn|xe|\d+\s*k|\d+\s*nghìn|\d+\s*đ)|\s*$)/i
   );
-  if (waypointMatch) {
-    let rawWp = waypointMatch[1].trim();
-    rawWp = rawWp.replace(/\s+(?:phụ|giá|sđt|zalo|tiền|còn).*/i, '').trim();
-    waypointNote = rawWp.toLowerCase().startsWith('dọc') ? rawWp : `Đón tại ${rawWp}`;
+  if (pickupMatch) {
+    let rawPickup = pickupMatch[1].trim();
+    rawPickup = rawPickup.replace(/\s+(?:phụ|giá|sđt|zalo|tiền|còn|xe).*/i, '').trim();
+    pickupSpot = rawPickup;
+    waypointNote = rawPickup.toLowerCase().startsWith('dọc') ? rawPickup : `Đón tại ${rawPickup}`;
+  }
+
+  const dropoffMatch = raw.match(
+    /(?:trả tại|trả ở|trả dọc|trả tận nơi|trả khách ở|trả khách tại|trả)\s+([^,.\n]+?)(?:\s+(?:giá|sđt|zalo|phụ|còn|xe|đón|\d+\s*k|\d+\s*nghìn|\d+\s*đ)|\s*$)/i
+  );
+  if (dropoffMatch) {
+    let rawDropoff = dropoffMatch[1].trim();
+    rawDropoff = rawDropoff.replace(/\s+(?:phụ|giá|sđt|zalo|tiền|còn|xe).*/i, '').trim();
+    dropoffSpot = rawDropoff;
   }
 
   // 8. Tiện ích & Nhu cầu đặc thù do chủ xe / hành khách nêu trong câu
@@ -519,18 +551,24 @@ export function parseNaturalTrip(text) {
   }
 
   const carAndGarbageRegex =
-    /\s+(?:xe\s*(?:\d|vios|xpander|innova|veloz|mazda|kia|hyundai|honda|toyota|ford|vinfast|carnival|accent|city|cx-?\d|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình)|còn|giá|sđt|zalo|lúc|khoảng|đón|phụ|ai tiện|ai có).*/i;
+    /(?:\s+|-|,|\/)?\s*(?:xe\s*)?(?:mazda\s*\d*|vios|xpander|innova|veloz|kia\s*\w*|hyundai\s*\w*|honda\s*\w*|toyota\s*\w*|ford\s*\w*|vinfast\s*\w*|carnival|accent|city|cerato|k3|cx-?\d+|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình|\d+\s*chỗ|chỗ|còn\s*\d*|giá|sđt|zalo|lúc|khoảng|đón|trả|phụ|ai tiện|ai có|\d+\s*k|\d+\s*nghìn|\d+\s*đ).*/i;
+
+  const cleanFromLoc = fromLocation
+    .replace(/^(mình|tôi|em|anh|chúng tôi)\s+/i, '')
+    .replace(carAndGarbageRegex, '')
+    .trim();
+
+  const cleanToLoc = toLocation
+    .replace(carAndGarbageRegex, '')
+    .trim();
 
   return {
     role,
-    fromLocation: fromLocation
-      .replace(/^(mình|tôi|em|anh|chúng tôi)\s+/i, '')
-      .replace(carAndGarbageRegex, '')
-      .trim(),
-    toLocation: toLocation
-      .replace(carAndGarbageRegex, '')
-      .trim(),
+    fromLocation: cleanFromLoc,
+    toLocation: cleanToLoc,
     waypointNote,
+    pickupSpot,
+    dropoffSpot,
     scheduleDay,
     timeSlot,
     exactTime,

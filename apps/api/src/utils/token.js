@@ -15,7 +15,7 @@ export const JWT_SECRET = resolvedJwtSecret;
 export function getJwtSecret() {
   return JWT_SECRET;
 }
-const TOKEN_EXPIRY = '7d';
+const TOKEN_EXPIRY = '90d';
 
 /**
  * Sinh mã JWT Token bảo mật phiên đăng nhập

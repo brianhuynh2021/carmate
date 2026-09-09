@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ShieldCheck, RotateCcw, Check, Eye, EyeOff, X, Sparkles } from 'lucide-react';
+import { normalizePhotoUrl } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import { renderMaskedImageFromSource } from '../../utils/plateMasker.js';
 
@@ -9,12 +10,27 @@ export default function PlateMaskModal({
   onSave,
   onClose
 }) {
-  const originalUrl = photo?.originalUrl || photo?.url;
+  const rawOriginalUrl = typeof photo === 'string' ? photo : (photo?.originalUrl || photo?.url);
+  const originalUrl = normalizePhotoUrl(rawOriginalUrl) || rawOriginalUrl || '';
+  const rawCurrentUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.originalUrl);
+  const initialPreviewUrl = normalizePhotoUrl(rawCurrentUrl) || originalUrl || '';
+
   const [isMasked, setIsMasked] = useState(() => photo?.isMasked !== false);
   const [maskPos, setMaskPos] = useState(() => photo?.maskPos || { xRatio: 0.5, yRatio: 0.74 });
-  const [previewUrl, setPreviewUrl] = useState(() => photo?.url || originalUrl);
+  const [previewUrl, setPreviewUrl] = useState(() => initialPreviewUrl);
   const [isRendering, setIsRendering] = useState(false);
   const imgRef = useRef(null);
+
+  // Đồng bộ khi prop photo thay đổi
+  useEffect(() => {
+    if (photo) {
+      setIsMasked(photo.isMasked !== false);
+      setMaskPos(photo.maskPos || { xRatio: 0.5, yRatio: 0.74 });
+      const raw = typeof photo === 'string' ? photo : (photo.url || photo.originalUrl);
+      const norm = normalizePhotoUrl(raw) || '';
+      setPreviewUrl(norm);
+    }
+  }, [photo]);
 
   // Cập nhật preview canvas khi vị trí hoặc trạng thái che thay đổi
   useEffect(() => {
@@ -29,11 +45,14 @@ export default function PlateMaskModal({
           yRatio: maskPos.yRatio,
           isMasked
         });
-        if (!cancelled) {
+        if (!cancelled && url) {
           setPreviewUrl(url);
         }
       } catch (err) {
         console.warn('[PlateMaskModal] Lỗi render preview:', err);
+        if (!cancelled) {
+          setPreviewUrl((prev) => prev || originalUrl);
+        }
       } finally {
         if (!cancelled) setIsRendering(false);
       }
@@ -43,7 +62,7 @@ export default function PlateMaskModal({
     return () => {
       cancelled = true;
     };
-  }, [originalUrl, maskPos, isMasked]);
+  }, [originalUrl, maskPos.xRatio, maskPos.yRatio, isMasked]);
 
   if (!isOpen || !photo) return null;
 
@@ -72,10 +91,11 @@ export default function PlateMaskModal({
   };
 
   const handleSave = () => {
+    const baseObj = typeof photo === 'object' && photo !== null ? { ...photo } : {};
     onSave?.({
-      ...photo,
-      url: previewUrl,
-      originalUrl,
+      ...baseObj,
+      url: previewUrl || originalUrl,
+      originalUrl: originalUrl || previewUrl,
       isMasked,
       maskPos
     });
@@ -151,21 +171,38 @@ export default function PlateMaskModal({
         </div>
 
         {/* Khung ảnh tương tác Tap-to-Mask */}
-        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-black/50 shadow-inner group select-none">
-          <img
-            ref={imgRef}
-            src={previewUrl}
-            alt="Preview xe che biển"
-            onClick={handleImageClick}
-            onTouchStart={handleImageClick}
-            className="w-full max-h-[360px] object-contain mx-auto cursor-crosshair active:scale-[0.99] transition-transform"
-          />
+        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950/80 shadow-inner group select-none min-h-[260px] sm:min-h-[320px] flex items-center justify-center">
+          {previewUrl ? (
+            <img
+              ref={imgRef}
+              src={previewUrl}
+              alt="Preview xe che biển"
+              onClick={handleImageClick}
+              onTouchStart={handleImageClick}
+              className="w-full max-h-[380px] object-contain mx-auto cursor-crosshair active:scale-[0.99] transition-transform"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center p-8 text-slate-400 gap-2">
+              <span className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs">Đang tải và xử lý ảnh xe...</span>
+            </div>
+          )}
+
+          {/* Loading indicator overlay khi đang render preview */}
+          {isRendering && previewUrl && (
+            <div className="absolute top-2 right-2 px-2 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-medium text-white flex items-center gap-1.5 pointer-events-none">
+              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Đang dán thanh che...</span>
+            </div>
+          )}
 
           {/* Vị trí chạm hint overlay */}
-          <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-black/70 backdrop-blur-xs text-[10px] font-mono text-white pointer-events-none flex items-center gap-1.5">
-            <ShieldCheck className="w-3 h-3 text-emerald-400" />
-            <span>Tọa độ che: {Math.round(maskPos.xRatio * 100)}% - {Math.round(maskPos.yRatio * 100)}%</span>
-          </div>
+          {isMasked && (
+            <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-black/70 backdrop-blur-xs text-[10px] font-mono text-white pointer-events-none flex items-center gap-1.5 shadow-sm">
+              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              <span>Tọa độ che: {Math.round(maskPos.xRatio * 100)}% - {Math.round(maskPos.yRatio * 100)}%</span>
+            </div>
+          )}
         </div>
 
         <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center">
