@@ -462,11 +462,15 @@ export default function TripCard({
             ) : isTripFull ? (
               <button
                 type="button"
-                disabled
-                className="h-9 px-3.5 rounded-full text-[12px] font-semibold tracking-tight inline-flex items-center justify-center whitespace-nowrap bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 cursor-not-allowed shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSelect) onSelect(item);
+                  else if (onBook) onBook(item);
+                }}
+                className="h-9 px-3.5 rounded-full text-[12px] font-semibold tracking-tight inline-flex items-center justify-center whitespace-nowrap bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-[0.96] transition-all cursor-pointer shrink-0"
+                title="Chuyến đã đủ người. Bấm để xem thông tin chi tiết"
               >
-                <Lock className="w-3 h-3 mr-1.5" />
-                <span>Đã kín chỗ</span>
+                <span>Xem chi tiết</span>
               </button>
             ) : (
               <button

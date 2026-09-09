@@ -5275,6 +5275,12 @@ async function runTests() {
       !cardSrc.includes('{isTripFull ? (\n            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500'),
       'Seamless Route 4: Header thẻ chuyến luôn đồng bộ PresenceDot, không xuất hiện thừa thãi nhãn Đã kín chỗ'
     );
+
+    // 71.5 Nút hành động khi chuyến đầy chuyển sang Xem chi tiết, không lặp lại nhãn Đã kín chỗ
+    assert(
+      cardSrc.includes('<span>Xem chi tiết</span>'),
+      'Seamless Route 5: Nút hành động chuyển sang "Xem chi tiết", triệt tiêu 100% sự lặp lại của nhãn Đã kín chỗ'
+    );
   } catch (err) {
     assert(false, '71. Kiểm thử Đường Kẻ Mũi Tên Liền Mạch & Đồng Bộ Header Thẻ Chuyến', err.message);
   }
