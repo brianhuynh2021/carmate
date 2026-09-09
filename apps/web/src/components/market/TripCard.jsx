@@ -8,7 +8,6 @@ import {
   Camera,
   Lock,
   User,
-  UserCheck,
   SlidersHorizontal,
   Car,
   CheckCircle2,
@@ -18,7 +17,7 @@ import {
   getTimeSlotLabel,
   sanitizeTimeLabel,
   isGoogleMapsUrl,
-  formatTripDateDisplay,
+  formatCleanDateLabel,
   parseLocation,
   getCorridorDisplay,
   toPublicAlias,
@@ -207,9 +206,8 @@ export default function TripCard({
   const seatsLeft = isDriver ? Number(item.availableSeats) || 0 : Number(item.seatsNeeded) || 1;
   const seatsTotal = isDriver ? Number(item.capacity) || Math.max(seatsLeft, 4) : null;
 
-  // Ngày rút gọn: "Ngày mai (09/09)" → "09/09" hoặc "Hôm nay · 09/09"
-  const rawDate = item.date ? formatTripDateDisplay(item.date) : 'Hôm nay';
-  const dateLabel = rawDate.replace(/\s*\((\d{1,2}\/\d{1,2})\)\s*/, ' · $1').trim();
+  // Ngày hiển thị gọn gàng, tinh tế (Stanford Ergonomics & Apple HIG: triệt tiêu hậu tố dd/mm dư thừa)
+  const dateLabel = formatCleanDateLabel(item.date);
 
   // Giờ: định dạng giờ chính xác (buổi sáng giữ chữ Sáng để phân biệt, buổi chiều/tối lược bỏ chữ thừa)
   const rawTime = getTimeSlotLabel(item, lang) || '';
@@ -241,12 +239,7 @@ export default function TripCard({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {isOwner ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60 shrink-0 whitespace-nowrap">
-              <UserCheck className="w-3 h-3" />
-              <span>Chuyến của bạn</span>
-            </span>
-          ) : isTripFull ? (
+          {isTripFull ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap">
               <Lock className="w-3 h-3" />
               <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>

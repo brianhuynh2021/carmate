@@ -140,6 +140,59 @@ export const formatTripDateDisplay = (dateStr, baseDate = new Date()) => {
   return isRecurring ? `${cleanStr} · Lặp hàng tuần` : cleanStr;
 };
 
+/**
+ * Định dạng nhãn ngày gọn gàng, tinh tế cho Card và Modal (Stanford Ergonomics & Apple HIG):
+ * - Hôm nay: "Hôm nay" (triệt tiêu hậu tố dd/mm gây dư thừa thông tin & 2 dấu chấm liên tiếp)
+ * - Ngày mai: "Ngày mai" (triệt tiêu hậu tố dd/mm)
+ * - Hôm qua: "Hôm qua"
+ * - Ngày khác: "Thứ X · dd/mm" hoặc "dd/mm"
+ * - Cơ chế tự phục hồi (Self-healing Invariant):
+ *   Nếu bài đăng cũ lưu chuỗi tương đối đã cũ như "Ngày mai (09/09)" mà hôm nay là 09/09,
+ *   hệ thống tự động phát hiện 09/09 là ngày hôm nay và trả về "Hôm nay"!
+ */
+export const formatCleanDateLabel = (dateStr, baseDate = new Date()) => {
+  if (!dateStr) return 'Hôm nay';
+
+  const str = String(dateStr).trim();
+  const isRecurring = str.includes('Lặp lại hàng tuần') || str.includes('hàng tuần');
+  const cleanStr = str
+    .replace(/\(Lặp lại hàng tuần\)/gi, '')
+    .replace(/hàng tuần/gi, '')
+    .trim();
+
+  const base = new Date(baseDate);
+  base.setHours(0, 0, 0, 0);
+
+  const targetDate = parseTripDate(cleanStr, base);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.round((targetDate.getTime() - base.getTime()) / (24 * 60 * 60 * 1000));
+
+  let label = '';
+  if (diffDays === 0) {
+    label = 'Hôm nay';
+  } else if (diffDays === 1) {
+    label = 'Ngày mai';
+  } else if (diffDays === -1) {
+    label = 'Hôm qua';
+  } else {
+    const weekday = WEEKDAY_NAMES[targetDate.getDay()];
+    const dm = formatDateDayMonth(targetDate);
+    label = `${weekday} · ${dm}`;
+  }
+
+  if (isRecurring) {
+    const weekdayMatch = cleanStr.match(/thứ\s*[2-7]|chủ nhật|cn/i);
+    if (weekdayMatch) {
+      const weekdayName = WEEKDAY_NAMES[targetDate.getDay()];
+      return `${weekdayName} · Lặp hàng tuần`;
+    }
+    return `${label} · Lặp hàng tuần`;
+  }
+
+  return label;
+};
+
 /** Dung sai sau giờ khởi hành trước khi bài đăng hết hạn (30 phút) */
 export const EXPIRY_TOLERANCE_MS = 30 * 60 * 1000;
 
@@ -159,19 +212,8 @@ export const parseTripDate = (dateStr, baseDate = new Date()) => {
     return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
   }
 
-  // 2. Chứa "Hôm nay"
-  if (lower.includes('hôm nay')) {
-    return new Date(base.getFullYear(), base.getMonth(), base.getDate());
-  }
-
-  // 3. Chứa "Ngày mai" hoặc "mai"
-  if (lower.includes('ngày mai') || lower.includes('mai')) {
-    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-    d.setDate(d.getDate() + 1);
-    return d;
-  }
-
-  // 4. Định dạng dd/mm (ví dụ: "07/09" hoặc "Thứ 2 (07/09)")
+  // 2. Định dạng dd/mm (ví dụ: "07/09" hoặc "Thứ 2 (07/09)" hoặc "Ngày mai (09/09)")
+  // Calendar date cụ thể luôn có độ ưu tiên cao nhất, tránh từ khóa tương đối bị cũ
   const dmMatch = str.match(/(\d{1,2})\/(\d{1,2})/);
   if (dmMatch) {
     const day = Number(dmMatch[1]);
@@ -184,7 +226,32 @@ export const parseTripDate = (dateStr, baseDate = new Date()) => {
     return new Date(year, month, day);
   }
 
-  // 5. Thứ trong tuần (vd "Thứ 2", "Thứ 3"...)
+  // 3. Chứa "Hôm nay" (khi không có dd/mm đi kèm)
+  if (lower.includes('hôm nay')) {
+    return new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  }
+
+  // 4. Chứa "Ngày mai" hoặc "mai" (khi không có dd/mm đi kèm)
+  if (lower.includes('ngày mai') || lower.includes('mai')) {
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  // 5. Chứa "Hôm qua" (khi không có dd/mm đi kèm)
+  if (lower.includes('hôm qua')) {
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    d.setDate(d.getDate() - 1);
+    return d;
+  }
+
+  // 6. Chứa "cuối tuần"
+  if (lower.includes('cuối tuần')) {
+    const sat = getNextWeekdayDate(6, base);
+    return new Date(sat.getFullYear(), sat.getMonth(), sat.getDate());
+  }
+
+  // 7. Thứ trong tuần (vd "Thứ 2", "Thứ 3"...)
   const dayMap = [
     { regex: /chủ nhật|cn/i, day: 0 },
     { regex: /thứ 2|thứ hai|t2/i, day: 1 },

@@ -24,7 +24,7 @@ import {
   formatVND,
   getTimeSlotLabel,
   ROUTE_BENCHMARKS,
-  formatTripDateDisplay,
+  formatCleanDateLabel,
   isTripExpired
 } from '@carmate/shared';
 import Button from '../ui/Button.jsx';
@@ -528,7 +528,7 @@ export default function MyTripsView({
                           </span>
 
                           <span className="text-xs text-slate-500 dark:text-slate-400 font-mono font-medium">
-                            · {trip.date ? formatTripDateDisplay(trip.date) : 'Hôm nay'}
+                            · {formatCleanDateLabel(trip.date)}
                           </span>
                         </div>
 

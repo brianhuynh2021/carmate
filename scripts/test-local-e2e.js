@@ -3563,10 +3563,10 @@ async function runTests() {
     const tripCardPath = './apps/web/src/components/market/TripCard.jsx';
     const tripCardContent = fs.readFileSync(tripCardPath, 'utf8');
 
-    // 1. TripCard có prop isOwner và huy hiệu Chuyến của bạn
+    // 1. TripCard có prop isOwner và loại bỏ chip "Chuyến của bạn" dư thừa
     assert(
-      tripCardContent.includes('isOwner') && tripCardContent.includes('Chuyến của bạn'),
-      'TripCard Invariant 1: TripCard tích hợp thuộc tính isOwner và hiển thị huy hiệu Chuyến của bạn'
+      tripCardContent.includes('isOwner') && !tripCardContent.includes('<UserCheck'),
+      'TripCard Invariant 1: TripCard tích hợp thuộc tính isOwner và đã loại bỏ chip Chuyến của bạn dư thừa'
     );
 
     // 2. TripCard đổi nút CTA thành "Quản lý chuyến của bạn" cho chủ bài đăng
@@ -4915,6 +4915,106 @@ async function runTests() {
     );
   } catch (err) {
     assert(false, '67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau', err.message);
+  }
+
+  // 68. KIỂM THỬ LÀM SẠCH NHÃN NGÀY & TRIỆT TIÊU HẬU TỐ DƯ THỪA (CLEAN DATE LABEL)
+  try {
+    console.log('\n📅 68. Kiểm thử Làm Sạch Nhãn Ngày & Triệt Tiêu Hậu Tố Dư Thừa (Clean Date Label)...');
+    const { formatCleanDateLabel } = await import('../packages/shared/src/utils/date.js');
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const mockBaseDate = new Date(2026, 8, 9, 14, 0, 0); // 09/09/2026
+
+    // 68.1 Triệt tiêu hậu tố dd/mm khi là Hôm nay
+    assert(
+      formatCleanDateLabel('Hôm nay', mockBaseDate) === 'Hôm nay',
+      'Clean Date 1: "Hôm nay" giữ nguyên nhãn sang trọng không hậu tố thừa'
+    );
+    assert(
+      formatCleanDateLabel('Hôm nay (09/09)', mockBaseDate) === 'Hôm nay',
+      'Clean Date 2: "Hôm nay (09/09)" triệt tiêu hoàn toàn "(09/09)" thừa thãi, trả về "Hôm nay"'
+    );
+    assert(
+      formatCleanDateLabel('2026-09-09', mockBaseDate) === 'Hôm nay',
+      'Clean Date 3: Chuỗi ISO trùng ngày hôm nay tự động định dạng thành "Hôm nay"'
+    );
+
+    // 68.2 Triệt tiêu hậu tố dd/mm khi là Ngày mai
+    assert(
+      formatCleanDateLabel('Ngày mai', mockBaseDate) === 'Ngày mai',
+      'Clean Date 4: "Ngày mai" giữ nguyên nhãn tinh tế không hậu tố thừa'
+    );
+    assert(
+      formatCleanDateLabel('Ngày mai (10/09)', mockBaseDate) === 'Ngày mai',
+      'Clean Date 5: "Ngày mai (10/09)" triệt tiêu hoàn toàn "(10/09)", trả về "Ngày mai"'
+    );
+    assert(
+      formatCleanDateLabel('2026-09-10', mockBaseDate) === 'Ngày mai',
+      'Clean Date 6: Chuỗi ISO ngày mai tự động định dạng thành "Ngày mai"'
+    );
+
+    // 68.3 Bất biến toán học & Tự phục hồi dữ liệu cũ (MIT Invariant / Self-healing)
+    assert(
+      formatCleanDateLabel('Ngày mai (09/09)', mockBaseDate) === 'Hôm nay',
+      'Clean Date 7: Bài đăng cũ lưu "Ngày mai (09/09)" khi đến ngày 09/09 tự sửa thành "Hôm nay", chống mâu thuẫn'
+    );
+
+    // 68.4 Các ngày xa hơn hiển thị rõ ràng Thứ · dd/mm
+    const dateFri = formatCleanDateLabel('2026-09-11', mockBaseDate);
+    assert(
+      dateFri.includes('Thứ 6') && dateFri.includes('11/09') && !dateFri.includes('('),
+      'Clean Date 8: Ngày xa hơn định dạng chuẩn "Thứ 6 · 11/09" thanh lịch'
+    );
+
+    // 68.5 Chuyến lặp hàng tuần
+    const recurringLabel = formatCleanDateLabel('Thứ 2 (Lặp lại hàng tuần)', mockBaseDate);
+    assert(
+      recurringLabel.includes('Thứ 2') && recurringLabel.includes('Lặp hàng tuần'),
+      'Clean Date 9: Chuyến lặp lại hiển thị "Thứ 2 · Lặp hàng tuần" chuẩn xác'
+    );
+
+    // 68.6 Tích hợp vào các component UI
+    const tripCardSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx'),
+      'utf-8'
+    );
+    assert(
+      tripCardSrc.includes('formatCleanDateLabel') &&
+      tripCardSrc.includes('formatCleanDateLabel(item.date)'),
+      'Clean Date 10: TripCard.jsx tích hợp formatCleanDateLabel'
+    );
+    assert(
+      !tripCardSrc.includes("replace(/\\s*\\((\\d{1,2}\\/\\d{1,2})\\)\\s*/, ' · $1')"),
+      'Clean Date 11: TripCard.jsx đã loại bỏ hoàn toàn regex chèn đè hai dấu chấm ·'
+    );
+
+    const routeDetailSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx'),
+      'utf-8'
+    );
+    assert(
+      routeDetailSrc.includes('formatCleanDateLabel') &&
+      routeDetailSrc.includes('formatCleanDateLabel(trip.date)'),
+      'Clean Date 12: RouteDetailModal.jsx tích hợp formatCleanDateLabel'
+    );
+
+    const myTripsSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx'),
+      'utf-8'
+    );
+    assert(
+      myTripsSrc.includes('formatCleanDateLabel') &&
+      myTripsSrc.includes('formatCleanDateLabel(trip.date)'),
+      'Clean Date 13: MyTripsView.jsx tích hợp formatCleanDateLabel'
+    );
+
+    assert(
+      !tripCardSrc.includes('Chuyến của bạn') && tripCardSrc.includes('Quản lý chuyến của bạn'),
+      'Clean Date 14: TripCard đã triệt tiêu hoàn toàn chip Chuyến của bạn dư thừa ở header'
+    );
+  } catch (err) {
+    assert(false, '68. Kiểm thử Làm Sạch Nhãn Ngày & Triệt Tiêu Hậu Tố Dư Thừa', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

@@ -19,7 +19,7 @@ import {
   formatVND,
   isGoogleMapsUrl,
   decodeHtmlEntities,
-  formatTripDateDisplay,
+  formatCleanDateLabel,
   getTimeSlotLabel,
   toPublicAlias,
   getUserOnlineStatus,
@@ -73,9 +73,8 @@ export default function RouteDetailModal({
   const orderedWaypoints = isReverse ? rawWaypoints.slice().reverse() : rawWaypoints;
   const transitWaypoints = orderedWaypoints.length > 2 ? orderedWaypoints.slice(1, -1) : orderedWaypoints;
 
-  // Lịch trình
-  const rawDate = trip.date ? formatTripDateDisplay(trip.date) : 'Hôm nay';
-  const dateLabel = rawDate.replace(/\s*\((\d{1,2}\/\d{1,2})\)\s*/, ' · $1').trim();
+  // Lịch trình gọn gàng, chuẩn công thái học
+  const dateLabel = formatCleanDateLabel(trip.date);
   const rawTime = getTimeSlotLabel(trip, lang) || '';
   const timeLabel = (rawTime.match(/^([^()]+)\s*\(/)?.[1] || rawTime).trim() || 'Linh hoạt';
 
