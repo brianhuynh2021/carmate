@@ -229,11 +229,11 @@ export default function TripCard({
     >
       {/* ── 1. KHI NÀO? (WHEN) + BADGE NGỮ CẢNH TINH TẾ ── */}
       <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-1">
-        <div className="flex items-baseline gap-1.5 whitespace-nowrap min-w-0">
-          <span className="text-[17px] font-bold text-slate-900 dark:text-white tabular font-mono tracking-tight">
+        <div className="flex items-baseline gap-1.5 min-w-0">
+          <span className="text-[15.5px] sm:text-[17px] font-bold text-slate-900 dark:text-white tabular font-mono tracking-tight shrink-0">
             {timeLabel}
           </span>
-          <span className="text-[12.5px] text-slate-500 dark:text-slate-400 font-medium truncate">
+          <span className="text-[12px] sm:text-[12.5px] text-slate-500 dark:text-slate-400 font-medium shrink-0 whitespace-nowrap">
             · {dateLabel}
           </span>
         </div>
@@ -243,10 +243,6 @@ export default function TripCard({
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap">
               <Lock className="w-3 h-3" />
               <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>
-            </span>
-          ) : !isDriver ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shrink-0 whitespace-nowrap">
-              <span>Khách tìm xe</span>
             </span>
           ) : (
             <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
@@ -411,8 +407,8 @@ export default function TripCard({
             </button>
           ) : (
             <div className="flex items-center gap-1 text-[11.5px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
-              <Car className="w-3 h-3 text-slate-400" />
-              <span>Khách tìm xe</span>
+              <Car className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Tìm xe {item.capacity ? `${item.capacity} chỗ` : 'đi cùng'}</span>
             </div>
           )}
         </div>
