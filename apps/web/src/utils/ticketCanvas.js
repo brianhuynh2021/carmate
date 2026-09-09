@@ -1,4 +1,4 @@
-import { formatVND, getTimeSlotLabel } from '@carmate/shared';
+import { getTimeSlotLabel } from '@carmate/shared';
 
 /**
  * ticketCanvas.js — Trình kết xuất Thẻ Thông Tin Chuyến Đi thành file ảnh PNG độ nét cao (HD 1080x1350)
@@ -172,16 +172,16 @@ export async function generateTicketImage(trip, lang = 'vi') {
 
   // Ô 2: Số chỗ trống
   const isDriver = trip.type === 'driver_offer';
-  const seatsLabel = isDriver ? `Còn ${trip.availableSeats || 3} ghế trống` : `Cần ${trip.seatsNeeded || 1} chỗ`;
+  const seatsLabel = isDriver ? `Cần ${trip.availableSeats || 3} người` : `Cần ${trip.seatsNeeded || 1} chỗ`;
   drawInfoBox(
     ctx,
     cardX + 70 + boxW,
     infoBoxY,
     boxW,
     boxH,
-    'TÌNH TRẠNG GHẾ',
+    'NHU CẦU GHÉP XE',
     seatsLabel,
-    trip.carType || 'Xe 7 chỗ rộng rãi',
+    trip.carType || 'Xe du lịch 5-7 chỗ',
     '#fbbf24'
   );
 
@@ -490,16 +490,16 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
 
   // Ô 2: Ghế trống
   const isDriver = trip.type === 'driver_offer';
-  const seatsLabel = isDriver ? `Còn ${trip.availableSeats || 3} ghế trống` : `Cần ${trip.seatsNeeded || 1} chỗ`;
+  const seatsLabel = isDriver ? `Cần ${trip.availableSeats || 3} người` : `Cần ${trip.seatsNeeded || 1} chỗ`;
   drawInfoBox(
     ctx,
     cardX + 70 + boxW,
     infoBoxY,
     boxW,
     boxH,
-    'TÌNH TRẠNG CHỖ',
+    'NHU CẦU GHÉP XE',
     seatsLabel,
-    trip.carType || 'Xe gia đình rộng rãi',
+    trip.carType || 'Xe du lịch 5-7 chỗ',
     '#fbbf24'
   );
 
@@ -793,13 +793,4 @@ function truncateText(ctx, text, maxWidth) {
     truncated = truncated.slice(0, -1);
   }
   return truncated + '...';
-}
-
-function formatPhoneForTicket(phone) {
-  if (!phone) return '0984 ••• 750';
-  const clean = String(phone).replace(/\D/g, '');
-  if (clean.length >= 10) {
-    return `${clean.slice(0, 4)} ••• ${clean.slice(-3)}`;
-  }
-  return '0984 ••• 750';
 }

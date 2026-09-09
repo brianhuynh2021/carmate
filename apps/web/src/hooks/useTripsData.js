@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 // Bỏ hẳn đường import khiến dữ liệu mẫu không thể vô tình quay lại giao diện.
 import { getTomorrowISO, normalizePhoneNumber } from '@carmate/shared';
 import api from '../api/client.js';
-import { trackInitiateBooking, trackOpenZalo, trackDriverConfirm } from '../utils/analytics.js';
+import { trackInitiateBooking, trackDriverConfirm } from '../utils/analytics.js';
 
 /**
  * Custom Hook quản lý dữ liệu chuyến đi, kết nối Zalo / Escrow và đồng bộ Backend

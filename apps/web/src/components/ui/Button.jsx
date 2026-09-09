@@ -54,7 +54,8 @@ export default function Button({
 }
 
 /** Nút tròn chỉ có icon — chuẩn 44px Google Mobile */
-export function IconButton({ icon: Icon, label, size = 'md', variant = 'ghost', className = '', ...rest }) {
+export function IconButton({ icon, label, size = 'md', variant = 'ghost', className = '', ...rest }) {
+  const Icon = icon;
   const dims = size === 'sm' ? 'w-9 h-9' : size === 'lg' ? 'w-12 h-12' : 'w-11 h-11';
   const ico = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
   const hasDisplayOverride = /\b(hidden|block|inline-block|flex|inline-flex|grid)\b/.test(className);

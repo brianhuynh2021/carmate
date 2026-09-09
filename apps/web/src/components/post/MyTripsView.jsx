@@ -23,7 +23,6 @@ import {
 import {
   formatVND,
   getTimeSlotLabel,
-  getRouteCorridor,
   ROUTE_BENCHMARKS,
   formatTripDateDisplay,
   isTripExpired
@@ -33,7 +32,6 @@ import Badge from '../ui/Badge.jsx';
 import Modal from '../ui/Modal.jsx';
 import { SectionHeader } from '../ui/EmptyState.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
-import { useI18n } from '../../i18n/index.jsx';
 
 export default function MyTripsView({
   driverOffers = [],
@@ -50,7 +48,6 @@ export default function MyTripsView({
   onViewTrip,
   onViewCarPhotos
 }) {
-  const { lang } = useI18n();
   const [myTripIds, setMyTripIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'open' | 'full'
 
@@ -494,8 +491,7 @@ export default function MyTripsView({
                     trip.carType?.toLowerCase().includes('tiện chuyến'));
 
                 // Tra cứu định mức kỹ thuật xăng RON 95 + vé cầu đường tuyến này
-                const corridor = getRouteCorridor(trip.from, trip.to);
-                const benchmark = corridor ? ROUTE_BENCHMARKS[corridor] : null;
+                const benchmark = trip.routeCategory ? ROUTE_BENCHMARKS[trip.routeCategory] : null;
                 const fuelBotRef = benchmark ? benchmark.suggestedRate : trip.suggestedContribution || price;
 
                 return (
@@ -576,7 +572,7 @@ export default function MyTripsView({
                             </span>
                             <span className="text-[12px] text-slate-600 dark:text-slate-400 font-medium inline-flex items-center gap-1">
                               <Users className="w-3.5 h-3.5 text-slate-400" />
-                              <span>{isDriver ? `Còn ${seats} chỗ trống` : `Cần ${seats} ghế`}</span>
+                              <span>{isDriver ? `Cần ${seats} người` : `Cần ${seats} chỗ`}</span>
                             </span>
                           </div>
 

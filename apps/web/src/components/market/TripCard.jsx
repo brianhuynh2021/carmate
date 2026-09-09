@@ -152,12 +152,6 @@ export default function TripCard({
   if (!item) return null;
 
   const isDriver = item.type === 'driver_offer';
-  const isConvenient =
-    isDriver &&
-    (item.carCategory === 'convenient_trip' ||
-      item.notes?.toLowerCase().includes('tiện chuyến') ||
-      item.notes?.toLowerCase().includes('biển vàng') ||
-      item.carType?.toLowerCase().includes('tiện chuyến'));
 
   const price = item.basePricePerSeat || item.expectedPrice || item.suggestedContribution || item.price || 180000;
   const formattedPrice = `${Number(price || 0).toLocaleString('vi-VN')}đ`;

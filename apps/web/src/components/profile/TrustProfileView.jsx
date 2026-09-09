@@ -66,7 +66,6 @@ export default function TrustProfileView({ onOpenPolicy, onShowToast }) {
   const { t } = useI18n();
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [copied, setCopied] = useState(false);
-  const steps = t('profile.steps');
   const etiquettes = t('profile.etiquettes');
 
   useEffect(() => {

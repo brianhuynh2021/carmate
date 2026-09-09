@@ -24,7 +24,7 @@ import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
 
-export function LanguageToggle({ size = 'sm' }) {
+export function LanguageToggle({ className = '' } = {}) {
   const { lang, setLang } = useI18n();
   const next = lang === 'vi' ? 'en' : 'vi';
   const label = lang === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt';
@@ -35,7 +35,7 @@ export function LanguageToggle({ size = 'sm' }) {
       onClick={() => setLang(next)}
       title={label}
       aria-label={label}
-      className="h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0"
+      className={`h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 ${className}`}
     >
       <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
       <span className="font-mono text-xs font-bold uppercase">{lang === 'vi' ? 'EN' : 'VI'}</span>

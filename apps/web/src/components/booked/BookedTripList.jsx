@@ -412,8 +412,9 @@ export default function BookedTripList({
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="font-bold text-sm text-[#1d1d1f] dark:text-white">{record.contactName}</p>
                               <PresenceDot isOnline={partnerOnline.isOnline} showLabel detail={partnerOnline.detail} />
-                              <span className="text-[11px] font-semibold px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60">
-                                98đ Tín nhiệm
+                              <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 inline-flex items-center gap-1">
+                                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                                <span>5.0 Tín nhiệm</span>
                               </span>
                             </div>
                             <p className="text-xs text-[#86868b] mt-0.5">Xác thực danh tính thật · 0 rủi ro</p>

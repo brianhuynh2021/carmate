@@ -23,7 +23,7 @@ import Modal from '../ui/Modal.jsx';
 import { GoogleIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import api from '../../api/client.js';
 import { useTranslation } from '../../i18n/index.jsx';
-import { computeTrustScore, getTrustLevel, DEFAULT_TRUST_RULES } from '@carmate/shared';
+import { computeTrustScore, DEFAULT_TRUST_RULES } from '@carmate/shared';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 
 // Danh sách hãng xe phổ biến tại Việt Nam
@@ -110,7 +110,7 @@ function compressImageToWebP(file, maxDimension = 1200, quality = 0.82) {
 }
 
 export default function UserProfileModal({ currentUser, onClose, onSave, onShowToast }) {
-  const { t, lang } = useTranslation();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'garage' | 'trust'
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState('');
