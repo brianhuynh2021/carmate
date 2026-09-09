@@ -18,7 +18,7 @@ import {
   getTimeSlotLabel,
   sanitizeTimeLabel,
   isGoogleMapsUrl,
-  formatTripDateDisplay,
+  formatCleanDateLabel,
   parseLocation,
   getCorridorDisplay,
   toPublicAlias,
@@ -207,9 +207,8 @@ export default function TripCard({
   const seatsLeft = isDriver ? Number(item.availableSeats) || 0 : Number(item.seatsNeeded) || 1;
   const seatsTotal = isDriver ? Number(item.capacity) || Math.max(seatsLeft, 4) : null;
 
-  // Ngày rút gọn: "Ngày mai (09/09)" → "09/09" hoặc "Hôm nay · 09/09"
-  const rawDate = item.date ? formatTripDateDisplay(item.date) : 'Hôm nay';
-  const dateLabel = rawDate.replace(/\s*\((\d{1,2}\/\d{1,2})\)\s*/, ' · $1').trim();
+  // Ngày hiển thị gọn gàng, tinh tế (Stanford Ergonomics & Apple HIG: triệt tiêu hậu tố dd/mm dư thừa)
+  const dateLabel = formatCleanDateLabel(item.date);
 
   // Giờ: định dạng giờ chính xác (buổi sáng giữ chữ Sáng để phân biệt, buổi chiều/tối lược bỏ chữ thừa)
   const rawTime = getTimeSlotLabel(item, lang) || '';
