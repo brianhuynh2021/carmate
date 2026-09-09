@@ -383,31 +383,52 @@ export default function Hero({
                 {isParcelActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />}
               </button>
             </div>
+          </div>
 
-            {/* ── CÔNG CỤ THÔNG MINH BẢN ĐỊA (CURSOR CMD+K & BẢNG ĐỊNH MỨC XĂNG) ── */}
-            <div className="pt-1.5 flex flex-wrap items-center justify-center gap-2 px-2">
-              {/* Nút 1-chạm Dán bài đăng Facebook/Zalo (Cursor Cmd+K) */}
-              <button
-                type="button"
-                onClick={() => setShowQuickPasteModal(true)}
-                title="Dán bài đăng từ Facebook/Zalo để AI bóc tách < 1ms và tạo vé đồ họa VIP (Phím tắt: ⌘K / Ctrl+K)"
-                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-semibold whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/40 hover:bg-blue-100/80 hover:border-blue-300"
-              >
-                <ClipboardPaste className="w-3.5 h-3.5 text-[#0071e3]" strokeWidth={2} />
-                <span>Dán tin FB / Zalo</span>
-                <kbd className="hidden sm:inline-block px-1.5 py-0.1 text-[9px] font-mono font-bold bg-white dark:bg-black/50 text-[#0071e3] rounded border border-blue-200/60 shadow-2xs">⌘K</kbd>
-              </button>
+          {/* ── CARD CÔNG CỤ TIỆN ÍCH ĐỘC LẬP DÀNH CHO CHỦ XE & ĐỐI TÁC (TÁCH BIỆT KHỎI DẢI LỌC) ── */}
+          <div className="pt-3.5 sm:pt-4.5 max-w-4xl mx-auto w-full relative z-20 text-left">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl border border-black/[0.06] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-tr from-[#0071e3]/15 via-blue-500/10 to-[#5ac8fa]/20 flex items-center justify-center shrink-0 border border-[#0071e3]/20">
+                  <Sparkles className="w-4 h-4 text-[#0071e3]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs sm:text-[13px] font-bold text-[#1d1d1f] dark:text-white">Công cụ kết nối thông minh</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0071e3]/10 text-[#0071e3] dark:text-[#2997ff]">
+                      Dành cho Chủ xe & Đối tác
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
+                    Bóc tách bài đăng FB/Zalo &lt; 1ms và bảng tính định mức xăng xe minh bạch
+                  </p>
+                </div>
+              </div>
 
-              {/* Nút 1-chạm Mở Bảng Tính Định Mức Xăng & Cầu Đường */}
-              <button
-                type="button"
-                onClick={() => setShowFairSplitModal(true)}
-                title="Xem công thức tính toán minh bạch chi phí xăng cộ và vé cầu đường thực tế"
-                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-medium whitespace-nowrap select-none cursor-pointer transition-all shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-black/[0.08] dark:border-white/[0.08] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
-              >
-                <Calculator className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2} />
-                <span>Định mức xăng & cầu đường</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
+                {/* Nút 1-chạm Dán bài đăng Facebook/Zalo (Cursor Cmd+K) */}
+                <button
+                  type="button"
+                  onClick={() => setShowQuickPasteModal(true)}
+                  title="Dán bài đăng từ Facebook/Zalo để AI bóc tách < 1ms và tạo vé đồ họa VIP (Phím tắt: ⌘K / Ctrl+K)"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap select-none cursor-pointer transition-all shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white hover:shadow-sm"
+                >
+                  <ClipboardPaste className="w-3.5 h-3.5 text-white" strokeWidth={2.2} />
+                  <span>Dán tin FB / Zalo</span>
+                  <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono font-bold bg-white/20 text-white rounded">⌘K</kbd>
+                </button>
+
+                {/* Nút 1-chạm Mở Bảng Tính Định Mức Xăng & Cầu Đường */}
+                <button
+                  type="button"
+                  onClick={() => setShowFairSplitModal(true)}
+                  title="Xem công thức tính toán minh bạch chi phí xăng cộ và vé cầu đường thực tế"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-xs font-medium whitespace-nowrap select-none cursor-pointer transition-all shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-slate-200 border border-black/[0.08] dark:border-white/[0.08] hover:bg-[#f5f5f7] dark:hover:bg-slate-700"
+                >
+                  <Calculator className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2} />
+                  <span>Định mức xăng</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
