@@ -183,9 +183,6 @@ export default function InboxModal({
     }
   };
 
-  const activeBookingId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
-  const isActiveUnread = activeBookingId ? isBookingUnread(activeBooking) : false;
-
   // Chuột phải mở menu ngữ cảnh chuẩn Cursor / Apple
   const handleContextMenu = (e, item) => {
     e.preventDefault();
@@ -416,7 +413,7 @@ export default function InboxModal({
       }
       onShowToast?.('✓ Đã khôi phục tài khoản và mở khóa trò chuyện thành công.', 'success');
       onRefreshBookings?.();
-    } catch (err) {
+    } catch {
       setIsBannedState(false);
       setViolationInfo(null);
       if (activeBooking) {
@@ -1672,19 +1669,21 @@ export default function InboxModal({
         }}
         booking={activeBooking}
         violationNotice={disputeTargetNotice}
-        onResolved={(updatedBooking) => {
-          if (onUpdateBooking && updatedBooking) {
-            onUpdateBooking(updatedBooking);
+        onResolved={(_updatedBooking) => {
+          if (onRefreshBookings) {
+            onRefreshBookings();
           }
-          if (user) {
-            user.isBanned = false;
-            user.bannedAt = null;
-            user.deactivateAt = null;
-            user.status = 'active';
-            user.trustScore = Math.max(user.trustScore || 80, 85);
+          if (currentUser) {
+            currentUser.isBanned = false;
+            currentUser.bannedAt = null;
+            currentUser.deactivateAt = null;
+            currentUser.status = 'active';
+            currentUser.trustScore = Math.max(currentUser.trustScore || 80, 85);
             try {
-              localStorage.setItem('carmate_user', JSON.stringify(user));
-            } catch (e) {}
+              localStorage.setItem('carmate_user', JSON.stringify(currentUser));
+            } catch {
+              // ignore
+            }
           }
           setIsSupportChannelActive(true);
           loadSupportMessages();
