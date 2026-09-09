@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ROUTE_BENCHMARKS, formatVND } from '@carmate/shared';
-import { Fuel, Scale, ChevronRight, Check, TrendingDown, Route, Sparkles, Milestone, ShieldAlert } from 'lucide-react';
+import { Fuel, Scale, ChevronRight, Check, TrendingDown, Route, Sparkles, Milestone, ShieldAlert, Calculator } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -73,39 +73,69 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
 
   return (
     <>
-      {/* ── THANH CHỈ BÁO COMPACT TRÊN TRANG CHỦ (Apple Squircle & Cursor High-Definition Telemetry) ── */}
+      {/* ── THANH CHỈ BÁO ĐỊNH MỨC XĂNG & GIÁ THAM KHẢO (Apple Squircle & Liquid Aesthetics, Tối ưu Mobile) ── */}
       <div
         onClick={() => setShowDetail(true)}
-        className="flex items-center justify-between gap-2 sm:gap-3 px-3.5 sm:px-4 py-2 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200/90 dark:border-slate-800 hover:border-[#0071e3]/60 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_12px_rgba(0,113,227,0.08)] transition-all cursor-pointer group active:scale-[0.99]"
+        className="rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.08] dark:border-white/[0.08] p-3 sm:px-4 sm:py-3 shadow-xs hover:shadow-md hover:border-[#0071e3]/40 transition-all cursor-pointer group active:scale-[0.99] backdrop-blur-xl relative overflow-hidden"
       >
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          <span className="w-6.5 h-6.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#0071e3] border border-blue-100 dark:border-blue-900/50 inline-flex items-center justify-center shrink-0">
-            <Fuel className="w-3.5 h-3.5" />
-          </span>
-          <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs sm:text-[13px] text-slate-800 dark:text-slate-200 font-bold truncate">
-              {info.shortName}:
+        {/* Ambient subtle glow */}
+        <div className="absolute -top-12 -right-12 w-40 h-40 bg-[#0071e3]/5 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Layout Responsive: Mobile (các tầng rõ ràng, zero tràn viền) vs Desktop (ngang rộng rãi) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
+          {/* Khối Thông Tin Tuyến & Định Mức */}
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <span className="w-8.5 h-8.5 rounded-xl bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 shadow-2xs">
+              <Fuel className="w-4 h-4" />
             </span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 font-bold text-[11px] sm:text-xs font-mono border border-blue-200/80 dark:border-blue-800/60 whitespace-nowrap">
-              ~{formatVND(info.suggestedRate)}
-              {t('common.perSeat')}
+
+            <div className="min-w-0 flex-1 space-y-1">
+              {/* Hàng Tiêu Đề Nhóm: Định mức xăng & Giá tham khảo */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-bold text-[#6e6e73] dark:text-slate-400 uppercase tracking-wider font-mono">
+                  Định mức xăng & Giá tham khảo
+                </span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
+                  Chuẩn 8L/100km & Vé cầu đường
+                </span>
+              </div>
+
+              {/* Hàng Dữ Liệu Tuyến: Tên tuyến + Cự ly + Giá đề xuất */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs sm:text-[13.5px] text-[#1d1d1f] dark:text-white font-bold tracking-tight">
+                  {info.shortName}
+                </span>
+                <span className="text-[11px] text-[#86868b] dark:text-slate-400 font-mono">
+                  (~{info.distanceKm} km)
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-[#0071e3]/10 text-[#0071e3] dark:text-[#2997ff] font-bold text-xs font-mono border border-[#0071e3]/20 shadow-2xs whitespace-nowrap">
+                  ~{formatVND(info.suggestedRate)}{t('common.perSeat')}
+                </span>
+                <span className="text-[11px] text-[#86868b] dark:text-slate-400 font-medium hidden md:inline truncate">
+                  · Xăng RON 95: ~{formatVND(info.fuelCost)} · <span>Vé cầu đường</span>: ~{formatVND(info.botFee)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Nút Hành Động 1-Chạm: Tối ưu ngón tay cái mobile */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t border-black/[0.04] sm:border-t-0 dark:border-white/[0.04]">
+            <span className="text-[11px] text-[#86868b] dark:text-slate-400 font-medium sm:hidden">
+              Xăng ~{formatVND(info.fuelCost)} · Cầu đường ~{formatVND(info.botFee)}
             </span>
-            <span className="text-[11.5px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline truncate">
-              · {t('benchmark.inclusive')}
-            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDetail(true);
+              }}
+              className="text-[11.5px] sm:text-xs font-bold text-[#0071e3] group-hover:text-[#0077ed] px-3.5 py-1.5 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/20 dark:bg-[#0071e3]/15 dark:hover:bg-[#0071e3]/25 border border-[#0071e3]/20 inline-flex items-center justify-center gap-1 shrink-0 cursor-pointer transition-all active:scale-95 shadow-2xs"
+            >
+              <span>Xem định mức & Bảng tính</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </button>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowDetail(true);
-          }}
-          className="text-[11.5px] sm:text-xs font-bold text-[#0071e3] group-hover:text-[#0077ed] px-2 sm:px-2.5 py-1 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/30 inline-flex items-center gap-0.5 shrink-0 cursor-pointer transition-colors"
-        >
-          <span>{t('benchmark.basis')}</span>
-          <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-        </button>
       </div>
 
       {/* ── MODAL ĐỊNH GIÁ THAM KHẢO ĐẲNG CẤP APPLE & CURSOR ── */}
@@ -261,6 +291,32 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                 </div>
               </div>
             </section>
+
+            {/* 3.1 BẢNG TÍNH ĐỊNH MỨC XĂNG & CHIA PHÍ THEO SỐ GHẾ (GOM CHUNG ĐỊNH MỨC XĂNG & ĐỊNH GIÁ THAM KHẢO) */}
+            <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-800/50 space-y-2.5">
+              <div className="flex items-center justify-between flex-wrap gap-1.5">
+                <span className="text-xs font-bold text-[#0071e3] dark:text-blue-300 flex items-center gap-1.5">
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>Định mức phụ xăng xe theo số người đi ghép</span>
+                </span>
+                <span className="text-[11px] font-mono text-[#6e6e73] dark:text-slate-400">
+                  Chuẩn 8L/100km · Định mức xe 5-7 chỗ
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center pt-0.5">
+                {[
+                  { count: 1, label: 'Xe ghép 1 khách', share: Math.round((totalOperatingCost * 0.4) / 10000) * 10000, note: 'Khách phụ ~40% chi phí lăn bánh' },
+                  { count: 2, label: 'Xe ghép 2 khách', share: Math.round((totalOperatingCost * 0.28) / 10000) * 10000, note: 'Khách phụ ~28% chi phí lăn bánh' },
+                  { count: 3, label: 'Xe ghép 3 khách', share: info.suggestedRate, note: 'Mức chia đều văn minh nhất' }
+                ].map((item) => (
+                  <div key={item.count} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.06] dark:border-white/[0.08] shadow-2xs text-left sm:text-center">
+                    <p className="text-xs text-[#6e6e73] dark:text-slate-400 font-semibold">{item.label}</p>
+                    <p className="text-sm sm:text-base font-bold text-[#0071e3] font-mono mt-0.5">~{formatVND(item.share)}/ghế</p>
+                    <p className="text-[10px] text-[#86868b] dark:text-slate-500 mt-0.5">{item.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* 4. SO SÁNH THỊ TRƯỜNG THỰC TẾ (APPLE VALUE COMPARISON) */}
             <section className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">

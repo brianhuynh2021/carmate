@@ -41,7 +41,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
       icon={Trash2}
       iconTone="danger"
       title="Xóa vĩnh viễn tài khoản"
-      subtitle="Tuân thủ Apple App Store Review & Nghị định 13/2023/NĐ-CP"
+      subtitle="Toàn bộ dữ liệu cá nhân sẽ bị xóa vĩnh viễn theo Nghị định 13/2023/NĐ-CP"
       footer={
         <div className="grid grid-cols-2 gap-3 w-full">
           <Button variant="outline" onClick={onClose} disabled={isDeleting}>

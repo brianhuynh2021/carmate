@@ -845,7 +845,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 {/* Phân loại xe & Bất biến MIT Invariant số ghế */}
                 <div>
                   <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                    Phân loại & Số ghế xe <span className="text-rose-500 font-mono">* (MIT Invariant)</span>
+                    Phân loại & Số ghế xe <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button

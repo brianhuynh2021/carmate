@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight } from 'lucide-react';
-import { TIME_SLOTS, normalizePhoneNumber } from '@carmate/shared';
+import { TIME_SLOTS, normalizePhoneNumber, cleanPhoneNumber } from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
 import { useI18n } from './i18n/index.jsx';
 import api from './api/client.js';
@@ -464,12 +464,48 @@ export default function App() {
     t
   });
 
-  // Đếm số lượng yêu cầu đang chờ xử lý trong Hộp thư (inquiring hoặc pre_confirmed)
+  // Quản lý trạng thái Đã đọc (Read Tracking) của Hộp thư đến
+  const [readBookingTimestamps, setReadBookingTimestamps] = useState(() => {
+    try {
+      const saved = localStorage.getItem('carmate_inbox_read_timestamps');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const markBookingAsRead = useCallback((bookingId) => {
+    if (!bookingId) return;
+    setReadBookingTimestamps((prev) => {
+      if (prev[bookingId] && Date.now() - prev[bookingId] < 2000) return prev;
+      const updated = { ...prev, [bookingId]: Date.now() };
+      try {
+        localStorage.setItem('carmate_inbox_read_timestamps', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Lỗi lưu carmate_inbox_read_timestamps:', err);
+      }
+      return updated;
+    });
+  }, []);
+
+  // Đếm số lượng yêu cầu CHƯA ĐỌC thực sự trong Hộp thư (inquiring hoặc pre_confirmed)
   const inboxCount = useMemo(() => {
-    return (bookedEscrows || []).filter(
-      (b) => b.status === 'inquiring' || b.status === 'pre_confirmed'
-    ).length;
-  }, [bookedEscrows]);
+    const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
+    return (bookedEscrows || []).filter((b) => {
+      if (b.status !== 'inquiring' && b.status !== 'pre_confirmed') return false;
+      const bId = b.escrowId || b.id;
+      const lastRead = readBookingTimestamps[bId] || 0;
+      if (!lastRead) return true; // Chưa mở bao giờ -> Chưa đọc
+
+      // Nếu có tin nhắn mới từ đối phương sau lần đọc cuối cùng
+      const hasNewMessage = (b.messages || []).some((m) => {
+        const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
+        const msgTime = m.timestamp ? new Date(m.timestamp).getTime() : 0;
+        return !isMe && msgTime > lastRead;
+      });
+      return hasNewMessage;
+    }).length;
+  }, [bookedEscrows, readBookingTimestamps, currentUser]);
 
   const [showInboxModal, setShowInboxModal] = useState(false);
   const [inboxInitialBookingId, setInboxInitialBookingId] = useState(null);
@@ -1176,6 +1212,8 @@ export default function App() {
           onRefreshBookings={refreshBookings}
           onReportUnreachablePhone={setUnreachablePhoneRecord}
           onShowToast={showToast}
+          onMarkAsRead={markBookingAsRead}
+          readBookingTimestamps={readBookingTimestamps}
         />
       )}
       {selectedItemForEscrow && (

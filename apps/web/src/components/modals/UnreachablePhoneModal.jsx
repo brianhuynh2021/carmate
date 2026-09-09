@@ -85,6 +85,17 @@ export default function UnreachablePhoneModal({ record, onClose, onSubmitReport 
       }
     >
       <div className="space-y-4">
+        {/* Lưu ý thời gian phản hồi (Grace Period MIT & Stanford) */}
+        <div className="p-3 rounded-xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/50 flex items-start gap-2.5 text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
+          <Info className="w-4 h-4 text-[#0071e3] shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">Lưu ý trước khi báo cáo sự cố:</p>
+            <p className="opacity-90 text-[11.5px] mt-0.5">
+              Sau khi chốt chuyến, đối tác có thể đang lái xe hoặc bận việc. Bạn hãy ưu tiên nhắn tin Zalo/SMS hoặc chờ ít nhất 15 phút trước khi báo cáo để đảm bảo quyền lợi công bằng cho cả hai bên.
+            </p>
+          </div>
+        </div>
+
         {/* Thẻ đối tác bị phản ánh */}
         <div className="p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/60 border border-black/[0.06] space-y-2">
           <div className="flex items-center justify-between text-xs">

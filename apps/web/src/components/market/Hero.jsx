@@ -401,17 +401,17 @@ export default function Hero({
                     </span>
                   </div>
                   <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                    Bóc tách bài đăng FB/Zalo &lt; 1ms và bảng tính định mức xăng xe minh bạch
+                    Tự động nhận diện bài đăng FB/Zalo và định mức chi phí xăng xe minh bạch
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
-                {/* Nút 1-chạm Dán bài đăng Facebook/Zalo (Cursor Cmd+K) */}
+                {/* Nút 1-chạm Dán bài đăng Facebook/Zalo (Phím tắt ⌘K) */}
                 <button
                   type="button"
                   onClick={() => setShowQuickPasteModal(true)}
-                  title="Dán bài đăng từ Facebook/Zalo để AI bóc tách < 1ms và tạo vé đồ họa VIP (Phím tắt: ⌘K / Ctrl+K)"
+                  title="Dán bài đăng từ Facebook/Zalo để tự động tạo chuyến nhanh và xuất vé chia sẻ (Phím tắt: ⌘K / Ctrl+K)"
                   className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap select-none cursor-pointer transition-all shadow-xs touch-manipulation active:scale-[0.98] outline-none bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white hover:shadow-sm"
                 >
                   <ClipboardPaste className="w-3.5 h-3.5 text-white" strokeWidth={2.2} />
@@ -435,13 +435,13 @@ export default function Hero({
         </div>
       </div>
 
-      {/* ── MODAL CURSOR CMD+K: DÁN TIN BÀI BÓC TÁCH & XUẤT VÉ VIP ── */}
+      {/* ── MODAL DÁN TIN BÀI BÓC TÁCH & XUẤT VÉ CHIA SẺ ── */}
       {showQuickPasteModal && (
         <Modal
           onClose={() => setShowQuickPasteModal(false)}
           size="lg"
-          title="Dán Bài Viết Facebook / Zalo (Cursor Cmd+K)"
-          subtitle="Trí tuệ bản địa bóc tách lộ trình < 1ms — Tạo vé đồ họa VIP đăng ngược lại MXH"
+          title="Dán Bài Viết Facebook / Zalo (⌘K)"
+          subtitle="Tự động nhận diện lộ trình, thời gian, giá tiền — Tạo vé đồ họa chia sẻ nhanh"
         >
           <SmartTripComposer
             currentUser={currentUser}

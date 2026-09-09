@@ -19,7 +19,7 @@ import {
   PhoneOff,
   Ban
 } from 'lucide-react';
-import { formatVND, toPublicAlias, detectPiiLeak } from '@carmate/shared';
+import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
@@ -33,7 +33,9 @@ export default function InboxModal({
   onRefreshBookings,
   initialBookingId = null,
   onReportUnreachablePhone = null,
-  onShowToast
+  onShowToast,
+  onMarkAsRead = null,
+  readBookingTimestamps = {}
 }) {
   const [selectedId, setSelectedId] = useState(initialBookingId);
   const [activeTab, setActiveTab] = useState('incoming'); // 'incoming' (Đến) | 'outgoing' (Đi)
@@ -95,6 +97,16 @@ export default function InboxModal({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeBooking?.messages]);
+
+  // Tự động đánh dấu đã đọc khi xem cuộc hội thoại (Xóa chuông đỏ ngay lập tức)
+  useEffect(() => {
+    if (activeBooking) {
+      const bId = activeBooking.escrowId || activeBooking.id;
+      if (bId) {
+        onMarkAsRead?.(bId);
+      }
+    }
+  }, [activeBooking, onMarkAsRead]);
 
   // Bộ đếm thời gian thực 15 phút (Soft-lock TTL Countdown)
   useEffect(() => {
@@ -413,12 +425,21 @@ export default function InboxModal({
                 const id = item.escrowId || item.id;
                 const isSelected = activeBooking && (activeBooking.escrowId || activeBooking.id) === id;
                 const status = item.status || 'inquiring';
+                const lastRead = readBookingTimestamps?.[id] || 0;
+                const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
+                const isUnread = !lastRead || (item.messages || []).some((m) => {
+                  const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
+                  return !isMe && new Date(m.timestamp).getTime() > lastRead;
+                });
 
                 return (
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setSelectedId(id)}
+                    onClick={() => {
+                      setSelectedId(id);
+                      onMarkAsRead?.(id);
+                    }}
                     className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer border ${
                       isSelected
                         ? 'bg-white dark:bg-slate-800 border-primary-500/40 shadow-xs ring-1 ring-primary-500/20'
@@ -426,8 +447,11 @@ export default function InboxModal({
                     }`}
                   >
                     <div className="flex items-center justify-between gap-1.5 mb-1">
-                      <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
-                        {toPublicAlias(item)}
+                      <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
+                        {isUnread && !isSelected && (
+                          <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0 animate-pulse" title="Tin nhắn mới chưa đọc" />
+                        )}
+                        <span>{toPublicAlias(item)}</span>
                       </span>
                       {status === 'confirmed' ? (
                         <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
@@ -729,18 +753,22 @@ export default function InboxModal({
                         <span>{copiedPhone ? 'Đã chép' : 'Chép'}</span>
                       </button>
                     </div>
+                    {/* Stanford Empathy Tip & Hướng dẫn liên lạc văn minh */}
+                    <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-100/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-emerald-900 dark:text-emerald-200 text-left leading-relaxed">
+                      💡 <strong>Mẹo liên hệ:</strong> Đối tác có thể đang lái xe hoặc bận việc. Nếu chưa gọi được ngay, bạn hãy gửi tin nhắn Zalo/SMS để đối tác liên hệ lại nhé!
+                    </div>
+
                     {onReportUnreachablePhone && (
-                      <div className="pt-1 text-center">
+                      <div className="pt-1.5 text-center">
                         <button
                           type="button"
                           onClick={() => {
                             onReportUnreachablePhone(activeBooking);
                             onClose();
                           }}
-                          className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer"
+                          className="text-[11.5px] text-slate-500 hover:text-[#0071e3] dark:text-slate-400 dark:hover:text-[#2997ff] font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
                         >
-                          <PhoneOff className="w-3 h-3" />
-                          <span>Báo số ảo / Không liên lạc được</span>
+                          <span>Chưa thấy đối tác phản hồi hoặc cần hỗ trợ?</span>
                         </button>
                       </div>
                     )}

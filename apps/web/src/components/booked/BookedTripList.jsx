@@ -480,12 +480,16 @@ export default function BookedTripList({
                               </div>
                             </div>
 
+                            <div className="mt-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/40 text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                              💡 Đối tác có thể đang lái xe hoặc bận việc. Nếu chưa gọi được ngay, bạn hãy gửi tin nhắn Zalo/SMS nhé.
+                            </div>
+
                             {onReportUnreachablePhone && (
                               <div className="flex justify-end pt-1">
                                 <button
                                   type="button"
                                   onClick={() => onReportUnreachablePhone(record)}
-                                  className="text-[11.5px] text-rose-600 dark:text-rose-400 hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                  className="text-[11px] text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
                                   title="Báo cáo nếu số điện thoại đối tác không liên lạc được hoặc là số ảo"
                                 >
                                   <PhoneOff className="w-3.5 h-3.5" />
