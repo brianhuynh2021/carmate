@@ -5244,6 +5244,41 @@ async function runTests() {
     assert(false, '70. Kiểm thử Tối Giản Nhãn Phương Tiện (Triệt Tiêu "Xe Du Lịch 5 Chỗ" -> "5 Chỗ")', err.message);
   }
 
+  // 71. KIỂM THỬ ĐƯỜNG KẺ MŨI TÊN LIỀN MẠCH & ĐỒNG BỘ HEADER THẺ CHUYẾN (SEAMLESS ROUTE CONNECTOR)
+  console.log('\n--- 71. Kiểm thử Đường Kẻ Mũi Tên Liền Mạch & Đồng Bộ Header Thẻ Chuyến ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const cardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
+    const cardSrc = fs.readFileSync(cardPath, 'utf8');
+
+    // 71.1 Không còn đoạn ngắt quãng / đứt đoạn giữa line và arrow
+    assert(
+      !cardSrc.includes('bg-slate-200 dark:bg-slate-700 rounded-full" />\n            <ArrowRight'),
+      'Seamless Route 1: Triệt tiêu hoàn toàn sự ngắt quãng giữa thẻ div đường kẻ và icon ArrowRight'
+    );
+
+    // 71.2 Sử dụng bộ nối SVG liền mạch với M0 5h8.5
+    assert(
+      cardSrc.includes('M0 5h8.5M5 1.5l3.5 3.5-3.5 3.5') || cardSrc.includes('d="M0 5h8.5'),
+      'Seamless Route 2: Tích hợp đường nối SVG với toạ độ nối chính xác 100% từ biên x=0 đến đỉnh mũi tên'
+    );
+
+    // 71.3 Dùng currentColor và bg-current đảm bảo đồng bộ màu sắc tuyệt đối giữa thân và đầu mũi tên
+    assert(
+      cardSrc.includes('bg-current') && cardSrc.includes('stroke="currentColor"'),
+      'Seamless Route 3: Thân đường kẻ và đầu mũi tên dùng chung tone màu currentColor loại bỏ độ chênh màu'
+    );
+
+    // 71.4 Đồng bộ header thẻ chuyến: luôn hiển thị PresenceDot, không trùng lặp nhãn "Đã kín chỗ" 3 lần
+    assert(
+      !cardSrc.includes('{isTripFull ? (\n            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500'),
+      'Seamless Route 4: Header thẻ chuyến luôn đồng bộ PresenceDot, không xuất hiện thừa thãi nhãn Đã kín chỗ'
+    );
+  } catch (err) {
+    assert(false, '71. Kiểm thử Đường Kẻ Mũi Tên Liền Mạch & Đồng Bộ Header Thẻ Chuyến', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

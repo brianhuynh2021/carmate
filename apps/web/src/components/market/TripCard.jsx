@@ -239,26 +239,30 @@ export default function TripCard({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {isTripFull ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap">
-              <Lock className="w-3 h-3" />
-              <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>
-            </span>
-          ) : (
-            <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
-          )}
+          <PresenceDot isOnline={onlineStatus.isOnline} showLabel detail={onlineStatus.detail} />
         </div>
       </div>
 
-      {/* ── 2. ĐI ĐÂU → ĐÂU? (WHERE - MŨI TÊN Ở CUỐI ĐƯỜNG KẺ) ── */}
+      {/* ── 2. ĐI ĐÂU → ĐÂU? (WHERE - MŨI TÊN Ở CUỐI ĐƯỜNG KẺ LIỀN MẠCH) ── */}
       <div className="px-5 pt-2 pb-1.5">
         <div className="flex items-center gap-2 text-slate-900 dark:text-white">
           <span className="text-[16.5px] font-bold tracking-tight truncate max-w-[44%]">
             {fromParsed.main}
           </span>
-          <div className="flex-1 flex items-center min-w-[32px] px-1">
-            <div className="h-[1.5px] flex-1 bg-slate-200 dark:bg-slate-700 rounded-full" />
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0 -ml-0.5" />
+          <div className="flex-1 flex items-center min-w-[32px] px-1 text-slate-400 dark:text-slate-500">
+            <div className="h-[1.5px] flex-1 bg-current rounded-l-full" />
+            <svg
+              className="w-2.5 h-2.5 text-current shrink-0 -ml-[1px]"
+              viewBox="0 0 10 10"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M0 5h8.5M5 1.5l3.5 3.5-3.5 3.5" />
+            </svg>
           </div>
           <span className="text-[16.5px] font-bold tracking-tight truncate max-w-[44%] text-right">
             {toParsed.main}
