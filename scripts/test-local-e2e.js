@@ -4733,6 +4733,124 @@ async function runTests() {
     assert(false, '65. Kiểm thử Clean URL Pathname', err.message);
   }
 
+  // 66. Kiểm thử Chặn Bắn Cảnh Báo Telegram ở Môi Trường Localhost & Development
+  console.log('\n🔕 66. Kiểm thử Chặn Bắn Cảnh Báo Telegram ở Môi Trường Localhost & Development...');
+  try {
+    const { isLocalhostRequest, sendSystemErrorAlert, sendBusinessAlert, _resetDeduplicationCache } =
+      await import('../apps/api/src/utils/telegramAlert.js');
+
+    // 1. Kiểm tra helper isLocalhostRequest với các trường hợp IP & headers
+    assert(
+      isLocalhostRequest({ ip: '::1' }) === true,
+      'Alert Suppress 1: Nhận diện chính xác Client IP ::1 là Localhost'
+    );
+    assert(
+      isLocalhostRequest({ ip: '127.0.0.1' }) === true,
+      'Alert Suppress 2: Nhận diện chính xác Client IP 127.0.0.1 là Localhost'
+    );
+    assert(
+      isLocalhostRequest({ headers: { origin: 'http://localhost:5173' } }) === true,
+      'Alert Suppress 3: Nhận diện chính xác Origin http://localhost:5173 là Localhost'
+    );
+    assert(
+      isLocalhostRequest({ headers: { referer: 'http://localhost:5173/my-trips' } }) === true,
+      'Alert Suppress 4: Nhận diện chính xác Referer http://localhost:5173/my-trips là Localhost'
+    );
+    assert(
+      isLocalhostRequest({ headers: { host: 'localhost:5173' } }) === true,
+      'Alert Suppress 5: Nhận diện chính xác Host localhost:5173 là Localhost'
+    );
+    assert(
+      isLocalhostRequest(
+        null,
+        new Error('ReferenceError: useMemo is not defined\n    at TripCard (http://localhost:5173/src/components/market/TripCard.jsx:207:21)')
+      ) === true,
+      'Alert Suppress 6: Nhận diện Call Stack chứa http://localhost:5173 là lỗi phát triển'
+    );
+    assert(
+      isLocalhostRequest({ ip: '14.241.12.34', headers: { host: 'carmate.vn' } }, new Error('Database down')) === false,
+      'Alert Suppress 7: Cho phép IP production và host carmate.vn hợp lệ không bị chặn nhầm'
+    );
+
+    // 2. Kiểm tra sendSystemErrorAlert chặn triệt để khi NODE_ENV !== 'production'
+    const savedToken = process.env.TELEGRAM_BOT_TOKEN;
+    const savedChatId = process.env.TELEGRAM_LOG_CHAT_ID;
+    const savedNodeEnv = process.env.NODE_ENV;
+    const savedEnableDev = process.env.ENABLE_DEV_TELEGRAM_ALERTS;
+
+    _resetDeduplicationCache();
+    process.env.TELEGRAM_BOT_TOKEN = '123456789:ABCDEF_real_token_simulated';
+    process.env.TELEGRAM_LOG_CHAT_ID = '-100987654321';
+    process.env.NODE_ENV = 'development';
+    delete process.env.ENABLE_DEV_TELEGRAM_ALERTS;
+
+    let interceptedFetches = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (url, opts) => {
+      if (typeof url === 'string' && url.includes('api.telegram.org')) {
+        interceptedFetches.push({ url, opts });
+        return { ok: true, status: 200, json: async () => ({ ok: true }) };
+      }
+      return origFetch(url, opts);
+    };
+
+    const devResult = await sendSystemErrorAlert({
+      error: new Error('Local dev test error'),
+      req: { ip: '14.241.12.34', headers: { host: 'carmate.vn' } },
+      source: 'Frontend Browser'
+    });
+    assert(devResult === false, 'Alert Suppress 8: Chặn gửi Telegram khi NODE_ENV !== "production"');
+    assert(interceptedFetches.length === 0, 'Alert Suppress 9: Tuyệt đối không dispatch HTTP request tới api.telegram.org');
+
+    // 3. Kiểm tra khi NODE_ENV === 'production' nhưng request đến từ localhost / ::1
+    process.env.NODE_ENV = 'production';
+    const localhostResult = await sendSystemErrorAlert({
+      error: new Error('ReferenceError: useMemo is not defined'),
+      req: { ip: '::1', headers: { origin: 'http://localhost:5173' } },
+      source: 'Frontend Browser (Client Crash)'
+    });
+    assert(localhostResult === false, 'Alert Suppress 10: Chặn gửi Telegram khi request xuất phát từ localhost / ::1');
+    assert(interceptedFetches.length === 0, 'Alert Suppress 11: Không bắn tin nhắn rác về Telegram của Founder');
+
+    // 4. Kiểm tra khi chủ động bật ENABLE_DEV_TELEGRAM_ALERTS = 'true'
+    process.env.ENABLE_DEV_TELEGRAM_ALERTS = 'true';
+    const devAllowedResult = await sendSystemErrorAlert({
+      error: new Error('Explicitly tested dev error'),
+      req: { ip: '::1' },
+      source: 'Dev Test'
+    });
+    assert(devAllowedResult === true, 'Alert Suppress 12: Cho phép gửi Telegram khi có cờ ENABLE_DEV_TELEGRAM_ALERTS=true');
+    assert(interceptedFetches.length === 1, 'Alert Suppress 13: Đã dispatch đúng 1 thông báo cho test mode');
+
+    // 5. Kiểm tra analyticsController có bộ lọc isDevEvent
+    const analyticsCtrlSrc = fs.readFileSync(path.resolve('apps/api/src/controllers/analyticsController.js'), 'utf8');
+    assert(
+      analyticsCtrlSrc.includes('const isDevEvent =') && analyticsCtrlSrc.includes("properties?.stack?.includes('localhost')"),
+      'Alert Suppress 14: analyticsController có bộ lọc isDevEvent phòng vệ đa tầng'
+    );
+
+    // 6. Kiểm tra sentry.js có gắn cờ isDev
+    const sentrySrc = fs.readFileSync(path.resolve('apps/web/src/utils/sentry.js'), 'utf8');
+    assert(
+      sentrySrc.includes('const isDev = Boolean(') && sentrySrc.includes('isDev'),
+      'Alert Suppress 15: sentry.js tự động nhận diện và gắn cờ isDev cho các ngoại lệ ở localhost'
+    );
+
+    // Khôi phục môi trường
+    globalThis.fetch = origFetch;
+    if (savedToken) process.env.TELEGRAM_BOT_TOKEN = savedToken;
+    else delete process.env.TELEGRAM_BOT_TOKEN;
+    if (savedChatId) process.env.TELEGRAM_LOG_CHAT_ID = savedChatId;
+    else delete process.env.TELEGRAM_LOG_CHAT_ID;
+    if (savedNodeEnv) process.env.NODE_ENV = savedNodeEnv;
+    else delete process.env.NODE_ENV;
+    if (savedEnableDev) process.env.ENABLE_DEV_TELEGRAM_ALERTS = savedEnableDev;
+    else delete process.env.ENABLE_DEV_TELEGRAM_ALERTS;
+    _resetDeduplicationCache();
+  } catch (err) {
+    assert(false, '66. Kiểm thử Chặn Bắn Cảnh Báo Telegram ở Môi Trường Localhost & Development', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;
