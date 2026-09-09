@@ -343,9 +343,8 @@ export default function TripCard({
             className="flex items-center gap-2 min-w-0 text-left cursor-pointer group/driver"
             title="Xem hồ sơ uy tín"
           >
-            <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10 relative">
+            <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10">
               <User className="w-3.5 h-3.5" />
-              <PresenceDot isOnline={onlineStatus.isOnline} size="xs" className="absolute -bottom-0.5 -right-0.5" detail={onlineStatus.detail} />
             </div>
 
             <div className="min-w-0">
