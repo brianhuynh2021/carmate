@@ -72,25 +72,6 @@ export default function InboxModal({
 
   const messagesEndRef = useRef(null);
 
-  // Cập nhật selectedId khi initialBookingId thay đổi
-  useEffect(() => {
-    if (initialBookingId) {
-      if (initialBookingId === 'support') {
-        setIsSupportChannelActive(true);
-      } else {
-        setIsSupportChannelActive(false);
-        setSelectedId(initialBookingId);
-        const isOut = outgoingBookings.some((b) => (b.escrowId || b.id) === initialBookingId);
-        if (isOut) {
-          setActiveTab('outgoing');
-        } else {
-          setActiveTab('incoming');
-        }
-      }
-      setMobileShowChat(true);
-    }
-  }, [initialBookingId, outgoingBookings]);
-
   // Phân loại danh sách booking: Đến (Chủ xe nhận) và Đi (Khách gửi)
   const { incomingBookings, outgoingBookings } = useMemo(() => {
     const userPhone = currentUser?.phone || '';
@@ -120,6 +101,25 @@ export default function InboxModal({
 
     return { incomingBookings: incoming, outgoingBookings: outgoing };
   }, [bookings, currentUser]);
+
+  // Cập nhật selectedId khi initialBookingId thay đổi
+  useEffect(() => {
+    if (initialBookingId) {
+      if (initialBookingId === 'support') {
+        setIsSupportChannelActive(true);
+      } else {
+        setIsSupportChannelActive(false);
+        setSelectedId(initialBookingId);
+        const isOut = outgoingBookings.some((b) => (b.escrowId || b.id) === initialBookingId);
+        if (isOut) {
+          setActiveTab('outgoing');
+        } else {
+          setActiveTab('incoming');
+        }
+      }
+      setMobileShowChat(true);
+    }
+  }, [initialBookingId, outgoingBookings]);
 
   const currentList = activeTab === 'incoming' ? incomingBookings : outgoingBookings;
   const activeBooking = useMemo(() => {
