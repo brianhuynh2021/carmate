@@ -1,4 +1,4 @@
-import { getTimeSlotLabel } from '@carmate/shared';
+import { getTimeSlotLabel, formatCleanDateLabel } from '@carmate/shared';
 import QRCode from 'qrcode';
 
 /**
@@ -167,7 +167,7 @@ export async function generateTicketImage(trip, lang = 'vi') {
     boxH,
     'THỜI GIAN XUẤT PHÁT',
     `${getTimeSlotLabel(trip, lang)}`,
-    trip.date || 'Hôm nay',
+    formatCleanDateLabel(trip.date),
     '#38bdf8'
   );
 
@@ -486,7 +486,7 @@ export async function generateTicketStoryImage(trip, lang = 'vi') {
     boxH,
     'THỜI GIAN XUẤT PHÁT',
     `${getTimeSlotLabel(trip, lang)}`,
-    trip.date || 'Hôm nay',
+    formatCleanDateLabel(trip.date),
     '#38bdf8'
   );
 

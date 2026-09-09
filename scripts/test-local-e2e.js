@@ -4917,54 +4917,54 @@ async function runTests() {
     assert(false, '67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau', err.message);
   }
 
-  // 68. KIỂM THỬ LÀM SẠCH NHÃN NGÀY & TRIỆT TIÊU HẬU TỐ DƯ THỪA (CLEAN DATE LABEL)
+  // 68. KIỂM THỬ HIỂN THỊ CHÍNH XÁC NGÀY & TRIỆT TIÊU NHÃN MƠ HỒ (EXACT DATE DISPLAY)
   try {
-    console.log('\n📅 68. Kiểm thử Làm Sạch Nhãn Ngày & Triệt Tiêu Hậu Tố Dư Thừa (Clean Date Label)...');
+    console.log('\n📅 68. Kiểm thử Hiển Thị Chính Xác Ngày & Triệt Tiêu Nhãn Mơ Hồ (Exact Date Display)...');
     const { formatCleanDateLabel } = await import('../packages/shared/src/utils/date.js');
     const fs = await import('fs');
     const path = await import('path');
 
-    const mockBaseDate = new Date(2026, 8, 9, 14, 0, 0); // 09/09/2026
+    const mockBaseDate = new Date(2026, 8, 9, 14, 0, 0); // 09/09/2026 (Thứ 4)
 
-    // 68.1 Triệt tiêu hậu tố dd/mm khi là Hôm nay
+    // 68.1 Hiển thị chính xác Thứ và Ngày/Tháng khi là Hôm nay (không để "Hôm nay" mơ hồ trên thẻ)
     assert(
-      formatCleanDateLabel('Hôm nay', mockBaseDate) === 'Hôm nay',
-      'Clean Date 1: "Hôm nay" giữ nguyên nhãn sang trọng không hậu tố thừa'
+      formatCleanDateLabel('Hôm nay', mockBaseDate) === 'Thứ 4, 09/09',
+      'Clean Date 1: "Hôm nay" định dạng chính xác Thứ 4, 09/09 giúp người dùng nắm rõ lịch trình'
     );
     assert(
-      formatCleanDateLabel('Hôm nay (09/09)', mockBaseDate) === 'Hôm nay',
-      'Clean Date 2: "Hôm nay (09/09)" triệt tiêu hoàn toàn "(09/09)" thừa thãi, trả về "Hôm nay"'
+      formatCleanDateLabel('Hôm nay (09/09)', mockBaseDate) === 'Thứ 4, 09/09',
+      'Clean Date 2: "Hôm nay (09/09)" chuyển thành "Thứ 4, 09/09" chuẩn xác'
     );
     assert(
-      formatCleanDateLabel('2026-09-09', mockBaseDate) === 'Hôm nay',
-      'Clean Date 3: Chuỗi ISO trùng ngày hôm nay tự động định dạng thành "Hôm nay"'
+      formatCleanDateLabel('2026-09-09', mockBaseDate) === 'Thứ 4, 09/09',
+      'Clean Date 3: Chuỗi ISO trùng ngày hôm nay tự động định dạng thành "Thứ 4, 09/09"'
     );
 
-    // 68.2 Triệt tiêu hậu tố dd/mm khi là Ngày mai
+    // 68.2 Hiển thị chính xác Thứ và Ngày/Tháng khi là Ngày mai
     assert(
-      formatCleanDateLabel('Ngày mai', mockBaseDate) === 'Ngày mai',
-      'Clean Date 4: "Ngày mai" giữ nguyên nhãn tinh tế không hậu tố thừa'
+      formatCleanDateLabel('Ngày mai', mockBaseDate) === 'Thứ 5, 10/09',
+      'Clean Date 4: "Ngày mai" định dạng chính xác Thứ 5, 10/09'
     );
     assert(
-      formatCleanDateLabel('Ngày mai (10/09)', mockBaseDate) === 'Ngày mai',
-      'Clean Date 5: "Ngày mai (10/09)" triệt tiêu hoàn toàn "(10/09)", trả về "Ngày mai"'
+      formatCleanDateLabel('Ngày mai (10/09)', mockBaseDate) === 'Thứ 5, 10/09',
+      'Clean Date 5: "Ngày mai (10/09)" định dạng chuẩn xác "Thứ 5, 10/09"'
     );
     assert(
-      formatCleanDateLabel('2026-09-10', mockBaseDate) === 'Ngày mai',
-      'Clean Date 6: Chuỗi ISO ngày mai tự động định dạng thành "Ngày mai"'
+      formatCleanDateLabel('2026-09-10', mockBaseDate) === 'Thứ 5, 10/09',
+      'Clean Date 6: Chuỗi ISO ngày mai tự động định dạng thành "Thứ 5, 10/09"'
     );
 
     // 68.3 Bất biến toán học & Tự phục hồi dữ liệu cũ (MIT Invariant / Self-healing)
     assert(
-      formatCleanDateLabel('Ngày mai (09/09)', mockBaseDate) === 'Hôm nay',
-      'Clean Date 7: Bài đăng cũ lưu "Ngày mai (09/09)" khi đến ngày 09/09 tự sửa thành "Hôm nay", chống mâu thuẫn'
+      formatCleanDateLabel('Ngày mai (09/09)', mockBaseDate) === 'Thứ 4, 09/09',
+      'Clean Date 7: Bài đăng cũ lưu "Ngày mai (09/09)" khi đến ngày 09/09 tự sửa thành "Thứ 4, 09/09", chống mâu thuẫn'
     );
 
-    // 68.4 Các ngày xa hơn hiển thị rõ ràng Thứ · dd/mm
+    // 68.4 Các ngày xa hơn hiển thị rõ ràng Thứ, dd/mm
     const dateFri = formatCleanDateLabel('2026-09-11', mockBaseDate);
     assert(
-      dateFri.includes('Thứ 6') && dateFri.includes('11/09') && !dateFri.includes('('),
-      'Clean Date 8: Ngày xa hơn định dạng chuẩn "Thứ 6 · 11/09" thanh lịch'
+      dateFri.includes('Thứ 6') && dateFri.includes('11/09'),
+      'Clean Date 8: Ngày xa hơn định dạng chuẩn "Thứ 6, 11/09" thanh lịch'
     );
 
     // 68.5 Chuyến lặp hàng tuần

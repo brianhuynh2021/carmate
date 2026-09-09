@@ -141,17 +141,23 @@ export const formatTripDateDisplay = (dateStr, baseDate = new Date()) => {
 };
 
 /**
- * Định dạng nhãn ngày gọn gàng, tinh tế cho Card và Modal (Stanford Ergonomics & Apple HIG):
- * - Hôm nay: "Hôm nay" (triệt tiêu hậu tố dd/mm gây dư thừa thông tin & 2 dấu chấm liên tiếp)
- * - Ngày mai: "Ngày mai" (triệt tiêu hậu tố dd/mm)
- * - Hôm qua: "Hôm qua"
- * - Ngày khác: "Thứ X · dd/mm" hoặc "dd/mm"
+ * Định dạng nhãn ngày chính xác, chuẩn xác 100% cho Thẻ Chuyến Đi và Modal:
+ * - Luôn hiển thị chính xác Thứ và Ngày/Tháng: "Thứ 4, 09/09", "Thứ 5, 10/09", "Thứ 6, 11/09"...
+ * - Không để "Hôm nay", "Ngày mai" mơ hồ trên thẻ giúp người dùng và chủ xe biết chuẩn xác lịch trình.
+ * - Chuyến lặp lại hàng tuần: "Thứ 2 · Lặp hàng tuần"
  * - Cơ chế tự phục hồi (Self-healing Invariant):
- *   Nếu bài đăng cũ lưu chuỗi tương đối đã cũ như "Ngày mai (09/09)" mà hôm nay là 09/09,
- *   hệ thống tự động phát hiện 09/09 là ngày hôm nay và trả về "Hôm nay"!
+ *   Nếu bài đăng cũ lưu chuỗi tương đối như "Ngày mai (09/09)" mà hôm nay là 09/09,
+ *   hệ thống tự động phát hiện 09/09 là ngày hôm nay và hiển thị chính xác "Thứ 4, 09/09"!
  */
 export const formatCleanDateLabel = (dateStr, baseDate = new Date()) => {
-  if (!dateStr) return 'Hôm nay';
+  const base = new Date(baseDate);
+  base.setHours(0, 0, 0, 0);
+
+  if (!dateStr) {
+    const weekday = WEEKDAY_NAMES[base.getDay()];
+    const dm = formatDateDayMonth(base);
+    return `${weekday}, ${dm}`;
+  }
 
   const str = String(dateStr).trim();
   const isRecurring = str.includes('Lặp lại hàng tuần') || str.includes('hàng tuần');
@@ -160,26 +166,12 @@ export const formatCleanDateLabel = (dateStr, baseDate = new Date()) => {
     .replace(/hàng tuần/gi, '')
     .trim();
 
-  const base = new Date(baseDate);
-  base.setHours(0, 0, 0, 0);
-
   const targetDate = parseTripDate(cleanStr, base);
   targetDate.setHours(0, 0, 0, 0);
 
-  const diffDays = Math.round((targetDate.getTime() - base.getTime()) / (24 * 60 * 60 * 1000));
-
-  let label = '';
-  if (diffDays === 0) {
-    label = 'Hôm nay';
-  } else if (diffDays === 1) {
-    label = 'Ngày mai';
-  } else if (diffDays === -1) {
-    label = 'Hôm qua';
-  } else {
-    const weekday = WEEKDAY_NAMES[targetDate.getDay()];
-    const dm = formatDateDayMonth(targetDate);
-    label = `${weekday} · ${dm}`;
-  }
+  const weekday = WEEKDAY_NAMES[targetDate.getDay()];
+  const dm = formatDateDayMonth(targetDate);
+  const label = `${weekday}, ${dm}`;
 
   if (isRecurring) {
     const weekdayMatch = cleanStr.match(/thứ\s*[2-7]|chủ nhật|cn/i);

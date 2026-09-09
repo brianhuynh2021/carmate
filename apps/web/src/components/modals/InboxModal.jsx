@@ -20,7 +20,7 @@ import {
   Ban,
   Mail
 } from 'lucide-react';
-import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus } from '@carmate/shared';
+import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
@@ -566,7 +566,7 @@ export default function InboxModal({
                       <span className="tabular font-semibold text-primary-600 dark:text-primary-400">
                         {item.totalDeal ? formatVND(item.totalDeal) : 'Thỏa thuận'}
                       </span>
-                      <span>{item.date || 'Hôm nay'}</span>
+                      <span>{formatCleanDateLabel(item.date)}</span>
                     </div>
                   </button>
                 );
