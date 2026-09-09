@@ -4851,6 +4851,72 @@ async function runTests() {
     assert(false, '66. Kiểm thử Chặn Bắn Cảnh Báo Telegram ở Môi Trường Localhost & Development', err.message);
   }
 
+  // 67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau (Mark as Unread / Read Later in Inbox)
+  console.log('\n✉️ 67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau (Mark as Unread / Read Later)...');
+  try {
+    const appSrc = fs.readFileSync(path.resolve('apps/web/src/App.jsx'), 'utf8');
+    const inboxModalSrc = fs.readFileSync(path.resolve('apps/web/src/components/modals/InboxModal.jsx'), 'utf8');
+
+    // 1. Kiểm tra App.jsx quản lý unreadBookingIds và markBookingAsUnread
+    assert(
+      appSrc.includes('const [unreadBookingIds, setUnreadBookingIds] = useState('),
+      'Mark as Unread 1: App.jsx quản lý state unreadBookingIds lưu trữ danh sách đọc sau'
+    );
+    assert(
+      appSrc.includes('const markBookingAsUnread = useCallback('),
+      'Mark as Unread 2: App.jsx cung cấp hàm markBookingAsUnread'
+    );
+    assert(
+      appSrc.includes('carmate_inbox_unread_ids'),
+      'Mark as Unread 3: App.jsx đồng bộ danh sách unreadBookingIds vào localStorage'
+    );
+    assert(
+      appSrc.includes('if (unreadBookingIds.includes(bId)) return true;'),
+      'Mark as Unread 4: inboxCount tự động tính các cuộc trao đổi được đánh dấu Đọc sau'
+    );
+    assert(
+      appSrc.includes('onMarkAsUnread={markBookingAsUnread}') && appSrc.includes('unreadBookingIds={unreadBookingIds}'),
+      'Mark as Unread 5: App.jsx truyền đầy đủ onMarkAsUnread và unreadBookingIds vào InboxModal'
+    );
+
+    // 2. Kiểm tra InboxModal.jsx hỗ trợ đầy đủ giao diện và logic Đọc sau
+    assert(
+      inboxModalSrc.includes('onMarkAsUnread = null') && inboxModalSrc.includes('unreadBookingIds = []'),
+      'Mark as Unread 6: InboxModal nhận props onMarkAsUnread và unreadBookingIds'
+    );
+    assert(
+      inboxModalSrc.includes('const isBookingUnread = useMemo(') && inboxModalSrc.includes('unreadBookingIds.includes(id)'),
+      'Mark as Unread 7: InboxModal có helper isBookingUnread nhận diện cờ Đọc sau'
+    );
+    assert(
+      inboxModalSrc.includes('const handleToggleUnread = (targetBookingId = null) => {'),
+      'Mark as Unread 8: InboxModal có hàm handleToggleUnread cho phép chuyển đổi trạng thái đọc linh hoạt'
+    );
+    assert(
+      inboxModalSrc.includes('title={isActiveUnread ? \'Đánh dấu đã đọc\' : \'Đánh dấu chưa đọc để xem lại sau\'}') ||
+      inboxModalSrc.includes('Chưa đọc (Đọc sau)'),
+      'Mark as Unread 9: Header chi tiết chuyến có nút Đọc sau / Chưa đọc (Đọc sau) 1-chạm'
+    );
+    assert(
+      inboxModalSrc.includes('title={isUnread ? \'Đánh dấu đã đọc\' : \'Đánh dấu chưa đọc để đọc sau\'}'),
+      'Mark as Unread 10: Từng thẻ trong danh sách cuộc trao đổi có icon Mail thao tác nhanh 1-chạm'
+    );
+    assert(
+      inboxModalSrc.includes('title="Chưa đọc (Đọc sau)"') && inboxModalSrc.includes('Đọc sau'),
+      'Mark as Unread 11: Thẻ hội thoại hiển thị chấm xanh animate-pulse và nhãn Đọc sau trực quan'
+    );
+    assert(
+      inboxModalSrc.includes('incomingUnreadCount > 0') && inboxModalSrc.includes('outgoingUnreadCount > 0'),
+      'Mark as Unread 12: Tabs Đến / Đi hiển thị chấm báo hiệu khi có tin nhắn chưa đọc'
+    );
+    assert(
+      inboxModalSrc.includes('if (bId && !unreadBookingIds.includes(bId)) {'),
+      'Mark as Unread 13: Bảo vệ không tự động đánh dấu đã đọc đè lên khi người dùng vừa chủ động chọn Đọc sau'
+    );
+  } catch (err) {
+    assert(false, '67. Kiểm thử Tính Năng Đánh Dấu Chưa Đọc / Đọc Sau', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

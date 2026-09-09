@@ -496,7 +496,7 @@ export default function App() {
     t
   });
 
-  // Quản lý trạng thái Đã đọc (Read Tracking) của Hộp thư đến
+  // Quản lý trạng thái Đã đọc / Chưa đọc (Read & Unread Tracking) của Hộp thư đến
   const [readBookingTimestamps, setReadBookingTimestamps] = useState(() => {
     try {
       const saved = localStorage.getItem('carmate_inbox_read_timestamps');
@@ -506,8 +506,28 @@ export default function App() {
     }
   });
 
+  const [unreadBookingIds, setUnreadBookingIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('carmate_inbox_unread_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const markBookingAsRead = useCallback((bookingId) => {
     if (!bookingId) return;
+    setUnreadBookingIds((prev) => {
+      if (!prev.includes(bookingId)) return prev;
+      const updated = prev.filter((id) => id !== bookingId);
+      try {
+        localStorage.setItem('carmate_inbox_unread_ids', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Lỗi lưu carmate_inbox_unread_ids:', err);
+      }
+      return updated;
+    });
+
     setReadBookingTimestamps((prev) => {
       if (prev[bookingId] && Date.now() - prev[bookingId] < 2000) return prev;
       const updated = { ...prev, [bookingId]: Date.now() };
@@ -520,16 +540,44 @@ export default function App() {
     });
   }, []);
 
-  // Đếm số lượng yêu cầu CHƯA ĐỌC thực sự trong Hộp thư (inquiring hoặc pre_confirmed)
+  const markBookingAsUnread = useCallback((bookingId) => {
+    if (!bookingId) return;
+    setUnreadBookingIds((prev) => {
+      if (prev.includes(bookingId)) return prev;
+      const updated = [...prev, bookingId];
+      try {
+        localStorage.setItem('carmate_inbox_unread_ids', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Lỗi lưu carmate_inbox_unread_ids:', err);
+      }
+      return updated;
+    });
+
+    setReadBookingTimestamps((prev) => {
+      const updated = { ...prev, [bookingId]: 0 };
+      try {
+        localStorage.setItem('carmate_inbox_read_timestamps', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Lỗi lưu carmate_inbox_read_timestamps:', err);
+      }
+      return updated;
+    });
+  }, []);
+
+  // Đếm số lượng yêu cầu CHƯA ĐỌC thực sự trong Hộp thư (inquiring hoặc pre_confirmed hoặc được chủ động đánh dấu Đọc sau)
   const inboxCount = useMemo(() => {
     const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
     return (bookedEscrows || []).filter((b) => {
-      if (b.status !== 'inquiring' && b.status !== 'pre_confirmed') return false;
       const bId = b.escrowId || b.id;
+      // 1. Nếu người dùng chủ động đánh dấu "Chưa đọc (Đọc sau)"
+      if (unreadBookingIds.includes(bId)) return true;
+
+      // 2. Chỉ tính các chuyến đang thương lượng hoặc giữ chỗ
+      if (b.status !== 'inquiring' && b.status !== 'pre_confirmed') return false;
       const lastRead = readBookingTimestamps[bId] || 0;
       if (!lastRead) return true; // Chưa mở bao giờ -> Chưa đọc
 
-      // Nếu có tin nhắn mới từ đối phương sau lần đọc cuối cùng
+      // 3. Nếu có tin nhắn mới từ đối phương sau lần đọc cuối cùng
       const hasNewMessage = (b.messages || []).some((m) => {
         const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
         const msgTime = m.timestamp ? new Date(m.timestamp).getTime() : 0;
@@ -537,7 +585,7 @@ export default function App() {
       });
       return hasNewMessage;
     }).length;
-  }, [bookedEscrows, readBookingTimestamps, currentUser]);
+  }, [bookedEscrows, readBookingTimestamps, unreadBookingIds, currentUser]);
 
   const [showInboxModal, setShowInboxModal] = useState(false);
   const [inboxInitialBookingId, setInboxInitialBookingId] = useState(null);
@@ -1240,7 +1288,9 @@ export default function App() {
           onReportUnreachablePhone={setUnreachablePhoneRecord}
           onShowToast={showToast}
           onMarkAsRead={markBookingAsRead}
+          onMarkAsUnread={markBookingAsUnread}
           readBookingTimestamps={readBookingTimestamps}
+          unreadBookingIds={unreadBookingIds}
         />
       )}
       {selectedItemForEscrow && (

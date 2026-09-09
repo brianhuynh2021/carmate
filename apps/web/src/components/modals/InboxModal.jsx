@@ -17,7 +17,8 @@ import {
   AlertCircle,
   ShieldAlert,
   PhoneOff,
-  Ban
+  Ban,
+  Mail
 } from 'lucide-react';
 import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -36,7 +37,9 @@ export default function InboxModal({
   onReportUnreachablePhone = null,
   onShowToast,
   onMarkAsRead = null,
-  readBookingTimestamps = {}
+  onMarkAsUnread = null,
+  readBookingTimestamps = {},
+  unreadBookingIds = []
 }) {
   const [selectedId, setSelectedId] = useState(initialBookingId);
   const [activeTab, setActiveTab] = useState('incoming'); // 'incoming' (Đến) | 'outgoing' (Đi)
@@ -94,20 +97,74 @@ export default function InboxModal({
     return bookings.find((b) => (b.escrowId || b.id) === selectedId) || currentList[0] || null;
   }, [bookings, selectedId, currentList]);
 
+  // Helper kiểm tra xem 1 cuộc trao đổi có đang ở trạng thái Chưa đọc / Đọc sau hay không
+  const isBookingUnread = useMemo(() => {
+    const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
+    return (itemOrId) => {
+      const id = typeof itemOrId === 'string' ? itemOrId : (itemOrId?.escrowId || itemOrId?.id);
+      if (!id) return false;
+
+      // 1. Người dùng chủ động gắn cờ Đọc sau (Unread)
+      if (unreadBookingIds.includes(id)) return true;
+
+      const booking = typeof itemOrId === 'object' && itemOrId !== null
+        ? itemOrId
+        : bookings.find((b) => (b.escrowId || b.id) === id);
+
+      const lastRead = readBookingTimestamps?.[id] || 0;
+      if (!lastRead) return true; // Chưa từng mở -> Chưa đọc
+
+      // 2. Có tin nhắn mới từ đối phương sau lần đọc cuối
+      const hasNewMessage = (booking?.messages || []).some((m) => {
+        const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
+        return !isMe && new Date(m.timestamp).getTime() > lastRead;
+      });
+
+      return hasNewMessage;
+    };
+  }, [unreadBookingIds, bookings, readBookingTimestamps, currentUser]);
+
+  // Đếm số lượng tin chưa đọc theo từng Tab (Đến / Đi)
+  const incomingUnreadCount = useMemo(() => {
+    return incomingBookings.filter((b) => isBookingUnread(b)).length;
+  }, [incomingBookings, isBookingUnread]);
+
+  const outgoingUnreadCount = useMemo(() => {
+    return outgoingBookings.filter((b) => isBookingUnread(b)).length;
+  }, [outgoingBookings, isBookingUnread]);
+
+  // Thao tác 1-chạm: Đánh dấu Chưa đọc (Đọc sau) / Đánh dấu Đã đọc
+  const handleToggleUnread = (targetBookingId = null) => {
+    const targetId = targetBookingId || (activeBooking ? (activeBooking.escrowId || activeBooking.id) : null);
+    if (!targetId) return;
+
+    const currentlyUnread = isBookingUnread(targetId);
+    if (currentlyUnread) {
+      onMarkAsRead?.(targetId);
+      onShowToast?.('✓ Đã đánh dấu cuộc trò chuyện là đã đọc', 'success');
+    } else {
+      onMarkAsUnread?.(targetId);
+      onShowToast?.('✉️ Đã đánh dấu chưa đọc để bạn xem lại sau', 'info');
+    }
+  };
+
+  const activeBookingId = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
+  const isActiveUnread = activeBookingId ? isBookingUnread(activeBooking) : false;
+
   // Cuộn xuống tin nhắn mới nhất
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeBooking?.messages]);
 
-  // Tự động đánh dấu đã đọc khi xem cuộc hội thoại (Xóa chuông đỏ ngay lập tức)
+  // Tự động đánh dấu đã đọc khi xem cuộc hội thoại (trừ khi đang được chủ động gắn cờ Đọc sau)
   useEffect(() => {
     if (activeBooking) {
       const bId = activeBooking.escrowId || activeBooking.id;
-      if (bId) {
+      if (bId && !unreadBookingIds.includes(bId)) {
         onMarkAsRead?.(bId);
       }
     }
-  }, [activeBooking, onMarkAsRead]);
+  }, [activeBooking, onMarkAsRead, unreadBookingIds]);
 
   // Bộ đếm thời gian thực 15 phút (Soft-lock TTL Countdown)
   useEffect(() => {
@@ -279,6 +336,7 @@ export default function InboxModal({
       setInputMessage('');
       setViolationInfo(null);
       playMessageChime();
+      onMarkAsRead?.(bId);
       onRefreshBookings?.();
     } catch (err) {
       const vData = err.data || {};
@@ -389,10 +447,13 @@ export default function InboxModal({
             >
               <span>Yêu cầu Đến</span>
               {incomingBookings.length > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 ${
                   activeTab === 'incoming' ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}>
-                  {incomingBookings.length}
+                  {incomingUnreadCount > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-blue-400 animate-pulse" title="Có tin chưa đọc" />
+                  )}
+                  <span>{incomingBookings.length}</span>
                 </span>
               )}
             </button>
@@ -407,10 +468,13 @@ export default function InboxModal({
             >
               <span>Yêu cầu Đi</span>
               {outgoingBookings.length > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 ${
                   activeTab === 'outgoing' ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}>
-                  {outgoingBookings.length}
+                  {outgoingUnreadCount > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-blue-400 animate-pulse" title="Có tin chưa đọc" />
+                  )}
+                  <span>{outgoingBookings.length}</span>
                 </span>
               )}
             </button>
@@ -429,12 +493,8 @@ export default function InboxModal({
                 const id = item.escrowId || item.id;
                 const isSelected = activeBooking && (activeBooking.escrowId || activeBooking.id) === id;
                 const status = item.status || 'inquiring';
-                const lastRead = readBookingTimestamps?.[id] || 0;
-                const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
-                const isUnread = !lastRead || (item.messages || []).some((m) => {
-                  const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
-                  return !isMe && new Date(m.timestamp).getTime() > lastRead;
-                });
+                const isUnread = isBookingUnread(item);
+                const isManuallyUnread = unreadBookingIds.includes(id);
                 const itemOnline = getUserOnlineStatus(item, currentUser?.phone || currentUser?.id);
 
                 return (
@@ -442,10 +502,12 @@ export default function InboxModal({
                     key={id}
                     type="button"
                     onClick={() => {
-                      setSelectedId(id);
-                      onMarkAsRead?.(id);
+                      if (selectedId !== id) {
+                        setSelectedId(id);
+                        onMarkAsRead?.(id);
+                      }
                     }}
-                    className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer border ${
+                    className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer border relative group ${
                       isSelected
                         ? 'bg-white dark:bg-slate-800 border-primary-500/40 shadow-xs ring-1 ring-primary-500/20'
                         : 'bg-white/40 dark:bg-slate-800/30 border-transparent hover:bg-white/80 dark:hover:bg-slate-800/60'
@@ -453,25 +515,47 @@ export default function InboxModal({
                   >
                     <div className="flex items-center justify-between gap-1.5 mb-1">
                       <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
-                        {isUnread && !isSelected && (
-                          <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0 animate-pulse" title="Tin nhắn mới chưa đọc" />
+                        {isUnread && (
+                          <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0 animate-pulse shadow-xs shadow-primary-500/50" title="Chưa đọc (Đọc sau)" />
                         )}
                         <PresenceDot isOnline={itemOnline.isOnline} size="xs" detail={itemOnline.detail} />
                         <span>{toPublicAlias(item)}</span>
+                        {isManuallyUnread && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50 shrink-0">
+                            Đọc sau
+                          </span>
+                        )}
                       </span>
-                      {status === 'confirmed' ? (
-                        <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
-                          Đã chốt
-                        </span>
-                      ) : status === 'pre_confirmed' ? (
-                        <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-300/40 shrink-0 animate-pulse">
-                          Giữ chỗ 15p
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300/40 shrink-0">
-                          Đang hỏi
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleUnread(id);
+                          }}
+                          className={`p-1 rounded-full transition-all cursor-pointer ${
+                            isUnread
+                              ? 'text-[#0071e3] bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 ring-1 ring-blue-500/20'
+                              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                          }`}
+                          title={isUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc để đọc sau'}
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                        </button>
+                        {status === 'confirmed' ? (
+                          <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
+                            Đã chốt
+                          </span>
+                        ) : status === 'pre_confirmed' ? (
+                          <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-300/40 shrink-0 animate-pulse">
+                            Giữ chỗ 15p
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300/40 shrink-0">
+                            Đang hỏi
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium truncate">
@@ -514,7 +598,22 @@ export default function InboxModal({
                   </p>
                 </div>
 
-                <div className="shrink-0 text-right">
+                <div className="shrink-0 flex items-center gap-2">
+                  {/* Nút 1-chạm Đánh dấu chưa đọc / Đọc sau */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleUnread()}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 border ${
+                      isActiveUnread
+                        ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-300/60 dark:border-blue-700/60 ring-1 ring-blue-500/20'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary-600 dark:hover:text-primary-400'
+                    }`}
+                    title={isActiveUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc để xem lại sau'}
+                  >
+                    <Mail className={`w-3.5 h-3.5 ${isActiveUnread ? 'text-[#0071e3]' : 'text-slate-500'}`} />
+                    <span>{isActiveUnread ? 'Chưa đọc (Đọc sau)' : 'Đọc sau'}</span>
+                  </button>
+
                   {isConfirmed ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-300/40">
                       <CheckCircle2 className="w-3.5 h-3.5" />
