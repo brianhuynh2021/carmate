@@ -5292,7 +5292,57 @@ async function runTests() {
       'Seamless Route 5: Nút hành động chuyển sang "Xem chi tiết", triệt tiêu 100% sự lặp lại của nhãn Đã kín chỗ'
     );
   } catch (err) {
-    assert(false, '71. Kiểm thử Đường Kẻ Mũi Tên Liền Mạch & Đồng Bộ Header Thẻ Chuyến', err.message);
+    assert(false, '71. Kiểm thử Đường Kẻ Mũi Tên Liền MẠch & Đồng Bộ Header Thẻ Chuyến', err.message);
+  }
+
+  // 72. KIỂM THỬ GIAO DIỆN HỘP THƯ CHUẨN APPLE & CÔNG THÁI HỌC CURSOR (INBOX APPLE HIG & ZERO TRUNCATION)
+  console.log('\n--- 72. Kiểm thử Giao Diện Hộp Thư Chuẩn Apple HIG & Công Thái Học Cursor ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const inboxPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/InboxModal.jsx');
+    const inboxSrc = fs.readFileSync(inboxPath, 'utf8');
+
+    // 72.1 Modal kích thước 5xl và cột danh sách rộng rãi w-full md:w-[320px] lg:w-[340px]
+    assert(
+      inboxSrc.includes('size="5xl"') && inboxSrc.includes('md:w-[320px]'),
+      'Inbox Apple HIG 1: Modal chuẩn 5xl và cột danh sách mở rộng md:w-[320px] cho không gian thở'
+    );
+
+    // 72.2 Tabs Đến / Đi thiết kế Apple Liquid Segmented Control với bo cong và track âm
+    assert(
+      inboxSrc.includes('p-1 rounded-2xl bg-black/[0.05] dark:bg-white/[0.06] grid grid-cols-2 gap-1'),
+      'Inbox Apple HIG 2: Tabs Đến / Đi dạng Apple Liquid Segmented Control squircle'
+    );
+
+    // 72.3 Thẻ hội thoại bố trí phân tầng 3 dòng Apple: Dòng 1 (Tên + Ngày), Dòng 2 (Lộ trình), Dòng 3 (Giá + Trạng thái)
+    assert(
+      inboxSrc.includes('Dòng 1: Tên đối tác (trái) + Thời gian (phải)') &&
+      inboxSrc.includes('Dòng 2: Lộ trình') &&
+      inboxSrc.includes('Dòng 3: Giá thỏa thuận (trái) + Badges trạng thái & Đọc sau (phải)'),
+      'Inbox Apple HIG 3: Thẻ hội thoại cấu trúc 3 dòng phân tầng Apple, triệt tiêu hoàn toàn dồn nén text'
+    );
+
+    // 72.4 Không còn hiện tượng ép 4 phần tử vào dòng 1 khiến "Đọc sau" bị cắt thành "Đọ"
+    assert(
+      !inboxSrc.includes('truncate flex items-center gap-1">\n                            <span>{toPublicAlias(item)}</span>\n                            {isManuallyUnread && (\n                              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50 shrink-0">\n                                Đọc sau'),
+      'Inbox Apple HIG 4: Triệt tiêu vĩnh viễn lỗi cắt chữ "Đọc sau" thành "Đọ"'
+    );
+
+    // 72.5 Avatar squircle tương tác 1-chạm Cursor toggle Chưa đọc / Đã đọc
+    assert(
+      inboxSrc.includes('rounded-2xl flex items-center justify-center transition-all group-hover/avatar:scale-105') &&
+      inboxSrc.includes('handleToggleUnread(id)'),
+      'Inbox Apple HIG 5: Avatar squircle hỗ trợ thao tác 1-chạm chuyển đổi trạng thái đọc tức thì'
+    );
+
+    // 72.6 Menu ngữ cảnh chuột phải và phím tắt U Ambient Cursor
+    assert(
+      inboxSrc.includes('handleContextMenu') && inboxSrc.includes("e.key === 'u' || e.key === 'U'"),
+      'Inbox Apple HIG 6: Hỗ trợ chuột phải Context Menu và phím tắt U Ambient Cursor'
+    );
+  } catch (err) {
+    assert(false, '72. Kiểm thử Giao Diện Hộp Thư Chuẩn Apple HIG & Công Thái Học Cursor', err.message);
   }
 
   const passed = results.filter((r) => r.pass).length;

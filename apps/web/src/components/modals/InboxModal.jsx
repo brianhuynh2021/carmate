@@ -481,103 +481,88 @@ export default function InboxModal({
   return (
     <Modal
       onClose={onClose}
-      size="4xl"
+      size="5xl"
       icon={Inbox}
       iconTone="brand"
       title="Hộp Thư Yêu Cầu & Trao Đổi"
       subtitle="Bảo mật PII 100% · Trao đổi ẩn danh · Khóa mềm 2 pha trước khi chốt"
     >
-      <div className="flex flex-col md:flex-row h-[580px] max-h-[78vh] -mx-6 -my-4 overflow-hidden border-t border-black/[0.06] dark:border-white/[0.06]">
+      <div className="flex flex-col md:flex-row h-[600px] max-h-[78vh] -mx-6 -my-4 overflow-hidden border-t border-black/[0.06] dark:border-white/[0.06]">
         {/* CỘT TRÁI: DANH SÁCH CUỘC HỘI THOẠI */}
-        <div className={`w-full md:w-[280px] shrink-0 border-r border-black/[0.06] dark:border-white/[0.06] flex flex-col bg-slate-50/70 dark:bg-slate-900/40 ${
+        <div className={`w-full md:w-[320px] lg:w-[340px] shrink-0 border-r border-black/[0.06] dark:border-white/[0.06] flex flex-col bg-slate-50/70 dark:bg-slate-900/40 ${
           mobileShowChat ? 'hidden md:flex' : 'flex'
         }`}>
-          {/* Tabs Đến / Đi */}
-          <div className="p-3 border-b border-black/[0.04] dark:border-white/[0.05] grid grid-cols-2 gap-1.5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('incoming');
-                setSelectedId(null);
-                setMobileShowChat(false);
-              }}
-              className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === 'incoming'
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
-              }`}
-            >
-              <span>Yêu cầu Đến</span>
-              {incomingUnreadCount > 0 ? (
-                <span
-                  className={`text-[10.5px] font-mono px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 shadow-2xs ${
-                    activeTab === 'incoming'
-                      ? 'bg-white text-primary-700'
-                      : 'bg-primary-600 text-white'
-                  }`}
-                  title={`${incomingUnreadCount} tin chưa đọc`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  <span>{incomingUnreadCount}</span>
-                </span>
-              ) : incomingBookings.length > 0 ? (
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium ${
-                    activeTab === 'incoming'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  {incomingBookings.length}
-                </span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('outgoing');
-                setSelectedId(null);
-                setMobileShowChat(false);
-              }}
-              className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === 'outgoing'
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
-              }`}
-            >
-              <span>Yêu cầu Đi</span>
-              {outgoingUnreadCount > 0 ? (
-                <span
-                  className={`text-[10.5px] font-mono px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 shadow-2xs ${
-                    activeTab === 'outgoing'
-                      ? 'bg-white text-primary-700'
-                      : 'bg-primary-600 text-white'
-                  }`}
-                  title={`${outgoingUnreadCount} tin chưa đọc`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  <span>{outgoingUnreadCount}</span>
-                </span>
-              ) : outgoingBookings.length > 0 ? (
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium ${
-                    activeTab === 'outgoing'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  {outgoingBookings.length}
-                </span>
-              ) : null}
-            </button>
+          {/* Tabs Đến / Đi: Apple Liquid Segmented Control */}
+          <div className="p-2.5 border-b border-black/[0.04] dark:border-white/[0.05] bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm">
+            <div className="p-1 rounded-2xl bg-black/[0.05] dark:bg-white/[0.06] grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('incoming');
+                  setSelectedId(null);
+                  setMobileShowChat(false);
+                }}
+                className={`py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                  activeTab === 'incoming'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>Yêu cầu Đến</span>
+                {incomingUnreadCount > 0 ? (
+                  <span
+                    className="text-[10.5px] font-mono px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 bg-[#0071e3] text-white shadow-2xs"
+                    title={`${incomingUnreadCount} tin chưa đọc`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
+                    <span>{incomingUnreadCount}</span>
+                  </span>
+                ) : incomingBookings.length > 0 ? (
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium bg-black/[0.05] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400">
+                    {incomingBookings.length}
+                  </span>
+                ) : null}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('outgoing');
+                  setSelectedId(null);
+                  setMobileShowChat(false);
+                }}
+                className={`py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                  activeTab === 'outgoing'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>Yêu cầu Đi</span>
+                {outgoingUnreadCount > 0 ? (
+                  <span
+                    className="text-[10.5px] font-mono px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 bg-[#0071e3] text-white shadow-2xs"
+                    title={`${outgoingUnreadCount} tin chưa đọc`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
+                    <span>{outgoingUnreadCount}</span>
+                  </span>
+                ) : outgoingBookings.length > 0 ? (
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium bg-black/[0.05] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400">
+                    {outgoingBookings.length}
+                  </span>
+                ) : null}
+              </button>
+            </div>
           </div>
 
           {/* Gợi ý Ambient Cursor: Chuột phải / Phím U để đổi trạng thái & Đọc hết */}
-          <div className="px-3 py-1.5 bg-slate-100/70 dark:bg-slate-800/50 text-[10.5px] text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.05]">
-            <span className="flex items-center gap-1 truncate">
-              <span>Chuột phải hoặc bấm</span>
-              <kbd className="px-1 py-0.2 rounded bg-white dark:bg-slate-700 font-mono text-[9.5px] border border-black/10 dark:border-white/10 shadow-2xs font-bold text-slate-700 dark:text-slate-200">U</kbd>
-              <span>để Đọc sau</span>
+          <div className="px-3.5 py-1.5 bg-black/[0.02] dark:bg-white/[0.02] text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.05]">
+            <span className="flex items-center gap-1.5 truncate">
+              <span>Chuột phải hoặc</span>
+              <kbd className="px-1.5 py-0.2 rounded-md bg-white dark:bg-slate-700 font-mono text-[9.5px] border border-black/10 dark:border-white/10 shadow-2xs font-bold text-slate-700 dark:text-slate-200">
+                U
+              </kbd>
+              <span>đổi trạng thái</span>
             </span>
             {currentList.some((b) => isBookingUnread(b)) && (
               <button
@@ -628,26 +613,27 @@ export default function InboxModal({
                     onContextMenu={(e) => handleContextMenu(e, item)}
                     className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer border relative group ${
                       isSelected
-                        ? 'bg-white dark:bg-slate-800 border-primary-500/40 shadow-xs ring-1 ring-primary-500/20'
-                        : 'bg-white/40 dark:bg-slate-800/30 border-transparent hover:bg-white/80 dark:hover:bg-slate-800/60'
+                        ? 'bg-white dark:bg-slate-800/90 border-[#0071e3]/40 shadow-xs ring-1 ring-[#0071e3]/25'
+                        : 'bg-white/50 dark:bg-slate-800/25 border-black/[0.04] dark:border-white/[0.04] hover:bg-white dark:hover:bg-slate-800/60 hover:shadow-xs'
                     }`}
                   >
                     <div className="flex items-start gap-2.5">
-                      {/* Avatar với Presence dot góc dưới & Unread dot góc trên: Bấm 1-chạm để đổi trạng thái */}
+                      {/* Avatar: 38x38 squircle with Presence dot & Unread pulse: Bấm 1-chạm Cursor toggle */}
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
                           handleToggleUnread(id);
                         }}
                         className="relative shrink-0 mt-0.5 cursor-pointer group/avatar"
-                        title={isUnread ? 'Bấm để đánh dấu ĐÃ ĐỌC (hoặc phím U / chuột phải)' : 'Bấm để đánh dấu CHƯA ĐỌC / ĐỌC SAU (hoặc phím U / chuột phải)'}
+                        title={isUnread ? 'Bấm để đánh dấu ĐÃ ĐỌC (Phím U / Chuột phải)' : 'Bấm để đánh dấu ĐỌC SAU (Phím U / Chuột phải)'}
+                        aria-label={isUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc'}
                       >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all group-hover/avatar:scale-105 active:scale-95 ${
+                        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all group-hover/avatar:scale-105 active:scale-95 shadow-2xs ${
                           isUnread
-                            ? 'bg-blue-50 dark:bg-blue-950/80 text-[#0071e3] ring-1 ring-blue-500/30 shadow-2xs'
+                            ? 'bg-blue-500/15 text-[#0071e3] ring-1 ring-blue-500/30'
                             : isSelected
-                              ? 'bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                              ? 'bg-primary-500/15 text-primary-600 dark:text-primary-400'
+                              : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'
                         }`}>
                           {isUnread ? (
                             <Mail className="w-4 h-4 text-[#0071e3]" />
@@ -668,60 +654,53 @@ export default function InboxModal({
                         )}
                       </div>
 
-                      {/* Nội dung tóm tắt */}
+                      {/* Nội dung tóm tắt chuẩn 3 dòng Apple / Cursor */}
                       <div className="flex-1 min-w-0">
+                        {/* Dòng 1: Tên đối tác (trái) + Thời gian (phải) */}
                         <div className="flex items-center justify-between gap-1.5 mb-0.5">
-                          <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate flex items-center gap-1">
-                            <span>{toPublicAlias(item)}</span>
-                            {isManuallyUnread && (
-                              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50 shrink-0">
-                                Đọc sau
+                          <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                            {toPublicAlias(item)}
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 shrink-0 tabular">
+                            {formatCleanDateLabel(item.date)}
+                          </span>
+                        </div>
+
+                        {/* Dòng 2: Lộ trình */}
+                        <p className="text-[11.5px] text-slate-600 dark:text-slate-300 font-medium truncate mb-1">
+                          {item.from} ➔ {item.to}
+                        </p>
+
+                        {/* Dòng 3: Giá thỏa thuận (trái) + Badges trạng thái & Đọc sau (phải) */}
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="tabular font-bold text-xs text-primary-600 dark:text-primary-400">
+                            {item.totalDeal ? formatVND(item.totalDeal) : 'Thỏa thuận'}
+                          </span>
+
+                          <div className="shrink-0 flex items-center gap-1">
+                            {/* Chip Chưa đọc / Đọc sau (nếu đang unread) */}
+                            {isUnread && (
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950/80 text-[#0071e3] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 shrink-0 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3] animate-pulse" />
+                                <span>{isManuallyUnread ? 'Đọc sau' : 'Chưa đọc'}</span>
                               </span>
                             )}
-                          </span>
-                          <div className="shrink-0 flex items-center gap-1">
-                            {/* Nút Chưa đọc / Đọc sau: Hiển thị rõ ràng, không ẩn opacity-0 */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleUnread(id);
-                              }}
-                              className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                                isUnread
-                                  ? 'text-[#0071e3] bg-blue-50 dark:bg-blue-950/80 ring-1 ring-blue-500/30'
-                                  : 'text-slate-400 hover:text-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-950/40'
-                              }`}
-                              title={isUnread ? 'Đánh dấu đã đọc (Phím U)' : 'Đánh dấu chưa đọc để đọc sau (Phím U / Chuột phải)'}
-                              aria-label={isUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc'}
-                            >
-                              {isUnread ? <Mail className="w-3.5 h-3.5" /> : <MailOpen className="w-3.5 h-3.5" />}
-                            </button>
+
+                            {/* Status badge */}
                             {status === 'confirmed' ? (
-                              <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
                                 Đã chốt
                               </span>
                             ) : status === 'pre_confirmed' ? (
-                              <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-300/40 shrink-0 animate-pulse">
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-300/40 shrink-0 animate-pulse">
                                 Giữ 15p
                               </span>
                             ) : (
-                              <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300/40 shrink-0">
+                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/40 shrink-0">
                                 Đang hỏi
                               </span>
                             )}
                           </div>
-                        </div>
-
-                        <p className="text-[11.5px] text-slate-600 dark:text-slate-400 font-medium truncate">
-                          {item.from} ➔ {item.to}
-                        </p>
-
-                        <div className="flex items-center justify-between text-[10.5px] text-slate-400 mt-1 pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
-                          <span className="tabular font-semibold text-primary-600 dark:text-primary-400">
-                            {item.totalDeal ? formatVND(item.totalDeal) : 'Thỏa thuận'}
-                          </span>
-                          <span>{formatCleanDateLabel(item.date)}</span>
                         </div>
                       </div>
                     </div>
