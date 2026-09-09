@@ -18,7 +18,8 @@ import {
   ShieldAlert,
   PhoneOff,
   Ban,
-  Mail
+  Mail,
+  MailOpen
 } from 'lucide-react';
 import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -560,12 +561,16 @@ export default function InboxModal({
                     <div className="flex items-start gap-2.5">
                       {/* Avatar với Presence dot góc dưới & Unread dot góc trên */}
                       <div className="relative shrink-0 mt-0.5">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold ${
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-colors ${
                           isSelected
                             ? 'bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                         }`}>
-                          <User className="w-4 h-4" />
+                          {isUnread ? (
+                            <Mail className="w-4 h-4 text-[#0071e3]" />
+                          ) : (
+                            <MailOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                          )}
                         </div>
                         {/* Chấm trực tuyến gắn góc dưới avatar */}
                         <div className="absolute -bottom-0.5 -right-0.5">
@@ -605,7 +610,7 @@ export default function InboxModal({
                               }`}
                               title={isUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc để đọc sau'}
                             >
-                              <Mail className="w-3 h-3" />
+                              {isUnread ? <Mail className="w-3 h-3" /> : <MailOpen className="w-3 h-3" />}
                             </button>
                             {status === 'confirmed' ? (
                               <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
@@ -695,7 +700,11 @@ export default function InboxModal({
                     }`}
                     title={isActiveUnread ? 'Đánh dấu đã đọc' : 'Đánh dấu chưa đọc để xem lại sau'}
                   >
-                    <Mail className={`w-3.5 h-3.5 ${isActiveUnread ? 'text-[#0071e3]' : 'text-slate-500'}`} />
+                    {isActiveUnread ? (
+                      <Mail className="w-3.5 h-3.5 text-[#0071e3]" />
+                    ) : (
+                      <MailOpen className="w-3.5 h-3.5 text-slate-500" />
+                    )}
                     <span className="hidden sm:inline">{isActiveUnread ? 'Chưa đọc' : 'Đọc sau'}</span>
                   </button>
 
