@@ -144,26 +144,27 @@ export default function EscrowBookingModal({
     return false;
   }, [isOwner, item, currentUser]);
 
+  const baseSeatPrice = item?.basePricePerSeat || item?.expectedPrice || item?.price || 180000;
+  const [proposedUnitPrice, setProposedUnitPrice] = useState(baseSeatPrice);
+  const [showNegotiate, setShowNegotiate] = useState(false);
+
+  // Price Guardrail
+  const priceGuardrail = useMemo(() => {
+    if (!item) return null;
+    return getPriceGuardrail(item?.from, item?.to, proposedUnitPrice);
+  }, [item, proposedUnitPrice]);
+
+  useEffect(() => {
+    setProposedUnitPrice(baseSeatPrice);
+    setShowNegotiate(false);
+  }, [item?.id, baseSeatPrice]);
+
   if (!item) return null;
 
   const isDriverItem = item.type === 'driver_offer';
   const maxSeats = item.availableSeats || item.seatsNeeded || 4;
   const pricing = calculatePricing(item, seats);
   const timeSlot = getTimeSlotLabel(item, lang);
-
-  const baseSeatPrice = item.basePricePerSeat || item.expectedPrice || item.price || 180000;
-  const [proposedUnitPrice, setProposedUnitPrice] = useState(baseSeatPrice);
-  const [showNegotiate, setShowNegotiate] = useState(false);
-
-  // Price Guardrail
-  const priceGuardrail = useMemo(() => {
-    return getPriceGuardrail(item?.from, item?.to, proposedUnitPrice);
-  }, [item?.from, item?.to, proposedUnitPrice]);
-
-  useEffect(() => {
-    setProposedUnitPrice(baseSeatPrice);
-    setShowNegotiate(false);
-  }, [item?.id, baseSeatPrice]);
 
   const effectiveUnitPrice = Number(proposedUnitPrice) || baseSeatPrice;
   const effectiveTotal = effectiveUnitPrice * seats;

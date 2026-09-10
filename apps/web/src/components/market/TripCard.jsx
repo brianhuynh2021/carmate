@@ -150,17 +150,18 @@ export default function TripCard({
   const { lang } = useI18n();
   const [coverFailed, setCoverFailed] = useState(false);
 
-  if (!item) return null;
-
-  const isDriver = item.type === 'driver_offer';
-
-  const price = item.basePricePerSeat || item.expectedPrice || item.suggestedContribution || item.price || 180000;
-  const formattedPrice = `${Number(price || 0).toLocaleString('vi-VN')}đ`;
+  const price = item?.basePricePerSeat || item?.expectedPrice || item?.suggestedContribution || item?.price || 180000;
 
   // Dải biên độ giá thông minh (Price Guardrail Benchmark)
   const priceGuardrail = useMemo(() => {
+    if (!item) return null;
     return getPriceGuardrail(item?.from, item?.to, price);
-  }, [item?.from, item?.to, price]);
+  }, [item, price]);
+
+  if (!item) return null;
+
+  const isDriver = item.type === 'driver_offer';
+  const formattedPrice = `${Number(price || 0).toLocaleString('vi-VN')}đ`;
 
   // Danh tính công khai: chỉ hiển thị bí danh vai trò + mã định danh chuẩn (Chủ xe CX-xxx / Khách KX-xxx)
   const driverDisplayName = toPublicAlias(item);
