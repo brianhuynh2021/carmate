@@ -54,20 +54,21 @@ export default {
     market: 'Khám phá',
     match: 'Ghép chuyến',
     post: 'Đăng chuyến',
-    myTrips: 'Chuyến của tôi',
-    booked: 'Chuyến đã hẹn',
+    myTrips: 'Bài đăng',
+    booked: 'Lịch hẹn',
     profile: 'Tín nhiệm',
     policy: 'Quy chế',
     postCta: 'Đăng chuyến',
-    aiAssistant: 'Trợ lý AI',
+    assistant: 'Trợ lý',
+    aiAssistant: 'Trợ lý',
     signIn: 'Đăng nhập',
     signInOrRegister: 'Đăng nhập / Đăng ký',
     mobile: {
       market: 'Khám phá',
       match: 'Ghép chuyến',
       post: 'Đăng chuyến',
-      myTrips: 'Tôi đăng',
-      booked: 'Đã hẹn',
+      myTrips: 'Bài đăng',
+      booked: 'Lịch hẹn',
       profile: 'Tín nhiệm'
     }
   },
@@ -77,7 +78,7 @@ export default {
     adminBadge: 'Quản trị viên',
     profileGarage: 'Hồ sơ & Garage của tôi',
     noVehicle: 'Chưa có xe',
-    myTrips: 'Chuyến xe của tôi',
+    myTrips: 'Bài đăng của tôi',
     adminPortal: 'Cổng Quản Trị Hệ Thống',
     safetyPolicy: 'Quy chế an toàn 100%',
     language: 'Ngôn ngữ',
@@ -138,10 +139,10 @@ export default {
     inclusive: 'Đã gồm xăng & cầu đường',
     basis: 'Định giá tham khảo',
     modalTitle: 'Định giá tham khảo theo tuyến',
-    modalSub: 'Cơ sở tính toán kỹ thuật dựa trên cự ly, hao phí nhiên liệu và vé cầu đường thực tế',
+    modalSub: 'Cơ sở tính toán kỹ thuật dựa trên cự ly, hao phí nhiên liệu và phí cầu đường thực tế',
     disclaimerTitle: 'Thông tin tham khảo · Giá cả do hai bên tự do thoả thuận',
     disclaimerBody:
-      'Mức giá gợi ý chỉ mang tính chất tham khảo kỹ thuật (dựa trên hao phí xăng RON 95 và vé cầu đường trung bình để chia sẻ công bằng chi phí lăn bánh, không phải cước taxi hay giá niêm yết cố định). Mức giá chốt sau cùng hoàn toàn phụ thuộc vào sự thống nhất trực tiếp giữa Chủ xe và Người đi cùng (tùy theo điểm đón trả tận nơi, mang nhiều đồ đạc, hoặc đón lệch tuyến). Hai bên vui lòng không vin vào con số này để khiếu nại đối phương hoặc nền tảng CarMate.',
+      'Mức giá gợi ý chỉ mang tính chất tham khảo kỹ thuật (dựa trên hao phí xăng RON 95 và phí cầu đường trung bình để chia sẻ công bằng chi phí lăn bánh, không phải cước taxi hay giá niêm yết cố định). Mức giá chốt sau cùng hoàn toàn phụ thuộc vào sự thống nhất trực tiếp giữa Chủ xe và Người đi cùng (tùy theo điểm đón trả tận nơi, mang nhiều đồ đạc, hoặc đón lệch tuyến). Hai bên vui lòng không vin vào con số này để khiếu nại đối phương hoặc nền tảng CarMate.',
     disclaimerShort: 'Giá tham khảo · Tự do thoả thuận',
     heroLabel: 'Định giá tham khảo cho tuyến này',
     heroDesc:
@@ -151,7 +152,7 @@ export default {
     technicalTitle: 'Chi phí vận hành thực tế',
     distance: 'Quãng đường',
     fuel: 'Xăng RON 95',
-    bot: 'Vé cầu đường',
+    bot: 'Phí cầu đường',
     basisLabel: 'Cơ sở',
     marketTitle: 'So sánh thị trường',
     limo: 'Limousine 9 chỗ',
@@ -175,7 +176,7 @@ export default {
 
   post: {
     title: 'Đăng chuyến đi',
-    subtitle: 'Điền thông tin lộ trình. Sau khi đăng, hệ thống tự tạo thẻ vé để bạn chia sẻ vào nhóm Zalo.',
+    subtitle: 'Điền thông tin lộ trình. Sau khi đăng, hệ thống tự tạo ảnh lịch trình để bạn chia sẻ vào nhóm Zalo.',
     whoAreYou: 'Bạn là',
     driverRole: 'Chủ xe có ghế trống',
     passengerRole: 'Người cần tìm xe',
@@ -242,7 +243,7 @@ export default {
     emptyTitle: 'Chưa có lịch hẹn chuyến nào',
     emptyDesc: 'Tìm chuyến tiện đường và nhắn Zalo với chủ xe để chốt điểm đón.',
     emptyCta: 'Tìm chuyến ngay',
-    title: 'Chuyến đi đã hẹn',
+    title: 'Lịch Hẹn Đi Chung Xe',
     count: '{n} chuyến đang chờ khởi hành',
     escrowNote: 'Cam kết đang được giữ',
     codeLabel: 'Mã kết nối',
@@ -411,7 +412,7 @@ export default {
     s1: [
       [
         '0% phí chiết khấu',
-        'CarMate không thu hoa hồng hay chiết khấu trên khoản đóng góp chi phí chuyến đi. Toàn bộ tiền chia sẻ xăng và vé cầu đường thuộc về chủ xe.'
+        'CarMate không thu hoa hồng hay chiết khấu trên khoản đóng góp chi phí chuyến đi. Toàn bộ tiền chia sẻ xăng và phí cầu đường thuộc về chủ xe.'
       ],
       [
         'Kết nối trực tiếp',

@@ -20,7 +20,7 @@ import { ZaloIcon } from '../ui/SocialIcons.jsx';
 
 const QUICK_PROMPTS = [
   'Tìm xe từ Hàng Xanh về Đồng Xoài chiều nay',
-  'Giá xăng và vé cầu đường tuyến QL13 hiện khoảng bao nhiêu?',
+  'Chi phí xăng và phí cầu đường tuyến QL13 hiện khoảng bao nhiêu?',
   'Kiểm tra độ uy tín của Chủ xe Tuấn Bình Phước',
   'Soạn giúp tôi tin nhắn Zalo hẹn đón lịch sự ở cây xăng'
 ];
@@ -30,7 +30,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
     {
       id: 'welcome',
       role: 'assistant',
-      text: 'Xin chào! Mình là **Trợ lý CarMate**.\n\nMình có thể hỗ trợ bạn:\n• Tìm chuyến xe ghép cùng đường có điểm đón tiện nhất\n• Tra cứu định mức tiền xăng & vé cầu đường hợp lý\n• Kiểm tra điểm tín nhiệm và đánh giá của chủ xe\n\nBạn đang muốn tìm chuyến đi đâu hôm nay?',
+      text: 'Xin chào! Mình là **Trợ lý CarMate**.\n\nMình có thể hỗ trợ bạn:\n• Tìm chuyến xe ghép cùng đường có điểm đón tiện nhất\n• Tra cứu định mức tiền xăng & phí cầu đường hợp lý\n• Kiểm tra điểm tín nhiệm và đánh giá của chủ xe\n\nBạn đang muốn tìm chuyến đi đâu hôm nay?',
       reasoningSteps: [],
       suggestedTrips: []
     }
@@ -89,7 +89,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
           id: `err-${Date.now()}`,
           role: 'assistant',
           text:
-            'Xin lỗi bạn, hiện tại kết nối đến Trợ lý AI đang bị gián đoạn: ' +
+            'Xin lỗi bạn, hiện tại kết nối đến Trợ lý đang bị gián đoạn: ' +
             (err.message || 'Vui lòng thử lại sau ít giây.'),
           reasoningSteps: ['Lỗi kết nối mạng hoặc máy chủ bận'],
           suggestedTrips: []

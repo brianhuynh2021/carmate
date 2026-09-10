@@ -8,9 +8,7 @@ import {
   XCircle,
   Share2,
   Check,
-  Ticket,
   MessageSquare,
-  ArrowRight,
   History,
   Star,
   Sparkles,
@@ -25,7 +23,7 @@ import {
   ChevronRight,
   X
 } from 'lucide-react';
-import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
+import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus, formatCleanDateLabel, parseLocation } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -308,7 +306,7 @@ export default function BookedTripList({
       <SectionHeader
         icon={Clock}
         title={t('booked.title')}
-        description="Lịch hẹn đi chung xe · 0% chiết khấu sàn · Trực tiếp kết nối bạn đồng hành"
+        description="Lịch hẹn đi chung xe · Cam kết đồng hành 0đ phí sàn · Trực tiếp kết nối bạn đồng hành"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5 font-medium">
             0đ Phí sàn · Tự do kết nối
@@ -540,6 +538,8 @@ export default function BookedTripList({
             const tripDateLabel = formatCleanDateLabel(rawTripDate);
 
             const isExpanded = expandedIds.has(record.escrowId || record.id);
+            const fromParsed = parseLocation(record.from);
+            const toParsed = parseLocation(record.to);
 
             return (
               <article
@@ -563,7 +563,7 @@ export default function BookedTripList({
                   <div className="flex items-center justify-between gap-2.5 flex-wrap">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 inline-flex items-center justify-center shrink-0">
-                        <Ticket className="w-4 h-4" />
+                        <Clock className="w-4 h-4" />
                       </span>
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className="font-display font-bold text-sm text-[#0071e3] tabular tracking-tight">
@@ -597,12 +597,29 @@ export default function BookedTripList({
                     </div>
                   </div>
 
-                  {/* Dòng 2: Lộ Trình Tuyến Đường & Thời Gian */}
+                  {/* Dòng 2: Lộ Trình Tuyến Đường & Thời Gian (Đồng Bộ Chuẩn Apple HIG) */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm">
                     <div className="flex items-center gap-2 font-bold text-[#1d1d1f] dark:text-white min-w-0">
-                      <span className="truncate">{record.from}</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
-                      <span className="truncate">{record.to}</span>
+                      <span className="text-[14.5px] sm:text-[15.5px] font-bold tracking-tight truncate max-w-[44%]">
+                        {fromParsed.main}
+                      </span>
+                      <div className="shrink-0 flex items-center px-0.5 text-slate-400 dark:text-slate-500 transition-colors">
+                        <svg
+                          className="w-7 h-3 text-current shrink-0"
+                          viewBox="0 0 28 12"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M2 6h22.5M18.5 2.5L24.5 6L18.5 9.5" />
+                        </svg>
+                      </div>
+                      <span className="text-[14.5px] sm:text-[15.5px] font-bold tracking-tight truncate max-w-[44%]">
+                        {toParsed.main}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-1.5 text-xs text-[#86868b] dark:text-slate-400 shrink-0 font-medium">

@@ -59,7 +59,7 @@ export default function FairSplitModal({
     return Math.round(totalTripCost / (passengerSeats + 1) / 5000) * 5000;
   }, [totalTripCost, passengerSeats]);
 
-  // So sánh với taxi truyền thống hoặc taxi công nghệ (trung bình 12.500đ/km + vé cầu đường)
+  // So sánh với taxi truyền thống hoặc taxi công nghệ (trung bình 12.500đ/km + phí cầu đường)
   const taxiCost = useMemo(() => {
     return distanceKm * 12500 + tollFee;
   }, [distanceKm, tollFee]);
@@ -224,7 +224,7 @@ export default function FairSplitModal({
               <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
                 <span className="flex items-center gap-1">
                   <Coins className="w-3.5 h-3.5 text-sky-500" />
-                  <span>Vé cầu đường (Cao tốc):</span>
+                  <span>Phí cầu đường (Cao tốc):</span>
                 </span>
                 <span className="font-semibold tabular">{formatVND(tollFee)}</span>
               </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Sparkles, Plus, Clock, Car } from 'lucide-react';
+import { Compass, Sparkles, Plus, Clock, FileText } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 
 export default function BottomNavBar({
@@ -15,8 +15,8 @@ export default function BottomNavBar({
     { id: 'market', label: t('nav.mobile.market'), icon: Compass },
     { id: 'match', label: t('nav.mobile.match'), icon: Sparkles },
     { id: 'post', label: t('nav.mobile.post'), icon: Plus, fab: true },
-    { id: 'my-trips', label: t('nav.mobile.myTrips') || 'Chuyến tôi', icon: Car, badge: myTripsCount },
-    { id: 'booked', label: t('nav.mobile.booked'), icon: Clock, badge: bookedCount }
+    { id: 'my-trips', label: t('nav.mobile.myTrips') || 'Bài đăng', icon: FileText, badge: myTripsCount },
+    { id: 'booked', label: t('nav.mobile.booked') || 'Lịch hẹn', icon: Clock, badge: bookedCount }
   ];
 
   return (

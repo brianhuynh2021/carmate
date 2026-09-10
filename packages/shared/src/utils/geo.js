@@ -758,7 +758,7 @@ export function maskLicensePlate(plateStr, fallbackLocation = '') {
 }
 
 /**
- * Trích xuất địa danh đô thị/tỉnh thành lớn để làm tiêu đề vé xe chuẩn Apple Wallet & Fly.io
+ * Trích xuất địa danh đô thị/tỉnh thành lớn để làm tiêu đề hành trình chuẩn Apple Wallet & Fly.io
  * Tuyệt đối KHÔNG cắt đôi từ ghép tiếng Việt (như "Phan Thiết" thành "Phan", "Bến Tre" thành "Bến")
  */
 export function getCorridorDisplay(item, fromParsed, toParsed) {

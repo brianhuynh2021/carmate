@@ -213,7 +213,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
               <p className="text-[11px] text-[#6e6e73] dark:text-slate-400">
                 {currentRole === 'passenger'
                   ? 'Dán nhu cầu tìm xe hoặc gõ 1 câu tự nhiên — Hệ thống tự điền điểm đón, giờ đi và ngân sách'
-                  : 'Dán bài đăng Zalo/Facebook hoặc gõ 1 câu tự nhiên — Hệ thống tự điền lộ trình, giờ chạy và giá vé'}
+                  : 'Dán bài đăng Zalo/Facebook hoặc gõ 1 câu tự nhiên — Hệ thống tự điền lộ trình, giờ chạy và chi phí phụ xăng'}
               </p>
             </div>
           </div>
@@ -523,7 +523,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] dark:bg-white/10 dark:hover:bg-white/20 border border-black/[0.08] dark:border-white/15 text-[#1d1d1f] dark:text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer active:scale-[0.98] inline-flex items-center justify-center gap-2 shrink-0"
               >
                 <Share2 className="w-4 h-4 text-[#0071e3] shrink-0" />
-                <span>Xuất Vé VIP Đăng Zalo/FB</span>
+                <span>Xuất Thẻ Lịch Trình Zalo/FB</span>
               </button>
               <button
                 type="button"

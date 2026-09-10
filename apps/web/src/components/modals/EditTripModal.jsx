@@ -298,7 +298,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             </button>
           )}
           <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
-            · Cập nhật lộ trình, mốc đón trả & giá vé
+            · Cập nhật lộ trình, mốc đón trả & chi phí phụ xăng
           </span>
         </div>
       }
@@ -676,13 +676,13 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           </div>
         )}
 
-        {/* ── 3. GIÁ VÉ & SỐ CHỖ (TACTILE PILLS & STEPPERS) ── */}
+        {/* ── 3. CHI PHÍ & SỐ CHỖ (TACTILE PILLS & STEPPERS) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Giá chia sẻ */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
               <DollarSign className="w-3.5 h-3.5 text-primary-600" />
-              <span>Giá vé ({isDriver ? 'thu khách' : 'dự kiến'}):</span>
+              <span>Chi phí phụ xăng ({isDriver ? 'chia sẻ' : 'dự kiến'}):</span>
             </label>
             <div className="relative">
               <input

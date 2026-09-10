@@ -96,7 +96,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                   Định mức xăng & Giá tham khảo
                 </span>
                 <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
-                  Chuẩn 8L/100km & Vé cầu đường
+                  Chuẩn 8L/100km & Phí cầu đường
                 </span>
               </div>
 
@@ -112,7 +112,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                   ~{formatVND(info.suggestedRate)}{t('common.perSeat')}
                 </span>
                 <span className="text-[11px] text-[#86868b] dark:text-slate-400 font-medium hidden md:inline truncate">
-                  · Xăng RON 95: ~{formatVND(info.fuelCost)} · <span>Vé cầu đường</span>: ~{formatVND(info.botFee)}
+                  · Xăng RON 95: ~{formatVND(info.fuelCost)} · <span>Phí cầu đường</span>: ~{formatVND(info.botFee)}
                 </span>
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
                 <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
                   <p className="text-[11.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
                     <Milestone className="w-3.5 h-3.5 text-blue-500" />
-                    <span>Vé cầu đường</span>
+                    <span>Phí cầu đường</span>
                   </p>
                   <p className="text-sm font-bold text-slate-900 dark:text-white font-mono mt-1">
                     ~{formatVND(info?.botFee || 0)}

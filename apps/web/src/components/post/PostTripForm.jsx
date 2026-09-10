@@ -583,7 +583,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     const perks = [];
     if (isDriver) {
       if (noSmoking) perks.push('Không khói thuốc');
-      if (botIncluded) perks.push('Trọn gói vé cầu đường & xăng xe');
+      if (botIncluded) perks.push('Trọn gói phí cầu đường & xăng xe');
       if (familyCar) perks.push('Xe gia đình sạch sẽ');
       if (largeTrunk) perks.push('Cốp rộng để đồ');
       if (acOn) perks.push('Bật máy lạnh');
@@ -1081,7 +1081,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     ? vehicleCapacity === 5
                       ? 'Xe 5 chỗ nhận tối đa 4 khách'
                       : 'Xe 7 chỗ nhận tối đa 6 khách'
-                    : 'tối đa 6 vé'}
+                    : 'tối đa 6 người'}
                 </span>
               </label>
               <div className={`grid ${isDriver && vehicleCapacity === 5 ? 'grid-cols-4' : 'grid-cols-6'} gap-1.5`}>
@@ -1561,7 +1561,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   <Checkbox
                     checked={botIncluded}
                     onChange={(e) => setBotIncluded(e.target.checked)}
-                    label="Trọn gói xăng xe & vé cầu đường"
+                    label="Trọn gói xăng xe & phí cầu đường"
                   />
                   <Checkbox
                     checked={familyCar}
@@ -1757,7 +1757,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
                   <span className="text-slate-400 text-[10.5px] block">
-                    {isDriver ? 'Ghế trống nhận khách:' : 'Số vé cần ghép:'}
+                    {isDriver ? 'Ghế trống nhận khách:' : 'Số người cần ghép:'}
                   </span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
                     {seats} {isDriver ? 'ghế' : 'người'}
@@ -1829,7 +1829,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
               </button>
             </div>
 
-            {/* Chi tiết vé xem trước */}
+            {/* Chi tiết chuyến đi xem trước */}
             <div className="space-y-3.5 p-4 rounded-2xl bg-slate-50 dark:bg-[#131929] border border-slate-200/80 dark:border-white/5">
               {/* Huy hiệu vai trò & Loại xe */}
               <div className="flex items-center justify-between gap-2">

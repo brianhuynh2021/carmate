@@ -548,7 +548,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 />
               </div>
               <p className="text-[11px] text-[#86868b] mt-1">
-                Tên hiển thị giúp Người đi cùng hoặc Chủ xe nhận diện trên danh sách và vé xác nhận.
+                Tên hiển thị giúp Người đi cùng hoặc Chủ xe nhận diện trên danh sách và xác nhận lịch hẹn.
               </p>
             </div>
 
@@ -612,10 +612,10 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </p>
             </div>
 
-            {/* Trường 2: Email nhận thông báo vé */}
+            {/* Trường 2: Email nhận thông báo lịch hẹn */}
             <div>
               <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                Địa chỉ Email <span className="text-[11px] font-normal text-[#86868b]">(Nhận thông báo & e-Ticket)</span>
+                Địa chỉ Email <span className="text-[11px] font-normal text-[#86868b]">(Nhận thông báo lịch hẹn)</span>
               </label>
               <div className="relative">
                 <input
