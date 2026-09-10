@@ -1177,13 +1177,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>Báo Cáo Sai Lệch Loại Xe (Biển Vàng / Biển Trắng)</span>
+                    <span>Báo Cáo Vi Phạm An Toàn & Cam Kết (Chống Xe Dù & Nhồi Nhét)</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
                       {reports?.vehicleMismatchReports?.length || 0} phản ánh
                     </span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Bảo vệ tính trung thực: Xử lý đổi loại xe sang Biển vàng hoặc khóa tài khoản vi phạm
+                    Bảo vệ tính an toàn và minh bạch: Xử lý nhồi nhét, sang xe giữa đường, chặt chém giá hoặc khóa tài khoản vi phạm
                   </p>
                 </div>
               </div>
@@ -1193,10 +1193,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <div className="p-6 rounded-xl bg-slate-50/60 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 text-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
                 <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
-                  Tất cả các chuyến xe đều trung thực với loại biển số đã đăng ký!
+                  Tất cả chuyến xe đều tuân thủ cam kết văn minh, không nhồi nhét, không sang xe!
                 </p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Không có phản ánh nào về xe biển vàng núp bóng xe gia đình.
+                  Không có phản ánh nào về vi phạm an toàn hay nhồi nhét khách.
                 </p>
               </div>
             ) : (

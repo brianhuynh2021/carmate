@@ -1043,14 +1043,17 @@ export async function reportVehicleMismatch(req, res) {
     const declaredCategory = trip?.carCategory || booking.carCategory || 'family_car';
 
     const mismatchLabels = {
+      overcrowded: 'Xe nhồi nhét khách / Chở quá tải',
+      passenger_transfer: 'Bắt sang xe / Đổi xe giữa đường (Xe dù)',
+      price_gouging: 'Chặt chém giá / Đòi thêm tiền ngoài thỏa thuận',
+      different_car: 'Xe khác hoàn toàn mô tả / Không đúng người đón',
       yellow_plate: 'Xe đón thực tế là Biển vàng (Dịch vụ kinh doanh)',
-      overcrowded: 'Xe nhồi nhét khách / Ghép xe trái phép',
-      different_car: 'Xe khác hoàn toàn mô tả / Đổi xe giữa đường',
-      other: 'Sai lệch loại xe khác'
+      yellow_commercial_plate: 'Xe đón thực tế là Biển vàng (Dịch vụ kinh doanh)',
+      other: 'Vấn đề an toàn & cam kết khác'
     };
 
     const mismatchTitle = mismatchLabels[mismatchType] || mismatchType;
-    const reporterName = req.user?.name || booking.passengerName || booking.contactName || 'Hành khách CarMate';
+    const reporterName = req.user?.name || booking.passengerName || booking.contactName || 'Người đi cùng CarMate';
     const reporterPhone = req.user?.phone || booking.passengerPhone || booking.contactPhone || 'N/A';
     const driverName = trip?.publicName || booking.driverName || 'Chủ xe';
     const driverPhone = trip?.phoneReal || trip?.phone || booking.driverPhone || booking.contactPhone || 'N/A';
@@ -1097,27 +1100,27 @@ export async function reportVehicleMismatch(req, res) {
     // Bắn tin cảnh báo tức thời tới Telegram Founder
     const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
     const declaredCatLabel =
-      declaredCategory === 'family_car' ? '🚗 Xe gia đình (Biển trắng)' : '⚡ Xe tiện chuyến (Biển vàng)';
+      declaredCategory === 'convenient_trip' ? '⚡ Xe tiện chuyến quay đầu' : '🚗 Xe gia đình / Cá nhân';
     const teleMsg =
-      `🚨 <b>[CARMATE CẢNH BÁO GIAN LẬN LOẠI XE]</b>\n` +
+      `🚨 <b>[CARMATE CẢNH BÁO VI PHẠM AN TOÀN & CAM KẾT]</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `⚠️ <b>Người đi cùng vừa báo cáo xe đón không đúng mô tả!</b>\n` +
+      `⚠️ <b>Người đi cùng vừa báo cáo vi phạm an toàn / cam kết chuyến đi!</b>\n` +
       `⏰ <b>Thời gian:</b> ${timeStr}\n` +
       `📋 <b>Mã đặt chuyến:</b> <code>${id}</code>\n` +
       `🚗 <b>Chủ xe:</b> ${driverName} (<code>${driverPhone}</code>)\n` +
-      `🏷️ <b>Loại xe đã đăng ký:</b> ${declaredCatLabel}\n` +
-      `⚡ <b>Vấn đề phản ánh:</b> <b>${mismatchTitle}</b>\n` +
+      `🏷️ <b>Phân loại chuyến:</b> ${declaredCatLabel}\n` +
+      `⚡ <b>Hành vi phản ánh:</b> <b>${mismatchTitle}</b>\n` +
       (cleanActualPlate ? `🔢 <b>Biển số đón thực tế:</b> <code>${cleanActualPlate}</code>\n` : '') +
       (cleanNote ? `📝 <b>Ghi chú của người đi cùng:</b> <i>&ldquo;${cleanNote}&rdquo;</i>\n` : '') +
       `👤 <b>Người báo cáo:</b> ${reporterName} (<code>${reporterPhone}</code>)\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `👉 <b>Thao tác:</b> Đăng nhập Cổng Admin để bấm 1-chạm đổi sang Biển vàng hoặc khóa tài khoản vi phạm.`;
+      `👉 <b>Thao tác:</b> Đăng nhập Cổng Admin để can thiệp bảo vệ người đi cùng hoặc xử lý tài khoản vi phạm.`;
 
     sendTelegramMessage(teleMsg, { parseMode: 'HTML', req }).catch(() => {});
 
     return res.status(200).json({
       success: true,
-      message: 'Đã tiếp nhận báo cáo sai lệch xe. Ban Quản Trị CarMate sẽ xử lý ngay lập tức để bảo vệ bạn!',
+      message: 'Đã tiếp nhận báo cáo vi phạm an toàn & cam kết. Ban Quản Trị CarMate sẽ xử lý ngay lập tức để bảo vệ bạn!',
       data: mismatchReport
     });
   } catch (err) {

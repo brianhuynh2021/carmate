@@ -6,29 +6,34 @@ import { Field, Input } from '../ui/Field.jsx';
 
 const MISMATCH_OPTIONS = [
   {
-    id: 'yellow_plate',
-    label: 'Xe biển vàng (Dịch vụ)',
-    desc: 'Chủ xe đăng ký xe gia đình biển trắng nhưng thực tế đón bằng xe dịch vụ kinh doanh biển vàng.'
+    id: 'overcrowded',
+    label: 'Nhồi nhét khách / Chở quá tải',
+    desc: 'Xe chở quá số ghế đăng kiểm an toàn (VD: xe 5 chỗ nhận 5-6 khách, xe tải nhận > 1 người trong cabin).'
   },
   {
-    id: 'overcrowded',
-    label: 'Nhồi nhét khách / Ghép xe',
-    desc: 'Xe nhồi nhét quá số lượng ghế, chở quá tải hoặc bắt khách sang xe khác giữa đường.'
+    id: 'passenger_transfer',
+    label: 'Bắt sang xe / Đổi xe giữa đường (Xe dù)',
+    desc: 'Chủ xe gom khách rồi bán cuốc hoặc ép sang xe khác dọc đường, không đi thẳng đúng xe đã hẹn.'
+  },
+  {
+    id: 'price_gouging',
+    label: 'Chặt chém giá / Đòi thêm tiền ngoài thỏa thuận',
+    desc: 'Đòi thêm tiền vé cầu đường, phụ phí hành lý vô lý hoặc ép giá cao hơn mức đã thỏa thuận trên CarMate.'
   },
   {
     id: 'different_car',
-    label: 'Khác mẫu xe / Biển số',
-    desc: 'Mẫu xe hoặc biển số xe thực tế đến đón khác hoàn toàn so với thông tin trên CarMate.'
+    label: 'Khác xe / Không đúng người đón',
+    desc: 'Mẫu xe, biển số hoặc người đến đón khác hoàn toàn so với thông tin đã hẹn trước.'
   },
   {
     id: 'other',
-    label: 'Sai lệch loại xe khác',
-    desc: 'Các vấn đề phát sinh khác liên quan đến phương tiện đón khách.'
+    label: 'Vấn đề an toàn & cam kết khác',
+    desc: 'Bỏ rơi khách, đón trễ quá mức hoặc phương tiện không đảm bảo an toàn kỹ thuật.'
   }
 ];
 
 export default function VehicleMismatchModal({ record, onClose, onSubmitReport }) {
-  const [mismatchType, setMismatchType] = useState('yellow_plate');
+  const [mismatchType, setMismatchType] = useState('overcrowded');
   const [actualPlate, setActualPlate] = useState('');
   const [passengerNote, setPassengerNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -37,7 +42,7 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
 
   const targetName = record.contactName || record.driverName || 'Chủ xe';
   const declaredLabel =
-    record.carCategory === 'convenient_trip' ? '⚡ Xe tiện chuyến (Biển vàng)' : '🚗 Xe gia đình (Biển trắng)';
+    record.carCategory === 'convenient_trip' ? '⚡ Xe tiện chuyến quay đầu' : '🚗 Xe gia đình / Cá nhân';
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -65,7 +70,7 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
       size="md"
       icon={ShieldAlert}
       iconTone="danger"
-      title="Báo cáo sai lệch loại xe"
+      title="Báo cáo vi phạm an toàn & cam kết"
       subtitle={`Phản ánh chuyến đi với ${targetName} (${record.escrowId || record.id})`}
       footer={
         <div className="grid grid-cols-2 gap-3 w-full">
@@ -157,7 +162,7 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
             rows={3}
             value={passengerNote}
             onChange={(e) => setPassengerNote(e.target.value)}
-            placeholder="VD: Xe biển vàng dán chữ dịch vụ, trên xe có sẵn khách lạ khác, bắt trả thêm tiền hoặc đổi sang xe khác..."
+            placeholder="VD: Xe nhồi nhét 5 người vào xe 4 chỗ, tài xế bắt sang xe khác giữa đường, hoặc đòi thêm tiền ngoài thỏa thuận..."
             className="w-full p-3 rounded-2xl border text-xs text-slate-900 dark:text-white bg-white dark:bg-[#151c2e] border-slate-200/90 dark:border-white/[0.08] focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 outline-none transition-all"
           />
         </Field>
@@ -166,8 +171,8 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
         <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-xs">
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed text-[11.5px]">
-            <b>CarMate cam kết bảo mật tuyệt đối:</b> Báo cáo này sẽ được chuyển thẳng đến điện thoại của Ban Quản Trị
-            qua Telegram để can thiệp và đổi loại xe hoặc khóa tài khoản vi phạm.
+            <b>CarMate cam kết bảo vệ quyền lợi văn minh:</b> Báo cáo này sẽ được chuyển thẳng đến Ban Quản Trị
+            qua Telegram để xác minh tức thì và xử lý tài khoản vi phạm cam kết an toàn.
           </p>
         </div>
       </div>

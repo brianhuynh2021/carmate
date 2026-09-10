@@ -426,23 +426,88 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 10. Báo Cáo Sai Lệch Loại Xe (Biển Vàng vs Biển Trắng)
+    // 10. Báo Cáo Vi Phạm An Toàn & Cam Kết (First Principles - Chống Nhồi Nhét & Xe Dù)
     // -------------------------------------------------------------
-    console.log('\n--- 10. Kiểm thử Báo Cáo Sai Lệch Loại Xe (Biển Vàng / Biển Trắng) ---');
+    console.log('\n--- 10. Kiểm thử Báo Cáo Vi Phạm An Toàn & Cam Kết (First Principles) ---');
     try {
-      // Khách báo cáo xe đón thực tế là biển vàng kinh doanh vận tải
-      const mismatchRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
+      // 1. Khách báo cáo xe nhồi nhét quá số ghế quy định
+      const overcrowdRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
         method: 'POST',
         headers: passengerHeaders,
         body: JSON.stringify({
-          mismatchType: 'yellow_commercial_plate',
-          mismatchTitle: 'Xe đón thực tế là Biển vàng kinh doanh taxi',
-          note: 'Biển số 51G-999.88 màu vàng'
+          mismatchType: 'overcrowded',
+          passengerNote: 'Xe 5 chỗ nhưng nhồi nhét tới 6 khách chật ních, gây nguy hiểm khi đi cao tốc'
         })
       });
-      assert(mismatchRes.status === 200, 'Mismatch Report 1: Gửi báo cáo sai lệch loại xe thành công (HTTP 200)');
+      const overcrowdData = await overcrowdRes.json();
+      assert(overcrowdRes.status === 200 && overcrowdData.data?.mismatchTitle === 'Xe nhồi nhét khách / Chở quá tải', 'Safety Invariant 1: Báo cáo hành vi nhồi nhét quá tải thành công (HTTP 200)');
+
+      // 2. Khách báo cáo hành vi bắt sang xe / bán khách giữa đường (xe dù)
+      const transferRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          mismatchType: 'passenger_transfer',
+          actualPlate: '51G-888.99',
+          passengerNote: 'Chủ xe chạy đến trạm thu phí thì ép khách đổi sang một xe khác'
+        })
+      });
+      const transferData = await transferRes.json();
+      assert(transferRes.status === 200 && transferData.data?.mismatchTitle === 'Bắt sang xe / Đổi xe giữa đường (Xe dù)', 'Safety Invariant 2: Báo cáo hành vi bắt sang xe / bán khách giữa đường thành công (HTTP 200)');
+
+      // 3. Khách báo cáo hành vi chặt chém giá / đòi thêm tiền ngoài thỏa thuận
+      const gougingRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          mismatchType: 'price_gouging',
+          passengerNote: 'Tới nơi đòi thêm 100k tiền vé BOT dù trên app đã ghi trọn gói'
+        })
+      });
+      const gougingData = await gougingRes.json();
+      assert(gougingRes.status === 200 && gougingData.data?.mismatchTitle === 'Chặt chém giá / Đòi thêm tiền ngoài thỏa thuận', 'Safety Invariant 3: Báo cáo hành vi chặt chém giá ngoài thỏa thuận thành công (HTTP 200)');
+
+      // 4. Triết lý Elon Musk: Tinh thần trung lập phương tiện (Platform Neutrality)
+      // Xe tiện chuyến quay đầu (convenient_trip) lấp đầy ghế trống/thùng rỗng để chống lãng phí xã hội
+      const convenientTripRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: driverHeaders,
+        body: JSON.stringify({
+          type: 'driver_offer',
+          phoneReal: '0988112233',
+          from: 'Bình Dương (Ngã 4 Sở Sao)',
+          to: 'Đồng Xoài (Bình Phước)',
+          routeCategory: 'Tuyến QL14',
+          carType: 'Toyota Vios (Xe tiện chuyến quay đầu)',
+          carCategory: 'convenient_trip',
+          capacity: 5,
+          availableSeats: 3,
+          basePricePerSeat: 100000,
+          notes: 'Xe dịch vụ trả khách xong quay đầu về Đồng Xoài rỗng ghế. Chia sẻ chi phí xăng dầu chống lãng phí.'
+        })
+      });
+      const convenientTripData = await convenientTripRes.json();
+      assert(
+        convenientTripRes.status === 201 && convenientTripData.data.carCategory === 'convenient_trip',
+        'Platform Neutrality 1: Hoan nghênh xe tiện chuyến quay đầu tham gia triệt tiêu lãng phí xã hội (HTTP 201)'
+      );
+
+      // Đặt chỗ trên chuyến xe tiện chuyến quay đầu thành công không bị chặn
+      const bookConvenientRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          targetId: convenientTripData.data.id,
+          from: 'Ngã 4 Sở Sao',
+          to: 'Đồng Xoài',
+          contactPhone: '0933888999',
+          seats: 1,
+          totalDeal: 100000
+        })
+      });
+      assert(bookConvenientRes.status === 201, 'Platform Neutrality 2: Khách ghép chuyến xe tiện chuyến quay đầu thuận lợi và bình đẳng (HTTP 201)');
     } catch (err) {
-      assert(false, '10. Vehicle Mismatch', err.message);
+      assert(false, '10. Behavioral Safety & Platform Neutrality', err.message);
     }
 
     // -------------------------------------------------------------
