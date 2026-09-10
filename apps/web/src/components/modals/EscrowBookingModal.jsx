@@ -18,7 +18,8 @@ import {
   SlidersHorizontal,
   Package,
   Box,
-  Truck
+  Truck,
+  PhoneCall
 } from 'lucide-react';
 import {
   formatVND,
@@ -366,7 +367,29 @@ export default function EscrowBookingModal({
         title={isDriverItem ? 'Đã gửi lời nhắn ghép chuyến!' : 'Đã gửi đề xuất đón khách!'}
         subtitle={`Đã chuyển tới ${toPublicAlias(item)} · Thông báo tức thì qua App & Telegram`}
         footer={
-          <div className="w-full space-y-2">
+          <div className="w-full space-y-2.5">
+            {/* 2 Nút hành động trực tiếp: Nhắn Zalo & Gọi thật */}
+            {(item.phoneReal || item.phone) && (
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={`https://zalo.me/${String(item.phoneReal || item.phone).replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2.5 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200 dark:border-blue-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Nhắn Zalo Chủ xe</span>
+                </a>
+                <a
+                  href={`tel:${String(item.phoneReal || item.phone).replace(/\D/g, '')}`}
+                  className="py-2.5 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Gọi điện trực tiếp</span>
+                </a>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => {
@@ -387,7 +410,7 @@ export default function EscrowBookingModal({
               <span>Để sau & Tiếp tục tìm chuyến</span>
             </button>
             <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
-              💡 Bạn có thể trao đổi trực tiếp với {toPublicAlias(item)} trong khung chat để nhận diện đồng thuận điểm đón và giữ chỗ 15 phút.
+              💡 Bạn có thể trao đổi trực tiếp với {toPublicAlias(item)} qua Zalo, gọi điện hoặc khung chat để chốt điểm đón và giữ chỗ 15 phút.
             </p>
           </div>
         }
@@ -588,7 +611,7 @@ export default function EscrowBookingModal({
       </Button>
       <p className="text-center text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5 pt-0.5">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-        <span>0đ cọc</span>
+        <span>0đ cọc · Trao đổi Zalo & Gọi thật trước khi đi · Lên xe mới gửi tiền xăng</span>
       </p>
     </div>
   );

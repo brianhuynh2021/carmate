@@ -8,8 +8,11 @@ import {
   Zap,
   ArrowRight,
   Sparkles,
-  Truck
+  Truck,
+  ShieldCheck,
+  PhoneCall
 } from 'lucide-react';
+import { toPublicAlias } from '@carmate/shared';
 
 /**
  * BẢNG DÒNG THỜI GIAN CÁC CHUYẾN XE DỌC HÀNH LANG (CORRIDOR DEPARTURE TIMELINE)
@@ -206,6 +209,12 @@ export default function CorridorTimeline({
 
                 {/* Cột 2: Xe & Ghế trống */}
                 <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-400 border-t md:border-t-0 md:border-l border-black/[0.06] dark:border-zinc-800 pt-2 md:pt-0 md:pl-4">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-800 dark:text-zinc-200 font-bold">
+                    <span className="truncate">{toPublicAlias(bestMatch)}</span>
+                    <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> Xác thực
+                    </span>
+                  </div>
                   <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                     {bestMatch.carType?.toLowerCase().includes('bán tải') ? (
                       <Truck className="w-4 h-4 text-amber-600" />
@@ -243,15 +252,36 @@ export default function CorridorTimeline({
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onOpenBooking?.(bestMatch)}
-                    className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all"
-                  >
-                    <Zap className="w-4 h-4 fill-current" />
-                    <span>Đặt Chỗ Ngay</span>
-                  </button>
+                  <div className="flex flex-col items-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onOpenBooking?.(bestMatch)}
+                      className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
+                    >
+                      <Zap className="w-4 h-4 fill-current" />
+                      <span>Giữ Chỗ 0đ (Chốt Zalo/Gọi)</span>
+                    </button>
+                    <span className="text-[10.5px] text-slate-500 dark:text-zinc-400 hidden sm:inline">
+                      0đ cọc · Lên xe mới trả tiền
+                    </span>
+                  </div>
                 </div>
+              </div>
+
+              {/* Dải bảo chứng an tâm & xóa bỏ lo lắng */}
+              <div className="mt-3.5 pt-3 border-t border-blue-100/80 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-zinc-300">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-200/80 dark:border-emerald-800">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> 0đ Cọc · 100% Không rủi ro
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-slate-700 dark:text-zinc-300">
+                    <PhoneCall className="w-3 h-3 text-blue-600" /> Nhắn Zalo & Gọi thật trước khi đi
+                  </span>
+                </div>
+                <span className="text-[10.5px] text-slate-500 dark:text-zinc-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                  Chủ xe bấm xác nhận trong 15p mới chốt · Có xe đệm cứu hộ
+                </span>
               </div>
             </div>
           )}
@@ -316,9 +346,9 @@ export default function CorridorTimeline({
                         <button
                           type="button"
                           onClick={() => onOpenBooking?.(trip)}
-                          className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-slate-700 dark:text-zinc-200 font-bold text-xs cursor-pointer transition-colors"
+                          className="px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 font-bold text-xs cursor-pointer transition-colors"
                         >
-                          Giữ chỗ
+                          Giữ chỗ 0đ
                         </button>
                       </div>
                     </div>
