@@ -31,7 +31,7 @@ export const ENGINE_CONFIG = {
   MICRO_BATCH_WINDOW_MS: 3 * 60 * 1000, // Cửa sổ gom phiên vi mô 3 phút
   CURBSIDE_WINDOW_SECONDS: 300, // 5 phút dừng đỗ tối đa tại Trạm ảo
   MAX_DETOUR_RATIO: 0.08, // Tối đa 8% cự ly đi vòng so với hành lang chuẩn
-  MAX_DOORSTEP_RADIUS_KM: DOORSTEP_CONFIG.MAX_NEIGHBORHOOD_RADIUS_KM || 1.0, // <= 1km đón tận cửa
+  MAX_DOORSTEP_RADIUS_KM: DOORSTEP_CONFIG.MAX_NEIGHBORHOOD_RADIUS_KM || 2.0, // <= 2km đón tận cửa
   DOORSTEP_SURCHARGE: DOORSTEP_CONFIG.DEFAULT_SURCHARGE || 40000, // +40k
   COMPENSATION_RATIO: DOORSTEP_CONFIG.COMPENSATION_DISCOUNT_RATIO || 0.5, // 50% chia lại cho khách cùng xe
   STANDBY_TIME_WINDOW_MINS: 45 // Bán kính thời gian tìm xe dự phòng +-45 phút
@@ -184,15 +184,15 @@ export function buildShareabilityGraph(driverOffers = [], passengerRequests = []
       // 3. Kiểm tra dung lượng ghế
       if (d.capacity < p.seatsNeeded) continue;
 
-      // 4. Kiểm tra điều kiện đón tận cửa (Doorstep Detour Constraint <= 1km)
+      // 4. Kiểm tra điều kiện đón tận cửa (Doorstep Detour Constraint <= 2km)
       let doorstepScore = 10;
       if (p.isDoorstep) {
         if (p.doorstepLat != null && p.doorstepLng != null && d.raw?.lat != null && d.raw?.lng != null) {
           const distToDriver = calculateDistanceKm(p.doorstepLat, p.doorstepLng, d.raw.lat, d.raw.lng);
           if (distToDriver > ENGINE_CONFIG.MAX_DOORSTEP_RADIUS_KM) {
-            continue; // Vượt quá bán kính đón tận cửa 1km
+            continue; // Vượt quá bán kính đón tận cửa 2km
           }
-          doorstepScore = Math.max(0, 20 - distToDriver * 10);
+          doorstepScore = Math.max(0, 20 - distToDriver * 5);
         }
       }
 

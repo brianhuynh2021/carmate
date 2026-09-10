@@ -466,7 +466,7 @@ export default function Hero({
                     Cần đón tận nhà (+40k phụ phí xăng ngõ ngách)
                   </span>
                   <span className="text-[11px] text-slate-500 dark:text-zinc-400 hidden sm:inline">
-                    · Ghép bán kính láng giềng ≤ 1km
+                    · Ghép bán kính láng giềng ≤ 2km
                   </span>
                 </label>
                 {isDoorstep && (

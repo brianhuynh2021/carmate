@@ -77,7 +77,7 @@ async function runLevel3Suite() {
 
   // Cấu hình Đón Tận Nhà
   assert(DOORSTEP_CONFIG.DEFAULT_SURCHARGE === 40000, 'Phụ phí đón tận nhà chuẩn 40.000đ hỗ trợ xăng ngõ ngách');
-  assert(DOORSTEP_CONFIG.MAX_NEIGHBORHOOD_RADIUS_KM <= 1.0, 'Bán kính láng giềng ghép đón tận nhà <= 1km (tránh Tour de Hẻm)');
+  assert(DOORSTEP_CONFIG.MAX_NEIGHBORHOOD_RADIUS_KM <= 2.0, 'Bán kính láng giềng ghép đón tận nhà <= 2km (tiện lợi cho bà con, an toàn cho chủ xe)');
   assert(DOORSTEP_CONFIG.COMPENSATION_DISCOUNT_RATIO === 0.5, '50% phụ phí được chia lại đền bù cho các khách khác cùng xe');
 
   // --- 2. KIỂM THỬ ĐỊNH GIÁ SHAPLEY FAIR PRICING & COMPENSATED DOORSTEP ---

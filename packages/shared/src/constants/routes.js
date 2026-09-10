@@ -741,11 +741,11 @@ export const VIRTUAL_HUBS = [
  */
 export const DOORSTEP_CONFIG = {
   DEFAULT_SURCHARGE: 40000, // +40.000đ phụ phí hỗ trợ xăng ngõ ngách
-  MAX_NEIGHBORHOOD_RADIUS_KM: 1.0, // Bán kính láng giềng tối đa 1.0km (tránh "Tour de Hẻm")
+  MAX_NEIGHBORHOOD_RADIUS_KM: 2.0, // Bán kính láng giềng tối đa 2.0km (tiện lợi cho bà con xóm ấp)
   MAX_CURBSIDE_WAIT_SECONDS: 300, // Tối đa 5 phút chờ trước cửa
   COMPENSATION_DISCOUNT_RATIO: 0.5, // 50% tiền phụ phí chia lại giảm giá cho khách cùng xe
   LABEL: 'Cần đón tận nhà (+40k phụ phí xăng)',
-  NOTE: 'Đón tận cửa nhà (+40.000đ hỗ trợ xăng ngõ ngách · Phù hợp đồ nặng / con nhỏ)'
+  NOTE: 'Đón tận cửa nhà (+40.000đ hỗ trợ xăng ngõ ngách · Bán kính láng giềng ≤ 2km)'
 };
 
 /**
