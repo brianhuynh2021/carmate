@@ -259,7 +259,7 @@ export default function CorridorTimeline({
                       className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
                     >
                       <Zap className="w-4 h-4 fill-current" />
-                      <span>Chốt Đi Chung 0đ (Zalo/Gọi)</span>
+                      <span>Chốt Đi Chung 0đ (Chat Ngay)</span>
                     </button>
                     <span className="text-[10.5px] text-slate-500 dark:text-zinc-400 hidden sm:inline">
                       0đ cọc · Lên xe mới gửi tiền xăng
@@ -275,12 +275,12 @@ export default function CorridorTimeline({
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> 0đ Cọc · 100% Không rủi ro
                   </span>
                   <span className="inline-flex items-center gap-1 text-slate-700 dark:text-zinc-300">
-                    <PhoneCall className="w-3 h-3 text-blue-600" /> Nhắn Zalo & Gọi thật trước khi đi
+                    <MessageSquare className="w-3 h-3 text-blue-600" /> Chat trực tiếp trong app an toàn
                   </span>
                 </div>
                 <span className="text-[10.5px] text-slate-500 dark:text-zinc-400 font-medium flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                  Đã khớp là chốt chuyến · Kết nối Zalo/Gọi đón ngay
+                  Đã khớp là chốt chuyến · Trao đổi điểm đón an toàn
                 </span>
               </div>
             </div>

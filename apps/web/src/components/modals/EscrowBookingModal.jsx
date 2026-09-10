@@ -360,31 +360,10 @@ export default function EscrowBookingModal({
         icon={CheckCircle2}
         iconTone="success"
         title={isDriverItem ? '✓ Đã chốt chuyến đi cùng Chủ xe!' : '✓ Đã chốt chuyến đón khách!'}
-        subtitle={`Kết nối trực tiếp ${toPublicAlias(item)} · Gọi điện hoặc nhắn Zalo để hẹn điểm đón`}
+        subtitle={`Kết nối với ${toPublicAlias(item)} · Chat nhắn điểm đón và trao đổi thông tin`}
         footer={
           <div className="w-full space-y-2.5">
-            {/* 2 Nút hành động trực tiếp: Nhắn Zalo & Gọi thật */}
-            {(item.phoneReal || item.phone) && (
-              <div className="grid grid-cols-2 gap-2">
-                <a
-                  href={`https://zalo.me/${String(item.phoneReal || item.phone).replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2.5 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200 dark:border-blue-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Nhắn Zalo Chủ xe</span>
-                </a>
-                <a
-                  href={`tel:${String(item.phoneReal || item.phone).replace(/\D/g, '')}`}
-                  className="py-2.5 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Gọi điện trực tiếp</span>
-                </a>
-              </div>
-            )}
-
+            {/* Nút hành động chính số 1: Chat trực tiếp ngay trong ứng dụng (Ẩn danh, bảo mật số điện thoại) */}
             <button
               type="button"
               onClick={() => {
@@ -394,18 +373,24 @@ export default function EscrowBookingModal({
               className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-600 via-indigo-600 to-primary-600 hover:from-blue-700 hover:to-primary-700 active:scale-[0.99] text-white shadow-md shadow-blue-500/25 cursor-pointer transition-all flex items-center justify-center gap-2"
             >
               <MessageSquare className="w-4 h-4" />
-              <span>Mở Khung Chat & Nhắn Điểm Đón</span>
+              <span>💬 Bấm Vào Chat Ngay Với {toPublicAlias(item)}</span>
             </button>
+
+            {/* Nút hành động phụ số 2: Xem chi tiết & SĐT trong Chuyến của tôi */}
             <button
               type="button"
-              onClick={onClose}
-              className="w-full py-2.5 px-4 rounded-2xl font-semibold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              onClick={() => {
+                onClose();
+                onViewBookedTab?.('booked');
+              }}
+              className="w-full py-2.5 px-4 rounded-2xl font-semibold text-xs text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>Xong & Quay lại danh sách</span>
+              <span>Xem chi tiết trong "Chuyến của tôi"</span>
             </button>
+
             <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
-              💡 Chuyến đi đã được chốt thành công. Hãy nhắn Zalo hoặc gọi điện cho {toPublicAlias(item)} để gửi định vị đón.
+              🔒 Bảo mật số điện thoại: Nhắn tin trao đổi trước qua khung chat an toàn. Thông tin liên hệ chi tiết hiển thị trong mục "Chuyến của tôi".
             </p>
           </div>
         }
@@ -424,13 +409,13 @@ export default function EscrowBookingModal({
                 <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
                   ✓
                 </span>
-                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã chốt ghế</span>
+                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã chốt chuyến</span>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold animate-pulse shadow-xs">
                   💬
                 </span>
-                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Kết nối Zalo/Gọi</span>
+                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Chat trao đổi</span>
               </div>
             </div>
           </div>
