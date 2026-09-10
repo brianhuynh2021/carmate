@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Sparkles } from 'lucide-react';
+import { AlertTriangle, Sparkles, HeartHandshake } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import Chip from '../ui/Chip.jsx';
@@ -58,7 +58,7 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
             <strong className="font-bold">Văn hoá đi chung xe văn minh:</strong>
             <p className="mt-0.5">
               CarMate <strong>không thu tiền cọc và không phạt tiền</strong> (0đ phạt). Để giữ gìn uy tín cộng đồng, xin
-              vui lòng thông báo sớm qua Zalo trước 1-2 tiếng để đối tác kịp thu xếp bạn đồng hành khác.
+              vui lòng thông báo sớm qua App trước 1-2 tiếng để đối tác kịp thu xếp bạn đồng hành khác.
             </p>
           </div>
         </div>
@@ -78,11 +78,11 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Nhập lý do thay đổi..." />
         </Field>
 
-        {/* Khung xem trước tin nhắn Zalo gửi đối tác */}
+        {/* Khung xem trước tin nhắn gửi đối tác */}
         <div className="p-3 rounded-2xl bg-slate-900 text-slate-200 border border-slate-800 space-y-1.5 text-left">
           <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-400" />
-            Tin nhắn tự động soạn gửi qua Zalo:
+            Tin nhắn tự động gửi đối tác trong App:
           </span>
           <p className="text-xs text-slate-100 font-sans leading-relaxed p-2 rounded-xl bg-black/40 border border-slate-800 select-all">
             {cancelMsg}

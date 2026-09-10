@@ -10,7 +10,8 @@ import {
   Sparkles,
   Truck,
   ShieldCheck,
-  PhoneCall
+  PhoneCall,
+  MessageSquare
 } from 'lucide-react';
 import { toPublicAlias } from '@carmate/shared';
 
