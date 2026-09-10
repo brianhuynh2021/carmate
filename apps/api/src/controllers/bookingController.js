@@ -164,11 +164,28 @@ export async function createBooking(req, res) {
           });
         }
 
+        const isTargetPassenger = targetTrip.type === 'passenger_request';
         const tripPhoneFinal = targetTrip.phoneReal || targetTrip.phone;
-        body.driverPhone = tripPhoneFinal;
+
+        if (isTargetPassenger) {
+          // Bên ra kèo là Người đi cùng đăng tìm xe
+          body.passengerPhone = tripPhoneFinal;
+          body.passengerName = targetTrip.publicName || targetTrip.name || 'Người đi cùng';
+          body.passengerId = targetTrip.userId;
+          body.driverPhone = req.user?.phone || body.driverPhone || '';
+          body.driverName = req.user?.name || body.driverName || 'Chủ xe';
+          body.driverId = req.user?.id || body.driverId || '';
+        } else {
+          // Bên ra kèo là Chủ xe đăng xe trống
+          body.driverPhone = tripPhoneFinal;
+          body.driverName = targetTrip.publicName || targetTrip.driverName || targetTrip.name || 'Chủ xe';
+          body.driverId = targetTrip.userId;
+          body.passengerPhone = body.passengerPhone || req.user?.phone || '';
+          body.passengerName = body.passengerName || req.user?.name || 'Người đi cùng';
+          body.passengerId = req.user?.id || body.passengerId || '';
+        }
+
         body.targetPhone = tripPhoneFinal;
-        body.driverId = targetTrip.userId;
-        body.driverName = targetTrip.publicName || targetTrip.driverName || targetTrip.name || 'Chủ xe';
         body.contactPhone = tripPhoneFinal || body.contactPhone;
         body.phoneReal = tripPhoneFinal || body.phoneReal;
         body.contactName = targetTrip.publicName || body.contactName;
@@ -181,9 +198,10 @@ export async function createBooking(req, res) {
       }
     }
 
-    // Chuẩn hóa danh tính Người đi cùng
+    // Chuẩn hóa danh tính Người đi cùng và Chủ xe dự phòng nếu chưa có
     body.passengerPhone = body.passengerPhone || body.userPhone || body.phone || req.user?.phone || '';
     body.passengerName = body.passengerName || body.userName || body.contactName || req.user?.name || 'Người đi cùng';
+    body.driverName = body.driverName || 'Chủ xe';
 
     // BẤT BIẾN MIT: Kiểm tra tính hợp lệ của chi phí thoả thuận (Price Guardrail)
     const dealPrice = Number(body.totalDeal || body.price || 0);

@@ -390,42 +390,74 @@ export default function InboxModal({
   const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
   const isDealCommitted = isConfirmed || isPreConfirmed;
 
+  const isTargetPassengerTrip = activeBooking?.targetTrip?.type === 'passenger_request' || activeBooking?.targetItem?.type === 'passenger_request';
+
   // Kiểm tra đối tác đã có ít nhất 1 tin nhắn phản hồi (tương tác 2 chiều giữa bên ra kèo và bên ghép)
   const hasPartnerReplied = useMemo(() => {
     if (!activeBooking?.messages || activeBooking.messages.length === 0) return false;
     const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
-    const myRole = activeTab === 'incoming' ? 'driver' : 'passenger';
+    const myRole = activeTab === 'incoming'
+      ? (isTargetPassengerTrip ? 'passenger' : 'driver')
+      : (isTargetPassengerTrip ? 'driver' : 'passenger');
     return activeBooking.messages.some((m) => {
       if (userPhone && m.senderPhone) {
         return cleanPhoneNumber(m.senderPhone) !== userPhone;
       }
       return m.senderRole && m.senderRole !== myRole;
     });
-  }, [activeBooking?.messages, activeTab, currentUser]);
+  }, [activeBooking?.messages, activeTab, currentUser, isTargetPassengerTrip]);
 
   const partnerAlias = useMemo(() => {
     if (!activeBooking) return 'Đối tác';
+    // Nếu là bài đăng của mình (incoming): đối tác là người gửi yêu cầu đến
     if (activeTab === 'incoming') {
-      if (isConfirmed) {
-        return activeBooking.passengerName || activeBooking.userName || activeBooking.contactName || 'Người đi cùng';
+      if (isTargetPassengerTrip) {
+        // Bài đăng của mình là tìm xe -> đối tác gửi đến là Chủ xe
+        if (isConfirmed) {
+          return activeBooking.driverName || 'Chủ xe';
+        }
+        const code = String(activeBooking.escrowId || activeBooking.id || '').replace(/\D/g, '').slice(-3) || '01';
+        return `Chủ xe CX-${code}`;
+      } else {
+        // Bài đăng của mình là xe trống -> đối tác gửi đến là Khách
+        if (isConfirmed) {
+          return activeBooking.passengerName || activeBooking.userName || activeBooking.contactName || 'Người đi cùng';
+        }
+        const code = String(activeBooking.escrowId || activeBooking.id || '').replace(/\D/g, '').slice(-3) || '01';
+        return `Khách KX-${code}`;
       }
-      const code = String(activeBooking.escrowId || activeBooking.id || '').replace(/\D/g, '').slice(-3) || '01';
+    }
+    // Nếu là yêu cầu mình gửi đi (outgoing): đối tác là chủ bài đăng
+    if (isTargetPassengerTrip) {
+      // Mình gửi đề xuất đón cho 1 Khách -> đối tác là Khách
+      if (isConfirmed) {
+        return activeBooking.passengerName || 'Người đi cùng';
+      }
+      const code = String(activeBooking.targetTrip?.id || activeBooking.targetItem?.id || '').replace(/\D/g, '').slice(-3) || '01';
       return `Khách KX-${code}`;
+    } else {
+      // Mình gửi yêu cầu ghép cho 1 Chủ xe -> đối tác là Chủ xe
+      if (isConfirmed) {
+        return activeBooking.driverName || activeBooking.targetTrip?.driverName || activeBooking.contactName || toPublicAlias(activeBooking);
+      }
+      return toPublicAlias(activeBooking);
     }
-    if (isConfirmed) {
-      return activeBooking.driverName || activeBooking.targetTrip?.driverName || activeBooking.contactName || toPublicAlias(activeBooking);
-    }
-    return toPublicAlias(activeBooking);
-  }, [activeBooking, activeTab, isConfirmed]);
+  }, [activeBooking, activeTab, isConfirmed, isTargetPassengerTrip]);
 
   const partnerPhone = useMemo(() => {
     if (!activeBooking) return '';
     if (!isConfirmed) return '';
     if (activeTab === 'incoming') {
-      return activeBooking.passengerPhone || activeBooking.userPhone || activeBooking.phone || '';
+      // Bài của mình -> đối tác là người gửi đến
+      return isTargetPassengerTrip
+        ? (activeBooking.driverPhone || '')
+        : (activeBooking.passengerPhone || activeBooking.userPhone || activeBooking.phone || '');
     }
-    return activeBooking.driverPhone || activeBooking.contactPhone || activeBooking.phoneReal || '';
-  }, [activeBooking, activeTab, isConfirmed]);
+    // Mình gửi đi -> đối tác là chủ bài đăng
+    return isTargetPassengerTrip
+      ? (activeBooking.passengerPhone || activeBooking.contactPhone || '')
+      : (activeBooking.driverPhone || activeBooking.contactPhone || activeBooking.phoneReal || '');
+  }, [activeBooking, activeTab, isConfirmed, isTargetPassengerTrip]);
   const activePartnerOnline = activeBooking
     ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
     : { isOnline: false };
