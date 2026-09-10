@@ -61,6 +61,7 @@ export default function InboxModal({
   const [timeLeftStr, setTimeLeftStr] = useState('');
   const [remainingSecs, setRemainingSecs] = useState(900);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, booking }
+  const [showEmergencyPhone, setShowEmergencyPhone] = useState(false);
 
   // Kênh Hỗ Trợ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
   const [isSupportChannelActive, setIsSupportChannelActive] = useState(false);
@@ -127,6 +128,10 @@ export default function InboxModal({
     if (!selectedId) return currentList[0] || null;
     return currentList.find((b) => (b.escrowId || b.id) === selectedId) || currentList[0] || null;
   }, [currentList, selectedId]);
+
+  useEffect(() => {
+    setShowEmergencyPhone(false);
+  }, [selectedId]);
 
   // Helper kiểm tra xem 1 cuộc trao đổi có đang ở trạng thái Chưa đọc / Đọc sau hay không
   const isBookingUnread = useMemo(() => {
@@ -1193,58 +1198,79 @@ export default function InboxModal({
               {/* THANH ĐIỀU PHỐI 2-PHASE COMMIT (SMART ACTION BAR) */}
               <div className="p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/60 dark:to-slate-800/40 border-b border-black/[0.06] dark:border-white/[0.06]">
                 {isConfirmed ? (
-                  // ĐÃ CHỐT CHÍNH THỨC: MỞ KHÓA SĐT THẬT & TÊN THẬT
+                  // ĐÃ CHỐT CHÍNH THỨC: BẢO MẬT SĐT - CHỈ HIỆN KHI ĐẾN ĐÓN MÀ KHÔNG LIÊN LẠC ĐƯỢC
                   <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
                         <Check className="w-4 h-4" strokeWidth={3} />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                          Chuyến đi đã chốt thành công 2 chiều!
+                          Chuyến đi đã chốt thành công!
                         </p>
                         <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                          SĐT {partnerAlias}: <strong className="text-slate-900 dark:text-white tabular font-mono">{partnerPhone || 'Đã mở khóa'}</strong>
+                          {showEmergencyPhone ? (
+                            <>
+                              SĐT {partnerAlias}:{' '}
+                              <strong className="text-slate-900 dark:text-white tabular font-mono">
+                                {partnerPhone || 'Chưa cập nhật SĐT'}
+                              </strong>
+                            </>
+                          ) : (
+                            '🔒 SĐT được bảo mật. Nhắn tin điểm đón qua khung chat bên dưới.'
+                          )}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                      {partnerPhone && (
-                        <>
-                          <a
-                            href={`tel:${partnerPhone}`}
-                            className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                            <span>Gọi điện</span>
-                          </a>
-                          <a
-                            href={`sms:${partnerPhone}`}
-                            className="py-1.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Nhắn SMS</span>
-                          </a>
-                          {cleanPhoneNumber(partnerPhone) && (
+                      {!showEmergencyPhone ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowEmergencyPhone(true)}
+                          className="py-1.5 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-bold text-xs border border-amber-200 dark:border-amber-800 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                          title="Bấm khi xe đến đón mà nhắn tin trong chat không thấy phản hồi"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Đến đón không liên lạc được? Mở SĐT khẩn cấp</span>
+                        </button>
+                      ) : (
+                        partnerPhone && (
+                          <>
                             <a
-                              href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="py-1.5 px-3 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                              href={`tel:${partnerPhone}`}
+                              className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
                             >
-                              <span>Mở Zalo</span>
+                              <Phone className="w-3.5 h-3.5" />
+                              <span>Gọi điện</span>
                             </a>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleCopyPhone(partnerPhone)}
-                            className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer active:scale-95"
-                          >
-                            {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                            <span>{copiedPhone ? 'Đã chép' : 'Sao chép'}</span>
-                          </button>
-                        </>
+                            <a
+                              href={`sms:${partnerPhone}`}
+                              className="py-1.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>Nhắn SMS</span>
+                            </a>
+                            {cleanPhoneNumber(partnerPhone) && (
+                              <a
+                                href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="py-1.5 px-3 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                              >
+                                <span>Mở Zalo</span>
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPhone(partnerPhone)}
+                              className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer active:scale-95"
+                            >
+                              {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                              <span>{copiedPhone ? 'Đã chép' : 'Sao chép'}</span>
+                            </button>
+                          </>
+                        )
                       )}
                     </div>
                   </div>

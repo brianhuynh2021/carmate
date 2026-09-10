@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { AlertTriangle, HeartHandshake, Sparkles, Send } from 'lucide-react';
-import { getZaloChatUrl } from '@carmate/shared';
+import { AlertTriangle, Sparkles } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import Chip from '../ui/Chip.jsx';
 import { Field, Input } from '../ui/Field.jsx';
-import { ZaloIcon } from '../ui/SocialIcons.jsx';
 
 const PRESET_CANCEL_REASONS = [
   'Việc gia đình đột xuất',
@@ -23,9 +21,6 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
 
   const handleCancelAndNotify = () => {
     onConfirmCancel(record.escrowId, { reason });
-    if (record.contactPhone) {
-      window.open(getZaloChatUrl(record.contactPhone, cancelMsg), '_blank', 'noopener,noreferrer');
-    }
   };
 
   return (
@@ -42,8 +37,8 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
             Quay lại
           </Button>
           <Button variant="danger" onClick={handleCancelAndNotify} className="font-semibold">
-            <ZaloIcon className="w-4 h-4 mr-1.5" />
-            <span>Xác nhận & Báo Zalo</span>
+            <AlertTriangle className="w-4 h-4 mr-1.5" />
+            <span>Xác nhận huỷ chuyến</span>
           </Button>
         </div>
       }

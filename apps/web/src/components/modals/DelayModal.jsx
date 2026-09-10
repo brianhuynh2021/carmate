@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { Timer, Send, Clock, Sparkles } from 'lucide-react';
-import { getZaloChatUrl } from '@carmate/shared';
+import { Timer, Clock, Sparkles } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import Chip from '../ui/Chip.jsx';
 import { Field, Input } from '../ui/Field.jsx';
-import { ZaloIcon } from '../ui/SocialIcons.jsx';
 
 export default function DelayModal({ record, onClose, onSendDelay }) {
   const [minutes, setMinutes] = useState(15);
@@ -18,9 +16,6 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
 
   const handleConfirmAndSend = () => {
     onSendDelay(record.escrowId, minutes, note);
-    if (record.contactPhone) {
-      window.open(getZaloChatUrl(record.contactPhone, delayMsg), '_blank', 'noopener,noreferrer');
-    }
   };
 
   return (
@@ -36,9 +31,9 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
           <Button variant="outline" onClick={onClose}>
             Đóng
           </Button>
-          <Button className="bg-[#0068ff] hover:bg-[#0055d4] text-white font-bold" onClick={handleConfirmAndSend}>
-            <ZaloIcon className="w-4 h-4 mr-1.5" />
-            <span>Báo trễ & Nhắn Zalo</span>
+          <Button className="bg-amber-600 hover:bg-amber-700 text-white font-bold" onClick={handleConfirmAndSend}>
+            <Timer className="w-4 h-4 mr-1.5" />
+            <span>Xác nhận báo trễ +{minutes}p</span>
           </Button>
         </div>
       }
