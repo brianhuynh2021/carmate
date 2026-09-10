@@ -188,7 +188,7 @@ export default function Hero({
             Đi chung xe tiện chuyến
           </h1>
           <p className="text-xs sm:text-sm text-[#515154] dark:text-slate-400 font-medium max-w-lg mx-auto">
-            Chia sẻ chi phí xăng xe văn minh · 0đ phí sàn · An toàn & Tiết kiệm
+            Đường ống tiện chuyến đa phương tiện · Tiết kiệm ~50% so với xe khách · 0đ phí sàn
           </p>
         </div>
 
@@ -356,9 +356,9 @@ export default function Hero({
               <span>Điểm đón cụ thể: Trao đổi & thống nhất trực tiếp qua Chat</span>
             </span>
             <span className="hidden sm:inline text-slate-300 dark:text-zinc-700">·</span>
-            <span>0đ phí sàn</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Chia sẻ tiền xăng siêu rẻ</span>
             <span className="hidden sm:inline text-slate-300 dark:text-zinc-700">·</span>
-            <span>Chia sẻ chi phí xăng xe văn minh</span>
+            <span>Xe 4–5 chỗ, 7 chỗ, Bán tải & Xe tải nhẹ</span>
           </div>
         </div>
 

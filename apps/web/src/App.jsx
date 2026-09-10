@@ -1060,9 +1060,12 @@ export default function App() {
                     aria-label="Lọc loại xe"
                     className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs hover:border-slate-400 dark:hover:border-slate-600 outline-none transition-colors"
                   >
-                    <option value="all">Mọi loại xe</option>
-                    <option value="family_car">Xe gia đình (Biển trắng)</option>
-                    <option value="convenient_trip">Xe tiện chuyến (Biển vàng)</option>
+                    <option value="all">🚗 Mọi phương tiện</option>
+                    <option value="family_car">🚗 Xe 4–5 chỗ gia đình</option>
+                    <option value="suv_7">🚙 Xe 7 chỗ rộng rãi</option>
+                    <option value="pickup">🛻 Bán tải (Chở người & Thùng hàng)</option>
+                    <option value="truck_light">🚚 Xe tải nhẹ (Chở xe máy, dọn trọ)</option>
+                    <option value="convenient_trip">🚕 Xe tiện chuyến quay đầu</option>
                   </select>
 
                   <select
