@@ -201,10 +201,10 @@ export default function LocationSuggestInput({
           className={
             isOmnibar
               ? 'w-full bg-transparent border-0 p-0 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none truncate'
-              : `w-full h-10 ${LeadingIcon ? 'pl-9' : 'pl-3'} pr-8 rounded-xl text-xs font-semibold bg-white dark:bg-[#151c2e] border ${
+              : `w-full h-10 ${LeadingIcon ? 'pl-9' : 'pl-3'} pr-8 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-[#151c2e] border ${
                   isOpen
                     ? 'border-[#0071e3] ring-2 ring-[#0071e3]/20 shadow-md'
-                    : 'border-slate-200/90 dark:border-white/[0.08]'
+                    : 'border-black/[0.12] dark:border-white/[0.14]'
                 } text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all shadow-2xs`
           }
         />
