@@ -429,3 +429,88 @@ carmate/
 3. **Kỷ Luật Quản Trị Git:**
    * Tuyệt đối không push hoặc commit trực tiếp vào nhánh `main`.
    * Mọi phát triển và kiểm thử tự động 100% được thực hiện trên nhánh `dev`.
+
+---
+
+## 9. Mô Hình Kinh Tế & Chiến Lược Doanh Thu Bền Vững (Monetization Architecture)
+
+CarMate không vận hành phi lợi nhuận vĩnh viễn. Để duy trì hạ tầng kỹ thuật và sinh lợi nhuận lâu dài cho nhà sáng lập, nền tảng triển khai mô hình doanh thu 4 tầng thông minh: **"Miễn phí kết nối cốt lõi để thâu tóm toàn bộ thị trường — Thu tiền từ Tiện ích, Vị thế và Dịch vụ gia tăng"**.
+
+```mermaid
+graph TD
+    subgraph MONETIZATION_TIERS ["4 TẦNG DOANH THU BỀN VỮNG"]
+        Tier1["TẦNG 1: 0% CHIẾT KHẤU CƯỚC XE (CORE LAYER)<br>• Thu hút tối đa Chủ xe và Khách tham gia, triệt tiêu 100% việc 'tắt app chạy ngoài'<br>• Tạo hiệu ứng mạng lưới độc quyền (Network Effect) trên các hành lang huyết mạch"]
+        
+        Tier2["TẦNG 2: MÔ HÌNH FREEMIUM & ĐẨY TIN HỎA TỐC (CLASSIFIEDS)<br>• Phí Đẩy Tin Hỏa Tốc: 5.000đ – 10.000đ/lần (Top 1 Timeline giờ cao điểm)<br>• Gói Hội Viên Chủ Xe Uy Tín / VIP Pro: 49.000đ – 99.000đ/tháng (Tick xanh, ưu tiên điểm Gale-Shapley +20%)"]
+        
+        Tier3["TẦNG 3: FINTECH & HỆ SINH THÁI B2B XE HƠI (ECOSYSTEM)<br>• Bảo hiểm vi mô tai nạn chuyến đi: 5.000đ/ghế (Hoa hồng nền tảng 30% – 35% cùng Bảo Việt / PTI)<br>• Chiết khấu B2B Xăng dầu (Petrolimex, PVOIL) & Trạm dừng chân ẩm thực dọc hành lang"]
+        
+        Tier4["TẦNG 4: BOOKING FEE QUỐC TẾ (GLOBAL EXPANSION)<br>• Khi mở rộng Đông Nam Á (Thái Lan, Indo) & Toàn cầu: Thu phí đặt chỗ 10% – 12% theo chuẩn BlaBlaCar"]
+    end
+    Tier1 --> Tier2 --> Tier3 --> Tier4
+```
+
+---
+
+## 10. Tấm Khiên Pháp Lý & Cơ Chế Kiểm Soát Giá / Xe Biển Số Vàng (Legal Shield)
+
+```
+                         TẤM KHIÊN PHÁP LÝ CARMATE
+                                    ▲
+                                   / \
+                                  /   \
+   [0% Phí Sàn - Không Cầm Tiền] ◄───┼───► [Thỏa Thuận Dân Sự Điều 513]
+   (CarMate không thu 1 đồng cọc,   │     (Chia sẻ chi phí xăng dầu,
+    không cắt phế % cuốc xe)        │      phi thương mại, không sinh lợi)
+                                    │
+                                    ▼
+       [Sàn TMĐT Kết Nối Thông Tin - Nghị Định 52/2013 & 85/2021]
+       (Chỉ là bảng tin công nghệ kết nối, không kinh doanh vận tải)
+```
+
+1. **Khóa Trần Giá Thuật Toán (Anti-Price-Gouging Ceiling):**
+   * Mã nguồn `PostTripForm.jsx` và `pricing.js` chặn cứng (`Hard Limit`) nếu Chủ xe nhập giá vượt quá khung an toàn `maxSafePrice`.
+   * Triệt tiêu 100% tình trạng chặt chém, giữ giá cước bám sát tiêu hao nhiên liệu thực tế ($35\text{k} + d \times 850\text{đ} + \text{BOT}$), đảm bảo tính phi thương mại.
+2. **Xe Biển Số Vàng Tiện Chuyến Quay Đầu (`convenient_trip`):**
+   * Xe hợp đồng biển vàng trả khách xong chiều về thường chạy rỗng (Deadhead miles). CarMate hoan nghênh xe quay đầu tham gia để lấp đầy ghế trống, tiết kiệm nhiên liệu xã hội.
+   * **Vị thế pháp lý:** Xe biển vàng đã có đăng ký kinh doanh vận tải, phù hiệu hợp đồng, bảo hiểm hành khách và hộp đen camera theo Nghị định 10/2020. Khi tham gia CarMate, họ bắt buộc tuân thủ trần giá và quy chuẩn trạm ảo của CarMate.
+3. **Căn Cứ Pháp Lý Bất Khả Xâm Phạm:**
+   * **Nghị định 10/2020/NĐ-CP:** CarMate không phải đơn vị kinh doanh vận tải vì không sở hữu xe, không điều hành lái xe và không có mục đích sinh lợi từ cước vận tải.
+   * **Nghị định 52/2013 & 85/2021/NĐ-CP:** CarMate đăng ký hoạt động dưới hình thức Sàn thương mại điện tử / Bảng tin kết nối thông tin trực tuyến.
+   * **Điều 513 Bộ Luật Dân Sự 2015:** Quan hệ đi chung xe là thỏa thuận dân sự tương trợ chia sẻ chi phí nhiên liệu tự nguyện giữa các công dân.
+   * **Án Lệ Quốc Tế BlaBlaCar (Tòa án Tối cao Tây Ban Nha 2017):** Phán quyết khẳng định chia sẻ chi phí xe cá nhân không phải dịch vụ taxi thương mại.
+
+---
+
+## 11. Tam Giác Bảo Chứng Niềm Tin (The Trust Triangle & Human Handshake)
+
+CarMate tuyệt đối không để xảy ra tình trạng "khớp lệnh tự động rồi hai bên im lặng không nói gì với nhau", gây hoang mang lo lắng cho hành khách:
+
+```
+              TAM GIÁC BẢO CHỨNG NIỀM TIN CARMATE
+                               ▲
+                              / \
+                             /   \
+                            /     \
+    [0đ Cọc - 0% Rủi Ro] ◄─────────► [Gọi Thật & Nhắn Zalo]
+            │                                  │
+            ▼                                  ▼
+    Lên xe mới gửi tiền              Chốt cột xăng, nghe giọng
+    (Không sợ mất 1 xu)              (Chủ xe bấm Xác nhận đón)
+                            │
+                            ▼
+              [Radar Cứu Hộ Đệm ±45 Phút]
+              Chủ xe sự cố -> Có xe khác đón thay
+```
+
+1. **Mở Tức Thì Cuộc Gọi Thật & Zalo 1-Chạm (`tel:` & `zalo.me/sdt`):**
+   * Bấm đặt chỗ ban đầu chỉ là "Giữ chỗ 15 phút".
+   * Hệ thống hiển thị ngay số điện thoại thật và link Zalo để hai bên nghe giọng nói của nhau, gửi ảnh định vị cột xăng chính xác trước khi khởi hành.
+2. **Xác Nhận 2 Chiều (Two-Way Handshake):**
+   * Chủ xe nhận thông báo tức thì và bấm "Xác nhận đón". Chỉ khi Chủ xe bấm xác nhận, chuyến đi mới chính thức chốt. Nếu quá 15 phút không chốt, hệ thống tự nhả ghế để khách chọn xe khác.
+3. **0đ Cọc — Thử Nghiệm 100% Không Rủi Ro:**
+   * Không nạp tiền vào ví, không thu cọc. Khách bước lên xe ngồi yên vị, xe lăn bánh mới gửi tiền xăng trực tiếp cho Chủ xe.
+4. **Lưới An Toàn Cứu Hộ:**
+   * Chủ xe huỷ sát giờ (< 15 phút) bị trừ 40 điểm tín nhiệm và khóa tài khoản 7 ngày.
+   * Radar xe đệm dự phòng (Standby Buffer $\pm 45$ phút) tự động kích hoạt điều chuyển khách sang xe khác cùng tuyến.
+
