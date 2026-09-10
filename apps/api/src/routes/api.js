@@ -29,6 +29,12 @@ import {
 import { getSupportMessagesHandler, sendSupportMessageHandler } from '../controllers/supportController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
 import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, getMe, updateProfile, deleteAccount, requestAccountDeletion, getAuthConfigHandler } from '../controllers/authController.js';
+import {
+  createMovementIntentHandler,
+  getMovementIntentsHandler,
+  runBatchMatchHandler,
+  getMatchingEpochsHandler
+} from '../controllers/intentController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -103,6 +109,12 @@ router.post('/trips/:id/republish', postTripLimiter, optionalAuth, requireTripOw
 // --- Smart Matching Radar & Social Suggestions ---
 router.get('/matches', optionalAuth, getMatches);
 router.get('/matches/social-suggestions', optionalAuth, getSocialSuggestions);
+
+// --- Autonomous Zero-Search Matching Engine (Level 3 - MIT & Nobel) ---
+router.get('/intents', optionalAuth, getMovementIntentsHandler);
+router.post('/intents', optionalAuth, createMovementIntentHandler);
+router.post('/intents/match', optionalAuth, runBatchMatchHandler);
+router.get('/intents/epochs', optionalAuth, getMatchingEpochsHandler);
 
 // --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
 router.get('/bookings', optionalAuth, listBookings);

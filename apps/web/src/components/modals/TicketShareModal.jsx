@@ -247,6 +247,33 @@ export default function TicketShareModal({
             </button>
           </div>
 
+          {/* Trojan Horse Growth Snippet: Rải nhóm Zalo siêu tốc */}
+          <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                Tin Nhắn Zalo Rải Nhóm 1-Chạm
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const shortSnippet = `🚗 ${trip.carType || 'Xe ô tô'} ${trip.timeSlotLabel || trip.timeSlot || ''} ${trip.from} ➔ ${trip.to} còn ${trip.availableSeats || trip.seats || 2} ghế. Bấm giữ chỗ trực tiếp 0đ: https://carmate.vn/t/${trip.id}`;
+                  if (navigator.clipboard?.writeText) {
+                    navigator.clipboard.writeText(shortSnippet);
+                  }
+                  onShowToast?.('Đã sao chép tin nhắn Zalo 1-dòng cực ngắn!', 'success');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs cursor-pointer"
+              >
+                <Copy className="w-3 h-3" />
+                Copy tin Zalo
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono line-clamp-1">
+              {`🚗 ${trip.carType || 'Xe ô tô'} ${trip.from} ➔ ${trip.to} còn trống ghế. Bấm: carmate.vn/t/${trip.id}`}
+            </p>
+          </div>
+
           {/* Hàng tiện ích: Sao chép tóm tắt & Xem bài trên Bảng tin */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <button

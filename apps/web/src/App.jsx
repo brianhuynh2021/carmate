@@ -18,6 +18,7 @@ import Hero from './components/market/Hero.jsx';
 import RouteBenchmarkBar from './components/market/RouteBenchmarkBar.jsx';
 import TripCard from './components/market/TripCard.jsx';
 import SocialMatchBar from './components/social/SocialMatchBar.jsx';
+import ZeroSearchMatchWidget from './components/market/ZeroSearchMatchWidget.jsx';
 
 // Views
 import PostTripForm from './components/post/PostTripForm.jsx';
@@ -989,6 +990,13 @@ export default function App() {
             />
 
             <div className={`${container} py-3.5 sm:py-6 space-y-3.5 sm:space-y-5 relative z-10`}>
+              {/* Cỗ máy Điều phối Tự động Level 3 Zero-Search */}
+              <ZeroSearchMatchWidget
+                currentUser={currentUser}
+                onShowToast={showToast}
+                onOpenBooking={(trip) => handleInitiateBook(trip)}
+              />
+
               <RouteBenchmarkBar
                 searchKeyword={searchKeyword}
                 setSearchKeyword={setSearchKeyword}

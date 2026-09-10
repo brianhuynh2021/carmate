@@ -16,7 +16,7 @@
     "dev:all": "node --env-file-if-exists=.env apps/api/src/index.js",
     "build": "npm run build --workspace=@carmate/web",
     "preview": "npm run preview --workspace=@carmate/web",
-    "test": "node --env-file-if-exists=.env scripts/test-local-e2e.js",
+    "test": "node --env-file-if-exists=.env scripts/test-local-e2e.js && node --env-file-if-exists=.env scripts/test-level3-engine.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

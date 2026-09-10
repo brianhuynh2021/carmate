@@ -119,86 +119,161 @@ export async function initDB() {
       createdAt INTEGER,
       payload TEXT
     );
-    CREATE INDEX IF NOT EXISTS idx_bookings_trip ON bookings(tripId);
-  `);
+      CREATE INDEX IF NOT EXISTS idx_bookings_trip ON bookings(tripId);
+    `);
 
-  // 4. Bảng Siêu dữ liệu & Cấu hình (key_values)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS key_values (
-      key TEXT PRIMARY KEY,
-      value TEXT
-    );
-  `);
+    // Migration bổ sung các cột Cấp độ 3 cho bookings nếu chưa có
+    try {
+      const bookingCols = db.pragma('table_info(bookings)').map((c) => c.name);
+      if (!bookingCols.includes('standbyOfferId')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN standbyOfferId TEXT');
+      }
+      if (!bookingCols.includes('doorstepPickup')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN doorstepPickup INTEGER DEFAULT 0');
+      }
+      if (!bookingCols.includes('doorstepAddress')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN doorstepAddress TEXT');
+      }
+      if (!bookingCols.includes('penaltyTier')) {
+        db.exec("ALTER TABLE bookings ADD COLUMN penaltyTier TEXT DEFAULT 'none'");
+      }
+      if (!bookingCols.includes('penaltyPoints')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN penaltyPoints INTEGER DEFAULT 0');
+      }
+      if (!bookingCols.includes('cancelledAt')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN cancelledAt INTEGER');
+      }
+      if (!bookingCols.includes('cancellationReason')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN cancellationReason TEXT');
+      }
+    } catch (migErr) {
+      // Bỏ qua nếu đã tồn tại
+    }
 
-  // 5. Bảng Lưu Trữ Quỹ Đạo AI (ai_trajectories - MIT & Stanford Observability)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS ai_trajectories (
-      id TEXT PRIMARY KEY,
-      userGoal TEXT,
-      requestedRoute TEXT,
-      reasoningSteps TEXT,
-      suggestionsCount INTEGER DEFAULT 0,
-      executionTimeMs INTEGER DEFAULT 0,
-      unmetDemand INTEGER DEFAULT 0,
-      createdAt INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_ai_traj_created ON ai_trajectories(createdAt);
-    CREATE INDEX IF NOT EXISTS idx_ai_traj_unmet ON ai_trajectories(unmetDemand);
-  `);
+    // 4. Bảng Siêu dữ liệu & Cấu hình (key_values)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS key_values (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      );
+    `);
 
-  // 6. Bảng Phân Tích Hành Vi & Funnel (analytics_events)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS analytics_events (
-      id TEXT PRIMARY KEY,
-      event_name TEXT NOT NULL,
-      properties TEXT,
-      user_id TEXT,
-      created_at INTEGER NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_analytics_event_name ON analytics_events(event_name);
-    CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
-  `);
+    // 5. Bảng Lưu Trữ Quỹ Đạo AI (ai_trajectories - MIT & Stanford Observability)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ai_trajectories (
+        id TEXT PRIMARY KEY,
+        userGoal TEXT,
+        requestedRoute TEXT,
+        reasoningSteps TEXT,
+        suggestionsCount INTEGER DEFAULT 0,
+        executionTimeMs INTEGER DEFAULT 0,
+        unmetDemand INTEGER DEFAULT 0,
+        createdAt INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_ai_traj_created ON ai_trajectories(createdAt);
+      CREATE INDEX IF NOT EXISTS idx_ai_traj_unmet ON ai_trajectories(unmetDemand);
+    `);
 
-  // 7. Bảng Trò Chuyện & Khiếu Nại Với Platform CSKH (support_messages)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS support_messages (
-      id TEXT PRIMARY KEY,
-      bookingId TEXT,
-      userId TEXT,
-      phone TEXT,
-      senderRole TEXT NOT NULL,
-      senderName TEXT,
-      message TEXT NOT NULL,
-      type TEXT DEFAULT 'support',
-      status TEXT DEFAULT 'open',
-      createdAt INTEGER NOT NULL,
-      metadata TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_support_booking ON support_messages(bookingId);
-    CREATE INDEX IF NOT EXISTS idx_support_user ON support_messages(userId);
-    CREATE INDEX IF NOT EXISTS idx_support_phone ON support_messages(phone);
-    CREATE INDEX IF NOT EXISTS idx_support_created ON support_messages(createdAt);
-  `);
+    // 6. Bảng Phân Tích Hành Vi & Funnel (analytics_events)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS analytics_events (
+        id TEXT PRIMARY KEY,
+        event_name TEXT NOT NULL,
+        properties TEXT,
+        user_id TEXT,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_analytics_event_name ON analytics_events(event_name);
+      CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
+    `);
 
-  // 8. Bảng Yêu Cầu Xóa Tài Khoản Gửi Tới Quản Trị Viên (account_deletion_requests)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS account_deletion_requests (
-      id TEXT PRIMARY KEY,
-      userId TEXT NOT NULL,
-      phone TEXT,
-      name TEXT,
-      email TEXT,
-      reason TEXT,
-      status TEXT DEFAULT 'pending',
-      createdAt INTEGER NOT NULL,
-      processedAt INTEGER,
-      processedBy TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_del_req_user ON account_deletion_requests(userId);
-    CREATE INDEX IF NOT EXISTS idx_del_req_phone ON account_deletion_requests(phone);
-    CREATE INDEX IF NOT EXISTS idx_del_req_status ON account_deletion_requests(status);
-    CREATE INDEX IF NOT EXISTS idx_del_req_created ON account_deletion_requests(createdAt);
-  `);
+    // 7. Bảng Trò Chuyện & Khiếu Nại Với Platform CSKH (support_messages)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS support_messages (
+        id TEXT PRIMARY KEY,
+        bookingId TEXT,
+        userId TEXT,
+        phone TEXT,
+        senderRole TEXT NOT NULL,
+        senderName TEXT,
+        message TEXT NOT NULL,
+        type TEXT DEFAULT 'support',
+        status TEXT DEFAULT 'open',
+        createdAt INTEGER NOT NULL,
+        metadata TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_support_booking ON support_messages(bookingId);
+      CREATE INDEX IF NOT EXISTS idx_support_user ON support_messages(userId);
+      CREATE INDEX IF NOT EXISTS idx_support_phone ON support_messages(phone);
+      CREATE INDEX IF NOT EXISTS idx_support_created ON support_messages(createdAt);
+    `);
+
+    // 8. Bảng Yêu Cầu Xóa Tài Khoản Gửi Tới Quản Trị Viên (account_deletion_requests)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS account_deletion_requests (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        phone TEXT,
+        name TEXT,
+        email TEXT,
+        reason TEXT,
+        status TEXT DEFAULT 'pending',
+        createdAt INTEGER NOT NULL,
+        processedAt INTEGER,
+        processedBy TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_del_req_user ON account_deletion_requests(userId);
+      CREATE INDEX IF NOT EXISTS idx_del_req_phone ON account_deletion_requests(phone);
+      CREATE INDEX IF NOT EXISTS idx_del_req_status ON account_deletion_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_del_req_created ON account_deletion_requests(createdAt);
+    `);
+
+    // 9. Bảng Khai Báo Ý Định Di Chuyển (intents - Zero-Search Autonomous Engine)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS intents (
+        id TEXT PRIMARY KEY,
+        userId TEXT,
+        role TEXT NOT NULL,
+        originHubId TEXT,
+        originName TEXT,
+        destinationHubId TEXT,
+        destinationName TEXT,
+        corridor TEXT,
+        date TEXT,
+        timeSlot TEXT,
+        seats INTEGER DEFAULT 1,
+        isDoorstep INTEGER DEFAULT 0,
+        doorstepAddress TEXT,
+        doorstepLat REAL,
+        doorstepLng REAL,
+        phone TEXT,
+        contactName TEXT,
+        status TEXT DEFAULT 'pending',
+        matchedTripId TEXT,
+        matchedBookingId TEXT,
+        createdAt INTEGER,
+        payload TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_intents_status ON intents(status);
+      CREATE INDEX IF NOT EXISTS idx_intents_corridor ON intents(corridor);
+      CREATE INDEX IF NOT EXISTS idx_intents_date ON intents(date);
+      CREATE INDEX IF NOT EXISTS idx_intents_role ON intents(role);
+    `);
+
+    // 10. Bảng Lưu Trữ Phiên Khớp Lệnh (matching_epochs)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS matching_epochs (
+        id TEXT PRIMARY KEY,
+        epochType TEXT NOT NULL,
+        corridor TEXT,
+        matchedCount INTEGER DEFAULT 0,
+        driverCount INTEGER DEFAULT 0,
+        passengerCount INTEGER DEFAULT 0,
+        createdAt INTEGER,
+        summary TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_epochs_created ON matching_epochs(createdAt);
+    `);
 
   // 9. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
   //
@@ -1690,5 +1765,272 @@ export async function processDeletionRequest(requestId, action, adminInfo = 'Adm
   } else {
     throw new Error('Hành động không hợp lệ (chỉ chấp nhận approved hoặc rejected).');
   }
+}
+
+/**
+ * =========================================================================
+ * KHỐI CHỨC NĂNG LEVEL 3: AUTONOMOUS ZERO-SEARCH MATCHING & GAME THEORY
+ * =========================================================================
+ */
+
+/**
+ * Tạo mới một Khai báo Ý định Di chuyển (Intent)
+ */
+export async function createIntent(intentData) {
+  const database = getRawDB();
+  const id = intentData.id || `INT-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const now = Date.now();
+
+  const full = {
+    ...intentData,
+    id,
+    seats: Number(intentData.seats) || 1,
+    isDoorstep: intentData.isDoorstep ? 1 : 0,
+    doorstepAddress: intentData.doorstepAddress || '',
+    doorstepLat: intentData.doorstepLat != null ? Number(intentData.doorstepLat) : null,
+    doorstepLng: intentData.doorstepLng != null ? Number(intentData.doorstepLng) : null,
+    status: intentData.status || 'pending',
+    createdAt: intentData.createdAt || now
+  };
+
+  database
+    .prepare(
+      `
+    INSERT OR REPLACE INTO intents (
+      id, userId, role, originHubId, originName, destinationHubId, destinationName,
+      corridor, date, timeSlot, seats, isDoorstep, doorstepAddress, doorstepLat, doorstepLng,
+      phone, contactName, status, matchedTripId, matchedBookingId, createdAt, payload
+    ) VALUES (
+      @id, @userId, @role, @originHubId, @originName, @destinationHubId, @destinationName,
+      @corridor, @date, @timeSlot, @seats, @isDoorstep, @doorstepAddress, @doorstepLat, @doorstepLng,
+      @phone, @contactName, @status, @matchedTripId, @matchedBookingId, @createdAt, @payload
+    )
+  `
+    )
+    .run({
+      id,
+      userId: full.userId || '',
+      role: full.role || 'passenger',
+      originHubId: full.originHubId || '',
+      originName: full.originName || '',
+      destinationHubId: full.destinationHubId || '',
+      destinationName: full.destinationName || '',
+      corridor: full.corridor || 'Tuyến QL13',
+      date: full.date || '',
+      timeSlot: full.timeSlot || '',
+      seats: full.seats,
+      isDoorstep: full.isDoorstep,
+      doorstepAddress: full.doorstepAddress,
+      doorstepLat: full.doorstepLat,
+      doorstepLng: full.doorstepLng,
+      phone: cleanPhoneNumber(full.phone || ''),
+      contactName: full.contactName || '',
+      status: full.status,
+      matchedTripId: full.matchedTripId || null,
+      matchedBookingId: full.matchedBookingId || null,
+      createdAt: full.createdAt,
+      payload: JSON.stringify(full)
+    });
+
+  return full;
+}
+
+/**
+ * Lấy danh sách các Intent theo bộ lọc (status, role, corridor, date)
+ */
+export function getIntents(filters = {}) {
+  const database = getRawDB();
+  const conditions = [];
+  const params = [];
+
+  if (filters.status) {
+    conditions.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.role) {
+    conditions.push('role = ?');
+    params.push(filters.role);
+  }
+  if (filters.corridor) {
+    conditions.push('corridor = ?');
+    params.push(filters.corridor);
+  }
+  if (filters.date) {
+    conditions.push('date = ?');
+    params.push(filters.date);
+  }
+  if (filters.userId) {
+    conditions.push('userId = ?');
+    params.push(filters.userId);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const query = `SELECT payload FROM intents ${whereClause} ORDER BY createdAt ASC`;
+  const rows = database.prepare(query).all(...params);
+
+  return rows
+    .map((r) => {
+      try {
+        return JSON.parse(r.payload);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Lấy chi tiết một Intent theo ID
+ */
+export function getIntentById(id) {
+  const database = getRawDB();
+  const row = database.prepare('SELECT payload FROM intents WHERE id = ?').get(id);
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cập nhật trạng thái và dữ liệu Intent
+ */
+export async function updateIntent(id, updates = {}) {
+  const database = getRawDB();
+  const row = database.prepare('SELECT payload FROM intents WHERE id = ?').get(id);
+  if (!row) return null;
+
+  try {
+    const full = JSON.parse(row.payload);
+    Object.assign(full, updates);
+
+    database
+      .prepare(
+        `
+      UPDATE intents 
+      SET status = ?, matchedTripId = ?, matchedBookingId = ?, payload = ?
+      WHERE id = ?
+    `
+      )
+      .run(
+        full.status || 'pending',
+        full.matchedTripId || null,
+        full.matchedBookingId || null,
+        JSON.stringify(full),
+        id
+      );
+
+    return full;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Xóa một Intent
+ */
+export async function deleteIntent(id) {
+  const database = getRawDB();
+  const info = database.prepare('DELETE FROM intents WHERE id = ?').run(id);
+  return info.changes > 0;
+}
+
+/**
+ * Lưu trữ nhật ký một Phiên Khớp Lệnh (Matching Epoch)
+ */
+export async function createMatchingEpoch(epochData) {
+  const database = getRawDB();
+  const id = epochData.id || `EP-${Date.now()}`;
+  const now = Date.now();
+
+  database
+    .prepare(
+      `
+    INSERT INTO matching_epochs (
+      id, epochType, corridor, matchedCount, driverCount, passengerCount, createdAt, summary
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?, ?, ?
+    )
+  `
+    )
+    .run(
+      id,
+      epochData.epochType || 'micro_batch',
+      epochData.corridor || 'Toàn sàn',
+      Number(epochData.matchedCount || 0),
+      Number(epochData.driverCount || 0),
+      Number(epochData.passengerCount || 0),
+      now,
+      typeof epochData.summary === 'string' ? epochData.summary : JSON.stringify(epochData.summary || {})
+    );
+
+  return { id, createdAt: now, ...epochData };
+}
+
+/**
+ * Lấy lịch sử các phiên khớp lệnh gần nhất
+ */
+export function getMatchingEpochs(limit = 20) {
+  const database = getRawDB();
+  return database.prepare('SELECT * FROM matching_epochs ORDER BY createdAt DESC LIMIT ?').all(limit);
+}
+
+/**
+ * Áp dụng kỷ luật hủy chuyến theo hàm suy giảm thời gian (Time-Decay Penalty Engine)
+ * - deltaMinutes > 120: An toàn 0đ, không phạt.
+ * - 30 <= deltaMinutes <= 120: Cảnh cáo, trừ 15 điểm tín nhiệm.
+ * - deltaMinutes < 30 hoặc sau khởi hành: Vi phạm nặng, trừ 40 điểm tín nhiệm, khoá 7 ngày.
+ */
+export async function applyCancellationPenalty(booking, cancellingUserPhone, deltaMinutes) {
+  const cleanPhone = cleanPhoneNumber(cancellingUserPhone);
+
+  let penaltyTier = 'safe_free';
+  let penaltyPoints = 0;
+  let freezeDays = 0;
+  let message = 'Huỷ chuyến an toàn trước > 2 tiếng. Không bị trừ điểm tín nhiệm.';
+
+  if (deltaMinutes < 30) {
+    penaltyTier = 'severe_freeze';
+    penaltyPoints = 40;
+    freezeDays = 7;
+    message =
+      'Huỷ chuyến sát giờ (< 30 phút). Trừ 40 điểm tín nhiệm và tạm khoá tài khoản 7 ngày. Hệ thống đã kích hoạt Radar cứu hộ.';
+  } else if (deltaMinutes <= 120) {
+    penaltyTier = 'warning';
+    penaltyPoints = 15;
+    freezeDays = 0;
+    message = 'Cảnh cáo huỷ chuyến cận giờ (30 phút - 2 tiếng). Trừ 15 điểm tín nhiệm và giãn cách ưu tiên 24h.';
+  }
+
+  // Khấu trừ điểm tín nhiệm nếu có người dùng
+  if (cleanPhone && penaltyPoints > 0) {
+    const user = getUserByPhone(cleanPhone);
+    if (user) {
+      const currentScore = Number(user.trustScore ?? 98);
+      const newScore = Math.max(10, currentScore - penaltyPoints);
+      const userUpdates = {
+        trustScore: newScore
+      };
+
+      if (freezeDays > 0) {
+        userUpdates.freezeUntil = Date.now() + freezeDays * 24 * 3600 * 1000;
+        userUpdates.freezeReason = message;
+      }
+
+      await saveUser({
+        ...user,
+        ...userUpdates
+      });
+    }
+  }
+
+  return {
+    penaltyTier,
+    penaltyPoints,
+    freezeDays,
+    message,
+    deltaMinutes: Math.round(deltaMinutes)
+  };
 }
 

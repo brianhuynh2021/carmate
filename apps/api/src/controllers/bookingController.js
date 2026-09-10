@@ -12,8 +12,10 @@ import {
   updateUserStatus,
   saveSupportMessage,
   resolveDisputeAndUnban,
-  isUserDeactivated
+  isUserDeactivated,
+  applyCancellationPenalty
 } from '../db/sqliteStore.js';
+import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
 import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import crypto from 'crypto';
 import { sendBusinessAlert, sendTelegramMessage, sendDirectBookingTelegramAlert } from '../utils/telegramAlert.js';
@@ -348,25 +350,94 @@ export async function reportDelay(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/cancel - Huỷ kết nối chuyến đi
+ * POST /api/bookings/:id/cancel - Huỷ kết nối chuyến đi (Thang phạt dốc thời gian & Radar cứu hộ)
  */
 export async function cancelBooking(req, res) {
   try {
     const { id } = req.params;
-    const { reason = 'Thay đổi lịch trình đột xuất' } = req.body;
+    const { reason = 'Thay đổi lịch trình đột xuất', phone = '' } = req.body || {};
 
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
+    }
+
+    // 1. Xác định thời điểm khởi hành của chuyến xe để đo lường delta t
+    let departureTimeMs = null;
+    let trip = null;
+    if (booking.tripId) {
+      trip = getTripById(booking.tripId);
+    }
+
+    const tripDate = booking.date || trip?.date;
+    const tripTimeSlot = booking.timeSlot || trip?.timeSlot || '';
+
+    if (tripDate) {
+      const hourMatch = String(tripTimeSlot).match(/(\d{1,2}):(\d{2})/);
+      const departureDate = new Date(tripDate);
+      if (hourMatch) {
+        departureDate.setHours(parseInt(hourMatch[1], 10), parseInt(hourMatch[2], 10), 0, 0);
+      } else {
+        departureDate.setHours(12, 0, 0, 0);
+      }
+      departureTimeMs = departureDate.getTime();
+    }
+
+    const nowMs = Date.now();
+    let deltaMinutes = 180; // Mặc định > 2 tiếng nếu không xác định được giờ cụ thể
+    if (departureTimeMs && !isNaN(departureTimeMs)) {
+      deltaMinutes = (departureTimeMs - nowMs) / (60 * 1000);
+    }
+
+    const cancellingPhone = phone || booking.passengerPhone || trip?.phoneReal || '';
+
+    // 2. Tính toán thang phạt dốc thời gian (Time-Decay Penalty)
+    const penaltyResult = await applyCancellationPenalty(booking, cancellingPhone, deltaMinutes);
+
+    // 3. Nếu huỷ sát giờ (< 30 phút), kích hoạt Radar cứu hộ (Standby Buffer)
+    let salvageInfo = null;
+    if (deltaMinutes < 30) {
+      const db = getDB();
+      const allActiveTrips = (db.trips || []).filter((t) => t.status === 'active' && !t.isHidden);
+      const standbyCandidate = findStandbyBufferOffer(
+        { ...booking, corridor: trip?.routeCategory || 'Tuyến QL13', direction: trip?.direction },
+        allActiveTrips.filter((t) => t.id !== booking.tripId)
+      );
+
+      if (standbyCandidate) {
+        salvageInfo = {
+          salvaged: true,
+          standbyTripId: standbyCandidate.id,
+          standbyDriverName: standbyCandidate.authorName || 'Chủ xe dự phòng',
+          standbyPhone: standbyCandidate.phoneReal || standbyCandidate.phone,
+          note: 'Đã tự động kết nối xe dự phòng thay thế thành công.'
+        };
+      }
+    }
+
+    // 4. Cập nhật booking vào database
     const updated = await updateBookingStatus(id, 'cancelled', {
       cancelReason: reason,
-      cancelledAt: new Date().toISOString()
+      cancelledAt: new Date().toISOString(),
+      penaltyTier: penaltyResult.penaltyTier,
+      penaltyPoints: penaltyResult.penaltyPoints,
+      salvageInfo
     });
 
-    if (!updated) {
-      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
+    // 5. Nếu chủ xe bị huỷ ghế, phục hồi lại số ghế trống trên chuyến xe
+    if (trip && trip.id) {
+      const currentSeats = Number(trip.seats || 0);
+      const bookedSeats = Number(booking.seats || 1);
+      await updateTrip(trip.id, {
+        seats: currentSeats + bookedSeats
+      });
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Huỷ chuyến thành công. Vui lòng nhắn tin Zalo báo trước cho đối tác',
+      message: penaltyResult.message,
+      penalty: penaltyResult,
+      salvageInfo,
       data: updated
     });
   } catch (err) {

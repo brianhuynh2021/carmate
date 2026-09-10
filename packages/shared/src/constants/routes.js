@@ -410,3 +410,287 @@ export function getCorridorWaypoints(routeCategoryOrKeyword) {
 
   return [];
 }
+
+/**
+ * MẠNG LƯỚI TRẠM ĐÓN ẢO CHUẨN HÓA (VIRTUAL HUBS - DARP-MP)
+ * Định vị các nút giao vàng dọc tuyến hành lang chính để xe lướt qua không phải vòng hẻm.
+ * Thời gian dừng đỗ chuẩn hóa 5 phút (300s) curbside window.
+ */
+export const VIRTUAL_HUBS = [
+  // ── HÀNH LANG TUYẾN QL13 (TP.HCM ⇄ BÌNH DƯƠNG ⇄ BÌNH PHƯỚC) ──
+  {
+    id: 'hub_ql13_hang_xanh',
+    name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)',
+    shortName: 'Ngã 4 Hàng Xanh',
+    corridor: 'Tuyến QL13',
+    lat: 10.8012,
+    lng: 106.7114,
+    landmark: 'Cây xăng Comeco Hàng Xanh / Điện Biên Phủ',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_nga4_binh_phuoc',
+    name: 'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)',
+    shortName: 'Ngã 4 Bình Phước',
+    corridor: 'Tuyến QL13',
+    lat: 10.8525,
+    lng: 106.7214,
+    landmark: 'Cây xăng Petrolimex QL13 giao QL1A',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_cong_chao_lai_thieu',
+    name: 'Cổng chào Bình Dương / Lái Thiêu (Thuận An)',
+    shortName: 'Cổng chào Lái Thiêu',
+    corridor: 'Tuyến QL13',
+    lat: 10.9015,
+    lng: 106.6985,
+    landmark: 'Cổng chào Bình Dương - QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false
+  },
+  {
+    id: 'hub_ql13_vsip1',
+    name: 'Cổng KCN VSIP 1 / AEON Mall Bình Dương',
+    shortName: 'KCN VSIP 1 / AEON Mall',
+    corridor: 'Tuyến QL13',
+    lat: 10.9328,
+    lng: 106.6972,
+    landmark: 'Cổng chính KCN VSIP 1 - Đại lộ Bình Dương',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_nga4_so_sao',
+    name: 'Ngã 4 Sở Sao / Trạm dừng Đại Nam (Thủ Dầu Một)',
+    shortName: 'Ngã 4 Sở Sao',
+    corridor: 'Tuyến QL13',
+    lat: 11.0423,
+    lng: 106.6341,
+    landmark: 'Ngã 4 Sở Sao - Cây xăng Đại Nam',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_bau_bang',
+    name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước',
+    shortName: 'KCN Bàu Bàng',
+    corridor: 'Tuyến QL13',
+    lat: 11.2382,
+    lng: 106.6125,
+    landmark: 'Cổng KCN Bàu Bàng - QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false
+  },
+  {
+    id: 'hub_ql13_nga4_chon_thanh',
+    name: 'Ngã 4 Chơn Thành (Giao Tuyến N2 & QL14)',
+    shortName: 'Ngã 4 Chơn Thành',
+    corridor: 'Tuyến QL13',
+    lat: 11.4791,
+    lng: 106.6694,
+    landmark: 'Bùng binh Chơn Thành - Trạm xăng Tín Nghĩa',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_binh_long',
+    name: 'Cổng chào TX. Bình Long / Bến xe Bình Long',
+    shortName: 'TX. Bình Long',
+    corridor: 'Tuyến QL13',
+    lat: 11.6482,
+    lng: 106.6025,
+    landmark: 'Cổng chào Thị xã Bình Long QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_dong_xoai',
+    name: 'Ngã 3 Đồng Xoài / Tượng đài Chiến Thắng (Bình Phước)',
+    shortName: 'Ngã 3 Đồng Xoài',
+    corridor: 'Tuyến QL13',
+    lat: 11.5328,
+    lng: 106.8834,
+    landmark: 'Bùng binh Ngã 3 Hùng Vương - ĐT741',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_cho_loc_ninh',
+    name: 'Chợ Lộc Ninh / Cây xăng 17 (Bình Phước)',
+    shortName: 'Chợ Lộc Ninh',
+    corridor: 'Tuyến QL13',
+    lat: 11.8421,
+    lng: 106.5972,
+    landmark: 'Khu phố Ninh Thịnh / Cây xăng 17 QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_hoa_lu',
+    name: 'Cửa khẩu Quốc tế Hoa Lư (Lộc Ninh)',
+    shortName: 'Cửa khẩu Hoa Lư',
+    corridor: 'Tuyến QL13',
+    lat: 11.9568,
+    lng: 106.5312,
+    landmark: 'Trạm kiểm soát liên hợp Cửa khẩu Hoa Lư',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+
+  // ── HÀNH LANG TUYẾN N2 (ĐÔNG NAM BỘ ⇄ MIỀN TÂY / KIÊN GIANG) ──
+  {
+    id: 'hub_n2_chon_thanh',
+    name: 'Ngã 4 Chơn Thành (Điểm kết nối QL13 - Tuyến N2)',
+    shortName: 'Ngã 4 Chơn Thành (N2)',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 11.4791,
+    lng: 106.6694,
+    landmark: 'Bùng binh Chơn Thành - Điểm đầu N2',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_thay_cai',
+    name: 'Cầu Thầy Cai / Bến Cát (Ranh Bình Dương - Củ Chi)',
+    shortName: 'Cầu Thầy Cai',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 11.0251,
+    lng: 106.4912,
+    landmark: 'Trạm dừng chân Cầu Thầy Cai',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false
+  },
+  {
+    id: 'hub_n2_hau_nghia',
+    name: 'Thị trấn Hậu Nghĩa / Đức Hòa (Long An)',
+    shortName: 'Hậu Nghĩa (Đức Hòa)',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.8924,
+    lng: 106.4215,
+    landmark: 'Vòng xoay Hậu Nghĩa - ĐT825 giao Tuyến N2',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_thanh_hoa',
+    name: 'Thị trấn Thạnh Hóa / Cầu Tuyên Nhơn (Long An)',
+    shortName: 'Thạnh Hóa (Long An)',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.6512,
+    lng: 106.1824,
+    landmark: 'Trạm xăng Cầu Tuyên Nhơn - Tuyến N2',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_thap_muoi',
+    name: 'Thị trấn Mỹ An / Tháp Mười (Đồng Tháp)',
+    shortName: 'Tháp Mười (Đồng Tháp)',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.5185,
+    lng: 105.8521,
+    landmark: 'Bến xe Mỹ An - Nút giao N2',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_cau_cao_lanh',
+    name: 'Nút giao Cầu Cao Lãnh (Đồng Tháp)',
+    shortName: 'Cầu Cao Lãnh',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.4214,
+    lng: 105.6542,
+    landmark: 'Trạm dừng chân Cao Lãnh / Quốc lộ 30',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_vam_cong',
+    name: 'Cầu Vàm Cống / Thốt Nốt (Cần Thơ)',
+    shortName: 'Cầu Vàm Cống',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.3125,
+    lng: 105.5124,
+    landmark: 'Trạm dừng chân Cầu Vàm Cống',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_lo_te',
+    name: 'Ngã 3 Lộ Tẻ / Cao tốc Lộ Tẻ - Rạch Sỏi',
+    shortName: 'Ngã 3 Lộ Tẻ',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.1852,
+    lng: 105.3214,
+    landmark: 'Nút giao Lộ Tẻ - Đầu cao tốc Rạch Sỏi',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_rach_gia',
+    name: 'Bến xe Rạch Sỏi / TP. Rạch Giá (Kiên Giang)',
+    shortName: 'TP. Rạch Giá',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 9.9612,
+    lng: 105.1245,
+    landmark: 'Bến xe Rạch Sỏi - Đường Mai Thị Hồng Hạnh',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  }
+];
+
+/**
+ * CẤU HÌNH ĐÓN TẬN CỬA NHÀ (DOORSTEP PICKUP - MIT COMPENSATED PRICING)
+ * Cho phép khách có con nhỏ/đồ nặng chọn đón tận cửa với phụ phí xăng ngõ ngách minh bạch.
+ * Phụ phí được chia sẻ công bằng (Pareto Optimal) giảm trừ giá vé cho các khách khác cùng xe.
+ */
+export const DOORSTEP_CONFIG = {
+  DEFAULT_SURCHARGE: 40000, // +40.000đ phụ phí hỗ trợ xăng ngõ ngách
+  MAX_NEIGHBORHOOD_RADIUS_KM: 1.0, // Bán kính láng giềng tối đa 1.0km (tránh "Tour de Hẻm")
+  MAX_CURBSIDE_WAIT_SECONDS: 300, // Tối đa 5 phút chờ trước cửa
+  COMPENSATION_DISCOUNT_RATIO: 0.5, // 50% tiền phụ phí chia lại giảm giá cho khách cùng xe
+  LABEL: 'Cần đón tận nhà (+40k phụ phí xăng)',
+  NOTE: 'Đón tận cửa nhà (+40.000đ hỗ trợ xăng ngõ ngách · Phù hợp đồ nặng / con nhỏ)'
+};
+
+/**
+ * Lấy danh sách Trạm đón ảo theo tuyến hành lang
+ */
+export function getVirtualHubsByCorridor(corridorKey) {
+  if (!corridorKey) return VIRTUAL_HUBS;
+  const clean = corridorKey.trim().toLowerCase();
+  return VIRTUAL_HUBS.filter(
+    (hub) => hub.corridor.toLowerCase().includes(clean) || clean.includes(hub.corridor.toLowerCase())
+  );
+}
+
+/**
+ * Tìm Trạm đón ảo gần nhất với toạ độ GPS cho trước
+ */
+export function findNearestVirtualHub(lat, lng, corridorKey = null) {
+  if (lat == null || lng == null) return null;
+  const hubs = corridorKey ? getVirtualHubsByCorridor(corridorKey) : VIRTUAL_HUBS;
+  if (hubs.length === 0) return null;
+
+  let bestHub = null;
+  let minDistance = Infinity;
+
+  for (const hub of hubs) {
+    const dLat = ((hub.lat - lat) * Math.PI) / 180;
+    const dLng = ((hub.lng - lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat * Math.PI) / 180) * Math.cos((hub.lat * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    if (dist < minDistance) {
+      minDistance = dist;
+      bestHub = { ...hub, distanceKm: Math.round(dist * 10) / 10 };
+    }
+  }
+
+  return bestHub;
+}
