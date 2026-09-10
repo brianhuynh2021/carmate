@@ -733,7 +733,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                     : seats === 4 && vehicleCapacity === 5
                       ? 'Đầy 4 ghế khách (ghế phụ + 3 ghế sau)'
                       : `Còn trống ${seats} ghế nhận khách`
-                  : `Cần ${seats} vé ghép`}
+                  : `Cần ghép ${seats} ghế`}
               </span>
               {isDriver && (
                 <span className="text-slate-400 font-mono text-[10.5px]">

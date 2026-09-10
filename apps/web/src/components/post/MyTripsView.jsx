@@ -576,7 +576,7 @@ export default function MyTripsView({
                             </span>
                             <span className="text-[12px] text-slate-600 dark:text-slate-400 font-medium inline-flex items-center gap-1">
                               <Users className="w-3.5 h-3.5 text-slate-400" />
-                              <span>{isDriver ? `Cần ${seats} người` : `Cần ${seats} chỗ`}</span>
+                              <span>{isDriver ? `Nhận ghép ${seats} ghế` : `Cần ghép ${seats} ghế`}</span>
                             </span>
                           </div>
 

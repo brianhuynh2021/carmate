@@ -478,7 +478,7 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                               <span>Hành Khách Tiện Đường</span>
                             </span>
                             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 tabular">
-                              Cần {passenger.seatsNeeded || 1} ghế
+                              Cần ghép {passenger.seatsNeeded || 1} ghế
                             </span>
                           </div>
 
@@ -613,8 +613,8 @@ export default function MatchRadarView({ driverOffers = [], passengerRequests = 
                           </span>
                         </div>
                         <p className="text-[11px] text-[#86868b] truncate">
-                          {item.hometown || 'Đồng hương'} · {item.carType?.replace(/du\s*lịch\s*/gi, '') || `Xe ${item.capacity || 5} chỗ`} (Cần {item.availableSeats || 1}{' '}
-                          người)
+                          {item.hometown || 'Đồng hương'} · {item.carType?.replace(/du\s*lịch\s*/gi, '') || `Xe ${item.capacity || 5} chỗ`} (Nhận ghép {item.availableSeats || 1}{' '}
+                          ghế)
                         </p>
                       </div>
                     </div>

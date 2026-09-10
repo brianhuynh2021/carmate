@@ -5723,6 +5723,56 @@ async function runTests() {
     assert(false, '74. Kiểm thử Chuông Thông Báo Góc Phải Trên Cùng & Dropdown Chuẩn YouTube', err.message);
   }
 
+  // 75. KIỂM THỬ CHUẨN MỰC DANH XƯNG GHÉP XE: TRIỆT TIÊU SẮC THÁI "CẦU XIN" (NHẬN GHÉP N GHẾ & CẦN GHÉP N GHẾ)
+  console.log('\n--- 75. Kiểm thử Chuẩn Mực Danh Xưng Ghép Xe: "Nhận Ghép n Ghế" & "Cần Ghép n Ghế" ---');
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 75.1 TripCard.jsx: Chủ xe hiển thị "Nhận ghép n ghế", Người đi cùng hiển thị "Cần ghép n ghế"
+    const tripCardPath = path.resolve(process.cwd(), 'apps/web/src/components/market/TripCard.jsx');
+    const tripCardCode = fs.readFileSync(tripCardPath, 'utf8');
+    assert(tripCardCode.includes('Nhận ghép') && tripCardCode.includes('{seatsLeft}') && tripCardCode.includes('ghế'),
+      'TripCard 1: Chủ xe hiển thị chuẩn mực "Nhận ghép {seatsLeft} ghế"');
+    assert(tripCardCode.includes('Cần ghép') && tripCardCode.includes('{seatsLeft}') && tripCardCode.includes('ghế'),
+      'TripCard 2: Người đi cùng hiển thị rõ ràng "Cần ghép {seatsLeft} ghế"');
+    assert(!tripCardCode.includes('Cần <span className="tabular">{seatsLeft}</span> người'),
+      'TripCard 3: Triệt tiêu vĩnh viễn sắc thái cầu xin "Cần {seatsLeft} người"');
+
+    // 75.2 RouteDetailModal.jsx
+    const routeModalPath = path.resolve(process.cwd(), 'apps/web/src/components/modals/RouteDetailModal.jsx');
+    const routeModalCode = fs.readFileSync(routeModalPath, 'utf8');
+    assert(routeModalCode.includes('Nhận ghép ${seatsCount} ghế'),
+      'RouteDetailModal 1: seatsLabel dùng "Nhận ghép ${seatsCount} ghế"');
+    assert(routeModalCode.includes('Cần ghép ${seatsCount} ghế'),
+      'RouteDetailModal 2: seatsLabel dùng "Cần ghép ${seatsCount} ghế"');
+    assert(!routeModalCode.includes('Cần ${seatsCount} người'),
+      'RouteDetailModal 3: Triệt tiêu "Cần ${seatsCount} người"');
+
+    // 75.3 ticketCanvas.js
+    const ticketPath = path.resolve(process.cwd(), 'apps/web/src/utils/ticketCanvas.js');
+    const ticketCode = fs.readFileSync(ticketPath, 'utf8');
+    assert(ticketCode.includes('Nhận ghép ${trip.availableSeats || 3} ghế'),
+      'TicketCanvas 1: Vé điện tử dùng "Nhận ghép {n} ghế"');
+    assert(ticketCode.includes('Cần ghép ${trip.seatsNeeded || 1} ghế'),
+      'TicketCanvas 2: Vé điện tử dùng "Cần ghép {n} ghế"');
+
+    // 75.4 SmartTripComposer & MyTripsView
+    const composerPath = path.resolve(process.cwd(), 'apps/web/src/components/post/SmartTripComposer.jsx');
+    const composerCode = fs.readFileSync(composerPath, 'utf8');
+    assert(composerCode.includes('Nhận ghép ${parsedResult.seats} ghế'),
+      'SmartTripComposer 1: Gợi ý bóc tách NLP dùng "Nhận ghép {n} ghế"');
+
+    const myTripsPath = path.resolve(process.cwd(), 'apps/web/src/components/post/MyTripsView.jsx');
+    const myTripsCode = fs.readFileSync(myTripsPath, 'utf8');
+    assert(myTripsCode.includes('Nhận ghép ${seats} ghế'),
+      'MyTripsView 1: Danh sách quản lý dùng "Nhận ghép {seats} ghế"');
+
+    assert(true, '75. Hoàn tất kiểm thử Chuẩn Mực Danh Xưng Ghép Xe Văn Minh');
+  } catch (err) {
+    assert(false, '75. Kiểm thử Chuẩn Mực Danh Xưng Ghép Xe Văn Minh', err.message);
+  }
+
   const passed = results.filter((r) => r.pass).length;
   const failed = results.filter((r) => !r.pass).length;
   const total = results.length;

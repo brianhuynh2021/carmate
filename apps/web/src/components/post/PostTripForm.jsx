@@ -1770,7 +1770,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   <span>
                     {pendingPayload.type === 'driver_offer'
                       ? `Chủ xe · ${pendingPayload.capacity === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
-                      : `Người đi cùng · Cần ${pendingPayload.seatsNeeded} ghế`}
+                      : `Người đi cùng · Cần ghép ${pendingPayload.seatsNeeded} ghế`}
                   </span>
                 </span>
                 <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
