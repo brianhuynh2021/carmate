@@ -6,19 +6,14 @@ import {
   Search,
   X,
   Truck,
-  Zap,
   Car,
   Users,
-  Home,
   Clock,
-  Radio,
-  ChevronDown,
-  SlidersHorizontal
+  MessageSquare
 } from 'lucide-react';
 import {
   computeHotRoutes,
-  DEFAULT_FALLBACK_ROUTES,
-  DOORSTEP_CONFIG
+  DEFAULT_FALLBACK_ROUTES
 } from '@carmate/shared';
 import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getContextualGhostRoute } from '../../utils/personaMemory.js';
@@ -40,25 +35,17 @@ export default function Hero({
   setSearchFrom,
   searchTo = '',
   setSearchTo,
-  currentUser,
+  currentUser: _currentUser,
   onShowToast,
   activeCorridor = 'Tuyến QL13',
   onCorridorChange
 }) {
   // Chế độ hiển thị trung tâm: 'auto' (Ghép nhanh 1-chạm - Mặc định) | 'manual' (Tìm kiếm thủ công)
-  // Vai trò: 'passenger' (Người đi cùng tìm xe) | 'driver' (Chủ xe có chỗ trống) | 'cargo' (Ghép hàng)
+  // Vai trò: 'passenger' (Người đi cùng tìm chuyến) | 'driver' (Chủ xe có chỗ trống) | 'cargo' (Ghép hàng)
   const [role, setRole] = useState('passenger');
   const [corridor, setCorridor] = useState(activeCorridor || 'Tuyến QL13');
   const [timeSlot, setTimeSlot] = useState('all');
   const [seats, setSeats] = useState(1);
-
-  // Tuỳ chọn nâng cao (Progressive Disclosure)
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [isDoorstep, setIsDoorstep] = useState(false);
-  const [doorstepAddress, setDoorstepAddress] = useState('');
-  const [userSelectedPrice, setUserSelectedPrice] = useState(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [_matchResult, setMatchResult] = useState(null);
 
   // Đảo chiều điểm đi / điểm đến
   const handleSwap = () => {
@@ -78,17 +65,15 @@ export default function Hero({
     const calculatedPerSeat = 35000 + Math.round(distKm * ratePerKm) + botProportion;
     const roundedBase = Math.round(calculatedPerSeat / 5000) * 5000;
     const clampedBase = Math.max(50000, Math.min(300000, roundedBase));
-    const surcharge = isDoorstep ? (DOORSTEP_CONFIG?.DEFAULT_SURCHARGE || 40000) : 0;
 
     return {
       distanceKm: distKm,
       basePrice: clampedBase,
-      doorstepSurcharge: surcharge,
-      finalPrice: (clampedBase + surcharge) * seats
+      finalPrice: clampedBase * seats
     };
-  }, [isDoorstep, seats, corridor]);
+  }, [seats, corridor]);
 
-  const effectivePrice = userSelectedPrice !== null ? userSelectedPrice : pricingEstimate.finalPrice;
+  const effectivePrice = pricingEstimate.finalPrice;
 
   // Đồng bộ ngữ cảnh hành lang lên App
   useEffect(() => {
@@ -105,76 +90,6 @@ export default function Hero({
     const el = document.getElementById('market-results') || document.getElementById('trips-section');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  // Gửi ý định ghép tự động 1-chạm (Level 3 Autonomous Engine)
-  const handleStartAutoMatch = async () => {
-    const contactPhone = currentUser?.phone;
-    if (!contactPhone) {
-      onShowToast?.('Vui lòng đăng nhập để hệ thống tự động kết nối và gửi thông báo ghép chuyến', 'warning');
-      return;
-    }
-
-    setIsSearching(true);
-    setMatchResult(null);
-
-    try {
-      const intentRes = await fetch('/api/intents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role,
-          originName: searchFrom || 'Điểm xuất phát',
-          destinationName: searchTo || 'Điểm đến',
-          corridor,
-          timeSlot: timeSlot === 'all' ? 'Mọi khung giờ' : timeSlot,
-          seats: Number(seats),
-          isDoorstep: isDoorstep ? 1 : 0,
-          doorstepAddress: isDoorstep ? doorstepAddress : '',
-          customPrice: effectivePrice,
-          phone: contactPhone,
-          contactName: currentUser?.name || (role === 'driver' ? 'Chủ xe' : 'Người đi cùng')
-        })
-      });
-
-      const intentData = await intentRes.json();
-      if (!intentData.success) {
-        throw new Error(intentData.error || 'Không thể tạo ý định ghép');
-      }
-
-      const matchRes = await fetch('/api/intents/match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ corridor })
-      });
-
-      const matchData = await matchRes.json();
-
-      if (matchData.success && matchData.matchedClusters?.length > 0) {
-        const myCluster = matchData.matchedClusters.find((c) =>
-          c.driver.id === intentData.data.id ||
-          c.passengers.some((p) => p.id === intentData.data.id || p.phone === contactPhone)
-        );
-
-        if (myCluster) {
-          setMatchResult({
-            cluster: myCluster,
-            role,
-            isDoorstep,
-            finalPrice: pricingEstimate.finalPrice
-          });
-          onShowToast?.('✓ Đã tìm thấy chuyến xe tiện đường phù hợp nhất!', 'success');
-        } else {
-          onShowToast?.('Đã lưu yêu cầu của bạn, hệ thống đang tự động tìm xe phù hợp (trong 3 phút)!', 'info');
-        }
-      } else {
-        onShowToast?.('Đã lưu yêu cầu của bạn, hệ thống đang tự động tìm xe phù hợp (trong 3 phút)!', 'info');
-      }
-    } catch (err) {
-      onShowToast?.(err.message || 'Lỗi điều phối tự động', 'error');
-    } finally {
-      setIsSearching(false);
     }
   };
 
@@ -293,7 +208,7 @@ export default function Hero({
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>Người đi cùng (Tìm xe)</span>
+              <span>Người đi cùng (Tìm chuyến)</span>
             </button>
 
             <button
@@ -430,115 +345,20 @@ export default function Hero({
               className="h-10 sm:h-11 px-5 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] text-white shadow-md shadow-blue-500/20 inline-flex items-center justify-center gap-2 shrink-0 cursor-pointer transition-all"
             >
               <Search className="w-4 h-4" />
-              <span>{role === 'driver' ? 'Tìm khách' : 'Tìm xe'}</span>
+              <span>{role === 'driver' ? 'Tìm người đi cùng' : 'Tìm chuyến tiện đường'}</span>
             </button>
           </div>
 
-          {/* Tuỳ chọn mở rộng (Progressive Disclosure) */}
-          <div className="pt-2 text-center">
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-xs text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors py-1 px-2.5 rounded-full hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
-            >
-              <SlidersHorizontal className="w-3 h-3 text-[#0071e3]" />
-              <span>{showAdvanced ? 'Thu gọn tuỳ chọn đón tận nơi & giá' : '+ Tuỳ chọn đón tận nơi & Ước lượng chi phí'}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
-            </button>
-
-            {showAdvanced && (
-              <div className="mt-2.5 p-4 rounded-2xl bg-white/95 dark:bg-zinc-900/95 border border-black/[0.06] dark:border-zinc-800 shadow-sm max-w-2xl mx-auto space-y-3 animate-in fade-in duration-200 text-left">
-                {/* Đón tận nhà */}
-                <div className="p-3 rounded-xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isDoorstep}
-                      onChange={(e) => setIsDoorstep(e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-zinc-600 cursor-pointer"
-                    />
-                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Home className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                      Cần đón tận nhà (+40.000đ phụ phí ngõ ngách)
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-zinc-400 hidden sm:inline">
-                      · Bán kính láng giềng ≤ 2km
-                    </span>
-                  </label>
-                  {isDoorstep && (
-                    <input
-                      type="text"
-                      placeholder="Nhập ngõ, hẻm, số nhà cụ thể..."
-                      value={doorstepAddress}
-                      onChange={(e) => setDoorstepAddress(e.target.value)}
-                      className="w-full bg-white dark:bg-zinc-900 border border-amber-300 dark:border-amber-500/30 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/20"
-                    />
-                  )}
-                </div>
-
-                {/* Ước lượng chi phí & Điều chỉnh giá */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 text-xs">
-                  <div>
-                    <span className="text-slate-500 dark:text-zinc-400">Ước tính chia sẻ xăng xe: </span>
-                    <span className="font-bold text-slate-900 dark:text-white font-mono text-sm">
-                      ~{effectivePrice.toLocaleString('vi-VN')}đ
-                    </span>
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold ml-1.5">
-                      (0đ phí sàn)
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setUserSelectedPrice(Math.max(40000, pricingEstimate.finalPrice - 20000))}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${
-                        userSelectedPrice === pricingEstimate.finalPrice - 20000
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
-                      }`}
-                    >
-                      -20k Tiết kiệm
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setUserSelectedPrice(null)}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${
-                        userSelectedPrice === null
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
-                      }`}
-                    >
-                      Chuẩn {Math.round(pricingEstimate.finalPrice / 1000)}k
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setUserSelectedPrice(pricingEstimate.finalPrice + 20000)}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${
-                        userSelectedPrice === pricingEstimate.finalPrice + 20000
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
-                      }`}
-                    >
-                      +20k Đi gấp
-                    </button>
-                  </div>
-                </div>
-
-                {/* Kích hoạt ghép tự động Level 3 */}
-                <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleStartAutoMatch}
-                    disabled={isSearching}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-all disabled:opacity-50"
-                  >
-                    {isSearching ? <Radio className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                    <span>Kích hoạt điều phối ghép tự động (3 phút)</span>
-                  </button>
-                </div>
-              </div>
-            )}
+          {/* Ghi chú văn minh Carpooling */}
+          <div className="pt-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-zinc-400 font-medium">
+            <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-zinc-300 font-semibold">
+              <MessageSquare className="w-3.5 h-3.5 text-[#0071e3]" />
+              <span>Điểm đón cụ thể: Trao đổi & thống nhất trực tiếp qua Chat</span>
+            </span>
+            <span className="hidden sm:inline text-slate-300 dark:text-zinc-700">·</span>
+            <span>0đ phí sàn</span>
+            <span className="hidden sm:inline text-slate-300 dark:text-zinc-700">·</span>
+            <span>Chia sẻ chi phí xăng xe văn minh</span>
           </div>
         </div>
 

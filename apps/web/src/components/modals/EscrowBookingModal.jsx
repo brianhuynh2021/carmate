@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users,
   ShieldCheck,
@@ -27,7 +27,6 @@ import {
   formatVND,
   calculatePricing,
   getTimeSlotLabel,
-  getCorridorWaypoints,
   toPublicAlias,
   normalizePhoneNumber,
   getPriceGuardrail,
@@ -39,22 +38,8 @@ import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { RouteTimeline, getCarDisplay } from '../market/TripCard.jsx';
-import { searchLocations, getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
 import { triggerMacNotification } from '../common/AppleMacNotification.jsx';
 import api from '../../api/client.js';
-
-// Điểm đón mốc nổi tiếng dọc trục QL13 & liên tỉnh (Hotspot Chips 1 chạm kiểu Grab)
-const POPULAR_HOTSPOTS = [
-  'Ngã 4 Bình Phước',
-  'Trạm thu phí Lái Thiêu',
-  'Cổng KCN VSIP 1',
-  'Cầu Bình Triệu',
-  'Ngã 4 Hàng Xanh',
-  'Bến xe Miền Đông',
-  'Cây xăng Petrolimex 17',
-  'Chợ Tân Khai',
-  'Cổng chào Bình Long'
-];
 
 export default function EscrowBookingModal({
   item,
@@ -70,48 +55,12 @@ export default function EscrowBookingModal({
 }) {
   const { lang } = useI18n();
   const [seats, setSeats] = useState(1);
-  const [pickupPoint, setPickupPoint] = useState('');
+  const [pickupPoint] = useState('');
   const [passengerNote, setPassengerNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const [bookingCode] = useState(() => `CX-${Math.floor(1000 + Math.random() * 9000)}`);
-
-  // Autocomplete Dropdown State
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    if (pickupPoint.trim().length >= 2) {
-      const results = searchLocations(pickupPoint, 5);
-      setSuggestions(results);
-    } else {
-      setSuggestions([]);
-    }
-  }, [pickupPoint]);
-
-  // Đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Gợi ý điểm đón dọc trục theo chuyến đi cụ thể (Corridor Waypoints + Hotspots)
-  const routeHotspots = useMemo(() => {
-    if (!item) return POPULAR_HOTSPOTS;
-    const fromNote = item.waypointNote ? item.waypointNote.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean) : [];
-    const corridorFrom = getCorridorWaypoints(item.from || '') || [];
-    const corridorTo = getCorridorWaypoints(item.to || '') || [];
-    const suggested = getSuggestedWaypoints(item.from || '', item.to || '') || [];
-    const combined = Array.from(new Set([...fromNote, ...corridorFrom, ...corridorTo, ...suggested, ...POPULAR_HOTSPOTS]));
-    return combined.slice(0, 10);
-  }, [item?.from, item?.to, item?.waypointNote]);
 
   // BẤT BIẾN MIT: Kiểm tra quyền sở hữu bài đăng để ngăn chặn 100% việc tự ghép chuyến cho chính mình
   const isTripOwner = useMemo(() => {
@@ -772,86 +721,14 @@ export default function EscrowBookingModal({
           )
         )}
 
-        {/* Điểm đón mong muốn cụ thể với Hotspots & Dropdown Autocomplete */}
-        <div ref={dropdownRef} className="relative p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-              Điểm hẹn đón mong muốn:
-            </label>
-            {pickupPoint && (
-              <button
-                type="button"
-                onClick={() => setPickupPoint('')}
-                className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                Xóa
-              </button>
-            )}
-          </div>
-
-          <div className="relative">
-            <input
-              type="text"
-              value={pickupPoint}
-              onChange={(e) => {
-                setPickupPoint(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              placeholder="VD: Cổng KCN VSIP 1, Cây xăng Petrolimex..."
-              className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            />
-
-            {/* Dropdown gợi ý */}
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden py-1 max-h-48 overflow-y-auto anim-fade-in">
-                {suggestions.map((s, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setPickupPoint(s.name);
-                      setShowSuggestions(false);
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
-                  >
-                    <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                      <MapPin className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-slate-800 truncate">{s.name}</p>
-                      <p className="text-[11px] text-slate-400 truncate">{s.detail}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Gợi ý điểm đón nhanh 1 chạm theo lộ trình (Hotspot Chips) */}
-          <div className="space-y-1 pt-1">
-            <p className="text-[11px] text-slate-500 font-medium">Gợi ý điểm đón thuận tiện dọc tuyến:</p>
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              {routeHotspots.map((spot) => (
-                <button
-                  key={spot}
-                  type="button"
-                  onClick={() => {
-                    setPickupPoint(pickupPoint === spot ? '' : spot);
-                    setShowSuggestions(false);
-                  }}
-                  className={`shrink-0 text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
-                    pickupPoint === spot
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold shadow-2xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100/60'
-                  }`}
-                >
-                  {pickupPoint === spot && <Check className="w-3 h-3 inline mr-1 text-emerald-600 stroke-[3]" />}
-                  {spot}
-                </button>
-              ))}
-            </div>
+        {/* Điểm đón tiện đường: Thống nhất trực tiếp qua Chat */}
+        <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-800/40 flex items-start gap-2.5">
+          <MessageSquare className="w-4 h-4 text-[#0071e3] shrink-0 mt-0.5" />
+          <div className="text-xs text-blue-950 dark:text-blue-200 leading-relaxed">
+            <p className="font-bold">Điểm đón & trả cụ thể:</p>
+            <p className="text-blue-700 dark:text-blue-300 text-[11px] mt-0.5 font-normal">
+              Hai bên trao đổi và thống nhất trực tiếp điểm hẹn trong Chat sau khi chốt chuyến để thuận tiện nhất cho lộ trình của Chủ xe.
+            </p>
           </div>
         </div>
 
