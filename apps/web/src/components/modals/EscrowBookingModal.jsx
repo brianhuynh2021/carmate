@@ -23,7 +23,8 @@ import {
   getTimeSlotLabel,
   getCorridorWaypoints,
   toPublicAlias,
-  normalizePhoneNumber
+  normalizePhoneNumber,
+  getPriceGuardrail
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -150,6 +151,23 @@ export default function EscrowBookingModal({
   const pricing = calculatePricing(item, seats);
   const timeSlot = getTimeSlotLabel(item, lang);
 
+  const baseSeatPrice = item.basePricePerSeat || item.expectedPrice || item.price || 180000;
+  const [proposedUnitPrice, setProposedUnitPrice] = useState(baseSeatPrice);
+  const [showNegotiate, setShowNegotiate] = useState(false);
+
+  // Price Guardrail
+  const priceGuardrail = useMemo(() => {
+    return getPriceGuardrail(item?.from, item?.to, proposedUnitPrice);
+  }, [item?.from, item?.to, proposedUnitPrice]);
+
+  useEffect(() => {
+    setProposedUnitPrice(baseSeatPrice);
+    setShowNegotiate(false);
+  }, [item?.id, baseSeatPrice]);
+
+  const effectiveUnitPrice = Number(proposedUnitPrice) || baseSeatPrice;
+  const effectiveTotal = effectiveUnitPrice * seats;
+
   const handleSendInquiry = async () => {
     if (isTripOwner) {
       onShowToast?.('Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.');
@@ -165,10 +183,15 @@ export default function EscrowBookingModal({
       targetTripId: item.id,
       from: item.from,
       to: item.to,
+      date: item.date,
+      time: item.time,
+      targetItem: item,
       pickupPoint: pickupPoint.trim() || undefined,
       passengerNote: passengerNote.trim() || undefined,
       seats,
-      totalDeal: pricing.total,
+      totalDeal: effectiveTotal,
+      proposedPricePerSeat: effectiveUnitPrice !== baseSeatPrice ? effectiveUnitPrice : undefined,
+      originalPricePerSeat: baseSeatPrice,
       timeSlot,
       passengerPhone: currentUser?.phone || undefined,
       driverPhone: item.phoneReal,
@@ -695,6 +718,78 @@ export default function EscrowBookingModal({
           />
         </div>
 
+        {/* Đề xuất mức chia sẻ chi phí (Thương lượng văn minh có dải giá an toàn) */}
+        {isDriverItem && (
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
+                <span>Mức phụ xăng:</span>
+                <span className="text-[11.5px] font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                  {formatVND(effectiveUnitPrice)}/ghế
+                </span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowNegotiate(!showNegotiate)}
+                className="text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer"
+              >
+                {showNegotiate ? 'Đóng đề xuất' : 'Đề xuất mức khác?'}
+              </button>
+            </div>
+
+            {showNegotiate ? (
+              <div className="space-y-2 pt-1">
+                <p className="text-[11px] text-slate-500">
+                  Chọn mức chia sẻ phù hợp (giới hạn tối đa 20% so với giá đề xuất):
+                </p>
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                  {[
+                    { label: `Giá gốc (${formatVND(baseSeatPrice)})`, price: baseSeatPrice },
+                    ...(baseSeatPrice - 15000 >= priceGuardrail.minSafePrice
+                      ? [{ label: `-15k (${formatVND(baseSeatPrice - 15000)})`, price: baseSeatPrice - 15000 }]
+                      : []),
+                    ...(baseSeatPrice - 25000 >= priceGuardrail.minSafePrice && (baseSeatPrice - 25000) >= baseSeatPrice * 0.8
+                      ? [{ label: `-25k (${formatVND(baseSeatPrice - 25000)})`, price: baseSeatPrice - 25000 }]
+                      : []),
+                    ...(baseSeatPrice - 35000 >= priceGuardrail.minSafePrice && (baseSeatPrice - 35000) >= baseSeatPrice * 0.8
+                      ? [{ label: `-35k (${formatVND(baseSeatPrice - 35000)})`, price: baseSeatPrice - 35000 }]
+                      : [])
+                  ].map((chip) => {
+                    const isSelected = effectiveUnitPrice === chip.price;
+                    return (
+                      <button
+                        key={chip.price}
+                        type="button"
+                        onClick={() => setProposedUnitPrice(chip.price)}
+                        className={`shrink-0 text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer font-medium ${
+                          isSelected
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold shadow-2xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100/60'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3 h-3 inline mr-1 text-emerald-600 stroke-[3]" />}
+                        {chip.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10.5px] text-slate-400 leading-tight">
+                  * Mức đề xuất hợp lý giúp Chủ xe dễ dàng đồng thuận đón bạn hơn.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span>Theo mức chia sẻ của Chủ xe ({formatVND(baseSeatPrice)}/ghế)</span>
+                {priceGuardrail?.comparisonBadge && (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    {priceGuardrail.comparisonBadge}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Chi phí chia sẻ minh bạch - 0% phí sàn, KHÔNG THU CỌC */}
         <div className="p-3.5 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white flex items-center justify-between shadow-2xs">
           <div>
@@ -704,11 +799,17 @@ export default function EscrowBookingModal({
                 0% phí sàn
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">Trọn gói xăng & cầu đường · Thanh toán khi lên xe</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {effectiveUnitPrice !== baseSeatPrice ? (
+                <span>Đề xuất: {formatVND(effectiveUnitPrice)}/ghế (Giá gốc {formatVND(baseSeatPrice)})</span>
+              ) : (
+                <span>Trọn gói xăng & cầu đường · Thanh toán khi lên xe</span>
+              )}
+            </p>
           </div>
           <div className="text-right">
             <p className="font-display font-black text-xl text-primary-700 tabular leading-none">
-              {formatVND(pricing.total)}
+              {formatVND(effectiveTotal)}
             </p>
             <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
           </div>

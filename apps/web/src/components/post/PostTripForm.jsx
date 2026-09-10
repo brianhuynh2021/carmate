@@ -39,6 +39,7 @@ import {
   formatTripDateDisplay,
   VEHICLE_SEAT_CONFIGS,
   formatVND,
+  getPriceGuardrail,
   getCorridorWaypoints,
   isValidVietnamesePhone,
   isLikelyFakePhone,
@@ -361,13 +362,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     return getDynamicRoutePriceBenchmark(fromLocation, toLocation);
   }, [fromLocation, toLocation]);
 
+  // Hệ thống Dải Biên Độ Giá Thông Minh (Price Guardrails) theo chuẩn Xe khách & Limousine
+  const priceGuardrail = useMemo(() => {
+    return getPriceGuardrail(fromLocation, toLocation, price);
+  }, [fromLocation, toLocation, price]);
+
   const [hasManuallyEditedPrice, setHasManuallyEditedPrice] = useState(false);
   const [showFairSplitModal, setShowFairSplitModal] = useState(false);
   useEffect(() => {
-    if (!hasManuallyEditedPrice && routePriceBenchmark?.suggestedPrice && fromLocation && toLocation) {
-      setPrice(routePriceBenchmark.suggestedPrice);
+    if (!hasManuallyEditedPrice && priceGuardrail?.suggestedPrice && fromLocation && toLocation) {
+      setPrice(priceGuardrail.suggestedPrice);
     }
-  }, [fromLocation, toLocation, routePriceBenchmark, hasManuallyEditedPrice]);
+  }, [fromLocation, toLocation, priceGuardrail?.suggestedPrice, hasManuallyEditedPrice]);
 
   const handleApplyPredictedTrip = (pred) => {
     if (!pred) return;
@@ -546,6 +552,23 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     }
     if (!toLocation.trim()) {
       triggerError('Vui lòng nhập điểm đến / trả khách cụ thể (quận, bến xe hoặc dán link Google Maps).');
+      return;
+    }
+
+    // Kiểm tra tính hợp lệ của mức giá (Price Guardrail Invariant)
+    const pNum = Number(price) || 0;
+    if (pNum <= 0) {
+      triggerError('Vui lòng nhập mức chia sẻ chi phí xăng xe hợp lệ.');
+      return;
+    }
+    if (pNum < 20000 && (priceGuardrail?.distanceKm || 0) > 30) {
+      triggerError('Mức phụ xăng quá thấp (tối thiểu 20.000đ cho lộ trình liên tỉnh). Vui lòng nhập mức hợp lý.');
+      return;
+    }
+    if (priceGuardrail?.maxSafePrice && pNum > priceGuardrail.maxSafePrice * 2.5) {
+      triggerError(
+        `Mức phụ xăng vượt quá khung chia sẻ tối đa (${formatVND(priceGuardrail.maxSafePrice * 2.5)}). CarMate là nền tảng chia sẻ chi phí xe gia đình văn minh, không hỗ trợ giá kinh doanh dịch vụ.`
+      );
       return;
     }
 
@@ -1166,10 +1189,10 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                 </span>
               </div>
 
-              {/* Quick Price Preset Chips - Được tính toán thông minh bởi AI Cục Bộ (Route Price Intelligence) */}
+              {/* Quick Price Preset Chips - Dải biên độ giá thông minh (Price Guardrails) */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[11px] text-slate-400 mr-0.5">Gợi ý cự ly:</span>
-                {(routePriceBenchmark?.quickPresets || [100000, 140000, 150000, 180000]).map((p) => (
+                {(priceGuardrail?.quickPresets || [100000, 140000, 150000, 180000]).map((p) => (
                   <button
                     key={p}
                     type="button"
@@ -1177,7 +1200,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                       setPrice(p);
                       setHasManuallyEditedPrice(true);
                     }}
-                    className={`px-2 py-0.5 rounded-lg text-[11px] font-mono transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-mono transition-all cursor-pointer ${
                       Number(price) === p
                         ? 'bg-emerald-600 text-white font-bold shadow-2xs'
                         : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-300 border border-slate-200/70 dark:border-white/5'
@@ -1186,11 +1209,6 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     {(p / 1000).toLocaleString('vi-VN')}k
                   </button>
                 ))}
-                {routePriceBenchmark?.note && (
-                  <span className="text-[10.5px] text-emerald-600 dark:text-emerald-400 font-medium">
-                    · {routePriceBenchmark.note}
-                  </span>
-                )}
                 <button
                   type="button"
                   onClick={() => setShowFairSplitModal(true)}
@@ -1200,8 +1218,62 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   <span>Bảng tính chi phí xăng & cầu đường</span>
                 </button>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">
-                * Định giá tham khảo theo hao phí lăn bánh. Mức chia sẻ thực tế do Chủ xe và Người đi cùng tự do thoả
+
+              {/* Bảng đối chiếu cước phí tuyến (Visual Benchmark Reference Anchors) */}
+              <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] space-y-2.5">
+                <div className="flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  <span>Khung tham chiếu tuyến (~{priceGuardrail.distanceKm}km):</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {priceGuardrail.routeName || 'Tuyến liên tỉnh'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 text-center text-[11px]">
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-white/[0.04]">
+                    <p className="text-[10px] text-slate-400 font-medium">Xe khách</p>
+                    <p className="font-mono font-bold text-slate-700 dark:text-slate-300 mt-0.5">
+                      ~{formatVND(priceGuardrail.busPrice)}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/80 dark:border-emerald-800/60 shadow-xs">
+                    <p className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">Điểm ngọt CarMate</p>
+                    <p className="font-mono font-black text-emerald-800 dark:text-emerald-200 mt-0.5">
+                      {formatVND(priceGuardrail.suggestedPrice)}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-white/[0.04]">
+                    <p className="text-[10px] text-slate-400 font-medium">Limousine</p>
+                    <p className="font-mono font-bold text-slate-700 dark:text-slate-300 mt-0.5">
+                      ~{formatVND(priceGuardrail.limoPrice)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phản hồi nhận thức hành vi (Cognitive Feedback Loop) */}
+                {priceGuardrail.statusMessage && (
+                  <div
+                    className={`p-2.5 rounded-xl border text-[11.5px] leading-relaxed transition-all flex items-start gap-2 ${
+                      priceGuardrail.statusTone === 'emerald'
+                        ? 'bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 border-emerald-200/80 dark:border-emerald-800/50'
+                        : priceGuardrail.statusTone === 'amber'
+                          ? 'bg-amber-50/90 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-200/80 dark:border-amber-800/60'
+                          : priceGuardrail.statusTone === 'rose'
+                            ? 'bg-rose-50/90 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 border-rose-200/80 dark:border-rose-800/60'
+                            : 'bg-sky-50/80 dark:bg-sky-950/30 text-sky-800 dark:text-sky-200 border-sky-200/80 dark:border-sky-800/50'
+                    }`}
+                  >
+                    {priceGuardrail.statusTone === 'emerald' ? (
+                      <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    )}
+                    <p className="font-medium flex-1">{priceGuardrail.statusMessage}</p>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-0.5">
+                * Định giá tham khảo theo chi phí lăn bánh thực tế. Mức chia sẻ do Chủ xe và Người đi cùng tự do thỏa
                 thuận.
               </p>
             </div>

@@ -47,6 +47,7 @@ export default function NotificationDropdown({
   onClose,
   bookedEscrows = [],
   currentUser = null,
+  socialMatches = [],
   readBookingTimestamps = {},
   unreadBookingIds = [],
   onSelectBooking,
@@ -177,7 +178,32 @@ export default function NotificationDropdown({
       });
     });
 
-    // 2. Thông báo từ CSKH CarMate 24/7
+    // 2. Gợi ý ghép xe tức thì (Social Smart Match)
+    (socialMatches || []).slice(0, 3).forEach((item) => {
+      if (!item?.trip?.id) return;
+      const mTrip = item.trip;
+      const isDriver = mTrip.type === 'driver_offer';
+      const partnerName = mTrip.partnerAlias || (isDriver ? `Chủ xe #${mTrip.id.slice(0, 4)}` : `Người đi cùng #${mTrip.id.slice(0, 4)}`);
+      const notifId = `notif-match-${mTrip.id}`;
+
+      list.push({
+        id: notifId,
+        targetType: 'trip',
+        trip: mTrip,
+        type: 'match',
+        senderName: partnerName,
+        avatar: '',
+        actionText: `Tìm thấy chuyến phù hợp · Khớp ${item.score}%`,
+        snippet: `${mTrip.from} ➔ ${mTrip.to}${item.fuelSavings?.savingsVndFormatted ? ` · ${item.fuelSavings.savingsVndFormatted}` : ''}`,
+        time: mTrip.createdAt || (Date.now() - 1000 * 60 * 15),
+        relativeTime: formatRelativeTimeVi(mTrip.createdAt || (Date.now() - 1000 * 60 * 15)),
+        thumbnail: '',
+        routeBadge: `🔥 Khớp ${item.score}%`,
+        isUnread: false
+      });
+    });
+
+    // 3. Thông báo từ CSKH CarMate 24/7
     list.push({
       id: 'notif-support-desk',
       targetType: 'support',
@@ -202,7 +228,7 @@ export default function NotificationDropdown({
     });
 
     return list.filter((item) => !dismissedIds.includes(item.id));
-  }, [bookedEscrows, currentUser, readBookingTimestamps, unreadBookingIds, dismissedIds]);
+  }, [bookedEscrows, currentUser, readBookingTimestamps, unreadBookingIds, dismissedIds, socialMatches]);
 
   // Lọc theo Tab (Tất cả / Chưa đọc)
   const displayedNotifications = useMemo(() => {
@@ -260,6 +286,8 @@ export default function NotificationDropdown({
 
   const renderEventIcon = (type) => {
     switch (type) {
+      case 'match':
+        return <Sparkles className="w-2.5 h-2.5 text-white" />;
       case 'pre_confirmed':
         return <Zap className="w-2.5 h-2.5 text-white" />;
       case 'confirmed':
@@ -275,6 +303,8 @@ export default function NotificationDropdown({
 
   const getBadgeBg = (type) => {
     switch (type) {
+      case 'match':
+        return 'bg-gradient-to-tr from-amber-500 to-orange-500';
       case 'pre_confirmed':
         return 'bg-amber-500';
       case 'confirmed':

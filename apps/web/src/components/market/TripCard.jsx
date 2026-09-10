@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Star,
   MapPin,
@@ -22,7 +22,8 @@ import {
   getCorridorDisplay,
   toPublicAlias,
   normalizePhotoUrl,
-  getUserOnlineStatus
+  getUserOnlineStatus,
+  getPriceGuardrail
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
@@ -156,6 +157,11 @@ export default function TripCard({
   const price = item.basePricePerSeat || item.expectedPrice || item.suggestedContribution || item.price || 180000;
   const formattedPrice = `${Number(price || 0).toLocaleString('vi-VN')}đ`;
 
+  // Dải biên độ giá thông minh (Price Guardrail Benchmark)
+  const priceGuardrail = useMemo(() => {
+    return getPriceGuardrail(item?.from, item?.to, price);
+  }, [item?.from, item?.to, price]);
+
   // Danh tính công khai: chỉ hiển thị bí danh vai trò + mã định danh chuẩn (Chủ xe CX-xxx / Khách KX-xxx)
   const driverDisplayName = toPublicAlias(item);
 
@@ -272,11 +278,28 @@ export default function TripCard({
 
       {/* ── 3. GIÁ BAO NHIÊU? (PRICE) ── VÀ ── CÒN CHỖ KHÔNG? (SEAT) ── */}
       <div className="flex items-center justify-between gap-3 px-5 py-2">
-        <div className="flex items-baseline gap-0.5">
-          <span className="text-[21px] font-extrabold tracking-tight text-slate-900 dark:text-white tabular font-mono leading-none">
-            {formattedPrice}
-          </span>
-          <span className="text-[12px] text-slate-400 dark:text-slate-500 font-medium">/người</span>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-[21px] font-extrabold tracking-tight text-slate-900 dark:text-white tabular font-mono leading-none">
+              {formattedPrice}
+            </span>
+            <span className="text-[12px] text-slate-400 dark:text-slate-500 font-medium">/người</span>
+          </div>
+          {priceGuardrail?.comparisonBadge && (
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-semibold w-fit px-1.5 py-0.5 rounded-md ${
+                priceGuardrail.statusTone === 'emerald'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/50'
+                  : priceGuardrail.statusTone === 'amber'
+                    ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/50'
+                    : priceGuardrail.statusTone === 'rose'
+                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/50'
+                      : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200/50'
+              }`}
+            >
+              {priceGuardrail.comparisonBadge}
+            </span>
+          )}
         </div>
 
         {isTripFull ? (

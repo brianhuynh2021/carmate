@@ -109,7 +109,7 @@ function compressImageToWebP(file, maxDimension = 1200, quality = 0.82) {
   });
 }
 
-export default function UserProfileModal({ currentUser, onClose, onSave, onShowToast }) {
+export default function UserProfileModal({ currentUser, onClose, onSave, onShowToast, onOpenDeleteAccount }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'garage' | 'trust'
   const [isSaving, setIsSaving] = useState(false);
@@ -735,6 +735,34 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               <p className="text-[10.5px] text-[#86868b] leading-relaxed">
                 CarMate tự động đối soát Số điện thoại và Email để hợp nhất tài khoản Google & Telegram làm 1, không tạo 2 tài khoản trùng lặp.
               </p>
+            </div>
+
+            {/* ── QUYỀN RIÊNG TƯ & QUẢN LÝ DỮ LIỆU TÀI KHOẢN (APPLE PRIVACY & STANFORD ERGONOMICS) ── */}
+            <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Quyền riêng tư & Quản lý tài khoản
+                </p>
+                <p className="text-[10.5px] text-[#86868b]">
+                  Dữ liệu cá nhân được bảo vệ theo Nghị định 13/2023/NĐ-CP
+                </p>
+              </div>
+
+              {currentUser?.role !== 'admin' &&
+                !currentUser?.phone?.includes('0984883750') &&
+                !currentUser?.phone?.includes('0984 883 750') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose?.();
+                    onOpenDeleteAccount?.();
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-rose-500 hover:bg-rose-50/50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Yêu cầu xóa tài khoản...</span>
+                </button>
+              )}
             </div>
           </div>
         )}

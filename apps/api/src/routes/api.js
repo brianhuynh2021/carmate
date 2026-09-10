@@ -8,7 +8,7 @@ import {
   deleteTripHandler,
   republishTripHandler
 } from '../controllers/tripController.js';
-import { getMatches } from '../controllers/matchController.js';
+import { getMatches, getSocialSuggestions } from '../controllers/matchController.js';
 import {
   listBookings,
   createBooking,
@@ -28,7 +28,7 @@ import {
 } from '../controllers/bookingController.js';
 import { getSupportMessagesHandler, sendSupportMessageHandler } from '../controllers/supportController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
-import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, getMe, updateProfile, deleteAccount, getAuthConfigHandler } from '../controllers/authController.js';
+import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, getMe, updateProfile, deleteAccount, requestAccountDeletion, getAuthConfigHandler } from '../controllers/authController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -45,6 +45,11 @@ import {
   getAdminTrustRulesHandler,
   updateAdminTrustRulesHandler,
   resetAdminTrustRulesHandler,
+  listDeletionRequestsHandler,
+  processDeletionRequestHandler,
+  deleteUserAdminHandler,
+  clearAdminAiTrajectories,
+  clearAdminTestData,
   requireAdmin
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
@@ -53,11 +58,12 @@ const router = Router();
 
 import { suggestLocationsHandler } from '../controllers/locationController.js';
 import { agentChatHandler } from '../controllers/agentController.js';
-import { recordEvent, getSummary as getAnalyticsSummaryHandler } from '../controllers/analyticsController.js';
+import { recordEvent, getSummary as getAnalyticsSummaryHandler, clearAnalytics as clearAnalyticsHandler } from '../controllers/analyticsController.js';
 
 // --- Analytics & Funnel Tracking (Zero-Cost & PostHog Bridge) ---
 router.post('/analytics/event', optionalAuth, recordEvent);
 router.get('/admin/analytics/summary', requireAdmin, getAnalyticsSummaryHandler);
+router.delete('/admin/analytics', requireAdmin, clearAnalyticsHandler);
 
 // --- Agentic AI Concierge & Dispatcher (Stanford Inner Loop & Tools) ---
 router.post('/agent/chat', optionalAuth, agentChatHandler);
@@ -72,6 +78,7 @@ router.post('/auth/verify-otp', authLimiter, verifyOtp);
 router.get('/auth/me', requireAuth, getMe);
 router.patch('/auth/profile', requireAuth, updateProfile);
 router.put('/auth/profile', requireAuth, updateProfile);
+router.post('/auth/deletion-request', requireAuth, requestAccountDeletion);
 router.delete('/auth/me', requireAuth, deleteAccount);
 router.delete('/auth/account', requireAuth, deleteAccount);
 
@@ -93,8 +100,9 @@ router.delete('/trips/:id', optionalAuth, requireTripOwnership, deleteTripHandle
 router.patch('/trips/:id/status', optionalAuth, requireTripOwnership, updateStatus);
 router.post('/trips/:id/republish', postTripLimiter, optionalAuth, requireTripOwnership, republishTripHandler);
 
-// --- Smart Matching Radar ---
+// --- Smart Matching Radar & Social Suggestions ---
 router.get('/matches', optionalAuth, getMatches);
+router.get('/matches/social-suggestions', optionalAuth, getSocialSuggestions);
 
 // --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
 router.get('/bookings', optionalAuth, listBookings);
@@ -149,5 +157,10 @@ router.get('/admin/ai-intelligence', requireAdmin, getAdminAiIntelligence);
 router.get('/admin/trust-rules', requireAdmin, getAdminTrustRulesHandler);
 router.put('/admin/trust-rules', requireAdmin, updateAdminTrustRulesHandler);
 router.post('/admin/trust-rules/reset', requireAdmin, resetAdminTrustRulesHandler);
+router.get('/admin/deletion-requests', requireAdmin, listDeletionRequestsHandler);
+router.post('/admin/deletion-requests/:id/process', requireAdmin, processDeletionRequestHandler);
+router.delete('/admin/users/:id', requireAdmin, deleteUserAdminHandler);
+router.delete('/admin/ai-trajectories', requireAdmin, clearAdminAiTrajectories);
+router.delete('/admin/test-data', requireAdmin, clearAdminTestData);
 
 export default router;

@@ -1,4 +1,4 @@
-import { saveAnalyticsEvent, getAnalyticsSummary } from '../db/sqliteStore.js';
+import { saveAnalyticsEvent, getAnalyticsSummary, clearAnalyticsEvents } from '../db/sqliteStore.js';
 import { sendSystemErrorAlert } from '../utils/telegramAlert.js';
 
 /**
@@ -71,5 +71,23 @@ export function getSummary(req, res) {
   } catch (error) {
     console.error('[Analytics] Lỗi khi lấy thống kê:', error);
     return res.status(500).json({ success: false, error: 'Không thể tải dữ liệu phân tích' });
+  }
+}
+
+/**
+ * DELETE /api/admin/analytics
+ * Quản trị viên xóa toàn bộ sự kiện analytics
+ */
+export function clearAnalytics(req, res) {
+  try {
+    const deletedCount = clearAnalyticsEvents();
+    return res.json({
+      success: true,
+      message: `Đã dọn sạch ${deletedCount} sự kiện phân tích`,
+      count: deletedCount
+    });
+  } catch (error) {
+    console.error('[Analytics] Lỗi khi xoá sự kiện:', error);
+    return res.status(500).json({ success: false, error: 'Không thể xoá dữ liệu phân tích' });
   }
 }

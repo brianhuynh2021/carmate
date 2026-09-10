@@ -55,6 +55,22 @@ if (fs.existsSync(DB_PATH)) {
     console.warn('Lưu ý dọn user:', err.message);
   }
 
+  // 5. Xóa toàn bộ sự kiện phân tích, phễu chuyển đổi & nhật ký AI
+  try {
+    const trajResult = db.prepare('DELETE FROM ai_trajectories').run();
+    console.log(`✅ Đã xóa ${trajResult.changes} nhật ký quỹ đạo AI (ai_trajectories).`);
+  } catch {}
+
+  try {
+    const analyticsResult = db.prepare('DELETE FROM analytics_events').run();
+    console.log(`✅ Đã xóa ${analyticsResult.changes} sự kiện phân tích (analytics_events).`);
+  } catch {}
+
+  try {
+    const supportResult = db.prepare('DELETE FROM support_messages').run();
+    console.log(`✅ Đã xóa ${supportResult.changes} tin nhắn hỗ trợ CSKH.`);
+  } catch {}
+
   db.close();
 }
 

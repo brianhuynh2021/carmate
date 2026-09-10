@@ -71,7 +71,8 @@ export default function Header({
   onMarkAsRead,
   onMarkAsUnread,
   readBookingTimestamps = {},
-  unreadBookingIds = []
+  unreadBookingIds = [],
+  socialMatches = []
 }) {
   const { t, lang, setLang } = useI18n();
   const tabs = [
@@ -503,20 +504,7 @@ export default function Header({
                         {t('userMenu.protected')}
                       </span>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        onOpenDeleteAccount?.();
-                      }}
-                      className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                      {/* Xóa tài khoản vĩnh viễn */}
-                      <span>{t('userMenu.deleteAccount')}</span>
-                    </button>
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>
@@ -561,6 +549,7 @@ export default function Header({
               onClose={() => setIsNotificationCenterOpen(false)}
               bookedEscrows={bookedEscrows}
               currentUser={currentUser}
+              socialMatches={socialMatches}
               readBookingTimestamps={readBookingTimestamps}
               unreadBookingIds={unreadBookingIds}
               onSelectBooking={onSelectBooking}
