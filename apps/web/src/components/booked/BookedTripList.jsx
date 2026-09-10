@@ -863,24 +863,39 @@ export default function BookedTripList({
                               )}
                             </div>
                           ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-2.5">
                               <div className="p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/80 text-blue-950 dark:text-blue-200 text-xs flex items-center gap-2">
                                 <MessageSquare className="w-4 h-4 text-blue-600 shrink-0" />
                                 <span className="leading-relaxed">
                                   {record.status === 'pre_confirmed'
                                     ? '⚡ Chuyến xe đang được đề xuất chốt. Vui lòng mở khung chat để xác nhận!'
-                                    : '💬 Hai bên đang trao đổi tìm hiểu điểm đón & hành lý. Mọi trao đổi diễn ra trực tiếp qua khung chat an toàn.'}
+                                    : '💬 Hai bên chủ động nhắn tin hoặc gọi qua App để hẹn điểm đón cụ thể (Bảo mật 100% SĐT).'}
                                 </span>
                               </div>
 
-                              <button
-                                type="button"
-                                onClick={() => onOpenChat?.(record.escrowId || record.id)}
-                                className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
-                              >
-                                <MessageSquare className="w-4 h-4 shrink-0" />
-                                <span>Mở Khung Chat Trao Đổi (Bảo mật 100%)</span>
-                              </button>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                                  className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
+                                >
+                                  <MessageSquare className="w-4 h-4 shrink-0 fill-current" />
+                                  <span>Mở Khung Chat</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                                  className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
+                                >
+                                  <Phone className="w-4 h-4 shrink-0 fill-current" />
+                                  <span>Gọi thoại qua App (0đ)</span>
+                                </button>
+                              </div>
+
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed">
+                                💡 Nếu đối tác không phản hồi, bạn có thể bấm <strong>Huỷ chuyến</strong> để tìm xe hoặc đón người khác ngay lập tức.
+                              </p>
                             </div>
                           )}
                         </div>

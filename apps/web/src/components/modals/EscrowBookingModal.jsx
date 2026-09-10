@@ -19,6 +19,7 @@ import {
   Package,
   Box,
   Truck,
+  Phone,
   PhoneCall,
   Lock
 } from 'lucide-react';
@@ -39,6 +40,7 @@ import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { RouteTimeline, getCarDisplay } from '../market/TripCard.jsx';
 import { searchLocations, getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
+import { triggerMacNotification } from '../common/AppleMacNotification.jsx';
 import api from '../../api/client.js';
 
 // Điểm đón mốc nổi tiếng dọc trục QL13 & liên tỉnh (Hotspot Chips 1 chạm kiểu Grab)
@@ -273,7 +275,16 @@ export default function EscrowBookingModal({
       const createdBooking = res?.data || bookingData;
       onConfirmBooking?.(createdBooking, { keepModalOpen: true });
       setIsSubmitted(true);
-      onShowToast?.('✓ Đã gửi yêu cầu ghép chuyến! Bạn có thể nhắn Zalo hoặc gọi cho Chủ xe.');
+      onShowToast?.('✓ Đã tạo kết nối chuyến đi! Vui lòng nhắn tin hoặc gọi qua App để hẹn điểm đón.');
+      triggerMacNotification({
+        title: '🚗 Đã tạo kết nối chuyến đi thành công!',
+        message: `Mã vé #${bookingCode}: Vui lòng nhắn tin hoặc gọi qua App để hẹn điểm đón cụ thể.`,
+        type: 'confirmed',
+        bookingId: bookingCode,
+        partnerName: toPublicAlias(item),
+        actionLabel: 'Mở chat ngay',
+        duration: 6000
+      });
     } catch (apiErr) {
       const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể gửi yêu cầu ghép chuyến';
       onShowToast?.(errMsg);
@@ -443,38 +454,57 @@ export default function EscrowBookingModal({
             </div>
           </div>
 
-          {/* 💬 2. KHUNG CHAT TRỰC TIẾP TRONG APP */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-1.5 px-1">
+          {/* 💬 2. LIÊN HỆ TRỰC TIẾP TRONG APP (0Đ CƯỚC · BẢO MẬT SĐT) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-1.5 px-1">
               <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span>💬 2. KHUNG CHAT TRỰC TIẾP TRONG APP</span>
+                <span>💬 2. LIÊN HỆ TRỰC TIẾP QUA APP</span>
+              </span>
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                0đ cước · Bảo mật SĐT
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenInbox?.(bookingCode);
-              }}
-              className="w-full min-h-[52px] py-3.5 px-4 rounded-2xl font-bold text-sm sm:text-[15px] bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white shadow-lg shadow-blue-500/25 cursor-pointer transition-all flex items-center justify-center gap-2.5"
-            >
-              <MessageSquare className="w-5 h-5 fill-current shrink-0" />
-              <span>💬 BẤM VÀO ĐÂY ĐỂ CHAT TRAO ĐỔI VỚI {partnerRoleTitle.toUpperCase()} NGAY</span>
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Nút 1: Nhắn tin trong App */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenInbox?.(bookingCode);
+                }}
+                className="w-full min-h-[50px] py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white shadow-md shadow-blue-500/20 cursor-pointer transition-all flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4 fill-current shrink-0" />
+                <span>Nhắn tin với {partnerRoleTitle}</span>
+              </button>
+
+              {/* Nút 2: Gọi thoại qua App */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenInbox?.(bookingCode, { autoCall: true });
+                }}
+                className="w-full min-h-[50px] py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white shadow-md shadow-emerald-600/20 cursor-pointer transition-all flex items-center justify-center gap-2"
+              >
+                <PhoneCall className="w-4 h-4 shrink-0" />
+                <span>Gọi cho {partnerRoleTitle} (0đ)</span>
+              </button>
+            </div>
           </div>
 
-          {/* 🔒 BẢO MẬT */}
-          <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 flex items-start gap-2.5 text-xs text-amber-950 dark:text-amber-200">
-            <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <div className="leading-relaxed">
+          {/* 🔒 BẢO MẬT & NGUYÊN TẮC DỨT KHOÁT */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 space-y-1.5 text-xs text-amber-950 dark:text-amber-200">
+            <div className="flex items-start gap-2">
+              <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <p className="font-bold">
-                🔒 Bảo mật: Không lộ số điện thoại cá nhân. Hai bên nhắn tin trực tiếp để hẹn điểm đón chính xác.
-              </p>
-              <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-1">
-                💡 SĐT khẩn cấp sẽ chỉ mở khi xe đến điểm đón mà không liên lạc được qua chat.
+                Bảo mật 100%: Nhắn tin và gọi điện trực tiếp qua App, không lộ số điện thoại cá nhân.
               </p>
             </div>
+            <p className="text-[11.5px] text-slate-600 dark:text-slate-400 pl-6 leading-relaxed">
+              💡 Hai bên chủ động liên lạc hẹn điểm đón trước giờ đi. Nếu nhắn tin hoặc gọi qua app mà đối tác không phản hồi, bạn có thể <strong>bấm Huỷ chuyến 1-chạm</strong> để tìm xe hoặc đón người khác ngay lập tức, không làm mất thời gian của nhau.
+            </p>
           </div>
         </div>
       </Modal>

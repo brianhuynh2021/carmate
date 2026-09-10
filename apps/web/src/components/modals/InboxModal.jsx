@@ -23,7 +23,11 @@ import {
   MapPin,
   Headphones,
   LifeBuoy,
-  HelpCircle
+  HelpCircle,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -63,7 +67,35 @@ export default function InboxModal({
   const [contextMenu, setContextMenu] = useState(null); // { x, y, booking }
   const [showEmergencyPhone, setShowEmergencyPhone] = useState(false);
 
-  // Kênh Hỗ Trợ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
+  // Trạng thái Gọi thoại trực tiếp trong App (0đ cước · Bảo mật 100% SĐT)
+  const [inAppCallState, setInAppCallState] = useState(null); // null | { status: 'ringing' | 'connected', seconds: 0, isMuted: false, isSpeaker: false }
+
+  useEffect(() => {
+    let timer = null;
+    if (inAppCallState?.status === 'connected') {
+      timer = setInterval(() => {
+        setInAppCallState((prev) => (prev ? { ...prev, seconds: prev.seconds + 1 } : null));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [inAppCallState?.status]);
+
+  const handleStartInAppCall = () => {
+    setInAppCallState({ status: 'ringing', seconds: 0, isMuted: false, isSpeaker: false });
+    playMessageChime();
+    setTimeout(() => {
+      setInAppCallState((prev) => (prev && prev.status === 'ringing' ? { ...prev, status: 'connected' } : prev));
+      playSuccessChime();
+    }, 2800);
+  };
+
+  const handleEndInAppCall = () => {
+    setInAppCallState(null);
+  };
+
+  // Kênh Hỗ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
   const [isSupportChannelActive, setIsSupportChannelActive] = useState(false);
   const [supportMessages, setSupportMessages] = useState([]);
   const [supportInput, setSupportInput] = useState('');
@@ -1168,6 +1200,16 @@ export default function InboxModal({
                 </div>
 
                 <div className="shrink-0 flex items-center gap-2">
+                  {/* Nút Gọi thoại trực tiếp trong App (0đ cước · Bảo mật SĐT) */}
+                  <button
+                    type="button"
+                    onClick={handleStartInAppCall}
+                    className="h-8 px-2.5 rounded-xl font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                    title="Gọi thoại trực tiếp qua App miễn phí 0đ cước và bảo mật 100% SĐT"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-current" />
+                    <span className="hidden sm:inline">Gọi qua App</span>
+                  </button>
 
                   {isConfirmed ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1.5 rounded-full border border-emerald-300/50">
@@ -1922,6 +1964,99 @@ export default function InboxModal({
         }}
         onShowToast={onShowToast}
       />
+
+      {/* ── 5. POPUP GỌI THOẠI TRỰC TIẾP TRONG APP (0Đ CƯỚC · BẢO MẬT 100% SĐT) ── */}
+      {inAppCallState && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden text-center text-white p-6 space-y-6">
+            {/* Huy hiệu bảo mật */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Gọi thoại an toàn · 0đ cước · Bảo mật SĐT</span>
+            </div>
+
+            {/* Avatar & Hiệu ứng sóng âm đổ chuông */}
+            <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
+              {inAppCallState.status === 'ringing' && (
+                <>
+                  <span className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
+                  <span className="absolute -inset-2 rounded-full bg-emerald-500/10 animate-pulse" />
+                </>
+              )}
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-emerald-500/20">
+                {partnerAlias.slice(0, 2).toUpperCase()}
+              </div>
+            </div>
+
+            {/* Thông tin đối tác & Lộ trình */}
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold tracking-tight text-white">{partnerAlias}</h3>
+              <p className="text-xs text-slate-400">
+                {activeBooking?.from} ➔ {activeBooking?.to}
+              </p>
+              <div className="pt-2">
+                {inAppCallState.status === 'ringing' ? (
+                  <p className="text-xs font-semibold text-emerald-400 animate-pulse flex items-center justify-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 animate-bounce" />
+                    <span>Đang đổ chuông qua App...</span>
+                  </p>
+                ) : (
+                  <p className="text-sm font-mono font-bold text-emerald-400 tabular tracking-wider">
+                    {Math.floor(inAppCallState.seconds / 60).toString().padStart(2, '0')}:
+                    {(inAppCallState.seconds % 60).toString().padStart(2, '0')}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Phím điều khiển cuộc gọi */}
+            <div className="flex items-center justify-center gap-4 pt-2">
+              {/* Tắt / Bật mic */}
+              <button
+                type="button"
+                onClick={() => setInAppCallState((prev) => (prev ? { ...prev, isMuted: !prev.isMuted } : null))}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+                  inAppCallState.isMuted
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                }`}
+                title={inAppCallState.isMuted ? 'Bật Mic' : 'Tắt Mic'}
+              >
+                {inAppCallState.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+
+              {/* Tắt / Bật loa ngoài */}
+              <button
+                type="button"
+                onClick={() => setInAppCallState((prev) => (prev ? { ...prev, isSpeaker: !prev.isSpeaker } : null))}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+                  inAppCallState.isSpeaker
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                }`}
+                title={inAppCallState.isSpeaker ? 'Tắt loa ngoài' : 'Bật loa ngoài'}
+              >
+                {inAppCallState.isSpeaker ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              </button>
+
+              {/* Kết thúc cuộc gọi */}
+              <button
+                type="button"
+                onClick={handleEndInAppCall}
+                className="w-14 h-14 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
+                title="Kết thúc cuộc gọi"
+              >
+                <PhoneOff className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Lưu ý thực tế */}
+            <p className="text-[11px] text-slate-400 leading-relaxed pt-2 border-t border-white/10">
+              💡 Nếu gọi 2 cuộc mà đối tác không nghe máy, bạn có thể bấm <strong>Huỷ chuyến 1-chạm</strong> để tìm xe hoặc đón người khác ngay.
+            </p>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

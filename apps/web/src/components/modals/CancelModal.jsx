@@ -6,6 +6,7 @@ import Chip from '../ui/Chip.jsx';
 import { Field, Input } from '../ui/Field.jsx';
 
 const PRESET_CANCEL_REASONS = [
+  'Đối tác không nghe máy / không phản hồi',
   'Việc gia đình đột xuất',
   'Thay đổi lịch trình công tác',
   'Kẹt xe / phương tiện gặp sự cố',
