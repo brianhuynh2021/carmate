@@ -286,13 +286,8 @@ export default function EscrowBookingModal({
 
       const createdBooking = res?.data || bookingData;
       onConfirmBooking?.(createdBooking, { keepModalOpen: true });
-      if (onOpenInbox) {
-        onShowToast?.('🚗 Đã tạo kết nối! Đang mở phòng chat thương lượng ẩn danh...');
-        onClose();
-        onOpenInbox(bookingCode);
-      } else {
-        setIsSubmitted(true);
-      }
+      setIsSubmitted(true);
+      onShowToast?.('✓ Đã gửi yêu cầu ghép chuyến! Bạn có thể nhắn Zalo hoặc gọi cho Chủ xe.');
     } catch (apiErr) {
       const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể gửi yêu cầu ghép chuyến';
       onShowToast?.(errMsg);

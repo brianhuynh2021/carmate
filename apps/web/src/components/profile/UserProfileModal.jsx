@@ -398,49 +398,51 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           </div>
         )}
 
-        {/* Apple Segmented Capsule Tab Control */}
-        <div className="p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800/80 border border-black/[0.05] dark:border-white/[0.06] flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('profile')}
-            className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
-              activeTab === 'profile'
-                ? 'bg-white text-[#1d1d1f] shadow-xs'
-                : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Thông tin cá nhân</span>
-          </button>
+        {/* Apple Segmented Capsule Tab Control - Ghim cố định khi cuộn */}
+        <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md pb-2 -mt-1 pt-0.5">
+          <div className="p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800/80 border border-black/[0.05] dark:border-white/[0.06] flex items-center gap-1 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
+                activeTab === 'profile'
+                  ? 'bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-xs'
+                  : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Thông tin cá nhân</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('garage')}
-            className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all relative ${
-              activeTab === 'garage'
-                ? 'bg-white text-[#1d1d1f] shadow-xs'
-                : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
-            }`}
-          >
-            <Car className="w-3.5 h-3.5" />
-            <span>Garage xe của tôi</span>
-            {hasCar && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5" title="Đã có cấu hình xe" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('garage')}
+              className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all relative ${
+                activeTab === 'garage'
+                  ? 'bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-xs'
+                  : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
+              }`}
+            >
+              <Car className="w-3.5 h-3.5" />
+              <span>Garage xe của tôi</span>
+              {hasCar && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5" title="Đã có cấu hình xe" />
+              )}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('trust')}
-            className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
-              activeTab === 'trust'
-                ? 'bg-white text-[#1d1d1f] shadow-xs'
-                : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Tín nhiệm & Giấy tờ</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('trust')}
+              className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
+                activeTab === 'trust'
+                  ? 'bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-xs'
+                  : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Tín nhiệm & Giấy tờ</span>
+            </button>
+          </div>
         </div>
 
         {/* TAB 1: THÔNG TIN CÁ NHÂN */}
@@ -550,6 +552,18 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               <p className="text-[11px] text-[#86868b] mt-1">
                 Tên hiển thị giúp Người đi cùng hoặc Chủ xe nhận diện trên danh sách và xác nhận lịch hẹn.
               </p>
+              {name && (name.startsWith('Thành viên USR-') || name.startsWith('USR-')) && (
+                <div className="mt-1.5 flex items-center justify-between gap-2 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 text-[11px] text-amber-800 dark:text-amber-300">
+                  <span>💡 Bạn có thể đổi sang tên thật hoặc tên thường gọi (VD: Minh Nhật) để tiện xưng hô.</span>
+                  <button
+                    type="button"
+                    onClick={() => setName('')}
+                    className="text-amber-900 dark:text-amber-200 font-bold underline shrink-0 cursor-pointer hover:opacity-80"
+                  >
+                    Đổi tên
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Trường 1b: Giới tính (Apple Segmented Control) */}
