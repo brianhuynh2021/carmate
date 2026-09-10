@@ -26,7 +26,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
 
   const handleSubmitRequest = async () => {
     if (isAdmin) {
-      onShowToast?.('Tài khoản Quản trị viên được bảo vệ bởi luật bất biến MIT, không thể tự xoá hoặc yêu cầu xoá.');
+      onShowToast?.('Tài khoản Quản trị viên được bảo vệ an toàn đặc biệt, không thể tự xoá.');
       return;
     }
     if (!confirmed || isDeleting) return;
@@ -74,10 +74,10 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
           <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-1 text-left">
             <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-300">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>Bảo vệ bất biến MIT: Tài khoản Quản trị viên</span>
+              <span>Bảo vệ an toàn: Tài khoản Quản trị viên</span>
             </div>
             <p className="leading-relaxed">
-              Tài khoản này có quyền Quản trị viên tối cao của CarMate. Theo luật bất biến hệ thống MIT, tài khoản Admin
+              Tài khoản này có quyền Quản trị viên tối cao của CarMate. Theo quy chuẩn bảo mật an toàn, tài khoản Admin
               không thể tự xoá vĩnh viễn để tránh làm hệ thống mất chủ quyền vận hành.
             </p>
           </div>

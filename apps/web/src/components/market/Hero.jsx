@@ -107,7 +107,7 @@ export default function Hero({
     };
   }, [originHub, destHub, isDoorstep, seats]);
 
-  // Mức giá thực tế (người dùng tự đặt hoặc theo gợi ý chuẩn Shapley)
+  // Mức giá thực tế (người dùng tự đặt hoặc theo chi phí xăng xe gợi ý)
   const effectivePrice = userSelectedPrice !== null ? userSelectedPrice : pricingEstimate.finalPrice;
 
   // Đồng bộ ngữ cảnh hành lang lên App để tự động cập nhật Dòng thời gian chuyến sau
