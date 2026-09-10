@@ -259,10 +259,10 @@ export default function CorridorTimeline({
                       className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
                     >
                       <Zap className="w-4 h-4 fill-current" />
-                      <span>Giữ Chỗ 0đ (Chốt Zalo/Gọi)</span>
+                      <span>Chốt Đi Chung 0đ (Zalo/Gọi)</span>
                     </button>
                     <span className="text-[10.5px] text-slate-500 dark:text-zinc-400 hidden sm:inline">
-                      0đ cọc · Lên xe mới trả tiền
+                      0đ cọc · Lên xe mới gửi tiền xăng
                     </span>
                   </div>
                 </div>
@@ -280,7 +280,7 @@ export default function CorridorTimeline({
                 </div>
                 <span className="text-[10.5px] text-slate-500 dark:text-zinc-400 font-medium flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                  Chủ xe bấm xác nhận trong 15p mới chốt · Có xe đệm cứu hộ
+                  Đã khớp là chốt chuyến · Kết nối Zalo/Gọi đón ngay
                 </span>
               </div>
             </div>
@@ -348,7 +348,7 @@ export default function CorridorTimeline({
                           onClick={() => onOpenBooking?.(trip)}
                           className="px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 font-bold text-xs cursor-pointer transition-colors"
                         >
-                          Giữ chỗ 0đ
+                          Chốt chuyến 0đ
                         </button>
                       </div>
                     </div>

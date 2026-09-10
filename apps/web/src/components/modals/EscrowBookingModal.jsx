@@ -359,8 +359,8 @@ export default function EscrowBookingModal({
         size="md"
         icon={CheckCircle2}
         iconTone="success"
-        title={isDriverItem ? 'Đã gửi lời nhắn ghép chuyến!' : 'Đã gửi đề xuất đón khách!'}
-        subtitle={`Đã chuyển tới ${toPublicAlias(item)} · Thông báo tức thì qua App & Telegram`}
+        title={isDriverItem ? '✓ Đã chốt chuyến đi cùng Chủ xe!' : '✓ Đã chốt chuyến đón khách!'}
+        subtitle={`Kết nối trực tiếp ${toPublicAlias(item)} · Gọi điện hoặc nhắn Zalo để hẹn điểm đón`}
         footer={
           <div className="w-full space-y-2.5">
             {/* 2 Nút hành động trực tiếp: Nhắn Zalo & Gọi thật */}
@@ -394,7 +394,7 @@ export default function EscrowBookingModal({
               className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-600 via-indigo-600 to-primary-600 hover:from-blue-700 hover:to-primary-700 active:scale-[0.99] text-white shadow-md shadow-blue-500/25 cursor-pointer transition-all flex items-center justify-center gap-2"
             >
               <MessageSquare className="w-4 h-4" />
-              <span>Mở Khung Chat & Giữ Chỗ 15 Phút</span>
+              <span>Mở Khung Chat & Nhắn Điểm Đón</span>
             </button>
             <button
               type="button"
@@ -402,10 +402,10 @@ export default function EscrowBookingModal({
               className="w-full py-2.5 px-4 rounded-2xl font-semibold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>Để sau & Tiếp tục tìm chuyến</span>
+              <span>Xong & Quay lại danh sách</span>
             </button>
             <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
-              💡 Bạn có thể trao đổi trực tiếp với {toPublicAlias(item)} qua Zalo, gọi điện hoặc khung chat để chốt điểm đón và giữ chỗ 15 phút.
+              💡 Chuyến đi đã được chốt thành công. Hãy nhắn Zalo hoặc gọi điện cho {toPublicAlias(item)} để gửi định vị đón.
             </p>
           </div>
         }
@@ -418,19 +418,19 @@ export default function EscrowBookingModal({
                 <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
                   ✓
                 </span>
-                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã gửi tin</span>
+                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã chọn xe</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                  ✓
+                </span>
+                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã chốt ghế</span>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold animate-pulse shadow-xs">
-                  ⚡
+                  💬
                 </span>
-                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Đã rung chuông</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-xs font-bold">
-                  ⏳
-                </span>
-                <span className="text-[11px] font-medium text-slate-500">Chờ phản hồi</span>
+                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Kết nối Zalo/Gọi</span>
               </div>
             </div>
           </div>

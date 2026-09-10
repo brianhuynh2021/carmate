@@ -320,19 +320,15 @@ stateDiagram-v2
         BATCH_PENDING --> OPEN_MARKET: Hết 180s chưa có cặp -> Đưa lên sàn mở
     }
 
-    OPEN_MARKET --> RESERVED_15M: Khách bấm Giữ chỗ 0đ
-    MATCHED --> RESERVED_15M: Chốt ghép tự động
+    OPEN_MARKET --> CONFIRMED: Khách bấm Chốt xe 0đ (Phân bổ ghế tức thì)
+    MATCHED --> CONFIRMED: Thuật toán Gale-Shapley ghép cặp tự động (Binding Allocation)
     
-    RESERVED_15M --> CONFIRMED: Chủ xe bấm Magic Link xác nhận (hoặc chốt Zalo)
-    RESERVED_15M --> EXPIRED_RELEASED: Quá 15 phút không chốt -> Tự động nhả ghế
-
-    CONFIRMED --> IN_TRANSIT: Xuất phát đúng giờ tại Trạm ảo / Nhà
-    CONFIRMED --> CANCELLED_PENALTY: Hủy chuyến giờ chót -> Trừ điểm Time-Decay
+    CONFIRMED --> IN_TRANSIT: Xuất phát đúng giờ tại Trạm ảo / Nhà (Liên lạc Zalo/Gọi phối hợp)
+    CONFIRMED --> CANCELLED_PENALTY: Chủ động bấm Hủy chuyến -> Phạt điểm Time-Decay nếu sát giờ
     
     IN_TRANSIT --> COMPLETED: Đến nơi an toàn -> Trả tiền mặt / Chuyển khoản trực tiếp
     COMPLETED --> [*]
     CANCELLED_PENALTY --> [*]
-    EXPIRED_RELEASED --> OPEN_MARKET
 ```
 
 ### 3 Bất Biến Toán Học Không Thể Bị Vi Phạm (Core Invariants):
@@ -504,10 +500,11 @@ CarMate tuyệt đối không để xảy ra tình trạng "khớp lệnh tự �
 ```
 
 1. **Mở Tức Thì Cuộc Gọi Thật & Zalo 1-Chạm (`tel:` & `zalo.me/sdt`):**
-   * Bấm đặt chỗ ban đầu chỉ là "Giữ chỗ 15 phút".
+   * Đã khớp lệnh là chốt chuyến tức thì (Binding Allocation theo lý thuyết Alvin Roth).
    * Hệ thống hiển thị ngay số điện thoại thật và link Zalo để hai bên nghe giọng nói của nhau, gửi ảnh định vị cột xăng chính xác trước khi khởi hành.
-2. **Xác Nhận 2 Chiều (Two-Way Handshake):**
-   * Chủ xe nhận thông báo tức thì và bấm "Xác nhận đón". Chỉ khi Chủ xe bấm xác nhận, chuyến đi mới chính thức chốt. Nếu quá 15 phút không chốt, hệ thống tự nhả ghế để khách chọn xe khác.
+2. **Khớp Lệnh Ràng Buộc & Điều Phối Thực Địa:**
+   * Chủ xe đưa chuyến vào đường ống, Khách chọn xe hoặc Engine tự động ghép đôi ➔ Chuyến đi chính thức chốt (CONFIRMED), không bắt người dùng phải tốn thời gian ngồi canh chừng màn hình.
+   * Trao đổi Zalo/Điện thoại thuần túy phục vụ điều phối vị trí đứng đón thực tế ngoài đời.
 3. **0đ Cọc — Thử Nghiệm 100% Không Rủi Ro:**
    * Không nạp tiền vào ví, không thu cọc. Khách bước lên xe ngồi yên vị, xe lăn bánh mới gửi tiền xăng trực tiếp cho Chủ xe.
 4. **Lưới An Toàn Cứu Hộ:**
