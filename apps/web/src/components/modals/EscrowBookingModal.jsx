@@ -19,7 +19,8 @@ import {
   Package,
   Box,
   Truck,
-  PhoneCall
+  PhoneCall,
+  Lock
 } from 'lucide-react';
 import {
   formatVND,
@@ -30,12 +31,13 @@ import {
   normalizePhoneNumber,
   getPriceGuardrail,
   CARGO_TYPES,
-  getRecommendedCargoPrice
+  getRecommendedCargoPrice,
+  formatCleanDateLabel
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
-import { RouteTimeline } from '../market/TripCard.jsx';
+import { RouteTimeline, getCarDisplay } from '../market/TripCard.jsx';
 import { searchLocations, getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
 import api from '../../api/client.js';
 
@@ -60,7 +62,7 @@ export default function EscrowBookingModal({
   onConfirmBooking,
   onViewTrustProfile,
   onViewBookedTab,
-  onAutoPostDemand,
+  _onAutoPostDemand,
   onShowToast,
   onOpenInbox
 }) {
@@ -70,8 +72,6 @@ export default function EscrowBookingModal({
   const [passengerNote, setPassengerNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [postedDemand, setPostedDemand] = useState(false);
-  const [isPostingDemand, setIsPostingDemand] = useState(false);
 
   const [bookingCode] = useState(() => `CX-${Math.floor(1000 + Math.random() * 9000)}`);
 
@@ -110,20 +110,6 @@ export default function EscrowBookingModal({
     const combined = Array.from(new Set([...fromNote, ...corridorFrom, ...corridorTo, ...suggested, ...POPULAR_HOTSPOTS]));
     return combined.slice(0, 10);
   }, [item?.from, item?.to, item?.waypointNote]);
-
-  // Cửa sổ phản hồi động (Dynamic SLA) dựa trên thời gian tới lúc khởi hành
-  const dynamicSlaText = useMemo(() => {
-    if (!item) return 'khoảng 30 – 45 phút';
-    const dateStr = String(item.date || '');
-    const isTomorrow = dateStr && !dateStr.toLowerCase().includes('hôm nay');
-    if (isTomorrow) {
-      return 'khoảng 2 – 3 tiếng (hoặc trước 21:00 tối nay)';
-    }
-    if (item.timeSlot && /gấp|ngay/i.test(item.timeSlot)) {
-      return 'khoảng 15 – 20 phút';
-    }
-    return 'khoảng 30 – 45 phút';
-  }, [item?.date, item?.timeSlot]);
 
   // BẤT BIẾN MIT: Kiểm tra quyền sở hữu bài đăng để ngăn chặn 100% việc tự ghép chuyến cho chính mình
   const isTripOwner = useMemo(() => {
@@ -164,6 +150,7 @@ export default function EscrowBookingModal({
 
   const [bookingMode, setBookingMode] = useState(() => (item?.isCargoOnly || item?.vehicleType === 'truck_light' ? 'cargo' : 'passenger'));
   const [selectedCargoPreset, setSelectedCargoPreset] = useState('produce_box');
+  const cargoPreset = CARGO_TYPES[selectedCargoPreset];
   const [cargoDescription, setCargoDescription] = useState('');
 
   // Giá phụ xăng gửi hàng theo cự ly
@@ -218,7 +205,6 @@ export default function EscrowBookingModal({
     setSubmitting(true);
 
     const isCargoBooking = bookingMode === 'cargo';
-    const cargoPreset = CARGO_TYPES[selectedCargoPreset];
 
     const bookingData = isCargoBooking
       ? {
@@ -297,86 +283,49 @@ export default function EscrowBookingModal({
     }
   };
 
-  const handleAutoPostDemand = async () => {
-    if (isPostingDemand || postedDemand) return;
-    setIsPostingDemand(true);
-    try {
-      const isDriver = !isDriverItem;
-      const newPostPayload = isDriver
-        ? {
-            id: `TRIP-DRV-${Date.now()}`,
-            type: 'driver_offer',
-            from: item.from,
-            to: item.to,
-            waypointNote: item.waypointNote || '',
-            date: item.date || 'Hôm nay',
-            timeSlot: item.timeSlot || '07:00-09:00',
-            availableSeats: 3,
-            basePricePerSeat: pricing.total / seats || 150000,
-            carType: 'Xe ô tô gia đình',
-            note: 'Chủ xe tiện chuyến đón khách cùng lộ trình',
-            publicName: currentUser?.name || 'Chủ xe',
-            phoneReal: currentUser?.phone || '',
-            createdAt: 'Vừa xong'
-          }
-        : {
-            id: `TRIP-REQ-${Date.now()}`,
-            type: 'passenger_request',
-            from: item.from,
-            to: item.to,
-            pickupPoint: pickupPoint.trim() || undefined,
-            date: item.date || 'Hôm nay',
-            timeSlot: item.timeSlot || '07:00-09:00',
-            seatsNeeded: seats,
-            expectedPrice: Math.round(pricing.total / seats),
-            note: passengerNote ? `Ghi chú: ${passengerNote}` : `Cần tìm xe tiện chuyến ${item.from} về ${item.to}`,
-            publicName: currentUser?.name || 'Người đi cùng',
-            phoneReal: currentUser?.phone || '',
-            createdAt: 'Vừa xong'
-          };
-
-      await onAutoPostDemand?.(newPostPayload);
-      setPostedDemand(true);
-      onShowToast?.(
-        isDriver
-          ? '🎉 Đã đưa chuyến xe trống lên Sàn! Các hành khách khác sẽ liên hệ bạn.'
-          : '🎉 Đã đưa nhu cầu tìm xe lên Sàn! Các chủ xe khác cùng tuyến sẽ thấy để đón bạn.'
-      );
-    } catch (err) {
-      console.warn('[AutoPost] Lỗi tự động đăng:', err);
-    } finally {
-      setIsPostingDemand(false);
-    }
-  };
-
   // -------------------------------------------------------------
-  // TRẠNG THÁI 2: ĐÃ GỬI LỜI NHẮN (THẺ TIẾP NHẬN YÊU CẦU & DYNAMIC SLA)
+  // TRẠNG THÁI 2: ĐÃ XÁC NHẬN KẾT NỐI (THẺ VÉ ĐIỆN TỬ & CHAT TRỰC TIẾP)
   // -------------------------------------------------------------
   if (isSubmitted) {
+    const partnerAlias = toPublicAlias(item);
+    const partnerRoleTitle = isDriverItem ? 'Chủ xe' : 'Khách đi cùng';
+    const carDisplay = getCarDisplay(item.carType, item.capacity, item.vehicleType);
+    const colorStr = item.carColor || item.color || '';
+    const plateDisplay = item.plateMask || item.licensePlate || '93A-385XX';
+    const rawDate = item.targetItem?.date || item.date || item.tripDate || item.createdAt;
+
+    // Khung giờ & thời điểm
+    const isToday = !rawDate || /hôm\s*nay/i.test(String(rawDate));
+    const isTomorrow = /ngày\s*mai|mai/i.test(String(rawDate));
+    const dateText = isToday ? 'hôm nay' : isTomorrow ? 'sáng mai' : formatCleanDateLabel(rawDate);
+    const timeDisplay = `${item.timeSlotLabel || item.timeSlot || '05:00 – 06:00'} ${dateText}`;
+
+    // Chi tiết xe
+    const vehicleDetails = isDriverItem
+      ? `${carDisplay}${colorStr ? ` ${colorStr.toLowerCase()}` : ''} (${partnerAlias}) - Biển số ${plateDisplay}`
+      : `Chuyến đón khách (${partnerAlias}) · ${seats} người đi cùng`;
+
+    // Hành lý
+    const luggageDisplay = passengerNote
+      ? passengerNote
+      : bookingMode === 'cargo'
+      ? `Gói gửi đồ: ${cargoPreset?.name || 'Hàng tiện chuyến'}`
+      : '1 Ba lô gọn nhẹ';
+
+    // Lộ trình
+    const routeFrom = pickupPoint || item.from;
+    const routeTo = item.to;
+
     return (
       <Modal
         onClose={onClose}
         size="md"
         icon={CheckCircle2}
         iconTone="success"
-        title={isDriverItem ? '✓ Đã chốt chuyến đi cùng Chủ xe!' : '✓ Đã chốt chuyến đón khách!'}
-        subtitle={`Kết nối với ${toPublicAlias(item)} · Chat nhắn điểm đón và trao đổi thông tin`}
+        title="✓ ĐÃ XÁC NHẬN KẾT NỐI CHUYẾN ĐI"
+        subtitle={`Mã vé điện tử #${bookingCode} · Giữ chỗ chắc chắn 0đ cọc`}
         footer={
-          <div className="w-full space-y-2.5">
-            {/* Nút hành động chính số 1: Chat trực tiếp ngay trong ứng dụng (Ẩn danh, bảo mật số điện thoại) */}
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenInbox?.(bookingCode);
-              }}
-              className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-600 via-indigo-600 to-primary-600 hover:from-blue-700 hover:to-primary-700 active:scale-[0.99] text-white shadow-md shadow-blue-500/25 cursor-pointer transition-all flex items-center justify-center gap-2"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>💬 Bấm Vào Chat Ngay Với {toPublicAlias(item)}</span>
-            </button>
-
-            {/* Nút hành động phụ số 2: Xem chi tiết & SĐT trong Chuyến của tôi */}
+          <div className="w-full space-y-2">
             <button
               type="button"
               onClick={() => {
@@ -388,155 +337,145 @@ export default function EscrowBookingModal({
               <Check className="w-3.5 h-3.5" />
               <span>Xem chi tiết trong "Chuyến của tôi"</span>
             </button>
-
-            <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
-              🔒 Bảo mật số điện thoại: Nhắn tin trao đổi trước qua khung chat an toàn. Thông tin liên hệ chi tiết hiển thị trong mục "Chuyến của tôi".
-            </p>
           </div>
         }
       >
         <div className="space-y-4">
-          {/* Apple Live Activity Stepper — Tiến trình sống động */}
-          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/60 border border-black/[0.04] dark:border-white/[0.05]">
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="flex flex-col items-center gap-1">
-                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                  ✓
-                </span>
-                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã chọn xe</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                  ✓
-                </span>
-                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã chốt chuyến</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold animate-pulse shadow-xs">
-                  💬
-                </span>
-                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Chat trao đổi</span>
-              </div>
-            </div>
-          </div>
+          {/* 📋 1. THẺ CHI TIẾT CHUYẾN ĐI (Như một vé điện tử) */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-white via-slate-50/90 to-slate-100/90 dark:from-slate-850 dark:via-slate-900 dark:to-slate-950 border border-black/[0.08] dark:border-white/[0.1] shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+            {/* Header của vé */}
+            <div className="p-4 sm:p-5 border-b border-dashed border-black/10 dark:border-white/10 relative">
+              {/* Rãnh khuyết vé điện tử (Ticket notches) phong cách Apple Wallet */}
+              <span className="absolute -bottom-3 -left-3 w-6 h-6 rounded-full bg-[#f2f2f7] dark:bg-[#1c1c1e] border-r border-black/[0.08] dark:border-white/[0.1]" />
+              <span className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-[#f2f2f7] dark:bg-[#1c1c1e] border-l border-black/[0.08] dark:border-white/[0.1]" />
 
-          {/* Card tóm tắt yêu cầu vừa gửi */}
-          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs text-emerald-800 dark:text-emerald-300 font-bold uppercase tracking-wider">
-                  Yêu cầu kết nối #{bookingCode}
-                </p>
-                <p className="font-bold text-slate-900 dark:text-white text-base mt-0.5">
-                  {toPublicAlias(item)}
-                </p>
-              </div>
-              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 text-xs font-bold tabular">
-                {timeSlot}
-              </span>
-            </div>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center font-bold text-xs">
+                    📋
+                  </span>
+                  <div>
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider">
+                      1. THẺ CHI TIẾT CHUYẾN ĐI
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                      Vé điện tử CarMate #{bookingCode}
+                    </p>
+                  </div>
+                </div>
 
-            <RouteTimeline from={item.from} to={item.to} compact />
-
-            <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/40 grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-slate-500 dark:text-slate-400">Điểm đón đề xuất:</span>
-                <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                  {pickupPoint || 'Thỏa thuận tiện đường'}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-500 dark:text-slate-400">Chi phí dự kiến ({seats} người):</span>
-                <p className="font-bold text-emerald-700 dark:text-emerald-400 tabular">
-                  {formatVND(pricing.total)}
-                </p>
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 inline-flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Đã xác nhận kết nối</span>
+                </span>
               </div>
             </div>
 
-            {passengerNote && (
-              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-emerald-200/60 text-xs text-slate-700 dark:text-slate-300">
-                <span className="font-semibold text-slate-900 dark:text-white">Lời nhắn gửi kèm: </span>
-                {passengerNote}
-              </div>
-            )}
-          </div>
-
-          {/* Trigger Siêu Tốc 1-Chạm (Two-Sided Matching Liquidity) */}
-          <div className="p-4 rounded-3xl bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-white dark:from-blue-950/40 dark:via-indigo-950/20 dark:to-slate-900 border border-blue-200/80 dark:border-blue-800/60 shadow-xs space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
-                <Zap className="w-5 h-5 fill-current text-amber-300" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    {isDriverItem ? 'Tăng 95% cơ hội có xe: Đăng tìm xe' : 'Tăng lấp đầy xe: Đăng chuyến trống'}
-                  </h4>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300/40">
-                    Khuyên dùng
+            {/* Nội dung chi tiết các dòng thông tin (Bullet items) */}
+            <div className="p-4 sm:p-5 space-y-3.5 text-xs sm:text-[13px] leading-relaxed">
+              {/* • Lộ trình */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Lộ trình: </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {routeFrom} ➔ {routeTo}
                   </span>
                 </div>
-                <p className="text-[11.5px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                  {isDriverItem
-                    ? `Tại sao chỉ đợi 1 xe? Đưa luôn nhu cầu đi ${item.from} ➔ ${item.to} lên Sàn để các chủ xe khác cùng tuyến cũng thấy và chủ động liên hệ đón bạn!`
-                    : `Bạn còn ghế trống? Đưa chuyến ${item.from} ➔ ${item.to} lên Sàn để các người tìm xe khác tiện đường đặt chỗ ngay!`}
-                </p>
+              </div>
+
+              {/* • Khung giờ */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Khung giờ: </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {timeDisplay}
+                  </span>
+                </div>
+              </div>
+
+              {/* • Xe */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Xe: </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {vehicleDetails}
+                  </span>
+                </div>
+              </div>
+
+              {/* • Chi phí */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Chi phí: </span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 font-display text-sm sm:text-base tabular">
+                    {formatVND(pricing.total)}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-400 font-semibold ml-1">
+                    (0đ cọc · Lên xe gửi tiền xăng)
+                  </span>
+                </div>
+              </div>
+
+              {/* • Hành lý */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Hành lý: </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {luggageDisplay}
+                  </span>
+                </div>
               </div>
             </div>
-
-            {postedDemand ? (
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Đã đưa lên Bảng tin CarMate! Các đối tác khác cùng tuyến đang thấy bài của bạn.</span>
-              </div>
-            ) : (
-              <button
-                type="button"
-                disabled={isPostingDemand}
-                onClick={handleAutoPostDemand}
-                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#0071e3] to-[#0055d4] hover:from-[#0077ed] hover:to-[#004bbd] active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75"
-              >
-                {isPostingDemand ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang đưa bài lên Sàn...</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 fill-current text-amber-300" />
-                    <span>
-                      {isDriverItem
-                        ? 'Đăng nhu cầu tìm xe lên Bảng tin'
-                        : 'Đăng chuyến xe trống lên Bảng tin'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            )}
           </div>
 
-          {/* Hộp thoại SLA phản hồi động & Closed-loop Alert */}
-          <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 text-amber-900 dark:text-amber-200 space-y-1.5">
-            <div className="flex items-center justify-between gap-2 font-bold text-xs flex-wrap">
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
-                <span>Thời gian phản hồi dự kiến: {dynamicSlaText}</span>
-              </span>
-              <span className="text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/60 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <Bell className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                Báo qua Telegram/App
+          {/* 💬 2. KHUNG CHAT TRỰC TIẾP TRONG APP */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 px-1">
+              <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <span>💬 2. KHUNG CHAT TRỰC TIẾP TRONG APP</span>
               </span>
             </div>
-            <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
-              Khi chủ xe bấm Xác nhận hoặc có tin nhắn mới, CarMate sẽ báo ngay về Telegram/App của bạn. Bạn yên tâm tắt ứng dụng để làm việc khác mà không lo lỡ chuyến!
-            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenInbox?.(bookingCode);
+              }}
+              className="w-full min-h-[52px] py-3.5 px-4 rounded-2xl font-bold text-sm sm:text-[15px] bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white shadow-lg shadow-blue-500/25 cursor-pointer transition-all flex items-center justify-center gap-2.5"
+            >
+              <MessageSquare className="w-5 h-5 fill-current shrink-0" />
+              <span>💬 BẤM VÀO ĐÂY ĐỂ CHAT TRAO ĐỔI VỚI {partnerRoleTitle.toUpperCase()} NGAY</span>
+            </button>
           </div>
 
-          <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span>Chỉ khi 2 bên cùng bấm Xác nhận, chuyến đi mới chính thức chốt ghế.</span>
-          </p>
+          {/* 🔒 BẢO MẬT */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 flex items-start gap-2.5 text-xs text-amber-950 dark:text-amber-200">
+            <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <p className="font-bold">
+                🔒 Bảo mật: Không lộ số điện thoại cá nhân. Hai bên nhắn tin trực tiếp để hẹn điểm đón chính xác.
+              </p>
+              <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-1">
+                💡 SĐT khẩn cấp sẽ chỉ mở khi xe đến điểm đón mà không liên lạc được qua chat.
+              </p>
+            </div>
+          </div>
         </div>
       </Modal>
     );
