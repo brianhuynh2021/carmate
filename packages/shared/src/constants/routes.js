@@ -7,6 +7,7 @@ export const DEFAULT_FALLBACK_ROUTES = [
   { from: 'Đồng Xoài', to: 'TP. Hồ Chí Minh', count: 0 },
   { from: 'Phan Thiết', to: 'Sài Gòn', count: 0 },
   { from: 'Vũng Tàu', to: 'Sài Gòn', count: 0 },
+  { from: 'Bình Phước', to: 'Kiên Giang', count: 0 },
   { from: 'Hà Nội', to: 'Hải Phòng', count: 0 },
   { from: 'Sài Gòn', to: 'Đà Lạt', count: 0 }
 ];
@@ -267,6 +268,22 @@ export const ROUTE_BENCHMARKS = {
     marketLimoRef: '140.000đ - 160.000đ',
     traditionalBusRef: '110.000đ',
     calculationBasis: '70km cao tốc TP.HCM - Trung Lương.'
+  },
+  'Tuyến N2 - Kiên Giang': {
+    name: 'Bình Phước ⇄ Kiên Giang / Miền Tây (Tuyến N2 ~280km)',
+    shortName: 'Bình Phước ⇄ Kiên Giang',
+    keyword: 'Kiên Giang',
+    region: 'south',
+    distanceKm: 280,
+    fuelCost: 420000,
+    botFee: 110000, // BOT Tuyến N2 + Cầu Vàm Cống / Rạch Sỏi
+    suggestedRate: 260000,
+    minSafePrice: 150000,
+    maxSafePrice: 500000,
+    marketLimoRef: '320.000đ - 380.000đ',
+    traditionalBusRef: '220.000đ - 250.000đ',
+    calculationBasis:
+      '280km trục Tuyến N2 nối Bình Phước - Long An - Đồng Tháp - Cần Thơ - Kiên Giang. Chiều xe tải/xe tiện tuyến chở nông sản & hàng hóa 2 chiều chia sẻ chi phí rất hiệu quả.'
   }
 };
 
@@ -338,6 +355,16 @@ export const CORRIDOR_WAYPOINTS = {
     'Thị xã Cai Lậy / Cái Bè',
     'Cầu Mỹ Thuận / TP. Vĩnh Long',
     'Bến xe Trung tâm TP. Cần Thơ'
+  ],
+  'Tuyến N2 - Kiên Giang': [
+    'Ngã 4 Chơn Thành / QL13 (Bình Phước)',
+    'Bến Cát / Cầu Thầy Cai',
+    'Thị trấn Hậu Nghĩa / Đức Hòa (Long An)',
+    'Thạnh Hóa / Tân Thạnh (Tuyến N2)',
+    'Tháp Mười / Cao Lãnh (Đồng Tháp)',
+    'Cầu Vàm Cống / Thốt Nốt (Cần Thơ)',
+    'Ngã 3 Lộ Tẻ / Cao tốc Lộ Tẻ - Rạch Sỏi',
+    'TP. Rạch Giá / Hà Tiên (Kiên Giang)'
   ]
 };
 
@@ -359,6 +386,9 @@ export function getCorridorWaypoints(routeCategoryOrKeyword) {
   }
 
   // Fallback thử tìm theo từ khóa chung
+  if (clean.includes('kiên giang') || clean.includes('rạch giá') || clean.includes('hà tiên') || clean.includes('miền tây') || clean.includes('tuyến n2')) {
+    return CORRIDOR_WAYPOINTS['Tuyến N2 - Kiên Giang'];
+  }
   if (clean.includes('bình phước') || clean.includes('bù đốp') || clean.includes('đồng xoài') || clean.includes('ql13')) {
     return CORRIDOR_WAYPOINTS['Tuyến QL13'];
   }

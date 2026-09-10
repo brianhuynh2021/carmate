@@ -308,21 +308,27 @@ export default function InboxModal({
     const lastPartnerMsg = [...msgs].reverse().find((m) => !m.isSystem && m.senderRole !== myRole);
     const partnerText = (lastPartnerMsg?.text || '').toLowerCase();
 
-    // 0. Phân tích Intent: Gửi đồ / Thùng hàng / Thùng bán tải / Nông sản
-    const isCargoBooking = Boolean(activeBooking?.isCargoBooking || activeBooking?.cargoType);
-    if (isCargoBooking || /(gửi đồ|gui do|chở hàng|cho hang|thùng xốp|thung xop|bán tải|ban tai|kiện|nông sản|nong san|chuyển trọ|chuyen tro)/i.test(partnerText)) {
+    // 0. Phân tích Intent: Gửi đồ / Thùng hàng / Xe tải / Xe máy / Nông sản / Chành xe
+    const isCargoBooking = Boolean(
+      activeBooking?.isCargoBooking ||
+      activeBooking?.cargoType ||
+      activeBooking?.vehicleType === 'truck_light'
+    );
+    if (isCargoBooking || /(gửi đồ|gui do|chở hàng|cho hang|thùng xốp|thung xop|xe tải|xe tai|chành|chanh|xe máy|xe may|xe điện|xe dien|bán tải|ban tai|kiện|nông sản|nong san|chuyển trọ|chuyen tro)/i.test(partnerText)) {
       if (myRole === 'driver') {
         return [
-          '📦 Xe nhận chở đồ nhé, cốp/thùng rộng rãi',
-          '🛻 Thùng xe có bạt che kín, đồ yên tâm sạch sẽ',
-          '📍 Bạn dán tên & SĐT người nhận lên kiện hàng nhé',
-          '✅ Bấm xác nhận chuyến để lấy SĐT gọi giao nhận nha'
+          '🚛 Xe tải quay đầu rỗng thùng, nhận chở tiện chuyến giá mềm',
+          '🛵 Có dây tăng đơ chằng buộc xe máy cố định chống trầy xước',
+          '🌾 Nhận chở nông sản vài tạ đến 1 tấn, có bạt che kín',
+          '📦 Bạn dán tên & SĐT người nhận lên kiện hàng nhé',
+          '✅ Bấm xác nhận chuyến để lấy SĐT gọi trực tiếp giao nhận nha'
         ];
       }
       return [
-        '📦 Đồ của em đã bọc kín băng dính cẩn thận ạ',
-        '🧊 Em có thùng xốp nông sản quê gửi người nhà',
-        '📍 Người nhận sẽ ra đón xe nhận đồ đúng giờ ạ',
+        '🛵 Em muốn gửi 1 chiếc xe máy (rút bớt xăng) về quê ạ',
+        '🌾 Em có mấy bao nông sản gửi từ Bình Phước về Miền Tây',
+        '📦 Đồ của em đã bọc kín băng dính cẩn thận sẵn ạ',
+        '📍 Người nhận sẽ ra đón xe nhận đồ dọc trục Tuyến N2 / QL ạ',
         '✅ Em bấm xác nhận gửi hàng ngay ạ'
       ];
     }

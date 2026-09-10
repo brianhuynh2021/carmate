@@ -679,6 +679,111 @@ async function runTests() {
       assert(false, '17. Cargo & Pickup Bed Sharing Expansion', err.message);
     }
 
+    // -------------------------------------------------------------
+    // 18. Kiểm thử Xe Tải Nhẹ & Chành Xe Địa Phương Tiện Tuyến N2 (Bình Phước ⇄ Kiên Giang)
+    // -------------------------------------------------------------
+    console.log('\n--- 18. Kiểm thử Xe Tải Nhẹ & Chành Xe Địa Phương Tiện Tuyến N2 ---');
+    try {
+      const {
+        CARGO_TYPES,
+        getRecommendedCargoPrice,
+        ROUTE_BENCHMARKS,
+        getCorridorWaypoints
+      } = await import('@carmate/shared');
+
+      // 1. Kiểm tra 6 nhóm thể tích tiện tuyến bản địa
+      const cargoKeys = Object.keys(CARGO_TYPES);
+      assert(
+        cargoKeys.includes('motorcycle') && cargoKeys.includes('half_truck') && cargoKeys.includes('full_truck'),
+        'Truck Cargo 1: Đầy đủ 3 gói hàng địa phương (Xe máy/xe điện, Nửa thùng ~1T, Bao trọn thùng quay đầu)'
+      );
+
+      // 2. Kiểm tra định giá cự ly cho xe máy
+      const motorcyclePrice = getRecommendedCargoPrice('motorcycle', 280);
+      assert(motorcyclePrice >= 350000 && motorcyclePrice <= 600000, `Truck Cargo 2: Giá gửi xe máy cự ly 280km chuẩn xác (~${motorcyclePrice.toLocaleString('vi-VN')}đ)`);
+
+      // 3. Kiểm tra định mức Tuyến N2 - Kiên Giang trong ROUTE_BENCHMARKS
+      const n2Benchmark = ROUTE_BENCHMARKS['Tuyến N2 - Kiên Giang'];
+      assert(n2Benchmark && n2Benchmark.distanceKm === 280, 'Route N2 1: Hành lang Tuyến N2 - Kiên Giang chuẩn 280km');
+
+      // 4. Kiểm tra Corridor Waypoints tuyến N2
+      const n2Waypoints = getCorridorWaypoints('Kiên Giang');
+      assert(
+        Array.isArray(n2Waypoints) && n2Waypoints.some((w) => w.includes('Đức Hòa') || w.includes('Thạnh Hóa') || w.includes('Vàm Cống')),
+        'Route N2 2: Tìm được các điểm mốc chính trên Tuyến N2 (Đức Hòa, Thạnh Hóa, Cầu Vàm Cống)'
+      );
+
+      // 5. Bất biến MIT: Xe tải nhẹ chỉ nhận tối đa 1 người đi cùng (ghế phụ)
+      const overloadTruckRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'driver_offer',
+          phoneReal: '0988112233',
+          carType: 'Kia K250 (Xe tải 2.4T)',
+          vehicleType: 'truck_light',
+          capacity: 2,
+          availableSeats: 2, // Quá tải ghế phụ! Chỉ được 1
+          from: 'Chơn Thành',
+          to: 'Rạch Giá'
+        })
+      });
+      assert(overloadTruckRes.status === 400, 'Truck Invariant 1: Chặn đăng xe tải chở quá 1 người đi cùng ghế phụ (HTTP 400)');
+
+      // 6. Đăng chuyến xe tải nhẹ hợp lệ (1 ghế phụ, có thùng xe chở hàng)
+      const truckTripRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: driverHeaders,
+        body: JSON.stringify({
+          type: 'driver_offer',
+          phoneReal: '0988112233',
+          carType: 'Kia K250 (Xe tải mui bạt 2.4T)',
+          vehicleType: 'truck_light',
+          capacity: 2,
+          availableSeats: 1,
+          hasCargoBed: true,
+          isCargoVehicle: true,
+          cargoBedCapacityKg: 2400,
+          from: 'Chơn Thành (Bình Phước)',
+          to: 'Rạch Giá (Kiên Giang)',
+          routeCategory: 'Tuyến N2 - Kiên Giang',
+          direction: 'both',
+          timeSlot: '05:00-06:00',
+          basePricePerSeat: 260000,
+          notes: 'Xe tải chở nông sản xong quay đầu về Rạch Giá rỗng thùng. Nhận chở xe máy, nông sản vài tạ đến 1 tấn.'
+        })
+      });
+      const truckTripData = await truckTripRes.json();
+      assert(
+        truckTripRes.status === 201 && truckTripData.data.vehicleType === 'truck_light' && truckTripData.data.hasCargoBed === true,
+        'Truck Trip 1: Đăng chuyến xe tải nhẹ quay đầu rỗng thùng thành công (HTTP 201)'
+      );
+
+      // 7. Tạo yêu cầu gửi xe máy về quê theo xe tải
+      const motoBookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          targetId: truckTripData.data.id,
+          from: 'Chơn Thành',
+          to: 'Rạch Giá',
+          contactPhone: '0933888999',
+          isCargoBooking: true,
+          cargoType: 'motorcycle',
+          cargoDescription: '1 xe máy Honda Wave Alpha đã rút sạch xăng gửi về quê cho mẹ',
+          totalDeal: 450000,
+          seats: 0
+        })
+      });
+      const motoBookingData = await motoBookingRes.json();
+      assert(
+        motoBookingRes.status === 201 && motoBookingData.data.cargoType === 'motorcycle',
+        'Truck Booking 1: Gửi yêu cầu vận chuyển xe máy về quê thành công (HTTP 201)'
+      );
+    } catch (err) {
+      assert(false, '18. Light Truck & Local Route N2 Corridor', err.message);
+    }
+
   } finally {
     // -------------------------------------------------------------
     // Tự động dọn dẹp 100% dữ liệu tạm sau khi test hoàn tất

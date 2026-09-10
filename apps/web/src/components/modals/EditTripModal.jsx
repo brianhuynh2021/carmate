@@ -51,16 +51,21 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   );
   const [price, setPrice] = useState(trip?.basePricePerSeat || trip?.expectedPrice || 150000);
   const [vehicleCapacity, setVehicleCapacity] = useState(() => {
+    if (trip?.vehicleType === 'truck_light' || trip?.isCargoVehicle || (trip?.carType && /xe tải|tải nhẹ|k200|k250|porter|h150|qkr/i.test(trip?.carType))) {
+      return 'truck_light';
+    }
     if (trip?.vehicleType === 'pickup' || trip?.hasCargoBed || (trip?.carType && /bán tải|ranger|hilux|triton|d-max/i.test(trip?.carType))) {
       return 'pickup';
     }
     if (trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4)) return 7;
     return 5;
   });
-  const [acceptsParcel, setAcceptsParcel] = useState(() => Boolean(trip?.acceptsParcel || trip?.vehicleType === 'pickup' || trip?.hasCargoBed));
+  const [acceptsParcel, setAcceptsParcel] = useState(() => Boolean(trip?.acceptsParcel || trip?.vehicleType === 'truck_light' || trip?.vehicleType === 'pickup' || trip?.hasCargoBed));
   const [cargoNotes, setCargoNotes] = useState(() => trip?.cargoNotes || '');
   const [seats, setSeats] = useState(() => {
     const raw = trip?.availableSeats || trip?.seatsNeeded || 3;
+    const isTruck = trip?.vehicleType === 'truck_light' || trip?.isCargoVehicle;
+    if (isTruck) return 1;
     const max = trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4) ? 6 : 4;
     return Math.min(raw, isDriver ? max : 6);
   });
@@ -72,6 +77,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   const [saving, setSaving] = useState(false);
   const [carType, setCarType] = useState(() => {
     if (trip?.carType) return trip.carType;
+    if (trip?.vehicleType === 'truck_light' || trip?.isCargoVehicle) return 'Kia K250 (Xe tải 2.4T)';
     if (trip?.vehicleType === 'pickup' || trip?.hasCargoBed) return 'Ford Ranger (Xe bán tải)';
     if (trip?.capacity === 7) return 'Mitsubishi Xpander (Xe 7 chỗ)';
     return 'Toyota Vios (Xe 5 chỗ)';
@@ -217,12 +223,13 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
       pickupSpot: pickupSpot.trim(),
       dropoffSpot: dropoffSpot.trim(),
       route: derivedRoute,
-      routeCategory: derivedRoute,
-      capacity: isDriver ? (vehicleCapacity === 'pickup' ? 5 : Number(vehicleCapacity)) : undefined,
+      capacity: isDriver ? (vehicleCapacity === 'truck_light' ? 2 : vehicleCapacity === 'pickup' ? 5 : Number(vehicleCapacity)) : undefined,
       vehicleCapacity: isDriver ? vehicleCapacity : undefined,
-      vehicleType: isDriver ? (vehicleCapacity === 'pickup' ? 'pickup' : (vehicleCapacity === 7 ? 'mpv_suv' : 'sedan_cuv')) : undefined,
-      hasCargoBed: isDriver ? (vehicleCapacity === 'pickup' || Boolean(trip?.hasCargoBed)) : undefined,
-      acceptsParcel: isDriver ? Boolean(acceptsParcel) : undefined,
+      vehicleType: isDriver ? (vehicleCapacity === 'truck_light' ? 'truck_light' : vehicleCapacity === 'pickup' ? 'pickup' : (vehicleCapacity === 7 ? 'mpv_suv' : 'sedan_cuv')) : undefined,
+      hasCargoBed: isDriver ? (vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup' || Boolean(trip?.hasCargoBed)) : undefined,
+      isCargoVehicle: isDriver ? Boolean(vehicleCapacity === 'truck_light') : undefined,
+      cargoBedCapacityKg: isDriver && vehicleCapacity === 'truck_light' ? 2500 : (vehicleCapacity === 'pickup' ? 800 : undefined),
+      acceptsParcel: isDriver ? Boolean(acceptsParcel || vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup') : undefined,
       cargoNotes: isDriver && cargoNotes.trim() ? cargoNotes.trim() : undefined,
       carType: isDriver ? carType.trim() : undefined,
       carPhotos: isDriver ? validPhotos : undefined,
@@ -527,7 +534,9 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] space-y-4 shadow-2xs">
             <div className="flex items-center justify-between text-xs sm:text-[13px]">
               <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                {vehicleCapacity === 'pickup' ? (
+                {vehicleCapacity === 'truck_light' ? (
+                  <Truck className="w-4 h-4 text-emerald-600" />
+                ) : vehicleCapacity === 'pickup' ? (
                   <Truck className="w-4 h-4 text-amber-600" />
                 ) : (
                   <Car className="w-4 h-4 text-[#0071e3]" />
@@ -535,22 +544,24 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 <span>Phương tiện di chuyển:</span>
               </span>
               <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                {vehicleCapacity === 'pickup'
-                  ? '🛻 Xe bán tải (Cabin 4 khách + Thùng ~800kg)'
-                  : vehicleCapacity === 7
-                  ? '🚙 Xe 7 chỗ (Tối đa 6 khách)'
-                  : '🚗 Xe 4–5 chỗ (Tối đa 4 khách)'}
+                {vehicleCapacity === 'truck_light'
+                  ? '🚛 Xe tải nhẹ (Cabin 1 khách + Thùng 1T–3.5T)'
+                  : vehicleCapacity === 'pickup'
+                    ? '🛻 Xe bán tải (Cabin 4 khách + Thùng ~800kg)'
+                    : vehicleCapacity === 7
+                      ? '🚙 Xe 7 chỗ (Tối đa 6 khách)'
+                      : '🚗 Xe 4–5 chỗ (Tối đa 4 khách)'}
               </span>
             </div>
 
-            {/* Quy mô 4-5 chỗ vs 7 chỗ vs Bán tải */}
-            <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-[#e5e5ea] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.06]">
+            {/* Quy mô 4-5 chỗ vs 7 chỗ vs Bán tải vs Xe tải nhẹ */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-[#e5e5ea] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.06]">
               <button
                 type="button"
                 onClick={() => {
                   setVehicleCapacity(5);
                   if (seats > 4) setSeats(4);
-                  if (carType.includes('Xpander') || carType.includes('7 chỗ') || carType.includes('Ranger') || carType.includes('bán tải')) {
+                  if (carType.includes('Xpander') || carType.includes('7 chỗ') || carType.includes('Ranger') || carType.includes('bán tải') || carType.includes('K250') || carType.includes('tải')) {
                     setCarType('Toyota Vios (Xe 5 chỗ)');
                   }
                 }}
@@ -566,7 +577,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 type="button"
                 onClick={() => {
                   setVehicleCapacity(7);
-                  if (carType.includes('Vios') || carType.includes('5 chỗ') || carType.includes('Ranger') || carType.includes('bán tải')) {
+                  if (carType.includes('Vios') || carType.includes('5 chỗ') || carType.includes('Ranger') || carType.includes('bán tải') || carType.includes('K250') || carType.includes('tải')) {
                     setCarType('Mitsubishi Xpander (Xe 7 chỗ)');
                   }
                 }}
@@ -596,6 +607,24 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
               >
                 <span>🛻 Bán tải</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVehicleCapacity('truck_light');
+                  setAcceptsParcel(true);
+                  setSeats(1);
+                  if (!carType.includes('K250') && !carType.includes('Porter') && !carType.includes('tải')) {
+                    setCarType('Kia K250 (Xe tải 2.4T)');
+                  }
+                }}
+                className={`py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap select-none ${
+                  vehicleCapacity === 'truck_light'
+                    ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-black/[0.04] dark:border-white/[0.08]'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🚛 Xe tải nhẹ</span>
+              </button>
             </div>
 
             {/* Dòng xe cụ thể + Biển số */}
@@ -608,7 +637,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                   type="text"
                   value={carType}
                   onChange={(e) => setCarType(e.target.value)}
-                  placeholder="VD: Mazda 3, Veloz Cross, Xpander, Ford Ranger..."
+                  placeholder="VD: Mazda 3, Veloz Cross, Xpander, Kia K250..."
                   className="w-full h-10 px-3.5 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] shadow-2xs"
                 />
               </div>
@@ -630,16 +659,22 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             {/* Preset chips */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Chọn nhanh:</span>
-              {(vehicleCapacity === 'pickup'
-                ? ['Ford Ranger', 'Toyota Hilux', 'Mitsubishi Triton', 'Isuzu D-Max', 'Nissan Navara']
-                : vehicleCapacity === 7
-                ? ['Mitsubishi Xpander', 'Toyota Veloz Cross', 'Toyota Innova', 'Kia Carnival', 'VinFast VF8']
-                : ['Toyota Vios', 'Mazda 3', 'Hyundai Accent', 'Honda City', 'Kia K3', 'VinFast VF5']
+              {(vehicleCapacity === 'truck_light'
+                ? ['Kia K200/K250', 'Hyundai Porter H150', 'Isuzu QKR', 'Suzuki Carry Pro', 'Thaco Towner']
+                : vehicleCapacity === 'pickup'
+                  ? ['Ford Ranger', 'Toyota Hilux', 'Mitsubishi Triton', 'Isuzu D-Max', 'Nissan Navara']
+                  : vehicleCapacity === 7
+                    ? ['Mitsubishi Xpander', 'Toyota Veloz Cross', 'Toyota Innova', 'Kia Carnival', 'VinFast VF8']
+                    : ['Toyota Vios', 'Mazda 3', 'Hyundai Accent', 'Honda City', 'Kia K3', 'VinFast VF5']
               ).map((preset) => (
                 <button
                   key={preset}
                   type="button"
-                  onClick={() => setCarType(`${preset} (${vehicleCapacity === 'pickup' ? 'Xe bán tải' : `Xe ${vehicleCapacity} chỗ`})`)}
+                  onClick={() =>
+                    setCarType(
+                      `${preset} (${vehicleCapacity === 'truck_light' ? 'Xe tải nhẹ' : vehicleCapacity === 'pickup' ? 'Xe bán tải' : `Xe ${vehicleCapacity} chỗ`})`
+                    )
+                  }
                   className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-black/[0.1] dark:border-white/[0.1] transition-colors cursor-pointer shadow-2xs"
                 >
                   {preset}

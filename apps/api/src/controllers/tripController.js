@@ -304,13 +304,29 @@ export async function createTrip(req, res) {
       }
     }
 
+    // BẤT BIẾN MIT: Giới hạn ghế an toàn theo quy định đăng kiểm (chống chở quá tải)
+    if (body.type === 'driver_offer' && body.availableSeats) {
+      const isTruck =
+        body.vehicleType === 'truck_light' ||
+        body.isCargoVehicle ||
+        /xe\s*tải|tải\s*nhẹ|k200|k250|porter|h150|qkr/i.test(body.carType || '');
+      if (isTruck && Number(body.availableSeats) > 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Xe tải nhẹ chỉ được phép nhận tối đa 1 người đi cùng (ghế phụ cabin) theo quy định đăng kiểm.'
+        });
+      }
+    }
+
     // Chuẩn hóa tải trọng xe và số ghế khách hợp lệ (Kháng chở quá tải Nghị định 100/2019)
     if (body.type === 'driver_offer' || body.availableSeats) {
       const rawCapacity =
-        body.vehicleType === 'pickup' || body.hasCargoBed
-          ? 'pickup'
-          : body.capacity || body.vehicleSeats || (Number(body.availableSeats) > 4 ? 7 : 5);
-      const { capacity, seats, vehicleType, hasCargoBed } = sanitizeVehicleCapacityAndSeats(
+        body.vehicleType === 'truck_light' || body.isCargoVehicle
+          ? 'truck_light'
+          : body.vehicleType === 'pickup' || body.hasCargoBed
+            ? 'pickup'
+            : body.capacity || body.vehicleSeats || (Number(body.availableSeats) > 4 ? 7 : 5);
+      const { capacity, seats, vehicleType, hasCargoBed, isCargoVehicle } = sanitizeVehicleCapacityAndSeats(
         rawCapacity,
         body.availableSeats
       );
@@ -318,12 +334,13 @@ export async function createTrip(req, res) {
       body.availableSeats = seats;
       if (vehicleType) body.vehicleType = vehicleType;
       if (hasCargoBed !== undefined) body.hasCargoBed = hasCargoBed;
+      if (isCargoVehicle !== undefined) body.isCargoVehicle = isCargoVehicle;
     }
 
     if (body.isCargoOnly) {
       body.isCargoOnly = true;
     }
-    if (body.acceptsParcel || body.vehicleType === 'pickup' || body.hasCargoBed) {
+    if (body.acceptsParcel || body.vehicleType === 'truck_light' || body.vehicleType === 'pickup' || body.hasCargoBed || body.isCargoVehicle) {
       body.acceptsParcel = true;
     }
 
@@ -438,19 +455,23 @@ export async function updateTripHandler(req, res) {
     const { id } = req.params;
     const updates = req.body || {};
 
-    if (updates.capacity || updates.vehicleSeats || updates.availableSeats !== undefined) {
+    if (updates.capacity || updates.vehicleSeats || updates.availableSeats !== undefined || updates.vehicleType || updates.hasCargoBed) {
       const existingTrip = getTripById(id);
       const rawCap =
-        updates.capacity ||
-        updates.vehicleSeats ||
-        existingTrip?.capacity ||
-        (Number(updates.availableSeats || existingTrip?.availableSeats) > 4 ? 7 : 5);
+        updates.vehicleType === 'truck_light' || updates.isCargoVehicle || existingTrip?.vehicleType === 'truck_light' || existingTrip?.isCargoVehicle
+          ? 'truck_light'
+          : (updates.vehicleType === 'pickup' || updates.hasCargoBed || existingTrip?.vehicleType === 'pickup' || existingTrip?.hasCargoBed
+            ? 'pickup'
+            : updates.capacity || updates.vehicleSeats || existingTrip?.capacity || (Number(updates.availableSeats || existingTrip?.availableSeats) > 4 ? 7 : 5));
       const rawSeats = updates.availableSeats !== undefined ? updates.availableSeats : existingTrip?.availableSeats;
-      const { capacity, seats } = sanitizeVehicleCapacityAndSeats(rawCap, rawSeats);
+      const { capacity, seats, vehicleType, hasCargoBed, isCargoVehicle } = sanitizeVehicleCapacityAndSeats(rawCap, rawSeats);
       updates.capacity = capacity;
       if (updates.availableSeats !== undefined) {
         updates.availableSeats = seats;
       }
+      if (vehicleType) updates.vehicleType = vehicleType;
+      if (hasCargoBed !== undefined) updates.hasCargoBed = hasCargoBed;
+      if (isCargoVehicle !== undefined) updates.isCargoVehicle = isCargoVehicle;
     }
 
     const updated = await updateTrip(id, updates);

@@ -116,6 +116,16 @@ export function RouteTimeline({ from, to, compact = false }) {
  * Chuẩn hoá hiển thị dòng xe kèm số chỗ ngồi (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
  */
 export function getCarDisplay(carType, capacity, vehicleType) {
+  const isTruck =
+    vehicleType === 'truck_light' ||
+    /xe\s*tải|tải\s*nhẹ|chành\s*xe|k200|k250|porter|h150|qkr|thaco\s*towner|carry\s*pro/i.test(carType || '');
+
+  if (isTruck) {
+    let cleanModel = (carType || 'Xe tải nhẹ').split('(')[0].trim();
+    cleanModel = cleanModel.replace(/\s*(xe\s*tải\s*nhẹ|xe\s*tải|tải\s*nhẹ|chành\s*xe)\b/gi, '').trim();
+    return cleanModel ? `${cleanModel} · Xe tải` : 'Xe tải nhẹ';
+  }
+
   const isPickup =
     vehicleType === 'pickup' ||
     /bán\s*tải|pickup|ranger|hilux|triton|d-?max|navara|bt-?50/i.test(carType || '');
@@ -336,6 +346,14 @@ export default function TripCard({
             <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
             <span>Gửi đồ tiện chuyến</span>
           </span>
+        ) : isDriver && (item.vehicleType === 'truck_light' || item.isCargoVehicle) ? (
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs"
+            title="Xe tải tiện chuyến: Thùng chở hàng 1T–3.5T + 1 ghế phụ trong cabin"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <span>Thùng tải tiện chuyến + {seatsLeft > 0 ? '1 ghế phụ' : 'Hết ghế phụ'}</span>
+          </span>
         ) : (
           <span
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs"
@@ -471,7 +489,15 @@ export default function TripCard({
 
         {/* Hàng: Tiện ích & Nút CTA */}
         <div className="pt-2 border-t border-slate-100 dark:border-white/[0.04] flex items-center justify-between gap-2">
-          {item.vehicleType === 'pickup' || item.hasCargoBed ? (
+          {item.vehicleType === 'truck_light' || item.isCargoVehicle ? (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-900 dark:text-emerald-200 bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300/90 dark:border-emerald-700/80 shadow-2xs"
+              title="Xe tải nhẹ tiện chuyến (1T–3.5T) sẵn sàng nhận chở xe máy, nông sản vài tạ đến 1 tấn, đồ dọn nhà hoặc bao trọn thùng"
+            >
+              <Truck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+              <span>🚛 Thùng xe tải 1T–3.5T</span>
+            </span>
+          ) : item.vehicleType === 'pickup' || item.hasCargoBed ? (
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-900 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-950/70 border border-amber-300/90 dark:border-amber-700/80 shadow-2xs"
               title="Xe bán tải có thùng chở hàng lớn (~800kg) sẵn sàng nhận đồ cồng kềnh, chuyển trọ sinh viên, nông sản"

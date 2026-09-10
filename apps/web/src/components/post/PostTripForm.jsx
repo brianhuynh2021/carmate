@@ -676,7 +676,8 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       if (familyCar) perks.push('Xe gia đình sạch sẽ');
       if (largeTrunk) perks.push('Cốp rộng để đồ');
       if (acOn) perks.push('Bật máy lạnh');
-      if (acceptsParcel || vehicleCapacity === 'pickup') perks.push('Nhận gửi đồ/hàng tiện chuyến');
+      if (acceptsParcel || vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup') perks.push('Nhận gửi đồ/hàng tiện chuyến');
+      if (vehicleCapacity === 'truck_light') perks.push('Xe tải nhẹ tiện chuyến (1T–3.5T)');
       if (vehicleCapacity === 'pickup') perks.push('Thùng xe bán tải ~800kg');
       if (noPet) perks.push('Không thú cưng');
     } else {
@@ -740,17 +741,21 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       carType: isDriver ? carType : undefined,
       carPhotos: isDriver && validPhotos.length >= 1 ? validPhotos : undefined,
       hasCarPhotos: isDriver && validPhotos.length >= 3,
-      capacity: isDriver ? (vehicleCapacity === 'pickup' ? 5 : Number(vehicleCapacity)) : undefined,
+      capacity: isDriver ? (vehicleCapacity === 'truck_light' ? 2 : vehicleCapacity === 'pickup' ? 5 : Number(vehicleCapacity)) : undefined,
       vehicleType: isDriver
-        ? vehicleCapacity === 'pickup'
-          ? 'pickup'
-          : Number(vehicleCapacity) === 7
-            ? 'mpv_suv'
-            : 'sedan_cuv'
+        ? vehicleCapacity === 'truck_light'
+          ? 'truck_light'
+          : vehicleCapacity === 'pickup'
+            ? 'pickup'
+            : Number(vehicleCapacity) === 7
+              ? 'mpv_suv'
+              : 'sedan_cuv'
         : undefined,
-      hasCargoBed: isDriver ? Boolean(vehicleCapacity === 'pickup' || hasCargoBed) : undefined,
-      acceptsParcel: isDriver ? Boolean(acceptsParcel || vehicleCapacity === 'pickup') : undefined,
-      cargoTypes: isDriver && (acceptsParcel || vehicleCapacity === 'pickup') ? selectedCargoTypes : (!isDriver && isCargoOnly ? [selectedCargoPreset] : undefined),
+      hasCargoBed: isDriver ? Boolean(vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup' || hasCargoBed) : undefined,
+      isCargoVehicle: isDriver ? Boolean(vehicleCapacity === 'truck_light') : undefined,
+      cargoBedCapacityKg: isDriver && vehicleCapacity === 'truck_light' ? 2500 : (vehicleCapacity === 'pickup' ? 800 : undefined),
+      acceptsParcel: isDriver ? Boolean(acceptsParcel || vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup') : undefined,
+      cargoTypes: isDriver && (acceptsParcel || vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup') ? selectedCargoTypes : (!isDriver && isCargoOnly ? [selectedCargoPreset] : undefined),
       cargoNotes: isDriver ? cargoNotes.trim() || undefined : undefined,
       isCargoOnly: !isDriver ? Boolean(isCargoOnly) : undefined,
       cargoType: !isDriver && isCargoOnly ? selectedCargoPreset : undefined,
@@ -1182,51 +1187,53 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     </span>
                   ) : (
                     <span className="text-xs font-normal text-slate-400">
-                      {vehicleCapacity === 'pickup'
-                        ? 'Cabin 4 khách + Thùng ~800kg'
-                        : vehicleCapacity === 5
-                          ? 'Tối đa 4 khách'
-                          : 'Tối đa 6 khách'}
+                      {vehicleCapacity === 'truck_light'
+                        ? 'Cabin 1 khách + Thùng 1T–3.5T'
+                        : vehicleCapacity === 'pickup'
+                          ? 'Cabin 4 khách + Thùng ~800kg'
+                          : vehicleCapacity === 5
+                            ? 'Tối đa 4 khách'
+                            : 'Tối đa 6 khách'}
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06]">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06]">
                   <button
                     type="button"
                     onClick={() => {
                       setVehicleCapacity(5);
                       setHasCargoBed(false);
                       if (seats > 4) setSeats(4);
-                      if (carType.includes('Xpander') || carType.includes('Ranger') || !carType) {
+                      if (carType.includes('Xpander') || carType.includes('Ranger') || carType.includes('K250') || !carType) {
                         setCarType('Toyota Vios (Xe 5 chỗ)');
                       }
                     }}
-                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer select-none ${
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer select-none ${
                       vehicleCapacity === 5 && !hasCargoBed
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>🚗 4–5 chỗ</span>
-                    <span className="text-[10px] font-normal opacity-70 hidden sm:inline">(Sedan/CUV)</span>
+                    <span className="text-[10px] font-normal opacity-70">(Sedan/CUV)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setVehicleCapacity(7);
                       setHasCargoBed(false);
-                      if (carType.includes('Vios') || carType.includes('Ranger') || !carType) {
+                      if (carType.includes('Vios') || carType.includes('Ranger') || carType.includes('K250') || !carType) {
                         setCarType('Mitsubishi Xpander (Xe 7 chỗ)');
                       }
                     }}
-                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer select-none ${
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer select-none ${
                       vehicleCapacity === 7 && !hasCargoBed
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>🚙 Xe 7 chỗ</span>
-                    <span className="text-[10px] font-normal opacity-70 hidden sm:inline">(MPV/SUV)</span>
+                    <span className="text-[10px] font-normal opacity-70">(MPV/SUV)</span>
                   </button>
                   <button
                     type="button"
@@ -1235,21 +1242,43 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                       setHasCargoBed(true);
                       setAcceptsParcel(true);
                       if (seats > 4) setSeats(3);
-                      if (carType.includes('Vios') || carType.includes('Xpander') || !carType) {
+                      if (carType.includes('Vios') || carType.includes('Xpander') || carType.includes('K250') || !carType) {
                         setCarType('Ford Ranger (Xe bán tải)');
                       }
                       if (!selectedCargoTypes.includes('bulky_cargo')) {
                         setSelectedCargoTypes([...selectedCargoTypes, 'bulky_cargo']);
                       }
                     }}
-                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer select-none ${
-                      vehicleCapacity === 'pickup' || hasCargoBed
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer select-none ${
+                      vehicleCapacity === 'pickup'
                         ? 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 shadow-xs ring-1 ring-amber-500/20'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>🛻 Bán tải</span>
-                    <span className="text-[10px] font-normal opacity-70 hidden sm:inline">(Pick-up)</span>
+                    <span className="text-[10px] font-normal opacity-70">(Pick-up)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVehicleCapacity('truck_light');
+                      setHasCargoBed(true);
+                      setAcceptsParcel(true);
+                      setSeats(1);
+                      if (carType.includes('Vios') || carType.includes('Xpander') || carType.includes('Ranger') || !carType) {
+                        setCarType('Kia K250 (Xe tải 2.4T)');
+                      }
+                      const truckCargoTypes = ['produce_box', 'bulky_cargo', 'motorcycle', 'half_truck', 'full_truck'];
+                      setSelectedCargoTypes(Array.from(new Set([...selectedCargoTypes, ...truckCargoTypes])));
+                    }}
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer select-none ${
+                      vehicleCapacity === 'truck_light'
+                        ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-300 shadow-xs ring-1 ring-emerald-500/20'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>🚛 Xe tải nhẹ</span>
+                    <span className="text-[10px] font-normal opacity-70">(1T–3.5T)</span>
                   </button>
                 </div>
               </div>
@@ -1265,12 +1294,18 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     </div>
                     <div>
                       <span className="text-xs font-bold text-slate-900 dark:text-white">
-                        {vehicleCapacity === 'pickup' ? '🛻 Thùng xe bán tải chở hàng' : '📦 Ghép cốp & chở đồ tiện chuyến'}
+                        {vehicleCapacity === 'truck_light'
+                          ? '🚛 Thùng xe tải nhẹ chở hàng'
+                          : vehicleCapacity === 'pickup'
+                            ? '🛻 Thùng xe bán tải chở hàng'
+                            : '📦 Ghép cốp & chở đồ tiện chuyến'}
                       </span>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {vehicleCapacity === 'pickup'
-                          ? 'Thùng xe rộng rãi (~800kg), sẵn sàng chở đồ chuyển trọ, thùng xốp, cây cảnh'
-                          : 'Tận dụng cốp sau còn trống để chở đồ bưu phẩm, thùng xốp nông sản phụ tiền xăng'}
+                        {vehicleCapacity === 'truck_light'
+                          ? 'Thùng xe 1T–3.5T nhận xe máy, nông sản vài tạ – 1 tấn, chuyển trọ, bao trọn thùng quay đầu'
+                          : vehicleCapacity === 'pickup'
+                            ? 'Thùng xe rộng rãi (~800kg), sẵn sàng chở đồ chuyển trọ, thùng xốp, cây cảnh'
+                            : 'Tận dụng cốp sau còn trống để chở đồ bưu phẩm, thùng xốp nông sản phụ tiền xăng'}
                       </p>
                     </div>
                   </div>
@@ -1321,9 +1356,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                       value={cargoNotes}
                       onChange={(e) => setCargoNotes(e.target.value)}
                       placeholder={
-                        vehicleCapacity === 'pickup'
-                          ? 'Ghi chú thùng xe (VD: Có nắp cuộn chống mưa, có dây chằng đồ cồng kềnh...)'
-                          : 'Ghi chú khoang cốp (VD: Cốp rộng rãi sạch sẽ, có lót bạt chống ướt...)'
+                        vehicleCapacity === 'truck_light'
+                          ? 'Ghi chú thùng xe tải (VD: Thùng mui bạt 2.4T sạch sẽ, có dây tăng đơ chằng xe máy...)'
+                          : vehicleCapacity === 'pickup'
+                            ? 'Ghi chú thùng xe (VD: Có nắp cuộn chống mưa, có dây chằng đồ cồng kềnh...)'
+                            : 'Ghi chú khoang cốp (VD: Cốp rộng rãi sạch sẽ, có lót bạt chống ướt...)'
                       }
                       className="text-xs h-9 bg-white dark:bg-slate-900"
                     />
@@ -1345,7 +1382,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                   {Object.values(CARGO_TYPES).map((cargo) => {
                     const isSelected = selectedCargoPreset === cargo.id;
                     const priceHint = getRecommendedCargoPrice(cargo.id, priceGuardrail?.distanceKm || 120);
@@ -1388,11 +1425,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   <Input
                     value={cargoDescription}
                     onChange={(e) => setCargoDescription(e.target.value)}
-                    placeholder="VD: 2 thùng xốp sầu riêng 25kg, 1 vali đồ chuyển trọ..."
+                    placeholder="VD: 2 thùng xốp sầu riêng 25kg, 1 xe máy Wave về quê, đồ chuyển trọ..."
                   />
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                     <span className="text-[10.5px] text-slate-400">Gợi ý nhanh:</span>
-                    {['2 thùng xốp sầu riêng 25kg', '1 thùng hải sản ướp đá', 'Vali + quạt cây chuyển trọ', '1 bao gạo quê 20kg'].map((hint) => (
+                    {['🛵 1 xe máy Wave về quê', '🌾 10 bao gạo / nông sản', '2 thùng xốp sầu riêng 25kg', '1 thùng hải sản ướp đá', 'Vali + quạt cây chuyển trọ'].map((hint) => (
                       <button
                         key={hint}
                         type="button"
@@ -1418,21 +1455,31 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   </span>
                   <span className="text-xs text-slate-400 font-normal">
                     {isDriver
-                      ? vehicleCapacity === 'pickup'
-                        ? 'Bán tải cabin kép nhận tối đa 4 khách'
-                        : vehicleCapacity === 5
-                          ? 'Xe 5 chỗ nhận tối đa 4 khách'
-                          : 'Xe 7 chỗ nhận tối đa 6 khách'
+                      ? vehicleCapacity === 'truck_light'
+                        ? 'Xe tải nhận tối đa 1 người đi cùng ghế phụ'
+                        : vehicleCapacity === 'pickup'
+                          ? 'Bán tải cabin kép nhận tối đa 4 khách'
+                          : vehicleCapacity === 5
+                            ? 'Xe 5 chỗ nhận tối đa 4 khách'
+                            : 'Xe 7 chỗ nhận tối đa 6 khách'
                       : 'tối đa 6 người'}
                   </span>
                 </label>
                 <div
-                  className={`grid ${isDriver && (vehicleCapacity === 5 || vehicleCapacity === 'pickup') ? 'grid-cols-4' : 'grid-cols-6'} gap-1.5`}
+                  className={`grid ${
+                    isDriver && vehicleCapacity === 'truck_light'
+                      ? 'grid-cols-1 sm:grid-cols-4'
+                      : isDriver && (vehicleCapacity === 5 || vehicleCapacity === 'pickup')
+                        ? 'grid-cols-4'
+                        : 'grid-cols-6'
+                  } gap-1.5`}
                 >
                   {(isDriver
-                    ? vehicleCapacity === 5 || vehicleCapacity === 'pickup'
-                      ? [1, 2, 3, 4]
-                      : [1, 2, 3, 4, 5, 6]
+                    ? vehicleCapacity === 'truck_light'
+                      ? [1]
+                      : vehicleCapacity === 5 || vehicleCapacity === 'pickup'
+                        ? [1, 2, 3, 4]
+                        : [1, 2, 3, 4, 5, 6]
                     : [1, 2, 3, 4, 5, 6]
                   ).map((num) => (
                     <button
@@ -1445,18 +1492,20 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                           : 'border-slate-200/90 hover:border-slate-300 bg-white text-slate-700 dark:bg-[#151c2e] dark:border-white/[0.08] dark:hover:border-white/[0.16] dark:text-slate-300'
                       }`}
                     >
-                      {num}
+                      {num} {vehicleCapacity === 'truck_light' ? 'ghế phụ trong cabin' : ''}
                     </button>
                   ))}
                 </div>
                 {isDriver && (
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between pt-0.5">
                     <span>
-                      {seats === 3 && (vehicleCapacity === 5 || vehicleCapacity === 'pickup')
-                        ? '✨ Khuyên chọn: Hàng ghế sau ngồi 3 người rất rộng rãi'
-                        : seats === 4 && (vehicleCapacity === 5 || vehicleCapacity === 'pickup')
-                          ? 'Đầy 4 ghế khách trong cabin (1 ghế phụ + 3 ghế sau)'
-                          : `Còn trống ${seats} ghế nhận khách (trừ 1 ghế lái)`}
+                      {vehicleCapacity === 'truck_light'
+                        ? '🚛 Cabin 1 ghế phụ cho khách đi cùng + Thùng xe 1T–3.5T chở hàng'
+                        : seats === 3 && (vehicleCapacity === 5 || vehicleCapacity === 'pickup')
+                          ? '✨ Khuyên chọn: Hàng ghế sau ngồi 3 người rất rộng rãi'
+                          : seats === 4 && (vehicleCapacity === 5 || vehicleCapacity === 'pickup')
+                            ? 'Đầy 4 ghế khách trong cabin (1 ghế phụ + 3 ghế sau)'
+                            : `Còn trống ${seats} ghế nhận khách (trừ 1 ghế lái)`}
                     </span>
                     <span className="text-slate-400 text-[10.5px]">Đã trừ 1 ghế lái của Chủ xe</span>
                   </p>
@@ -1631,18 +1680,20 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                 <Input value={carType} onChange={(e) => setCarType(e.target.value)} placeholder={t('post.carTypePh')} />
                 <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
                   <span className="text-[10.5px] text-slate-400">Gợi ý dòng xe:</span>
-                  {(vehicleCapacity === 'pickup'
-                    ? ['Ford Ranger', 'Toyota Hilux', 'Mitsubishi Triton', 'Isuzu D-Max', 'Nissan Navara']
-                    : vehicleCapacity === 7
-                      ? ['Mitsubishi Xpander', 'Toyota Veloz', 'Toyota Innova', 'Kia Carnival', 'Hyundai SantaFe']
-                      : ['Toyota Vios', 'Hyundai Accent', 'Honda City', 'Mazda 3', 'Mazda CX-5']
+                  {(vehicleCapacity === 'truck_light'
+                    ? ['Kia K200/K250', 'Hyundai Porter H150', 'Isuzu QKR', 'Suzuki Carry Pro', 'Thaco Towner']
+                    : vehicleCapacity === 'pickup'
+                      ? ['Ford Ranger', 'Toyota Hilux', 'Mitsubishi Triton', 'Isuzu D-Max', 'Nissan Navara']
+                      : vehicleCapacity === 7
+                        ? ['Mitsubishi Xpander', 'Toyota Veloz', 'Toyota Innova', 'Kia Carnival', 'Hyundai SantaFe']
+                        : ['Toyota Vios', 'Hyundai Accent', 'Honda City', 'Mazda 3', 'Mazda CX-5']
                   ).map((m) => (
                     <button
                       key={m}
                       type="button"
                       onClick={() =>
                         setCarType(
-                          `${m} (${vehicleCapacity === 'pickup' ? 'Xe bán tải' : vehicleCapacity === 7 ? 'Xe 7 chỗ' : 'Xe 5 chỗ'})`
+                          `${m} (${vehicleCapacity === 'truck_light' ? 'Xe tải nhẹ' : vehicleCapacity === 'pickup' ? 'Xe bán tải' : vehicleCapacity === 7 ? 'Xe 7 chỗ' : 'Xe 5 chỗ'})`
                         )
                       }
                       className="px-2 py-0.5 rounded-lg text-[10.5px] bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 cursor-pointer transition-all"
@@ -2082,7 +2133,13 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     }`}
                   >
                     {isDriver ? (
-                      vehicleType === 'pickup' ? <Truck className="w-3.5 h-3.5" /> : <Car className="w-3.5 h-3.5" />
+                      vehicleType === 'truck_light' || vehicleCapacity === 'truck_light' ? (
+                        <Truck className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : vehicleType === 'pickup' ? (
+                        <Truck className="w-3.5 h-3.5 text-amber-600" />
+                      ) : (
+                        <Car className="w-3.5 h-3.5" />
+                      )
                     ) : isCargoOnly ? (
                       <Package className="w-3.5 h-3.5" />
                     ) : (
@@ -2090,7 +2147,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     )}
                     <span>
                       {isDriver
-                        ? `Chủ xe · ${vehicleType === 'pickup' ? 'Bán tải (Thùng ~800kg)' : Number(vehicleCapacity) === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
+                        ? `Chủ xe · ${vehicleType === 'truck_light' || vehicleCapacity === 'truck_light' ? 'Xe tải nhẹ (1T–3.5T)' : vehicleType === 'pickup' ? 'Bán tải (Thùng ~800kg)' : Number(vehicleCapacity) === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
                         : isCargoOnly
                         ? 'Người gửi đồ tiện chuyến'
                         : `Khách cần tìm xe · ${seats} người`}
@@ -2105,7 +2162,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
 
                   {isDriver && acceptsParcel && (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60">
-                      {vehicleType === 'pickup' ? '🛻 Thùng bán tải ~800kg' : '📦 Nhận gửi đồ / Cốp rộng'}
+                      {vehicleType === 'truck_light' || vehicleCapacity === 'truck_light'
+                        ? '🚛 Thùng xe tải 1T–3.5T'
+                        : vehicleType === 'pickup'
+                          ? '🛻 Thùng bán tải ~800kg'
+                          : '📦 Nhận gửi đồ / Cốp rộng'}
                     </span>
                   )}
                 </div>
@@ -2161,7 +2222,7 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                         {seats} {isDriver ? 'ghế' : 'người'}
                         {isDriver && (
                           <span className="font-normal text-slate-400 text-[10px] ml-1">
-                            ({vehicleType === 'pickup' ? 'Bán tải cabin 4 chỗ' : Number(vehicleCapacity) === 5 ? 'Xe 5 chỗ' : 'Xe 7 chỗ'})
+                            ({vehicleType === 'truck_light' || vehicleCapacity === 'truck_light' ? 'Cabin 1 ghế phụ' : vehicleType === 'pickup' ? 'Bán tải cabin 4 chỗ' : Number(vehicleCapacity) === 5 ? 'Xe 5 chỗ' : 'Xe 7 chỗ'})
                           </span>
                         )}
                       </>

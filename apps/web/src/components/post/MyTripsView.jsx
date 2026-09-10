@@ -34,9 +34,10 @@ import { getCarDisplay } from '../market/TripCard.jsx';
 
 function SeatOccupancyGauge({ trip, bookings = [] }) {
   if (trip.type !== 'driver_offer') return null;
-  const isPickup = trip.vehicleType === 'pickup' || trip.hasCargoBed || (trip.carType && /bán tải|ranger|hilux|triton|d-max/i.test(trip.carType));
-  const capacity = isPickup ? 5 : (Number(trip.capacity) || 5);
-  const maxPassengerSeats = Math.max(1, capacity - 1);
+  const isTruck = trip.vehicleType === 'truck_light' || trip.isCargoVehicle || (trip.carType && /xe tải|tải nhẹ|k200|k250|porter|h150|qkr/i.test(trip.carType));
+  const isPickup = !isTruck && (trip.vehicleType === 'pickup' || trip.hasCargoBed || (trip.carType && /bán tải|ranger|hilux|triton|d-max/i.test(trip.carType)));
+  const capacity = isTruck ? 2 : (isPickup ? 5 : (Number(trip.capacity) || 5));
+  const maxPassengerSeats = isTruck ? 1 : Math.max(1, capacity - 1);
   const passengerBookings = bookings.filter((b) => !b.isCargoBooking);
   const cargoBookings = bookings.filter((b) => b.isCargoBooking);
   const confirmedCount = passengerBookings.filter((b) => b.status === 'confirmed').length;
@@ -54,7 +55,7 @@ function SeatOccupancyGauge({ trip, bookings = [] }) {
     passengerSlots.push({ id: `empty-${i}`, status: 'empty' });
   }
 
-  const showCargoSlot = isPickup || trip.acceptsParcel;
+  const showCargoSlot = isTruck || isPickup || trip.acceptsParcel;
   const hasCargoBooked = cargoBookings.some((b) => b.status === 'confirmed');
   const hasCargoHeld = cargoBookings.some((b) => b.status === 'pre_confirmed' || b.status === 'inquiring');
 
@@ -62,9 +63,19 @@ function SeatOccupancyGauge({ trip, bookings = [] }) {
     <div className="p-3 rounded-2xl bg-[#f8f9fa] dark:bg-[#202024] border border-black/[0.04] dark:border-white/[0.06] space-y-2">
       <div className="flex items-center justify-between text-xs">
         <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-          {isPickup ? <Truck className="w-3.5 h-3.5 text-amber-600" /> : <Car className="w-3.5 h-3.5 text-[#0071e3]" />}
+          {isTruck ? (
+            <Truck className="w-3.5 h-3.5 text-emerald-600" />
+          ) : isPickup ? (
+            <Truck className="w-3.5 h-3.5 text-amber-600" />
+          ) : (
+            <Car className="w-3.5 h-3.5 text-[#0071e3]" />
+          )}
           <span>
-            {isPickup ? 'Sơ đồ bán tải (Cabin 4 chỗ + Thùng ~800kg)' : `Sơ đồ khoang xe (${capacity} chỗ)`}
+            {isTruck
+              ? 'Sơ đồ xe tải (Cabin 1 ghế phụ + Thùng 1T–3.5T)'
+              : isPickup
+                ? 'Sơ đồ bán tải (Cabin 4 chỗ + Thùng ~800kg)'
+                : `Sơ đồ khoang xe (${capacity} chỗ)`}
           </span>
         </span>
         <span className="text-[11px] font-mono font-bold text-slate-500">
@@ -128,17 +139,25 @@ function SeatOccupancyGauge({ trip, bookings = [] }) {
                 ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300'
                 : hasCargoHeld
                 ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 animate-pulse'
+                : isTruck
+                ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-300/80 dark:border-emerald-700/80 text-emerald-900 dark:text-emerald-200'
                 : isPickup
                 ? 'bg-amber-500/10 dark:bg-amber-500/20 border-amber-300/80 dark:border-amber-700/80 text-amber-900 dark:text-amber-200'
                 : 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-200/80 dark:border-blue-800/80 text-blue-900 dark:text-blue-200'
             }`}
-            title={isPickup ? 'Thùng xe bán tải chịu tải ~800kg sẵn sàng nhận hàng' : 'Cốp xe nhận gửi hàng tiện chuyến'}
+            title={
+              isTruck
+                ? 'Thùng xe tải 1T–3.5T chở hàng, xe máy, nông sản quay đầu tiện chuyến'
+                : isPickup
+                  ? 'Thùng xe bán tải chịu tải ~800kg sẵn sàng nhận hàng'
+                  : 'Cốp xe nhận gửi hàng tiện chuyến'
+            }
           >
             <span className="text-[10px] font-bold flex items-center gap-1">
-              {isPickup ? '🛻 Thùng xe' : '📦 Cốp xe'}
+              {isTruck ? '🚛 Thùng tải' : isPickup ? '🛻 Thùng xe' : '📦 Cốp xe'}
             </span>
             <span className="text-[9px] font-mono opacity-85">
-              {hasCargoBooked ? '✓ Có hàng' : hasCargoHeld ? 'Đang hỏi' : isPickup ? '~800kg' : 'Nhận đồ'}
+              {hasCargoBooked ? '✓ Có hàng' : hasCargoHeld ? 'Đang hỏi' : isTruck ? '~2.5T rỗng' : isPickup ? '~800kg' : 'Nhận đồ'}
             </span>
           </div>
         )}

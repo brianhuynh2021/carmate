@@ -150,16 +150,18 @@ export default function EscrowBookingModal({
     return false;
   }, [isOwner, item, currentUser]);
 
-  // Kiểm tra xe có nhận gửi hàng / xe bán tải / chuyến gửi đồ không
+  // Kiểm tra xe có nhận gửi hàng / xe bán tải / xe tải tiện chuyến / chuyến gửi đồ không
   const acceptsCargo = Boolean(
     item?.acceptsParcel ||
+    item?.vehicleType === 'truck_light' ||
     item?.vehicleType === 'pickup' ||
     item?.hasCargoBed ||
+    item?.isCargoVehicle ||
     item?.isCargoOnly ||
-    (item?.carType && /bán tải|ranger|hilux|triton|d-max/i.test(item.carType))
+    (item?.carType && /bán tải|ranger|hilux|triton|d-max|xe tải|tải nhẹ|k200|k250|porter|h150|qkr/i.test(item.carType))
   );
 
-  const [bookingMode, setBookingMode] = useState(() => (item?.isCargoOnly ? 'cargo' : 'passenger'));
+  const [bookingMode, setBookingMode] = useState(() => (item?.isCargoOnly || item?.vehicleType === 'truck_light' ? 'cargo' : 'passenger'));
   const [selectedCargoPreset, setSelectedCargoPreset] = useState('produce_box');
   const [cargoDescription, setCargoDescription] = useState('');
 
@@ -678,7 +680,7 @@ export default function EscrowBookingModal({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {Object.values(CARGO_TYPES).map((cargo) => {
                 const isSelected = selectedCargoPreset === cargo.id;
                 const estPrice = getRecommendedCargoPrice(cargo.id, item?.distanceKm || 120);
@@ -731,9 +733,12 @@ export default function EscrowBookingModal({
               {/* Quick chips 1-chạm */}
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                 {[
+                  '🛵 Xe máy chằng buộc',
+                  '🌾 10 bao nông sản',
                   '🧊 Thùng xốp trái cây',
-                  '🌾 Bao gạo quê 20kg',
                   '📦 Đồ sinh viên dọn trọ',
+                  '🛋️ Đồ gia dụng cồng kềnh',
+                  '🚛 Bao trọn thùng xe tải',
                   '📄 Bưu phẩm hỏa tốc'
                 ].map((chip) => (
                   <button
