@@ -73,14 +73,14 @@ export const ROUTE_BENCHMARKS = {
     region: 'north',
     distanceKm: 105,
     fuelCost: 160000, // ~7.5L xăng RON 95
-    botFee: 190000, // Vé cao tốc Hà Nội - Hải Phòng (Nút Cổ Linh - Đình Vũ)
+    botFee: 190000, // Phí cao tốc Hà Nội - Hải Phòng (Nút Cổ Linh - Đình Vũ)
     suggestedRate: 150000,
     minSafePrice: 100000,
     maxSafePrice: 280000,
     marketLimoRef: '220.000đ - 250.000đ',
     traditionalBusRef: '150.000đ - 180.000đ',
     calculationBasis:
-      '105km cao tốc 5B Hà Nội - Hải Phòng. Xăng ~160k + vé cao tốc 190k = 350.000đ chi phí toàn xe. Ghép 2-3 người chia sẻ ~130k - 150k/ghế.'
+      '105km cao tốc 5B Hà Nội - Hải Phòng. Xăng ~160k + phí cao tốc 190k = 350.000đ chi phí toàn xe. Ghép 2-3 người chia sẻ ~130k - 150k/ghế.'
   },
   'Tuyến CT Pháp Vân - Ninh Bình': {
     name: 'Hà Nội ⇄ Ninh Bình / Nam Định (~95km)',
@@ -106,7 +106,7 @@ export const ROUTE_BENCHMARKS = {
     region: 'central',
     distanceKm: 100,
     fuelCost: 150000,
-    botFee: 110000, // Vé qua hầm Hải Vân + Trạm Phú Bài
+    botFee: 110000, // Phí qua hầm Hải Vân + Trạm Phú Bài
     suggestedRate: 140000,
     minSafePrice: 90000,
     maxSafePrice: 260000,
@@ -130,7 +130,7 @@ export const ROUTE_BENCHMARKS = {
     marketLimoRef: '240.000đ - 260.000đ',
     traditionalBusRef: '200.000đ - 220.000đ',
     calculationBasis:
-      '140km x 1.500đ xăng/km + 70.000đ vé cầu đường = 280.000đ chi phí xe. Ghép 2-3 người chia sẻ ~150k - 180k/ghế.'
+      '140km x 1.500đ xăng/km + 70.000đ phí cầu đường = 280.000đ chi phí xe. Ghép 2-3 người chia sẻ ~150k - 180k/ghế.'
   },
   'Tuyến QL51': {
     name: 'Vũng Tàu / Bà Rịa ⇄ Sài Gòn (Cao Tốc Long Thành ~100km)',
@@ -146,7 +146,7 @@ export const ROUTE_BENCHMARKS = {
     marketLimoRef: '220.000đ - 260.000đ',
     traditionalBusRef: '180.000đ',
     calculationBasis:
-      '100km x 1.500đ xăng/km + 98.000đ vé cao tốc = 248.000đ chi phí xe. Ghép chia sẻ ~140k - 160k/ghế.'
+      '100km x 1.500đ xăng/km + 98.000đ phí cao tốc = 248.000đ chi phí xe. Ghép chia sẻ ~140k - 160k/ghế.'
   },
   'Tuyến QL20': {
     name: 'Bảo Lộc / Đà Lạt (Lâm Đồng) ⇄ Sài Gòn (~180-300km)',
@@ -161,7 +161,7 @@ export const ROUTE_BENCHMARKS = {
     maxSafePrice: 450000,
     marketLimoRef: '270.000đ - 320.000đ',
     traditionalBusRef: '250.000đ',
-    calculationBasis: 'Đèo Bảo Lộc + Cao tốc Dầu Giây. Chia sẻ chi phí nhiên liệu & vé cầu đường qua đèo.'
+    calculationBasis: 'Đèo Bảo Lộc + Cao tốc Dầu Giây. Chia sẻ chi phí nhiên liệu & phí cầu đường qua đèo.'
   },
   'Tuyến QL1A': {
     name: 'Phan Thiết / Bình Thuận ⇄ Sài Gòn (Cao Tốc Dầu Giây ~200km)',
@@ -191,7 +191,7 @@ export const ROUTE_BENCHMARKS = {
     maxSafePrice: 250000,
     marketLimoRef: '150.000đ - 180.000đ',
     traditionalBusRef: '120.000đ',
-    calculationBasis: '95km QL22 + vé cầu đường An Sương. Chia sẻ hợp lý 100k - 120k/ghế.'
+    calculationBasis: '95km QL22 + phí cầu đường An Sương. Chia sẻ hợp lý 100k - 120k/ghế.'
   },
   'Tuyến CT Long Thành': {
     name: 'Long Thành / Nhơn Trạch / Đồng Nai ⇄ Sài Gòn (~60km)',

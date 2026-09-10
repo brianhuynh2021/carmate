@@ -57,18 +57,18 @@ export default function TermsModal({ onClose, zIndex = 'z-50' }) {
               & Luật TTATGT đường bộ.
             </li>
             <li>
-              Giữ đúng cam kết về giá vé chia sẻ, không tự ý tăng giá dọc đường, không đón quá số ghế đăng kiểm cho
+              Giữ đúng cam kết về chi phí phụ xăng chia sẻ, không tự ý tăng giá dọc đường, không đón quá số ghế đăng kiểm cho
               phép.
             </li>
             <li>Gửi định vị GPS thực tế qua Zalo cho hành khách để xác nhận điểm đón an toàn.</li>
           </ul>
         </div>
 
-        {/* Điều 3: Trách nhiệm của Hành khách */}
+        {/* Điều 3: Trách nhiệm của Người đi cùng */}
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
           <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
             <Users className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-            <span>3. Cam kết của Hành khách</span>
+            <span>3. Cam kết của Người đi cùng</span>
           </div>
           <ul className="list-disc pl-4 space-y-1">
             <li>

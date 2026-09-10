@@ -334,7 +334,7 @@ export default function App() {
         } catch {}
       }
 
-      // Đồng bộ hai tầng sang Persona Memory để Trợ lý AI và Form nạp tức thì 0ms
+      // Đồng bộ hai tầng sang Persona Memory để Trợ lý và Form nạp tức thì 0ms
       if (updated.vehicle) {
         try {
           const raw = localStorage.getItem('carmate_persona_memory_v1');
@@ -706,7 +706,7 @@ export default function App() {
     loadSocialMatches();
   }, [loadSocialMatches, driverOffers.length, passengerRequests.length]);
 
-  // Phím tắt toàn cục ⌘K / Ctrl+K mở AI Trợ lý, ⌘+Shift+A mở Cổng Quản trị
+  // Phím tắt toàn cục ⌘K / Ctrl+K mở Trợ lý, ⌘+Shift+A mở Cổng Quản trị
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key?.toLowerCase() === 'k') {
@@ -1269,6 +1269,7 @@ export default function App() {
               passengerRequests={passengerRequests}
               onBook={handleInitiateBook}
               onViewTrustProfile={setSelectedDriverForTrust}
+              onViewRoute={setSelectedTripForRoute}
               onShowToast={showToast}
             />
           </div>
@@ -1316,6 +1317,8 @@ export default function App() {
               onViewInMarket={handleViewTripInMarket}
               onViewTrip={(trip) => setTicketToShare(trip)}
               onViewCarPhotos={setSelectedTripForPhotos}
+              bookedEscrows={bookedEscrows}
+              onViewBookings={() => setActiveTab('booked')}
             />
           </div>
         )}

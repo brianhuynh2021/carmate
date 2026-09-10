@@ -171,7 +171,7 @@ export const INITIAL_DRIVER_OFFERS = [
     completedCount: 52,
     carCategory: 'family_car',
     waypointNote: 'Tiện đón trả dọc Cao tốc 5B Hà Nội - Hải Phòng, nút giao Vành đai 3',
-    perks: ['Xe gia đình (Biển trắng)', 'Trọn gói vé cao tốc 5B & xăng', 'Không khói thuốc'],
+    perks: ['Xe gia đình (Biển trắng)', 'Trọn gói phí cao tốc 5B & xăng', 'Không khói thuốc'],
     notes: 'Xe gia đình đi làm cuối tuần về Hải Phòng, chạy cao tốc 5B êm ái, đón trả linh hoạt.',
     createdAt: Date.now() - 3600000 * 2
   },
@@ -201,7 +201,7 @@ export const INITIAL_DRIVER_OFFERS = [
     completedCount: 84,
     carCategory: 'convenient_trip',
     waypointNote: 'Tiện đón trả dọc Hầm Hải Vân, Lăng Cô, Phú Lộc',
-    perks: ['Xe tiện chuyến (Biển vàng)', 'Trọn gói vé hầm & xăng dầu', 'Lái xe an toàn'],
+    perks: ['Xe tiện chuyến (Biển vàng)', 'Trọn gói phí hầm & xăng dầu', 'Lái xe an toàn'],
     notes: 'Xe tiện chuyến chiều về rỗng khách, nhận ghép chia sẻ chi phí hầm & cầu đường.',
     createdAt: Date.now() - 3600000 * 3
   },

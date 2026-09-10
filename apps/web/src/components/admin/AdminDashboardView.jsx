@@ -432,7 +432,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         showNotice(res?.message || 'Đã dọn sạch dữ liệu phân tích!');
       } else if (clearTarget === 'ai') {
         const res = await api.adminClearAiTrajectories();
-        showNotice(res?.message || 'Đã dọn sạch dữ liệu AI Trajectories!');
+        showNotice(res?.message || 'Đã dọn sạch dữ liệu nhật ký điều phối!');
       } else {
         const res = await api.adminClearTestData();
         showNotice(res?.message || 'Đã dọn sạch toàn bộ dữ liệu kiểm thử & log!');
@@ -828,7 +828,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>AI Trajectories ({aiIntelligence?.summary?.totalQueries || 0})</span>
+              <span>Nhật ký điều phối ({aiIntelligence?.summary?.totalQueries || 0})</span>
             </button>
             <button
               type="button"
@@ -1363,7 +1363,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
               <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
                 <Cpu className="w-3.5 h-3.5 text-[#0071e3]" />
-                Lượt tương tác AI
+                Lượt tương tác trợ lý
               </span>
               <p className="text-2xl font-bold font-display tabular text-[#1d1d1f] dark:text-white">
                 {aiIntelligence?.summary?.totalQueries || 0}
@@ -1390,7 +1390,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <p className="text-2xl font-bold font-display tabular text-[#0071e3]">
                 {aiIntelligence?.summary?.avgLatencyMs || 0} ms
               </p>
-              <p className="text-[11px] text-[#86868b]">Thời gian phản hồi luồng AI</p>
+              <p className="text-[11px] text-[#86868b]">Thời gian phản hồi hệ thống</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
@@ -1414,7 +1414,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   <span>Radar Tuyến Đường Khát Xe (Unmet Demand Discovery)</span>
                 </h3>
                 <p className="text-xs text-[#86868b] mt-0.5">
-                  Phát hiện tự động các tuyến đường hành khách hỏi tìm nhiều nhất qua AI nhưng hiện tại chưa có chủ xe
+                  Phát hiện tự động các tuyến đường hành khách hỏi tìm nhiều nhất nhưng hiện tại chưa có chủ xe
                   nào đăng bài
                 </p>
               </div>
@@ -1462,7 +1462,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <div>
                 <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[#0071e3]" />
-                  <span>Nhật ký luồng xử lý AI (AI Execution Trajectory Log)</span>
+                  <span>Nhật ký luồng xử lý tự động (Execution Log)</span>
                 </h3>
                 <p className="text-xs text-[#86868b] mt-0.5">
                   Nhật ký xử lý đa bước tự động [Lập kế hoạch ➔ Rà soát chuyến ➔ Kiểm tra định mức ➔ Đề xuất]
@@ -1478,7 +1478,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   className="px-3 py-1 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer transition-colors inline-flex items-center gap-1.5"
                 >
                   <Trash2 className="w-3 h-3" />
-                  <span>Dọn Quỹ đạo AI</span>
+                  <span>Dọn Nhật ký</span>
                 </button>
                 <span className="text-xs text-[#86868b] tabular font-medium">
                   {aiIntelligence?.recentTrajectories?.length || 0} lượt gần nhất
@@ -1488,7 +1488,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
             {!aiIntelligence?.recentTrajectories || aiIntelligence.recentTrajectories.length === 0 ? (
               <div className="p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-xs text-[#86868b]">
-                Chưa có dữ liệu quỹ đạo nào được lưu. Hãy thử trò chuyện với Trợ lý CarMate AI để xem luồng suy luận
+                Chưa có dữ liệu quỹ đạo nào được lưu. Hãy thử trò chuyện với Trợ lý CarMate để xem luồng xử lý
                 xuất hiện tại đây.
               </div>
             ) : (
@@ -1662,7 +1662,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 },
                 {
                   key: 'view_trip',
-                  name: '3. Xem Chi Tiết Vé (View Trip)',
+                  name: '3. Xem Chi Tiết Chuyến Đi (View Trip)',
                   count: funnel.view_trip || 0,
                   desc: 'Khách bấm xem chi tiết giá & thông tin chủ xe'
                 },
@@ -2179,7 +2179,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             clearTarget === 'analytics'
               ? 'Dọn sạch Phễu & Sự kiện phân tích'
               : clearTarget === 'ai'
-              ? 'Dọn sạch Quỹ đạo AI Trajectories'
+              ? 'Dọn sạch Nhật ký điều phối'
               : 'Dọn sạch toàn bộ dữ liệu kiểm thử'
           }
           subtitle="Tác vụ quản trị hệ thống"
@@ -2211,8 +2211,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
               {clearTarget === 'analytics'
                 ? 'Hệ thống sẽ xoá toàn bộ sự kiện đã ghi nhận trong bảng analytics_events, đưa chỉ số Phễu và lượt tương tác về 0.'
                 : clearTarget === 'ai'
-                ? 'Hệ thống sẽ xoá toàn bộ lịch sử quỹ đạo AI (ai_trajectories), làm sạch bảng điều phối AI.'
-                : 'Hệ thống sẽ xoá toàn bộ sự kiện phân tích (Analytics), quỹ đạo AI (Trajectories) và tin nhắn kiểm thử CSKH để đưa Dashboard về trạng thái sạch sẽ nhất.'}
+                ? 'Hệ thống sẽ xoá toàn bộ lịch sử điều phối tự động, làm sạch bảng điều khiển.'
+                : 'Hệ thống sẽ xoá toàn bộ sự kiện phân tích (Analytics), nhật ký điều phối (Trajectories) và tin nhắn kiểm thử CSKH để đưa Dashboard về trạng thái sạch sẽ nhất.'}
             </p>
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11.5px] text-amber-800 dark:text-amber-300 font-medium">
               ⚠️ Các chuyến xe thật và tài khoản thành viên sẽ được giữ nguyên an toàn 100%.

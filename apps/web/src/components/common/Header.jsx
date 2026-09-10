@@ -78,7 +78,7 @@ export default function Header({
   const tabs = [
     { id: 'market', label: t('nav.market'), icon: Compass },
     { id: 'match', label: t('nav.match'), icon: Sparkles },
-    { id: 'my-trips', label: t('nav.myTrips'), icon: Car, badge: myTripsCount },
+    { id: 'my-trips', label: t('nav.myTrips'), icon: FileText, badge: myTripsCount },
     { id: 'booked', label: t('nav.booked'), icon: Clock, badge: bookedCount }
   ];
 
@@ -194,12 +194,12 @@ export default function Header({
           <button
             type="button"
             onClick={onOpenAi}
-            title={isMac ? 'Trợ lý CarMate AI (Phím tắt: ⌘K)' : 'Trợ lý CarMate AI (Phím tắt: Ctrl+K)'}
-            aria-label="Mở Trợ lý CarMate AI"
+            title={isMac ? 'Trợ lý CarMate (Phím tắt: ⌘K)' : 'Trợ lý CarMate (Phím tắt: Ctrl+K)'}
+            aria-label="Mở Trợ lý CarMate"
             className="inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
-            <span className="hidden sm:inline font-medium">{t('nav.aiAssistant') || 'Trợ lý AI'}</span>
+            <span className="hidden sm:inline font-medium">{t('nav.assistant') || t('nav.aiAssistant') || 'Trợ lý'}</span>
             <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-md bg-black/[0.05] text-[#515154] border border-black/[0.06] ml-0.5">
               {isMac ? '⌘K' : 'Ctrl K'}
             </kbd>

@@ -95,7 +95,7 @@ export default function DisputeNoticeModal({
               </span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-              Giải trình nhanh nếu bạn gõ nhầm số nhà, biển số xe hoặc hệ thống AI hiểu sai ngữ cảnh.
+              Giải trình nhanh nếu bạn gõ nhầm số nhà, biển số xe hoặc hệ thống nhận diện nhầm ngữ cảnh.
             </p>
           </div>
         </div>

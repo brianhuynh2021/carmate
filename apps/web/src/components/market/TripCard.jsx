@@ -461,8 +461,8 @@ export default function TripCard({
                   onShare(item);
                 }}
                 className="h-9 w-9 rounded-full inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#0071e3] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
-                title="Tạo vé điện tử & chia sẻ nhanh lên Zalo"
-                aria-label="Chia sẻ vé chuyến xe"
+                title="Tạo ảnh lịch trình & chia sẻ nhanh lên Zalo"
+                aria-label="Chia sẻ thông tin chuyến đi"
               >
                 <Share2 className="w-3.5 h-3.5" />
               </button>
