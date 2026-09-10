@@ -23,7 +23,8 @@ import {
   Eye,
   Crosshair,
   Image as ImageIcon,
-  Calculator
+  Calculator,
+  Zap
 } from 'lucide-react';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import PlateMaskModal from '../modals/PlateMaskModal.jsx';
@@ -392,6 +393,78 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     if (pred.carCategory) setCarCategory(pred.carCategory);
   };
 
+  const handleOneTapReplicate = (pred) => {
+    if (!pred) return;
+    const phone = phoneReal.trim() || currentUser?.phone || '';
+    if (!phone) {
+      triggerError('Vui lòng nhập số điện thoại hoặc đăng nhập để đăng chuyến 1-chạm');
+      onOpenAuth?.();
+      return;
+    }
+
+    const cleanFrom = (pred.from || '').trim();
+    const cleanTo = (pred.to || '').trim();
+    if (!cleanFrom || !cleanTo) {
+      triggerError('Lộ trình chưa hoàn chỉnh');
+      return;
+    }
+
+    const fromCity = cleanFrom.split(/[,-]/)[0].trim() || cleanFrom;
+    const toCity = cleanTo.split(/[,-]/)[0].trim() || cleanTo;
+    const derivedRoute = `${fromCity} ⇄ ${toCity}`;
+
+    const slot = TIME_SLOTS.find((s) => s.id === (pred.timeSlot || '07:00-09:00')) || TIME_SLOTS[2];
+    const isExactTimeValid = pred.exactTime && isTimeInSlot(pred.exactTime.trim(), pred.timeSlot);
+    const validExactTime = isExactTimeValid ? pred.exactTime.trim() : undefined;
+    const timeSlotLabel = validExactTime ? `${validExactTime} (${slot.short})` : slot.short;
+
+    // Ưu tiên ngày mai để thuận tiện cho người đi làm / chuyến đi ngày kế tiếp
+    const targetDate = upcomingDays[1]?.label || upcomingDays[0]?.label || 'Ngày mai';
+
+    const payload = {
+      id: `${isDriver ? 'DRV' : 'REQ'}-${Date.now().toString().slice(-4)}`,
+      type: isDriver ? 'driver_offer' : 'passenger_request',
+      carCategory: isDriver ? (pred.carCategory || carCategory) : undefined,
+      maskedCode: `${isDriver ? 'CX' : 'KH'}-${Math.floor(100 + Math.random() * 900)}`,
+      publicName: `${isDriver ? ((pred.carCategory || carCategory) === 'convenient_trip' ? 'Xe tiện chuyến' : 'Chủ xe') : 'Khách'} #${Math.floor(100 + Math.random() * 900)}`,
+      avatar: currentUser?.avatar || undefined,
+      phoneReal: phone,
+      direction: 'both',
+      from: cleanFrom,
+      to: cleanTo,
+      pickupSpot: pred.pickupSpot || undefined,
+      dropoffSpot: pred.dropoffSpot || undefined,
+      route: derivedRoute,
+      routeCategory: derivedRoute,
+      hometown: fromCity,
+      waypointNote: pred.waypointNote || '',
+      date: targetDate,
+      isRecurringWeekly: false,
+      timeSlot: pred.timeSlot || '07:00-09:00',
+      exactTime: validExactTime,
+      timeSlotLabel,
+      carType: isDriver ? (pred.carType || carType) : undefined,
+      carPhotos: isDriver && carPhotos.length >= 1 ? carPhotos.map(p => typeof p === 'string' ? p : p.url) : undefined,
+      hasCarPhotos: isDriver && carPhotos.length >= 3,
+      capacity: isDriver ? Number(pred.vehicleCapacity || vehicleCapacity) : undefined,
+      availableSeats: isDriver ? Number(pred.seats || seats) : undefined,
+      seatsNeeded: !isDriver ? Number(pred.seats || seats) : undefined,
+      basePricePerSeat: isDriver ? Number(pred.price || price) : undefined,
+      depositPerSeat: 0,
+      commitmentType: 'zalo_direct',
+      isVip: false,
+      rating: 5.0,
+      completedCount: 1,
+      perks: isDriver ? ['Không hút thuốc', 'Cốp rộng chứa hành lý', 'Máy lạnh mát mẻ'] : ['Hành lý gọn gàng', 'Đúng giờ hẹn'],
+      notes: '',
+      createdAt: Date.now()
+    };
+
+    recordTripPattern(payload);
+    onShowToast?.(`⚡ 1-Chạm thành công! Đã đăng chuyến ${payload.from} ➔ ${payload.to} cho ${targetDate}`);
+    onSubmit(payload, currentUser);
+  };
+
   useEffect(() => {
     if (currentUser?.phone) {
       setPhoneReal(currentUser.phone);
@@ -716,34 +789,48 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
         />
       </div>
 
-      {/* ── BANNER DỰ ĐOÁN THÓI QUEN (CURSOR PREDICTIVE AMBIENT UX) ── */}
+      {/* ── BANNER DỰ ĐOÁN THÓI QUEN (CURSOR PREDICTIVE AMBIENT UX: 1-TAP REPLICATE) ── */}
       {predictedTrip && (
-        <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-primary-500/10 via-emerald-500/10 to-transparent border border-primary-300/40 dark:border-primary-700/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <div>
-              <p className="text-xs text-slate-800 dark:text-slate-200">
-                <span className="font-bold text-primary-600 dark:text-primary-400">
-                  {isDriver ? 'Chuyến quen thuộc của Chủ xe:' : 'Nhu cầu quen thuộc của bạn:'}
-                </span>{' '}
-                <span className="font-semibold">
-                  {predictedTrip.from} ➔ {predictedTrip.to}
-                </span>{' '}
-                <span className="text-slate-500 dark:text-slate-400">({predictedTrip.timeSlot})</span>
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {formatVND(predictedTrip.price)}/ghế · {predictedTrip.seats} ghế · Đã đi {predictedTrip.count} lần
+        <div className="mt-4 p-3.5 sm:p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/25 dark:border-emerald-500/20 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all animate-in fade-in">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Zap className="w-5 h-5 fill-current" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                  {isDriver ? 'Chuyến quen thuộc của Chủ xe' : 'Nhu cầu quen thuộc của bạn'}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  · Đã đi {predictedTrip.count} lần
+                </span>
+              </div>
+              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                {predictedTrip.from} ➔ {predictedTrip.to} · {formatVND(predictedTrip.price)}/ghế · {predictedTrip.seats} ghế
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => handleApplyPredictedTrip(predictedTrip)}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 transition-all shadow-xs shrink-0 cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Áp dụng</span>
-          </button>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleApplyPredictedTrip(predictedTrip)}
+              className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+              title="Điền thông tin này vào form để chỉnh sửa thêm"
+            >
+              <span>Điền form</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOneTapReplicate(predictedTrip)}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all shadow-md shadow-emerald-600/20 shrink-0 cursor-pointer"
+              title="Đăng chuyến này ngay lập tức cho ngày mai mà không cần điền form"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>Đăng ngay ⚡ (1-Chạm)</span>
+            </button>
+          </div>
         </div>
       )}
 

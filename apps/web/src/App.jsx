@@ -1388,6 +1388,7 @@ export default function App() {
           onMarkAsUnread={markBookingAsUnread}
           readBookingTimestamps={readBookingTimestamps}
           unreadBookingIds={unreadBookingIds}
+          onNavigateTab={setActiveTab}
         />
       )}
       {selectedItemForEscrow && (

@@ -11,7 +11,8 @@ import {
   SlidersHorizontal,
   Car,
   CheckCircle2,
-  Share2
+  Share2,
+  Sparkles
 } from 'lucide-react';
 import {
   getTimeSlotLabel,
@@ -288,17 +289,18 @@ export default function TripCard({
           </div>
           {priceGuardrail?.comparisonBadge && (
             <span
-              className={`inline-flex items-center gap-1 text-[10px] font-semibold w-fit px-1.5 py-0.5 rounded-md ${
+              className={`inline-flex items-center gap-1 text-[10.5px] font-bold w-fit px-2 py-0.5 rounded-full shadow-2xs ${
                 priceGuardrail.statusTone === 'emerald'
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/50'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/60'
                   : priceGuardrail.statusTone === 'amber'
-                    ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/50'
+                    ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/60'
                     : priceGuardrail.statusTone === 'rose'
-                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/50'
-                      : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200/50'
+                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/60'
+                      : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200/60'
               }`}
             >
-              {priceGuardrail.comparisonBadge}
+              <Sparkles className="w-2.5 h-2.5 shrink-0 opacity-80" />
+              <span>{priceGuardrail.comparisonBadge}</span>
             </span>
           )}
         </div>

@@ -10,7 +10,8 @@ import {
   CheckCircle2,
   MapPin,
   Navigation,
-  ShieldCheck
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import {
   ROUTE_BENCHMARKS,
@@ -92,6 +93,13 @@ export default function MatchRadarView({
   const validMatches = useMemo(() => {
     return matches.filter((m) => !isTripExpired(m.driver) && !isTripExpired(m.passenger));
   }, [matches]);
+
+  // Cặp ghép tối ưu nhất (Autopilot High Match >= 85%)
+  const topMatch = useMemo(() => {
+    if (!validMatches || validMatches.length === 0) return null;
+    const sorted = [...validMatches].sort((a, b) => (b.score || 0) - (a.score || 0));
+    return sorted[0]?.score >= 85 ? sorted[0] : null;
+  }, [validMatches]);
 
   // Danh sách duyệt thủ công (Fallback & Direct Browse) loại bỏ chuyến quá giờ
   const manualList = useMemo(() => {
@@ -290,7 +298,67 @@ export default function MatchRadarView({
               }
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              {/* ── AUTONOMOUS AUTOPILOT HIGH MATCH HIGHLIGHT (ELON MUSK ZERO-SEARCH) ── */}
+              {topMatch && (
+                <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#0071e3]/10 via-emerald-500/10 to-transparent border-2 border-[#0071e3]/40 dark:border-sky-500/40 shadow-[0_8px_30px_rgba(0,113,227,0.12)] space-y-3.5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0071e3] text-white text-xs font-black tracking-wide shadow-xs">
+                      <Sparkles className="w-3.5 h-3.5 fill-current animate-pulse text-amber-300" />
+                      <span>AUTOPILOT MATCH {topMatch.score}%</span>
+                    </div>
+
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Độ lệch đón chỉ ~0.8km · Thuận chiều 100%</span>
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                        <span className="truncate max-w-[42%]">
+                          {parseLocation((userRole === 'passenger' ? topMatch.driver : topMatch.passenger).from).main}
+                        </span>
+                        <ArrowRight className="w-4 h-4 text-[#0071e3] shrink-0" />
+                        <span className="truncate max-w-[42%]">
+                          {parseLocation((userRole === 'passenger' ? topMatch.driver : topMatch.passenger).to).main}
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate">
+                        {userRole === 'passenger' ? 'Chủ xe' : 'Người đi cùng'}:{' '}
+                        <strong>{toPublicAlias(userRole === 'passenger' ? topMatch.driver : topMatch.passenger)}</strong>{' '}
+                        · Khung giờ:{' '}
+                        <strong>
+                          {getTimeSlotLabel(userRole === 'passenger' ? topMatch.driver : topMatch.passenger).replace(
+                            /\s*\([^)]*\)/g,
+                            ''
+                          )}
+                        </strong>{' '}
+                        · Phụ xăng:{' '}
+                        <strong className="text-[#0071e3]">
+                          {formatVND(
+                            (userRole === 'passenger' ? topMatch.driver : topMatch.passenger).basePricePerSeat ||
+                              (userRole === 'passenger' ? topMatch.driver : topMatch.passenger).expectedPrice ||
+                              150000
+                          )}
+                        </strong>
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onBook?.(userRole === 'passenger' ? topMatch.driver : topMatch.passenger)}
+                      className="py-2.5 px-5 rounded-2xl font-black text-xs sm:text-sm bg-gradient-to-r from-[#0071e3] to-[#005bb5] hover:from-[#0077ed] hover:to-[#0062c4] active:scale-95 text-white shadow-lg shadow-[#0071e3]/25 flex items-center justify-center gap-2 shrink-0 cursor-pointer transition-all"
+                    >
+                      <Zap className="w-4 h-4 fill-current text-amber-300" />
+                      <span>{userRole === 'passenger' ? 'Ghép chuyến ngay ⚡' : 'Đón khách này ngay ⚡'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {validMatches.map((match) => {
                 const driver = match.driver;
                 const passenger = match.passenger;
@@ -450,7 +518,8 @@ export default function MatchRadarView({
                 );
               })}
             </div>
-          )}
+          </div>
+        )}
         </div>
       )}
 

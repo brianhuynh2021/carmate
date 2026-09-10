@@ -45,7 +45,8 @@ export default function InboxModal({
   onMarkAsRead = null,
   onMarkAsUnread = null,
   readBookingTimestamps = {},
-  unreadBookingIds = []
+  unreadBookingIds = [],
+  onNavigateTab = null
 }) {
   const [selectedId, setSelectedId] = useState(initialBookingId);
   const [mobileShowChat, setMobileShowChat] = useState(Boolean(initialBookingId));
@@ -406,6 +407,16 @@ export default function InboxModal({
       return m.senderRole && m.senderRole !== myRole;
     });
   }, [activeBooking?.messages, activeTab, currentUser, isTargetPassengerTrip]);
+
+  // Cảnh báo đối tác phản hồi chậm (> 3 phút sau tin nhắn đầu tiên của mình mà chưa ai trả lời)
+  const isPartnerStale = useMemo(() => {
+    if (hasPartnerReplied || !activeBooking?.messages || activeBooking.messages.length === 0) return false;
+    const firstMsgTime = activeBooking.messages[0]?.timestamp
+      ? new Date(activeBooking.messages[0].timestamp).getTime()
+      : 0;
+    if (!firstMsgTime) return false;
+    return Date.now() - firstMsgTime > 3 * 60 * 1000;
+  }, [hasPartnerReplied, activeBooking?.messages]);
 
   const partnerAlias = useMemo(() => {
     if (!activeBooking) return 'Đối tác';
@@ -1172,29 +1183,36 @@ export default function InboxModal({
                         <>
                           <a
                             href={`tel:${partnerPhone}`}
-                            className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                            className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
                           >
                             <Phone className="w-3.5 h-3.5" />
                             <span>Gọi điện</span>
                           </a>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyPhone(partnerPhone)}
-                            className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
+                          <a
+                            href={`sms:${partnerPhone}`}
+                            className="py-1.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
                           >
-                            {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                            <span>{copiedPhone ? 'Đã chép' : 'Sao chép số'}</span>
-                          </button>
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Nhắn SMS</span>
+                          </a>
                           {cleanPhoneNumber(partnerPhone) && (
                             <a
                               href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="py-1.5 px-3 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                              className="py-1.5 px-3 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
                             >
                               <span>Mở Zalo</span>
                             </a>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => handleCopyPhone(partnerPhone)}
+                            className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer active:scale-95"
+                          >
+                            {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedPhone ? 'Đã chép' : 'Sao chép'}</span>
+                          </button>
                         </>
                       )}
                     </div>
@@ -1242,7 +1260,7 @@ export default function InboxModal({
                         type="button"
                         disabled={actionLoading}
                         onClick={handleFinalConfirm}
-                        className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
+                        className="py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-xl shadow-emerald-600/30 ring-4 ring-emerald-500/40 animate-pulse flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         <span>✅ Xác nhận chốt chuyến ngay</span>
@@ -1294,10 +1312,10 @@ export default function InboxModal({
                             type="button"
                             disabled={actionLoading}
                             onClick={handlePreConfirm}
-                            className={`py-2 px-3.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
+                            className={`py-2.5 px-4 rounded-xl font-black text-xs shadow-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
                               hasConsensus
-                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-2 ring-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] animate-pulse'
-                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white'
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-4 ring-amber-400/60 shadow-[0_0_20px_rgba(245,158,11,0.4)] animate-pulse'
+                                : 'bg-gradient-to-r from-[#0071e3] to-indigo-600 hover:from-[#0077ed] text-white ring-4 ring-[#0071e3]/30 shadow-[0_0_20px_rgba(0,113,227,0.35)] animate-pulse'
                             }`}
                           >
                             <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
@@ -1306,6 +1324,28 @@ export default function InboxModal({
                         </>
                       )}
                     </div>
+
+                    {/* Cảnh báo Stale Inactivity nếu đối tác không phản hồi > 3 phút */}
+                    {isPartnerStale && !hasPartnerReplied && (
+                      <div className="p-2.5 px-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span className="text-[11.5px] font-medium">
+                            {partnerAlias} phản hồi chậm (&gt;3 phút). Bạn có thể tìm chuyến xe khác trên Sàn để không lỡ lịch trình!
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose?.();
+                            onNavigateTab?.('market');
+                          }}
+                          className="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-[11px] shrink-0 cursor-pointer shadow-xs transition-all"
+                        >
+                          Tìm xe khác ➔
+                        </button>
+                      </div>
+                    )}
 
                     {/* Edge AI Ambient Consensus Prompt */}
                     {hasConsensus && hasPartnerReplied && (
