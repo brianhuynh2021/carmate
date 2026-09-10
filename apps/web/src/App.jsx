@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight } from 'lucide-react';
+import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight, ArrowLeft, Clock } from 'lucide-react';
 import { TIME_SLOTS, normalizePhoneNumber, cleanPhoneNumber } from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
 import { useI18n } from './i18n/index.jsx';
@@ -690,7 +690,7 @@ export default function App() {
   // Quản lý Hành lang Tuyến Level 3 & Trạng thái xem sàn
   const [activeCorridor, setActiveCorridor] = useState('Tuyến QL13');
   const [activeCorridorContext, setActiveCorridorContext] = useState(null);
-  const [showAllNationwide, setShowAllNationwide] = useState(false);
+  const [marketLayoutView, setMarketLayoutView] = useState('cards'); // 'cards' (mặc định trực quan) | 'timeline' (dòng thời gian)
 
   // Quản lý Social Smart Match Suggestions (Ambient Intelligence)
   const [socialMatches, setSocialMatches] = useState([]);
@@ -1001,9 +1001,19 @@ export default function App() {
             />
 
             <div className={`${container} py-3.5 sm:py-6 space-y-3.5 sm:space-y-5 relative z-10`}>
-              {/* DÒNG THỜI GIAN CÁC CHUYẾN XE DỌC TUYẾN (CORRIDOR TIMELINE - LEVEL 3) */}
-              {!showAllNationwide ? (
-                <div className="space-y-4">
+              {/* CHẾ ĐỘ HIỂN THỊ SÀN: DANH SÁCH THẺ (MẶC ĐỊNH) HOẶC DÒNG THỜI GIAN TUYẾN */}
+              {marketLayoutView === 'timeline' ? (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setMarketLayoutView('cards')}
+                      className="px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-xs font-bold text-slate-700 dark:text-zinc-200 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Quay lại dạng thẻ ({driverOffers.length + passengerRequests.length} chuyến)</span>
+                    </button>
+                  </div>
                   <CorridorTimeline
                     trips={driverOffers}
                     corridor={activeCorridor}
@@ -1011,36 +1021,11 @@ export default function App() {
                     destHub={activeCorridorContext?.destHub}
                     timeSlot={activeCorridorContext?.timeSlot}
                     onOpenBooking={(trip) => handleInitiateBook(trip)}
-                    onShowAllNationwide={() => setShowAllNationwide(true)}
+                    onShowAllNationwide={() => setMarketLayoutView('cards')}
                   />
-
-                  {/* Nút chuyển đổi xem toàn bộ sàn */}
-                  <div className="text-center pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowAllNationwide(true)}
-                      className="px-4 py-2 rounded-full bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-xs font-bold text-slate-700 dark:text-zinc-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>Hoặc lướt xem toàn bộ {driverOffers.length + passengerRequests.length} chuyến trên sàn toàn quốc</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
-                    <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
-                      Đang xem: Toàn bộ danh sách chuyến xe toàn quốc
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowAllNationwide(false)}
-                      className="px-3 py-1 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors cursor-pointer"
-                    >
-                      ← Quay lại Tuyến {activeCorridor}
-                    </button>
-                  </div>
-
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5 pb-0.5">
                 <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 py-0.5">
                   <Segmented
@@ -1060,6 +1045,15 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setMarketLayoutView('timeline')}
+                    className="h-8.5 px-3.5 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-[#0071e3] dark:hover:text-[#2997ff] inline-flex items-center gap-1.5 cursor-pointer shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
+                    title="Xem theo dòng thời gian dọc tuyến"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-[#0071e3]" />
+                    <span>Lịch trình tuyến</span>
+                  </button>
                   <select
                     value={selectedCarCategory}
                     onChange={(e) => setSelectedCarCategory(e.target.value)}
