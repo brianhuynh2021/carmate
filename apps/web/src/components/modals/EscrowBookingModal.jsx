@@ -55,7 +55,8 @@ export default function EscrowBookingModal({
   onViewTrustProfile,
   onViewBookedTab,
   onAutoPostDemand,
-  onShowToast
+  onShowToast,
+  onOpenInbox
 }) {
   const { lang } = useI18n();
   const [seats, setSeats] = useState(1);
@@ -289,14 +290,25 @@ export default function EscrowBookingModal({
           <div className="w-full space-y-2">
             <button
               type="button"
-              onClick={onClose}
-              className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-primary-600 hover:bg-primary-700 active:scale-[0.99] text-white shadow-md shadow-primary-500/25 cursor-pointer transition-all flex items-center justify-center gap-2"
+              onClick={() => {
+                onClose();
+                onOpenInbox?.(bookingCode);
+              }}
+              className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-600 via-indigo-600 to-primary-600 hover:from-blue-700 hover:to-primary-700 active:scale-[0.99] text-white shadow-md shadow-blue-500/25 cursor-pointer transition-all flex items-center justify-center gap-2"
             >
-              <Check className="w-4 h-4" strokeWidth={2.5} />
-              <span>Đã hiểu & Tiếp tục tìm chuyến</span>
+              <MessageSquare className="w-4 h-4" />
+              <span>Mở Khung Chat & Giữ Chỗ 15 Phút</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 px-4 rounded-2xl font-semibold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Để sau & Tiếp tục tìm chuyến</span>
             </button>
             <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
-              💡 Bạn có thể kiểm tra tiến độ phản hồi bất kỳ lúc nào tại mục <strong className="text-slate-600 dark:text-slate-300">Chuyến đã hẹn</strong> trên menu.
+              💡 Bạn có thể trao đổi trực tiếp với {toPublicAlias(item)} trong khung chat để nhận diện đồng thuận điểm đón và giữ chỗ 15 phút.
             </p>
           </div>
         }

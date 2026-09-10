@@ -735,6 +735,33 @@ export async function addBookingMessageHandler(req, res) {
     const existingMsgs = Array.isArray(booking.messages) ? booking.messages : [];
     const updatedMsgs = [...existingMsgs, newMsg];
 
+    // Mô phỏng phản hồi thân thiện của Chủ xe đối với chuyến đi mẫu (Single-tester Demo Simulation)
+    const isMockTrip = Boolean(
+      booking.targetTripId?.startsWith('DRV-') ||
+      booking.driverPhone?.startsWith('0900') ||
+      booking.targetItem?.maskedCode?.startsWith('CX-') ||
+      booking.targetTrip?.maskedCode?.startsWith('CX-')
+    );
+
+    if (isMockTrip && senderRole === 'passenger' && !booking.bothConfirmed) {
+      let driverReplyText = 'Dạ ok bạn, mình đón tại đúng điểm hẹn trên đường nhé! Mình nhất trí chốt chuyến.';
+      const lowerText = text.toLowerCase();
+      if (/(vali|balo|hành lý|đồ|cốp)/i.test(lowerText)) {
+        driverReplyText = '🧳 Cốp xe rộng rãi thoải mái nhé bạn! Mình đón đúng điểm hẹn, bạn bấm [Đề xuất chốt & Giữ chỗ 15p] để mình giữ ghế nha.';
+      } else if (/(cây xăng|ngã tư|bến xe|điểm|đón|ở đâu|chỗ)/i.test(lowerText)) {
+        driverReplyText = '📍 Dạ ok bạn, mình đón đúng điểm hẹn trên đường nhé! Mình giữ chỗ cho bạn luôn.';
+      }
+
+      const hostMsg = {
+        id: `MSG-HOST-${Date.now()}`,
+        senderRole: 'driver',
+        senderName: booking.contactName || 'Chủ xe',
+        text: driverReplyText,
+        createdAt: new Date(Date.now() + 100).toISOString()
+      };
+      updatedMsgs.push(hostMsg);
+    }
+
     const updated = await updateBookingStatus(id, booking.status, {
       messages: updatedMsgs,
       lastMessageAt: newMsg.createdAt

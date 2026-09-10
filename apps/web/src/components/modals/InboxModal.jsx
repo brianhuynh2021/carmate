@@ -286,7 +286,9 @@ export default function InboxModal({
       /\b(hẹn anh|hẹn bạn|hẹn em|hen anh|hen em)\b/i,
       /\b(được anh|được em|duoc anh|duoc em|được nha|duoc nha)\b/i,
       /\b(đón em|don em|đón anh|don anh|đón nhé|don nhe)\b/i,
-      /\b(giữ chỗ|giu cho)\b/i
+      /\b(giữ chỗ|giu cho)\b/i,
+      /\b(điểm hẹn|diem hen|cây xăng|cay xang|ngã tư|nga tu|bến xe|ben xe|quốc lộ|quoc lo|tiện đường|tien duong)\b/i,
+      /\b(balo|vali|túi|hành lý|hanh ly|cốp xe|cop xe)\b/i
     ];
 
     return recentMsgs.some((m) => {
@@ -1133,19 +1135,21 @@ export default function InboxModal({
 
                       <div className="space-y-0.5">
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          {activeTab === 'incoming'
-                            ? 'Đang khóa mềm 1 ghế (Chờ khách bấm chốt)'
-                            : 'Chủ xe đang giữ chỗ cho bạn'}
+                          {activeBooking.preConfirmedBy === (activeTab === 'incoming' ? 'driver' : 'passenger')
+                            ? 'Đang khóa mềm chỗ 15 phút (Chờ đối phương xác nhận)'
+                            : activeTab === 'incoming'
+                              ? 'Khách đã đề xuất chốt (Bấm xác nhận để nhận chuyến)'
+                              : 'Chủ xe đang giữ chỗ cho bạn'}
                         </p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {activeTab === 'incoming'
-                            ? 'Ghế tự động giải phóng nếu khách không chốt trước khi hết giờ.'
-                            : 'Bấm xác nhận bên phải để nhận ngay SĐT & Zalo chủ xe!'}
+                          {activeBooking.preConfirmedBy === (activeTab === 'incoming' ? 'driver' : 'passenger')
+                            ? 'Ghế tự động giải phóng nếu đối phương không bấm chốt trước khi hết giờ.'
+                            : 'Bấm nút xác nhận bên phải để nhận ngay SĐT & Zalo liên hệ đón!'}
                         </p>
                       </div>
                     </div>
 
-                    {activeTab === 'outgoing' && (
+                    {(activeTab === 'outgoing' || activeBooking.preConfirmedBy === 'passenger' || !activeBooking.preConfirmedBy) && (
                       <button
                         type="button"
                         disabled={actionLoading}
@@ -1171,30 +1175,30 @@ export default function InboxModal({
                         </p>
                       </div>
 
-                      {activeTab === 'incoming' && (
-                        <button
-                          type="button"
-                          disabled={actionLoading}
-                          onClick={handlePreConfirm}
-                          className={`py-2 px-3.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
-                            hasConsensus
-                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-2 ring-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] animate-pulse'
-                              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white'
-                          }`}
-                        >
-                          <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-                          <span>{hasConsensus ? '⚡ Đồng thuận đạt! Giữ chỗ 15p' : 'Đề xuất chốt & Giữ chỗ 15p'}</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        disabled={actionLoading}
+                        onClick={handlePreConfirm}
+                        className={`py-2 px-3.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
+                          hasConsensus
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-2 ring-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] animate-pulse'
+                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white'
+                        }`}
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+                        <span>{hasConsensus ? '⚡ Đồng thuận đạt! Giữ chỗ 15p' : 'Đề xuất chốt & Giữ chỗ 15p'}</span>
+                      </button>
                     </div>
 
                     {/* Edge AI Ambient Consensus Prompt */}
-                    {hasConsensus && activeTab === 'incoming' && (
+                    {hasConsensus && (
                       <div className="p-2 px-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2 text-xs text-amber-800 dark:text-amber-300 animate-in fade-in slide-in-from-top-1">
                         <div className="flex items-center gap-2">
                           <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                           <span className="font-medium text-[11.5px]">
-                            Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm giữ chỗ 15p cho khách!
+                            {activeTab === 'incoming'
+                              ? 'Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm giữ chỗ 15p cho khách!'
+                              : 'Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm đề xuất giữ chỗ 15p với Chủ xe!'}
                           </span>
                         </div>
                       </div>
