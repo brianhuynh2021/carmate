@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getTomorrowISO, normalizePhoneNumber } from '@carmate/shared';
 import api from '../api/client.js';
 import { trackInitiateBooking, trackDriverConfirm } from '../utils/analytics.js';
+import { triggerMacNotification } from '../components/common/AppleMacNotification.jsx';
 
 /**
  * Custom Hook quản lý dữ liệu chuyến đi, kết nối Zalo / Escrow và đồng bộ Backend
@@ -494,6 +495,51 @@ export default function useTripsData({
       console.warn('[refreshBookings] Lỗi:', err);
     }
   }, []);
+
+  // Polling đồng bộ ngầm & Bắn thông báo In-app (AppleMacNotification) cho Chủ xe khi có khách đặt
+  useEffect(() => {
+    const knownIds = new Set(bookedEscrows.map((b) => b.escrowId || b.id));
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await api.getBookings();
+        if (res?.success && Array.isArray(res.data)) {
+          const newBookings = res.data;
+          const userPhone = currentUser?.phone ? normalizePhoneNumber(currentUser.phone) : '';
+          const userId = currentUser?.id || currentUser?.userId || '';
+
+          newBookings.forEach((b) => {
+            const bId = b.escrowId || b.id;
+            if (!knownIds.has(bId)) {
+              knownIds.add(bId);
+              // Kiểm tra xem người đăng nhập hiện tại có phải Chủ xe nhận yêu cầu không:
+              const bDriverPhone = b.driverPhone ? normalizePhoneNumber(b.driverPhone) : '';
+              const isTargetDriver = (userPhone && bDriverPhone && userPhone === bDriverPhone) ||
+                                     (userId && b.driverId && userId === b.driverId);
+
+              if (isTargetDriver && b.status === 'inquiring') {
+                triggerMacNotification({
+                  title: '🚗 Yêu cầu ghép chuyến mới!',
+                  message: `${b.contactName || 'Người đi cùng'} muốn ghép ${b.seats || 1} ghế tuyến ${b.from} ➔ ${b.to}`,
+                  type: 'trip',
+                  bookingId: bId,
+                  partnerName: b.contactName || 'Người đi cùng',
+                  actionLabel: 'Mở Chat Ngay'
+                });
+                showToast?.(`🔔 Bạn có yêu cầu ghép chuyến mới từ ${b.contactName || 'Người đi cùng'}`);
+              }
+            }
+          });
+
+          setBookedEscrows(newBookings);
+        }
+      } catch {
+        // Bỏ qua lỗi ngầm nếu mất mạng thoáng qua
+      }
+    }, 6000);
+
+    return () => clearInterval(pollInterval);
+  }, [currentUser, showToast, bookedEscrows]);
 
   const handleUnreachablePhoneReport = useCallback(
     async ({ bookingId, reason, note }) => {

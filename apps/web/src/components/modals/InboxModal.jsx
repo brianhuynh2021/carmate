@@ -386,8 +386,21 @@ export default function InboxModal({
     ];
   }, [activeBooking?.status, activeBooking?.messages, activeTab]);
 
-  const partnerAlias = activeBooking ? toPublicAlias(activeBooking) : 'Đối tác';
-  const partnerPhone = activeBooking?.driverPhone || activeBooking?.contactPhone || activeBooking?.phoneReal || '';
+  const partnerAlias = useMemo(() => {
+    if (!activeBooking) return 'Đối tác';
+    if (activeTab === 'incoming') {
+      return activeBooking.passengerName || activeBooking.userName || activeBooking.contactName || 'Người đi cùng';
+    }
+    return toPublicAlias(activeBooking);
+  }, [activeBooking, activeTab]);
+
+  const partnerPhone = useMemo(() => {
+    if (!activeBooking) return '';
+    if (activeTab === 'incoming') {
+      return activeBooking.passengerPhone || activeBooking.userPhone || activeBooking.phone || '';
+    }
+    return activeBooking.driverPhone || activeBooking.contactPhone || activeBooking.phoneReal || '';
+  }, [activeBooking, activeTab]);
   const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
   const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
   const isDealCommitted = isConfirmed || isPreConfirmed;

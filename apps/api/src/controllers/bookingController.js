@@ -16,7 +16,8 @@ import {
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import crypto from 'crypto';
-import { sendBusinessAlert, sendTelegramMessage } from '../utils/telegramAlert.js';
+import { sendBusinessAlert, sendTelegramMessage, sendDirectBookingTelegramAlert } from '../utils/telegramAlert.js';
+import { sendEmailNotification } from '../utils/emailAlert.js';
 
 /**
  * So khớp access token thời gian hằng định (chống timing attack).
@@ -144,8 +145,9 @@ export async function createBooking(req, res) {
 
     // Nếu có tripId, truy vấn SĐT thật của chuyến xe từ DB
     const targetTripId = body.tripId || body.targetTripId || body.targetId || (body.targetItem && body.targetItem.id);
+    let targetTrip = null;
     if (targetTripId) {
-      const targetTrip = getTripById(targetTripId);
+      targetTrip = getTripById(targetTripId);
       if (targetTrip) {
         // BẤT BIẾN MIT: Chặn tự đặt/gửi yêu cầu cho chuyến của chính mình
         const reqUserId = req.user?.id || req.user?.userId || body.userId;
@@ -216,7 +218,52 @@ export async function createBooking(req, res) {
 
     const booking = await addBooking(body);
 
-    // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
+    // 1. Gửi thông báo Telegram trực tiếp đến Chủ Xe (nếu có liên kết Telegram ID)
+    const driverUser = (targetTrip?.userId && getUserById(targetTrip.userId)) ||
+                       (targetTrip?.phoneReal && getUserByPhone(targetTrip.phoneReal)) ||
+                       (body.driverPhone && getUserByPhone(body.driverPhone));
+    const driverTelegramId = targetTrip?.telegramId || driverUser?.telegramId;
+
+    if (driverTelegramId) {
+      sendDirectBookingTelegramAlert({
+        targetTelegramId: driverTelegramId,
+        booking,
+        passengerName: body.contactName || 'Người đi cùng',
+        req
+      }).catch(() => {});
+    }
+
+    // 2. Gửi Email thông báo trực tiếp đến Chủ Xe (nếu có Email)
+    const driverEmail = targetTrip?.email || driverUser?.email;
+    if (driverEmail) {
+      const emailSubject = `[CarMate] Có yêu cầu ghép chuyến mới tuyến ${booking.from} ➔ ${booking.to}`;
+      const emailHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;">
+          <h2 style="color: #0071e3; margin-top: 0;">🚗 Yêu Cầu Ghép Chuyến Mới</h2>
+          <p style="color: #334155; font-size: 14px;">Chào <strong>${targetTrip?.publicName || driverUser?.name || 'Chủ xe'}</strong>,</p>
+          <p style="color: #334155; font-size: 14px;">Bạn vừa nhận được một yêu cầu kết nối đi chung xe trên hệ thống CarMate:</p>
+          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; margin: 16px 0; border: 1px solid #e2e8f0;">
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Lộ trình:</strong> ${booking.from} ➔ ${booking.to}</p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Khởi hành:</strong> ${booking.date || 'Hôm nay'} ${booking.time || ''}</p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Số ghế đặt:</strong> ${booking.seatsBooked || booking.seats || 1} người</p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Điểm đón đề xuất:</strong> ${booking.pickupPoint || 'Thỏa thuận tiện đường'}</p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Lời nhắn:</strong> "${booking.passengerNote || 'Không có ghi chú'}"</p>
+          </div>
+          <p style="color: #475569; font-size: 13px;">Mở CarMate vào mục <strong>Hộp thư</strong> để trao đổi điểm đón cụ thể và bấm nút <strong>[Chốt chuyến 15 phút]</strong>.</p>
+          <p style="font-size: 11px; color: #94a3b8; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+            🛡️ Số điện thoại thật của 2 bên được bảo mật 100% và chỉ tự động hiển thị sau khi 2 bên cùng chốt chuyến.
+          </p>
+        </div>
+      `;
+      sendEmailNotification({
+        to: driverEmail,
+        subject: emailSubject,
+        html: emailHtml,
+        text: `Yêu cầu ghép chuyến mới từ ${body.contactName || 'Người đi cùng'}: ${booking.from} ➔ ${booking.to}`
+      }).catch(() => {});
+    }
+
+    // 3. Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
     sendBusinessAlert({
       title: '💬 Yêu cầu ghép chuyến mới từ Người đi cùng',
       details: {
