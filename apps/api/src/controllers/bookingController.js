@@ -168,6 +168,7 @@ export async function createBooking(req, res) {
         body.driverPhone = tripPhoneFinal;
         body.targetPhone = tripPhoneFinal;
         body.driverId = targetTrip.userId;
+        body.driverName = targetTrip.publicName || targetTrip.driverName || targetTrip.name || 'Chủ xe';
         body.contactPhone = tripPhoneFinal || body.contactPhone;
         body.phoneReal = tripPhoneFinal || body.phoneReal;
         body.contactName = targetTrip.publicName || body.contactName;
@@ -179,6 +180,10 @@ export async function createBooking(req, res) {
         body.targetItem = body.targetItem || targetTrip;
       }
     }
+
+    // Chuẩn hóa danh tính Người đi cùng
+    body.passengerPhone = body.passengerPhone || body.userPhone || body.phone || req.user?.phone || '';
+    body.passengerName = body.passengerName || body.userName || body.contactName || req.user?.name || 'Người đi cùng';
 
     // BẤT BIẾN MIT: Kiểm tra tính hợp lệ của chi phí thoả thuận (Price Guardrail)
     const dealPrice = Number(body.totalDeal || body.price || 0);
@@ -278,10 +283,18 @@ export async function createBooking(req, res) {
       req
     }).catch(() => {});
 
+    const sanitizedBooking = {
+      ...booking,
+      phoneReal: maskPhoneNumber(booking.phoneReal || booking.contactPhone || ''),
+      contactPhone: maskPhoneNumber(booking.contactPhone || ''),
+      driverPhone: maskPhoneNumber(booking.driverPhone || ''),
+      passengerPhone: maskPhoneNumber(booking.passengerPhone || '')
+    };
+
     return res.status(201).json({
       success: true,
       message: 'Đã gửi yêu cầu ghép chuyến thành công',
-      data: booking
+      data: sanitizedBooking
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -861,7 +874,7 @@ export async function preConfirmBookingHandler(req, res) {
       senderRole: 'system',
       senderName: 'Hệ thống CarMate',
       isSystem: true,
-      text: `⚡ ${proposerTitle} đã ĐỀ XUẤT CHỐT CHUYẾN & tạm giữ chỗ trong 15 phút. Vui lòng ${receiverTitle} bấm [Xác nhận chốt] để hoàn tất chuyến đi!`,
+      text: `⚡ ${proposerTitle} đã ĐỀ XUẤT CHỐT CHUYẾN & tạm giữ chỗ trong 15 phút. Vui lòng ${receiverTitle} bấm [✅ Xác nhận chốt chuyến ngay] để hoàn tất chuyến đi!`,
       createdAt: now.toISOString()
     };
 
@@ -889,10 +902,18 @@ export async function preConfirmBookingHandler(req, res) {
       req
     }).catch(() => {});
 
+    const sanitizedUpdated = {
+      ...updated,
+      phoneReal: maskPhoneNumber(updated.phoneReal || updated.contactPhone || ''),
+      contactPhone: maskPhoneNumber(updated.contactPhone || ''),
+      driverPhone: maskPhoneNumber(updated.driverPhone || ''),
+      passengerPhone: maskPhoneNumber(updated.passengerPhone || '')
+    };
+
     return res.status(200).json({
       success: true,
-      message: `${proposerTitle} đã đề xuất chốt chuyến. Chỗ được tạm giữ trong 15 phút.`,
-      data: updated
+      message: `${proposerTitle} đã đề xuất chốt chuyến & tạm giữ chỗ 15 phút.`,
+      data: sanitizedUpdated
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -933,7 +954,7 @@ export async function finalConfirmBookingHandler(req, res) {
       senderRole: 'system',
       senderName: 'Hệ thống CarMate',
       isSystem: true,
-      text: '🎉 Chúc mừng 2 bạn! Chuyến đi đã được CHỐT CHÍNH THỨC 2 CHIỀU. Thông tin liên hệ đầy đủ đã được mở khóa an toàn.',
+      text: '🎉 Chúc mừng 2 bạn! Chuyến đi đã được CHỐT CHÍNH THỨC 2 CHIỀU. Tên thật và số điện thoại liên hệ của 2 bên đã được mở khóa an toàn kèm nút Gọi điện / Sao chép số.',
       createdAt: now.toISOString()
     };
 

@@ -386,24 +386,33 @@ export default function InboxModal({
     ];
   }, [activeBooking?.status, activeBooking?.messages, activeTab]);
 
+  const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
+  const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
+  const isDealCommitted = isConfirmed || isPreConfirmed;
+
   const partnerAlias = useMemo(() => {
     if (!activeBooking) return 'Đối tác';
     if (activeTab === 'incoming') {
-      return activeBooking.passengerName || activeBooking.userName || activeBooking.contactName || 'Người đi cùng';
+      if (isConfirmed) {
+        return activeBooking.passengerName || activeBooking.userName || activeBooking.contactName || 'Người đi cùng';
+      }
+      const code = String(activeBooking.escrowId || activeBooking.id || '').replace(/\D/g, '').slice(-3) || '01';
+      return `Khách KX-${code}`;
+    }
+    if (isConfirmed) {
+      return activeBooking.driverName || activeBooking.targetTrip?.driverName || activeBooking.contactName || toPublicAlias(activeBooking);
     }
     return toPublicAlias(activeBooking);
-  }, [activeBooking, activeTab]);
+  }, [activeBooking, activeTab, isConfirmed]);
 
   const partnerPhone = useMemo(() => {
     if (!activeBooking) return '';
+    if (!isConfirmed) return '';
     if (activeTab === 'incoming') {
       return activeBooking.passengerPhone || activeBooking.userPhone || activeBooking.phone || '';
     }
     return activeBooking.driverPhone || activeBooking.contactPhone || activeBooking.phoneReal || '';
-  }, [activeBooking, activeTab]);
-  const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
-  const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
-  const isDealCommitted = isConfirmed || isPreConfirmed;
+  }, [activeBooking, activeTab, isConfirmed]);
   const activePartnerOnline = activeBooking
     ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
     : { isOnline: false };
@@ -848,7 +857,13 @@ export default function InboxModal({
                         {/* Dòng 1: Tên đối tác (trái) + Thời gian (phải) */}
                         <div className="flex items-center justify-between gap-1.5 mb-0.5">
                           <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
-                            {toPublicAlias(item)}
+                            {activeTab === 'incoming'
+                              ? (item.status === 'confirmed'
+                                  ? (item.passengerName || item.userName || item.contactName || 'Người đi cùng')
+                                  : `Khách KX-${String(item.escrowId || item.id || '').replace(/\D/g, '').slice(-3) || '01'}`)
+                              : (item.status === 'confirmed'
+                                  ? (item.driverName || toPublicAlias(item))
+                                  : toPublicAlias(item))}
                           </span>
                           <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 shrink-0 tabular">
                             {formatCleanDateLabel(item.date)}
@@ -1068,10 +1083,15 @@ export default function InboxModal({
                       <span className="hidden sm:inline">Đã chốt chính thức</span>
                       <span className="sm:hidden">Đã chốt</span>
                     </span>
-                  ) : isPreConfirmed ? (
+                  ) : isPreConfirmed && remainingSecs > 0 ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1.5 rounded-full border border-blue-300/50 animate-pulse">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>{timeLeftStr || 'Giữ chỗ 15p'}</span>
+                      <span>{timeLeftStr ? `Tạm giữ chỗ ${timeLeftStr}` : 'Tạm giữ chỗ 15p'}</span>
+                    </span>
+                  ) : activeBooking.status === 'expired' || (isPreConfirmed && remainingSecs <= 0) ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-850 px-2.5 py-1.5 rounded-full border border-slate-300/50">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Hết hạn 15p</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1.5 rounded-full border border-amber-300/50">
@@ -1086,7 +1106,7 @@ export default function InboxModal({
               {/* THANH ĐIỀU PHỐI 2-PHASE COMMIT (SMART ACTION BAR) */}
               <div className="p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/60 dark:to-slate-800/40 border-b border-black/[0.06] dark:border-white/[0.06]">
                 {isConfirmed ? (
-                  // ĐÃ CHỐT CHÍNH THỨC: MỞ KHÓA SĐT THẬT
+                  // ĐÃ CHỐT CHÍNH THỨC: MỞ KHÓA SĐT THẬT & TÊN THẬT
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
@@ -1097,12 +1117,12 @@ export default function InboxModal({
                           Chuyến đi đã chốt thành công 2 chiều!
                         </p>
                         <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                          SĐT {partnerAlias}: <strong className="text-slate-900 dark:text-white tabular">{partnerPhone || 'Đã cấp quyền'}</strong>
+                          SĐT {partnerAlias}: <strong className="text-slate-900 dark:text-white tabular font-mono">{partnerPhone || 'Đã mở khóa'}</strong>
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
                       {partnerPhone && (
                         <>
                           <a
@@ -1118,13 +1138,23 @@ export default function InboxModal({
                             className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
                           >
                             {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                            <span>{copiedPhone ? 'Đã chép' : 'Chép SĐT'}</span>
+                            <span>{copiedPhone ? 'Đã chép' : 'Sao chép số'}</span>
                           </button>
+                          {cleanPhoneNumber(partnerPhone) && (
+                            <a
+                              href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="py-1.5 px-3 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                            >
+                              <span>Mở Zalo</span>
+                            </a>
+                          )}
                         </>
                       )}
                     </div>
                   </div>
-                ) : isPreConfirmed ? (
+                ) : isPreConfirmed && remainingSecs > 0 ? (
                   // ĐANG Ở BƯỚC PRE-CONFIRM: SOFT-LOCK 15 PHÚT (DYNAMIC ISLAND LIQUID COUNTDOWN)
                   <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-slate-50 dark:from-slate-900/60 dark:to-blue-950/40 border border-blue-200/70 dark:border-blue-800/50 shadow-xs flex-wrap">
                     <div className="flex items-center gap-3">
@@ -1151,13 +1181,13 @@ export default function InboxModal({
                           {activeBooking.preConfirmedBy === (activeTab === 'incoming' ? 'driver' : 'passenger')
                             ? 'Đang khóa mềm chỗ 15 phút (Chờ đối phương xác nhận)'
                             : activeTab === 'incoming'
-                              ? 'Khách đã đề xuất chốt (Bấm xác nhận để nhận chuyến)'
-                              : 'Chủ xe đang giữ chỗ cho bạn'}
+                              ? 'Khách đã đề xuất chốt (Bấm xác nhận để chốt chuyến ngay)'
+                              : 'Chủ xe đang tạm giữ chỗ 15 phút cho bạn'}
                         </p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400">
                           {activeBooking.preConfirmedBy === (activeTab === 'incoming' ? 'driver' : 'passenger')
                             ? 'Ghế tự động giải phóng nếu đối phương không bấm chốt trước khi hết giờ.'
-                            : 'Bấm nút xác nhận bên phải để nhận ngay SĐT & Zalo liên hệ đón!'}
+                            : 'Bấm nút xác nhận bên phải để chốt chuyến ngay và nhận SĐT & Zalo liên hệ đón!'}
                         </p>
                       </div>
                     </div>
@@ -1170,21 +1200,25 @@ export default function InboxModal({
                         className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>XÁC NHẬN CHỐT CHUYẾN</span>
+                        <span>✅ Xác nhận chốt chuyến ngay</span>
                       </button>
                     )}
                   </div>
                 ) : (
-                  // ĐANG Ở BƯỚC THƯƠNG LƯỢNG (INQUIRING)
+                  // ĐANG Ở BƯỚC THƯƠNG LƯỢNG (INQUIRING HOẶC HẾT HẠN 15P)
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="space-y-0.5">
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          <span>Thỏa thuận điểm hẹn đón & hành lý trước khi chốt</span>
+                          <span>
+                            {activeBooking.status === 'expired' || remainingSecs <= 0
+                              ? 'Hết hạn giữ chỗ 15p · Trao đổi lại & Tạm giữ chỗ mới'
+                              : 'Thỏa thuận điểm hẹn đón & hành lý trước khi chốt'}
+                          </span>
                         </p>
                         <p className="text-[11px] text-slate-500">
-                          Sau khi trao đổi xong, bấm "Đề xuất chốt" để giữ chỗ mềm 15 phút.
+                          Sau khi trao đổi xong, bấm "Đề xuất chốt chuyến & Tạm giữ chỗ 15p".
                         </p>
                       </div>
 
@@ -1199,7 +1233,7 @@ export default function InboxModal({
                         }`}
                       >
                         <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-                        <span>{hasConsensus ? '⚡ Đồng thuận đạt! Giữ chỗ 15p' : 'Đề xuất chốt & Giữ chỗ 15p'}</span>
+                        <span>{hasConsensus ? '⚡ Đồng thuận đạt! Tạm giữ chỗ 15p' : '⚡ Đề xuất chốt chuyến & Tạm giữ chỗ 15p'}</span>
                       </button>
                     </div>
 
@@ -1210,8 +1244,8 @@ export default function InboxModal({
                           <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                           <span className="font-medium text-[11.5px]">
                             {activeTab === 'incoming'
-                              ? 'Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm giữ chỗ 15p cho khách!'
-                              : 'Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm đề xuất giữ chỗ 15p với Chủ xe!'}
+                              ? 'Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm tạm giữ chỗ 15p cho khách!'
+                              : 'Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm đề xuất tạm giữ chỗ 15p với Chủ xe!'}
                           </span>
                         </div>
                       </div>
@@ -1359,7 +1393,7 @@ export default function InboxModal({
                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                       >
                         <span className="text-[10px] text-slate-400 mb-0.5 px-1">
-                          {msg.senderName || (isMe ? 'Tôi' : partnerAlias)}
+                          {isMe ? 'Tôi' : (isConfirmed ? (msg.senderName || partnerAlias) : partnerAlias)}
                         </span>
                         <div
                           className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
@@ -1390,7 +1424,7 @@ export default function InboxModal({
                         {partnerPhone}
                       </p>
                     </div>
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
                       <a
                         href={`tel:${partnerPhone}`}
                         className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
@@ -1411,8 +1445,18 @@ export default function InboxModal({
                         className="py-2 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
                       >
                         {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedPhone ? 'Đã chép' : 'Chép'}</span>
+                        <span>{copiedPhone ? 'Đã chép' : 'Sao chép số'}</span>
                       </button>
+                      {cleanPhoneNumber(partnerPhone) && (
+                        <a
+                          href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2 px-3.5 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                        >
+                          <span>Mở Zalo</span>
+                        </a>
+                      )}
                     </div>
                     {/* Stanford Empathy Tip & Hướng dẫn liên lạc văn minh */}
                     <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-100/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-emerald-900 dark:text-emerald-200 text-left leading-relaxed">
