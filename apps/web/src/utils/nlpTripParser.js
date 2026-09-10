@@ -157,6 +157,26 @@ export const SMART_TRIP_TEMPLATES = {
       desc: 'Xe 5 chỗ còn 2 ghế, đón Nguyễn Văn Linh, phụ xăng 100k',
       text: 'Chiều nay 14h xe 5 chỗ chạy Đà Nẵng ra Huế còn 2 ghế đón Nguyễn Văn Linh phụ 100k sđt 0905556677'
     },
+    {
+      id: 'drv-pickup-bp',
+      role: 'driver',
+      category: 'driver',
+      direction: 'outbound',
+      badge: 'Bán tải chở hàng',
+      title: 'Đồng Xoài ➔ Sài Gòn (Bán tải thùng rộng)',
+      desc: 'Bán tải thùng rỗng nhận chở đồ/nông sản + 2 ghế khách',
+      text: 'Sáng mai 8h mình lái xe bán tải Ford Ranger từ Đồng Xoài về Sài Gòn thùng sau còn rỗng nhận chở nông sản chuyển trọ kèm 2 ghế khách sđt 0988223344'
+    },
+    {
+      id: 'drv-truck-n2',
+      role: 'driver',
+      category: 'driver',
+      direction: 'outbound',
+      badge: 'Xe tải Tuyến N2',
+      title: 'Chơn Thành ➔ Kiên Giang (Xe tải chở xe máy)',
+      desc: 'Xe tải nhẹ 2.5T quay đầu Tuyến N2 nhận chở xe máy/nông sản + 1 ghế phụ',
+      text: 'Trưa mai 12h mình chạy xe tải nhẹ 2.5T từ Chơn Thành về Rạch Giá Kiên Giang Tuyến N2 thùng rỗng nhận chở xe máy nông sản kèm 1 ghế phụ sđt 0912334455'
+    },
     // Chiều về (Return: Sài Gòn ➔ Tỉnh / Huế ➔ Đà Nẵng)
     {
       id: 'drv-ret-budop-7',
@@ -197,6 +217,16 @@ export const SMART_TRIP_TEMPLATES = {
       title: 'Sài Gòn ➔ Lộc Ninh (Vios 5 chỗ)',
       desc: 'Xe 5 chỗ từ Sài Gòn về Lộc Ninh đón dọc QL13, phụ xăng 140k',
       text: 'Tối nay 19h mình lái xe Vios 5 chỗ từ Sài Gòn về Lộc Ninh đón dọc QL13 còn 2 chỗ phụ xăng 140k sđt 0977223344'
+    },
+    {
+      id: 'drv-ret-pickup',
+      role: 'driver',
+      category: 'driver',
+      direction: 'return',
+      badge: 'Chiều về Bán tải',
+      title: 'Sài Gòn ➔ Đồng Xoài (Bán tải quay đầu)',
+      desc: 'Bán tải từ Sài Gòn về Đồng Xoài thùng rỗng nhận chở hàng + 2 ghế khách',
+      text: 'Chiều nay 17h mình chạy xe bán tải từ Sài Gòn về Đồng Xoài thùng xe nhận chở hàng chuyển trọ kèm 2 ghế khách sđt 0988223344'
     },
     {
       id: 'drv-ret-central',
@@ -251,6 +281,16 @@ export const SMART_TRIP_TEMPLATES = {
       desc: 'Cần ghép 1 ghế sáng sớm, hành lý gọn, phụ 150k',
       text: 'Sáng sớm mai 5h mình cần tìm xe ghép 1 ghế từ Biên Hòa lên sân bay Tân Sơn Nhất phụ 150k sđt 0905112233'
     },
+    {
+      id: 'pax-motorcycle-n2',
+      role: 'passenger',
+      category: 'passenger',
+      direction: 'outbound',
+      badge: 'Gửi xe máy về quê',
+      title: 'Chơn Thành ➔ Kiên Giang (Gửi xe máy)',
+      desc: 'Cần gửi 1 xe máy Wave về Rạch Giá Tuyến N2 phụ 550k',
+      text: 'Sáng mai em cần gửi 1 xe máy Wave từ Chơn Thành về Rạch Giá Kiên Giang dọc Tuyến N2 ai tiện xe tải cho em gửi phụ 550k sđt 0984883750'
+    },
     // Chiều về (Return: Sài Gòn ➔ Tỉnh)
     {
       id: 'pax-ret-budop',
@@ -281,6 +321,16 @@ export const SMART_TRIP_TEMPLATES = {
       title: 'Thủ Đức ➔ Đồng Xoài (Gửi bưu phẩm)',
       desc: 'Kiện hàng 5kg gửi từ Thủ Đức về Đồng Xoài chiều nay, phụ 70k',
       text: 'Chiều nay em có kiện hàng 5kg cần gửi từ Thủ Đức về Đồng Xoài ai tiện xe cho em gửi phụ xăng 70k sđt 0977223344'
+    },
+    {
+      id: 'pax-ret-produce',
+      role: 'passenger',
+      category: 'passenger',
+      direction: 'return',
+      badge: 'Gửi hàng về quê',
+      title: 'Sài Gòn ➔ Lộc Ninh (Thùng nông sản)',
+      desc: 'Thùng xốp 15kg gửi từ Sài Gòn về Lộc Ninh, phụ xăng 90k',
+      text: 'Chiều nay em có thùng xốp 15kg cần gửi từ Sài Gòn về Lộc Ninh ai tiện xe cho em gửi phụ xăng 90k sđt 0977223344'
     },
     {
       id: 'pax-ret-airport',
@@ -365,7 +415,18 @@ export function parseNaturalTrip(text) {
     carCategory = 'family_car';
   }
 
-  if (/xpander/i.test(lower)) carType = 'Mitsubishi Xpander (Xe 7 chỗ)';
+  let vehicleType = 'standard';
+  let hasCargoBed = false;
+
+  if (/bán tải|ranger|hilux|triton|navara|d-?max/i.test(lower)) {
+    carType = 'Xe bán tải (Ford Ranger / Hilux)';
+    vehicleType = 'pickup';
+    hasCargoBed = true;
+  } else if (/xe tải|tải nhẹ|k250|k200|porter|h150|qkr/i.test(lower)) {
+    carType = 'Xe tải nhẹ 1T–3.5T (Tuyến N2 / Chành xe)';
+    vehicleType = 'truck_light';
+    hasCargoBed = true;
+  } else if (/xpander/i.test(lower)) carType = 'Mitsubishi Xpander (Xe 7 chỗ)';
   else if (/veloz/i.test(lower)) carType = 'Toyota Veloz Cross (Xe 7 chỗ)';
   else if (/innova/i.test(lower)) carType = 'Toyota Innova (Xe 7 chỗ)';
   else if (/carnival/i.test(lower)) carType = 'Kia Carnival (Xe 7 chỗ)';
@@ -532,7 +593,11 @@ export function parseNaturalTrip(text) {
   const isDriver = role === 'driver';
   let capacity = undefined;
   if (isDriver) {
-    if (
+    if (vehicleType === 'truck_light') {
+      capacity = 2;
+    } else if (vehicleType === 'pickup') {
+      capacity = 5;
+    } else if (
       /(?:7\s*chỗ|xpander|veloz|innova|carnival|santafe|santa fe|fortuner|everest|custin|sorento|crv|cr-v|cx-?8|vf\s*9)/i.test(
         lower
       ) ||
@@ -572,14 +637,16 @@ export function parseNaturalTrip(text) {
     scheduleDay,
     timeSlot,
     exactTime,
-    seats: seats || (isDriver ? (hasRelatives ? 1 : 3) : 1),
-    price: price || (isDriver ? 150000 : 120000),
+    seats: seats || (isDriver ? (vehicleType === 'truck_light' ? 1 : hasRelatives ? 1 : 3) : 1),
+    price: price || (isDriver ? (vehicleType === 'truck_light' ? 350000 : 150000) : 120000),
     phoneReal,
     capacity,
+    vehicleType: isDriver ? vehicleType : undefined,
+    hasCargoBed: isDriver ? hasCargoBed : undefined,
     carCategory: isDriver ? carCategory : undefined,
     carType: isDriver ? carType : undefined,
     hasRelatives: isDriver ? hasRelatives : false,
-    acceptsParcel,
+    acceptsParcel: isDriver ? (hasCargoBed ? true : acceptsParcel) : acceptsParcel,
     detectedPerks: {
       noSmoking,
       acOn,

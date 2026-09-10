@@ -7,6 +7,7 @@ import {
   ClipboardPaste,
   Car,
   Users,
+  Truck,
   MapPin,
   Navigation,
   Clock,
@@ -69,8 +70,25 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
     }
   };
 
+  const allTemplatesForCategory = useMemo(() => {
+    return SMART_TRIP_TEMPLATES[activeCategory] || SMART_TRIP_TEMPLATES.driver;
+  }, [activeCategory]);
+
+  const outboundCount = useMemo(() => {
+    return allTemplatesForCategory.filter((t) => t.direction === 'outbound').length;
+  }, [allTemplatesForCategory]);
+
+  const returnCount = useMemo(() => {
+    return allTemplatesForCategory.filter((t) => t.direction === 'return').length;
+  }, [allTemplatesForCategory]);
+
+  const currentTemplates = useMemo(() => {
+    if (directionFilter === 'all') return allTemplatesForCategory;
+    return allTemplatesForCategory.filter((t) => t.direction === directionFilter);
+  }, [allTemplatesForCategory, directionFilter]);
+
   const handleCycleNextSample = () => {
-    const list = currentTemplates.length > 0 ? currentTemplates : (SMART_TRIP_TEMPLATES[activeCategory] || SMART_TRIP_TEMPLATES.driver);
+    const list = currentTemplates.length > 0 ? currentTemplates : allTemplatesForCategory;
     const currentIndex = list.findIndex((t) => t.text.trim() === inputText.trim());
     const nextIndex = (currentIndex + 1) % list.length;
     handleApplyTemplate(list[nextIndex]);
@@ -112,12 +130,6 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
       }
     }
   };
-
-  const currentTemplates = useMemo(() => {
-    const list = SMART_TRIP_TEMPLATES[activeCategory] || SMART_TRIP_TEMPLATES.driver;
-    if (directionFilter === 'all') return list;
-    return list.filter((t) => t.direction === directionFilter);
-  }, [activeCategory, directionFilter]);
 
   const synthesizedTrip = useMemo(() => {
     if (!parsedResult) return null;
@@ -331,7 +343,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                     : 'text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-slate-200'
                 }`}
               >
-                Tất cả
+                Tất cả ({allTemplatesForCategory.length})
               </button>
               <button
                 type="button"
@@ -342,7 +354,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                     : 'text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-slate-200'
                 }`}
               >
-                <span>➔ Chiều đi</span>
+                <span>➔ Chiều đi ({outboundCount})</span>
               </button>
               <button
                 type="button"
@@ -353,7 +365,7 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                     : 'text-[#6e6e73] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-slate-200'
                 }`}
               >
-                <span>⬅ Chiều về</span>
+                <span>⬅ Chiều về ({returnCount})</span>
               </button>
             </div>
 
@@ -370,8 +382,8 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
           </div>
         </div>
 
-        {/* Danh sách các chip mẫu bấm 1 chạm */}
-        <div className="flex items-center gap-2 overflow-x-auto py-1 px-1 -mx-1 scrollbar-none">
+        {/* Danh sách các chip mẫu bấm 1 chạm: flex-wrap hiển thị đầy đủ 100% */}
+        <div className="flex flex-wrap items-center gap-2 py-1 px-0.5">
           {currentTemplates.map((tmpl) => {
             const isSelected = inputText.trim() === tmpl.text.trim();
             return (
@@ -380,22 +392,24 @@ export default function SmartTripComposer({ onApply, onInstantSubmit, currentRol
                 type="button"
                 onClick={() => handleApplyTemplate(tmpl)}
                 title={tmpl.desc}
-                className={`text-[11px] px-3 py-1.5 rounded-xl border transition-all cursor-pointer text-left shrink-0 inline-flex items-center gap-1.5 select-none ${
+                className={`text-[11px] px-3 py-1.5 rounded-xl border transition-all cursor-pointer text-left inline-flex items-center gap-1.5 select-none ${
                   isSelected
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20 font-bold'
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20 font-bold shadow-xs'
                     : 'border-black/[0.08] dark:border-white/[0.08] bg-[#f5f5f7] dark:bg-slate-800/60 hover:bg-[#e8e8ed] dark:hover:bg-slate-700/80 text-[#424245] dark:text-slate-300 hover:text-[#1d1d1f] dark:hover:text-white'
                 }`}
               >
                 {tmpl.badge.includes('Gia đình') ? (
-                  <HeartHandshake className="w-3 h-3 text-pink-500 shrink-0" />
-                ) : tmpl.badge.includes('Gửi hàng') ? (
-                  <Package className="w-3 h-3 text-amber-500 shrink-0" />
+                  <HeartHandshake className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                ) : tmpl.badge.includes('Gửi hàng') || tmpl.badge.includes('xe máy') || tmpl.badge.includes('bưu phẩm') || tmpl.badge.includes('nông sản') ? (
+                  <Package className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                ) : tmpl.badge.includes('Bán tải') || tmpl.badge.includes('Xe tải') ? (
+                  <Truck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 ) : tmpl.badge.includes('sân bay') ? (
-                  <Plane className="w-3 h-3 text-sky-500 shrink-0" />
+                  <Plane className="w-3.5 h-3.5 text-sky-500 shrink-0" />
                 ) : tmpl.role === 'passenger' ? (
-                  <Users className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <Users className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 ) : (
-                  <Car className="w-3 h-3 text-[#0071e3] shrink-0" />
+                  <Car className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
                 )}
                 <span>{tmpl.title}</span>
               </button>
