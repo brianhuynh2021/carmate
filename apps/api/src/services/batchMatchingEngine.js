@@ -70,25 +70,26 @@ export function getCorridorDistanceKm(fromHubIdOrName, toHubIdOrName, corridor =
 export function calculateShapleyFairPrice({
   distanceKm,
   corridor = 'Tuyến QL13',
-  numPassengers = 1,
+  _numPassengers = 1,
   isDoorstep = false,
   otherPassengersCount = 0
 }) {
   const dist = Math.max(10, distanceKm || 100);
   const benchmark = ROUTE_BENCHMARKS[corridor] || ROUTE_BENCHMARKS['Tuyến QL13'] || {};
   
-  // Chi phí vận hành thực tế toàn xe: Xăng ~1.500đ/km + BOT bình quân
-  const estimatedFuelCost = Math.round(dist * 1500);
+  // Định mức chi phí chia sẻ thực tế theo cự ly lăn bánh (Xăng RON 95 + Khấu hao bảo dưỡng + Phí BOT cầu đường)
+  const isN2 = corridor?.includes('N2') || corridor?.includes('Kiên Giang');
+  const ratePerKm = isN2 ? 750 : 850;
   const botFee = benchmark.botFee || 45000;
-  const totalVehicleCost = estimatedFuelCost + botFee;
+  const botProportion = Math.min(botFee, Math.round((dist / (benchmark.distanceKm || 140)) * 25000));
 
-  // Giả định xe có 1 chủ xe + numPassengers khách đi cùng
-  const totalOccupants = 1 + Math.max(1, numPassengers);
-  let fairBasePrice = Math.round(totalVehicleCost / totalOccupants / 1000) * 1000;
+  // Cước cơ bản đón trả: 35.000đ + cước cự ly + BOT phân bổ theo chặng
+  const calculatedPerSeat = 35000 + Math.round(dist * ratePerKm) + botProportion;
+  let fairBasePrice = Math.round(calculatedPerSeat / 5000) * 5000;
 
   // Ràng buộc cận an toàn theo quy chuẩn
   const minSafe = benchmark.minSafePrice || 80000;
-  const maxSafe = benchmark.maxSafePrice || 220000;
+  const maxSafe = benchmark.maxSafePrice || 350000;
   fairBasePrice = Math.max(minSafe, Math.min(maxSafe, fairBasePrice));
 
   let finalPrice = fairBasePrice;
@@ -113,9 +114,8 @@ export function calculateShapleyFairPrice({
     finalPrice,
     distanceKm: dist,
     breakdown: {
-      fuelCost: estimatedFuelCost,
-      botFee,
-      totalVehicleCost,
+      ratePerKm,
+      botProportion,
       isDoorstep: Boolean(isDoorstep)
     }
   };

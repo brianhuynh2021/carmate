@@ -88,15 +88,20 @@ export default function Hero({
     setDestHubId(temp);
   };
 
-  // Tính cự ly và giá xăng chia sẻ dự kiến tức thì (< 1ms client-side)
+  // Tính cự ly và giá chia sẻ chi phí lăn bánh công bằng tức thì (< 1ms client-side)
   const pricingEstimate = useMemo(() => {
-    if (!originHub || !destHub) return { finalPrice: 140000, distanceKm: 110 };
-    const directKm = calculateDistanceKm(originHub.lat, originHub.lng, destHub.lat, destHub.lng) || 100;
+    if (!originHub || !destHub) return { finalPrice: 180000, distanceKm: 140 };
+    const directKm = calculateDistanceKm(originHub.lat, originHub.lng, destHub.lat, destHub.lng) || 120;
     const distKm = Math.max(15, Math.round(directKm * 1.28));
-    const fuel = Math.round(distKm * 1500);
-    const bot = 70000;
-    const baseShare = Math.round((fuel + bot) / 3 / 1000) * 1000;
-    const clampedBase = Math.max(80000, Math.min(220000, baseShare));
+    
+    // Định mức chi phí chia sẻ thực tế theo cự ly lăn bánh (Xăng RON 95 + Khấu hao hao mòn + Phí BOT cầu đường)
+    // Cước cơ bản đón trả trạm ảo: 35.000đ + 850đ/km + Phí BOT phân bổ theo chặng
+    const isN2 = corridor?.includes('N2') || corridor?.includes('Kiên Giang');
+    const ratePerKm = isN2 ? 750 : 850;
+    const botProportion = Math.min(30000, Math.round((distKm / 140) * 25000));
+    const calculatedPerSeat = 35000 + Math.round(distKm * ratePerKm) + botProportion;
+    const roundedBase = Math.round(calculatedPerSeat / 5000) * 5000;
+    const clampedBase = Math.max(50000, Math.min(300000, roundedBase));
     const surcharge = isDoorstep ? (DOORSTEP_CONFIG.DEFAULT_SURCHARGE || 40000) : 0;
 
     return {
@@ -105,7 +110,7 @@ export default function Hero({
       doorstepSurcharge: surcharge,
       finalPrice: (clampedBase + surcharge) * seats
     };
-  }, [originHub, destHub, isDoorstep, seats]);
+  }, [originHub, destHub, isDoorstep, seats, corridor]);
 
   // Mức giá thực tế (người dùng tự đặt hoặc theo chi phí xăng xe gợi ý)
   const effectivePrice = userSelectedPrice !== null ? userSelectedPrice : pricingEstimate.finalPrice;
