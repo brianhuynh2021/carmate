@@ -63,7 +63,6 @@ import {
   recordTripPattern,
   getTopPredictedTrip,
   getLastUsedCarProfile,
-  getDynamicRoutePriceBenchmark,
   computePredictedReturnTrip
 } from '../../utils/personaMemory.js';
 
@@ -363,15 +362,17 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     }
   }, [role, currentUser, savedCarProfile]);
 
-  // Định giá phụ xăng thông minh dựa trên cự ly km thực tế
-  const routePriceBenchmark = useMemo(() => {
-    return getDynamicRoutePriceBenchmark(fromLocation, toLocation);
-  }, [fromLocation, toLocation]);
-
   // Hệ thống Dải Biên Độ Giá Thông Minh (Price Guardrails) theo chuẩn Xe khách & Limousine
   const priceGuardrail = useMemo(() => {
     return getPriceGuardrail(fromLocation, toLocation, price);
   }, [fromLocation, toLocation, price]);
+
+  // Phân loại kiểu xe hiện tại từ vehicleCapacity
+  const vehicleType = useMemo(() => {
+    if (vehicleCapacity === 'truck_light') return 'truck_light';
+    if (vehicleCapacity === 'pickup') return 'pickup';
+    return Number(vehicleCapacity) === 7 ? '7_seater' : '5_seater';
+  }, [vehicleCapacity]);
 
   const [hasManuallyEditedPrice, setHasManuallyEditedPrice] = useState(false);
   const [showFairSplitModal, setShowFairSplitModal] = useState(false);
