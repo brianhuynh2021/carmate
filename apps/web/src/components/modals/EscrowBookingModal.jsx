@@ -15,7 +15,10 @@ import {
   Bell,
   ArrowRight,
   Loader2,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Package,
+  Box,
+  Truck
 } from 'lucide-react';
 import {
   formatVND,
@@ -24,7 +27,9 @@ import {
   getCorridorWaypoints,
   toPublicAlias,
   normalizePhoneNumber,
-  getPriceGuardrail
+  getPriceGuardrail,
+  CARGO_TYPES,
+  getRecommendedCargoPrice
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
@@ -145,6 +150,35 @@ export default function EscrowBookingModal({
     return false;
   }, [isOwner, item, currentUser]);
 
+  // Kiểm tra xe có nhận gửi hàng / xe bán tải / chuyến gửi đồ không
+  const acceptsCargo = Boolean(
+    item?.acceptsParcel ||
+    item?.vehicleType === 'pickup' ||
+    item?.hasCargoBed ||
+    item?.isCargoOnly ||
+    (item?.carType && /bán tải|ranger|hilux|triton|d-max/i.test(item.carType))
+  );
+
+  const [bookingMode, setBookingMode] = useState(() => (item?.isCargoOnly ? 'cargo' : 'passenger'));
+  const [selectedCargoPreset, setSelectedCargoPreset] = useState('produce_box');
+  const [cargoDescription, setCargoDescription] = useState('');
+
+  // Giá phụ xăng gửi hàng theo cự ly
+  const recommendedCargoPrice = useMemo(() => {
+    return getRecommendedCargoPrice(selectedCargoPreset, item?.distanceKm || 120);
+  }, [selectedCargoPreset, item?.distanceKm]);
+  const [proposedCargoPrice, setProposedCargoPrice] = useState(recommendedCargoPrice);
+
+  useEffect(() => {
+    setProposedCargoPrice(recommendedCargoPrice);
+  }, [recommendedCargoPrice]);
+
+  useEffect(() => {
+    if (item?.isCargoOnly) {
+      setBookingMode('cargo');
+    }
+  }, [item?.isCargoOnly]);
+
   const baseSeatPrice = item?.basePricePerSeat || item?.expectedPrice || item?.price || 180000;
   const [proposedUnitPrice, setProposedUnitPrice] = useState(baseSeatPrice);
   const [showNegotiate, setShowNegotiate] = useState(false);
@@ -169,6 +203,7 @@ export default function EscrowBookingModal({
 
   const effectiveUnitPrice = Number(proposedUnitPrice) || baseSeatPrice;
   const effectiveTotal = effectiveUnitPrice * seats;
+  const effectiveCargoTotal = Number(proposedCargoPrice) || recommendedCargoPrice;
 
   const handleSendInquiry = async () => {
     if (isTripOwner) {
@@ -179,31 +214,66 @@ export default function EscrowBookingModal({
     if (submitting) return;
     setSubmitting(true);
 
-    const bookingData = {
-      escrowId: bookingCode,
-      tripId: item.id,
-      targetTripId: item.id,
-      from: item.from,
-      to: item.to,
-      date: item.date,
-      time: item.time,
-      targetItem: item,
-      pickupPoint: pickupPoint.trim() || undefined,
-      passengerNote: passengerNote.trim() || undefined,
-      seats,
-      totalDeal: effectiveTotal,
-      proposedPricePerSeat: effectiveUnitPrice !== baseSeatPrice ? effectiveUnitPrice : undefined,
-      originalPricePerSeat: baseSeatPrice,
-      timeSlot,
-      passengerPhone: currentUser?.phone || undefined,
-      driverPhone: item.phoneReal,
-      contactPhone: currentUser?.phone || item.phoneReal,
-      status: 'inquiring',
-      commitmentType: 'inquiry_chat',
-      partyRole: isDriverItem ? 'Người đi cùng Chủ Xe' : 'Chủ xe đón Người đi cùng',
-      contactName: toPublicAlias(item),
-      createdAt: 'Vừa xong'
-    };
+    const isCargoBooking = bookingMode === 'cargo';
+    const cargoPreset = CARGO_TYPES[selectedCargoPreset];
+
+    const bookingData = isCargoBooking
+      ? {
+          escrowId: bookingCode,
+          tripId: item.id,
+          targetTripId: item.id,
+          from: item.from,
+          to: item.to,
+          date: item.date,
+          time: item.time,
+          targetItem: item,
+          pickupPoint: pickupPoint.trim() || undefined,
+          passengerNote: cargoDescription.trim()
+            ? `[Gửi đồ: ${cargoPreset?.name || 'Hàng tiện chuyến'}] ${cargoDescription.trim()}${passengerNote ? ' · ' + passengerNote : ''}`
+            : passengerNote.trim() || undefined,
+          seats: 0,
+          isCargoBooking: true,
+          cargoType: selectedCargoPreset,
+          cargoPresetName: cargoPreset?.name,
+          cargoDescription: cargoDescription.trim() || undefined,
+          totalDeal: effectiveCargoTotal,
+          proposedPricePerSeat: effectiveCargoTotal,
+          originalPricePerSeat: recommendedCargoPrice,
+          timeSlot,
+          passengerPhone: currentUser?.phone || undefined,
+          driverPhone: item.phoneReal,
+          contactPhone: currentUser?.phone || item.phoneReal,
+          status: 'inquiring',
+          commitmentType: 'inquiry_chat',
+          partyRole: 'Người gửi đồ ➔ Chủ xe',
+          contactName: toPublicAlias(item),
+          createdAt: 'Vừa xong'
+        }
+      : {
+          escrowId: bookingCode,
+          tripId: item.id,
+          targetTripId: item.id,
+          from: item.from,
+          to: item.to,
+          date: item.date,
+          time: item.time,
+          targetItem: item,
+          pickupPoint: pickupPoint.trim() || undefined,
+          passengerNote: passengerNote.trim() || undefined,
+          seats,
+          totalDeal: effectiveTotal,
+          proposedPricePerSeat: effectiveUnitPrice !== baseSeatPrice ? effectiveUnitPrice : undefined,
+          originalPricePerSeat: baseSeatPrice,
+          timeSlot,
+          passengerPhone: currentUser?.phone || undefined,
+          driverPhone: item.phoneReal,
+          contactPhone: currentUser?.phone || item.phoneReal,
+          status: 'inquiring',
+          commitmentType: 'inquiry_chat',
+          partyRole: isDriverItem ? 'Người đi cùng Chủ Xe' : 'Chủ xe đón Người đi cùng',
+          contactName: toPublicAlias(item),
+          createdAt: 'Vừa xong'
+        };
 
     try {
       const res = await api.createBooking(bookingData);
@@ -503,7 +573,13 @@ export default function EscrowBookingModal({
           ) : (
             <>
               <Zap className="w-5 h-5 text-amber-300 animate-pulse fill-amber-300" />
-              <span>{isDriverItem ? 'Gửi yêu cầu ghép ngay' : 'Gửi đề xuất đón ngay'}</span>
+              <span>
+                {bookingMode === 'cargo'
+                  ? 'Gửi yêu cầu chuyển đồ ngay'
+                  : isDriverItem
+                  ? 'Gửi yêu cầu ghép ngay'
+                  : 'Gửi đề xuất đón ngay'}
+              </span>
             </>
           )}
         </span>
@@ -559,32 +635,158 @@ export default function EscrowBookingModal({
           <RouteTimeline from={item.from} to={item.to} compact />
         </div>
 
-        {/* Chọn số lượng người cùng đi */}
-        {isDriverItem && (
-          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200">
-            <span className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary-600" />
-              Số người cùng đi:
-            </span>
-            <div className="inline-flex items-center gap-1.5 p-1 rounded-lg bg-slate-100">
-              {[1, 2, 3, 4]
-                .filter((n) => n <= maxSeats)
-                .map((n) => (
+        {/* Lựa chọn Ghép Ghế vs Gửi Đồ (Nếu xe nhận chở đồ hoặc xe bán tải) */}
+        {acceptsCargo && isDriverItem && !item.isCargoOnly && !isTripOwner && (
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/5">
+            <button
+              type="button"
+              onClick={() => setBookingMode('passenger')}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                bookingMode === 'passenger'
+                  ? 'bg-white dark:bg-[#1a2234] text-primary-600 dark:text-primary-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Đặt ghế đi cùng</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setBookingMode('cargo')}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                bookingMode === 'cargo'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'text-amber-700 dark:text-amber-400 hover:text-amber-800'
+              }`}
+            >
+              <Package className="w-3.5 h-3.5" />
+              <span>📦 Gửi đồ tiện chuyến</span>
+            </button>
+          </div>
+        )}
+
+        {/* Chọn số lượng người cùng đi hoặc Chọn gói thể tích gửi đồ */}
+        {bookingMode === 'cargo' ? (
+          <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 inline-flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5 text-amber-600" />
+                Chọn loại đồ cần gửi:
+              </span>
+              <span className="text-[11px] font-mono font-bold text-amber-700 dark:text-amber-300">
+                {formatVND(effectiveCargoTotal)}/kiện
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {Object.values(CARGO_TYPES).map((cargo) => {
+                const isSelected = selectedCargoPreset === cargo.id;
+                const estPrice = getRecommendedCargoPrice(cargo.id, item?.distanceKm || 120);
+                return (
                   <button
-                    key={n}
+                    key={cargo.id}
                     type="button"
-                    onClick={() => setSeats(n)}
-                    className={`w-8 h-8 rounded-md text-sm font-bold tabular cursor-pointer transition-all ${
-                      seats === n
-                        ? 'bg-white text-primary-700 shadow-xs font-black'
-                        : 'text-slate-600 hover:text-slate-900'
+                    onClick={() => {
+                      setSelectedCargoPreset(cargo.id);
+                      setProposedCargoPrice(estPrice);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-500/10 dark:bg-amber-500/20 ring-1 ring-amber-500/30'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 hover:border-slate-300'
                     }`}
                   >
-                    {n}
+                    <div className="flex items-center justify-between">
+                      <span className="text-base">{cargo.emoji}</span>
+                      <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">
+                        ~{formatVND(estPrice)}
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white mt-1 line-clamp-1">{cargo.name}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-tight">
+                      {cargo.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mô tả chi tiết đồ gửi */}
+            <div className="pt-1 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  Chi tiết đồ gửi (nông sản, bao bì, kích thước):
+                </label>
+                {cargoDescription && (
+                  <button
+                    type="button"
+                    onClick={() => setCargoDescription('')}
+                    className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    Xóa
+                  </button>
+                )}
+              </div>
+
+              {/* Quick chips 1-chạm */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                {[
+                  '🧊 Thùng xốp trái cây',
+                  '🌾 Bao gạo quê 20kg',
+                  '📦 Đồ sinh viên dọn trọ',
+                  '📄 Bưu phẩm hỏa tốc'
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setCargoDescription(chip)}
+                    className={`shrink-0 text-[10.5px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                      cargoDescription === chip
+                        ? 'bg-amber-100 text-amber-800 border-amber-300 font-bold'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {chip}
                   </button>
                 ))}
+              </div>
+
+              <input
+                type="text"
+                value={cargoDescription}
+                onChange={(e) => setCargoDescription(e.target.value)}
+                placeholder="VD: 1 thùng xốp mít sấy 15kg dán kín, gửi về ngã tư Bình Phước..."
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              />
             </div>
           </div>
+        ) : (
+          isDriverItem && (
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200">
+              <span className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary-600" />
+                Số người cùng đi:
+              </span>
+              <div className="inline-flex items-center gap-1.5 p-1 rounded-lg bg-slate-100">
+                {[1, 2, 3, 4]
+                  .filter((n) => n <= maxSeats)
+                  .map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setSeats(n)}
+                      className={`w-8 h-8 rounded-md text-sm font-bold tabular cursor-pointer transition-all ${
+                        seats === n
+                          ? 'bg-white text-primary-700 shadow-xs font-black'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )
         )}
 
         {/* Điểm đón mong muốn cụ thể với Hotspots & Dropdown Autocomplete */}
@@ -739,7 +941,7 @@ export default function EscrowBookingModal({
         </div>
 
         {/* Đề xuất mức chia sẻ chi phí (Thương lượng văn minh có dải giá an toàn) */}
-        {isDriverItem && (
+        {isDriverItem && bookingMode === 'passenger' && (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
@@ -811,29 +1013,53 @@ export default function EscrowBookingModal({
         )}
 
         {/* Chi phí chia sẻ minh bạch - 0% phí sàn, KHÔNG THU CỌC */}
-        <div className="p-3.5 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white flex items-center justify-between shadow-2xs">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-900">Chi phí chia sẻ ({seats} người)</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                0% phí sàn
-              </span>
+        {bookingMode === 'cargo' ? (
+          <div className="p-3.5 rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/60 to-white dark:from-amber-950/20 dark:to-slate-900 flex items-center justify-between shadow-2xs">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  Phụ phí gửi đồ ({CARGO_TYPES[selectedCargoPreset]?.shortLabel || 'Hàng tiện chuyến'})
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-300/60">
+                  0% phí sàn
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Giao nhận dọc trục đường thuận tiện · Thanh toán khi giao nhận hàng
+              </p>
             </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              {effectiveUnitPrice !== baseSeatPrice ? (
-                <span>Đề xuất: {formatVND(effectiveUnitPrice)}/ghế (Giá gốc {formatVND(baseSeatPrice)})</span>
-              ) : (
-                <span>Trọn gói xăng & cầu đường · Thanh toán khi lên xe</span>
-              )}
-            </p>
+            <div className="text-right">
+              <p className="font-display font-black text-xl text-amber-700 dark:text-amber-400 tabular leading-none">
+                {formatVND(effectiveCargoTotal)}
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="font-display font-black text-xl text-primary-700 tabular leading-none">
-              {formatVND(effectiveTotal)}
-            </p>
-            <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
+        ) : (
+          <div className="p-3.5 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white flex items-center justify-between shadow-2xs">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-900">Chi phí chia sẻ ({seats} người)</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                  0% phí sàn
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {effectiveUnitPrice !== baseSeatPrice ? (
+                  <span>Đề xuất: {formatVND(effectiveUnitPrice)}/ghế (Giá gốc {formatVND(baseSeatPrice)})</span>
+                ) : (
+                  <span>Trọn gói xăng & cầu đường · Thanh toán khi lên xe</span>
+                )}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-display font-black text-xl text-primary-700 tabular leading-none">
+                {formatVND(effectiveTotal)}
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </Modal>
   );

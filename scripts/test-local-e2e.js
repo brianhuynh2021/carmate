@@ -602,6 +602,83 @@ async function runTests() {
       assert(false, '16. Social Smart Match & Telegram Alert', err.message);
     }
 
+    // -------------------------------------------------------------
+    // 17. Kiểm thử Mở rộng Ghép Cốp & Thùng Bán Tải Tiện Tuyến (Cargo & Pickup Bed Sharing)
+    // -------------------------------------------------------------
+    console.log('\n--- 17. Kiểm thử Mở rộng Ghép Cốp & Thùng Bán Tải Tiện Tuyến ---');
+    try {
+      const {
+        CARGO_TYPES,
+        getRecommendedCargoPrice,
+        VEHICLE_SEAT_CONFIGS,
+        sanitizeVehicleCapacityAndSeats,
+        TIME_SLOTS
+      } = await import('@carmate/shared');
+
+      // 1. Kiểm tra 3 nhóm thể tích hàng gửi chuẩn bản địa
+      assert(Boolean(CARGO_TYPES.compact_parcel && CARGO_TYPES.produce_box && CARGO_TYPES.bulky_cargo), 'Cargo 1: Đủ 3 gói thể tích tiện tuyến (Bưu phẩm, Thùng xốp/Nông sản, Chuyển trọ)');
+      assert(CARGO_TYPES.produce_box.basePrice === 90000, 'Cargo 2: Gói thùng xốp có giá gốc định mức chuẩn 90.000đ');
+
+      // 2. Kiểm tra tính giá phụ xăng hàng gửi động theo cự ly
+      const shortDistPrice = getRecommendedCargoPrice('produce_box', 80);
+      const longDistPrice = getRecommendedCargoPrice('produce_box', 180);
+      assert(shortDistPrice > 0 && longDistPrice > shortDistPrice, 'Cargo 3: Phụ xăng thùng xốp tính tự động theo cự ly Geodesic');
+
+      // 3. Kiểm tra cấu hình xe bán tải (Cabin 5 chỗ, max 4 khách + Thùng ~800kg)
+      assert(VEHICLE_SEAT_CONFIGS.pickup?.hasCargoBed === true, 'Pickup 1: Xe bán tải nhận diện khoang thùng chở hàng riêng');
+      assert(VEHICLE_SEAT_CONFIGS.pickup?.maxPassengerSeats === 4, 'Pickup 2: Xe bán tải tuân thủ tối đa 4 ghế khách (trừ ghế lái)');
+
+      // 4. Chuẩn hóa xe bán tải qua hàm sanitizer
+      const pickupSanitized = sanitizeVehicleCapacityAndSeats('pickup', 6);
+      assert(pickupSanitized.vehicleType === 'pickup' && pickupSanitized.seats === 4, 'Pickup 3: Sanitizer tự động giới hạn 4 ghế khách cho xe bán tải');
+
+      // 5. Đăng chuyến xe bán tải thực tế qua API
+      const pickupTripRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'driver_offer',
+          phoneReal: '0988112233',
+          from: 'Bình Phước',
+          to: 'TP Hồ Chí Minh',
+          vehicleType: 'pickup',
+          carType: 'Ford Ranger Wildtrak (Xe bán tải)',
+          hasCargoBed: true,
+          acceptsParcel: true,
+          availableSeats: 3,
+          basePricePerSeat: 160000,
+          cargoNotes: 'Thùng xe rộng ~800kg có nắp cuộn chống nước, nhận gửi nông sản quê & đồ chuyển trọ'
+        })
+      });
+      const pickupTripData = await pickupTripRes.json();
+      assert(pickupTripRes.status === 201 && pickupTripData.data.hasCargoBed === true, 'Pickup 4: Đăng chuyến xe bán tải nhận chở hàng thành công (HTTP 201)');
+
+      // 6. Tạo yêu cầu gửi hàng thùng xốp tiện tuyến
+      const cargoBookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          targetId: pickupTripData.data.id,
+          from: 'Chơn Thành',
+          to: 'Bến xe Miền Đông',
+          contactPhone: '0933888999',
+          isCargoBooking: true,
+          cargoType: 'produce_box',
+          cargoDescription: '1 thùng xốp mít sấy 15kg bọc kín băng dính',
+          totalDeal: 100000,
+          seats: 0
+        })
+      });
+      const cargoBookingData = await cargoBookingRes.json();
+      assert(cargoBookingRes.status === 201 && cargoBookingData.data.isCargoBooking === true, 'Cargo 4: Gửi yêu cầu ghép hàng tiện tuyến thành công (HTTP 201)');
+
+      // 7. Kiểm tra chuẩn hóa khung giờ 24h sạch (không còn "Sáng" / "Chiều" thừa trong 24h format)
+      const slot0506 = TIME_SLOTS.find((s) => s.id === '05:00-06:00');
+      assert(slot0506 && !slot0506.short.includes('Sáng') && !slot0506.short.includes('AM'), 'TimeSlot 1: Chuẩn 24h sạch sẽ (05:00 — 06:00 không có từ thừa)');
+    } catch (err) {
+      assert(false, '17. Cargo & Pickup Bed Sharing Expansion', err.message);
+    }
+
   } finally {
     // -------------------------------------------------------------
     // Tự động dọn dẹp 100% dữ liệu tạm sau khi test hoàn tất

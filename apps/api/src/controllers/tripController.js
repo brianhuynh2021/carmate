@@ -306,10 +306,25 @@ export async function createTrip(req, res) {
 
     // Chuẩn hóa tải trọng xe và số ghế khách hợp lệ (Kháng chở quá tải Nghị định 100/2019)
     if (body.type === 'driver_offer' || body.availableSeats) {
-      const rawCapacity = body.capacity || body.vehicleSeats || (Number(body.availableSeats) > 4 ? 7 : 5);
-      const { capacity, seats } = sanitizeVehicleCapacityAndSeats(rawCapacity, body.availableSeats);
+      const rawCapacity =
+        body.vehicleType === 'pickup' || body.hasCargoBed
+          ? 'pickup'
+          : body.capacity || body.vehicleSeats || (Number(body.availableSeats) > 4 ? 7 : 5);
+      const { capacity, seats, vehicleType, hasCargoBed } = sanitizeVehicleCapacityAndSeats(
+        rawCapacity,
+        body.availableSeats
+      );
       body.capacity = capacity;
       body.availableSeats = seats;
+      if (vehicleType) body.vehicleType = vehicleType;
+      if (hasCargoBed !== undefined) body.hasCargoBed = hasCargoBed;
+    }
+
+    if (body.isCargoOnly) {
+      body.isCargoOnly = true;
+    }
+    if (body.acceptsParcel || body.vehicleType === 'pickup' || body.hasCargoBed) {
+      body.acceptsParcel = true;
     }
 
     if (req.user) {

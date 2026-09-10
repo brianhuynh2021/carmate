@@ -308,6 +308,25 @@ export default function InboxModal({
     const lastPartnerMsg = [...msgs].reverse().find((m) => !m.isSystem && m.senderRole !== myRole);
     const partnerText = (lastPartnerMsg?.text || '').toLowerCase();
 
+    // 0. Phân tích Intent: Gửi đồ / Thùng hàng / Thùng bán tải / Nông sản
+    const isCargoBooking = Boolean(activeBooking?.isCargoBooking || activeBooking?.cargoType);
+    if (isCargoBooking || /(gửi đồ|gui do|chở hàng|cho hang|thùng xốp|thung xop|bán tải|ban tai|kiện|nông sản|nong san|chuyển trọ|chuyen tro)/i.test(partnerText)) {
+      if (myRole === 'driver') {
+        return [
+          '📦 Xe nhận chở đồ nhé, cốp/thùng rộng rãi',
+          '🛻 Thùng xe có bạt che kín, đồ yên tâm sạch sẽ',
+          '📍 Bạn dán tên & SĐT người nhận lên kiện hàng nhé',
+          '✅ Bấm xác nhận chuyến để lấy SĐT gọi giao nhận nha'
+        ];
+      }
+      return [
+        '📦 Đồ của em đã bọc kín băng dính cẩn thận ạ',
+        '🧊 Em có thùng xốp nông sản quê gửi người nhà',
+        '📍 Người nhận sẽ ra đón xe nhận đồ đúng giờ ạ',
+        '✅ Em bấm xác nhận gửi hàng ngay ạ'
+      ];
+    }
+
     // 1. Phân tích Intent: Hỏi hoặc đề cập đến Hành lý / Vali / Thùng hàng
     if (/(vali|hành lý|hanh ly|đồ đạc|do dac|balo|thùng|thung|cốp|cop)/i.test(partnerText)) {
       if (myRole === 'driver') {
@@ -1123,10 +1142,16 @@ export default function InboxModal({
                         #{activeBooking.escrowId || activeBooking.id}
                       </span>
                     </div>
-                    <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                      {activeBooking.from} ➔ {activeBooking.to}
-                      {activeBooking.seats ? ` · ${activeBooking.seats} chỗ` : ''}
-                      {activeBooking.totalDeal ? ` · ${formatVND(activeBooking.totalDeal)}` : ''}
+                    <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <span>{activeBooking.from} ➔ {activeBooking.to}</span>
+                      {activeBooking.isCargoBooking ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                          📦 {activeBooking.cargoPresetName || 'Gửi đồ tiện chuyến'}
+                        </span>
+                      ) : activeBooking.seats ? (
+                        <span>· {activeBooking.seats} chỗ</span>
+                      ) : null}
+                      {activeBooking.totalDeal ? <span>· {formatVND(activeBooking.totalDeal)}</span> : ''}
                     </p>
                   </div>
                 </div>

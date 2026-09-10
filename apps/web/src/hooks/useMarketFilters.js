@@ -163,9 +163,17 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
       if (searchKeyword.trim()) {
         const kw = searchKeyword.toLowerCase();
         const perksStr = Array.isArray(item.perks) ? item.perks.join(' ') : '';
-        const parcelStr = item.acceptsParcel ? 'gửi hàng gửi đồ bưu phẩm' : '';
+        const isParcelOrPickup =
+          item.acceptsParcel ||
+          item.vehicleType === 'pickup' ||
+          item.hasCargoBed ||
+          /bán\s*tải|pickup|ranger|hilux|triton/i.test(item.carType || '');
+        const parcelStr = isParcelOrPickup
+          ? 'gửi hàng gửi đồ bưu phẩm thùng xốp bán tải pickup chuyển trọ cồng kềnh thùng xe'
+          : '';
+        const carStr = `${item.carType || ''} ${item.vehicleType || ''} ${item.cargoNotes || ''}`;
         const matchText =
-          `${item.from} ${item.to} ${item.routeCategory} ${item.hometown || ''} ${item.notes || ''} ${perksStr} ${parcelStr}`.toLowerCase();
+          `${item.from} ${item.to} ${item.routeCategory} ${item.hometown || ''} ${item.notes || ''} ${perksStr} ${parcelStr} ${carStr}`.toLowerCase();
         if (!matchText.includes(kw)) return false;
       }
       if (searchFrom.trim()) {

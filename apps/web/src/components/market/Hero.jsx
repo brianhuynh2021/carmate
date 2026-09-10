@@ -6,7 +6,8 @@ import {
   ArrowLeftRight,
   Search,
   X,
-  Package
+  Package,
+  Truck
 } from 'lucide-react';
 import { computeHotRoutes, DEFAULT_FALLBACK_ROUTES } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -43,7 +44,8 @@ export default function Hero({
     setSearchTo?.('');
   };
 
-  const isParcelActive = searchKeyword.toLowerCase().includes('gửi hàng');
+  const isParcelActive =
+    searchKeyword.toLowerCase().includes('gửi hàng') || searchKeyword.toLowerCase().includes('bán tải');
 
   const handleToggleParcel = () => {
     if (isParcelActive) {
@@ -288,23 +290,23 @@ export default function Hero({
               {/* Subtle divider */}
               <span className="h-4 w-px bg-black/[0.1] dark:bg-white/[0.1] shrink-0 mx-1" aria-hidden="true" />
 
-              {/* Tách riêng nút "Gửi đồ kèm xe" thành bộ lọc tinh tế, không tranh chấp màu với nút Tìm chuyến */}
+              {/* Tách riêng nút "Gửi đồ / Xe bán tải" thành bộ lọc tinh tế, không tranh chấp màu với nút Tìm chuyến */}
               <button
                 type="button"
                 onClick={handleToggleParcel}
-                title="Lọc các chuyến có nhận gửi hàng hoá, bưu phẩm kèm xe"
+                title="Lọc các chuyến có nhận gửi hàng hoá, bưu phẩm hoặc xe bán tải có thùng rỗng"
                 aria-pressed={isParcelActive}
                 className={`inline-flex items-center gap-1.5 h-7.5 px-3 rounded-full text-xs font-medium whitespace-nowrap select-none cursor-pointer transition-all duration-150 shrink-0 shadow-xs touch-manipulation active:scale-[0.98] outline-none ${
                   isParcelActive
-                    ? 'bg-amber-500/12 text-amber-900 border border-amber-400/50 font-semibold ring-1 ring-amber-400/20'
+                    ? 'bg-amber-500/15 text-amber-900 border border-amber-400/60 font-semibold ring-1 ring-amber-400/30'
                     : 'bg-white text-[#515154] border border-black/[0.08] hover:bg-[#f5f5f7] hover:border-black/[0.16] hover:text-[#1d1d1f]'
                 }`}
               >
-                <Package
+                <Truck
                   className={`w-3.5 h-3.5 ${isParcelActive ? 'text-amber-600' : 'text-[#86868b]'}`}
                   strokeWidth={2}
                 />
-                <span>Gửi đồ kèm xe</span>
+                <span>🛻 Nhận gửi đồ / Xe bán tải</span>
                 {isParcelActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ml-0.5" />}
               </button>
             </div>

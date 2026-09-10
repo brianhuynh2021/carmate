@@ -21,7 +21,10 @@ import {
   Camera,
   Upload,
   ShieldCheck,
-  Crosshair
+  Crosshair,
+  Truck,
+  Package,
+  Box
 } from 'lucide-react';
 import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot, VEHICLE_SEAT_CONFIGS, normalizePhotoUrl, parseLocation } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -48,9 +51,14 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   );
   const [price, setPrice] = useState(trip?.basePricePerSeat || trip?.expectedPrice || 150000);
   const [vehicleCapacity, setVehicleCapacity] = useState(() => {
+    if (trip?.vehicleType === 'pickup' || trip?.hasCargoBed || (trip?.carType && /bán tải|ranger|hilux|triton|d-max/i.test(trip?.carType))) {
+      return 'pickup';
+    }
     if (trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4)) return 7;
     return 5;
   });
+  const [acceptsParcel, setAcceptsParcel] = useState(() => Boolean(trip?.acceptsParcel || trip?.vehicleType === 'pickup' || trip?.hasCargoBed));
+  const [cargoNotes, setCargoNotes] = useState(() => trip?.cargoNotes || '');
   const [seats, setSeats] = useState(() => {
     const raw = trip?.availableSeats || trip?.seatsNeeded || 3;
     const max = trip?.capacity === 7 || (trip?.availableSeats && trip.availableSeats > 4) ? 6 : 4;
@@ -62,9 +70,12 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   const [waypointNote, setWaypointNote] = useState(trip?.waypointNote || '');
   const [notes, setNotes] = useState(trip?.notes || '');
   const [saving, setSaving] = useState(false);
-  const [carType, setCarType] = useState(
-    () => trip?.carType || (trip?.capacity === 7 ? 'Mitsubishi Xpander (Xe 7 chỗ)' : 'Toyota Vios (Xe 5 chỗ)')
-  );
+  const [carType, setCarType] = useState(() => {
+    if (trip?.carType) return trip.carType;
+    if (trip?.vehicleType === 'pickup' || trip?.hasCargoBed) return 'Ford Ranger (Xe bán tải)';
+    if (trip?.capacity === 7) return 'Mitsubishi Xpander (Xe 7 chỗ)';
+    return 'Toyota Vios (Xe 5 chỗ)';
+  });
   const [plateMask, setPlateMask] = useState(
     () => trip?.plateMask || trip?.plate || trip?.licensePlate || ''
   );
@@ -207,7 +218,12 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
       dropoffSpot: dropoffSpot.trim(),
       route: derivedRoute,
       routeCategory: derivedRoute,
-      capacity: isDriver ? vehicleCapacity : undefined,
+      capacity: isDriver ? (vehicleCapacity === 'pickup' ? 5 : Number(vehicleCapacity)) : undefined,
+      vehicleCapacity: isDriver ? vehicleCapacity : undefined,
+      vehicleType: isDriver ? (vehicleCapacity === 'pickup' ? 'pickup' : (vehicleCapacity === 7 ? 'mpv_suv' : 'sedan_cuv')) : undefined,
+      hasCargoBed: isDriver ? (vehicleCapacity === 'pickup' || Boolean(trip?.hasCargoBed)) : undefined,
+      acceptsParcel: isDriver ? Boolean(acceptsParcel) : undefined,
+      cargoNotes: isDriver && cargoNotes.trim() ? cargoNotes.trim() : undefined,
       carType: isDriver ? carType.trim() : undefined,
       carPhotos: isDriver ? validPhotos : undefined,
       hasCarPhotos: isDriver && validPhotos.length > 0,
@@ -511,50 +527,74 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] space-y-4 shadow-2xs">
             <div className="flex items-center justify-between text-xs sm:text-[13px]">
               <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <Car className="w-4 h-4 text-[#0071e3]" />
+                {vehicleCapacity === 'pickup' ? (
+                  <Truck className="w-4 h-4 text-amber-600" />
+                ) : (
+                  <Car className="w-4 h-4 text-[#0071e3]" />
+                )}
                 <span>Phương tiện di chuyển:</span>
               </span>
               <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                {vehicleCapacity === 5 ? '🚗 Xe 4–5 chỗ (Tối đa 4 khách)' : '🚙 Xe 7 chỗ (Tối đa 6 khách)'}
+                {vehicleCapacity === 'pickup'
+                  ? '🛻 Xe bán tải (Cabin 4 khách + Thùng ~800kg)'
+                  : vehicleCapacity === 7
+                  ? '🚙 Xe 7 chỗ (Tối đa 6 khách)'
+                  : '🚗 Xe 4–5 chỗ (Tối đa 4 khách)'}
               </span>
             </div>
 
-            {/* Quy mô 4-5 chỗ vs 7 chỗ */}
-            <div className="grid grid-cols-2 gap-2 p-1.5 rounded-2xl bg-[#e5e5ea] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.06]">
+            {/* Quy mô 4-5 chỗ vs 7 chỗ vs Bán tải */}
+            <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-[#e5e5ea] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.06]">
               <button
                 type="button"
                 onClick={() => {
                   setVehicleCapacity(5);
                   if (seats > 4) setSeats(4);
-                  if (carType.includes('Xpander') || carType.includes('7 chỗ')) {
+                  if (carType.includes('Xpander') || carType.includes('7 chỗ') || carType.includes('Ranger') || carType.includes('bán tải')) {
                     setCarType('Toyota Vios (Xe 5 chỗ)');
                   }
                 }}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none ${
+                className={`py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap select-none ${
                   vehicleCapacity === 5
                     ? 'bg-white dark:bg-slate-900 text-[#0071e3] dark:text-sky-400 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-black/[0.04] dark:border-white/[0.08]'
                     : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>🚗 Xe 4–5 chỗ</span>
-                <span className="text-[11px] font-normal opacity-80 hidden sm:inline">(Sedan/CUV)</span>
+                <span>🚗 4–5 chỗ</span>
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setVehicleCapacity(7);
-                  if (carType.includes('Vios') || carType.includes('5 chỗ')) {
+                  if (carType.includes('Vios') || carType.includes('5 chỗ') || carType.includes('Ranger') || carType.includes('bán tải')) {
                     setCarType('Mitsubishi Xpander (Xe 7 chỗ)');
                   }
                 }}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none ${
+                className={`py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap select-none ${
                   vehicleCapacity === 7
                     ? 'bg-white dark:bg-slate-900 text-[#0071e3] dark:text-sky-400 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-black/[0.04] dark:border-white/[0.08]'
                     : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <span>🚙 Xe 7 chỗ</span>
-                <span className="text-[11px] font-normal opacity-80 hidden sm:inline">(MPV/SUV)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVehicleCapacity('pickup');
+                  setAcceptsParcel(true);
+                  if (seats > 4) setSeats(4);
+                  if (!carType.includes('Ranger') && !carType.includes('bán tải') && !carType.includes('Hilux')) {
+                    setCarType('Ford Ranger (Xe bán tải)');
+                  }
+                }}
+                className={`py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap select-none ${
+                  vehicleCapacity === 'pickup'
+                    ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-black/[0.04] dark:border-white/[0.08]'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🛻 Bán tải</span>
               </button>
             </div>
 
@@ -568,7 +608,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                   type="text"
                   value={carType}
                   onChange={(e) => setCarType(e.target.value)}
-                  placeholder="VD: Mazda 3, Veloz Cross, Xpander..."
+                  placeholder="VD: Mazda 3, Veloz Cross, Xpander, Ford Ranger..."
                   className="w-full h-10 px-3.5 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] shadow-2xs"
                 />
               </div>
@@ -590,19 +630,51 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             {/* Preset chips */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Chọn nhanh:</span>
-              {(vehicleCapacity === 7
+              {(vehicleCapacity === 'pickup'
+                ? ['Ford Ranger', 'Toyota Hilux', 'Mitsubishi Triton', 'Isuzu D-Max', 'Nissan Navara']
+                : vehicleCapacity === 7
                 ? ['Mitsubishi Xpander', 'Toyota Veloz Cross', 'Toyota Innova', 'Kia Carnival', 'VinFast VF8']
                 : ['Toyota Vios', 'Mazda 3', 'Hyundai Accent', 'Honda City', 'Kia K3', 'VinFast VF5']
               ).map((preset) => (
                 <button
                   key={preset}
                   type="button"
-                  onClick={() => setCarType(`${preset} (Xe ${vehicleCapacity} chỗ)`)}
+                  onClick={() => setCarType(`${preset} (${vehicleCapacity === 'pickup' ? 'Xe bán tải' : `Xe ${vehicleCapacity} chỗ`})`)}
                   className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-black/[0.1] dark:border-white/[0.1] transition-colors cursor-pointer shadow-2xs"
                 >
                   {preset}
                 </button>
               ))}
+            </div>
+
+            {/* Nhận chở đồ / Thùng hàng bán tải */}
+            <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 space-y-2.5">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={acceptsParcel}
+                  onChange={(e) => setAcceptsParcel(e.target.checked)}
+                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300"
+                />
+                <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Nhận gửi hàng / bưu phẩm / thùng xốp tiện chuyến</span>
+                </span>
+              </label>
+
+              {acceptsParcel && (
+                <input
+                  type="text"
+                  value={cargoNotes}
+                  onChange={(e) => setCargoNotes(e.target.value)}
+                  placeholder={
+                    vehicleCapacity === 'pickup'
+                      ? 'VD: Thùng bán tải có nắp cuộn chống nước, nhận chuyển trọ sinh viên, nông sản quê...'
+                      : 'VD: Cốp rộng rãi nhận thùng xốp hoa quả, hải sản dán kín, bưu kiện gia đình...'
+                  }
+                  className="w-full text-xs p-2.5 rounded-xl border border-amber-200 dark:border-amber-800/80 bg-white dark:bg-[#151c2e] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-2xs"
+                />
+              )}
             </div>
 
             {/* Quản lý ảnh xe thật */}
