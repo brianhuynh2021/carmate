@@ -185,12 +185,12 @@ export default function Hero({
             isDoorstep,
             finalPrice: pricingEstimate.finalPrice
           });
-          onShowToast?.('✓ Tìm thấy chuyến ghép ổn định tối ưu toàn cục!', 'success');
+          onShowToast?.('✓ Đã tìm thấy chuyến xe phù hợp nhất với bạn!', 'success');
         } else {
-          onShowToast?.('Ý định đã được lưu vào phiên gom tự động (sẽ ghép trong 3 phút).', 'info');
+          onShowToast?.('Đã lưu yêu cầu của bạn, hệ thống đang tự động tìm xe phù hợp (trong 3 phút)!', 'info');
         }
       } else {
-        onShowToast?.('Ý định đã được lưu vào phiên gom tự động (sẽ ghép trong 3 phút).', 'info');
+        onShowToast?.('Đã lưu yêu cầu của bạn, hệ thống đang tự động tìm xe phù hợp (trong 3 phút)!', 'info');
       }
     } catch (err) {
       onShowToast?.(err.message || 'Lỗi điều phối tự động', 'error');

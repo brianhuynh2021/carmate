@@ -6,6 +6,55 @@
 export const POPULAR_LOCATIONS = [
   // ── BÌNH PHƯỚC & ĐÔNG NAM BỘ (TUYẾN QL13 & QL14) ──
   {
+    name: 'Chợ Bù Đốp / Bến xe Bù Đốp (TT. Thanh Bình)',
+    category: 'station',
+    detail: 'Đường ĐT759B, TT. Thanh Bình, Huyện Bù Đốp, Bình Phước',
+    icon: 'station',
+    keywords: ['bu dop', 'cho bu dop', 'ben xe bu dop', 'thanh binh', 'binh phuoc']
+  },
+  {
+    name: 'Chợ Tân Tiến / Cầu Tân Tiến (Bù Đốp)',
+    category: 'building',
+    detail: 'Đường ĐT759B, Xã Tân Tiến, Huyện Bù Đốp, Bình Phước',
+    icon: 'building',
+    keywords: ['tan tien', 'cho tan tien', 'cau tan tien', 'bu dop', 'binh phuoc']
+  },
+  {
+    name: 'Chợ Lộc Hiệp (Lộc Ninh)',
+    category: 'building',
+    detail: 'Đường ĐT759B, Xã Lộc Hiệp, Huyện Lộc Ninh, Bình Phước',
+    icon: 'building',
+    keywords: ['loc hiep', 'cho loc hiep', 'loc ninh', 'binh phuoc']
+  },
+  {
+    name: 'Ngã 3 Lộc Tấn (Giao ĐT759B & QL13)',
+    category: 'highway',
+    detail: 'Ngã 3 Lộc Tấn, Xã Lộc Tấn, Huyện Lộc Ninh, Bình Phước',
+    icon: 'highway',
+    keywords: ['loc tan', 'nga 3 loc tan', 'nga ba loc tan', 'loc ninh', 'ql13']
+  },
+  {
+    name: 'Cửa khẩu Quốc tế Hoa Lư',
+    category: 'highway',
+    detail: 'Quốc lộ 13, Xã Lộc Hòa, Huyện Lộc Ninh, Bình Phước',
+    icon: 'highway',
+    keywords: ['hoa lu', 'cua khau hoa lu', 'loc ninh', 'ql13']
+  },
+  {
+    name: 'Chợ Lộc Ninh (Khu phố Ninh Thịnh)',
+    category: 'building',
+    detail: 'Quốc lộ 13, TT. Lộc Ninh, Huyện Lộc Ninh, Bình Phước',
+    icon: 'building',
+    keywords: ['cho loc ninh', 'ninh thinh', 'loc ninh', 'cay xang 17', 'ql13']
+  },
+  {
+    name: 'Ngã 3 Thanh Lương',
+    category: 'highway',
+    detail: 'Quốc lộ 13, Xã Thanh Lương, TX. Bình Long, Bình Phước',
+    icon: 'highway',
+    keywords: ['thanh luong', 'nga 3 thanh luong', 'binh long', 'ql13']
+  },
+  {
     name: 'Trung tâm Hành chính Huyện Hớn Quản',
     category: 'building',
     detail: 'Khu phố 3, TT. Tân Khai, Huyện Hớn Quản, Bình Phước',
