@@ -211,8 +211,15 @@ export default function EscrowBookingModal({
         throw new Error(res?.error || 'Không thể tạo yêu cầu ghép chuyến');
       }
 
-      onConfirmBooking?.(bookingData, { keepModalOpen: true });
-      setIsSubmitted(true);
+      const createdBooking = res?.data || bookingData;
+      onConfirmBooking?.(createdBooking, { keepModalOpen: true });
+      if (onOpenInbox) {
+        onShowToast?.('🚗 Đã tạo kết nối! Đang mở phòng chat thương lượng ẩn danh...');
+        onClose();
+        onOpenInbox(bookingCode);
+      } else {
+        setIsSubmitted(true);
+      }
     } catch (apiErr) {
       const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể gửi yêu cầu ghép chuyến';
       onShowToast?.(errMsg);

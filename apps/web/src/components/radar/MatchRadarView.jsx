@@ -15,7 +15,6 @@ import {
 import {
   ROUTE_BENCHMARKS,
   formatVND,
-  getZaloChatUrl,
   isTripExpired,
   formatCleanDateLabel,
   getTimeSlotLabel,
@@ -437,21 +436,12 @@ export default function MatchRadarView({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (passenger.phoneReal) {
-                                const url = getZaloChatUrl(
-                                  passenger.phoneReal,
-                                  `Chào bạn ${passenger.publicName}, mình là chủ xe CarMate có chuyến tiện đường cùng tuyến với bạn. Mình đón bạn nhé!`
-                                );
-                                if (url) window.open(url, '_blank');
-                                else onBook?.(passenger);
-                              } else {
-                                onBook?.(passenger);
-                              }
+                              onBook?.(passenger);
                             }}
-                            className="h-8.5 px-3.5 rounded-full text-xs font-bold bg-[#107c41] hover:bg-emerald-700 text-white shadow-xs active:scale-95 transition-all inline-flex items-center gap-1 cursor-pointer"
+                            className="h-8.5 px-3.5 rounded-full text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-xs active:scale-95 transition-all inline-flex items-center gap-1 cursor-pointer"
                           >
-                            <ZaloIcon className="w-3.5 h-3.5" />
                             <span>Đón khách này</span>
+                            <ArrowRight className="w-3 h-3" />
                           </button>
                         )}
                       </div>
