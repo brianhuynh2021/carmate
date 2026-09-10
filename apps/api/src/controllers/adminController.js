@@ -17,7 +17,13 @@ import {
   updateBookingStatus,
   getTrustRules,
   saveTrustRules,
-  resetTrustRules
+  resetTrustRules,
+  getDeletionRequests,
+  processDeletionRequest,
+  deleteUserAccount,
+  clearAiTrajectories,
+  clearAnalyticsEvents,
+  clearSupportMessages
 } from '../db/sqliteStore.js';
 
 const JWT_SECRET = getJwtSecret();
@@ -143,9 +149,13 @@ export async function adminAuth(req, res) {
       if (!isProduction) {
         console.log(`\n🔔 [MFA RESEND LOCAL] Mã OTP mới là: \x1b[32m\x1b[1m${newOtp}\x1b[0m`);
       }
+      const hasTelegram = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_LOG_CHAT_ID);
+      const actuallySentTelegram = hasTelegram && (isProduction || process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true');
       return res.status(200).json({
         success: true,
-        message: 'Đã gửi lại mã OTP mới qua Telegram.'
+        viaTelegram: actuallySentTelegram,
+        devOtp: !isProduction ? newOtp : undefined,
+        message: actuallySentTelegram ? 'Đã gửi lại mã OTP mới qua Telegram.' : 'Đã tạo mã OTP mới.'
       });
     }
 
@@ -168,7 +178,9 @@ export async function adminAuth(req, res) {
       }
 
       session.attempts = (session.attempts || 0) + 1;
-      const inputMfa = typeof mfaCode === 'string' ? mfaCode.trim() : '';
+      const rawInput = typeof mfaCode === 'string' ? mfaCode.trim() : '';
+      // Ở môi trường local dev: Mặc định 123456 để test nhanh 0 gõ phím
+      const inputMfa = rawInput || (!isProduction ? '123456' : '');
 
       let isValidMfa = false;
       // 1) Khớp mã OTP Telegram động
@@ -180,7 +192,7 @@ export async function adminAuth(req, res) {
       if (staticMfa && inputMfa === staticMfa.trim()) {
         isValidMfa = true;
       }
-      // 3) Chế độ test/dev local fallback
+      // 3) Chế độ test/dev local fallback: luôn chấp nhận 123456 làm mặc định
       if (!isProduction && inputMfa === '123456') {
         isValidMfa = true;
       }
@@ -318,14 +330,19 @@ export async function adminAuth(req, res) {
       );
     }
 
+    const actuallySentTelegram = hasTelegram && (isProduction || process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true');
+
     return res.status(200).json({
       success: true,
       requireMfa: true,
       mfaSessionId: newSessionId,
-      viaTelegram: hasTelegram,
-      message: hasTelegram
+      viaTelegram: actuallySentTelegram,
+      devOtp: !isProduction ? otp : undefined,
+      message: actuallySentTelegram
         ? 'Mật mã chính xác. Mã OTP 6 số đã được gửi trực tiếp tới Telegram của bạn.'
-        : 'Mật mã chính xác. Vui lòng nhập mã OTP để hoàn tất đăng nhập.'
+        : (!isProduction
+            ? 'Mật mã chính xác. Đang ở môi trường Local Development (mã OTP được hiển thị trực tiếp).'
+            : 'Mật mã chính xác. Vui lòng nhập mã OTP để hoàn tất đăng nhập.')
     });
   } catch (err) {
     console.error('[Admin Auth Error]:', err);
@@ -639,6 +656,104 @@ export function resetAdminTrustRulesHandler(req, res) {
       success: true,
       message: 'Đã khôi phục quy tắc tín nhiệm về mặc định',
       data: defaultRules
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/admin/deletion-requests - Lấy danh sách các yêu cầu xóa tài khoản
+ */
+export function listDeletionRequestsHandler(req, res) {
+  try {
+    const { status } = req.query || {};
+    const requests = getDeletionRequests(status);
+    return res.status(200).json({
+      success: true,
+      total: requests.length,
+      data: requests
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/admin/deletion-requests/:id/process - Quản trị viên xử lý yêu cầu xóa (Duyệt hoặc Từ chối)
+ */
+export async function processDeletionRequestHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { action, note } = req.body || {};
+
+    if (!action || (action !== 'approved' && action !== 'rejected')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Hành động không hợp lệ. Vui lòng truyền action: "approved" hoặc "rejected".'
+      });
+    }
+
+    const adminName = req.admin?.role === 'super_admin' ? 'Super Admin' : 'Quản trị viên';
+    const result = await processDeletionRequest(id, action, adminName);
+
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error('[Admin Process Deletion Request Error]:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/admin/users/:id - Quản trị viên chủ động xóa tài khoản thành viên
+ */
+export async function deleteUserAdminHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await deleteUserAccount(id);
+    return res.status(200).json({
+      success: true,
+      message: 'Đã xóa vĩnh viễn tài khoản thành viên khỏi hệ thống.',
+      details: result
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/admin/ai-trajectories - Xóa toàn bộ quỹ đạo AI để làm sạch telemetry
+ */
+export function clearAdminAiTrajectories(req, res) {
+  try {
+    const deletedCount = clearAiTrajectories();
+    return res.status(200).json({
+      success: true,
+      message: `Đã dọn sạch ${deletedCount} quỹ đạo AI`,
+      count: deletedCount
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/admin/test-data - Dọn sạch toàn bộ dữ liệu kiểm thử (Analytics, AI Trajectories, Support Messages)
+ */
+export function clearAdminTestData(req, res) {
+  try {
+    const trajCount = clearAiTrajectories();
+    const analyticsCount = clearAnalyticsEvents();
+    const supportCount = clearSupportMessages();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã dọn sạch toàn bộ dữ liệu kiểm thử thành công',
+      data: {
+        aiTrajectoriesCleared: trajCount,
+        analyticsCleared: analyticsCount,
+        supportMessagesCleared: supportCount
+      }
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

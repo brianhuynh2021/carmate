@@ -12,8 +12,8 @@ import {
   saveUser,
   isUserDeactivated
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
-import { sendBusinessAlert } from '../utils/telegramAlert.js';
+import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
+import { sendBusinessAlert, sendSmartMatchTelegramAlert } from '../utils/telegramAlert.js';
 
 /**
  * Che giấu thông tin định danh cá nhân (PII Protection - Nghị định 13/2023/NĐ-CP)
@@ -286,6 +286,24 @@ export async function createTrip(req, res) {
       body.expectedPrice = Number(body.suggestedContribution);
     }
 
+    // BẤT BIẾN MIT: Kiểm tra Dải giá an toàn (Price Guardrail Invariant)
+    const tripPrice = Number(body.basePricePerSeat || body.expectedPrice || 0);
+    if (tripPrice > 0) {
+      const guardrail = getPriceGuardrail(body.from, body.to, tripPrice);
+      if (tripPrice < 15000 && (guardrail?.distanceKm || 0) > 30) {
+        return res.status(400).json({
+          success: false,
+          error: 'Mức phụ xăng quá thấp (tối thiểu 15.000đ cho chuyến liên tỉnh). Vui lòng nhập mức chia sẻ hợp lý.'
+        });
+      }
+      if (guardrail?.maxSafePrice && tripPrice > guardrail.maxSafePrice * 3) {
+        return res.status(400).json({
+          success: false,
+          error: `Mức phụ xăng quá cao (${tripPrice.toLocaleString('vi-VN')}đ). CarMate là nền tảng chia sẻ chi phí xe gia đình văn minh, không hỗ trợ giá kinh doanh dịch vụ riêng.`
+        });
+      }
+    }
+
     // Chuẩn hóa tải trọng xe và số ghế khách hợp lệ (Kháng chở quá tải Nghị định 100/2019)
     if (body.type === 'driver_offer' || body.availableSeats) {
       const rawCapacity = body.capacity || body.vehicleSeats || (Number(body.availableSeats) > 4 ? 7 : 5);
@@ -330,6 +348,39 @@ export async function createTrip(req, res) {
       },
       req
     }).catch(() => {});
+
+    // Radar AI Omni-channel: Tự động phát hiện và gửi thông báo cho các đối tác khớp lộ trình cao (>= 85%)
+    setTimeout(async () => {
+      try {
+        const targetType = newTrip.type === 'driver_offer' ? 'passengers' : 'drivers';
+        const oppositeCandidates = getTrips({
+          type: targetType,
+          routeCategory: newTrip.routeCategory,
+          direction: newTrip.direction,
+          includeHidden: false
+        }).filter((c) => !c.status || (c.status !== 'cancelled' && c.status !== 'completed'));
+
+        for (const candidate of oppositeCandidates) {
+          if (candidate.id === newTrip.id) continue;
+          let score = 75;
+          if (newTrip.direction && candidate.direction && newTrip.direction === candidate.direction) score += 10;
+          if (newTrip.timeSlot && candidate.timeSlot && newTrip.timeSlot === candidate.timeSlot) score += 10;
+          if (score >= 85) {
+            const targetTelegramId = candidate.telegramId || (candidate.userId ? getUserById(candidate.userId)?.telegramId : null);
+            if (targetTelegramId) {
+              await sendSmartMatchTelegramAlert({
+                targetTelegramId,
+                matchedTrip: newTrip,
+                score,
+                req
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Auto Match Notification Error]:', err.message);
+      }
+    }, 50);
 
     return res.status(201).json({
       success: true,

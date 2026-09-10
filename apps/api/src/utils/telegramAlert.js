@@ -68,7 +68,7 @@ export function isLocalhostRequest(req = null, error = null) {
  */
 export async function sendTelegramMessage(text, options = {}) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_LOG_CHAT_ID;
+  const chatId = options.chatId || process.env.TELEGRAM_LOG_CHAT_ID;
 
   if (!token || !chatId) {
     return false;
@@ -247,11 +247,66 @@ export async function sendBusinessAlert({ title, details = {}, req = null }) {
   return sendTelegramMessage(message, { parseMode: 'HTML', disableNotification: false, req });
 }
 
+// Bộ đệm chống spam thông báo khớp chuyến liên tiếp (2 giờ cho mỗi cặp người/chuyến)
+const matchAlertCooldownMap = new Map();
+const MATCH_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 tiếng
+
+/**
+ * Gửi thông báo gợi ý bạn đồng hành khớp lộ trình qua Telegram Bot (0đ)
+ * Chuẩn MIT & Anti-Spam: Chỉ gửi khi độ khớp cao, có cooldown 2 tiếng, không để lộ PII.
+ */
+export async function sendSmartMatchTelegramAlert({ targetTelegramId, matchedTrip, score = 90, fuelSavings = 0, req = null }) {
+  if (!targetTelegramId || !matchedTrip) return false;
+
+  const cleanChatId = String(targetTelegramId).trim();
+  const key = `${cleanChatId}_${matchedTrip.id}`;
+  const now = Date.now();
+  const lastSent = matchAlertCooldownMap.get(key) || 0;
+  if (now - lastSent < MATCH_COOLDOWN_MS) {
+    return false; // Đã gửi trong 2h qua, chặn spam
+  }
+  matchAlertCooldownMap.set(key, now);
+
+  // Dọn dẹp cache nếu quá lớn
+  if (matchAlertCooldownMap.size > 500) {
+    for (const [k, time] of matchAlertCooldownMap.entries()) {
+      if (now - time > MATCH_COOLDOWN_MS) {
+        matchAlertCooldownMap.delete(k);
+      }
+    }
+  }
+
+  const isDriver = matchedTrip.type === 'driver_offer';
+  const roleName = isDriver ? `Chủ xe ${matchedTrip.maskedCode || 'CX'}` : `Khách đi cùng ${matchedTrip.maskedCode || 'KX'}`;
+  const routeName = matchedTrip.routeCategory || 'Hành lang di chuyển';
+  const fromTo = `${matchedTrip.from || 'Điểm đón'} ➔ ${matchedTrip.to || 'Điểm đến'}`;
+  const timeStr = matchedTrip.departureTime || matchedTrip.date || 'Sắp khởi hành';
+  const savingsText = fuelSavings > 0 ? `\n💰 <b>Chia sẻ tiền xăng:</b> ~${fuelSavings.toLocaleString('vi-VN')} ₫` : '';
+
+  const message =
+    `🚗 <b>[CARMATE RADAR AI - KHỚP ${score}%]</b>\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `👋 Chào bạn, vừa phát hiện <b>${roleName}</b> có lộ trình khớp hoàn hảo với bạn!\n\n` +
+    `📍 <b>Tuyến:</b> ${escapeHtml(routeName)}\n` +
+    `🛣️ <b>Lộ trình:</b> ${escapeHtml(fromTo)}\n` +
+    `⏰ <b>Thời gian:</b> ${escapeHtml(timeStr)}${savingsText}\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `👉 <a href="https://carmate.vn/?matchTripId=${matchedTrip.id}">Nhấp vào đây để xem và kết nối ngay</a>`;
+
+  return sendTelegramMessage(message, {
+    chatId: cleanChatId,
+    parseMode: 'HTML',
+    disableNotification: false,
+    req
+  });
+}
+
 /**
  * Hàm hỗ trợ Unit Testing dọn dẹp cache
  */
 export function _resetDeduplicationCache() {
   alertCache.clear();
+  matchAlertCooldownMap.clear();
 }
 export function _getDeduplicationCacheSize() {
   return alertCache.size;

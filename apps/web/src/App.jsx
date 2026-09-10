@@ -17,6 +17,7 @@ import AppleMacNotification from './components/common/AppleMacNotification.jsx';
 import Hero from './components/market/Hero.jsx';
 import RouteBenchmarkBar from './components/market/RouteBenchmarkBar.jsx';
 import TripCard from './components/market/TripCard.jsx';
+import SocialMatchBar from './components/social/SocialMatchBar.jsx';
 
 // Views
 import PostTripForm from './components/post/PostTripForm.jsx';
@@ -685,6 +686,26 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [currentUser, driverOffers, passengerRequests, updateMyTripsCount]);
 
+  // Quản lý Social Smart Match Suggestions (Ambient Intelligence)
+  const [socialMatches, setSocialMatches] = useState([]);
+
+  const loadSocialMatches = useCallback(async () => {
+    try {
+      const params = {};
+      if (searchKeyword) params.routeCategory = searchKeyword;
+      const res = await api.getSocialMatches(params);
+      if (res?.success && Array.isArray(res?.data)) {
+        setSocialMatches(res.data);
+      }
+    } catch (err) {
+      console.warn('[SocialMatch] Lỗi tải gợi ý khớp:', err);
+    }
+  }, [searchKeyword]);
+
+  useEffect(() => {
+    loadSocialMatches();
+  }, [loadSocialMatches, driverOffers.length, passengerRequests.length]);
+
   // Phím tắt toàn cục ⌘K / Ctrl+K mở AI Trợ lý, ⌘+Shift+A mở Cổng Quản trị
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -947,6 +968,7 @@ export default function App() {
         onMarkAsUnread={markBookingAsUnread}
         readBookingTimestamps={readBookingTimestamps}
         unreadBookingIds={unreadBookingIds}
+        socialMatches={socialMatches}
       />
 
       <main className="flex-1 pb-24 md:pb-0">
@@ -972,6 +994,13 @@ export default function App() {
                 setSearchKeyword={setSearchKeyword}
                 forceOpen={showBenchmarkModal}
                 onCloseForced={() => setShowBenchmarkModal(false)}
+              />
+
+              {/* Gợi ý ghép xe tức thì thông minh CarMate Smart Match */}
+              <SocialMatchBar
+                suggestions={socialMatches}
+                onSelectTrip={setSelectedTripForRoute}
+                onConnectMatch={handleInitiateBook}
               />
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5 pb-0.5">
@@ -1391,6 +1420,8 @@ export default function App() {
           onClose={() => setTicketToShare(null)}
           onShowToast={showToast}
           onViewInMarket={handleViewTripInMarket}
+          onSelectTrip={setSelectedTripForRoute}
+          onConnectMatch={handleInitiateBook}
         />
       )}
       {editingTrip && (
@@ -1476,6 +1507,7 @@ export default function App() {
           onClose={() => setShowProfileModal(false)}
           onSave={handleSaveProfile}
           onShowToast={showToast}
+          onOpenDeleteAccount={() => setShowDeleteAccountModal(true)}
         />
       )}
 

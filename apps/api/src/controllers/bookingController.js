@@ -14,7 +14,7 @@ import {
   resolveDisputeAndUnban,
   isUserDeactivated
 } from '../db/sqliteStore.js';
-import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone } from '@carmate/shared';
+import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import crypto from 'crypto';
 import { sendBusinessAlert, sendTelegramMessage } from '../utils/telegramAlert.js';
 
@@ -170,6 +170,31 @@ export async function createBooking(req, res) {
         body.phoneReal = tripPhoneFinal || body.phoneReal;
         body.contactName = targetTrip.publicName || body.contactName;
         body.targetTripId = targetTrip.id;
+        body.date = body.date || targetTrip.date;
+        body.time = body.time || targetTrip.time;
+        body.timeSlot = body.timeSlot || targetTrip.timeSlot || targetTrip.time;
+        body.targetTrip = targetTrip;
+        body.targetItem = body.targetItem || targetTrip;
+      }
+    }
+
+    // BẤT BIẾN MIT: Kiểm tra tính hợp lệ của chi phí thoả thuận (Price Guardrail)
+    const dealPrice = Number(body.totalDeal || body.price || 0);
+    const seatsCount = Math.max(1, Number(body.seats || 1));
+    const perSeatPrice = Math.round(dealPrice / seatsCount);
+    if (dealPrice > 0) {
+      const guardrail = getPriceGuardrail(body.from, body.to, perSeatPrice);
+      if (perSeatPrice < 15000 && (guardrail?.distanceKm || 0) > 30) {
+        return res.status(400).json({
+          success: false,
+          error: 'Mức phụ xăng đề xuất quá thấp (tối thiểu 15.000đ cho chuyến liên tỉnh).'
+        });
+      }
+      if (guardrail?.maxSafePrice && perSeatPrice > guardrail.maxSafePrice * 3) {
+        return res.status(400).json({
+          success: false,
+          error: 'Mức phụ xăng vượt quá khung chia sẻ tối đa cho phép.'
+        });
       }
     }
 

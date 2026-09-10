@@ -47,6 +47,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [mfaSessionId, setMfaSessionId] = useState('');
   const [requireMfa, setRequireMfa] = useState(false);
   const [mfaViaTelegram, setMfaViaTelegram] = useState(false);
+  const [devOtp, setDevOtp] = useState('');
   const [mfaCountdown, setMfaCountdown] = useState(180); // 3 phút
   const [isResendingMfa, setIsResendingMfa] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -78,6 +79,11 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [noticeType, setNoticeType] = useState('success'); // 'success' | 'error'
   const [adminTripToDelete, setAdminTripToDelete] = useState(null);
   const [adminUserToBan, setAdminUserToBan] = useState(null);
+  const [deletionRequests, setDeletionRequests] = useState([]);
+  const [adminReqToProcess, setAdminReqToProcess] = useState(null); // { req, action: 'approved' | 'rejected' }
+  const [showClearDataModal, setShowClearDataModal] = useState(false);
+  const [clearTarget, setClearTarget] = useState('all'); // 'all' | 'analytics' | 'ai'
+  const [isClearing, setIsClearing] = useState(false);
 
   // Đếm ngược thời gian hết hạn OTP 3 phút
   useEffect(() => {
@@ -109,6 +115,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
         setRequireMfa(true);
         setMfaSessionId(res.mfaSessionId || '');
         setMfaViaTelegram(Boolean(res.viaTelegram));
+        if (res.devOtp) setDevOtp(res.devOtp);
+        // Ở môi trường Local Dev: Tự động điền mặc định 123456 để test nhanh 0 gõ phím
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocal || res.devOtp) {
+          setMfaCode('123456');
+        }
         setMfaCountdown(180);
         setIsLoading(false);
         return;
@@ -134,7 +146,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
       const res = await api.resendAdminMfa(mfaSessionId);
       if (res.success) {
         setMfaCountdown(180);
-        setAuthNotice('Đã gửi lại mã OTP mới qua Telegram!');
+        if (res.devOtp) setDevOtp(res.devOtp);
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocal || res.devOtp) {
+          setMfaCode('123456');
+        }
+        setAuthNotice(res.message || 'Đã gửi lại mã OTP mới!');
         setTimeout(() => setAuthNotice(''), 4000);
       }
     } catch (err) {
@@ -158,14 +175,15 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const loadAllAdminData = async () => {
     setIsLoading(true);
     try {
-      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes, trustRulesRes] = await Promise.allSettled([
+      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes, trustRulesRes, delReqRes] = await Promise.allSettled([
         api.getAdminMetrics(),
         api.getAdminTrips(),
         api.getAdminUsers(),
         api.getAdminReports(),
         api.getAdminAiIntelligence(),
         api.getAdminAnalyticsSummary(),
-        api.getAdminTrustRules()
+        api.getAdminTrustRules(),
+        api.getAdminDeletionRequests()
       ]);
 
       if (metricsRes.status === 'fulfilled' && metricsRes.value?.success) {
@@ -190,6 +208,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
         setTrustRules(trustRulesRes.value.data);
       } else {
         setTrustRules((prev) => (prev.length > 0 ? prev : DEFAULT_TRUST_RULES));
+      }
+      if (delReqRes.status === 'fulfilled' && delReqRes.value?.success) {
+        setDeletionRequests(delReqRes.value.data || []);
       }
     } catch (err) {
       console.warn('[Admin] Lỗi nạp dữ liệu:', err);
@@ -355,6 +376,26 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
+  const handleExecuteProcessDeletion = async () => {
+    if (!adminReqToProcess) return;
+    const { req, action } = adminReqToProcess;
+    setAdminReqToProcess(null);
+    setIsLoading(true);
+    try {
+      const res = await api.processAdminDeletionRequest(req.id, action);
+      if (res.success) {
+        showNotice(res.message || 'Đã xử lý yêu cầu xóa tài khoản thành công', 'success');
+        loadAllAdminData();
+      } else {
+        showNotice(res.error || 'Không thể xử lý yêu cầu', 'error');
+      }
+    } catch (err) {
+      showNotice(err.message || 'Lỗi khi xử lý yêu cầu xóa tài khoản', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleConvertCarCategory = async (tripId, bookingId, targetCategory = 'convenient_trip') => {
     try {
       const res = await api.adminConvertCarCategory(tripId, targetCategory, bookingId);
@@ -383,6 +424,28 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
+  const handleExecuteClearData = async () => {
+    setIsClearing(true);
+    try {
+      if (clearTarget === 'analytics') {
+        const res = await api.adminClearAnalytics();
+        showNotice(res?.message || 'Đã dọn sạch dữ liệu phân tích!');
+      } else if (clearTarget === 'ai') {
+        const res = await api.adminClearAiTrajectories();
+        showNotice(res?.message || 'Đã dọn sạch dữ liệu AI Trajectories!');
+      } else {
+        const res = await api.adminClearTestData();
+        showNotice(res?.message || 'Đã dọn sạch toàn bộ dữ liệu kiểm thử & log!');
+      }
+      setShowClearDataModal(false);
+      await loadAllAdminData();
+    } catch (err) {
+      showNotice(err?.message || 'Không thể dọn dữ liệu, vui lòng thử lại', 'error');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   // MÀN HÌNH ĐĂNG NHẬP ADMIN NẾU CHƯA XÁC THỰC
   if (!isAuthenticated) {
     return (
@@ -404,12 +467,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/50 text-xs space-y-1.5">
                   <div className="flex items-center gap-2 text-sky-700 dark:text-sky-300 font-bold">
                     <Send className="w-4 h-4 text-sky-500 shrink-0" />
-                    <span>Mã OTP đã được gửi đến Telegram</span>
+                    <span>{mfaViaTelegram ? 'Mã OTP đã được gửi đến Telegram' : 'Mã Xác Thực Quản Trị Viên (Dev Local)'}</span>
                   </div>
                   <p className="text-slate-600 dark:text-slate-400 text-[11.5px] leading-relaxed">
                     {mfaViaTelegram
                       ? 'Vui lòng kiểm tra ứng dụng Telegram trên điện thoại của bạn để lấy mã xác thực 6 số.'
-                      : 'Mật mã chính xác. Vui lòng nhập mã xác thực OTP 6 số để hoàn tất đăng nhập.'}
+                      : 'Đang ở môi trường Local Development (chặn gửi Telegram thật để chống spam). Dùng mã bên dưới hoặc 123456.'}
                   </p>
                   <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                     <span>Thời hạn mã:</span>
@@ -436,6 +499,29 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     className="w-full h-12 px-4 text-center tracking-[0.4em] font-mono text-xl font-black rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/40"
                   />
                 </div>
+
+                {(devOtp || !mfaViaTelegram) && (
+                  <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 flex items-center justify-between gap-3 text-xs">
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                        <span>⚡ Mã OTP Local:</span>
+                        <code className="font-mono font-black text-sm bg-amber-200/60 dark:bg-amber-800/60 px-1.5 py-0.5 rounded text-amber-950 dark:text-amber-100">
+                          {devOtp || '123456'}
+                        </code>
+                      </div>
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                        Chống spam bot Telegram ở Local. Bấm nút để điền ngay.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMfaCode(devOtp || '123456')}
+                      className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                    >
+                      1-Chạm Điền
+                    </button>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between text-xs pt-1">
                   <button
@@ -576,6 +662,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
+            onClick={() => {
+              setClearTarget('all');
+              setShowClearDataModal(true);
+            }}
+            title="Dọn sạch dữ liệu kiểm thử & log"
+            className="h-9 px-3 rounded-full border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100/80 dark:hover:bg-rose-900/40 inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Dọn dữ liệu test</span>
+          </button>
+          <button
+            type="button"
             onClick={loadAllAdminData}
             title="Làm mới dữ liệu"
             className="h-9 px-3 rounded-full border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
@@ -702,6 +800,11 @@ export default function AdminDashboardView({ onExitAdmin }) {
             >
               <Users className="w-3.5 h-3.5 text-emerald-600" />
               <span>Thành viên ({users.length})</span>
+              {deletionRequests.some((r) => r.status === 'pending') && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                  {deletionRequests.filter((r) => r.status === 'pending').length} xóa
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -880,7 +983,83 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
       {/* ── TAB 2: THÀNH VIÊN & XÁC MINH ── */}
       {activeTab === 'users' && (
-        <div className="rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="space-y-4">
+          {/* KHU VỰC YÊU CẦU XÓA TÀI KHOẢN (ĐỐI SOÁT & PHÊ DUYỆT BỞI ADMIN) */}
+          {deletionRequests.some((r) => r.status === 'pending') && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-rose-200/80 dark:border-rose-900/50 shadow-xs space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center">
+                    <Trash2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>Yêu Cầu Xóa Tài Khoản Chờ Duyệt</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+                        {deletionRequests.filter((r) => r.status === 'pending').length} yêu cầu
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Đối soát các chuyến đi dở dang trước khi thực hiện xóa vĩnh viễn dữ liệu theo Nghị định 13/2023.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-rose-50/50 dark:bg-rose-950/20 text-slate-500 font-mono uppercase text-[10px]">
+                    <tr>
+                      <th className="py-2.5 px-3">Thành viên</th>
+                      <th className="py-2.5 px-3">Liên hệ</th>
+                      <th className="py-2.5 px-3">Lý do đóng tài khoản</th>
+                      <th className="py-2.5 px-3">Thời điểm gửi</th>
+                      <th className="py-2.5 px-3 text-right">Thao tác Admin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+                    {deletionRequests
+                      .filter((r) => r.status === 'pending')
+                      .map((req) => (
+                        <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
+                          <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">
+                            {req.name || 'Thành viên'}
+                          </td>
+                          <td className="py-3 px-3 font-mono text-slate-600 dark:text-slate-300">
+                            {req.phone || req.email || 'N/A'}
+                          </td>
+                          <td className="py-3 px-3 text-slate-600 dark:text-slate-300 max-w-[260px] truncate">
+                            {req.reason}
+                          </td>
+                          <td className="py-3 px-3 text-[11px] text-slate-400">
+                            {new Date(req.createdAt).toLocaleString('vi-VN')}
+                          </td>
+                          <td className="py-3 px-3 text-right space-x-2 whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => setAdminReqToProcess({ req, action: 'approved' })}
+                              className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 active:scale-95 transition-all"
+                            >
+                              <Trash2 className="w-3 h-3 text-rose-600" />
+                              <span>Duyệt & Xóa</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAdminReqToProcess({ req, action: 'rejected' })}
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 active:scale-95 transition-all"
+                            >
+                              <span>Từ chối</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 font-mono uppercase text-[10.5px]">
@@ -982,6 +1161,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 
@@ -1288,9 +1468,22 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   Nhật ký xử lý đa bước tự động [Lập kế hoạch ➔ Rà soát chuyến ➔ Kiểm tra định mức ➔ Đề xuất]
                 </p>
               </div>
-              <span className="text-xs text-[#86868b] tabular font-medium">
-                {aiIntelligence?.recentTrajectories?.length || 0} lượt gần nhất
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClearTarget('ai');
+                    setShowClearDataModal(true);
+                  }}
+                  className="px-3 py-1 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Dọn Quỹ đạo AI</span>
+                </button>
+                <span className="text-xs text-[#86868b] tabular font-medium">
+                  {aiIntelligence?.recentTrajectories?.length || 0} lượt gần nhất
+                </span>
+              </div>
             </div>
 
             {!aiIntelligence?.recentTrajectories || aiIntelligence.recentTrajectories.length === 0 ? (
@@ -1433,9 +1626,22 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   Đo lường từng điểm rơi (drop-off) từ lúc khách vào web đến khi chủ xe bấm nhận đón trên Zalo
                 </p>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 self-start sm:self-auto">
-                Tự động lưu SQLite 0đ
-              </span>
+              <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClearTarget('analytics');
+                    setShowClearDataModal(true);
+                  }}
+                  className="px-3 py-1 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Dọn Phễu & Sự kiện</span>
+                </button>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+                  Tự động lưu SQLite 0đ
+                </span>
+              </div>
             </div>
 
             {/* Các bước trong phễu */}
@@ -1962,6 +2168,59 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </Modal>
       )}
 
+      {/* ── MODAL DỌN DẸP DỮ LIỆU TEST ADMIN CHUẨN APPLE / HIG ── */}
+      {showClearDataModal && (
+        <Modal
+          onClose={() => !isClearing && setShowClearDataModal(false)}
+          size="sm"
+          icon={Trash2}
+          iconTone="danger"
+          title={
+            clearTarget === 'analytics'
+              ? 'Dọn sạch Phễu & Sự kiện phân tích'
+              : clearTarget === 'ai'
+              ? 'Dọn sạch Quỹ đạo AI Trajectories'
+              : 'Dọn sạch toàn bộ dữ liệu kiểm thử'
+          }
+          subtitle="Tác vụ quản trị hệ thống"
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isClearing}
+                onClick={() => setShowClearDataModal(false)}
+                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Huỷ bỏ
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={isClearing}
+                onClick={handleExecuteClearData}
+                className="px-5 font-bold rounded-full shadow-sm"
+              >
+                {isClearing ? 'Đang dọn...' : 'Xác nhận dọn sạch'}
+              </Button>
+            </div>
+          }
+        >
+          <div className="p-1 space-y-3 text-left">
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {clearTarget === 'analytics'
+                ? 'Hệ thống sẽ xoá toàn bộ sự kiện đã ghi nhận trong bảng analytics_events, đưa chỉ số Phễu và lượt tương tác về 0.'
+                : clearTarget === 'ai'
+                ? 'Hệ thống sẽ xoá toàn bộ lịch sử quỹ đạo AI (ai_trajectories), làm sạch bảng điều phối AI.'
+                : 'Hệ thống sẽ xoá toàn bộ sự kiện phân tích (Analytics), quỹ đạo AI (Trajectories) và tin nhắn kiểm thử CSKH để đưa Dashboard về trạng thái sạch sẽ nhất.'}
+            </p>
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11.5px] text-amber-800 dark:text-amber-300 font-medium">
+              ⚠️ Các chuyến xe thật và tài khoản thành viên sẽ được giữ nguyên an toàn 100%.
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* ── MODAL KHOÁ / MỞ KHOÁ TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
       {adminUserToBan && (
         <Modal
@@ -2017,6 +2276,62 @@ export default function AdminDashboardView({ onExitAdmin }) {
               {adminUserToBan.isBanned
                 ? 'Tài khoản này sẽ được khôi phục quyền truy cập, có thể đăng bài và ghép chuyến bình thường trên hệ thống CarMate.'
                 : 'Tài khoản này sẽ bị cấm ngay lập tức: không thể đăng nhập, không thể đăng bài và không thể kết nối ghép chuyến trên toàn hệ thống.'}
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── MODAL XỬ LÝ YÊU CẦU XÓA TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
+      {adminReqToProcess && (
+        <Modal
+          onClose={() => setAdminReqToProcess(null)}
+          size="sm"
+          icon={adminReqToProcess.action === 'approved' ? Trash2 : AlertTriangle}
+          iconTone={adminReqToProcess.action === 'approved' ? 'danger' : 'neutral'}
+          title={adminReqToProcess.action === 'approved' ? 'Phê duyệt & Xóa tài khoản' : 'Từ chối yêu cầu xóa'}
+          subtitle={`Yêu cầu từ: ${adminReqToProcess.req.name || 'Thành viên'} (${adminReqToProcess.req.phone || adminReqToProcess.req.email || 'N/A'})`}
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdminReqToProcess(null)}
+                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Quay lại
+              </Button>
+              <Button
+                variant={adminReqToProcess.action === 'approved' ? 'danger' : 'outline'}
+                size="sm"
+                onClick={handleExecuteProcessDeletion}
+                className="px-5 font-bold rounded-full shadow-sm"
+              >
+                {adminReqToProcess.action === 'approved' ? 'Xác nhận xóa vĩnh viễn' : 'Xác nhận từ chối'}
+              </Button>
+            </div>
+          }
+        >
+          <div className="p-1 space-y-3 text-left">
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5 text-xs">
+              <p className="text-slate-500 font-medium">
+                Họ tên: <strong className="text-slate-900 dark:text-white">{adminReqToProcess.req.name}</strong>
+              </p>
+              <p className="text-slate-500 font-medium">
+                Liên hệ:{' '}
+                <strong className="text-slate-900 dark:text-white font-mono">
+                  {adminReqToProcess.req.phone || adminReqToProcess.req.email || 'N/A'}
+                </strong>
+              </p>
+              <p className="text-slate-500 font-medium">
+                Lý do gửi:{' '}
+                <strong className="text-slate-900 dark:text-white">{adminReqToProcess.req.reason}</strong>
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {adminReqToProcess.action === 'approved'
+                ? 'Toàn bộ bài đăng trên sàn và dữ liệu cá nhân của tài khoản này sẽ bị xóa vĩnh viễn khỏi hệ thống theo Nghị định 13/2023/NĐ-CP. Hành động này không thể hoàn tác!'
+                : 'Yêu cầu xóa tài khoản sẽ được đánh dấu từ chối trong hệ thống.'}
             </p>
           </div>
         </Modal>

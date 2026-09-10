@@ -9,7 +9,9 @@ import {
   Download,
   Loader2,
   MessageCircle,
-  QrCode
+  QrCode,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import {
   generateSocialShareText,
@@ -18,6 +20,7 @@ import {
   cleanPhoneNumber
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
+import api from '../../api/client.js';
 import Modal from '../ui/Modal.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import QRCode from 'qrcode';
@@ -29,7 +32,14 @@ import {
   getTripShareUrl
 } from '../../utils/ticketCanvas.js';
 
-export default function TicketShareModal({ trip, onClose, onShowToast, onViewInMarket }) {
+export default function TicketShareModal({
+  trip,
+  onClose,
+  onShowToast,
+  onViewInMarket,
+  onSelectTrip,
+  onConnectMatch
+}) {
   const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -37,6 +47,27 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [smartMatches, setSmartMatches] = useState([]);
+  const [loadingMatches, setLoadingMatches] = useState(false);
+
+  useEffect(() => {
+    if (!trip?.id) return;
+    let isMounted = true;
+    setLoadingMatches(true);
+    api.getSocialMatches({ tripId: trip.id })
+      .then((res) => {
+        if (isMounted && res?.success && Array.isArray(res?.data)) {
+          setSmartMatches(res.data);
+        }
+      })
+      .catch((err) => console.warn('[TicketShare] Lỗi tải gợi ý khớp:', err))
+      .finally(() => {
+        if (isMounted) setLoadingMatches(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [trip?.id]);
 
   useEffect(() => {
     if (!trip) return;
@@ -312,6 +343,68 @@ export default function TicketShareModal({ trip, onClose, onShowToast, onViewInM
             </div>
           </div>
         </div>
+
+        {/* Khối gợi ý người ghép ngay (Smart Match Radar) */}
+        {smartMatches && smartMatches.length > 0 && (
+          <div className="rounded-2xl bg-gradient-to-r from-blue-50/80 to-indigo-50/60 dark:from-slate-800/80 dark:to-indigo-950/30 border border-blue-200/80 dark:border-blue-700/40 p-3.5 space-y-2.5 text-left">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#0071e3] animate-pulse" />
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  Tìm thấy {smartMatches.length} đối tác phù hợp ngay!
+                </span>
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                Khớp {smartMatches[0].score}%
+              </span>
+            </div>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1 no-scrollbar">
+              {smartMatches.slice(0, 3).map(({ trip: mTrip, score, fuelSavings }) => {
+                const isDriver = mTrip.type === 'driver_offer';
+                const partnerAlias = mTrip.partnerAlias || (isDriver ? `Chủ xe #${mTrip.id?.slice(0, 4)}` : `Người đi cùng #${mTrip.id?.slice(0, 4)}`);
+                return (
+                  <div
+                    key={mTrip.id}
+                    className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/70 dark:border-slate-700/60 shadow-2xs"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {partnerAlias}
+                        </span>
+                        <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400">
+                          🔥 {score}%
+                        </span>
+                        {fuelSavings?.savingsVndFormatted && (
+                          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                            · {fuelSavings.savingsVndFormatted}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                        {mTrip.from} ➔ {mTrip.to} ({getTimeSlotLabel(mTrip, lang)})
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose?.();
+                        if (onConnectMatch) onConnectMatch(mTrip);
+                        else if (onViewInMarket) onViewInMarket(mTrip);
+                        else onSelectTrip?.(mTrip);
+                      }}
+                      className="shrink-0 px-2.5 py-1.5 rounded-lg bg-[#0071e3] hover:bg-[#0077ed] text-white text-[11px] font-bold shadow-xs active:scale-95 transition-transform flex items-center gap-1 cursor-pointer"
+                    >
+                      <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
+                      <span>Ghép ngay</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Khối gợi ý tinh tế & Xem trước có thể thu gọn (Collapsible) */}
         <div className="pt-0.5 text-center space-y-2">

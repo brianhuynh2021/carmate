@@ -145,6 +145,17 @@ export const api = {
     return request(`/matches${queryString}`);
   },
 
+  // Social Smart Matches
+  async getSocialMatches(params = {}) {
+    const query = new URLSearchParams();
+    if (params.tripId) query.append('tripId', params.tripId);
+    if (params.userRole) query.append('userRole', params.userRole);
+    if (params.routeCategory && params.routeCategory !== 'all') query.append('routeCategory', params.routeCategory);
+    if (params.direction && params.direction !== 'all') query.append('direction', params.direction);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/matches/social-suggestions${queryString}`);
+  },
+
   // Bookings / Zalo Connections
   async getBookings() {
     return request('/bookings');
@@ -329,6 +340,13 @@ export const api = {
     });
   },
 
+  async submitAccountDeletionRequest(reason) {
+    return request('/auth/deletion-request', {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  },
+
   async deleteAccount() {
     const res = await request('/auth/me', {
       method: 'DELETE'
@@ -420,6 +438,24 @@ export const api = {
     return request('/admin/analytics/summary');
   },
 
+  async adminClearAnalytics() {
+    return request('/admin/analytics', {
+      method: 'DELETE'
+    });
+  },
+
+  async adminClearAiTrajectories() {
+    return request('/admin/ai-trajectories', {
+      method: 'DELETE'
+    });
+  },
+
+  async adminClearTestData() {
+    return request('/admin/test-data', {
+      method: 'DELETE'
+    });
+  },
+
   // Agentic AI Concierge & Dispatcher (Stanford Inner Loop)
   async agentChat(message, history = []) {
     return request('/agent/chat', {
@@ -447,6 +483,24 @@ export const api = {
   async resetAdminTrustRules() {
     return request('/admin/trust-rules/reset', {
       method: 'POST'
+    });
+  },
+
+  async getAdminDeletionRequests(status = '') {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return request(`/admin/deletion-requests${query}`);
+  },
+
+  async processAdminDeletionRequest(requestId, action, note = '') {
+    return request(`/admin/deletion-requests/${requestId}/process`, {
+      method: 'POST',
+      body: JSON.stringify({ action, note })
+    });
+  },
+
+  async deleteUserAdmin(userId) {
+    return request(`/admin/users/${userId}`, {
+      method: 'DELETE'
     });
   }
 };

@@ -9,10 +9,12 @@ import {
   saveUser,
   getTripsForUser,
   deleteUserAccount,
-  isUserDeactivated
+  isUserDeactivated,
+  createDeletionRequest
 } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
 import { isAdminPhone } from '../utils/adminIdentity.js';
+import { sendTelegramMessage } from '../utils/telegramAlert.js';
 
 // Bộ nhớ đệm OTP tạm thời trong RAM (5 phút hết hạn, 0đ chi phí SMS)
 const otpMap = new Map();
@@ -661,6 +663,71 @@ export async function deleteAccount(req, res) {
     return res.status(500).json({ success: false, error: 'Không thể xóa tài khoản. Vui lòng thử lại sau.' });
   }
 }
+
+/**
+ * POST /api/auth/deletion-request
+ * Người dùng gửi yêu cầu hủy & xóa tài khoản tới Quản trị viên CarMate
+ * Chuẩn công thái học & Bất biến: Không xóa tức thì, tiếp nhận để Admin đối soát chuyến đi & nghĩa vụ
+ */
+export async function requestAccountDeletion(req, res) {
+  try {
+    if (!req.user || (!req.user.id && !req.user.userId && !req.user.phone)) {
+      return res.status(401).json({ success: false, error: 'Chưa đăng nhập hoặc phiên làm việc không hợp lệ' });
+    }
+
+    const userId = req.user.id || req.user.userId;
+    const phone = req.user.phone || '';
+    const name = req.user.name || '';
+    const email = req.user.email || '';
+    const { reason } = req.body || {};
+
+    // MIT Invariant Guard: Tài khoản Quản trị viên (Admin) không thể gửi yêu cầu xóa chính mình
+    const isAdmin = req.user.role === 'admin' || (phone && isAdminPhone(phone));
+    if (isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error:
+          'Tài khoản Quản trị viên (Admin) được bảo vệ bởi luật bất biến MIT, không thể gửi yêu cầu xóa tài khoản.'
+      });
+    }
+
+    const result = await createDeletionRequest({
+      userId,
+      phone,
+      name,
+      email,
+      reason: reason?.trim() || 'Người dùng yêu cầu đóng tài khoản'
+    });
+
+    // Gửi thông báo cảnh báo tức thì vào Telegram Quản trị viên nếu có cấu hình
+    const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    sendTelegramMessage(
+      `⚠️ <b>[CARMATE] YÊU CẦU XÓA TÀI KHOẢN MỚI</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `👤 <b>Thành viên:</b> ${name || 'Ẩn danh'} (<code>${userId}</code>)\n` +
+        `📞 <b>Số điện thoại:</b> <code>${phone || 'Chưa có'}</code>\n` +
+        `📧 <b>Email:</b> <code>${email || 'Chưa có'}</code>\n` +
+        `📝 <b>Lý do:</b> ${reason?.trim() || 'Không nêu cụ thể'}\n` +
+        `⏰ <b>Thời gian:</b> ${timeStr}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `👉 <i>Vui lòng truy cập Cổng Quản Trị để đối soát chuyến xe và xử lý.</i>`,
+      { parseMode: 'HTML', req }
+    ).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      alreadyExists: result.alreadyExists,
+      message:
+        result.message ||
+        'Yêu cầu xóa tài khoản của bạn đã được gửi thành công tới Quản trị viên. Quản trị viên sẽ kiểm tra các chuyến xe dở dang và xử lý trong vòng 24-48 giờ.',
+      data: result.data
+    });
+  } catch (err) {
+    console.error('[Auth] Lỗi khi gửi yêu cầu xóa tài khoản:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Không thể gửi yêu cầu xóa tài khoản.' });
+  }
+}
+
 
 /**
  * POST /api/auth/telegram-login

@@ -1,5 +1,17 @@
-import { getTrips } from '../db/sqliteStore.js';
+import { getTrips, getTripById, getTripsForUser } from '../db/sqliteStore.js';
 import { sanitizeTripForPublic } from './tripController.js';
+import { ROUTE_BENCHMARKS, cleanPhoneNumber } from '@carmate/shared';
+
+export function calculateFuelSavings(routeCategory, seats = 1) {
+  const benchmark = ROUTE_BENCHMARKS[routeCategory];
+  const rate = (benchmark && benchmark.suggestedRate) ? benchmark.suggestedRate : 150000;
+  const savingsVnd = Math.round(rate * (seats || 1) * 0.6);
+  return {
+    savingsVnd,
+    savingsVndFormatted: `Tiết kiệm ~${(savingsVnd / 1000).toLocaleString('vi-VN')}k xăng`,
+    estimatedRateVnd: rate
+  };
+}
 
 // Cache kết quả tìm kiếm so khớp trong 5 giây để giảm tải truy vấn đồng thời
 const matchCache = new Map();
@@ -143,6 +155,121 @@ export function getMatches(req, res) {
         totalDriversAvailable: drivers.length,
         totalPassengersWaiting: passengers.length
       }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/matches/social-suggestions
+ * Gợi ý bạn đồng hành thông minh cho feed mạng xã hội (Kiểu TikTok / Facebook Reels)
+ * Tự động tìm kiếm bạn đồng hành đối ứng phù hợp nhất cho chuyến của người dùng.
+ */
+export function getSocialSuggestions(req, res) {
+  try {
+    const { tripId, routeCategory, excludeIds = '', limit = 10 } = req.query;
+    const excludedSet = new Set(
+      excludeIds
+        ? excludeIds
+            .split(',')
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : []
+    );
+
+    let anchorTrip = null;
+    if (tripId) {
+      anchorTrip = getTripById(tripId);
+    }
+
+    // Nếu không có tripId cụ thể nhưng có user đăng nhập, lấy chuyến mới nhất của user làm mỏ neo
+    if (!anchorTrip && req.user) {
+      const userTrips = getTripsForUser(req.user);
+      if (userTrips && userTrips.length > 0) {
+        anchorTrip = userTrips.find((t) => !t.status || (t.status !== 'cancelled' && t.status !== 'completed')) || userTrips[0];
+      }
+    }
+
+    let targetRole = 'all';
+    let targetRoute = routeCategory;
+    let targetDirection = undefined;
+
+    if (anchorTrip) {
+      targetRole = anchorTrip.type === 'driver_offer' ? 'passengers' : 'drivers';
+      targetRoute = anchorTrip.routeCategory || targetRoute;
+      targetDirection = anchorTrip.direction;
+    }
+
+    // Lấy danh sách ứng viên đối ứng
+    const candidateType = targetRole === 'passengers' ? 'passengers' : (targetRole === 'drivers' ? 'drivers' : undefined);
+    const candidates = getTrips({
+      type: candidateType,
+      routeCategory: targetRoute && targetRoute !== 'all' ? targetRoute : undefined,
+      direction: targetDirection && targetDirection !== 'all' ? targetDirection : undefined,
+      includeHidden: false
+    })
+      .filter((c) => !c.status || (c.status !== 'cancelled' && c.status !== 'completed'))
+      .filter((c) => !excludedSet.has(c.id))
+      .filter((c) => {
+        // Loại trừ chính mình
+        if (anchorTrip && c.id === anchorTrip.id) return false;
+        if (req.user) {
+          const userPhone = cleanPhoneNumber(req.user.phone || '');
+          const cPhone = cleanPhoneNumber(c.phoneReal || c.phone || '');
+          if (userPhone && cPhone && userPhone === cPhone) return false;
+          if (req.user.id && c.userId && req.user.id === c.userId) return false;
+        }
+        return true;
+      });
+
+    // Tính điểm tương đồng & Gắn thẻ Social
+    const suggestions = candidates.map((item) => {
+      let score = 75; // Cùng tuyến đường
+      const socialTags = [];
+
+      if (anchorTrip) {
+        if (anchorTrip.direction && item.direction && anchorTrip.direction === item.direction) {
+          score += 10;
+        }
+        if (anchorTrip.timeSlot && item.timeSlot && anchorTrip.timeSlot === item.timeSlot) {
+          score += 10;
+          socialTags.push('Cùng khung giờ');
+        }
+        if (anchorTrip.hometown && item.hometown && anchorTrip.hometown.trim().toLowerCase() === item.hometown.trim().toLowerCase()) {
+          score += 5;
+          socialTags.push(`Đồng hương ${anchorTrip.hometown}`);
+        }
+      } else {
+        if (item.timeSlot) socialTags.push('Giờ tiện lợi');
+      }
+
+      if (item.trustScore && item.trustScore >= 95) {
+        socialTags.push('Tín nhiệm cao');
+      }
+
+      const seats = item.type === 'driver_offer' ? (item.availableSeats || 3) : (item.seatsNeeded || 1);
+      const fuelSavings = calculateFuelSavings(item.routeCategory || targetRoute || 'Tuyến QL13', seats);
+
+      return {
+        id: item.id,
+        score: Math.min(99, score),
+        trip: sanitizeTripForPublic(item, req.user),
+        anchorTripId: anchorTrip?.id || null,
+        fuelSavings,
+        socialTags
+      };
+    });
+
+    // Sắp xếp điểm cao nhất
+    suggestions.sort((a, b) => b.score - a.score);
+    const limitedSuggestions = suggestions.slice(0, Number(limit) || 10);
+
+    return res.status(200).json({
+      success: true,
+      count: limitedSuggestions.length,
+      anchorTrip: anchorTrip ? sanitizeTripForPublic(anchorTrip, req.user) : null,
+      data: limitedSuggestions
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

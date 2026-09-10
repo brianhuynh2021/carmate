@@ -180,7 +180,27 @@ export async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_support_created ON support_messages(createdAt);
   `);
 
-  // 7. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
+  // 8. Bảng Yêu Cầu Xóa Tài Khoản Gửi Tới Quản Trị Viên (account_deletion_requests)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS account_deletion_requests (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL,
+      phone TEXT,
+      name TEXT,
+      email TEXT,
+      reason TEXT,
+      status TEXT DEFAULT 'pending',
+      createdAt INTEGER NOT NULL,
+      processedAt INTEGER,
+      processedBy TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_del_req_user ON account_deletion_requests(userId);
+    CREATE INDEX IF NOT EXISTS idx_del_req_phone ON account_deletion_requests(phone);
+    CREATE INDEX IF NOT EXISTS idx_del_req_status ON account_deletion_requests(status);
+    CREATE INDEX IF NOT EXISTS idx_del_req_created ON account_deletion_requests(createdAt);
+  `);
+
+  // 9. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
   //
   // BẤT BIẾN SÀN GIAO DỊCH: mọi chuyến hiển thị trên sàn phải liên hệ được với
   // một người thật. Dữ liệu mẫu vi phạm bất biến này — khách bấm đặt chỗ sẽ gọi
@@ -1383,6 +1403,24 @@ export function getAnalyticsSummary() {
   };
 }
 
+export function clearAnalyticsEvents() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM analytics_events').run();
+  return res.changes;
+}
+
+export function clearAiTrajectories() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM ai_trajectories').run();
+  return res.changes;
+}
+
+export function clearSupportMessages() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM support_messages').run();
+  return res.changes;
+}
+
 /**
  * Lấy cấu hình quy tắc tính điểm tín nhiệm (Dynamic Trust Policy Rules)
  */
@@ -1565,3 +1603,92 @@ export async function resolveDisputeAndUnban({ bookingId, userId, phone, reason 
 
   return { success: true, message: 'Đã xử lý khiếu nại và khôi phục tài khoản thành công.' };
 }
+
+/**
+ * Gửi yêu cầu xóa tài khoản tới Quản trị viên CarMate
+ * Bất biến & Công thái học: Không xóa tức thì, yêu cầu được tiếp nhận để đối soát nghĩa vụ & chuyến đi
+ */
+export async function createDeletionRequest({ userId, phone, name, email, reason = '' }) {
+  const database = getRawDB();
+  const id = `DEL-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const now = Date.now();
+
+  // Kiểm tra nếu đã có yêu cầu xóa đang chờ xử lý (pending)
+  const existingPending = database.prepare(
+    `SELECT * FROM account_deletion_requests WHERE (userId = ? OR (phone = ? AND phone != '')) AND status = 'pending'`
+  ).get(userId || '', phone || '');
+
+  if (existingPending) {
+    return {
+      success: true,
+      alreadyExists: true,
+      data: existingPending,
+      message: 'Bạn đã có một yêu cầu xóa tài khoản đang chờ Quản trị viên tiếp nhận và xử lý.'
+    };
+  }
+
+  database.prepare(`
+    INSERT INTO account_deletion_requests (id, userId, phone, name, email, reason, status, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
+  `).run(id, userId, phone || '', name || '', email || '', reason, now);
+
+  const created = database.prepare('SELECT * FROM account_deletion_requests WHERE id = ?').get(id);
+  return { success: true, alreadyExists: false, data: created };
+}
+
+/**
+ * Lấy danh sách các yêu cầu xóa tài khoản dành cho Quản trị viên
+ */
+export function getDeletionRequests(status = '') {
+  const database = getRawDB();
+  if (status) {
+    return database.prepare('SELECT * FROM account_deletion_requests WHERE status = ? ORDER BY createdAt DESC').all(status);
+  }
+  return database.prepare('SELECT * FROM account_deletion_requests ORDER BY createdAt DESC').all();
+}
+
+/**
+ * Quản trị viên phê duyệt hoặc từ chối yêu cầu xóa tài khoản
+ * Khi phê duyệt (action: 'approved'): Thực hiện xóa tài khoản, gỡ bài đăng và anonymize dữ liệu theo Nghị định 13/2023
+ */
+export async function processDeletionRequest(requestId, action, adminInfo = 'Admin') {
+  const database = getRawDB();
+  const req = database.prepare('SELECT * FROM account_deletion_requests WHERE id = ?').get(requestId);
+  if (!req) {
+    throw new Error('Không tìm thấy yêu cầu xóa tài khoản với mã ' + requestId);
+  }
+
+  const now = Date.now();
+  if (action === 'approved') {
+    // 1. Thực hiện xóa vĩnh viễn dữ liệu cá nhân theo Nghị định 13/2023/NĐ-CP
+    await deleteUserAccount(req.userId, req.phone);
+
+    // 2. Cập nhật trạng thái yêu cầu
+    database.prepare(`
+      UPDATE account_deletion_requests 
+      SET status = 'approved', processedAt = ?, processedBy = ? 
+      WHERE id = ?
+    `).run(now, adminInfo, requestId);
+
+    return {
+      success: true,
+      action: 'approved',
+      message: 'Đã phê duyệt và xóa vĩnh viễn tài khoản thành công.'
+    };
+  } else if (action === 'rejected') {
+    database.prepare(`
+      UPDATE account_deletion_requests 
+      SET status = 'rejected', processedAt = ?, processedBy = ? 
+      WHERE id = ?
+    `).run(now, adminInfo, requestId);
+
+    return {
+      success: true,
+      action: 'rejected',
+      message: 'Đã từ chối yêu cầu xóa tài khoản.'
+    };
+  } else {
+    throw new Error('Hành động không hợp lệ (chỉ chấp nhận approved hoặc rejected).');
+  }
+}
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Clock,
   Phone,
@@ -18,7 +18,12 @@ import {
   Shield,
   ShieldAlert,
   PhoneOff,
-  User
+  User,
+  ChevronDown,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -33,7 +38,7 @@ import PresenceDot from '../ui/PresenceDot.jsx';
  * Đồng hồ đếm ngược 15 phút theo chuẩn ARCHITECTURE.md:
  * "Hành khách giữ chỗ 0đ, cam kết bằng danh tính thật qua Zalo trong 15 phút"
  */
-function Countdown30Min({ createdAt }) {
+function Countdown30Min({ createdAt, compact = false }) {
   const [timeLeft, setTimeLeft] = useState(() => {
     let start = Date.now() - 4 * 60 * 1000;
     if (typeof createdAt === 'number') start = createdAt;
@@ -56,15 +61,16 @@ function Countdown30Min({ createdAt }) {
   const isUrgent = timeLeft < 5 * 60;
   return (
     <div
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tabular ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tabular ${
         isUrgent
           ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 animate-pulse'
           : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200/80'
       }`}
     >
-      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
       <span>
-        Đang kết nối · Hạn phản hồi {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+        {compact ? 'Hạn ' : 'Đang kết nối · Hạn '}
+        {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
       </span>
     </div>
   );
@@ -78,26 +84,26 @@ function TripProgressStepper({ status, delayedMinutes }) {
   const steps = [
     {
       id: 1,
-      label: 'Khớp xe tiện đường',
+      label: 'Khớp xe',
       desc: 'Chi phí xăng & phí cầu đường',
       state: 'completed'
     },
     {
       id: 2,
-      label: isDelayed ? `Báo trễ +${delayedMinutes || 15}p` : 'Trao đổi & Khớp chuyến',
-      desc: isCancelled ? 'Đã dừng kết nối' : 'Thoả thuận điểm đón & hành lý',
+      label: isDelayed ? `Trễ +${delayedMinutes || 15}p` : 'Trao đổi',
+      desc: isCancelled ? 'Đã dừng kết nối' : 'Điểm đón & hành lý',
       state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active'
     },
     {
       id: 3,
-      label: 'Lên xe & Phụ xăng',
-      desc: '0% phí sàn · Đưa trực tiếp',
+      label: 'Lên xe',
+      desc: 'Gửi tiền trực tiếp',
       state: isCompleted ? 'completed' : 'pending'
     },
     {
       id: 4,
-      label: 'Tín nhiệm 2 chiều',
-      desc: isCompleted ? 'Đã ghi nhận uy tín' : 'Tích xanh CCCD',
+      label: 'Tín nhiệm',
+      desc: isCompleted ? 'Đã ghi nhận' : 'Đánh giá 2 chiều',
       state: isCompleted ? 'completed' : 'pending'
     }
   ];
@@ -139,7 +145,7 @@ function TripProgressStepper({ status, delayedMinutes }) {
                 isDone
                   ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/70 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-200'
                   : isActive
-                    ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-2 ring-blue-500/15'
+                    ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-1 ring-blue-500/25'
                     : isDelayState
                       ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
                       : isCancelState
@@ -153,7 +159,7 @@ function TripProgressStepper({ status, delayedMinutes }) {
                     isDone
                       ? 'bg-emerald-600 text-white'
                       : isActive
-                        ? 'bg-[#0071e3] text-white animate-pulse'
+                        ? 'bg-[#0071e3] text-white shadow-xs'
                         : isDelayState
                           ? 'bg-amber-500 text-white'
                           : isCancelState
@@ -190,14 +196,82 @@ export default function BookedTripList({
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
   const [copiedId, setCopiedId] = useState(null);
 
-  const activeBookings = bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled');
-  const historyBookings = bookedEscrows.filter((b) => b.status === 'completed' || b.status === 'cancelled');
+  // Trạng thái Cursor Ambient: Quản lý danh sách thu gọn & mở rộng (Accordion)
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusSubFilter, setStatusSubFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
-  const displayedList = activeTab === 'active' ? activeBookings : historyBookings;
+  const activeBookings = useMemo(
+    () => bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled'),
+    [bookedEscrows]
+  );
+  const historyBookings = useMemo(
+    () => bookedEscrows.filter((b) => b.status === 'completed' || b.status === 'cancelled'),
+    [bookedEscrows]
+  );
+
+  const baseList = activeTab === 'active' ? activeBookings : historyBookings;
+
+  // Lọc nhanh trực tiếp trên Client < 1ms
+  const filteredList = useMemo(() => {
+    return baseList.filter((record) => {
+      // 1. Lọc theo trạng thái con
+      if (activeTab === 'active') {
+        if (statusSubFilter === 'connecting' && (record.status === 'confirmed' || record.bothConfirmed)) return false;
+        if (statusSubFilter === 'confirmed' && !(record.status === 'confirmed' || record.bothConfirmed)) return false;
+        if (statusSubFilter === 'delayed' && record.status !== 'delayed') return false;
+      } else {
+        if (statusSubFilter === 'completed' && record.status !== 'completed') return false;
+        if (statusSubFilter === 'cancelled' && record.status !== 'cancelled') return false;
+      }
+
+      // 2. Tìm kiếm theo từ khóa (Mã CX, tên đối tác, lộ trình)
+      if (!searchTerm.trim()) return true;
+      const term = searchTerm.toLowerCase().trim();
+      const matchId = String(record.escrowId || '').toLowerCase().includes(term);
+      const matchName = String(record.contactName || '').toLowerCase().includes(term);
+      const matchFrom = String(record.from || '').toLowerCase().includes(term);
+      const matchTo = String(record.to || '').toLowerCase().includes(term);
+      return matchId || matchName || matchFrom || matchTo;
+    });
+  }, [baseList, activeTab, statusSubFilter, searchTerm]);
+
+  // Phân trang chuẩn Apple: Giữ DOM nhẹ tênh dù có 1000 chuyến
+  const totalPages = Math.max(1, Math.ceil(filteredList.length / itemsPerPage));
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredList.slice(start, start + itemsPerPage);
+  }, [filteredList, currentPage, itemsPerPage]);
+
+  // Thao tác 1-chạm: Mở / Đóng chi tiết từng thẻ
+  const toggleExpand = (id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleExpandAll = () => {
+    setExpandedIds(new Set(paginatedList.map((r) => r.escrowId || r.id)));
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedIds(new Set());
+  };
 
   const handleCopyForFamily = (record) => {
     const totalAmount = record.fullTripAmount || record.totalDeal || 0;
-    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: ${record.escrowId}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${record.timeSlot}\n• Đối tác: ${record.contactName} (SĐT: ${record.contactPhone})\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats} ghế · Trọn gói xăng & cầu đường, gửi khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
+    const dateFormatted = formatCleanDateLabel(
+      record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
+    );
+    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: ${record.escrowId}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${record.timeSlot} (${dateFormatted})\n• Đối tác: ${record.contactName} (SĐT: ${record.contactPhone})\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats} ghế · Trọn gói xăng & cầu đường, gửi khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -221,39 +295,49 @@ export default function BookedTripList({
 
   const handleSendSMS = (record) => {
     const totalAmount = record.fullTripAmount || record.totalDeal || 0;
-    const text = `Thong tin chuyen di CarMate ${record.escrowId}: ${record.from} ve ${record.to}, gio ${record.timeSlot}, doi tac ${record.contactName} (${record.contactPhone}), gia ${formatVND(totalAmount)}. Xem tai carmate.vn`;
+    const dateFormatted = formatCleanDateLabel(
+      record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
+    );
+    const text = `Thong tin chuyen di CarMate ${record.escrowId}: ${record.from} ve ${record.to}, ngay ${dateFormatted}, gio ${record.timeSlot}, doi tac ${record.contactName} (${record.contactPhone}), gia ${formatVND(totalAmount)}. Xem tai carmate.vn`;
     window.open(`sms:?body=${encodeURIComponent(text)}`, '_self');
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-5">
+      {/* Header Tiêu Đề */}
       <SectionHeader
         icon={Clock}
         title={t('booked.title')}
         description="Lịch hẹn đi chung xe · 0% chiết khấu sàn · Trực tiếp kết nối bạn đồng hành"
         action={
-          <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5">
+          <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5 font-medium">
             0đ Phí sàn · Tự do kết nối
           </Badge>
         }
       />
 
       {/* Tabs Chuyển Đổi: Đang Hoạt Động vs Lịch Sử */}
-      <div className="flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed]/90 border border-black/[0.04]">
+      <div className="flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed]/90 dark:bg-slate-800/80 border border-black/[0.04] dark:border-white/[0.06]">
         <button
           type="button"
-          onClick={() => setActiveTab('active')}
+          onClick={() => {
+            setActiveTab('active');
+            setStatusSubFilter('all');
+            setCurrentPage(1);
+          }}
           className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
             activeTab === 'active'
-              ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
-              : 'text-[#86868b] hover:text-[#1d1d1f]'
+              ? 'bg-white dark:bg-slate-900 text-[#1d1d1f] dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+              : 'text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
           }`}
         >
           <Clock className={`w-4 h-4 ${activeTab === 'active' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
           <span>Chuyến đang diễn ra</span>
           <span
             className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
-              activeTab === 'active' ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
+              activeTab === 'active'
+                ? 'bg-[#0071e3] text-white'
+                : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#515154] dark:text-slate-300'
             }`}
           >
             {activeBookings.length}
@@ -262,18 +346,24 @@ export default function BookedTripList({
 
         <button
           type="button"
-          onClick={() => setActiveTab('history')}
+          onClick={() => {
+            setActiveTab('history');
+            setStatusSubFilter('all');
+            setCurrentPage(1);
+          }}
           className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
             activeTab === 'history'
-              ? 'bg-white text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
-              : 'text-[#86868b] hover:text-[#1d1d1f]'
+              ? 'bg-white dark:bg-slate-900 text-[#1d1d1f] dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+              : 'text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
           }`}
         >
           <History className={`w-4 h-4 ${activeTab === 'history' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
           <span>Lịch sử chuyến đi</span>
           <span
             className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
-              activeTab === 'history' ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
+              activeTab === 'history'
+                ? 'bg-[#0071e3] text-white'
+                : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#515154] dark:text-slate-300'
             }`}
           >
             {historyBookings.length}
@@ -281,8 +371,124 @@ export default function BookedTripList({
         </button>
       </div>
 
-      {/* Danh Sách Chuyến */}
-      {displayedList.length === 0 ? (
+      {/* Thanh Tìm Kiếm & Lọc Nhanh Chuẩn Cursor Ambient (< 1ms) */}
+      {baseList.length > 0 && (
+        <div className="space-y-2.5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            {/* Ô tìm kiếm tức thì */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b]" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Tìm mã chuyến CX, tên đối tác, lộ trình..."
+                className="w-full h-10 pl-9.5 pr-8 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.08] text-xs sm:text-sm text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:outline-hidden focus:ring-2 focus:ring-[#0071e3]/30 transition-all"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Chips lọc trạng thái con */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              {activeTab === 'active' ? (
+                <>
+                  {[
+                    { id: 'all', label: 'Tất cả' },
+                    { id: 'connecting', label: 'Đang kết nối' },
+                    { id: 'confirmed', label: 'Đã chốt' },
+                    { id: 'delayed', label: 'Báo trễ' }
+                  ].map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => {
+                        setStatusSubFilter(chip.id);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                        statusSubFilter === chip.id
+                          ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-2xs'
+                          : 'bg-[#f5f5f7] dark:bg-slate-800/60 text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {[
+                    { id: 'all', label: 'Tất cả' },
+                    { id: 'completed', label: 'Đã hoàn tất' },
+                    { id: 'cancelled', label: 'Đã huỷ' }
+                  ].map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => {
+                        setStatusSubFilter(chip.id);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                        statusSubFilter === chip.id
+                          ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-2xs'
+                          : 'bg-[#f5f5f7] dark:bg-slate-800/60 text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Thanh tổng quan số lượng & Nút mở/thu gọn nhanh */}
+          <div className="flex items-center justify-between text-xs text-[#86868b] px-1 font-medium">
+            <span>
+              {searchTerm
+                ? `Tìm thấy ${filteredList.length} kết quả`
+                : `Đang hiển thị ${filteredList.length} chuyến`}
+            </span>
+            {filteredList.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExpandAll}
+                  className="hover:text-[#0071e3] transition-colors cursor-pointer"
+                >
+                  Mở rộng tất cả
+                </button>
+                <span>·</span>
+                <button
+                  type="button"
+                  onClick={handleCollapseAll}
+                  className="hover:text-[#0071e3] transition-colors cursor-pointer"
+                >
+                  Thu gọn tất cả
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Danh Sách Chuyến (Compact Accordion List) */}
+      {baseList.length === 0 ? (
         <div className="py-8">
           <EmptyState
             icon={activeTab === 'active' ? Clock : History}
@@ -295,9 +501,25 @@ export default function BookedTripList({
             action={<Button onClick={onFindTrip}>Tìm chuyến tiện đường ngay</Button>}
           />
         </div>
+      ) : filteredList.length === 0 ? (
+        <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.08] space-y-2">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            Không tìm thấy chuyến nào phù hợp với bộ lọc
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm('');
+              setStatusSubFilter('all');
+            }}
+            className="text-xs text-[#0071e3] hover:underline font-semibold cursor-pointer"
+          >
+            Xoá bộ lọc và xem tất cả
+          </button>
+        </div>
       ) : (
-        <div className="space-y-5">
-          {displayedList.map((record) => {
+        <div className="space-y-3">
+          {paginatedList.map((record) => {
             const phone = record.contactPhone;
             const zaloUrl = getZaloChatUrl(
               phone,
@@ -313,356 +535,514 @@ export default function BookedTripList({
             const isCancelled = record.status === 'cancelled';
             const isDelayed = record.status === 'delayed';
             const partnerOnline = getUserOnlineStatus(record.targetItem || record, currentUser?.phone || currentUser?.id);
+            const rawTripDate =
+              record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt;
+            const tripDateLabel = formatCleanDateLabel(rawTripDate);
+
+            const isExpanded = expandedIds.has(record.escrowId || record.id);
 
             return (
               <article
                 key={record.escrowId}
-                className="surface overflow-hidden shadow-xs border border-black/[0.08] rounded-3xl"
+                className="surface overflow-hidden rounded-2xl sm:rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.08)] hover:border-[#0071e3]/40 dark:hover:border-sky-400/40 transition-all duration-200"
               >
-                {/* Header Vé */}
-                <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-3 flex-wrap border-b border-black/[0.06]">
-                  <div className="flex items-center gap-3">
-                    <span className="w-10 h-10 rounded-2xl bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 inline-flex items-center justify-center">
-                      <Ticket className="w-5 h-5" />
-                    </span>
-                    <div>
-                      <p className="text-xs text-[#86868b]">Mã chuyến xe</p>
-                      <p className="text-base font-bold text-[#1d1d1f] flex items-center gap-1.5 flex-wrap">
-                        <span className="tabular font-display tracking-tight text-[#0071e3]">{record.escrowId}</span>
-                        <span className="text-[#86868b] mx-1.5">·</span>
-                        <span>{toPublicAlias(record.contactName)}</span>
+                {/* ── 1. KHỐI THU GỌN TINH TẾ (COMPACT SUMMARY ROW) ── */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleExpand(record.escrowId || record.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleExpand(record.escrowId || record.id);
+                    }
+                  }}
+                  className="p-4 sm:p-5 flex flex-col gap-3 cursor-pointer select-none transition-colors hover:bg-black/[0.015] dark:hover:bg-white/[0.02]"
+                >
+                  {/* Dòng 1: Mã CX, Đối tác, PresenceDot & Badge Trạng Thái */}
+                  <div className="flex items-center justify-between gap-2.5 flex-wrap">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 inline-flex items-center justify-center shrink-0">
+                        <Ticket className="w-4 h-4" />
+                      </span>
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="font-display font-bold text-sm text-[#0071e3] tabular tracking-tight">
+                          {record.escrowId}
+                        </span>
+                        <span className="text-[#86868b]">·</span>
+                        <span className="font-bold text-sm text-[#1d1d1f] dark:text-white truncate">
+                          {toPublicAlias(record.contactName)}
+                        </span>
                         <PresenceDot isOnline={partnerOnline.isOnline} size="xs" detail={partnerOnline.detail} />
-                      </p>
+                      </div>
+                    </div>
+
+                    {/* Badge trạng thái dứt khoát */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isCompleted ? (
+                        <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
+                          Đã hoàn tất an toàn
+                        </Badge>
+                      ) : isCancelled ? (
+                        <Badge tone="danger" icon={XCircle} className="h-6.5 px-2.5 text-[11px] font-semibold">
+                          Đã huỷ chuyến
+                        </Badge>
+                      ) : isDelayed ? (
+                        <Badge tone="warning" icon={Timer} className="h-6.5 px-2.5 text-[11px] font-semibold">
+                          Trễ +{record.delayedMinutes || 15} phút
+                        </Badge>
+                      ) : (
+                        <Countdown30Min createdAt={record.createdAt} compact />
+                      )}
                     </div>
                   </div>
 
-                  {isCompleted ? (
-                    <Badge tone="success" icon={CheckCircle2} className="h-7 px-2.5 font-semibold">
-                      Đã hoàn tất an toàn
-                    </Badge>
-                  ) : isCancelled ? (
-                    <Badge tone="danger" icon={XCircle} className="h-7 px-2.5 font-semibold">
-                      Đã huỷ chuyến
-                    </Badge>
-                  ) : isDelayed ? (
-                    <Badge tone="warning" icon={Timer} className="h-7 px-2.5 font-semibold">
-                      Trễ +{record.delayedMinutes || 15} phút
-                    </Badge>
-                  ) : (
-                    <Countdown30Min createdAt={record.createdAt} />
-                  )}
+                  {/* Dòng 2: Lộ Trình Tuyến Đường & Thời Gian */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm">
+                    <div className="flex items-center gap-2 font-bold text-[#1d1d1f] dark:text-white min-w-0">
+                      <span className="truncate">{record.from}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
+                      <span className="truncate">{record.to}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-xs text-[#86868b] dark:text-slate-400 shrink-0 font-medium">
+                      <Clock className="w-3.5 h-3.5 text-[#0071e3]" />
+                      <span className="tabular font-semibold text-[#1d1d1f] dark:text-slate-200">
+                        {record.timeSlot}
+                      </span>
+                      {tripDateLabel && <span className="tabular">· {tripDateLabel}</span>}
+                    </div>
+                  </div>
+
+                  {/* Dòng 3: Chi Phí Xăng Xe & Nút Thao Tác Nhanh */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.04] dark:border-white/[0.04] text-xs">
+                    <div className="flex items-center gap-2 text-[#86868b] dark:text-slate-400">
+                      <span className="text-sm sm:text-base font-bold text-[#1d1d1f] dark:text-white tabular font-display">
+                        {formatVND(totalCost)}
+                      </span>
+                      <span>·</span>
+                      <span>{record.seats} ghế</span>
+                      <span className="hidden sm:inline">·</span>
+                      <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-medium">
+                        0đ phí sàn
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {!isCompleted && !isCancelled && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenChat?.(record.escrowId || record.id);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Mở chat</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpand(record.escrowId || record.id);
+                        }}
+                        className={`px-2.5 py-1.5 rounded-xl font-semibold text-xs inline-flex items-center gap-1 transition-all cursor-pointer ${
+                          isExpanded
+                            ? 'bg-[#0071e3]/10 text-[#0071e3]'
+                            : 'bg-black/[0.04] dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 hover:bg-black/[0.08]'
+                        }`}
+                      >
+                        <span>{isExpanded ? 'Thu gọn' : 'Chi tiết'}</span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            isExpanded ? 'rotate-180 text-[#0071e3]' : ''
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-5 space-y-4">
-                  {/* Cảnh báo đã báo cáo sai lệch loại xe nếu có */}
-                  {record.vehicleMismatchReport && (
-                    <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-semibold min-w-0">
-                        <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-                        <span className="truncate">
-                          Đã báo cáo: {record.vehicleMismatchReport.mismatchTitle || 'Sai lệch loại xe'}
+                {/* ── 2. KHỐI CHI TIẾT MỞ RỘNG (EXPANDED ACCORDION) ── */}
+                {isExpanded && (
+                  <div className="border-t border-black/[0.06] dark:border-white/[0.06] bg-[#fafafa] dark:bg-slate-900/60 p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
+                    {/* Cảnh báo đã báo cáo sai lệch loại xe nếu có */}
+                    {record.vehicleMismatchReport && (
+                      <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-semibold min-w-0">
+                          <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span className="truncate">
+                            Đã báo cáo: {record.vehicleMismatchReport.mismatchTitle || 'Sai lệch loại xe'}
+                          </span>
+                        </div>
+                        <span className="shrink-0 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-200/80 dark:bg-rose-900/80 text-rose-900 dark:text-rose-100">
+                          {record.vehicleMismatchReport.status === 'resolved_converted'
+                            ? '✓ Đã chuyển Biển vàng'
+                            : 'Đang xử lý'}
                         </span>
                       </div>
-                      <span className="shrink-0 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-200/80 dark:bg-rose-900/80 text-rose-900 dark:text-rose-100">
-                        {record.vehicleMismatchReport.status === 'resolved_converted'
-                          ? '✓ Đã chuyển Biển vàng'
-                          : 'Đang xử lý'}
-                      </span>
+                    )}
+
+                    {/* Quy trình kết nối an toàn 4 bước */}
+                    <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} />
+
+                    {/* Lộ Trình & Thời Gian Chi Tiết */}
+                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.06] dark:border-white/[0.08]">
+                      <div className="flex items-center justify-between gap-3 mb-3 text-xs sm:text-[13px]">
+                        <span className="font-semibold text-[#1d1d1f] dark:text-white tabular">
+                          {record.timeSlot} {tripDateLabel ? `· ${tripDateLabel}` : ''}
+                        </span>
+                        <span className="text-[#86868b] font-medium">{record.seats} người đồng hành</span>
+                      </div>
+                      <RouteTimeline from={record.from} to={record.to} compact />
                     </div>
-                  )}
 
-                  {/* Quy trình kết nối an toàn 4 bước */}
-                  <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} />
-
-                  {/* Lộ Trình & Thời Gian */}
-                  <div className="p-4 rounded-2xl bg-[#f5f5f7] border border-black/[0.06]">
-                    <div className="flex items-center justify-between gap-3 mb-3 text-xs sm:text-[13px]">
-                      <span className="font-semibold text-[#1d1d1f] tabular">
-                        {record.timeSlot} {record.targetItem?.date ? `· ${formatCleanDateLabel(record.targetItem.date)}` : ''}
-                      </span>
-                      <span className="text-[#86868b] font-medium">{record.seats} người đồng hành</span>
-                    </div>
-                    <RouteTimeline from={record.from} to={record.to} compact />
-                  </div>
-
-                  {/* Thẻ Liên Lạc & Khung Chat Chuẩn MIT 2-Phase Commit */}
-                  {!isCompleted && !isCancelled && (
-                    <div className="rounded-2xl bg-white dark:bg-slate-900/90 border border-black/[0.08] p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] space-y-3.5">
-                      {/* Hàng Tiêu Đề Đối Tác */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
-                        <div className="flex items-center gap-3">
-                          <div className="relative">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
-                              <User className="w-5 h-5 text-white" strokeWidth={2.2} />
-                            </div>
-                            <span
-                              className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
-                              title="Đã xác thực CCCD & GPLX"
-                            >
-                              ✓
-                            </span>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <p className="font-bold text-sm text-[#1d1d1f] dark:text-white">{record.contactName}</p>
-                              <PresenceDot isOnline={partnerOnline.isOnline} showLabel detail={partnerOnline.detail} />
-                              <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 inline-flex items-center gap-1">
-                                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                                <span>5.0 Tín nhiệm</span>
+                    {/* Thẻ Liên Lạc & Khung Chat Chuẩn MIT 2-Phase Commit */}
+                    {!isCompleted && !isCancelled && (
+                      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.08] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] space-y-3.5">
+                        {/* Hàng Tiêu Đề Đối Tác */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
+                                <User className="w-5 h-5 text-white" strokeWidth={2.2} />
+                              </div>
+                              <span
+                                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
+                                title="Đã xác thực CCCD & GPLX"
+                              >
+                                ✓
                               </span>
                             </div>
-                            <p className="text-xs text-[#86868b] mt-0.5">Xác thực danh tính thật · 0 rủi ro</p>
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="font-bold text-sm text-[#1d1d1f] dark:text-white">{record.contactName}</p>
+                                <PresenceDot isOnline={partnerOnline.isOnline} showLabel detail={partnerOnline.detail} />
+                                <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 inline-flex items-center gap-1">
+                                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                                  <span>5.0 Tín nhiệm</span>
+                                </span>
+                              </div>
+                              <p className="text-xs text-[#86868b] mt-0.5">Xác thực danh tính thật · 0 rủi ro</p>
+                            </div>
+                          </div>
+
+                          {/* Trạng thái liên hệ & Số điện thoại (Chỉ mở khi đã chốt) */}
+                          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-black/[0.03] dark:border-white/[0.04]">
+                            <p className="text-[11px] font-medium text-[#86868b]">
+                              {record.status === 'confirmed' || record.bothConfirmed
+                                ? 'Số điện thoại đối tác'
+                                : 'Bảo mật thông tin'}
+                            </p>
+                            <p className="font-display text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular tracking-tight">
+                              {record.status === 'confirmed' || record.bothConfirmed
+                                ? phone
+                                : maskPhoneNumber(phone || '090***xxxx')}
+                            </p>
                           </div>
                         </div>
 
-                        {/* Trạng thái liên hệ & Số điện thoại (Chỉ mở khi đã chốt) */}
-                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-black/[0.03] dark:border-white/[0.04]">
-                          <p className="text-[11px] font-medium text-[#86868b]">
-                            {record.status === 'confirmed' || record.bothConfirmed ? 'Số điện thoại đối tác' : 'Bảo mật thông tin'}
-                          </p>
-                          <p className="font-display text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular tracking-tight">
-                            {record.status === 'confirmed' || record.bothConfirmed
-                              ? phone
-                              : maskPhoneNumber(phone || '090***xxxx')}
-                          </p>
-                        </div>
-                      </div>
+                        {/* Khối Hành Động Tự Do & An Toàn */}
+                        <div className="space-y-2.5">
+                          {record.status === 'confirmed' || record.bothConfirmed ? (
+                            <div className="space-y-2.5">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <a
+                                  href={`tel:${cleanPhoneNumber(phone)}`}
+                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs bg-emerald-50 hover:bg-emerald-100/90 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 border border-emerald-200/80 dark:border-emerald-800/60 transition-all inline-flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                                >
+                                  <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                  <span>Gọi điện ({phone})</span>
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs bg-[#0071e3] hover:bg-[#0077ed] text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                                >
+                                  <MessageSquare className="w-4 h-4" />
+                                  <span>Mở Khung Chat Chuyến Đi</span>
+                                </button>
+                              </div>
 
-                      {/* Khối Hành Động Tự Do & An Toàn (Không ép Zalo) */}
-                      <div className="space-y-2.5">
-                        {record.status === 'confirmed' || record.bothConfirmed ? (
-                          // ĐÃ CHỐT CHUYẾN: Tự do gọi điện, nhắn tin, sao chép
-                          <div className="space-y-2.5">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <a
-                                href={`tel:${cleanPhoneNumber(phone)}`}
-                                className="w-full h-11 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-                              >
-                                <Phone className="w-4 h-4" />
-                                <span>Gọi điện trực tiếp ({phone})</span>
-                              </a>
+                              {/* Tùy chọn nền tảng tự do khác */}
+                              <div className="flex items-center justify-between gap-2 pt-1 text-xs text-[#86868b] flex-wrap">
+                                <span className="text-[11.5px] opacity-75">Tự do liên hệ kênh khác:</span>
+                                <div className="flex items-center gap-1.5 text-[11.5px]">
+                                  <a
+                                    href={zaloUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-medium inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    <ZaloIcon className="w-3.5 h-3.5" />
+                                    <span>Zalo</span>
+                                  </a>
+                                  <span className="text-slate-300 dark:text-slate-700">·</span>
+                                  <a
+                                    href={teleUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-medium inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    <TelegramIcon className="w-3.5 h-3.5" />
+                                    <span>Telegram</span>
+                                  </a>
+                                  <span className="text-slate-300 dark:text-slate-700">·</span>
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-medium inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    <span>WhatsApp</span>
+                                  </a>
+                                </div>
+                              </div>
+
+                              <div className="mt-1.5 px-3 py-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.04] text-[11px] text-[#86868b] dark:text-slate-400 leading-relaxed flex items-center gap-2">
+                                <span className="shrink-0">💡</span>
+                                <span>
+                                  Đối tác có thể đang lái xe hoặc bận việc. Nếu chưa gọi được ngay, bạn hãy gửi tin nhắn
+                                  Zalo/SMS nhé.
+                                </span>
+                              </div>
+
+                              {onReportUnreachablePhone && (
+                                <div className="flex justify-end pt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => onReportUnreachablePhone(record)}
+                                    className="text-[11px] text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                    title="Báo cáo nếu số điện thoại đối tác không liên lạc được hoặc là số ảo"
+                                  >
+                                    <PhoneOff className="w-3.5 h-3.5" />
+                                    <span>Báo số ảo / Không nghe máy</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                                <span className="leading-relaxed">
+                                  {record.status === 'pre_confirmed'
+                                    ? '⚡ Chuyến xe đang được giữ chỗ 15 phút. Vui lòng mở khung chat để xác nhận chốt!'
+                                    : '💬 Đang thỏa thuận điểm hẹn và hành lý. SĐT sẽ tự động mở sau khi 2 bên cùng chốt.'}
+                                </span>
+                              </div>
+
                               <button
                                 type="button"
                                 onClick={() => onOpenChat?.(record.escrowId || record.id)}
-                                className="w-full h-11 px-4 rounded-xl font-bold text-xs bg-[#0071e3] hover:bg-[#0077ed] text-white active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                                className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
                               >
-                                <MessageSquare className="w-4 h-4" />
-                                <span>Mở Khung Chat Chuyến Đi</span>
+                                <MessageSquare className="w-4 h-4 shrink-0" />
+                                <span>Mở Khung Chat & Chốt Chuyến (Bảo mật 100%)</span>
                               </button>
                             </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-                            {/* Tùy chọn nền tảng tự do khác */}
-                            <div className="flex items-center justify-between gap-2 pt-1 text-xs text-[#86868b] flex-wrap">
-                              <span className="text-[11.5px] opacity-75">Tự do liên hệ kênh khác:</span>
-                              <div className="flex items-center gap-2 text-[11.5px]">
-                                <a
-                                  href={zaloUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[#0071e3] hover:underline font-medium inline-flex items-center gap-1"
-                                >
-                                  <ZaloIcon className="w-3.5 h-3.5" />
-                                  <span>Zalo</span>
-                                </a>
-                                <span>·</span>
-                                <a
-                                  href={teleUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[#0071e3] hover:underline font-medium inline-flex items-center gap-1"
-                                >
-                                  <TelegramIcon className="w-3.5 h-3.5" />
-                                  <span>Telegram</span>
-                                </a>
-                                <span>·</span>
-                                <a
-                                  href={waUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[#0071e3] hover:underline font-medium"
-                                >
-                                  WhatsApp
-                                </a>
-                              </div>
-                            </div>
+                    {/* Bảng Chi Phí Xăng Xe Chuẩn Apple Wallet */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
+                        <p className="text-xs text-[#86868b] font-medium">Phí nền tảng CarMate</p>
+                        <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular mt-1">
+                          0 ₫ · Miễn phí kết nối
+                        </p>
+                        <p className="text-[11px] text-[#86868b] mt-0.5">Không thu phí sàn trung gian</p>
+                      </div>
 
-                            <div className="mt-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/40 text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
-                              💡 Đối tác có thể đang lái xe hoặc bận việc. Nếu chưa gọi được ngay, bạn hãy gửi tin nhắn Zalo/SMS nhé.
-                            </div>
-
-                            {onReportUnreachablePhone && (
-                              <div className="flex justify-end pt-1">
-                                <button
-                                  type="button"
-                                  onClick={() => onReportUnreachablePhone(record)}
-                                  className="text-[11px] text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
-                                  title="Báo cáo nếu số điện thoại đối tác không liên lạc được hoặc là số ảo"
-                                >
-                                  <PhoneOff className="w-3.5 h-3.5" />
-                                  <span>Báo số ảo / Không nghe máy</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          // CHƯA CHỐT: Thương lượng hoặc Giữ chỗ mềm qua Khung Chat
-                          <div className="space-y-2">
-                            <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2">
-                              <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
-                              <span className="leading-relaxed">
-                                {record.status === 'pre_confirmed'
-                                  ? '⚡ Chuyến xe đang được giữ chỗ 15 phút. Vui lòng mở khung chat để xác nhận chốt!'
-                                  : '💬 Đang thỏa thuận điểm hẹn và hành lý. SĐT sẽ tự động mở sau khi 2 bên cùng chốt.'}
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => onOpenChat?.(record.escrowId || record.id)}
-                              className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
-                            >
-                              <MessageSquare className="w-4 h-4 shrink-0" />
-                              <span>Mở Khung Chat & Chốt Chuyến (Bảo mật 100%)</span>
-                            </button>
-                          </div>
-                        )}
+                      <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
+                        <p className="text-xs text-[#86868b] font-medium">Chia sẻ chi phí xăng xe</p>
+                        <p className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular mt-1">
+                          {formatVND(totalCost)}
+                        </p>
+                        <p className="text-[11px] text-[#86868b] mt-0.5">Gửi trực tiếp Chủ xe khi lên xe</p>
                       </div>
                     </div>
-                  )}
 
-                  {/* Bảng Chi Phí Xăng Xe Chuẩn Apple Wallet */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-4 rounded-2xl border border-black/[0.06] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
-                      <p className="text-xs text-[#86868b] font-medium">Phí nền tảng CarMate</p>
-                      <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular mt-1">
-                        0 ₫ · Miễn phí trọn đời
-                      </p>
-                      <p className="text-[11px] text-[#86868b] mt-0.5">Không thu chiết khấu trung gian</p>
-                    </div>
-
-                    <div className="p-4 rounded-2xl border border-black/[0.06] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
-                      <p className="text-xs text-[#86868b] font-medium">Chia sẻ chi phí xăng xe</p>
-                      <p className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular mt-1">
-                        {formatVND(totalCost)}
-                      </p>
-                      <p className="text-[11px] text-[#86868b] mt-0.5">Gửi trực tiếp Chủ xe khi lên xe</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Thanh Hành Động */}
-                <div className="px-4 sm:px-5 py-3.5 border-t border-black/[0.06] bg-[#fbfbfd] dark:bg-slate-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  {/* Cụm chia sẻ cho người thân */}
-                  <div className="flex items-center gap-1.5 justify-between sm:justify-start w-full sm:w-auto">
-                    <button
-                      type="button"
-                      onClick={() => handleCopyForFamily(record)}
-                      className="text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400 inline-flex items-center gap-1.5 cursor-pointer py-1.5 px-2.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      {copiedId === record.escrowId ? (
-                        <>
-                          <Check className="w-4 h-4 text-emerald-600" />
-                          <span className="text-emerald-600 dark:text-emerald-400">Đã chép thông tin</span>
-                        </>
-                      ) : (
-                        <>
-                          <Share2 className="w-4 h-4 text-slate-500" />
-                          <span>Gửi tin người thân</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSendSMS(record)}
-                      className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 py-1.5 px-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                      title="Soạn tin nhắn SMS gửi người thân"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>SMS</span>
-                    </button>
-                  </div>
-
-                  {/* Nút hành động trạng thái */}
-                  {!isCompleted && !isCancelled && (
-                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                      <Button variant="warningGhost" size="sm" icon={Timer} onClick={() => onDelay(record)} className="flex-1 sm:flex-initial justify-center">
-                        Báo trễ
-                      </Button>
-                      <Button variant="dangerGhost" size="sm" icon={XCircle} onClick={() => onCancel(record)} className="flex-1 sm:flex-initial justify-center">
-                        Huỷ chuyến
-                      </Button>
-                      {onReportMismatch && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={ShieldAlert}
-                          onClick={() => onReportMismatch(record)}
-                          className="flex-1 sm:flex-initial justify-center text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
-                          title="Báo cáo xe đón thực tế là Biển vàng hoặc sai mô tả"
-                        >
-                          Báo sai loại xe
-                        </Button>
-                      )}
-                      {onReportUnreachablePhone && (record.status === 'confirmed' || record.bothConfirmed) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={PhoneOff}
-                          onClick={() => onReportUnreachablePhone(record)}
-                          className="w-full sm:w-auto justify-center text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
-                          title="Báo cáo đối tác dùng số điện thoại ảo hoặc không liên lạc được"
-                        >
-                          Báo số ảo / Không nghe máy
-                        </Button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => onComplete(record.escrowId, record)}
-                        className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl sm:rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black text-xs font-semibold shadow-2xs transition-all cursor-pointer min-h-[38px] sm:min-h-0"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
-                        <span>Hoàn tất chuyến</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {(isCompleted || isCancelled) && (
-                    <div className="flex items-center justify-between w-full text-xs text-slate-500 dark:text-slate-400 flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <span>
-                          {isCompleted
-                            ? '✓ Chuyến đi đã hoàn tất an toàn'
-                            : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
-                        </span>
-                        {onReportMismatch && !record.vehicleMismatchReport && (
-                          <button
-                            type="button"
-                            onClick={() => onReportMismatch(record)}
-                            className="text-[11.5px] text-slate-400 hover:text-rose-600 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer ml-1"
-                            title="Báo cáo nếu xe đón không đúng cam kết"
-                          >
-                            <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
-                            <span>Báo sai xe</span>
-                          </button>
-                        )}
-                      </div>
-                      {isCompleted && onReview && (
+                    {/* Thanh Hành Động Chi Tiết */}
+                    <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      {/* Cụm chia sẻ cho người thân */}
+                      <div className="flex items-center gap-1.5 justify-between sm:justify-start w-full sm:w-auto">
                         <button
                           type="button"
-                          onClick={() => onReview(record)}
-                          className="font-bold text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 py-1.5 px-3 rounded-xl inline-flex items-center gap-1.5 hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
+                          onClick={() => handleCopyForFamily(record)}
+                          className="text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400 inline-flex items-center gap-1.5 cursor-pointer py-1.5 px-2.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
                         >
-                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                          <span>{record.reviews?.length > 0 ? 'Xem / Sửa đánh giá' : 'Đánh giá 2 chiều'}</span>
+                          {copiedId === record.escrowId ? (
+                            <>
+                              <Check className="w-4 h-4 text-emerald-600" />
+                              <span className="text-emerald-600 dark:text-emerald-400">Đã chép thông tin</span>
+                            </>
+                          ) : (
+                            <>
+                              <Share2 className="w-4 h-4 text-slate-500" />
+                              <span>Gửi tin người thân</span>
+                            </>
+                          )}
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSendSMS(record)}
+                          className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 py-1.5 px-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                          title="Soạn tin nhắn SMS gửi người thân"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>SMS</span>
+                        </button>
+                      </div>
+
+                      {/* Nút hành động trạng thái */}
+                      {!isCompleted && !isCancelled && (
+                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={Timer}
+                            onClick={() => onDelay(record)}
+                            className="flex-1 sm:flex-initial justify-center text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                          >
+                            Báo trễ
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={XCircle}
+                            onClick={() => onCancel(record)}
+                            className="flex-1 sm:flex-initial justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                          >
+                            Huỷ chuyến
+                          </Button>
+                          {onReportMismatch && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={ShieldAlert}
+                              onClick={() => onReportMismatch(record)}
+                              className="flex-1 sm:flex-initial justify-center text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-medium"
+                              title="Báo cáo xe đón thực tế là Biển vàng hoặc sai mô tả"
+                            >
+                              Báo sai loại xe
+                            </Button>
+                          )}
+                          {onReportUnreachablePhone && (record.status === 'confirmed' || record.bothConfirmed) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={PhoneOff}
+                              onClick={() => onReportUnreachablePhone(record)}
+                              className="w-full sm:w-auto justify-center text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-medium"
+                              title="Báo cáo đối tác dùng số điện thoại ảo hoặc không liên lạc được"
+                            >
+                              Báo số ảo / Không nghe máy
+                            </Button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onComplete(record.escrowId, record)}
+                            className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl sm:rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black text-xs font-semibold shadow-2xs transition-all cursor-pointer min-h-[38px] sm:min-h-0"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
+                            <span>Hoàn tất chuyến</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {(isCompleted || isCancelled) && (
+                        <div className="flex items-center justify-between w-full text-xs text-slate-500 dark:text-slate-400 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span>
+                              {isCompleted
+                                ? '✓ Chuyến đi đã hoàn tất an toàn'
+                                : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
+                            </span>
+                            {onReportMismatch && !record.vehicleMismatchReport && (
+                              <button
+                                type="button"
+                                onClick={() => onReportMismatch(record)}
+                                className="text-[11.5px] text-slate-400 hover:text-rose-600 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer ml-1"
+                                title="Báo cáo nếu xe đón không đúng cam kết"
+                              >
+                                <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                                <span>Báo sai xe</span>
+                              </button>
+                            )}
+                          </div>
+                          {isCompleted && onReview && (
+                            <button
+                              type="button"
+                              onClick={() => onReview(record)}
+                              className="font-bold text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 py-1.5 px-3 rounded-xl inline-flex items-center gap-1.5 hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                              <span>{record.reviews?.length > 0 ? 'Xem / Sửa đánh giá' : 'Đánh giá 2 chiều'}</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </article>
             );
           })}
+
+          {/* ── 3. THANH PHÂN TRANG CHUẨN APPLE (PAGINATION) ── */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-3 pb-2 px-1 text-xs text-[#86868b] dark:text-slate-400">
+              <span>
+                Trang {currentPage} / {totalPages} (Tổng {filteredList.length} chuyến)
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer inline-flex items-center gap-1 font-medium"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Trước</span>
+                </button>
+
+                {/* Các nút số trang */}
+                <div className="hidden sm:flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setCurrentPage(p)}
+                      className={`w-7 h-7 rounded-lg text-xs font-semibold tabular transition-all cursor-pointer ${
+                        currentPage === p
+                          ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-2xs'
+                          : 'hover:bg-black/5 dark:hover:bg-white/5 text-[#86868b]'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer inline-flex items-center gap-1 font-medium"
+                >
+                  <span>Sau</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

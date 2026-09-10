@@ -81,8 +81,8 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
         {/* Ambient subtle glow */}
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-[#0071e3]/5 rounded-full blur-2xl pointer-events-none" />
 
-        {/* Layout Responsive: Mobile (các tầng rõ ràng, zero tràn viền) vs Desktop (ngang rộng rãi) */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
+        {/* Layout Responsive Apple Squircle & Liquid Banner */}
+        <div className="flex items-center justify-between gap-3 sm:gap-4 relative z-10">
           {/* Khối Thông Tin Tuyến & Định Mức */}
           <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <span className="w-8.5 h-8.5 rounded-xl bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 shadow-2xs">
@@ -118,22 +118,9 @@ export default function RouteBenchmarkBar({ searchKeyword = '', setSearchKeyword
             </div>
           </div>
 
-          {/* Nút Hành Động 1-Chạm: Tối ưu ngón tay cái mobile */}
-          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t border-black/[0.04] sm:border-t-0 dark:border-white/[0.04]">
-            <span className="text-[11px] text-[#86868b] dark:text-slate-400 font-medium sm:hidden">
-              Xăng ~{formatVND(info.fuelCost)} · Cầu đường ~{formatVND(info.botFee)}
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDetail(true);
-              }}
-              className="text-[11.5px] sm:text-xs font-bold text-[#0071e3] group-hover:text-[#0077ed] px-3.5 py-1.5 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/20 dark:bg-[#0071e3]/15 dark:hover:bg-[#0071e3]/25 border border-[#0071e3]/20 inline-flex items-center justify-center gap-1 shrink-0 cursor-pointer transition-all active:scale-95 shadow-2xs"
-            >
-              <span>Xem định mức & Bảng tính</span>
-              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </button>
+          {/* Mũi tên chỉ thị mở modal định mức Apple HIG */}
+          <div className="flex items-center shrink-0 text-[#86868b] dark:text-slate-400 group-hover:text-[#0071e3] transition-colors pr-1">
+            <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
       </div>
