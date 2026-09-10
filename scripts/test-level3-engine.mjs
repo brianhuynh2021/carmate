@@ -16,8 +16,7 @@ import {
   VIRTUAL_HUBS,
   DOORSTEP_CONFIG,
   getVirtualHubsByCorridor,
-  findNearestVirtualHub,
-  calculateDistanceKm
+  findNearestVirtualHub
 } from '@carmate/shared';
 
 import {
@@ -31,12 +30,8 @@ import {
 import {
   initDB,
   createIntent,
-  getIntents,
   deleteIntent,
   applyCancellationPenalty,
-  addBooking,
-  getBookingById,
-  removeBooking,
   saveUser,
   getUserByPhone,
   deleteUserAccount
