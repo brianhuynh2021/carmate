@@ -29,7 +29,18 @@ import {
   Volume2,
   VolumeX
 } from 'lucide-react';
-import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
+import {
+  formatVND,
+  toPublicAlias,
+  detectPiiLeak,
+  cleanPhoneNumber,
+  getUserOnlineStatus,
+  formatCleanDateLabel,
+  MIN_CALL_DURATION_FOR_EMERGENCY,
+  REQUIRED_UNANSWERED_CALLS,
+  recordCallAttempt,
+  getEmergencyCallStatus
+} from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
@@ -67,13 +78,36 @@ export default function InboxModal({
   const [contextMenu, setContextMenu] = useState(null); // { x, y, booking }
 
   // Trạng thái Gọi thoại trực tiếp trong App (0đ cước · Bảo mật 100% SĐT)
-  const [inAppCallState, setInAppCallState] = useState(null); // null | { status: 'ringing' | 'connected', seconds: 0, isMuted: false, isSpeaker: false }
+  const [inAppCallState, setInAppCallState] = useState(null); // null | { status: 'ringing' | 'connected', seconds: 0, ringSeconds: 0, isMuted: false, isSpeaker: false, isTimeout?: boolean }
+  const [emergencyCallVersion, setEmergencyCallVersion] = useState(0);
+  const [copiedPhone, setCopiedPhone] = useState(false);
+
+  const handleCopyPhone = (phone) => {
+    if (!phone) return;
+    navigator.clipboard?.writeText?.(phone);
+    setCopiedPhone(true);
+    onShowToast?.('✓ Đã sao chép số điện thoại', 'success');
+    setTimeout(() => setCopiedPhone(false), 2000);
+  };
 
   useEffect(() => {
     let timer = null;
-    if (inAppCallState?.status === 'connected') {
+    if (inAppCallState) {
       timer = setInterval(() => {
-        setInAppCallState((prev) => (prev ? { ...prev, seconds: prev.seconds + 1 } : null));
+        setInAppCallState((prev) => {
+          if (!prev) return null;
+          if (prev.status === 'ringing') {
+            const nextRing = (prev.ringSeconds || 0) + 1;
+            if (nextRing >= 35) {
+              return { ...prev, ringSeconds: nextRing, seconds: nextRing, isTimeout: true };
+            }
+            return { ...prev, ringSeconds: nextRing, seconds: nextRing };
+          }
+          if (prev.status === 'connected') {
+            return { ...prev, seconds: (prev.seconds || 0) + 1 };
+          }
+          return prev;
+        });
       }, 1000);
     }
     return () => {
@@ -82,17 +116,71 @@ export default function InboxModal({
   }, [inAppCallState?.status]);
 
   const handleStartInAppCall = () => {
-    setInAppCallState({ status: 'ringing', seconds: 0, isMuted: false, isSpeaker: false });
+    setInAppCallState({
+      status: 'ringing',
+      seconds: 0,
+      ringSeconds: 0,
+      isMuted: false,
+      isSpeaker: false
+    });
     playMessageChime();
-    setTimeout(() => {
-      setInAppCallState((prev) => (prev && prev.status === 'ringing' ? { ...prev, status: 'connected' } : prev));
+  };
+
+  const handleSimulatePartnerAnswer = () => {
+    if (inAppCallState?.status === 'ringing') {
+      setInAppCallState((prev) => (prev ? { ...prev, status: 'connected', seconds: 0 } : null));
       playSuccessChime();
-    }, 2800);
+    }
   };
 
   const handleEndInAppCall = () => {
+    if (!inAppCallState) return;
+
+    const ringSec = inAppCallState.ringSeconds || 0;
+    const wasRinging = inAppCallState.status === 'ringing';
+
     setInAppCallState(null);
+
+    if (wasRinging) {
+      const bKey = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
+      const cKey = currentUser?.phone || currentUser?.id || 'guest_caller';
+
+      if (ringSec < MIN_CALL_DURATION_FOR_EMERGENCY) {
+        onShowToast?.(
+          `⚠️ Bạn chỉ mới đổ chuông ${ringSec}s (< ${MIN_CALL_DURATION_FOR_EMERGENCY}s). Cần đổ chuông tối thiểu ${MIN_CALL_DURATION_FOR_EMERGENCY}s để đối tác kịp nhấc máy.`,
+          'warning'
+        );
+      } else {
+        const res = recordCallAttempt({
+          bookingId: bKey,
+          callerId: cKey,
+          durationSeconds: ringSec,
+          answered: false
+        });
+        setEmergencyCallVersion((v) => v + 1);
+
+        if (res.isUnlocked) {
+          playSuccessChime();
+          onShowToast?.(
+            `🚨 Đã mở khoá Số điện thoại khẩn cấp của ${partnerAlias} cho riêng bạn (sau 2 lần gọi ≥25s không phản hồi).`,
+            'success'
+          );
+        } else {
+          onShowToast?.(
+            `📞 Đã ghi nhận cuộc gọi nhỡ (đổ chuông ${ringSec}s - Lần ${res.attempts}/${REQUIRED_UNANSWERED_CALLS}). Hãy gọi lại lần 2 (≥25s) nếu đối tác vẫn không nhấc máy.`,
+            'info'
+          );
+        }
+      }
+    }
   };
+
+  // Tự động kết thúc cuộc gọi khi đổ chuông quá 35s không nghe máy
+  useEffect(() => {
+    if (inAppCallState?.isTimeout && inAppCallState.status === 'ringing') {
+      handleEndInAppCall();
+    }
+  }, [inAppCallState?.isTimeout, inAppCallState?.status]);
 
   // Kênh Hỗ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
   const [isSupportChannelActive, setIsSupportChannelActive] = useState(false);
@@ -518,6 +606,30 @@ export default function InboxModal({
       return toPublicAlias(activeBooking);
     }
   }, [activeBooking, activeTab, isConfirmed, isTargetPassengerTrip]);
+
+  const partnerPhone = useMemo(() => {
+    if (!activeBooking) return '';
+    if (activeTab === 'incoming') {
+      return isTargetPassengerTrip
+        ? (activeBooking.driverPhone || '')
+        : (activeBooking.passengerPhone || activeBooking.userPhone || activeBooking.phone || '');
+    }
+    return isTargetPassengerTrip
+      ? (activeBooking.passengerPhone || activeBooking.contactPhone || '')
+      : (activeBooking.driverPhone || activeBooking.contactPhone || activeBooking.phoneReal || '');
+  }, [activeBooking, activeTab, isTargetPassengerTrip]);
+
+  const bookingKey = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
+  const callerKey = currentUser?.phone || currentUser?.id || 'guest_caller';
+
+  const emergencyCallStatus = useMemo(() => {
+    if (!bookingKey || !callerKey) {
+      return { isUnlocked: false, attempts: 0, remainingAttempts: REQUIRED_UNANSWERED_CALLS };
+    }
+    return getEmergencyCallStatus({ bookingId: bookingKey, callerId: callerKey });
+  }, [bookingKey, callerKey, emergencyCallVersion]);
+
+  const isEmergencyPhoneUnlockedForMe = Boolean(isConfirmed && emergencyCallStatus.isUnlocked && partnerPhone);
 
   const activePartnerOnline = activeBooking
     ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
@@ -1221,34 +1333,87 @@ export default function InboxModal({
               {/* THANH ĐIỀU PHỐI 2-PHASE COMMIT (SMART ACTION BAR) */}
               <div className="p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/60 dark:to-slate-800/40 border-b border-black/[0.06] dark:border-white/[0.06]">
                 {isConfirmed ? (
-                  // ĐÃ CHỐT CHÍNH THỨC: BẢO MẬT 100% SĐT - LIÊN HỆ TRỰC TIẾP TRÊN PLATFORM
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                        <Check className="w-4 h-4" strokeWidth={3} />
+                  isEmergencyPhoneUnlockedForMe && partnerPhone ? (
+                    // ĐÃ MỞ KHOÁ SĐT KHẨN CẤP CHO NGƯỜI GỌI (SAU 2 LẦN GỌI APP >= 25S)
+                    <div className="p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 text-left space-y-2.5 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-xs shrink-0">
+                            !
+                          </span>
+                          <div>
+                            <p className="text-xs font-bold text-amber-950 dark:text-amber-200">
+                              Mở khoá Số điện thoại khẩn cấp đón xe
+                            </p>
+                            <p className="text-[11px] text-amber-800 dark:text-amber-400">
+                              Đã xác thực: Bạn đã gọi qua App 2 lần (≥ 25s) nhưng {partnerAlias} không bắt máy
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-bold shrink-0">
+                          Chỉ riêng bạn
+                        </span>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                          Chuyến đi đã chốt thành công!
-                        </p>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                          🔒 Bảo mật 100% qua App. Nhắn tin và gọi thoại trực tiếp trên nền tảng (ẩn SĐT).
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={handleStartInAppCall}
-                        className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-                        title="Gọi thoại trực tiếp qua App miễn phí 0đ cước và bảo mật 100% SĐT"
-                      >
-                        <Phone className="w-3.5 h-3.5 fill-current" />
-                        <span>Gọi cho {partnerAlias} (0đ)</span>
-                      </button>
+                      <div className="flex items-center justify-between bg-white dark:bg-slate-900/90 p-2.5 rounded-xl border border-amber-500/20">
+                        <div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">SĐT trực tiếp {partnerAlias}:</p>
+                          <p className="text-base font-mono font-bold text-slate-900 dark:text-white tracking-tight">
+                            {partnerPhone}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`tel:${partnerPhone}`}
+                            className="py-1.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                          >
+                            <Phone className="w-3.5 h-3.5 fill-current" />
+                            <span>Gọi ngay</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyPhone(partnerPhone)}
+                            className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer active:scale-95"
+                          >
+                            {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedPhone ? 'Đã chép' : 'Sao chép'}</span>
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-[10.5px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                        💡 <strong>Nguyên tắc:</strong> Chỉ sử dụng số này để gọi đón khẩn cấp tại điểm hẹn. Giữ đúng thỏa thuận chi phí trên CarMate.
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    // ĐÃ CHỐT CHÍNH THỨC: BẢO MẬT 100% SĐT - LIÊN HỆ TRỰC TIẾP TRÊN PLATFORM
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-4 h-4" strokeWidth={3} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                            Chuyến đi đã chốt thành công!
+                          </p>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                            🔒 Bảo mật 100% qua App. Nhắn tin và gọi thoại trực tiếp trên nền tảng (ẩn SĐT).
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={handleStartInAppCall}
+                          className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                          title="Gọi thoại trực tiếp qua App miễn phí 0đ cước và bảo mật 100% SĐT"
+                        >
+                          <Phone className="w-3.5 h-3.5 fill-current" />
+                          <span>Gọi cho {partnerAlias} (0đ)</span>
+                        </button>
+                      </div>
+                    </div>
+                  )
                 ) : isPreConfirmed && remainingSecs > 0 ? (
                   // ĐANG Ở BƯỚC PRE-CONFIRM: SOFT-LOCK 15 PHÚT (DYNAMIC ISLAND LIQUID COUNTDOWN)
                   <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-slate-50 dark:from-slate-900/60 dark:to-blue-950/40 border border-blue-200/70 dark:border-blue-800/50 shadow-xs flex-wrap">
@@ -1551,48 +1716,88 @@ export default function InboxModal({
                   })
                 )}
                 {isConfirmed && (
-                  <div className="my-3 p-4 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-xs text-center space-y-2.5">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                        ✓
-                      </span>
-                      <p className="text-sm font-bold text-emerald-950 dark:text-emerald-200">
-                        Chuyến đi đã chốt thành công!
-                      </p>
-                    </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-                      Hai bên chủ động nhắn tin hẹn điểm đón hoặc gọi thoại trực tiếp qua App (0đ cước · Bảo mật 100% SĐT cá nhân).
-                    </p>
-                    <div className="flex items-center justify-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleStartInAppCall}
-                        className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
-                      >
-                        <Phone className="w-3.5 h-3.5 fill-current" />
-                        <span>Gọi thoại cho {partnerAlias} qua App (0đ)</span>
-                      </button>
-                    </div>
-                    {/* Stanford Empathy Tip & Hướng dẫn dứt khoát */}
-                    <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-100/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-emerald-900 dark:text-emerald-200 text-left leading-relaxed">
-                      💡 <strong>Nguyên tắc dứt khoát:</strong> Nếu đối tác không phản hồi tin nhắn hoặc cuộc gọi qua app, bạn có thể bấm <strong>Huỷ chuyến 1-chạm</strong> để tìm xe hoặc đón người khác ngay lập tức.
-                    </div>
-
-                    {onReportUnreachablePhone && (
-                      <div className="pt-1.5 text-center">
+                  isEmergencyPhoneUnlockedForMe && partnerPhone ? (
+                    <div className="my-3 p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 shadow-xs text-center space-y-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                          !
+                        </span>
+                        <p className="text-sm font-bold text-amber-950 dark:text-amber-200">
+                          Mở khoá Số điện thoại đón xe khẩn cấp
+                        </p>
+                      </div>
+                      <div className="py-1">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Số điện thoại trực tiếp của {partnerAlias}:</p>
+                        <p className="text-xl font-mono font-bold text-slate-900 dark:text-white tabular tracking-tight">
+                          {partnerPhone}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <a
+                          href={`tel:${partnerPhone}`}
+                          className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+                        >
+                          <Phone className="w-3.5 h-3.5 fill-current" />
+                          <span>Gọi SĐT trực tiếp</span>
+                        </a>
                         <button
                           type="button"
-                          onClick={() => {
-                            onReportUnreachablePhone(activeBooking);
-                            onClose();
-                          }}
-                          className="text-[11.5px] text-slate-500 hover:text-[#0071e3] dark:text-slate-400 dark:hover:text-[#2997ff] font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
+                          onClick={() => handleCopyPhone(partnerPhone)}
+                          className="py-2.5 px-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer active:scale-95"
                         >
-                          <span>Chưa thấy đối tác phản hồi hoặc cần hỗ trợ?</span>
+                          {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedPhone ? 'Đã chép' : 'Sao chép số'}</span>
                         </button>
                       </div>
-                    )}
-                  </div>
+                      <div className="mt-2 p-2.5 rounded-xl bg-amber-100/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-[11.5px] text-amber-900 dark:text-amber-200 text-left leading-relaxed">
+                        💡 <strong>Mở khoá đón xe:</strong> Hệ thống cung cấp số cho riêng bạn sau 2 lần gọi qua App (≥25s) không nghe máy. Chỉ sử dụng để liên lạc đón xe khẩn cấp.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="my-3 p-4 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-xs text-center space-y-2.5">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                          ✓
+                        </span>
+                        <p className="text-sm font-bold text-emerald-950 dark:text-emerald-200">
+                          Chuyến đi đã chốt thành công!
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+                        Hai bên chủ động nhắn tin hẹn điểm đón hoặc gọi thoại trực tiếp qua App (0đ cước · Bảo mật 100% SĐT cá nhân).
+                      </p>
+                      <div className="flex items-center justify-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleStartInAppCall}
+                          className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+                        >
+                          <Phone className="w-3.5 h-3.5 fill-current" />
+                          <span>Gọi thoại cho {partnerAlias} qua App (0đ)</span>
+                        </button>
+                      </div>
+                      {/* Stanford Empathy Tip & Hướng dẫn dứt khoát */}
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-100/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-emerald-900 dark:text-emerald-200 text-left leading-relaxed">
+                        💡 <strong>Nguyên tắc dứt khoát:</strong> Nếu đối tác không phản hồi tin nhắn hoặc cuộc gọi qua app, bạn có thể bấm <strong>Huỷ chuyến 1-chạm</strong> để tìm xe hoặc đón người khác ngay lập tức.
+                      </div>
+
+                      {onReportUnreachablePhone && (
+                        <div className="pt-1.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onReportUnreachablePhone(activeBooking);
+                              onClose();
+                            }}
+                            className="text-[11.5px] text-slate-500 hover:text-[#0071e3] dark:text-slate-400 dark:hover:text-[#2997ff] font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <PhoneOff className="w-3 h-3 text-rose-500" />
+                            <span>Đối tác không nhấc máy? Gửi báo cáo sự cố</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -1902,10 +2107,21 @@ export default function InboxModal({
               </p>
               <div className="pt-2">
                 {inAppCallState.status === 'ringing' ? (
-                  <p className="text-xs font-semibold text-emerald-400 animate-pulse flex items-center justify-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 animate-bounce" />
-                    <span>Đang đổ chuông qua App...</span>
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-emerald-400 animate-pulse flex items-center justify-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 animate-bounce" />
+                      <span>Đang đổ chuông qua App... ({inAppCallState.ringSeconds || 0}s)</span>
+                    </p>
+                    {(inAppCallState.ringSeconds || 0) >= MIN_CALL_DURATION_FOR_EMERGENCY ? (
+                      <div className="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11.5px] font-medium animate-in fade-in">
+                        ⏱️ Đã đổ chuông {inAppCallState.ringSeconds}s (Đạt chuẩn ≥{MIN_CALL_DURATION_FOR_EMERGENCY}s). Bạn có thể gác máy để ghi nhận lần {emergencyCallStatus.attempts + 1}/{REQUIRED_UNANSWERED_CALLS}.
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400">
+                        Cần đổ chuông tối thiểu {MIN_CALL_DURATION_FOR_EMERGENCY}s nếu đối tác không nhấc máy
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm font-mono font-bold text-emerald-400 tabular tracking-wider">
                     {Math.floor(inAppCallState.seconds / 60).toString().padStart(2, '0')}:
@@ -1956,9 +2172,22 @@ export default function InboxModal({
               </button>
             </div>
 
+            {/* Nút mô phỏng nhấc máy khi đang đổ chuông (hỗ trợ kiểm thử/demo) */}
+            {inAppCallState.status === 'ringing' && (
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={handleSimulatePartnerAnswer}
+                  className="text-[11px] text-emerald-400/80 hover:text-emerald-300 underline cursor-pointer py-1 transition-colors"
+                >
+                  [Mô phỏng: Đối tác bắt máy]
+                </button>
+              </div>
+            )}
+
             {/* Lưu ý thực tế */}
             <p className="text-[11px] text-slate-400 leading-relaxed pt-2 border-t border-white/10">
-              💡 Nếu gọi 2 cuộc mà đối tác không nghe máy, bạn có thể bấm <strong>Huỷ chuyến 1-chạm</strong> để tìm xe hoặc đón người khác ngay.
+              💡 Gọi 2 cuộc qua App (mỗi cuộc ≥ {MIN_CALL_DURATION_FOR_EMERGENCY}s) nếu đối tác không bắt máy, hệ thống sẽ mở khoá SĐT khẩn cấp để kịp giờ đón.
             </p>
           </div>
         </div>

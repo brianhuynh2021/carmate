@@ -162,7 +162,7 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
             rows={3}
             value={passengerNote}
             onChange={(e) => setPassengerNote(e.target.value)}
-            placeholder="VD: Xe nhồi nhét 5 người vào xe 4 chỗ, tài xế bắt sang xe khác giữa đường, hoặc đòi thêm tiền ngoài thỏa thuận..."
+            placeholder="VD: Xe nhồi nhét 5 người vào xe 4 chỗ, Chủ xe bắt sang xe khác giữa đường, hoặc đòi thêm tiền ngoài thỏa thuận..."
             className="w-full p-3 rounded-2xl border text-xs text-slate-900 dark:text-white bg-white dark:bg-[#151c2e] border-slate-200/90 dark:border-white/[0.08] focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 outline-none transition-all"
           />
         </Field>
@@ -172,7 +172,7 @@ export default function VehicleMismatchModal({ record, onClose, onSubmitReport }
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed text-[11.5px]">
             <b>CarMate cam kết bảo vệ quyền lợi văn minh:</b> Báo cáo này sẽ được chuyển thẳng đến Ban Quản Trị
-            qua Telegram để xác minh tức thì và xử lý tài khoản vi phạm cam kết an toàn.
+            Hệ Thống để xác minh tức thì và xử lý tài khoản vi phạm cam kết an toàn.
           </p>
         </div>
       </div>

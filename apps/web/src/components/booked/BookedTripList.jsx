@@ -23,7 +23,7 @@ import {
   ChevronRight,
   X
 } from 'lucide-react';
-import { formatVND, toPublicAlias, getUserOnlineStatus, formatCleanDateLabel, parseLocation } from '@carmate/shared';
+import { formatVND, toPublicAlias, getUserOnlineStatus, formatCleanDateLabel, parseLocation, isEmergencyPhoneUnlocked } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -152,6 +152,7 @@ export default function BookedTripList({
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
   const [copiedId, setCopiedId] = useState(null);
+  const [copiedPhoneId, setCopiedPhoneId] = useState(null);
 
 
   // Trạng thái Cursor Ambient: Quản lý danh sách thu gọn & mở rộng (Accordion)
@@ -494,6 +495,12 @@ export default function BookedTripList({
             const fromParsed = parseLocation(record.from);
             const toParsed = parseLocation(record.to);
 
+            const partnerPhone = record.contactPhone || record.driverPhone || record.passengerPhone || record.phoneReal || '';
+            const isEmergencyUnlocked = isEmergencyPhoneUnlocked({
+              bookingId: record.escrowId || record.id,
+              callerId: currentUser?.phone || currentUser?.id
+            });
+
             return (
               <article
                 key={record.escrowId}
@@ -723,6 +730,46 @@ export default function BookedTripList({
                         <div className="space-y-3">
                           {isConfirmed ? (
                             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
+                              {isEmergencyUnlocked && partnerPhone ? (
+                                <div className="p-3 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 text-xs space-y-2 animate-in fade-in duration-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200 text-xs">
+                                      <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">!</span>
+                                      <span>SĐT Khẩn Cấp Đón Xe (Đã mở khoá)</span>
+                                    </div>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-semibold">
+                                      Sau 2 lần gọi ≥25s
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between bg-white dark:bg-slate-900/80 p-2.5 rounded-lg border border-amber-500/20">
+                                    <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{partnerPhone}</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <a
+                                        href={`tel:${partnerPhone}`}
+                                        className="py-1 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Phone className="w-3 h-3 fill-current" />
+                                        <span>Gọi SĐT</span>
+                                      </a>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard?.writeText?.(partnerPhone);
+                                          setCopiedPhoneId(record.id);
+                                          setTimeout(() => setCopiedPhoneId(null), 2000);
+                                        }}
+                                        className="py-1 px-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer"
+                                      >
+                                        {copiedPhoneId === record.id ? 'Đã chép' : 'Chép'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
+                                    💡 Chỉ sử dụng số này để gọi đón khẩn cấp tại điểm hẹn.
+                                  </p>
+                                </div>
+                              ) : null}
+
                               <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
                                 <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
