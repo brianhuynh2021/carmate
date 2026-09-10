@@ -115,73 +115,6 @@ export default function InboxModal({
     };
   }, [inAppCallState?.status]);
 
-  const handleStartInAppCall = () => {
-    setInAppCallState({
-      status: 'ringing',
-      seconds: 0,
-      ringSeconds: 0,
-      isMuted: false,
-      isSpeaker: false
-    });
-    playMessageChime();
-  };
-
-  const handleSimulatePartnerAnswer = () => {
-    if (inAppCallState?.status === 'ringing') {
-      setInAppCallState((prev) => (prev ? { ...prev, status: 'connected', seconds: 0 } : null));
-      playSuccessChime();
-    }
-  };
-
-  const handleEndInAppCall = () => {
-    if (!inAppCallState) return;
-
-    const ringSec = inAppCallState.ringSeconds || 0;
-    const wasRinging = inAppCallState.status === 'ringing';
-
-    setInAppCallState(null);
-
-    if (wasRinging) {
-      const bKey = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
-      const cKey = currentUser?.phone || currentUser?.id || 'guest_caller';
-
-      if (ringSec < MIN_CALL_DURATION_FOR_EMERGENCY) {
-        onShowToast?.(
-          `⚠️ Bạn chỉ mới đổ chuông ${ringSec}s (< ${MIN_CALL_DURATION_FOR_EMERGENCY}s). Cần đổ chuông tối thiểu ${MIN_CALL_DURATION_FOR_EMERGENCY}s để đối tác kịp nhấc máy.`,
-          'warning'
-        );
-      } else {
-        const res = recordCallAttempt({
-          bookingId: bKey,
-          callerId: cKey,
-          durationSeconds: ringSec,
-          answered: false
-        });
-        setEmergencyCallVersion((v) => v + 1);
-
-        if (res.isUnlocked) {
-          playSuccessChime();
-          onShowToast?.(
-            `🚨 Đã mở khoá Số điện thoại khẩn cấp của ${partnerAlias} cho riêng bạn (sau 2 lần gọi ≥25s không phản hồi).`,
-            'success'
-          );
-        } else {
-          onShowToast?.(
-            `📞 Đã ghi nhận cuộc gọi nhỡ (đổ chuông ${ringSec}s - Lần ${res.attempts}/${REQUIRED_UNANSWERED_CALLS}). Hãy gọi lại lần 2 (≥25s) nếu đối tác vẫn không nhấc máy.`,
-            'info'
-          );
-        }
-      }
-    }
-  };
-
-  // Tự động kết thúc cuộc gọi khi đổ chuông quá 35s không nghe máy
-  useEffect(() => {
-    if (inAppCallState?.isTimeout && inAppCallState.status === 'ringing') {
-      handleEndInAppCall();
-    }
-  }, [inAppCallState?.isTimeout, inAppCallState?.status]);
-
   // Kênh Hỗ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
   const [isSupportChannelActive, setIsSupportChannelActive] = useState(false);
   const [supportMessages, setSupportMessages] = useState([]);
@@ -247,13 +180,6 @@ export default function InboxModal({
     if (!selectedId) return currentList[0] || null;
     return currentList.find((b) => (b.escrowId || b.id) === selectedId) || currentList[0] || null;
   }, [currentList, selectedId]);
-
-  // Tự động kích hoạt cuộc gọi in-app nếu được yêu cầu từ ngoài
-  useEffect(() => {
-    if (autoCall && activeBooking && !inAppCallState) {
-      handleStartInAppCall();
-    }
-  }, [autoCall, activeBooking?.escrowId, activeBooking?.id]);
 
   // Helper kiểm tra xem 1 cuộc trao đổi có đang ở trạng thái Chưa đọc / Đọc sau hay không
   const isBookingUnread = useMemo(() => {
@@ -629,7 +555,81 @@ export default function InboxModal({
     return getEmergencyCallStatus({ bookingId: bookingKey, callerId: callerKey });
   }, [bookingKey, callerKey, emergencyCallVersion]);
 
-  const isEmergencyPhoneUnlockedForMe = Boolean(isConfirmed && emergencyCallStatus.isUnlocked && partnerPhone);
+  const isEmergencyPhoneUnlockedForMe = Boolean(isConfirmed && emergencyCallStatus?.isUnlocked && partnerPhone);
+
+  const handleStartInAppCall = () => {
+    setInAppCallState({
+      status: 'ringing',
+      seconds: 0,
+      ringSeconds: 0,
+      isMuted: false,
+      isSpeaker: false
+    });
+    playMessageChime();
+  };
+
+  const handleSimulatePartnerAnswer = () => {
+    if (inAppCallState?.status === 'ringing') {
+      setInAppCallState((prev) => (prev ? { ...prev, status: 'connected', seconds: 0 } : null));
+      playSuccessChime();
+    }
+  };
+
+  const handleEndInAppCall = () => {
+    if (!inAppCallState) return;
+
+    const ringSec = inAppCallState.ringSeconds || 0;
+    const wasRinging = inAppCallState.status === 'ringing';
+
+    setInAppCallState(null);
+
+    if (wasRinging) {
+      const bKey = bookingKey;
+      const cKey = callerKey;
+
+      if (ringSec < MIN_CALL_DURATION_FOR_EMERGENCY) {
+        onShowToast?.(
+          `⚠️ Bạn chỉ mới đổ chuông ${ringSec}s (< ${MIN_CALL_DURATION_FOR_EMERGENCY}s). Cần đổ chuông tối thiểu ${MIN_CALL_DURATION_FOR_EMERGENCY}s để đối tác kịp nhấc máy.`,
+          'warning'
+        );
+      } else {
+        const res = recordCallAttempt({
+          bookingId: bKey,
+          callerId: cKey,
+          durationSeconds: ringSec,
+          answered: false
+        });
+        setEmergencyCallVersion((v) => v + 1);
+
+        if (res.isUnlocked) {
+          playSuccessChime();
+          onShowToast?.(
+            `🚨 Đã mở khoá Số điện thoại khẩn cấp của ${partnerAlias || 'đối tác'} cho riêng bạn (sau 2 lần gọi ≥25s không phản hồi).`,
+            'success'
+          );
+        } else {
+          onShowToast?.(
+            `📞 Đã ghi nhận cuộc gọi nhỡ (đổ chuông ${ringSec}s - Lần ${res.attempts}/${REQUIRED_UNANSWERED_CALLS}). Hãy gọi lại lần 2 (≥25s) nếu đối tác vẫn không nhấc máy.`,
+            'info'
+          );
+        }
+      }
+    }
+  };
+
+  // Tự động kết thúc cuộc gọi khi đổ chuông quá 35s không nghe máy
+  useEffect(() => {
+    if (inAppCallState?.isTimeout && inAppCallState.status === 'ringing') {
+      handleEndInAppCall();
+    }
+  }, [inAppCallState?.isTimeout, inAppCallState?.status]);
+
+  // Tự động kích hoạt cuộc gọi in-app nếu được yêu cầu từ ngoài
+  useEffect(() => {
+    if (autoCall && activeBooking && !inAppCallState) {
+      handleStartInAppCall();
+    }
+  }, [autoCall, activeBooking?.escrowId, activeBooking?.id]);
 
   const activePartnerOnline = activeBooking
     ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
@@ -2095,13 +2095,13 @@ export default function InboxModal({
                 </>
               )}
               <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-emerald-500/20">
-                {partnerAlias.slice(0, 2).toUpperCase()}
+                {(partnerAlias || 'CarMate').slice(0, 2).toUpperCase()}
               </div>
             </div>
 
             {/* Thông tin đối tác & Lộ trình */}
             <div className="space-y-1">
-              <h3 className="text-lg font-bold tracking-tight text-white">{partnerAlias}</h3>
+              <h3 className="text-lg font-bold tracking-tight text-white">{partnerAlias || 'Đối tác'}</h3>
               <p className="text-xs text-slate-400">
                 {activeBooking?.from} ➔ {activeBooking?.to}
               </p>
@@ -2114,7 +2114,7 @@ export default function InboxModal({
                     </p>
                     {(inAppCallState.ringSeconds || 0) >= MIN_CALL_DURATION_FOR_EMERGENCY ? (
                       <div className="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11.5px] font-medium animate-in fade-in">
-                        ⏱️ Đã đổ chuông {inAppCallState.ringSeconds}s (Đạt chuẩn ≥{MIN_CALL_DURATION_FOR_EMERGENCY}s). Bạn có thể gác máy để ghi nhận lần {emergencyCallStatus.attempts + 1}/{REQUIRED_UNANSWERED_CALLS}.
+                        ⏱️ Đã đổ chuông {inAppCallState.ringSeconds}s (Đạt chuẩn ≥{MIN_CALL_DURATION_FOR_EMERGENCY}s). Bạn có thể gác máy để ghi nhận lần {(emergencyCallStatus?.attempts || 0) + 1}/{REQUIRED_UNANSWERED_CALLS}.
                       </div>
                     ) : (
                       <p className="text-[11px] text-slate-400">

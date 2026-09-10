@@ -503,7 +503,7 @@ export default function BookedTripList({
 
             return (
               <article
-                key={record.escrowId}
+                key={record.escrowId || record.id}
                 className="surface overflow-hidden rounded-2xl sm:rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.08)] hover:border-[#0071e3]/40 dark:hover:border-sky-400/40 transition-all duration-200"
               >
                 {/* ── 1. KHỐI THU GỌN TINH TẾ (COMPACT SUMMARY ROW) ── */}

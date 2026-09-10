@@ -22,24 +22,24 @@ function getStorageKey(bookingId, callerId) {
 }
 
 function getRawData(key) {
-  if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-    try {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
       const val = globalThis.localStorage.getItem(key);
       return val ? JSON.parse(val) : null;
-    } catch {
-      return memoryStore.get(key) || null;
     }
+  } catch {
+    // fallback to memoryStore
   }
   return memoryStore.get(key) || null;
 }
 
 function setRawData(key, data) {
-  if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-    try {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
       globalThis.localStorage.setItem(key, JSON.stringify(data));
-    } catch {
-      // Bỏ qua lỗi quota storage nếu có
     }
+  } catch {
+    // Bỏ qua lỗi quota storage nếu có
   }
   memoryStore.set(key, data);
 }
@@ -173,12 +173,12 @@ export function isEmergencyPhoneUnlocked({ bookingId, callerId }) {
 export function resetEmergencyCallStatus({ bookingId, callerId }) {
   if (!bookingId || !callerId) return;
   const key = getStorageKey(bookingId, callerId);
-  if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-    try {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
       globalThis.localStorage.removeItem(key);
-    } catch {
-      // ignore
     }
+  } catch {
+    // ignore
   }
   memoryStore.delete(key);
 }
