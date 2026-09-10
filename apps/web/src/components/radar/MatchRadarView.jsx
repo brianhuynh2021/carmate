@@ -627,7 +627,7 @@ export default function MatchRadarView({
                         }}
                         className="h-8.5 px-3.5 rounded-full text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-xs active:scale-95 transition-all inline-flex items-center gap-1 cursor-pointer"
                       >
-                        <span>{userRole === 'driver' ? 'Nhận đón' : 'Ghép ngay'}</span>
+                        <span>{userRole === 'driver' ? 'Nhận đón' : 'Chốt đi cùng'}</span>
                         <ArrowRight className="w-3 h-3" />
                       </button>
                     </div>

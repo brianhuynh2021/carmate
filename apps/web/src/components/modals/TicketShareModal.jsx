@@ -424,7 +424,7 @@ export default function TicketShareModal({
                       className="shrink-0 px-2.5 py-1.5 rounded-lg bg-[#0071e3] hover:bg-[#0077ed] text-white text-[11px] font-bold shadow-xs active:scale-95 transition-transform flex items-center gap-1 cursor-pointer"
                     >
                       <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
-                      <span>Ghép ngay</span>
+                      <span>Chốt chuyến</span>
                     </button>
                   </div>
                 );

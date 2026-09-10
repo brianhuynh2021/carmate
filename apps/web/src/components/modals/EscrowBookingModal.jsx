@@ -199,7 +199,7 @@ export default function EscrowBookingModal({
 
   const handleSendInquiry = async () => {
     if (isTripOwner) {
-      onShowToast?.('Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.');
+      onShowToast?.('Đây là bài đăng của chính bạn. Bạn không thể tự chốt chuyến với chính mình.');
       onClose();
       return;
     }
@@ -269,24 +269,30 @@ export default function EscrowBookingModal({
     try {
       const res = await api.createBooking(bookingData);
       if (res?.error || res?.success === false) {
-        throw new Error(res?.error || 'Không thể tạo yêu cầu ghép chuyến');
+        throw new Error(res?.error || 'Không thể chốt chuyến đi');
       }
 
       const createdBooking = res?.data || bookingData;
       onConfirmBooking?.(createdBooking, { keepModalOpen: true });
-      setIsSubmitted(true);
-      onShowToast?.('✓ Đã tạo kết nối chuyến đi! Vui lòng nhắn tin hoặc gọi qua App để hẹn điểm đón.');
+      onShowToast?.('✓ Đã chốt chuyến thành công! Mở cuộc trò chuyện...', 'success');
       triggerMacNotification({
-        title: '🚗 Đã tạo kết nối chuyến đi thành công!',
-        message: `Mã vé #${bookingCode}: Vui lòng nhắn tin hoặc gọi qua App để hẹn điểm đón cụ thể.`,
+        title: '🚗 Đã chốt chuyến đi thành công!',
+        message: `Mã vé #${bookingCode}: Vui lòng trao đổi điểm đón qua Chat hoặc Gọi thoại.`,
         type: 'confirmed',
         bookingId: bookingCode,
         partnerName: toPublicAlias(item),
         actionLabel: 'Mở chat ngay',
         duration: 6000
       });
+
+      if (onOpenInbox) {
+        onClose();
+        onOpenInbox(bookingCode);
+      } else {
+        setIsSubmitted(true);
+      }
     } catch (apiErr) {
-      const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể gửi yêu cầu ghép chuyến';
+      const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể chốt chuyến đi';
       onShowToast?.(errMsg);
       return;
     } finally {
@@ -542,17 +548,17 @@ export default function EscrowBookingModal({
           {submitting ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Đang gửi yêu cầu...</span>
+              <span>Đang chốt chuyến & kết nối...</span>
             </>
           ) : (
             <>
               <Zap className="w-5 h-5 text-amber-300 animate-pulse fill-amber-300" />
               <span>
                 {bookingMode === 'cargo'
-                  ? 'Gửi yêu cầu chuyển đồ ngay'
+                  ? '⚡ Chốt Chuyển Đồ & Vào Chat (0đ cọc)'
                   : isDriverItem
-                  ? 'Gửi yêu cầu ghép ngay'
-                  : 'Gửi đề xuất đón ngay'}
+                  ? '⚡ Chốt Chuyến & Vào Chat Ngay (0đ cọc)'
+                  : '⚡ Chốt Đón & Vào Chat Ngay (0đ cọc)'}
               </span>
             </>
           )}
@@ -560,7 +566,7 @@ export default function EscrowBookingModal({
       </Button>
       <p className="text-center text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5 pt-0.5">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-        <span>0đ cọc · Trao đổi Zalo & Gọi thật trước khi đi · Lên xe mới gửi tiền xăng</span>
+        <span>0đ cọc · Nhắn tin & Gọi thoại bảo mật qua App · Lên xe mới gửi tiền xăng</span>
       </p>
     </div>
   );
@@ -571,8 +577,8 @@ export default function EscrowBookingModal({
       size="md"
       icon={MessageSquare}
       iconTone="primary"
-      title={isTripOwner ? 'Bài đăng chuyến đi của bạn' : (isDriverItem ? 'Hỏi ghép chuyến cùng Chủ xe' : 'Đề xuất đón Người tìm xe')}
-      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : '0% phí sàn · Trao đổi điểm đón & hành lý trước khi chốt'}
+      title={isTripOwner ? 'Quản lý chuyến đi của bạn' : (isDriverItem ? 'Chốt Chuyến Đi Chung Cùng Chủ Xe' : 'Chốt Đón Người Đi Cùng')}
+      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : '0đ cọc · Khớp là chốt luôn · Trao đổi điểm đón & hành lý qua Chat'}
       footer={footer}
     >
       <div className="space-y-4">
@@ -580,7 +586,7 @@ export default function EscrowBookingModal({
         {isTripOwner && (
           <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.</span>
+            <span>Đây là bài đăng của chính bạn. Bạn không thể tự chốt chuyến với chính mình.</span>
           </div>
         )}
 

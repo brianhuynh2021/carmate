@@ -526,7 +526,7 @@ export default function TripCard({
                   onShare(item);
                 }}
                 className="h-9 w-9 rounded-full inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#0071e3] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
-                title="Tạo ảnh lịch trình & chia sẻ nhanh lên Zalo"
+                title="Tạo ảnh lịch trình & chia sẻ nhanh"
                 aria-label="Chia sẻ thông tin chuyến đi"
               >
                 <Share2 className="w-3.5 h-3.5" />
@@ -570,9 +570,9 @@ export default function TripCard({
                   if (onBook) onBook(item);
                 }}
                 className="h-9 px-4.5 rounded-full text-[12.5px] font-semibold tracking-tight inline-flex items-center justify-center whitespace-nowrap transition-all duration-150 cursor-pointer active:scale-[0.96] bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white shadow-xs hover:shadow-md hover:shadow-blue-500/25 shrink-0"
-                title={isDriver ? 'Bấm để liên hệ & ghép chuyến ngay' : 'Bấm để nhận chở người này'}
+                title={isDriver ? 'Bấm để chốt chuyến & vào chat ngay' : 'Bấm để nhận chở người này'}
               >
-                <span>{isDriver ? 'Ghép chuyến' : 'Nhận chở'}</span>
+                <span>{isDriver ? 'Chốt đi cùng' : 'Nhận chở'}</span>
                 <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </button>
             )}
