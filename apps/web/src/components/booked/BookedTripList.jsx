@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Clock,
   Phone,
@@ -32,47 +32,7 @@ import { RouteTimeline } from '../market/TripCard.jsx';
 import { ZaloIcon, WhatsAppIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
 
-/**
- * Đồng hồ đếm ngược 15 phút theo chuẩn ARCHITECTURE.md:
- * "Hành khách giữ chỗ 0đ, cam kết bằng danh tính thật qua Zalo trong 15 phút"
- */
-function Countdown30Min({ createdAt, compact = false }) {
-  const [timeLeft, setTimeLeft] = useState(() => {
-    let start = Date.now() - 4 * 60 * 1000;
-    if (typeof createdAt === 'number') start = createdAt;
-    else if (typeof createdAt === 'string' && createdAt.includes('06:20')) {
-      start = Date.now() - 6 * 60 * 1000;
-    }
-    const expiry = start + 15 * 60 * 1000;
-    return Math.max(0, Math.floor((expiry - Date.now()) / 1000));
-  });
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
-  const isUrgent = timeLeft < 5 * 60;
-  return (
-    <div
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tabular ${
-        isUrgent
-          ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 animate-pulse'
-          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200/80'
-      }`}
-    >
-      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-      <span>
-        {compact ? 'Hạn ' : 'Đang kết nối · Hạn '}
-        {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-      </span>
-    </div>
-  );
-}
 
 function TripProgressStepper({ status, delayedMinutes }) {
   const isCompleted = status === 'completed';
@@ -406,8 +366,8 @@ export default function BookedTripList({
                 <>
                   {[
                     { id: 'all', label: 'Tất cả' },
-                    { id: 'connecting', label: 'Đang kết nối' },
                     { id: 'confirmed', label: 'Đã chốt' },
+                    { id: 'connecting', label: 'Đang trao đổi' },
                     { id: 'delayed', label: 'Báo trễ' }
                   ].map((chip) => (
                     <button
@@ -532,6 +492,7 @@ export default function BookedTripList({
             const isCompleted = record.status === 'completed';
             const isCancelled = record.status === 'cancelled';
             const isDelayed = record.status === 'delayed';
+            const isConfirmed = record.status === 'confirmed' || record.bothConfirmed === true;
             const partnerOnline = getUserOnlineStatus(record.targetItem || record, currentUser?.phone || currentUser?.id);
             const rawTripDate =
               record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt;
@@ -591,8 +552,15 @@ export default function BookedTripList({
                         <Badge tone="warning" icon={Timer} className="h-6.5 px-2.5 text-[11px] font-semibold">
                           Trễ +{record.delayedMinutes || 15} phút
                         </Badge>
+                      ) : isConfirmed ? (
+                        <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
+                          Đã chốt chuyến
+                        </Badge>
                       ) : (
-                        <Countdown30Min createdAt={record.createdAt} compact />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60">
+                          <MessageSquare className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span>Đang trao đổi</span>
+                        </span>
                       )}
                     </div>
                   </div>
@@ -843,12 +811,12 @@ export default function BookedTripList({
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2">
-                                <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                              <div className="p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/80 text-blue-950 dark:text-blue-200 text-xs flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-blue-600 shrink-0" />
                                 <span className="leading-relaxed">
                                   {record.status === 'pre_confirmed'
-                                    ? '⚡ Chuyến xe đang được giữ chỗ 15 phút. Vui lòng mở khung chat để xác nhận chốt!'
-                                    : '💬 Đang thỏa thuận điểm hẹn và hành lý. SĐT sẽ tự động mở sau khi 2 bên cùng chốt.'}
+                                    ? '⚡ Chuyến xe đang được đề xuất chốt. Vui lòng mở khung chat để xác nhận!'
+                                    : '💬 Hai bên đang trao đổi tìm hiểu điểm đón & hành lý. SĐT sẽ tự động hiển thị sau khi 2 bên cùng chốt.'}
                                 </span>
                               </div>
 
@@ -937,7 +905,7 @@ export default function BookedTripList({
                             onClick={() => onCancel(record)}
                             className="flex-1 sm:flex-initial justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                           >
-                            Huỷ chuyến
+                            {isConfirmed ? 'Huỷ chuyến' : 'Dừng trao đổi'}
                           </Button>
                           {onReportMismatch && (
                             <Button
@@ -946,9 +914,9 @@ export default function BookedTripList({
                               icon={ShieldAlert}
                               onClick={() => onReportMismatch(record)}
                               className="flex-1 sm:flex-initial justify-center text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-medium"
-                              title="Báo cáo xe đón thực tế là Biển vàng hoặc sai mô tả"
+                              title="Báo cáo vi phạm an toàn, nhồi nhét hoặc sang xe giữa đường"
                             >
-                              Báo sai loại xe
+                              Báo sự cố
                             </Button>
                           )}
                           {onReportUnreachablePhone && (record.status === 'confirmed' || record.bothConfirmed) && (
