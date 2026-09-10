@@ -15,9 +15,8 @@ import AppleMacNotification from './components/common/AppleMacNotification.jsx';
 
 // Market
 import Hero from './components/market/Hero.jsx';
-import RouteBenchmarkBar from './components/market/RouteBenchmarkBar.jsx';
 import TripCard from './components/market/TripCard.jsx';
-import SocialMatchBar from './components/social/SocialMatchBar.jsx';
+import CorridorTimeline from './components/market/CorridorTimeline.jsx';
 
 // Views
 import PostTripForm from './components/post/PostTripForm.jsx';
@@ -686,6 +685,11 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [currentUser, driverOffers, passengerRequests, updateMyTripsCount]);
 
+  // Quản lý Hành lang Tuyến Level 3 & Trạng thái xem sàn
+  const [activeCorridor, setActiveCorridor] = useState('Tuyến QL13');
+  const [activeCorridorContext, setActiveCorridorContext] = useState(null);
+  const [showAllNationwide, setShowAllNationwide] = useState(false);
+
   // Quản lý Social Smart Match Suggestions (Ambient Intelligence)
   const [socialMatches, setSocialMatches] = useState([]);
 
@@ -987,24 +991,55 @@ export default function App() {
               currentUser={currentUser}
               onShowToast={showToast}
               onOpenBooking={(trip) => handleInitiateBook(trip)}
+              activeCorridor={activeCorridor}
+              onCorridorChange={(ctx) => {
+                setActiveCorridor(ctx.corridor);
+                setActiveCorridorContext(ctx);
+              }}
             />
 
             <div className={`${container} py-3.5 sm:py-6 space-y-3.5 sm:space-y-5 relative z-10`}>
-              <RouteBenchmarkBar
-                searchKeyword={searchKeyword}
-                setSearchKeyword={setSearchKeyword}
-                forceOpen={showBenchmarkModal}
-                onCloseForced={() => setShowBenchmarkModal(false)}
-              />
+              {/* DÒNG THỜI GIAN CÁC CHUYẾN XE DỌC TUYẾN (CORRIDOR TIMELINE - LEVEL 3) */}
+              {!showAllNationwide ? (
+                <div className="space-y-4">
+                  <CorridorTimeline
+                    trips={driverOffers}
+                    corridor={activeCorridor}
+                    originHub={activeCorridorContext?.originHub}
+                    destHub={activeCorridorContext?.destHub}
+                    timeSlot={activeCorridorContext?.timeSlot}
+                    onOpenBooking={(trip) => handleInitiateBook(trip)}
+                    onShowAllNationwide={() => setShowAllNationwide(true)}
+                  />
 
-              {/* Gợi ý ghép xe tức thì thông minh CarMate Smart Match */}
-              <SocialMatchBar
-                suggestions={socialMatches}
-                onSelectTrip={setSelectedTripForRoute}
-                onConnectMatch={handleInitiateBook}
-              />
+                  {/* Nút chuyển đổi xem toàn bộ sàn */}
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllNationwide(true)}
+                      className="px-4 py-2 rounded-full bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-xs font-bold text-slate-700 dark:text-zinc-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Hoặc lướt xem toàn bộ {driverOffers.length + passengerRequests.length} chuyến trên sàn toàn quốc</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
+                    <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                      Đang xem: Toàn bộ danh sách chuyến xe toàn quốc
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllNationwide(false)}
+                      className="px-3 py-1 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors cursor-pointer"
+                    >
+                      ← Quay lại Tuyến {activeCorridor}
+                    </button>
+                  </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5 pb-0.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5 pb-0.5">
                 <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 py-0.5">
                   <Segmented
                     size="sm"
@@ -1259,6 +1294,8 @@ export default function App() {
                   </>
                 )}
               </div>
+                </>
+              )}
             </div>
           </>
         )}

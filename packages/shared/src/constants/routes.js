@@ -290,16 +290,20 @@ export const ROUTE_BENCHMARKS = {
 // BẢNG HÀNH LANG ĐIỂM ĐÓN / TRẢ DỌC ĐƯỜNG (CORRIDOR WAYPOINTS) THEO TRỤC QUỐC LỘ & CAO TỐC
 export const CORRIDOR_WAYPOINTS = {
   'Tuyến QL13': [
-    'Bến xe Miền Đông / Cầu Bình Triệu',
-    'Ngã 4 Bình Phước (Thủ Đức)',
+    'Bù Đốp (TT. Thanh Bình)',
+    'Tân Tiến / Lộc Hiệp',
+    'Ngã 3 Lộc Tấn / Cửa khẩu Hoa Lư',
+    'Chợ Lộc Ninh / Cây xăng 17',
+    'TX. Bình Long / Thanh Lương',
+    'Tân Khai / Huyện Hớn Quản',
+    'Ngã 4 Chơn Thành (Giao N2 & QL14)',
+    'KCN Bàu Bàng / Bến Cát',
+    'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)',
+    'Aeon Mall Canary / KCN VSIP 1',
     'Lái Thiêu / Cổng chào Bình Dương',
-    'Aeon Mall Canary Thuận An',
-    'TP. Thủ Dầu Một / Đại Lộ Bình Dương',
-    'Ngã 4 Sở Sao / Mỹ Phước',
-    'Bến Cát / Bàu Bàng',
-    'Ngã 4 Chơn Thành (Bình Phước)',
-    'TP. Đồng Xoài / Phước Long',
-    'Lộc Ninh / Bù Đốp'
+    'Ngã 4 Bình Phước (Thủ Đức)',
+    'Cầu Bình Triệu / BX Miền Đông cũ',
+    'Ngã tư Hàng Xanh (Bình Thạnh)'
   ],
   'Tuyến QL51': [
     'Hàng Xanh / Mai Chí Thọ (TP. Thủ Đức)',
@@ -417,7 +421,7 @@ export function getCorridorWaypoints(routeCategoryOrKeyword) {
  * Thời gian dừng đỗ chuẩn hóa 5 phút (300s) curbside window.
  */
 export const VIRTUAL_HUBS = [
-  // ── HÀNH LANG TUYẾN QL13 (TP.HCM ⇄ BÌNH DƯƠNG ⇄ BÌNH PHƯỚC) ──
+  // ── HÀNH LANG TUYẾN QL13 (TP.HCM ⇄ BÌNH DƯƠNG ⇄ BÌNH PHƯỚC: BÙ ĐỐP - LỘC NINH) ──
   {
     id: 'hub_ql13_hang_xanh',
     name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)',
@@ -426,6 +430,17 @@ export const VIRTUAL_HUBS = [
     lat: 10.8012,
     lng: 106.7114,
     landmark: 'Cây xăng Comeco Hàng Xanh / Điện Biên Phủ',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_binh_trieu',
+    name: 'Cầu Bình Triệu / Bến xe Miền Đông cũ (Bình Thạnh)',
+    shortName: 'Cầu Bình Triệu / BX Miền Đông',
+    corridor: 'Tuyến QL13',
+    lat: 10.8175,
+    lng: 106.7118,
+    landmark: 'Cầu Bình Triệu 1 - Đinh Bộ Lĩnh / QL13',
     curbsideWindowSeconds: 300,
     isMajorJunction: true
   },
@@ -496,31 +511,53 @@ export const VIRTUAL_HUBS = [
     isMajorJunction: true
   },
   {
-    id: 'hub_ql13_binh_long',
-    name: 'Cổng chào TX. Bình Long / Bến xe Bình Long',
-    shortName: 'TX. Bình Long',
+    id: 'hub_ql13_minh_hung',
+    name: 'KCN Minh Hưng - Hàn Quốc (Chơn Thành)',
+    shortName: 'KCN Minh Hưng',
     corridor: 'Tuyến QL13',
-    lat: 11.6482,
-    lng: 106.6025,
-    landmark: 'Cổng chào Thị xã Bình Long QL13',
+    lat: 11.5120,
+    lng: 106.6520,
+    landmark: 'Cổng KCN Minh Hưng Hàn Quốc - QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false
+  },
+  {
+    id: 'hub_ql13_tan_khai',
+    name: 'Chợ Tân Khai / Trung tâm Huyện Hớn Quản',
+    shortName: 'Chợ Tân Khai (Hớn Quản)',
+    corridor: 'Tuyến QL13',
+    lat: 11.5620,
+    lng: 106.6340,
+    landmark: 'Chợ Tân Khai - Cổng Huyện ủy Hớn Quản QL13',
     curbsideWindowSeconds: 300,
     isMajorJunction: true
   },
   {
-    id: 'hub_ql13_dong_xoai',
-    name: 'Ngã 3 Đồng Xoài / Tượng đài Chiến Thắng (Bình Phước)',
-    shortName: 'Ngã 3 Đồng Xoài',
+    id: 'hub_ql13_binh_long',
+    name: 'Cổng chào TX. Bình Long / Bến xe Bình Long',
+    shortName: 'TX. Bình Long (An Lộc)',
     corridor: 'Tuyến QL13',
-    lat: 11.5328,
-    lng: 106.8834,
-    landmark: 'Bùng binh Ngã 3 Hùng Vương - ĐT741',
+    lat: 11.6482,
+    lng: 106.6025,
+    landmark: 'Cổng chào Thị xã Bình Long QL13 - Vòng xoay An Lộc',
     curbsideWindowSeconds: 300,
     isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_thanh_luong',
+    name: 'Ngã 3 Thanh Lương (Ranh Bình Long - Lộc Ninh)',
+    shortName: 'Ngã 3 Thanh Lương',
+    corridor: 'Tuyến QL13',
+    lat: 11.7250,
+    lng: 106.5980,
+    landmark: 'Ngã 3 Thanh Lương QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false
   },
   {
     id: 'hub_ql13_cho_loc_ninh',
     name: 'Chợ Lộc Ninh / Cây xăng 17 (Bình Phước)',
-    shortName: 'Chợ Lộc Ninh',
+    shortName: 'Chợ Lộc Ninh (Cây xăng 17)',
     corridor: 'Tuyến QL13',
     lat: 11.8421,
     lng: 106.5972,
@@ -536,6 +573,61 @@ export const VIRTUAL_HUBS = [
     lat: 11.9568,
     lng: 106.5312,
     landmark: 'Trạm kiểm soát liên hợp Cửa khẩu Hoa Lư',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_loc_tan',
+    name: 'Ngã 3 Lộc Tấn (Giao ĐT759B & QL13)',
+    shortName: 'Ngã 3 Lộc Tấn',
+    corridor: 'Tuyến QL13',
+    lat: 11.8845,
+    lng: 106.5912,
+    landmark: 'Ngã 3 Lộc Tấn - Điểm rẽ vào Lộc Hiệp & Bù Đốp',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_loc_hiep',
+    name: 'Chợ Lộc Hiệp / Ngã 3 Lộc Hiệp (Lộc Ninh)',
+    shortName: 'Chợ Lộc Hiệp',
+    corridor: 'Tuyến QL13',
+    lat: 11.9012,
+    lng: 106.6623,
+    landmark: 'Chợ Lộc Hiệp - ĐT759B kết nối Bù Đốp',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_tan_tien',
+    name: 'Chợ Tân Tiến / Cầu Tân Tiến (Bù Đốp)',
+    shortName: 'Chợ Tân Tiến (Bù Đốp)',
+    corridor: 'Tuyến QL13',
+    lat: 11.9351,
+    lng: 106.7321,
+    landmark: 'Chợ Tân Tiến - ĐT759B',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_budop',
+    name: 'Chợ Bù Đốp / Bến xe Bù Đốp (TT. Thanh Bình)',
+    shortName: 'Chợ Bù Đốp (TT. Thanh Bình)',
+    corridor: 'Tuyến QL13',
+    lat: 11.9832,
+    lng: 106.8124,
+    landmark: 'Cây xăng Petrolimex Thanh Bình / Chợ Bù Đốp (Đầu tuyến)',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql14_dong_xoai',
+    name: 'Ngã 3 Đồng Xoài / Tượng đài Chiến Thắng (Nhánh QL14)',
+    shortName: 'TP. Đồng Xoài (Nhánh QL14)',
+    corridor: 'Tuyến QL13',
+    lat: 11.5328,
+    lng: 106.8834,
+    landmark: 'Bùng binh Ngã 3 Hùng Vương - ĐT741 / QL14',
     curbsideWindowSeconds: 300,
     isMajorJunction: true
   },

@@ -46,14 +46,22 @@ export const ROUTE_CORRIDORS = {
       lng: 106.7114
     },
     popularPickups: [
-      'Cây xăng Petrolimex 17 (QL13, Lộc Ninh)',
-      'Chợ Lộc Ninh (Khu phố Ninh Thịnh)',
-      'Ngã 3 Lộc Tấn (Giao ĐT759 & QL13)',
+      'Chợ Bù Đốp (TT. Thanh Bình)',
+      'Chợ Tân Tiến / Cầu Tân Tiến (Bù Đốp)',
+      'Chợ Lộc Hiệp (Lộc Ninh)',
+      'Ngã 3 Lộc Tấn (Giao ĐT759B & QL13)',
+      'Chợ Lộc Ninh (Khu phố Ninh Thịnh / Cây xăng 17)',
+      'Ngã 3 Thanh Lương',
       'Cổng chào TX. Bình Long (Bình Phước)',
+      'Chợ Tân Khai / Hớn Quản',
       'Ngã 4 Chơn Thành (Giao QL13 & QL14)',
       'KCN Chơn Thành / KCN Minh Hưng',
-      'Đại Nam / Bến Cát (Bình Dương)',
-      'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)'
+      'KCN Bàu Bàng / Bến Cát',
+      'Đại Nam / Ngã 4 Sở Sao (Bình Dương)',
+      'KCN VSIP 1 / AEON Mall Canary',
+      'Cổng chào Lái Thiêu',
+      'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)',
+      'Cầu Bình Triệu / Bến xe Miền Đông cũ'
     ],
     popularDropoffs: [
       'Ngã tư Hàng Xanh (Bình Thạnh, TP.HCM)',

@@ -13,7 +13,8 @@ import {
   Home,
   Clock,
   Radio,
-  CheckCircle2
+  CheckCircle2,
+  Pencil
 } from 'lucide-react';
 import {
   computeHotRoutes,
@@ -40,7 +41,9 @@ export default function Hero({
   setSearchTo,
   currentUser,
   onShowToast,
-  onOpenBooking
+  onOpenBooking,
+  activeCorridor = 'Tuyến QL13',
+  onCorridorChange
 }) {
   const { t, lang } = useI18n();
 
@@ -49,7 +52,7 @@ export default function Hero({
 
   // --- State cho Chế độ Ghép Nhanh 1-Chạm ---
   const [role, setRole] = useState('passenger'); // 'passenger' | 'driver'
-  const [corridor, setCorridor] = useState('Tuyến QL13');
+  const [corridor, setCorridor] = useState(activeCorridor || 'Tuyến QL13');
   const [originHubId, setOriginHubId] = useState('hub_ql13_cho_loc_ninh');
   const [destHubId, setDestHubId] = useState('hub_ql13_hang_xanh');
   const [timeSlot, setTimeSlot] = useState('Sáng sớm (05:00 - 08:00)');
@@ -59,6 +62,11 @@ export default function Hero({
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [isSearching, setIsSearching] = useState(false);
   const [matchResult, setMatchResult] = useState(null);
+
+  // Khối giá 2 chiều (Double Auction: Người dùng và Chủ xe đều tự do đặt giá)
+  const [userSelectedPrice, setUserSelectedPrice] = useState(null);
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [customPriceInput, setCustomPriceInput] = useState('');
 
   // Lọc danh sách trạm đón theo hành lang
   const corridorHubs = useMemo(() => {
@@ -99,6 +107,21 @@ export default function Hero({
     };
   }, [originHub, destHub, isDoorstep, seats]);
 
+  // Mức giá thực tế (người dùng tự đặt hoặc theo gợi ý chuẩn Shapley)
+  const effectivePrice = userSelectedPrice !== null ? userSelectedPrice : pricingEstimate.finalPrice;
+
+  // Đồng bộ ngữ cảnh hành lang lên App để tự động cập nhật Dòng thời gian chuyến sau
+  useEffect(() => {
+    onCorridorChange?.({
+      corridor,
+      originHub,
+      destHub,
+      timeSlot,
+      role,
+      effectivePrice
+    });
+  }, [corridor, originHub, destHub, timeSlot, role, effectivePrice, onCorridorChange]);
+
   // Gửi yêu cầu ghép tự động 1-chạm
   const handleStartAutoMatch = async () => {
     const contactPhone = phone || currentUser?.phone;
@@ -130,6 +153,7 @@ export default function Hero({
           seats: Number(seats),
           isDoorstep: isDoorstep ? 1 : 0,
           doorstepAddress: isDoorstep ? doorstepAddress : '',
+          customPrice: effectivePrice,
           phone: contactPhone,
           contactName: currentUser?.name || (role === 'driver' ? 'Chủ xe' : 'Người đi cùng')
         })
@@ -484,13 +508,96 @@ export default function Hero({
                   </div>
                 </div>
 
-                <div className="flex items-baseline gap-1.5 text-right">
-                  <span className="text-xs text-slate-500 dark:text-zinc-400">
-                    Phí xăng gợi ý ({pricingEstimate.distanceKm}km):
-                  </span>
-                  <span className="text-base sm:text-xl font-mono font-extrabold text-blue-600 dark:text-blue-400">
-                    {pricingEstimate.finalPrice.toLocaleString('vi-VN')}đ
-                  </span>
+                {/* Khối định giá 2 chiều (Double Auction: Cả Chủ xe và Người đi cùng đều tự do đặt giá) */}
+                <div className="flex flex-col sm:items-end gap-1 text-left sm:text-right">
+                  <div className="flex items-center sm:justify-end gap-1.5 flex-wrap">
+                    <span className="text-xs text-slate-500 dark:text-zinc-400">
+                      {role === 'passenger' ? 'Giá bạn sẵn sàng trả:' : 'Phí xăng mong muốn nhận:'}
+                    </span>
+                    {isEditingPrice ? (
+                      <div className="inline-flex items-center gap-1">
+                        <input
+                          type="number"
+                          step={5000}
+                          min={30000}
+                          max={600000}
+                          value={customPriceInput}
+                          onChange={(e) => setCustomPriceInput(e.target.value)}
+                          onBlur={() => {
+                            const val = Number(customPriceInput);
+                            if (val >= 30000 && val <= 600000) {
+                              setUserSelectedPrice(val);
+                            }
+                            setIsEditingPrice(false);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const val = Number(customPriceInput);
+                              if (val >= 30000 && val <= 600000) {
+                                setUserSelectedPrice(val);
+                              }
+                              setIsEditingPrice(false);
+                            }
+                          }}
+                          autoFocus
+                          className="w-24 px-2 py-0.5 text-sm font-mono font-bold bg-white dark:bg-zinc-800 border border-blue-500 rounded-lg text-blue-600 outline-none"
+                        />
+                        <span className="text-xs font-bold text-blue-600">đ</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomPriceInput(String(effectivePrice));
+                          setIsEditingPrice(true);
+                        }}
+                        title="Bấm để tự chỉnh giá theo ý muốn"
+                        className="inline-flex items-center gap-1 group cursor-pointer"
+                      >
+                        <span className="text-base sm:text-xl font-mono font-extrabold text-blue-600 dark:text-blue-400 group-hover:underline">
+                          {effectivePrice.toLocaleString('vi-VN')}đ
+                        </span>
+                        <Pencil className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 3 Chip điều chỉnh giá nhanh 1-chạm */}
+                  <div className="flex items-center sm:justify-end gap-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setUserSelectedPrice(Math.max(40000, pricingEstimate.finalPrice - 20000))}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer transition-all ${
+                        userSelectedPrice === pricingEstimate.finalPrice - 20000
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      {role === 'passenger' ? '-20k Tiết kiệm' : '-20k Hỗ trợ'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserSelectedPrice(null)}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer transition-all ${
+                        userSelectedPrice === null
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      Chuẩn {Math.round(pricingEstimate.finalPrice / 1000)}k
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserSelectedPrice(pricingEstimate.finalPrice + 20000)}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer transition-all ${
+                        userSelectedPrice === pricingEstimate.finalPrice + 20000
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      {role === 'passenger' ? '+20k Đi gấp' : '+20k Xe mới'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
