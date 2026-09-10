@@ -165,14 +165,14 @@ export default function ZeroSearchMatchWidget({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-                Điều Phối Tự Động 3 Giây
+                Ghép Xe Nhanh 3 Giây
               </h3>
               <Badge variant="primary" size="sm" className="bg-blue-600 text-white font-medium text-[11px] px-2 py-0.5">
-                Level 3 Zero-Search
+                Tự Động Kết Nối
               </Badge>
             </div>
             <p className="text-xs text-slate-500 dark:text-zinc-400">
-              Không cần lướt tìm · Thuật toán Nobel Gale-Shapley & Định giá xăng dầu Shapley Value
+              Tự động ghép người cùng lộ trình · Báo giá xăng chuẩn xác · Không cần lướt tìm
             </p>
           </div>
         </div>
@@ -354,10 +354,10 @@ export default function ZeroSearchMatchWidget({
               </div>
             </div>
 
-              {/* Thẻ Báo giá Shapley Value */}
+              {/* Thẻ Báo giá Gợi ý */}
               <div className="flex items-baseline gap-2 text-right">
                 <span className="text-xs text-slate-500 dark:text-zinc-400">
-                  Giá Shapley ({pricingEstimate.distanceKm}km):
+                  Phí xăng gợi ý ({pricingEstimate.distanceKm}km):
                 </span>
                 <span className="text-lg sm:text-xl font-mono font-extrabold text-blue-600 dark:text-blue-400">
                   {pricingEstimate.finalPrice.toLocaleString('vi-VN')}đ
@@ -390,12 +390,12 @@ export default function ZeroSearchMatchWidget({
               {isSearching ? (
                 <>
                   <Radio className="w-5 h-5 animate-spin" />
-                  Đang gom phiên tối ưu toàn cục (Wait to be Faster)...
+                  Đang tìm chuyến tiện đường phù hợp...
                 </>
               ) : (
                 <>
                   <Zap className="w-5 h-5" />
-                  Gửi Ý Định Ghép Tự Động (1-Chạm)
+                  Gửi Yêu Cầu Ghép Nhanh (1-Chạm)
                 </>
               )}
             </Button>
@@ -407,10 +407,10 @@ export default function ZeroSearchMatchWidget({
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
                   <CheckCircle2 className="w-4 h-4" />
-                  Đã ghép đôi thành công theo thuật toán Gale-Shapley!
+                  Đã tìm thấy chuyến xe tiện đường phù hợp nhất!
                 </span>
                 <Badge variant="success" size="sm" className="font-mono">
-                  Tối ưu ghế: {matchResult.cluster.seatUtilizationRate}%
+                  Khớp lộ trình: 100%
                 </Badge>
               </div>
 
@@ -428,7 +428,7 @@ export default function ZeroSearchMatchWidget({
                   <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {matchResult.finalPrice.toLocaleString('vi-VN')}đ
                   </span>
-                  <p className="text-[10px] text-slate-400">Giá Shapley</p>
+                  <p className="text-[10px] text-slate-400">Phí xăng chia sẻ</p>
                 </div>
               </div>
 
