@@ -105,6 +105,14 @@ export function getMatches(req, res) {
           reasons.push(`Đồng hương ${driver.hometown}`);
         }
 
+        // Tối ưu hoá ghép đồ: Khách gửi đồ tiện tuyến & Chủ xe có thùng bán tải / cốp rộng
+        const isDriverCargoReady = driver.acceptsParcel || driver.hasCargoBed || driver.vehicleType === 'pickup';
+        const isPassCargo = pass.isCargoOnly || pass.cargoType || pass.notes?.toLowerCase().includes('gửi đồ') || pass.notes?.toLowerCase().includes('thùng xốp');
+        if (isPassCargo && isDriverCargoReady) {
+          score = Math.min(100, score + 10);
+          reasons.push(driver.vehicleType === 'pickup' ? '🛻 Khớp gửi đồ: Chủ xe bán tải thùng lớn' : '📦 Khớp gửi đồ: Chủ xe nhận ghép cốp');
+        }
+
         matchedPairs.push({
           pairId: `MATCH-${driver.id}-${pass.id}`,
           score,

@@ -45,7 +45,8 @@ export default function InboxModal({
   onMarkAsRead = null,
   onMarkAsUnread = null,
   readBookingTimestamps = {},
-  unreadBookingIds = []
+  unreadBookingIds = [],
+  onNavigateTab = null
 }) {
   const [selectedId, setSelectedId] = useState(initialBookingId);
   const [mobileShowChat, setMobileShowChat] = useState(Boolean(initialBookingId));
@@ -286,7 +287,9 @@ export default function InboxModal({
       /\b(hẹn anh|hẹn bạn|hẹn em|hen anh|hen em)\b/i,
       /\b(được anh|được em|duoc anh|duoc em|được nha|duoc nha)\b/i,
       /\b(đón em|don em|đón anh|don anh|đón nhé|don nhe)\b/i,
-      /\b(giữ chỗ|giu cho)\b/i
+      /\b(giữ chỗ|giu cho)\b/i,
+      /\b(điểm hẹn|diem hen|cây xăng|cay xang|ngã tư|nga tu|bến xe|ben xe|quốc lộ|quoc lo|tiện đường|tien duong)\b/i,
+      /\b(balo|vali|túi|hành lý|hanh ly|cốp xe|cop xe)\b/i
     ];
 
     return recentMsgs.some((m) => {
@@ -304,6 +307,31 @@ export default function InboxModal({
     // Lấy tin nhắn gần nhất của đối tác
     const lastPartnerMsg = [...msgs].reverse().find((m) => !m.isSystem && m.senderRole !== myRole);
     const partnerText = (lastPartnerMsg?.text || '').toLowerCase();
+
+    // 0. Phân tích Intent: Gửi đồ / Thùng hàng / Xe tải / Xe máy / Nông sản / Chành xe
+    const isCargoBooking = Boolean(
+      activeBooking?.isCargoBooking ||
+      activeBooking?.cargoType ||
+      activeBooking?.vehicleType === 'truck_light'
+    );
+    if (isCargoBooking || /(gửi đồ|gui do|chở hàng|cho hang|thùng xốp|thung xop|xe tải|xe tai|chành|chanh|xe máy|xe may|xe điện|xe dien|bán tải|ban tai|kiện|nông sản|nong san|chuyển trọ|chuyen tro)/i.test(partnerText)) {
+      if (myRole === 'driver') {
+        return [
+          '🚛 Xe tải quay đầu rỗng thùng, nhận chở tiện chuyến giá mềm',
+          '🛵 Có dây tăng đơ chằng buộc xe máy cố định chống trầy xước',
+          '🌾 Nhận chở nông sản vài tạ đến 1 tấn, có bạt che kín',
+          '📦 Bạn dán tên & SĐT người nhận lên kiện hàng nhé',
+          '✅ Bấm xác nhận chuyến để lấy SĐT gọi trực tiếp giao nhận nha'
+        ];
+      }
+      return [
+        '🛵 Em muốn gửi 1 chiếc xe máy (rút bớt xăng) về quê ạ',
+        '🌾 Em có mấy bao nông sản gửi từ Bình Phước về Miền Tây',
+        '📦 Đồ của em đã bọc kín băng dính cẩn thận sẵn ạ',
+        '📍 Người nhận sẽ ra đón xe nhận đồ dọc trục Tuyến N2 / QL ạ',
+        '✅ Em bấm xác nhận gửi hàng ngay ạ'
+      ];
+    }
 
     // 1. Phân tích Intent: Hỏi hoặc đề cập đến Hành lý / Vali / Thùng hàng
     if (/(vali|hành lý|hanh ly|đồ đạc|do dac|balo|thùng|thung|cốp|cop)/i.test(partnerText)) {
@@ -384,11 +412,88 @@ export default function InboxModal({
     ];
   }, [activeBooking?.status, activeBooking?.messages, activeTab]);
 
-  const partnerAlias = activeBooking ? toPublicAlias(activeBooking) : 'Đối tác';
-  const partnerPhone = activeBooking?.driverPhone || activeBooking?.contactPhone || activeBooking?.phoneReal || '';
   const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
   const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
   const isDealCommitted = isConfirmed || isPreConfirmed;
+
+  const isTargetPassengerTrip = activeBooking?.targetTrip?.type === 'passenger_request' || activeBooking?.targetItem?.type === 'passenger_request';
+
+  // Kiểm tra đối tác đã có ít nhất 1 tin nhắn phản hồi (tương tác 2 chiều giữa bên ra kèo và bên ghép)
+  const hasPartnerReplied = useMemo(() => {
+    if (!activeBooking?.messages || activeBooking.messages.length === 0) return false;
+    const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
+    const myRole = activeTab === 'incoming'
+      ? (isTargetPassengerTrip ? 'passenger' : 'driver')
+      : (isTargetPassengerTrip ? 'driver' : 'passenger');
+    return activeBooking.messages.some((m) => {
+      if (userPhone && m.senderPhone) {
+        return cleanPhoneNumber(m.senderPhone) !== userPhone;
+      }
+      return m.senderRole && m.senderRole !== myRole;
+    });
+  }, [activeBooking?.messages, activeTab, currentUser, isTargetPassengerTrip]);
+
+  // Cảnh báo đối tác phản hồi chậm (> 3 phút sau tin nhắn đầu tiên của mình mà chưa ai trả lời)
+  const isPartnerStale = useMemo(() => {
+    if (hasPartnerReplied || !activeBooking?.messages || activeBooking.messages.length === 0) return false;
+    const firstMsgTime = activeBooking.messages[0]?.timestamp
+      ? new Date(activeBooking.messages[0].timestamp).getTime()
+      : 0;
+    if (!firstMsgTime) return false;
+    return Date.now() - firstMsgTime > 3 * 60 * 1000;
+  }, [hasPartnerReplied, activeBooking?.messages]);
+
+  const partnerAlias = useMemo(() => {
+    if (!activeBooking) return 'Đối tác';
+    // Nếu là bài đăng của mình (incoming): đối tác là người gửi yêu cầu đến
+    if (activeTab === 'incoming') {
+      if (isTargetPassengerTrip) {
+        // Bài đăng của mình là tìm xe -> đối tác gửi đến là Chủ xe
+        if (isConfirmed) {
+          return activeBooking.driverName || 'Chủ xe';
+        }
+        const code = String(activeBooking.escrowId || activeBooking.id || '').replace(/\D/g, '').slice(-3) || '01';
+        return `Chủ xe CX-${code}`;
+      } else {
+        // Bài đăng của mình là xe trống -> đối tác gửi đến là Khách
+        if (isConfirmed) {
+          return activeBooking.passengerName || activeBooking.userName || activeBooking.contactName || 'Người đi cùng';
+        }
+        const code = String(activeBooking.escrowId || activeBooking.id || '').replace(/\D/g, '').slice(-3) || '01';
+        return `Khách KX-${code}`;
+      }
+    }
+    // Nếu là yêu cầu mình gửi đi (outgoing): đối tác là chủ bài đăng
+    if (isTargetPassengerTrip) {
+      // Mình gửi đề xuất đón cho 1 Khách -> đối tác là Khách
+      if (isConfirmed) {
+        return activeBooking.passengerName || 'Người đi cùng';
+      }
+      const code = String(activeBooking.targetTrip?.id || activeBooking.targetItem?.id || '').replace(/\D/g, '').slice(-3) || '01';
+      return `Khách KX-${code}`;
+    } else {
+      // Mình gửi yêu cầu ghép cho 1 Chủ xe -> đối tác là Chủ xe
+      if (isConfirmed) {
+        return activeBooking.driverName || activeBooking.targetTrip?.driverName || activeBooking.contactName || toPublicAlias(activeBooking);
+      }
+      return toPublicAlias(activeBooking);
+    }
+  }, [activeBooking, activeTab, isConfirmed, isTargetPassengerTrip]);
+
+  const partnerPhone = useMemo(() => {
+    if (!activeBooking) return '';
+    if (!isConfirmed) return '';
+    if (activeTab === 'incoming') {
+      // Bài của mình -> đối tác là người gửi đến
+      return isTargetPassengerTrip
+        ? (activeBooking.driverPhone || '')
+        : (activeBooking.passengerPhone || activeBooking.userPhone || activeBooking.phone || '');
+    }
+    // Mình gửi đi -> đối tác là chủ bài đăng
+    return isTargetPassengerTrip
+      ? (activeBooking.passengerPhone || activeBooking.contactPhone || '')
+      : (activeBooking.driverPhone || activeBooking.contactPhone || activeBooking.phoneReal || '');
+  }, [activeBooking, activeTab, isConfirmed, isTargetPassengerTrip]);
   const activePartnerOnline = activeBooking
     ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
     : { isOnline: false };
@@ -833,7 +938,13 @@ export default function InboxModal({
                         {/* Dòng 1: Tên đối tác (trái) + Thời gian (phải) */}
                         <div className="flex items-center justify-between gap-1.5 mb-0.5">
                           <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
-                            {toPublicAlias(item)}
+                            {activeTab === 'incoming'
+                              ? (item.status === 'confirmed'
+                                  ? (item.passengerName || item.userName || item.contactName || 'Người đi cùng')
+                                  : `Khách KX-${String(item.escrowId || item.id || '').replace(/\D/g, '').slice(-3) || '01'}`)
+                              : (item.status === 'confirmed'
+                                  ? (item.driverName || toPublicAlias(item))
+                                  : toPublicAlias(item))}
                           </span>
                           <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 shrink-0 tabular">
                             {formatCleanDateLabel(item.date)}
@@ -1037,10 +1148,16 @@ export default function InboxModal({
                         #{activeBooking.escrowId || activeBooking.id}
                       </span>
                     </div>
-                    <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                      {activeBooking.from} ➔ {activeBooking.to}
-                      {activeBooking.seats ? ` · ${activeBooking.seats} chỗ` : ''}
-                      {activeBooking.totalDeal ? ` · ${formatVND(activeBooking.totalDeal)}` : ''}
+                    <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <span>{activeBooking.from} ➔ {activeBooking.to}</span>
+                      {activeBooking.isCargoBooking ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                          📦 {activeBooking.cargoPresetName || 'Gửi đồ tiện chuyến'}
+                        </span>
+                      ) : activeBooking.seats ? (
+                        <span>· {activeBooking.seats} chỗ</span>
+                      ) : null}
+                      {activeBooking.totalDeal ? <span>· {formatVND(activeBooking.totalDeal)}</span> : ''}
                     </p>
                   </div>
                 </div>
@@ -1053,10 +1170,15 @@ export default function InboxModal({
                       <span className="hidden sm:inline">Đã chốt chính thức</span>
                       <span className="sm:hidden">Đã chốt</span>
                     </span>
-                  ) : isPreConfirmed ? (
+                  ) : isPreConfirmed && remainingSecs > 0 ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1.5 rounded-full border border-blue-300/50 animate-pulse">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>{timeLeftStr || 'Giữ chỗ 15p'}</span>
+                      <span>{timeLeftStr ? `Tạm giữ chỗ ${timeLeftStr}` : 'Tạm giữ chỗ 15p'}</span>
+                    </span>
+                  ) : activeBooking.status === 'expired' || (isPreConfirmed && remainingSecs <= 0) ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-850 px-2.5 py-1.5 rounded-full border border-slate-300/50">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Hết hạn 15p</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1.5 rounded-full border border-amber-300/50">
@@ -1071,7 +1193,7 @@ export default function InboxModal({
               {/* THANH ĐIỀU PHỐI 2-PHASE COMMIT (SMART ACTION BAR) */}
               <div className="p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/60 dark:to-slate-800/40 border-b border-black/[0.06] dark:border-white/[0.06]">
                 {isConfirmed ? (
-                  // ĐÃ CHỐT CHÍNH THỨC: MỞ KHÓA SĐT THẬT
+                  // ĐÃ CHỐT CHÍNH THỨC: MỞ KHÓA SĐT THẬT & TÊN THẬT
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
@@ -1082,34 +1204,51 @@ export default function InboxModal({
                           Chuyến đi đã chốt thành công 2 chiều!
                         </p>
                         <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                          SĐT {partnerAlias}: <strong className="text-slate-900 dark:text-white tabular">{partnerPhone || 'Đã cấp quyền'}</strong>
+                          SĐT {partnerAlias}: <strong className="text-slate-900 dark:text-white tabular font-mono">{partnerPhone || 'Đã mở khóa'}</strong>
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
                       {partnerPhone && (
                         <>
                           <a
                             href={`tel:${partnerPhone}`}
-                            className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                            className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
                           >
                             <Phone className="w-3.5 h-3.5" />
                             <span>Gọi điện</span>
                           </a>
+                          <a
+                            href={`sms:${partnerPhone}`}
+                            className="py-1.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Nhắn SMS</span>
+                          </a>
+                          {cleanPhoneNumber(partnerPhone) && (
+                            <a
+                              href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="py-1.5 px-3 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                            >
+                              <span>Mở Zalo</span>
+                            </a>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleCopyPhone(partnerPhone)}
-                            className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
+                            className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer active:scale-95"
                           >
                             {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                            <span>{copiedPhone ? 'Đã chép' : 'Chép SĐT'}</span>
+                            <span>{copiedPhone ? 'Đã chép' : 'Sao chép'}</span>
                           </button>
                         </>
                       )}
                     </div>
                   </div>
-                ) : isPreConfirmed ? (
+                ) : isPreConfirmed && remainingSecs > 0 ? (
                   // ĐANG Ở BƯỚC PRE-CONFIRM: SOFT-LOCK 15 PHÚT (DYNAMIC ISLAND LIQUID COUNTDOWN)
                   <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-slate-50 dark:from-slate-900/60 dark:to-blue-950/40 border border-blue-200/70 dark:border-blue-800/50 shadow-xs flex-wrap">
                     <div className="flex items-center gap-3">
@@ -1133,68 +1272,121 @@ export default function InboxModal({
 
                       <div className="space-y-0.5">
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          {activeTab === 'incoming'
-                            ? 'Đang khóa mềm 1 ghế (Chờ khách bấm chốt)'
-                            : 'Chủ xe đang giữ chỗ cho bạn'}
+                          {activeBooking.preConfirmedBy === (activeTab === 'incoming' ? 'driver' : 'passenger')
+                            ? 'Đang khóa mềm chỗ 15 phút (Chờ đối phương xác nhận)'
+                            : activeTab === 'incoming'
+                              ? 'Khách đã đề xuất chốt (Bấm xác nhận để chốt chuyến ngay)'
+                              : 'Chủ xe đang tạm giữ chỗ 15 phút cho bạn'}
                         </p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {activeTab === 'incoming'
-                            ? 'Ghế tự động giải phóng nếu khách không chốt trước khi hết giờ.'
-                            : 'Bấm xác nhận bên phải để nhận ngay SĐT & Zalo chủ xe!'}
+                          {activeBooking.preConfirmedBy === (activeTab === 'incoming' ? 'driver' : 'passenger')
+                            ? 'Ghế tự động giải phóng nếu đối phương không bấm chốt trước khi hết giờ.'
+                            : 'Bấm nút xác nhận bên phải để chốt chuyến ngay và nhận SĐT & Zalo liên hệ đón!'}
                         </p>
                       </div>
                     </div>
 
-                    {activeTab === 'outgoing' && (
+                    {(activeTab === 'outgoing' || activeBooking.preConfirmedBy === 'passenger' || !activeBooking.preConfirmedBy) && (
                       <button
                         type="button"
                         disabled={actionLoading}
                         onClick={handleFinalConfirm}
-                        className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
+                        className="py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-xl shadow-emerald-600/30 ring-4 ring-emerald-500/40 animate-pulse flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>XÁC NHẬN CHỐT CHUYẾN</span>
+                        <span>✅ Xác nhận chốt chuyến ngay</span>
                       </button>
                     )}
                   </div>
                 ) : (
-                  // ĐANG Ở BƯỚC THƯƠNG LƯỢNG (INQUIRING)
+                  // ĐANG Ở BƯỚC THƯƠNG LƯỢNG (INQUIRING HOẶC HẾT HẠN 15P)
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          <span>Thỏa thuận điểm hẹn đón & hành lý trước khi chốt</span>
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          Sau khi trao đổi xong, bấm "Đề xuất chốt" để giữ chỗ mềm 15 phút.
-                        </p>
-                      </div>
+                      {!hasPartnerReplied ? (
+                        <>
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
+                              <span>Đang chờ phản hồi từ {partnerAlias}</span>
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              Hệ thống đã gửi thông báo. Khi {partnerAlias} phản hồi và hai bên trao đổi ok, nút chốt chuyến sẽ kích hoạt.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            disabled
+                            className="py-2 px-3.5 rounded-xl font-semibold text-xs bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed flex items-center gap-1.5"
+                            title="Cần có tin nhắn phản hồi trao đổi 2 chiều trước khi kích hoạt chốt chuyến"
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Chờ {partnerAlias} phản hồi</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                              <span>
+                                {activeBooking.status === 'expired' || remainingSecs <= 0
+                                  ? 'Hết hạn giữ chỗ 15p · Trao đổi lại & Tạm giữ chỗ mới'
+                                  : 'Thỏa thuận điểm hẹn đón & hành lý trước khi chốt'}
+                              </span>
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              Sau khi trao đổi xong, bấm "Đề xuất chốt chuyến & Tạm giữ chỗ 15p".
+                            </p>
+                          </div>
 
-                      {activeTab === 'incoming' && (
-                        <button
-                          type="button"
-                          disabled={actionLoading}
-                          onClick={handlePreConfirm}
-                          className={`py-2 px-3.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
-                            hasConsensus
-                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-2 ring-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] animate-pulse'
-                              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white'
-                          }`}
-                        >
-                          <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-                          <span>{hasConsensus ? '⚡ Đồng thuận đạt! Giữ chỗ 15p' : 'Đề xuất chốt & Giữ chỗ 15p'}</span>
-                        </button>
+                          <button
+                            type="button"
+                            disabled={actionLoading}
+                            onClick={handlePreConfirm}
+                            className={`py-2.5 px-4 rounded-xl font-black text-xs shadow-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
+                              hasConsensus
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-4 ring-amber-400/60 shadow-[0_0_20px_rgba(245,158,11,0.4)] animate-pulse'
+                                : 'bg-gradient-to-r from-[#0071e3] to-indigo-600 hover:from-[#0077ed] text-white ring-4 ring-[#0071e3]/30 shadow-[0_0_20px_rgba(0,113,227,0.35)] animate-pulse'
+                            }`}
+                          >
+                            <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+                            <span>{hasConsensus ? '⚡ Đồng thuận đạt! Tạm giữ chỗ 15p' : '⚡ Đề xuất chốt chuyến & Tạm giữ chỗ 15p'}</span>
+                          </button>
+                        </>
                       )}
                     </div>
 
+                    {/* Cảnh báo Stale Inactivity nếu đối tác không phản hồi > 3 phút */}
+                    {isPartnerStale && !hasPartnerReplied && (
+                      <div className="p-2.5 px-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span className="text-[11.5px] font-medium">
+                            {partnerAlias} phản hồi chậm (&gt;3 phút). Bạn có thể tìm chuyến xe khác trên Sàn để không lỡ lịch trình!
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose?.();
+                            onNavigateTab?.('market');
+                          }}
+                          className="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-[11px] shrink-0 cursor-pointer shadow-xs transition-all"
+                        >
+                          Tìm xe khác ➔
+                        </button>
+                      </div>
+                    )}
+
                     {/* Edge AI Ambient Consensus Prompt */}
-                    {hasConsensus && activeTab === 'incoming' && (
+                    {hasConsensus && hasPartnerReplied && (
                       <div className="p-2 px-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2 text-xs text-amber-800 dark:text-amber-300 animate-in fade-in slide-in-from-top-1">
                         <div className="flex items-center gap-2">
                           <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                           <span className="font-medium text-[11.5px]">
-                            Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm giữ chỗ 15p cho khách!
+                            {activeTab === 'incoming'
+                              ? 'Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm tạm giữ chỗ 15p cho khách!'
+                              : 'Trí tuệ bản địa nhận diện hai bên đã thống nhất điểm đón. Hãy bấm đề xuất tạm giữ chỗ 15p với Chủ xe!'}
                           </span>
                         </div>
                       </div>
@@ -1342,7 +1534,7 @@ export default function InboxModal({
                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                       >
                         <span className="text-[10px] text-slate-400 mb-0.5 px-1">
-                          {msg.senderName || (isMe ? 'Tôi' : partnerAlias)}
+                          {isMe ? 'Tôi' : (isConfirmed ? (msg.senderName || partnerAlias) : partnerAlias)}
                         </span>
                         <div
                           className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
@@ -1373,7 +1565,7 @@ export default function InboxModal({
                         {partnerPhone}
                       </p>
                     </div>
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
                       <a
                         href={`tel:${partnerPhone}`}
                         className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
@@ -1394,8 +1586,18 @@ export default function InboxModal({
                         className="py-2 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
                       >
                         {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedPhone ? 'Đã chép' : 'Chép'}</span>
+                        <span>{copiedPhone ? 'Đã chép' : 'Sao chép số'}</span>
                       </button>
+                      {cleanPhoneNumber(partnerPhone) && (
+                        <a
+                          href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2 px-3.5 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                        >
+                          <span>Mở Zalo</span>
+                        </a>
+                      )}
                     </div>
                     {/* Stanford Empathy Tip & Hướng dẫn liên lạc văn minh */}
                     <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-100/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-emerald-900 dark:text-emerald-200 text-left leading-relaxed">

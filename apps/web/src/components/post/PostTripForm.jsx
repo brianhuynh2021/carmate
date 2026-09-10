@@ -23,7 +23,11 @@ import {
   Eye,
   Crosshair,
   Image as ImageIcon,
-  Calculator
+  Calculator,
+  Zap,
+  Truck,
+  Package,
+  Box
 } from 'lucide-react';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import PlateMaskModal from '../modals/PlateMaskModal.jsx';
@@ -38,6 +42,8 @@ import {
   getUpcomingDays,
   formatTripDateDisplay,
   VEHICLE_SEAT_CONFIGS,
+  CARGO_TYPES,
+  getRecommendedCargoPrice,
   formatVND,
   getPriceGuardrail,
   getCorridorWaypoints,
@@ -57,7 +63,6 @@ import {
   recordTripPattern,
   getTopPredictedTrip,
   getLastUsedCarProfile,
-  getDynamicRoutePriceBenchmark,
   computePredictedReturnTrip
 } from '../../utils/personaMemory.js';
 
@@ -357,15 +362,17 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     }
   }, [role, currentUser, savedCarProfile]);
 
-  // Định giá phụ xăng thông minh dựa trên cự ly km thực tế
-  const routePriceBenchmark = useMemo(() => {
-    return getDynamicRoutePriceBenchmark(fromLocation, toLocation);
-  }, [fromLocation, toLocation]);
-
   // Hệ thống Dải Biên Độ Giá Thông Minh (Price Guardrails) theo chuẩn Xe khách & Limousine
   const priceGuardrail = useMemo(() => {
     return getPriceGuardrail(fromLocation, toLocation, price);
   }, [fromLocation, toLocation, price]);
+
+  // Phân loại kiểu xe hiện tại từ vehicleCapacity
+  const vehicleType = useMemo(() => {
+    if (vehicleCapacity === 'truck_light') return 'truck_light';
+    if (vehicleCapacity === 'pickup') return 'pickup';
+    return Number(vehicleCapacity) === 7 ? '7_seater' : '5_seater';
+  }, [vehicleCapacity]);
 
   const [hasManuallyEditedPrice, setHasManuallyEditedPrice] = useState(false);
   const [showFairSplitModal, setShowFairSplitModal] = useState(false);
@@ -392,6 +399,78 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
     if (pred.carCategory) setCarCategory(pred.carCategory);
   };
 
+  const handleOneTapReplicate = (pred) => {
+    if (!pred) return;
+    const phone = phoneReal.trim() || currentUser?.phone || '';
+    if (!phone) {
+      triggerError('Vui lòng nhập số điện thoại hoặc đăng nhập để đăng chuyến 1-chạm');
+      onOpenAuth?.();
+      return;
+    }
+
+    const cleanFrom = (pred.from || '').trim();
+    const cleanTo = (pred.to || '').trim();
+    if (!cleanFrom || !cleanTo) {
+      triggerError('Lộ trình chưa hoàn chỉnh');
+      return;
+    }
+
+    const fromCity = cleanFrom.split(/[,-]/)[0].trim() || cleanFrom;
+    const toCity = cleanTo.split(/[,-]/)[0].trim() || cleanTo;
+    const derivedRoute = `${fromCity} ⇄ ${toCity}`;
+
+    const slot = TIME_SLOTS.find((s) => s.id === (pred.timeSlot || '07:00-09:00')) || TIME_SLOTS[2];
+    const isExactTimeValid = pred.exactTime && isTimeInSlot(pred.exactTime.trim(), pred.timeSlot);
+    const validExactTime = isExactTimeValid ? pred.exactTime.trim() : undefined;
+    const timeSlotLabel = validExactTime ? `${validExactTime} (${slot.short})` : slot.short;
+
+    // Ưu tiên ngày mai để thuận tiện cho người đi làm / chuyến đi ngày kế tiếp
+    const targetDate = upcomingDays[1]?.label || upcomingDays[0]?.label || 'Ngày mai';
+
+    const payload = {
+      id: `${isDriver ? 'DRV' : 'REQ'}-${Date.now().toString().slice(-4)}`,
+      type: isDriver ? 'driver_offer' : 'passenger_request',
+      carCategory: isDriver ? (pred.carCategory || carCategory) : undefined,
+      maskedCode: `${isDriver ? 'CX' : 'KH'}-${Math.floor(100 + Math.random() * 900)}`,
+      publicName: `${isDriver ? ((pred.carCategory || carCategory) === 'convenient_trip' ? 'Xe tiện chuyến' : 'Chủ xe') : 'Khách'} #${Math.floor(100 + Math.random() * 900)}`,
+      avatar: currentUser?.avatar || undefined,
+      phoneReal: phone,
+      direction: 'both',
+      from: cleanFrom,
+      to: cleanTo,
+      pickupSpot: pred.pickupSpot || undefined,
+      dropoffSpot: pred.dropoffSpot || undefined,
+      route: derivedRoute,
+      routeCategory: derivedRoute,
+      hometown: fromCity,
+      waypointNote: pred.waypointNote || '',
+      date: targetDate,
+      isRecurringWeekly: false,
+      timeSlot: pred.timeSlot || '07:00-09:00',
+      exactTime: validExactTime,
+      timeSlotLabel,
+      carType: isDriver ? (pred.carType || carType) : undefined,
+      carPhotos: isDriver && carPhotos.length >= 1 ? carPhotos.map(p => typeof p === 'string' ? p : p.url) : undefined,
+      hasCarPhotos: isDriver && carPhotos.length >= 3,
+      capacity: isDriver ? Number(pred.vehicleCapacity || vehicleCapacity) : undefined,
+      availableSeats: isDriver ? Number(pred.seats || seats) : undefined,
+      seatsNeeded: !isDriver ? Number(pred.seats || seats) : undefined,
+      basePricePerSeat: isDriver ? Number(pred.price || price) : undefined,
+      depositPerSeat: 0,
+      commitmentType: 'zalo_direct',
+      isVip: false,
+      rating: 5.0,
+      completedCount: 1,
+      perks: isDriver ? ['Không hút thuốc', 'Cốp rộng chứa hành lý', 'Máy lạnh mát mẻ'] : ['Hành lý gọn gàng', 'Đúng giờ hẹn'],
+      notes: '',
+      createdAt: Date.now()
+    };
+
+    recordTripPattern(payload);
+    onShowToast?.(`⚡ 1-Chạm thành công! Đã đăng chuyến ${payload.from} ➔ ${payload.to} cho ${targetDate}`);
+    onSubmit(payload, currentUser);
+  };
+
   useEffect(() => {
     if (currentUser?.phone) {
       setPhoneReal(currentUser.phone);
@@ -408,6 +487,12 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
   const [acOn, setAcOn] = useState(false);
   const [noPet, setNoPet] = useState(false);
   const [acceptsParcel, setAcceptsParcel] = useState(false);
+  const [hasCargoBed, setHasCargoBed] = useState(false);
+  const [cargoNotes, setCargoNotes] = useState('');
+  const [selectedCargoTypes, setSelectedCargoTypes] = useState(['compact_parcel', 'produce_box']);
+  const [isCargoOnly, setIsCargoOnly] = useState(false);
+  const [selectedCargoPreset, setSelectedCargoPreset] = useState('produce_box');
+  const [cargoDescription, setCargoDescription] = useState('');
   const [compactLuggage, setCompactLuggage] = useState(true);
   const [onTime, setOnTime] = useState(true);
   const [pickupHighway, setPickupHighway] = useState(false);
@@ -555,6 +640,11 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       return;
     }
 
+    if (!isDriver && isCargoOnly && !cargoDescription.trim()) {
+      triggerError('Vui lòng nhập mô tả món đồ gửi (VD: 2 thùng xốp sầu riêng 25kg, 1 vali đồ chuyển trọ...).');
+      return;
+    }
+
     // Kiểm tra tính hợp lệ của mức giá (Price Guardrail Invariant)
     const pNum = Number(price) || 0;
     if (pNum <= 0) {
@@ -587,9 +677,14 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       if (familyCar) perks.push('Xe gia đình sạch sẽ');
       if (largeTrunk) perks.push('Cốp rộng để đồ');
       if (acOn) perks.push('Bật máy lạnh');
-      if (acceptsParcel) perks.push('Nhận gửi đồ/hàng tiện chuyến');
+      if (acceptsParcel || vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup') perks.push('Nhận gửi đồ/hàng tiện chuyến');
+      if (vehicleCapacity === 'truck_light') perks.push('Xe tải nhẹ tiện chuyến (1T–3.5T)');
+      if (vehicleCapacity === 'pickup') perks.push('Thùng xe bán tải ~800kg');
       if (noPet) perks.push('Không thú cưng');
     } else {
+      if (isCargoOnly) {
+        perks.push(`Gửi đồ: ${CARGO_TYPES[selectedCargoPreset]?.shortLabel || 'Hàng hoá'}`);
+      }
       if (noSmoking) perks.push('Không hút thuốc');
       if (compactLuggage) perks.push('Hành lý gọn gàng');
       if (onTime) perks.push('Đúng giờ hẹn');
@@ -647,10 +742,29 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
       carType: isDriver ? carType : undefined,
       carPhotos: isDriver && validPhotos.length >= 1 ? validPhotos : undefined,
       hasCarPhotos: isDriver && validPhotos.length >= 3,
-      capacity: isDriver ? Number(vehicleCapacity) : undefined,
+      capacity: isDriver ? (vehicleCapacity === 'truck_light' ? 2 : vehicleCapacity === 'pickup' ? 5 : Number(vehicleCapacity)) : undefined,
+      vehicleType: isDriver
+        ? vehicleCapacity === 'truck_light'
+          ? 'truck_light'
+          : vehicleCapacity === 'pickup'
+            ? 'pickup'
+            : Number(vehicleCapacity) === 7
+              ? 'mpv_suv'
+              : 'sedan_cuv'
+        : undefined,
+      hasCargoBed: isDriver ? Boolean(vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup' || hasCargoBed) : undefined,
+      isCargoVehicle: isDriver ? Boolean(vehicleCapacity === 'truck_light') : undefined,
+      cargoBedCapacityKg: isDriver && vehicleCapacity === 'truck_light' ? 2500 : (vehicleCapacity === 'pickup' ? 800 : undefined),
+      acceptsParcel: isDriver ? Boolean(acceptsParcel || vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup') : undefined,
+      cargoTypes: isDriver && (acceptsParcel || vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup') ? selectedCargoTypes : (!isDriver && isCargoOnly ? [selectedCargoPreset] : undefined),
+      cargoNotes: isDriver ? cargoNotes.trim() || undefined : undefined,
+      isCargoOnly: !isDriver ? Boolean(isCargoOnly) : undefined,
+      cargoType: !isDriver && isCargoOnly ? selectedCargoPreset : undefined,
+      cargoDescription: !isDriver && isCargoOnly ? cargoDescription.trim() || undefined : undefined,
       availableSeats: isDriver ? Number(seats) : undefined,
-      seatsNeeded: !isDriver ? Number(seats) : undefined,
+      seatsNeeded: !isDriver ? (isCargoOnly ? 0 : Number(seats)) : undefined,
       basePricePerSeat: isDriver ? Number(price) : undefined,
+      expectedPrice: !isDriver ? Number(price) : undefined,
       depositPerSeat: 0,
       commitmentType: 'zalo_direct',
       isVip: false,
@@ -716,34 +830,48 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
         />
       </div>
 
-      {/* ── BANNER DỰ ĐOÁN THÓI QUEN (CURSOR PREDICTIVE AMBIENT UX) ── */}
+      {/* ── BANNER DỰ ĐOÁN THÓI QUEN (CURSOR PREDICTIVE AMBIENT UX: 1-TAP REPLICATE) ── */}
       {predictedTrip && (
-        <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-primary-500/10 via-emerald-500/10 to-transparent border border-primary-300/40 dark:border-primary-700/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <div>
-              <p className="text-xs text-slate-800 dark:text-slate-200">
-                <span className="font-bold text-primary-600 dark:text-primary-400">
-                  {isDriver ? 'Chuyến quen thuộc của Chủ xe:' : 'Nhu cầu quen thuộc của bạn:'}
-                </span>{' '}
-                <span className="font-semibold">
-                  {predictedTrip.from} ➔ {predictedTrip.to}
-                </span>{' '}
-                <span className="text-slate-500 dark:text-slate-400">({predictedTrip.timeSlot})</span>
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {formatVND(predictedTrip.price)}/ghế · {predictedTrip.seats} ghế · Đã đi {predictedTrip.count} lần
+        <div className="mt-4 p-3.5 sm:p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/25 dark:border-emerald-500/20 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all animate-in fade-in">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Zap className="w-5 h-5 fill-current" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                  {isDriver ? 'Chuyến quen thuộc của Chủ xe' : 'Nhu cầu quen thuộc của bạn'}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  · Đã đi {predictedTrip.count} lần
+                </span>
+              </div>
+              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                {predictedTrip.from} ➔ {predictedTrip.to} · {formatVND(predictedTrip.price)}/ghế · {predictedTrip.seats} ghế
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => handleApplyPredictedTrip(predictedTrip)}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 transition-all shadow-xs shrink-0 cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Áp dụng</span>
-          </button>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleApplyPredictedTrip(predictedTrip)}
+              className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+              title="Điền thông tin này vào form để chỉnh sửa thêm"
+            >
+              <span>Điền form</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOneTapReplicate(predictedTrip)}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all shadow-md shadow-emerald-600/20 shrink-0 cursor-pointer"
+              title="Đăng chuyến này ngay lập tức cho ngày mai mà không cần điền form"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>Đăng ngay ⚡ (1-Chạm)</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -760,6 +888,40 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
               title={t('post.passengerRole')}
             />
           </div>
+
+          {!isDriver && (
+            <div className="mt-2.5 p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06] grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIsCargoOnly(false)}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none ${
+                  !isCargoOnly
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-primary-600" />
+                <span>Đặt ghế đi cùng (1–6 người)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCargoOnly(true);
+                  if (!hasManuallyEditedPrice) {
+                    setPrice(getRecommendedCargoPrice(selectedCargoPreset, priceGuardrail?.distanceKm || 120));
+                  }
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none ${
+                  isCargoOnly
+                    ? 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 shadow-xs ring-1 ring-amber-500/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5 text-amber-600" />
+                <span>📦 Chỉ gửi đồ tiện chuyến (Không đi người)</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* LỘ TRÌNH TỰ DO TOÀN QUỐC — KHÔNG ÉP CỨNG SÀI GÒN / VỀ TỈNH */}
@@ -1026,67 +1188,301 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     </span>
                   ) : (
                     <span className="text-xs font-normal text-slate-400">
-                      {vehicleCapacity === 5 ? 'Tối đa 4 khách' : 'Tối đa 6 khách'}
+                      {vehicleCapacity === 'truck_light'
+                        ? 'Cabin 1 khách + Thùng 1T–3.5T'
+                        : vehicleCapacity === 'pickup'
+                          ? 'Cabin 4 khách + Thùng ~800kg'
+                          : vehicleCapacity === 5
+                            ? 'Tối đa 4 khách'
+                            : 'Tối đa 6 khách'}
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06]">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800 border border-black/[0.04] dark:border-white/[0.06]">
                   <button
                     type="button"
                     onClick={() => {
                       setVehicleCapacity(5);
+                      setHasCargoBed(false);
                       if (seats > 4) setSeats(4);
-                      if (carType.includes('Xpander') || !carType) {
+                      if (carType.includes('Xpander') || carType.includes('Ranger') || carType.includes('K250') || !carType) {
                         setCarType('Toyota Vios (Xe 5 chỗ)');
                       }
                     }}
-                    className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer select-none whitespace-nowrap ${
-                      vehicleCapacity === 5
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer select-none ${
+                      vehicleCapacity === 5 && !hasCargoBed
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    <span>🚗 Xe 4–5 chỗ</span>
-                    <span className="text-[10.5px] font-normal opacity-70 hidden sm:inline">(Sedan/CUV)</span>
+                    <span>🚗 4–5 chỗ</span>
+                    <span className="text-[10px] font-normal opacity-70">(Sedan/CUV)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setVehicleCapacity(7);
-                      if (carType.includes('Vios') || !carType) {
+                      setHasCargoBed(false);
+                      if (carType.includes('Vios') || carType.includes('Ranger') || carType.includes('K250') || !carType) {
                         setCarType('Mitsubishi Xpander (Xe 7 chỗ)');
                       }
                     }}
-                    className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer select-none whitespace-nowrap ${
-                      vehicleCapacity === 7
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer select-none ${
+                      vehicleCapacity === 7 && !hasCargoBed
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>🚙 Xe 7 chỗ</span>
-                    <span className="text-[10.5px] font-normal opacity-70 hidden sm:inline">(MPV/SUV)</span>
+                    <span className="text-[10px] font-normal opacity-70">(MPV/SUV)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVehicleCapacity('pickup');
+                      setHasCargoBed(true);
+                      setAcceptsParcel(true);
+                      if (seats > 4) setSeats(3);
+                      if (carType.includes('Vios') || carType.includes('Xpander') || carType.includes('K250') || !carType) {
+                        setCarType('Ford Ranger (Xe bán tải)');
+                      }
+                      if (!selectedCargoTypes.includes('bulky_cargo')) {
+                        setSelectedCargoTypes([...selectedCargoTypes, 'bulky_cargo']);
+                      }
+                    }}
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer select-none ${
+                      vehicleCapacity === 'pickup'
+                        ? 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 shadow-xs ring-1 ring-amber-500/20'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>🛻 Bán tải</span>
+                    <span className="text-[10px] font-normal opacity-70">(Pick-up)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVehicleCapacity('truck_light');
+                      setHasCargoBed(true);
+                      setAcceptsParcel(true);
+                      setSeats(1);
+                      if (carType.includes('Vios') || carType.includes('Xpander') || carType.includes('Ranger') || !carType) {
+                        setCarType('Kia K250 (Xe tải 2.4T)');
+                      }
+                      const truckCargoTypes = ['produce_box', 'bulky_cargo', 'motorcycle', 'half_truck', 'full_truck'];
+                      setSelectedCargoTypes(Array.from(new Set([...selectedCargoTypes, ...truckCargoTypes])));
+                    }}
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer select-none ${
+                      vehicleCapacity === 'truck_light'
+                        ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-300 shadow-xs ring-1 ring-emerald-500/20'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>🚛 Xe tải nhẹ</span>
+                    <span className="text-[10px] font-normal opacity-70">(1T–3.5T)</span>
                   </button>
                 </div>
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>
-                  {isDriver ? 'Số ghế trống nhận khách' : t('post.seatsPassenger')}{' '}
-                  <span className="text-rose-500">*</span>
-                </span>
-                <span className="text-xs text-slate-400 font-normal">
-                  {isDriver
-                    ? vehicleCapacity === 5
-                      ? 'Xe 5 chỗ nhận tối đa 4 khách'
-                      : 'Xe 7 chỗ nhận tối đa 6 khách'
-                    : 'tối đa 6 người'}
-                </span>
-              </label>
-              <div className={`grid ${isDriver && vehicleCapacity === 5 ? 'grid-cols-4' : 'grid-cols-6'} gap-1.5`}>
-                {(isDriver ? (vehicleCapacity === 5 ? [1, 2, 3, 4] : [1, 2, 3, 4, 5, 6]) : [1, 2, 3, 4, 5, 6]).map(
-                  (num) => (
+            {/* Khả năng nhận chở đồ của Chủ xe & Thùng xe */}
+            {isDriver && (
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-300/60 dark:border-amber-700/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        {vehicleCapacity === 'truck_light'
+                          ? '🚛 Thùng xe tải nhẹ chở hàng'
+                          : vehicleCapacity === 'pickup'
+                            ? '🛻 Thùng xe bán tải chở hàng'
+                            : '📦 Ghép cốp & chở đồ tiện chuyến'}
+                      </span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {vehicleCapacity === 'truck_light'
+                          ? 'Thùng xe 1T–3.5T nhận xe máy, nông sản vài tạ – 1 tấn, chuyển trọ, bao trọn thùng quay đầu'
+                          : vehicleCapacity === 'pickup'
+                            ? 'Thùng xe rộng rãi (~800kg), sẵn sàng chở đồ chuyển trọ, thùng xốp, cây cảnh'
+                            : 'Tận dụng cốp sau còn trống để chở đồ bưu phẩm, thùng xốp nông sản phụ tiền xăng'}
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={acceptsParcel}
+                      onChange={(e) => setAcceptsParcel(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                {acceptsParcel && (
+                  <div className="space-y-2 pt-2 border-t border-amber-200/60 dark:border-white/[0.06]">
+                    <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block">
+                      Nhóm đồ sẵn sàng nhận ghép:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.values(CARGO_TYPES).map((c) => {
+                        const isChecked = selectedCargoTypes.includes(c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              if (isChecked) {
+                                setSelectedCargoTypes(selectedCargoTypes.filter((id) => id !== c.id));
+                              } else {
+                                setSelectedCargoTypes([...selectedCargoTypes, c.id]);
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-xl text-[11.5px] border flex items-center gap-1 cursor-pointer transition-all ${
+                              isChecked
+                                ? 'bg-white dark:bg-slate-900 border-amber-500 text-amber-900 dark:text-amber-200 font-bold shadow-2xs'
+                                : 'bg-white/60 dark:bg-slate-800/60 border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            <span>{c.emoji}</span>
+                            <span>{c.shortLabel}</span>
+                            {isChecked && <Check className="w-3 h-3 text-amber-600 ml-0.5" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Input
+                      value={cargoNotes}
+                      onChange={(e) => setCargoNotes(e.target.value)}
+                      placeholder={
+                        vehicleCapacity === 'truck_light'
+                          ? 'Ghi chú thùng xe tải (VD: Thùng mui bạt 2.4T sạch sẽ, có dây tăng đơ chằng xe máy...)'
+                          : vehicleCapacity === 'pickup'
+                            ? 'Ghi chú thùng xe (VD: Có nắp cuộn chống mưa, có dây chằng đồ cồng kềnh...)'
+                            : 'Ghi chú khoang cốp (VD: Cốp rộng rãi sạch sẽ, có lót bạt chống ướt...)'
+                      }
+                      className="text-xs h-9 bg-white dark:bg-slate-900"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* CHỌN SỐ GHẾ (CHO CHỦ XE / HÀNH KHÁCH) HOẶC CHỌN LOẠI ĐỒ GỬI TIỆN TUYẾN */}
+            {!isDriver && isCargoOnly ? (
+              <div className="space-y-3 p-4 rounded-2xl bg-amber-500/[0.06] border border-amber-500/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                    <Package className="w-4 h-4 text-amber-600" />
+                    <span>Chọn nhóm thể tích đồ gửi</span>
+                  </span>
+                  <span className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+                    Không cần cân đo kg / cm³
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {Object.values(CARGO_TYPES).map((cargo) => {
+                    const isSelected = selectedCargoPreset === cargo.id;
+                    const priceHint = getRecommendedCargoPrice(cargo.id, priceGuardrail?.distanceKm || 120);
+                    return (
+                      <button
+                        key={cargo.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCargoPreset(cargo.id);
+                          setPrice(priceHint);
+                          setHasManuallyEditedPrice(true);
+                        }}
+                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-900 border-amber-500 ring-2 ring-amber-500/20 shadow-xs'
+                            : 'bg-white/80 dark:bg-slate-800/80 border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg">{cargo.emoji}</span>
+                            <span className="font-mono text-xs font-bold text-amber-700 dark:text-amber-400">
+                              ~{formatVND(priceHint)}
+                            </span>
+                          </div>
+                          <p className="font-bold text-xs text-slate-900 dark:text-white mt-1.5">{cargo.shortLabel}</p>
+                          <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">
+                            {cargo.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Mô tả món đồ gửi <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    value={cargoDescription}
+                    onChange={(e) => setCargoDescription(e.target.value)}
+                    placeholder="VD: 2 thùng xốp sầu riêng 25kg, 1 xe máy Wave về quê, đồ chuyển trọ..."
+                  />
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10.5px] text-slate-400">Gợi ý nhanh:</span>
+                    {['🛵 1 xe máy Wave về quê', '🌾 10 bao gạo / nông sản', '2 thùng xốp sầu riêng 25kg', '1 thùng hải sản ướp đá', 'Vali + quạt cây chuyển trọ'].map((hint) => (
+                      <button
+                        key={hint}
+                        type="button"
+                        onClick={() => setCargoDescription(hint)}
+                        className="px-2 py-0.5 rounded-lg text-[10.5px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-300 hover:border-amber-400 cursor-pointer"
+                      >
+                        + {hint}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
+                  💡 <em>CarMate là nền tảng tiện chuyến chia sẻ chi phí xăng. Bạn và Chủ xe sẽ giao nhận đồ dọc trục đường xe chạy hoặc điểm hẹn thuận tiện cho hai bên.</em>
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>
+                    {isDriver ? 'Số ghế trống nhận khách' : t('post.seatsPassenger')}{' '}
+                    <span className="text-rose-500">*</span>
+                  </span>
+                  <span className="text-xs text-slate-400 font-normal">
+                    {isDriver
+                      ? vehicleCapacity === 'truck_light'
+                        ? 'Xe tải nhận tối đa 1 người đi cùng ghế phụ'
+                        : vehicleCapacity === 'pickup'
+                          ? 'Bán tải cabin kép nhận tối đa 4 khách'
+                          : vehicleCapacity === 5
+                            ? 'Xe 5 chỗ nhận tối đa 4 khách'
+                            : 'Xe 7 chỗ nhận tối đa 6 khách'
+                      : 'tối đa 6 người'}
+                  </span>
+                </label>
+                <div
+                  className={`grid ${
+                    isDriver && vehicleCapacity === 'truck_light'
+                      ? 'grid-cols-1 sm:grid-cols-4'
+                      : isDriver && (vehicleCapacity === 5 || vehicleCapacity === 'pickup')
+                        ? 'grid-cols-4'
+                        : 'grid-cols-6'
+                  } gap-1.5`}
+                >
+                  {(isDriver
+                    ? vehicleCapacity === 'truck_light'
+                      ? [1]
+                      : vehicleCapacity === 5 || vehicleCapacity === 'pickup'
+                        ? [1, 2, 3, 4]
+                        : [1, 2, 3, 4, 5, 6]
+                    : [1, 2, 3, 4, 5, 6]
+                  ).map((num) => (
                     <button
                       key={num}
                       type="button"
@@ -1097,24 +1493,26 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                           : 'border-slate-200/90 hover:border-slate-300 bg-white text-slate-700 dark:bg-[#151c2e] dark:border-white/[0.08] dark:hover:border-white/[0.16] dark:text-slate-300'
                       }`}
                     >
-                      {num}
+                      {num} {vehicleCapacity === 'truck_light' ? 'ghế phụ trong cabin' : ''}
                     </button>
-                  )
+                  ))}
+                </div>
+                {isDriver && (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between pt-0.5">
+                    <span>
+                      {vehicleCapacity === 'truck_light'
+                        ? '🚛 Cabin 1 ghế phụ cho khách đi cùng + Thùng xe 1T–3.5T chở hàng'
+                        : seats === 3 && (vehicleCapacity === 5 || vehicleCapacity === 'pickup')
+                          ? '✨ Khuyên chọn: Hàng ghế sau ngồi 3 người rất rộng rãi'
+                          : seats === 4 && (vehicleCapacity === 5 || vehicleCapacity === 'pickup')
+                            ? 'Đầy 4 ghế khách trong cabin (1 ghế phụ + 3 ghế sau)'
+                            : `Còn trống ${seats} ghế nhận khách (trừ 1 ghế lái)`}
+                    </span>
+                    <span className="text-slate-400 text-[10.5px]">Đã trừ 1 ghế lái của Chủ xe</span>
+                  </p>
                 )}
               </div>
-              {isDriver && (
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between pt-0.5">
-                  <span>
-                    {seats === 3 && vehicleCapacity === 5
-                      ? '✨ Khuyên chọn: Hàng ghế sau ngồi 3 người rất rộng rãi'
-                      : seats === 4 && vehicleCapacity === 5
-                        ? 'Đầy 4 ghế khách (1 ghế phụ + 3 ghế sau)'
-                        : `Còn trống ${seats} ghế nhận khách (trừ 1 ghế lái)`}
-                  </span>
-                  <span className="text-slate-400 text-[10.5px]">Đã trừ 1 ghế lái của Chủ xe</span>
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </FormSection>
 
@@ -1281,6 +1679,30 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
             {isDriver ? (
               <Field label={t('post.carType')}>
                 <Input value={carType} onChange={(e) => setCarType(e.target.value)} placeholder={t('post.carTypePh')} />
+                <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
+                  <span className="text-[10.5px] text-slate-400">Gợi ý dòng xe:</span>
+                  {(vehicleCapacity === 'truck_light'
+                    ? ['Kia K200/K250', 'Hyundai Porter H150', 'Isuzu QKR', 'Suzuki Carry Pro', 'Thaco Towner']
+                    : vehicleCapacity === 'pickup'
+                      ? ['Ford Ranger', 'Toyota Hilux', 'Mitsubishi Triton', 'Isuzu D-Max', 'Nissan Navara']
+                      : vehicleCapacity === 7
+                        ? ['Mitsubishi Xpander', 'Toyota Veloz', 'Toyota Innova', 'Kia Carnival', 'Hyundai SantaFe']
+                        : ['Toyota Vios', 'Hyundai Accent', 'Honda City', 'Mazda 3', 'Mazda CX-5']
+                  ).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() =>
+                        setCarType(
+                          `${m} (${vehicleCapacity === 'truck_light' ? 'Xe tải nhẹ' : vehicleCapacity === 'pickup' ? 'Xe bán tải' : vehicleCapacity === 7 ? 'Xe 7 chỗ' : 'Xe 5 chỗ'})`
+                        )
+                      }
+                      className="px-2 py-0.5 rounded-lg text-[10.5px] bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 cursor-pointer transition-all"
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
               </Field>
             ) : (
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs text-slate-500 dark:text-slate-400 space-y-1">
@@ -1703,14 +2125,32 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                   <span
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
                       isDriver
-                        ? 'bg-blue-100/80 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60'
+                        ? vehicleType === 'pickup'
+                          ? 'bg-amber-100/80 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60'
+                          : 'bg-blue-100/80 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60'
+                        : isCargoOnly
+                        ? 'bg-amber-100/80 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60'
                         : 'bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
                     }`}
                   >
-                    {isDriver ? <Car className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+                    {isDriver ? (
+                      vehicleType === 'truck_light' || vehicleCapacity === 'truck_light' ? (
+                        <Truck className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : vehicleType === 'pickup' ? (
+                        <Truck className="w-3.5 h-3.5 text-amber-600" />
+                      ) : (
+                        <Car className="w-3.5 h-3.5" />
+                      )
+                    ) : isCargoOnly ? (
+                      <Package className="w-3.5 h-3.5" />
+                    ) : (
+                      <Users className="w-3.5 h-3.5" />
+                    )}
                     <span>
                       {isDriver
-                        ? `Chủ xe · ${Number(vehicleCapacity) === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
+                        ? `Chủ xe · ${vehicleType === 'truck_light' || vehicleCapacity === 'truck_light' ? 'Xe tải nhẹ (1T–3.5T)' : vehicleType === 'pickup' ? 'Bán tải (Thùng ~800kg)' : Number(vehicleCapacity) === 5 ? 'Xe 4–5 chỗ' : 'Xe 7 chỗ'}`
+                        : isCargoOnly
+                        ? 'Người gửi đồ tiện chuyến'
                         : `Khách cần tìm xe · ${seats} người`}
                     </span>
                   </span>
@@ -1720,10 +2160,20 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                       {carCategory === 'convenient_trip' ? 'Biển vàng / Tiện chuyến' : 'Xe gia đình'}
                     </span>
                   )}
+
+                  {isDriver && acceptsParcel && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60">
+                      {vehicleType === 'truck_light' || vehicleCapacity === 'truck_light'
+                        ? '🚛 Thùng xe tải 1T–3.5T'
+                        : vehicleType === 'pickup'
+                          ? '🛻 Thùng bán tải ~800kg'
+                          : '📦 Nhận gửi đồ / Cốp rộng'}
+                    </span>
+                  )}
                 </div>
 
                 <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200/60 dark:border-emerald-800/60">
-                  {formatVND(price)}/{isDriver ? 'ghế' : 'người'}
+                  {formatVND(price)}/{isCargoOnly ? 'kiện' : isDriver ? 'ghế' : 'người'}
                 </span>
               </div>
 
@@ -1744,9 +2194,15 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                     <span>{waypointNote.trim()}</span>
                   </p>
                 )}
+                {isCargoOnly && cargoDescription.trim() && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1.5 pt-0.5 font-medium">
+                    <Package className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                    <span>Hàng gửi: {cargoDescription.trim()}</span>
+                  </p>
+                )}
               </div>
 
-              {/* Lịch trình & Ghế */}
+              {/* Lịch trình & Ghế / Hàng gửi */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
                   <span className="text-slate-400 text-[10.5px] block">Khởi hành:</span>
@@ -1757,14 +2213,20 @@ export default function PostTripForm({ onSubmit, currentUser, onOpenAuth, initia
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
                   <span className="text-slate-400 text-[10.5px] block">
-                    {isDriver ? 'Ghế trống nhận khách:' : 'Số người cần ghép:'}
+                    {isCargoOnly ? 'Gói hàng gửi:' : isDriver ? 'Ghế trống nhận khách:' : 'Số người cần ghép:'}
                   </span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
-                    {seats} {isDriver ? 'ghế' : 'người'}
-                    {isDriver && (
-                      <span className="font-normal text-slate-400 text-[10px] ml-1">
-                        ({Number(vehicleCapacity) === 5 ? 'Xe 5 chỗ' : 'Xe 7 chỗ'})
-                      </span>
+                    {isCargoOnly ? (
+                      CARGO_TYPES[selectedCargoPreset]?.name || 'Hàng gửi tiện chuyến'
+                    ) : (
+                      <>
+                        {seats} {isDriver ? 'ghế' : 'người'}
+                        {isDriver && (
+                          <span className="font-normal text-slate-400 text-[10px] ml-1">
+                            ({vehicleType === 'truck_light' || vehicleCapacity === 'truck_light' ? 'Cabin 1 ghế phụ' : vehicleType === 'pickup' ? 'Bán tải cabin 4 chỗ' : Number(vehicleCapacity) === 5 ? 'Xe 5 chỗ' : 'Xe 7 chỗ'})
+                          </span>
+                        )}
+                      </>
                     )}
                   </span>
                 </div>

@@ -16,7 +16,8 @@ import {
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import crypto from 'crypto';
-import { sendBusinessAlert, sendTelegramMessage } from '../utils/telegramAlert.js';
+import { sendBusinessAlert, sendTelegramMessage, sendDirectBookingTelegramAlert } from '../utils/telegramAlert.js';
+import { sendEmailNotification } from '../utils/emailAlert.js';
 
 /**
  * So khớp access token thời gian hằng định (chống timing attack).
@@ -144,8 +145,9 @@ export async function createBooking(req, res) {
 
     // Nếu có tripId, truy vấn SĐT thật của chuyến xe từ DB
     const targetTripId = body.tripId || body.targetTripId || body.targetId || (body.targetItem && body.targetItem.id);
+    let targetTrip = null;
     if (targetTripId) {
-      const targetTrip = getTripById(targetTripId);
+      targetTrip = getTripById(targetTripId);
       if (targetTrip) {
         // BẤT BIẾN MIT: Chặn tự đặt/gửi yêu cầu cho chuyến của chính mình
         const reqUserId = req.user?.id || req.user?.userId || body.userId;
@@ -162,10 +164,28 @@ export async function createBooking(req, res) {
           });
         }
 
+        const isTargetPassenger = targetTrip.type === 'passenger_request';
         const tripPhoneFinal = targetTrip.phoneReal || targetTrip.phone;
-        body.driverPhone = tripPhoneFinal;
+
+        if (isTargetPassenger) {
+          // Bên ra kèo là Người đi cùng đăng tìm xe
+          body.passengerPhone = tripPhoneFinal;
+          body.passengerName = targetTrip.publicName || targetTrip.name || 'Người đi cùng';
+          body.passengerId = targetTrip.userId;
+          body.driverPhone = req.user?.phone || body.driverPhone || '';
+          body.driverName = req.user?.name || body.driverName || 'Chủ xe';
+          body.driverId = req.user?.id || body.driverId || '';
+        } else {
+          // Bên ra kèo là Chủ xe đăng xe trống
+          body.driverPhone = tripPhoneFinal;
+          body.driverName = targetTrip.publicName || targetTrip.driverName || targetTrip.name || 'Chủ xe';
+          body.driverId = targetTrip.userId;
+          body.passengerPhone = body.passengerPhone || req.user?.phone || '';
+          body.passengerName = body.passengerName || req.user?.name || 'Người đi cùng';
+          body.passengerId = req.user?.id || body.passengerId || '';
+        }
+
         body.targetPhone = tripPhoneFinal;
-        body.driverId = targetTrip.userId;
         body.contactPhone = tripPhoneFinal || body.contactPhone;
         body.phoneReal = tripPhoneFinal || body.phoneReal;
         body.contactName = targetTrip.publicName || body.contactName;
@@ -177,6 +197,11 @@ export async function createBooking(req, res) {
         body.targetItem = body.targetItem || targetTrip;
       }
     }
+
+    // Chuẩn hóa danh tính Người đi cùng và Chủ xe dự phòng nếu chưa có
+    body.passengerPhone = body.passengerPhone || body.userPhone || body.phone || req.user?.phone || '';
+    body.passengerName = body.passengerName || body.userName || body.contactName || req.user?.name || 'Người đi cùng';
+    body.driverName = body.driverName || 'Chủ xe';
 
     // BẤT BIẾN MIT: Kiểm tra tính hợp lệ của chi phí thoả thuận (Price Guardrail)
     const dealPrice = Number(body.totalDeal || body.price || 0);
@@ -216,7 +241,52 @@ export async function createBooking(req, res) {
 
     const booking = await addBooking(body);
 
-    // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
+    // 1. Gửi thông báo Telegram trực tiếp đến Chủ Xe (nếu có liên kết Telegram ID)
+    const driverUser = (targetTrip?.userId && getUserById(targetTrip.userId)) ||
+                       (targetTrip?.phoneReal && getUserByPhone(targetTrip.phoneReal)) ||
+                       (body.driverPhone && getUserByPhone(body.driverPhone));
+    const driverTelegramId = targetTrip?.telegramId || driverUser?.telegramId;
+
+    if (driverTelegramId) {
+      sendDirectBookingTelegramAlert({
+        targetTelegramId: driverTelegramId,
+        booking,
+        passengerName: body.contactName || 'Người đi cùng',
+        req
+      }).catch(() => {});
+    }
+
+    // 2. Gửi Email thông báo trực tiếp đến Chủ Xe (nếu có Email)
+    const driverEmail = targetTrip?.email || driverUser?.email;
+    if (driverEmail) {
+      const emailSubject = `[CarMate] Có yêu cầu ghép chuyến mới tuyến ${booking.from} ➔ ${booking.to}`;
+      const emailHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;">
+          <h2 style="color: #0071e3; margin-top: 0;">🚗 Yêu Cầu Ghép Chuyến Mới</h2>
+          <p style="color: #334155; font-size: 14px;">Chào <strong>${targetTrip?.publicName || driverUser?.name || 'Chủ xe'}</strong>,</p>
+          <p style="color: #334155; font-size: 14px;">Bạn vừa nhận được một yêu cầu kết nối đi chung xe trên hệ thống CarMate:</p>
+          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; margin: 16px 0; border: 1px solid #e2e8f0;">
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Lộ trình:</strong> ${booking.from} ➔ ${booking.to}</p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Khởi hành:</strong> ${booking.date || 'Hôm nay'} ${booking.time || ''}</p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Số ghế đặt:</strong> ${booking.seatsBooked || booking.seats || 1} người</p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Điểm đón đề xuất:</strong> ${booking.pickupPoint || 'Thỏa thuận tiện đường'}</p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Lời nhắn:</strong> "${booking.passengerNote || 'Không có ghi chú'}"</p>
+          </div>
+          <p style="color: #475569; font-size: 13px;">Mở CarMate vào mục <strong>Hộp thư</strong> để trao đổi điểm đón cụ thể và bấm nút <strong>[Chốt chuyến 15 phút]</strong>.</p>
+          <p style="font-size: 11px; color: #94a3b8; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+            🛡️ Số điện thoại thật của 2 bên được bảo mật 100% và chỉ tự động hiển thị sau khi 2 bên cùng chốt chuyến.
+          </p>
+        </div>
+      `;
+      sendEmailNotification({
+        to: driverEmail,
+        subject: emailSubject,
+        html: emailHtml,
+        text: `Yêu cầu ghép chuyến mới từ ${body.contactName || 'Người đi cùng'}: ${booking.from} ➔ ${booking.to}`
+      }).catch(() => {});
+    }
+
+    // 3. Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
     sendBusinessAlert({
       title: '💬 Yêu cầu ghép chuyến mới từ Người đi cùng',
       details: {
@@ -231,10 +301,18 @@ export async function createBooking(req, res) {
       req
     }).catch(() => {});
 
+    const sanitizedBooking = {
+      ...booking,
+      phoneReal: maskPhoneNumber(booking.phoneReal || booking.contactPhone || ''),
+      contactPhone: maskPhoneNumber(booking.contactPhone || ''),
+      driverPhone: maskPhoneNumber(booking.driverPhone || ''),
+      passengerPhone: maskPhoneNumber(booking.passengerPhone || '')
+    };
+
     return res.status(201).json({
       success: true,
       message: 'Đã gửi yêu cầu ghép chuyến thành công',
-      data: booking
+      data: sanitizedBooking
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -735,6 +813,33 @@ export async function addBookingMessageHandler(req, res) {
     const existingMsgs = Array.isArray(booking.messages) ? booking.messages : [];
     const updatedMsgs = [...existingMsgs, newMsg];
 
+    // Mô phỏng phản hồi thân thiện của Chủ xe đối với chuyến đi mẫu (Single-tester Demo Simulation)
+    const isMockTrip = Boolean(
+      booking.targetTripId?.startsWith('DRV-') ||
+      booking.driverPhone?.startsWith('0900') ||
+      booking.targetItem?.maskedCode?.startsWith('CX-') ||
+      booking.targetTrip?.maskedCode?.startsWith('CX-')
+    );
+
+    if (isMockTrip && senderRole === 'passenger' && !booking.bothConfirmed) {
+      let driverReplyText = 'Dạ ok bạn, mình đón tại đúng điểm hẹn trên đường nhé! Mình nhất trí chốt chuyến.';
+      const lowerText = text.toLowerCase();
+      if (/(vali|balo|hành lý|đồ|cốp)/i.test(lowerText)) {
+        driverReplyText = '🧳 Cốp xe rộng rãi thoải mái nhé bạn! Mình đón đúng điểm hẹn, bạn bấm [Đề xuất chốt & Giữ chỗ 15p] để mình giữ ghế nha.';
+      } else if (/(cây xăng|ngã tư|bến xe|điểm|đón|ở đâu|chỗ)/i.test(lowerText)) {
+        driverReplyText = '📍 Dạ ok bạn, mình đón đúng điểm hẹn trên đường nhé! Mình giữ chỗ cho bạn luôn.';
+      }
+
+      const hostMsg = {
+        id: `MSG-HOST-${Date.now()}`,
+        senderRole: 'driver',
+        senderName: booking.contactName || 'Chủ xe',
+        text: driverReplyText,
+        createdAt: new Date(Date.now() + 100).toISOString()
+      };
+      updatedMsgs.push(hostMsg);
+    }
+
     const updated = await updateBookingStatus(id, booking.status, {
       messages: updatedMsgs,
       lastMessageAt: newMsg.createdAt
@@ -787,7 +892,7 @@ export async function preConfirmBookingHandler(req, res) {
       senderRole: 'system',
       senderName: 'Hệ thống CarMate',
       isSystem: true,
-      text: `⚡ ${proposerTitle} đã ĐỀ XUẤT CHỐT CHUYẾN & tạm giữ chỗ trong 15 phút. Vui lòng ${receiverTitle} bấm [Xác nhận chốt] để hoàn tất chuyến đi!`,
+      text: `⚡ ${proposerTitle} đã ĐỀ XUẤT CHỐT CHUYẾN & tạm giữ chỗ trong 15 phút. Vui lòng ${receiverTitle} bấm [✅ Xác nhận chốt chuyến ngay] để hoàn tất chuyến đi!`,
       createdAt: now.toISOString()
     };
 
@@ -815,10 +920,18 @@ export async function preConfirmBookingHandler(req, res) {
       req
     }).catch(() => {});
 
+    const sanitizedUpdated = {
+      ...updated,
+      phoneReal: maskPhoneNumber(updated.phoneReal || updated.contactPhone || ''),
+      contactPhone: maskPhoneNumber(updated.contactPhone || ''),
+      driverPhone: maskPhoneNumber(updated.driverPhone || ''),
+      passengerPhone: maskPhoneNumber(updated.passengerPhone || '')
+    };
+
     return res.status(200).json({
       success: true,
-      message: `${proposerTitle} đã đề xuất chốt chuyến. Chỗ được tạm giữ trong 15 phút.`,
-      data: updated
+      message: `${proposerTitle} đã đề xuất chốt chuyến & tạm giữ chỗ 15 phút.`,
+      data: sanitizedUpdated
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -859,7 +972,7 @@ export async function finalConfirmBookingHandler(req, res) {
       senderRole: 'system',
       senderName: 'Hệ thống CarMate',
       isSystem: true,
-      text: '🎉 Chúc mừng 2 bạn! Chuyến đi đã được CHỐT CHÍNH THỨC 2 CHIỀU. Thông tin liên hệ đầy đủ đã được mở khóa an toàn.',
+      text: '🎉 Chúc mừng 2 bạn! Chuyến đi đã được CHỐT CHÍNH THỨC 2 CHIỀU. Tên thật và số điện thoại liên hệ của 2 bên đã được mở khóa an toàn kèm nút Gọi điện / Sao chép số.',
       createdAt: now.toISOString()
     };
 
@@ -930,14 +1043,17 @@ export async function reportVehicleMismatch(req, res) {
     const declaredCategory = trip?.carCategory || booking.carCategory || 'family_car';
 
     const mismatchLabels = {
+      overcrowded: 'Xe nhồi nhét khách / Chở quá tải',
+      passenger_transfer: 'Bắt sang xe / Đổi xe giữa đường (Xe dù)',
+      price_gouging: 'Chặt chém giá / Đòi thêm tiền ngoài thỏa thuận',
+      different_car: 'Xe khác hoàn toàn mô tả / Không đúng người đón',
       yellow_plate: 'Xe đón thực tế là Biển vàng (Dịch vụ kinh doanh)',
-      overcrowded: 'Xe nhồi nhét khách / Ghép xe trái phép',
-      different_car: 'Xe khác hoàn toàn mô tả / Đổi xe giữa đường',
-      other: 'Sai lệch loại xe khác'
+      yellow_commercial_plate: 'Xe đón thực tế là Biển vàng (Dịch vụ kinh doanh)',
+      other: 'Vấn đề an toàn & cam kết khác'
     };
 
     const mismatchTitle = mismatchLabels[mismatchType] || mismatchType;
-    const reporterName = req.user?.name || booking.passengerName || booking.contactName || 'Hành khách CarMate';
+    const reporterName = req.user?.name || booking.passengerName || booking.contactName || 'Người đi cùng CarMate';
     const reporterPhone = req.user?.phone || booking.passengerPhone || booking.contactPhone || 'N/A';
     const driverName = trip?.publicName || booking.driverName || 'Chủ xe';
     const driverPhone = trip?.phoneReal || trip?.phone || booking.driverPhone || booking.contactPhone || 'N/A';
@@ -984,27 +1100,27 @@ export async function reportVehicleMismatch(req, res) {
     // Bắn tin cảnh báo tức thời tới Telegram Founder
     const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
     const declaredCatLabel =
-      declaredCategory === 'family_car' ? '🚗 Xe gia đình (Biển trắng)' : '⚡ Xe tiện chuyến (Biển vàng)';
+      declaredCategory === 'convenient_trip' ? '⚡ Xe tiện chuyến quay đầu' : '🚗 Xe gia đình / Cá nhân';
     const teleMsg =
-      `🚨 <b>[CARMATE CẢNH BÁO GIAN LẬN LOẠI XE]</b>\n` +
+      `🚨 <b>[CARMATE CẢNH BÁO VI PHẠM AN TOÀN & CAM KẾT]</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `⚠️ <b>Người đi cùng vừa báo cáo xe đón không đúng mô tả!</b>\n` +
+      `⚠️ <b>Người đi cùng vừa báo cáo vi phạm an toàn / cam kết chuyến đi!</b>\n` +
       `⏰ <b>Thời gian:</b> ${timeStr}\n` +
       `📋 <b>Mã đặt chuyến:</b> <code>${id}</code>\n` +
       `🚗 <b>Chủ xe:</b> ${driverName} (<code>${driverPhone}</code>)\n` +
-      `🏷️ <b>Loại xe đã đăng ký:</b> ${declaredCatLabel}\n` +
-      `⚡ <b>Vấn đề phản ánh:</b> <b>${mismatchTitle}</b>\n` +
+      `🏷️ <b>Phân loại chuyến:</b> ${declaredCatLabel}\n` +
+      `⚡ <b>Hành vi phản ánh:</b> <b>${mismatchTitle}</b>\n` +
       (cleanActualPlate ? `🔢 <b>Biển số đón thực tế:</b> <code>${cleanActualPlate}</code>\n` : '') +
       (cleanNote ? `📝 <b>Ghi chú của người đi cùng:</b> <i>&ldquo;${cleanNote}&rdquo;</i>\n` : '') +
       `👤 <b>Người báo cáo:</b> ${reporterName} (<code>${reporterPhone}</code>)\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `👉 <b>Thao tác:</b> Đăng nhập Cổng Admin để bấm 1-chạm đổi sang Biển vàng hoặc khóa tài khoản vi phạm.`;
+      `👉 <b>Thao tác:</b> Đăng nhập Cổng Admin để can thiệp bảo vệ người đi cùng hoặc xử lý tài khoản vi phạm.`;
 
     sendTelegramMessage(teleMsg, { parseMode: 'HTML', req }).catch(() => {});
 
     return res.status(200).json({
       success: true,
-      message: 'Đã tiếp nhận báo cáo sai lệch xe. Ban Quản Trị CarMate sẽ xử lý ngay lập tức để bảo vệ bạn!',
+      message: 'Đã tiếp nhận báo cáo vi phạm an toàn & cam kết. Ban Quản Trị CarMate sẽ xử lý ngay lập tức để bảo vệ bạn!',
       data: mismatchReport
     });
   } catch (err) {

@@ -4,29 +4,29 @@ export const TIME_SLOTS = [
     id: '03:00-05:00',
     label: '03:00 – 05:00 (Rạng sáng · Đi viện / Sân bay)',
     labelEn: '03:00 – 05:00 (Dawn / Hospital / Airport)',
-    short: '03:00 – 05:00 Sáng',
-    shortEn: '03:00 – 05:00 AM'
+    short: '03:00 – 05:00',
+    shortEn: '03:00 – 05:00'
   },
   {
     id: '05:00-07:00',
     label: '05:00 – 07:00 (Sáng sớm · Tránh kẹt xe)',
     labelEn: '05:00 – 07:00 (Early morning)',
-    short: '05:00 – 07:00 Sáng',
-    shortEn: '05:00 – 07:00 AM'
+    short: '05:00 – 07:00',
+    shortEn: '05:00 – 07:00'
   },
   {
     id: '07:00-09:00',
     label: '07:00 – 09:00 (Cao điểm sáng)',
     labelEn: '07:00 – 09:00 (Morning rush)',
-    short: '07:00 – 09:00 Sáng',
-    shortEn: '07:00 – 09:00 AM'
+    short: '07:00 – 09:00',
+    shortEn: '07:00 – 09:00'
   },
   {
     id: '09:00-11:00',
     label: '09:00 – 11:00 (Giữa buổi sáng)',
     labelEn: '09:00 – 11:00 (Mid-morning)',
-    short: '09:00 – 11:00 Sáng',
-    shortEn: '09:00 – 11:00 AM'
+    short: '09:00 – 11:00',
+    shortEn: '09:00 – 11:00'
   },
   {
     id: '11:00-13:00',
@@ -82,24 +82,24 @@ export const TIME_SLOTS = [
     id: '05:00-06:00',
     label: '05:00 – 06:00 (Sáng sớm)',
     labelEn: '05:00 – 06:00 (Early morning)',
-    short: '05:00 – 06:00 Sáng',
-    shortEn: '05:00 – 06:00 AM',
+    short: '05:00 – 06:00',
+    shortEn: '05:00 – 06:00',
     isAlias: true
   },
   {
     id: '07:00-08:00',
     label: '07:00 – 08:00 (Cao điểm sáng)',
     labelEn: '07:00 – 08:00 (Morning peak)',
-    short: '07:00 – 08:00 Sáng',
-    shortEn: '07:00 – 08:00 AM',
+    short: '07:00 – 08:00',
+    shortEn: '07:00 – 08:00',
     isAlias: true
   },
   {
     id: '09:00-10:00',
     label: '09:00 – 10:00 (Sáng)',
     labelEn: '09:00 – 10:00 (Morning)',
-    short: '09:00 – 10:00 Sáng',
-    shortEn: '09:00 – 10:00 AM',
+    short: '09:00 – 10:00',
+    shortEn: '09:00 – 10:00',
     isAlias: true
   },
   {
@@ -116,6 +116,14 @@ export const TIME_SLOTS = [
     labelEn: '15:00 – 16:00 (Afternoon)',
     short: '15:00 – 16:00',
     shortEn: '15:00 – 16:00',
+    isAlias: true
+  },
+  {
+    id: '16:00-18:00',
+    label: '16:00 – 18:00 (Tan tầm)',
+    labelEn: '16:00 – 18:00 (Evening rush)',
+    short: '16:00 – 18:00',
+    shortEn: '16:00 – 18:00',
     isAlias: true
   },
   {
@@ -143,27 +151,19 @@ export const TIME_SLOTS = [
     isAlias: true
   },
   {
-    id: '16:00-18:00',
-    label: '16:00 – 18:00 (Tan tầm)',
-    labelEn: '16:00 – 18:00 (Evening rush)',
-    short: '16:00 – 18:00',
-    shortEn: '16:00 – 18:00',
-    isAlias: true
-  },
-  {
     id: '06:00-08:00',
     label: '06:00 – 08:00 (Sáng sớm)',
     labelEn: '06:00 – 08:00 (Morning)',
-    short: '06:00 – 08:00 Sáng',
-    shortEn: '06:00 – 08:00 AM',
+    short: '06:00 – 08:00',
+    shortEn: '06:00 – 08:00',
     isAlias: true
   },
   {
     id: '08:00-10:00',
     label: '08:00 – 10:00 (Giữa sáng)',
     labelEn: '08:00 – 10:00 (Mid-morning)',
-    short: '08:00 – 10:00 Sáng',
-    shortEn: '08:00 – 10:00 AM',
+    short: '08:00 – 10:00',
+    shortEn: '08:00 – 10:00',
     isAlias: true
   },
   {
@@ -193,9 +193,8 @@ export const TIME_SLOTS = [
 ];
 
 /**
- * Chuẩn hóa và làm sạch nhãn thời gian:
- * - Buổi chiều/tối/đêm/trưa (>= 11:00, VD: "16:00 – 18:00 Chiều" -> "16:00 – 18:00", "11:00 – 13:00"): Bỏ từ chỉ buổi thừa vì định dạng 24h đã tự minh định.
- * - Buổi sáng (03:00 <= h < 11:00, VD: "7:00" -> "07:00 Sáng", "7:00-8:00" -> "07:00 – 08:00 Sáng"): Cần hiển thị chữ "Sáng" để tránh khách hỏi lại nhầm với giờ tối (19:00).
+ * Chuẩn hóa và làm sạch nhãn thời gian theo chuẩn 24h đồng nhất (Zero Fluff, First Principles)
+ * Triệt tiêu các từ ngữ chỉ buổi dư thừa ("Sáng", "Chiều", "Tối", "AM", "PM") khi đã dùng chuẩn 24h (VD: 05:00, 17:00)
  */
 export const sanitizeTimeLabel = (str) => {
   if (!str || typeof str !== 'string') return '';
@@ -210,26 +209,10 @@ export const sanitizeTimeLabel = (str) => {
   // Chuẩn hóa giờ 1 chữ số thành 2 chữ số (vd: "7:00" -> "07:00", "7:00 – 8:00" -> "07:00 – 08:00")
   cleaned = cleaned.replace(/^(\d):(\d{2})/, '0$1:$2').replace(/–\s*(\d):(\d{2})/, '– 0$1:$2');
 
-  // Lấy giờ bắt đầu để xác định buổi
-  const match = cleaned.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return cleaned;
+  // Bỏ toàn bộ từ chỉ buổi dư thừa trong chuẩn 24h: Sáng, Chiều, Trưa, Tối, Đêm, AM, PM
+  cleaned = cleaned.replace(/\s*(?:sáng|chiều|trưa|tối|đêm|am|pm)(?:\s+mai|\s+hôm nay)?\b/gi, '').trim();
 
-  const h = parseInt(match[1], 10);
-
-  if (h >= 11) {
-    // Buổi trưa/chiều/tối/đêm (>= 11h): Bỏ từ chỉ buổi thừa (VD: "16:00 – 18:00 Chiều" -> "16:00 – 18:00")
-    cleaned = cleaned.replace(/\s*(?:chiều|trưa|tối|đêm)(?:\s+mai|\s+hôm nay)?\b/gi, '');
-  } else if (h >= 3 && h < 11) {
-    // Buổi sáng (03:00 <= h < 11:00): Cần hiển thị chữ "Sáng" (VD: "07:00 Sáng", "07:00 – 08:00 Sáng") để khách không nhầm sang giờ tối
-    cleaned = cleaned.replace(/\s+sáng\s+(?:mai|hôm nay)\b/gi, ' Sáng');
-    if (!/\bsáng\b/i.test(cleaned)) {
-      cleaned = `${cleaned} Sáng`;
-    } else {
-      cleaned = cleaned.replace(/\s*sáng\b/i, ' Sáng');
-    }
-  }
-
-  return cleaned.trim();
+  return cleaned;
 };
 
 /** Kiểm tra giờ đón cụ thể có nằm trong khung giờ hay không */

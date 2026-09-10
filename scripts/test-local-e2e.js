@@ -426,23 +426,88 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 10. Báo Cáo Sai Lệch Loại Xe (Biển Vàng vs Biển Trắng)
+    // 10. Báo Cáo Vi Phạm An Toàn & Cam Kết (First Principles - Chống Nhồi Nhét & Xe Dù)
     // -------------------------------------------------------------
-    console.log('\n--- 10. Kiểm thử Báo Cáo Sai Lệch Loại Xe (Biển Vàng / Biển Trắng) ---');
+    console.log('\n--- 10. Kiểm thử Báo Cáo Vi Phạm An Toàn & Cam Kết (First Principles) ---');
     try {
-      // Khách báo cáo xe đón thực tế là biển vàng kinh doanh vận tải
-      const mismatchRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
+      // 1. Khách báo cáo xe nhồi nhét quá số ghế quy định
+      const overcrowdRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
         method: 'POST',
         headers: passengerHeaders,
         body: JSON.stringify({
-          mismatchType: 'yellow_commercial_plate',
-          mismatchTitle: 'Xe đón thực tế là Biển vàng kinh doanh taxi',
-          note: 'Biển số 51G-999.88 màu vàng'
+          mismatchType: 'overcrowded',
+          passengerNote: 'Xe 5 chỗ nhưng nhồi nhét tới 6 khách chật ních, gây nguy hiểm khi đi cao tốc'
         })
       });
-      assert(mismatchRes.status === 200, 'Mismatch Report 1: Gửi báo cáo sai lệch loại xe thành công (HTTP 200)');
+      const overcrowdData = await overcrowdRes.json();
+      assert(overcrowdRes.status === 200 && overcrowdData.data?.mismatchTitle === 'Xe nhồi nhét khách / Chở quá tải', 'Safety Invariant 1: Báo cáo hành vi nhồi nhét quá tải thành công (HTTP 200)');
+
+      // 2. Khách báo cáo hành vi bắt sang xe / bán khách giữa đường (xe dù)
+      const transferRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          mismatchType: 'passenger_transfer',
+          actualPlate: '51G-888.99',
+          passengerNote: 'Chủ xe chạy đến trạm thu phí thì ép khách đổi sang một xe khác'
+        })
+      });
+      const transferData = await transferRes.json();
+      assert(transferRes.status === 200 && transferData.data?.mismatchTitle === 'Bắt sang xe / Đổi xe giữa đường (Xe dù)', 'Safety Invariant 2: Báo cáo hành vi bắt sang xe / bán khách giữa đường thành công (HTTP 200)');
+
+      // 3. Khách báo cáo hành vi chặt chém giá / đòi thêm tiền ngoài thỏa thuận
+      const gougingRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          mismatchType: 'price_gouging',
+          passengerNote: 'Tới nơi đòi thêm 100k tiền vé BOT dù trên app đã ghi trọn gói'
+        })
+      });
+      const gougingData = await gougingRes.json();
+      assert(gougingRes.status === 200 && gougingData.data?.mismatchTitle === 'Chặt chém giá / Đòi thêm tiền ngoài thỏa thuận', 'Safety Invariant 3: Báo cáo hành vi chặt chém giá ngoài thỏa thuận thành công (HTTP 200)');
+
+      // 4. Triết lý Elon Musk: Tinh thần trung lập phương tiện (Platform Neutrality)
+      // Xe tiện chuyến quay đầu (convenient_trip) lấp đầy ghế trống/thùng rỗng để chống lãng phí xã hội
+      const convenientTripRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: driverHeaders,
+        body: JSON.stringify({
+          type: 'driver_offer',
+          phoneReal: '0988112233',
+          from: 'Bình Dương (Ngã 4 Sở Sao)',
+          to: 'Đồng Xoài (Bình Phước)',
+          routeCategory: 'Tuyến QL14',
+          carType: 'Toyota Vios (Xe tiện chuyến quay đầu)',
+          carCategory: 'convenient_trip',
+          capacity: 5,
+          availableSeats: 3,
+          basePricePerSeat: 100000,
+          notes: 'Xe dịch vụ trả khách xong quay đầu về Đồng Xoài rỗng ghế. Chia sẻ chi phí xăng dầu chống lãng phí.'
+        })
+      });
+      const convenientTripData = await convenientTripRes.json();
+      assert(
+        convenientTripRes.status === 201 && convenientTripData.data.carCategory === 'convenient_trip',
+        'Platform Neutrality 1: Hoan nghênh xe tiện chuyến quay đầu tham gia triệt tiêu lãng phí xã hội (HTTP 201)'
+      );
+
+      // Đặt chỗ trên chuyến xe tiện chuyến quay đầu thành công không bị chặn
+      const bookConvenientRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          targetId: convenientTripData.data.id,
+          from: 'Ngã 4 Sở Sao',
+          to: 'Đồng Xoài',
+          contactPhone: '0933888999',
+          seats: 1,
+          totalDeal: 100000
+        })
+      });
+      assert(bookConvenientRes.status === 201, 'Platform Neutrality 2: Khách ghép chuyến xe tiện chuyến quay đầu thuận lợi và bình đẳng (HTTP 201)');
     } catch (err) {
-      assert(false, '10. Vehicle Mismatch', err.message);
+      assert(false, '10. Behavioral Safety & Platform Neutrality', err.message);
     }
 
     // -------------------------------------------------------------
@@ -600,6 +665,188 @@ async function runTests() {
       assert(typeof sendSmartMatchTelegramAlert === 'function', 'Social Match 8: Hàm gửi alert thông minh qua Telegram tồn tại');
     } catch (err) {
       assert(false, '16. Social Smart Match & Telegram Alert', err.message);
+    }
+
+    // -------------------------------------------------------------
+    // 17. Kiểm thử Mở rộng Ghép Cốp & Thùng Bán Tải Tiện Tuyến (Cargo & Pickup Bed Sharing)
+    // -------------------------------------------------------------
+    console.log('\n--- 17. Kiểm thử Mở rộng Ghép Cốp & Thùng Bán Tải Tiện Tuyến ---');
+    try {
+      const {
+        CARGO_TYPES,
+        getRecommendedCargoPrice,
+        VEHICLE_SEAT_CONFIGS,
+        sanitizeVehicleCapacityAndSeats,
+        TIME_SLOTS
+      } = await import('@carmate/shared');
+
+      // 1. Kiểm tra 3 nhóm thể tích hàng gửi chuẩn bản địa
+      assert(Boolean(CARGO_TYPES.compact_parcel && CARGO_TYPES.produce_box && CARGO_TYPES.bulky_cargo), 'Cargo 1: Đủ 3 gói thể tích tiện tuyến (Bưu phẩm, Thùng xốp/Nông sản, Chuyển trọ)');
+      assert(CARGO_TYPES.produce_box.basePrice === 90000, 'Cargo 2: Gói thùng xốp có giá gốc định mức chuẩn 90.000đ');
+
+      // 2. Kiểm tra tính giá phụ xăng hàng gửi động theo cự ly
+      const shortDistPrice = getRecommendedCargoPrice('produce_box', 80);
+      const longDistPrice = getRecommendedCargoPrice('produce_box', 180);
+      assert(shortDistPrice > 0 && longDistPrice > shortDistPrice, 'Cargo 3: Phụ xăng thùng xốp tính tự động theo cự ly Geodesic');
+
+      // 3. Kiểm tra cấu hình xe bán tải (Cabin 5 chỗ, max 4 khách + Thùng ~800kg)
+      assert(VEHICLE_SEAT_CONFIGS.pickup?.hasCargoBed === true, 'Pickup 1: Xe bán tải nhận diện khoang thùng chở hàng riêng');
+      assert(VEHICLE_SEAT_CONFIGS.pickup?.maxPassengerSeats === 4, 'Pickup 2: Xe bán tải tuân thủ tối đa 4 ghế khách (trừ ghế lái)');
+
+      // 4. Chuẩn hóa xe bán tải qua hàm sanitizer
+      const pickupSanitized = sanitizeVehicleCapacityAndSeats('pickup', 6);
+      assert(pickupSanitized.vehicleType === 'pickup' && pickupSanitized.seats === 4, 'Pickup 3: Sanitizer tự động giới hạn 4 ghế khách cho xe bán tải');
+
+      // 5. Đăng chuyến xe bán tải thực tế qua API
+      const pickupTripRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'driver_offer',
+          phoneReal: '0988112233',
+          from: 'Bình Phước',
+          to: 'TP Hồ Chí Minh',
+          vehicleType: 'pickup',
+          carType: 'Ford Ranger Wildtrak (Xe bán tải)',
+          hasCargoBed: true,
+          acceptsParcel: true,
+          availableSeats: 3,
+          basePricePerSeat: 160000,
+          cargoNotes: 'Thùng xe rộng ~800kg có nắp cuộn chống nước, nhận gửi nông sản quê & đồ chuyển trọ'
+        })
+      });
+      const pickupTripData = await pickupTripRes.json();
+      assert(pickupTripRes.status === 201 && pickupTripData.data.hasCargoBed === true, 'Pickup 4: Đăng chuyến xe bán tải nhận chở hàng thành công (HTTP 201)');
+
+      // 6. Tạo yêu cầu gửi hàng thùng xốp tiện tuyến
+      const cargoBookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          targetId: pickupTripData.data.id,
+          from: 'Chơn Thành',
+          to: 'Bến xe Miền Đông',
+          contactPhone: '0933888999',
+          isCargoBooking: true,
+          cargoType: 'produce_box',
+          cargoDescription: '1 thùng xốp mít sấy 15kg bọc kín băng dính',
+          totalDeal: 100000,
+          seats: 0
+        })
+      });
+      const cargoBookingData = await cargoBookingRes.json();
+      assert(cargoBookingRes.status === 201 && cargoBookingData.data.isCargoBooking === true, 'Cargo 4: Gửi yêu cầu ghép hàng tiện tuyến thành công (HTTP 201)');
+
+      // 7. Kiểm tra chuẩn hóa khung giờ 24h sạch (không còn "Sáng" / "Chiều" thừa trong 24h format)
+      const slot0506 = TIME_SLOTS.find((s) => s.id === '05:00-06:00');
+      assert(slot0506 && !slot0506.short.includes('Sáng') && !slot0506.short.includes('AM'), 'TimeSlot 1: Chuẩn 24h sạch sẽ (05:00 — 06:00 không có từ thừa)');
+    } catch (err) {
+      assert(false, '17. Cargo & Pickup Bed Sharing Expansion', err.message);
+    }
+
+    // -------------------------------------------------------------
+    // 18. Kiểm thử Xe Tải Nhẹ & Chành Xe Địa Phương Tiện Tuyến N2 (Bình Phước ⇄ Kiên Giang)
+    // -------------------------------------------------------------
+    console.log('\n--- 18. Kiểm thử Xe Tải Nhẹ & Chành Xe Địa Phương Tiện Tuyến N2 ---');
+    try {
+      const {
+        CARGO_TYPES,
+        getRecommendedCargoPrice,
+        ROUTE_BENCHMARKS,
+        getCorridorWaypoints
+      } = await import('@carmate/shared');
+
+      // 1. Kiểm tra 6 nhóm thể tích tiện tuyến bản địa
+      const cargoKeys = Object.keys(CARGO_TYPES);
+      assert(
+        cargoKeys.includes('motorcycle') && cargoKeys.includes('half_truck') && cargoKeys.includes('full_truck'),
+        'Truck Cargo 1: Đầy đủ 3 gói hàng địa phương (Xe máy/xe điện, Nửa thùng ~1T, Bao trọn thùng quay đầu)'
+      );
+
+      // 2. Kiểm tra định giá cự ly cho xe máy
+      const motorcyclePrice = getRecommendedCargoPrice('motorcycle', 280);
+      assert(motorcyclePrice >= 350000 && motorcyclePrice <= 600000, `Truck Cargo 2: Giá gửi xe máy cự ly 280km chuẩn xác (~${motorcyclePrice.toLocaleString('vi-VN')}đ)`);
+
+      // 3. Kiểm tra định mức Tuyến N2 - Kiên Giang trong ROUTE_BENCHMARKS
+      const n2Benchmark = ROUTE_BENCHMARKS['Tuyến N2 - Kiên Giang'];
+      assert(n2Benchmark && n2Benchmark.distanceKm === 280, 'Route N2 1: Hành lang Tuyến N2 - Kiên Giang chuẩn 280km');
+
+      // 4. Kiểm tra Corridor Waypoints tuyến N2
+      const n2Waypoints = getCorridorWaypoints('Kiên Giang');
+      assert(
+        Array.isArray(n2Waypoints) && n2Waypoints.some((w) => w.includes('Đức Hòa') || w.includes('Thạnh Hóa') || w.includes('Vàm Cống')),
+        'Route N2 2: Tìm được các điểm mốc chính trên Tuyến N2 (Đức Hòa, Thạnh Hóa, Cầu Vàm Cống)'
+      );
+
+      // 5. Bất biến MIT: Xe tải nhẹ chỉ nhận tối đa 1 người đi cùng (ghế phụ)
+      const overloadTruckRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'driver_offer',
+          phoneReal: '0988112233',
+          carType: 'Kia K250 (Xe tải 2.4T)',
+          vehicleType: 'truck_light',
+          capacity: 2,
+          availableSeats: 2, // Quá tải ghế phụ! Chỉ được 1
+          from: 'Chơn Thành',
+          to: 'Rạch Giá'
+        })
+      });
+      assert(overloadTruckRes.status === 400, 'Truck Invariant 1: Chặn đăng xe tải chở quá 1 người đi cùng ghế phụ (HTTP 400)');
+
+      // 6. Đăng chuyến xe tải nhẹ hợp lệ (1 ghế phụ, có thùng xe chở hàng)
+      const truckTripRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: driverHeaders,
+        body: JSON.stringify({
+          type: 'driver_offer',
+          phoneReal: '0988112233',
+          carType: 'Kia K250 (Xe tải mui bạt 2.4T)',
+          vehicleType: 'truck_light',
+          capacity: 2,
+          availableSeats: 1,
+          hasCargoBed: true,
+          isCargoVehicle: true,
+          cargoBedCapacityKg: 2400,
+          from: 'Chơn Thành (Bình Phước)',
+          to: 'Rạch Giá (Kiên Giang)',
+          routeCategory: 'Tuyến N2 - Kiên Giang',
+          direction: 'both',
+          timeSlot: '05:00-06:00',
+          basePricePerSeat: 260000,
+          notes: 'Xe tải chở nông sản xong quay đầu về Rạch Giá rỗng thùng. Nhận chở xe máy, nông sản vài tạ đến 1 tấn.'
+        })
+      });
+      const truckTripData = await truckTripRes.json();
+      assert(
+        truckTripRes.status === 201 && truckTripData.data.vehicleType === 'truck_light' && truckTripData.data.hasCargoBed === true,
+        'Truck Trip 1: Đăng chuyến xe tải nhẹ quay đầu rỗng thùng thành công (HTTP 201)'
+      );
+
+      // 7. Tạo yêu cầu gửi xe máy về quê theo xe tải
+      const motoBookingRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({
+          targetId: truckTripData.data.id,
+          from: 'Chơn Thành',
+          to: 'Rạch Giá',
+          contactPhone: '0933888999',
+          isCargoBooking: true,
+          cargoType: 'motorcycle',
+          cargoDescription: '1 xe máy Honda Wave Alpha đã rút sạch xăng gửi về quê cho mẹ',
+          totalDeal: 450000,
+          seats: 0
+        })
+      });
+      const motoBookingData = await motoBookingRes.json();
+      assert(
+        motoBookingRes.status === 201 && motoBookingData.data.cargoType === 'motorcycle',
+        'Truck Booking 1: Gửi yêu cầu vận chuyển xe máy về quê thành công (HTTP 201)'
+      );
+    } catch (err) {
+      assert(false, '18. Light Truck & Local Route N2 Corridor', err.message);
     }
 
   } finally {

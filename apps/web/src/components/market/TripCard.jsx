@@ -11,7 +11,9 @@ import {
   SlidersHorizontal,
   Car,
   CheckCircle2,
-  Share2
+  Share2,
+  Sparkles,
+  Truck
 } from 'lucide-react';
 import {
   getTimeSlotLabel,
@@ -113,9 +115,36 @@ export function RouteTimeline({ from, to, compact = false }) {
 /**
  * Chuẩn hoá hiển thị dòng xe kèm số chỗ ngồi (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
  */
-export function getCarDisplay(carType, capacity) {
-  const cap = Number(capacity) || Number(carType?.match(/(\d+)\s*chỗ/i)?.[1]) || 5;
-  if (!carType || !carType.trim()) return `Xe ${cap} chỗ`;
+export function getCarDisplay(carType, capacity, vehicleType) {
+  const isTruck =
+    vehicleType === 'truck_light' ||
+    /xe\s*tải|tải\s*nhẹ|chành\s*xe|k200|k250|porter|h150|qkr|thaco\s*towner|carry\s*pro/i.test(carType || '');
+
+  if (isTruck) {
+    let cleanModel = (carType || 'Xe tải nhẹ').split('(')[0].trim();
+    cleanModel = cleanModel.replace(/\s*(xe\s*tải\s*nhẹ|xe\s*tải|tải\s*nhẹ|chành\s*xe)\b/gi, '').trim();
+    return cleanModel ? `${cleanModel} · Xe tải` : 'Xe tải nhẹ';
+  }
+
+  const isPickup =
+    vehicleType === 'pickup' ||
+    /bán\s*tải|pickup|ranger|hilux|triton|d-?max|navara|bt-?50/i.test(carType || '');
+
+  if (isPickup) {
+    let cleanModel = (carType || 'Xe bán tải').split('(')[0].trim();
+    cleanModel = cleanModel.replace(/\s*(xe\s*bán\s*tải|bán\s*tải|pickup|\d+\s*chỗ)\b/gi, '').trim();
+    return cleanModel ? `${cleanModel} · Bán tải` : 'Xe bán tải';
+  }
+
+  // Danh mục các dòng xe 7 chỗ phổ biến ở VN (tránh hiển thị sai "Xpander 4 chỗ")
+  const is7Seater =
+    Number(capacity) === 7 ||
+    /7\s*chỗ/i.test(carType || '') ||
+    /xpander|veloz|innova|fortuner|carnival|santafe|everest|outlander|sorento|avanza|custin|sedona/i.test(carType || '');
+
+  const standardCap = is7Seater ? 7 : 5;
+
+  if (!carType || !carType.trim()) return `Xe ${standardCap} chỗ`;
 
   // Tách phần trong ngoặc đơn nếu có (vd "(Xe 7 chỗ)" hoặc "(Xe 5 chỗ gầm cao)")
   let raw = carType.split('(')[0].trim();
@@ -124,16 +153,16 @@ export function getCarDisplay(carType, capacity) {
 
   // Kiểm tra nếu chuỗi chỉ là "Xe 7 chỗ", "7 chỗ", "Xe 5 chỗ"
   if (!raw || /^(?:xe\s*)?\d+\s*chỗ$/i.test(raw) || raw.toLowerCase() === 'xe') {
-    return `Xe ${cap} chỗ`;
+    return `Xe ${standardCap} chỗ`;
   }
 
   // Khử phần "... 5 chỗ" hoặc "xe 5 chỗ" ở cuối chuỗi nếu người dùng gõ liền (vd "Mazda 2 5 chỗ")
   let cleanModel = raw.replace(/\s+(?:xe\s*)?\d+\s*chỗ.*$/i, '').trim();
   if (!cleanModel || cleanModel.toLowerCase() === 'xe') {
-    return `Xe ${cap} chỗ`;
+    return `Xe ${standardCap} chỗ`;
   }
 
-  return `${cleanModel} · ${cap} chỗ`;
+  return `${cleanModel} · ${standardCap} chỗ`;
 }
 
 export default function TripCard({
@@ -226,8 +255,8 @@ export default function TripCard({
   const rawCover = photos.length > 0 ? normalizePhotoUrl(photos[0]) : null;
   const coverPhoto = coverFailed ? null : rawCover;
 
-  // Hiển thị tên xe & số chỗ ngồi đồng nhất (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
-  const carDisplay = getCarDisplay(item.carType, item.capacity);
+  // Hiển thị tên xe & số chỗ ngồi đồng nhất (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ", "Ford Ranger · Bán tải")
+  const carDisplay = getCarDisplay(item.carType, item.capacity, item.vehicleType);
 
   return (
     <article
@@ -288,17 +317,18 @@ export default function TripCard({
           </div>
           {priceGuardrail?.comparisonBadge && (
             <span
-              className={`inline-flex items-center gap-1 text-[10px] font-semibold w-fit px-1.5 py-0.5 rounded-md ${
+              className={`inline-flex items-center gap-1 text-[10.5px] font-bold w-fit px-2 py-0.5 rounded-full shadow-2xs ${
                 priceGuardrail.statusTone === 'emerald'
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/50'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/60'
                   : priceGuardrail.statusTone === 'amber'
-                    ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/50'
+                    ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/60'
                     : priceGuardrail.statusTone === 'rose'
-                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/50'
-                      : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200/50'
+                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/60'
+                      : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200/60'
               }`}
             >
-              {priceGuardrail.comparisonBadge}
+              <Sparkles className="w-2.5 h-2.5 shrink-0 opacity-80" />
+              <span>{priceGuardrail.comparisonBadge}</span>
             </span>
           )}
         </div>
@@ -307,6 +337,22 @@ export default function TripCard({
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0 whitespace-nowrap">
             <Lock className="w-3 h-3 text-slate-400" />
             <span>{isDriver ? 'Đã kín chỗ' : 'Đã có xe'}</span>
+          </span>
+        ) : item.isCargoOnly ? (
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/60 shrink-0 whitespace-nowrap shadow-2xs"
+            title="Người cần gửi hàng hoá, bưu phẩm hoặc đồ chuyển trọ tiện chuyến (Không đi người)"
+          >
+            <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>Gửi đồ tiện chuyến</span>
+          </span>
+        ) : isDriver && (item.vehicleType === 'truck_light' || item.isCargoVehicle) ? (
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs"
+            title="Xe tải tiện chuyến: Thùng chở hàng 1T–3.5T + 1 ghế phụ trong cabin"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <span>Thùng tải tiện chuyến + {seatsLeft > 0 ? '1 ghế phụ' : 'Hết ghế phụ'}</span>
           </span>
         ) : (
           <span
@@ -443,10 +489,29 @@ export default function TripCard({
 
         {/* Hàng: Tiện ích & Nút CTA */}
         <div className="pt-2 border-t border-slate-100 dark:border-white/[0.04] flex items-center justify-between gap-2">
-          {item.acceptsParcel ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/[0.05]">
-              <Package className="w-3 h-3 shrink-0" />
-              <span>Nhận gửi đồ</span>
+          {item.vehicleType === 'truck_light' || item.isCargoVehicle ? (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-900 dark:text-emerald-200 bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300/90 dark:border-emerald-700/80 shadow-2xs"
+              title="Xe tải nhẹ tiện chuyến (1T–3.5T) sẵn sàng nhận chở xe máy, nông sản vài tạ đến 1 tấn, đồ dọn nhà hoặc bao trọn thùng"
+            >
+              <Truck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+              <span>🚛 Thùng xe tải 1T–3.5T</span>
+            </span>
+          ) : item.vehicleType === 'pickup' || item.hasCargoBed ? (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-900 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-950/70 border border-amber-300/90 dark:border-amber-700/80 shadow-2xs"
+              title="Xe bán tải có thùng chở hàng lớn (~800kg) sẵn sàng nhận đồ cồng kềnh, chuyển trọ sinh viên, nông sản"
+            >
+              <Truck className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
+              <span>🛻 Thùng bán tải ~800kg</span>
+            </span>
+          ) : item.acceptsParcel ? (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-sky-900 dark:text-sky-200 bg-sky-100/90 dark:bg-sky-950/70 border border-sky-300/90 dark:border-sky-700/80 shadow-2xs"
+              title="Chủ xe có cốp rộng nhận gửi bưu phẩm, đồ quê, thùng xốp tiện đường xe chạy"
+            >
+              <Package className="w-3.5 h-3.5 text-[#0071e3] dark:text-sky-400 shrink-0" />
+              <span>📦 Nhận gửi đồ / Cốp rộng</span>
             </span>
           ) : (
             <span />

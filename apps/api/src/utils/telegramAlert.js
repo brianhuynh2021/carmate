@@ -302,6 +302,36 @@ export async function sendSmartMatchTelegramAlert({ targetTelegramId, matchedTri
 }
 
 /**
+ * Gửi thông báo trực tiếp cho Chủ xe qua Telegram Bot khi có Người đi cùng gửi yêu cầu ghép chuyến
+ */
+export async function sendDirectBookingTelegramAlert({ targetTelegramId, booking, passengerName, req = null }) {
+  if (!targetTelegramId || !booking) return false;
+
+  const cleanChatId = String(targetTelegramId).trim();
+  const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+
+  const text = `🚗 <b>[CARMATE] BẠN CÓ YÊU CẦU GHÉP CHUYẾN MỚI!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `👤 <b>Người đi cùng:</b> ${escapeHtml(passengerName || 'Người đi cùng')}\n` +
+    `📍 <b>Lộ trình:</b> ${escapeHtml(booking.from || '')} ➔ ${escapeHtml(booking.to || '')}\n` +
+    `⏰ <b>Khởi hành:</b> ${escapeHtml(booking.date || 'Hôm nay')} ${escapeHtml(booking.time || '')}\n` +
+    `👥 <b>Số ghế:</b> ${booking.seats || booking.seatsBooked || 1} người\n` +
+    `📍 <b>Điểm đón đề xuất:</b> ${escapeHtml(booking.pickupPoint || 'Thỏa thuận tiện đường')}\n` +
+    `💬 <b>Lời nhắn:</b> "${escapeHtml(booking.passengerNote || 'Không có ghi chú')}"\n` +
+    `⏰ <b>Nhận lúc:</b> ${timeStr}\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `👉 Mở CarMate vào Hộp thư để trao đổi và bấm [Chốt chuyến 15']!\n` +
+    `🔗 https://carmate.vn`;
+
+  return sendTelegramMessage(text, {
+    chatId: cleanChatId,
+    parseMode: 'HTML',
+    disableNotification: false,
+    req
+  });
+}
+
+/**
  * Hàm hỗ trợ Unit Testing dọn dẹp cache
  */
 export function _resetDeduplicationCache() {

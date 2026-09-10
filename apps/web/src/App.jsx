@@ -1388,6 +1388,7 @@ export default function App() {
           onMarkAsUnread={markBookingAsUnread}
           readBookingTimestamps={readBookingTimestamps}
           unreadBookingIds={unreadBookingIds}
+          onNavigateTab={setActiveTab}
         />
       )}
       {selectedItemForEscrow && (
@@ -1398,6 +1399,10 @@ export default function App() {
           onClose={() => setSelectedItemForEscrow(null)}
           onConfirmBooking={handleConfirmBooking}
           onViewTrustProfile={setSelectedDriverForTrust}
+          onOpenInbox={(bookingId) => {
+            setSelectedItemForEscrow(null);
+            handleOpenInbox(bookingId);
+          }}
           onViewBookedTab={(targetTab = 'booked') => {
             setSelectedItemForEscrow(null);
             setActiveTab(targetTab === 'my-trips' || targetTab === 'my_trips' ? 'my-trips' : 'booked');
