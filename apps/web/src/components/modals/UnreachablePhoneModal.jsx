@@ -35,12 +35,6 @@ export default function UnreachablePhoneModal({ record, onClose, onSubmitReport 
   if (!record) return null;
 
   const targetName = record.contactName || record.driverName || record.passengerName || 'Đối tác chuyến đi';
-  const targetPhone =
-    record.phoneReal ||
-    record.contactPhone ||
-    record.driverPhone ||
-    record.passengerPhone ||
-    'Không rõ';
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -91,7 +85,7 @@ export default function UnreachablePhoneModal({ record, onClose, onSubmitReport 
           <div>
             <p className="font-bold">Lưu ý trước khi báo cáo sự cố:</p>
             <p className="opacity-90 text-[11.5px] mt-0.5">
-              Sau khi chốt chuyến, đối tác có thể đang lái xe hoặc bận việc. Bạn hãy ưu tiên nhắn tin Zalo/SMS hoặc chờ ít nhất 15 phút trước khi báo cáo để đảm bảo quyền lợi công bằng cho cả hai bên.
+              Sau khi chốt chuyến, đối tác có thể đang chuẩn bị xe hoặc bận việc. Bạn hãy ưu tiên nhắn tin và gọi thoại trực tiếp qua App để hẹn điểm đón cụ thể.
             </p>
           </div>
         </div>
@@ -104,7 +98,7 @@ export default function UnreachablePhoneModal({ record, onClose, onSubmitReport 
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
             <span className="text-slate-500 dark:text-slate-400 font-medium">Số điện thoại:</span>
-            <span className="font-mono font-bold text-rose-600 dark:text-rose-400">{targetPhone}</span>
+            <span className="font-medium text-emerald-600 dark:text-emerald-400">Bảo mật 100% qua CarMate</span>
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
             <span className="text-slate-500 dark:text-slate-400 font-medium">Lộ trình:</span>

@@ -23,13 +23,12 @@ import {
   ChevronRight,
   X
 } from 'lucide-react';
-import { formatVND, getZaloChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus, formatCleanDateLabel, parseLocation } from '@carmate/shared';
+import { formatVND, toPublicAlias, getUserOnlineStatus, formatCleanDateLabel, parseLocation } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 import EmptyState, { SectionHeader } from '../ui/EmptyState.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
-import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
 
 
@@ -153,25 +152,7 @@ export default function BookedTripList({
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
   const [copiedId, setCopiedId] = useState(null);
-  const [copiedPhoneId, setCopiedPhoneId] = useState(null);
 
-  // Cơ chế Bảo Mật SĐT: Chỉ mở SĐT khi đến đón mà không liên lạc được qua chat
-  const [revealedPhoneIds, setRevealedPhoneIds] = useState(() => new Set());
-  const isPhoneRevealed = (id) => revealedPhoneIds.has(id);
-  const handleRevealPhone = (id) => {
-    setRevealedPhoneIds((prev) => new Set(prev).add(id));
-  };
-  const handleCopyPhone = (id, phoneNumber) => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(phoneNumber);
-      }
-    } catch (err) {
-      console.warn('Copy phone error:', err);
-    }
-    setCopiedPhoneId(id);
-    setTimeout(() => setCopiedPhoneId(null), 2000);
-  };
 
   // Trạng thái Cursor Ambient: Quản lý danh sách thu gọn & mở rộng (Accordion)
   const [expandedIds, setExpandedIds] = useState(() => new Set());
@@ -248,10 +229,7 @@ export default function BookedTripList({
     const dateFormatted = formatCleanDateLabel(
       record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
     );
-    const phoneRevealed = isPhoneRevealed(record.escrowId || record.id);
-    const phoneDisplay = phoneRevealed
-      ? `SĐT: ${record.contactPhone}`
-      : 'SĐT: Bảo mật (Trao đổi trực tiếp qua app CarMate)';
+    const phoneDisplay = 'Bảo mật (Trao đổi trực tiếp qua app CarMate)';
     const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: ${record.escrowId}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${record.timeSlot} (${dateFormatted})\n• Đối tác: ${record.contactName} (${phoneDisplay})\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats} ghế · Trọn gói xăng & cầu đường, gửi khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
 
     try {
@@ -279,8 +257,7 @@ export default function BookedTripList({
     const dateFormatted = formatCleanDateLabel(
       record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
     );
-    const phoneRevealed = isPhoneRevealed(record.escrowId || record.id);
-    const phoneDisplay = phoneRevealed ? record.contactPhone : 'Bảo mật qua CarMate';
+    const phoneDisplay = 'Bảo mật qua CarMate';
     const text = `Thong tin chuyen di CarMate ${record.escrowId}: ${record.from} ve ${record.to}, ngay ${dateFormatted}, gio ${record.timeSlot}, doi tac ${record.contactName} (${phoneDisplay}), gia ${formatVND(totalAmount)}. Xem tai carmate.vn`;
     window.open(`sms:?body=${encodeURIComponent(text)}`, '_self');
   };
@@ -503,11 +480,6 @@ export default function BookedTripList({
       ) : (
         <div className="space-y-3">
           {paginatedList.map((record) => {
-            const phone = record.contactPhone;
-            const zaloUrl = getZaloChatUrl(
-              phone,
-              `Xin chào ${record.contactName}, tôi vừa ghép chuyến CarMate [${record.escrowId}] tuyến ${record.from} đi ${record.to}. Mình trao đổi chốt điểm đón nhé!`
-            );
             const totalCost = record.fullTripAmount || record.totalDeal || 0;
             const isCompleted = record.status === 'completed';
             const isCancelled = record.status === 'cancelled';
@@ -735,132 +707,55 @@ export default function BookedTripList({
                             </div>
                           </div>
 
-                          {/* Trạng thái liên hệ & Số điện thoại (Chỉ mở khi khẩn cấp đến đón) */}
+                          {/* Trạng thái liên hệ: 100% trực tiếp qua App */}
                           <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-black/[0.03] dark:border-white/[0.04]">
                             <p className="text-[11px] font-medium text-[#86868b]">
-                              {isConfirmed && isPhoneRevealed(record.escrowId || record.id)
-                                ? 'SĐT liên hệ khẩn cấp'
-                                : 'Bảo mật liên hệ'}
+                              Kênh liên hệ
                             </p>
-                            <p className="font-display text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular tracking-tight">
-                              {isConfirmed && isPhoneRevealed(record.escrowId || record.id)
-                                ? phone
-                                : maskPhoneNumber(phone || '090***xxxx')}
-                            </p>
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-300/40">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Trực tiếp qua App</span>
+                            </span>
                           </div>
                         </div>
 
-                        {/* Khối Hành Động Tự Do & An Toàn (In-App Chat First + SĐT Khẩn Cấp) */}
+                        {/* Khối Hành Động Tự Do & An Toàn (100% In-App Chat & In-App Call) */}
                         <div className="space-y-3">
                           {isConfirmed ? (
-                            <div className="space-y-3">
-                              {/* 1. NÚT CHÍNH: KHUNG CHAT TRAO ĐỔI TRỰC TIẾP TRONG APP */}
-                              <button
-                                type="button"
-                                onClick={() => onOpenChat?.(record.escrowId || record.id)}
-                                className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0071e3] hover:bg-[#0077ed] text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
-                              >
-                                <MessageSquare className="w-4 h-4" />
-                                <span>Mở Khung Chat Trao Đổi Điểm Đón (Bảo mật 100%)</span>
-                              </button>
+                            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
+                              <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
+                                <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                  <span>Giao tiếp an toàn qua nền tảng</span>
+                                </span>
+                                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                                  0đ cước · Bảo mật 100% SĐT
+                                </span>
+                              </div>
 
-                              {/* 2. CƠ CHẾ SĐT KHẨN CẤP: CHỈ MỞ KHI ĐẾN ĐÓN MÀ KHÔNG LIÊN LẠC ĐƯỢC */}
-                              {!isPhoneRevealed(record.escrowId || record.id) ? (
-                                <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2.5 text-xs text-amber-950 dark:text-amber-200">
-                                    <div className="w-7 h-7 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                                      <Lock className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold">SĐT đối tác được bảo mật an toàn</p>
-                                      <p className="text-[11px] text-[#86868b] dark:text-slate-400 mt-0.5">
-                                        Nhắn tin qua khung chat trước. Chỉ mở SĐT khi đến giờ đón mà không nhận được phản hồi.
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRevealPhone(record.escrowId || record.id)}
-                                    className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
-                                  >
-                                    <Phone className="w-3.5 h-3.5" />
-                                    <span>Đến đón không liên lạc được? Mở SĐT</span>
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/50 space-y-3 animate-in fade-in duration-200">
-                                  <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
-                                    <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 font-bold">
-                                      <Phone className="w-4 h-4 text-emerald-600" />
-                                      <span>
-                                        SĐT Khẩn Cấp: <strong className="font-mono text-sm">{phone}</strong>
-                                      </span>
-                                    </div>
-                                    <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                                      ⚠️ Chỉ sử dụng khi đến giờ đón không thấy
-                                    </span>
-                                  </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#0071e3] hover:bg-[#0077ed] text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
+                                >
+                                  <MessageSquare className="w-4 h-4 fill-current shrink-0" />
+                                  <span>Mở Khung Chat Hẹn Điểm</span>
+                                </button>
 
-                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    <a
-                                      href={`tel:${cleanPhoneNumber(phone)}`}
-                                      className="h-10 px-3 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                                    >
-                                      <Phone className="w-3.5 h-3.5" />
-                                      <span>Gọi điện</span>
-                                    </a>
-                                    <a
-                                      href={`sms:${cleanPhoneNumber(phone)}`}
-                                      className="h-10 px-3 rounded-xl font-bold text-xs bg-sky-600 hover:bg-sky-700 text-white transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                                    >
-                                      <MessageSquare className="w-3.5 h-3.5" />
-                                      <span>Nhắn SMS</span>
-                                    </a>
-                                    {cleanPhoneNumber(phone) && (
-                                      <a
-                                        href={zaloUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="h-10 px-3 rounded-xl font-bold text-xs bg-[#0068ff] hover:bg-[#0055d4] text-white transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                                      >
-                                        <ZaloIcon className="w-3.5 h-3.5" />
-                                        <span>Zalo</span>
-                                      </a>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCopyPhone(record.escrowId || record.id, phone)}
-                                      className="h-10 px-3 rounded-xl font-bold text-xs bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-black/[0.08] dark:border-white/[0.08] transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                                    >
-                                      {copiedPhoneId === (record.escrowId || record.id) ? (
-                                        <>
-                                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                          <span className="text-emerald-600">Đã chép</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Share2 className="w-3.5 h-3.5" />
-                                          <span>Sao chép</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id, { autoCall: true })}
+                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
+                                >
+                                  <Phone className="w-4 h-4 fill-current shrink-0" />
+                                  <span>Gọi thoại qua App (0đ)</span>
+                                </button>
+                              </div>
 
-                                  {onReportUnreachablePhone && (
-                                    <div className="flex justify-end pt-1 border-t border-emerald-200/50 dark:border-emerald-900/30">
-                                      <button
-                                        type="button"
-                                        onClick={() => onReportUnreachablePhone(record)}
-                                        className="text-[11px] text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
-                                        title="Báo cáo nếu số điện thoại đối tác không liên lạc được hoặc là số ảo"
-                                      >
-                                        <PhoneOff className="w-3.5 h-3.5" />
-                                        <span>Báo số ảo / Không nghe máy</span>
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                                💡 Hai bên liên lạc trực tiếp trên app. Nếu đối tác không nghe máy hoặc không phản hồi, bạn có thể bấm <strong>Huỷ chuyến 1-chạm</strong> để tìm người khác ngay lập tức.
+                              </p>
                             </div>
                           ) : (
                             <div className="space-y-2.5">
@@ -885,7 +780,7 @@ export default function BookedTripList({
 
                                 <button
                                   type="button"
-                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id, { autoCall: true })}
                                   className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
                                 >
                                   <Phone className="w-4 h-4 shrink-0 fill-current" />

@@ -646,9 +646,11 @@ export default function App() {
 
   const [showInboxModal, setShowInboxModal] = useState(false);
   const [inboxInitialBookingId, setInboxInitialBookingId] = useState(null);
+  const [inboxAutoCall, setInboxAutoCall] = useState(false);
 
-  const handleOpenInbox = useCallback((bookingId = null) => {
+  const handleOpenInbox = useCallback((bookingId = null, options = {}) => {
     setInboxInitialBookingId(bookingId);
+    setInboxAutoCall(Boolean(options?.autoCall));
     setShowInboxModal(true);
   }, []);
 
@@ -1373,7 +1375,7 @@ export default function App() {
               onReportMismatch={setMismatchRecord}
               onReportUnreachablePhone={setUnreachablePhoneRecord}
               onFindTrip={() => setActiveTab('market')}
-              onOpenChat={(id) => handleOpenInbox(id)}
+              onOpenChat={(id, opts) => handleOpenInbox(id, opts)}
             />
           </div>
         )}
@@ -1415,10 +1417,14 @@ export default function App() {
       {showInboxModal && (
         <InboxModal
           isOpen={showInboxModal}
-          onClose={() => setShowInboxModal(false)}
+          onClose={() => {
+            setShowInboxModal(false);
+            setInboxAutoCall(false);
+          }}
           bookings={bookedEscrows}
           currentUser={currentUser}
           initialBookingId={inboxInitialBookingId}
+          autoCall={inboxAutoCall}
           onRefreshBookings={refreshBookings}
           onReportUnreachablePhone={setUnreachablePhoneRecord}
           onShowToast={showToast}
@@ -1437,9 +1443,9 @@ export default function App() {
           onClose={() => setSelectedItemForEscrow(null)}
           onConfirmBooking={handleConfirmBooking}
           onViewTrustProfile={setSelectedDriverForTrust}
-          onOpenInbox={(bookingId) => {
+          onOpenInbox={(bookingId, opts) => {
             setSelectedItemForEscrow(null);
-            handleOpenInbox(bookingId);
+            handleOpenInbox(bookingId, opts);
           }}
           onViewBookedTab={(targetTab = 'booked') => {
             setSelectedItemForEscrow(null);
