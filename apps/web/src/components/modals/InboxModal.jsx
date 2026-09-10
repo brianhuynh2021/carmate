@@ -390,6 +390,19 @@ export default function InboxModal({
   const isPreConfirmed = activeBooking?.status === 'pre_confirmed';
   const isDealCommitted = isConfirmed || isPreConfirmed;
 
+  // Kiểm tra đối tác đã có ít nhất 1 tin nhắn phản hồi (tương tác 2 chiều giữa bên ra kèo và bên ghép)
+  const hasPartnerReplied = useMemo(() => {
+    if (!activeBooking?.messages || activeBooking.messages.length === 0) return false;
+    const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
+    const myRole = activeTab === 'incoming' ? 'driver' : 'passenger';
+    return activeBooking.messages.some((m) => {
+      if (userPhone && m.senderPhone) {
+        return cleanPhoneNumber(m.senderPhone) !== userPhone;
+      }
+      return m.senderRole && m.senderRole !== myRole;
+    });
+  }, [activeBooking?.messages, activeTab, currentUser]);
+
   const partnerAlias = useMemo(() => {
     if (!activeBooking) return 'Đối tác';
     if (activeTab === 'incoming') {
@@ -1208,37 +1221,62 @@ export default function InboxModal({
                   // ĐANG Ở BƯỚC THƯƠNG LƯỢNG (INQUIRING HOẶC HẾT HẠN 15P)
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          <span>
-                            {activeBooking.status === 'expired' || remainingSecs <= 0
-                              ? 'Hết hạn giữ chỗ 15p · Trao đổi lại & Tạm giữ chỗ mới'
-                              : 'Thỏa thuận điểm hẹn đón & hành lý trước khi chốt'}
-                          </span>
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          Sau khi trao đổi xong, bấm "Đề xuất chốt chuyến & Tạm giữ chỗ 15p".
-                        </p>
-                      </div>
+                      {!hasPartnerReplied ? (
+                        <>
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
+                              <span>Đang chờ phản hồi từ {partnerAlias}</span>
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              Hệ thống đã gửi thông báo. Khi {partnerAlias} phản hồi và hai bên trao đổi ok, nút chốt chuyến sẽ kích hoạt.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            disabled
+                            className="py-2 px-3.5 rounded-xl font-semibold text-xs bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed flex items-center gap-1.5"
+                            title="Cần có tin nhắn phản hồi trao đổi 2 chiều trước khi kích hoạt chốt chuyến"
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Chờ {partnerAlias} phản hồi</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                              <span>
+                                {activeBooking.status === 'expired' || remainingSecs <= 0
+                                  ? 'Hết hạn giữ chỗ 15p · Trao đổi lại & Tạm giữ chỗ mới'
+                                  : 'Thỏa thuận điểm hẹn đón & hành lý trước khi chốt'}
+                              </span>
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              Sau khi trao đổi xong, bấm "Đề xuất chốt chuyến & Tạm giữ chỗ 15p".
+                            </p>
+                          </div>
 
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={handlePreConfirm}
-                        className={`py-2 px-3.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
-                          hasConsensus
-                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-2 ring-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] animate-pulse'
-                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white'
-                        }`}
-                      >
-                        <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-                        <span>{hasConsensus ? '⚡ Đồng thuận đạt! Tạm giữ chỗ 15p' : '⚡ Đề xuất chốt chuyến & Tạm giữ chỗ 15p'}</span>
-                      </button>
+                          <button
+                            type="button"
+                            disabled={actionLoading}
+                            onClick={handlePreConfirm}
+                            className={`py-2 px-3.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
+                              hasConsensus
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white ring-2 ring-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] animate-pulse'
+                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white'
+                            }`}
+                          >
+                            <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+                            <span>{hasConsensus ? '⚡ Đồng thuận đạt! Tạm giữ chỗ 15p' : '⚡ Đề xuất chốt chuyến & Tạm giữ chỗ 15p'}</span>
+                          </button>
+                        </>
+                      )}
                     </div>
 
                     {/* Edge AI Ambient Consensus Prompt */}
-                    {hasConsensus && (
+                    {hasConsensus && hasPartnerReplied && (
                       <div className="p-2 px-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2 text-xs text-amber-800 dark:text-amber-300 animate-in fade-in slide-in-from-top-1">
                         <div className="flex items-center gap-2">
                           <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
