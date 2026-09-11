@@ -552,6 +552,25 @@ export const api = {
     });
   },
 
+  async cockpitRegisterVehicle(payload) {
+    return request('/cockpit/register-vehicle', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitVehicleStatus(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/cockpit/vehicle-status${query ? `?${query}` : ''}`);
+  },
+
+  async cockpitApproveVehicle(payload) {
+    return request('/cockpit/approve-vehicle', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
   async resetStationData() {
     return request('/station/reset', {
       method: 'DELETE'

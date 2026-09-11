@@ -43,6 +43,9 @@ import {
   cockpitAcceptOfferHandler,
   cockpitRejectOfferHandler,
   cockpitVerifyPinHandler,
+  cockpitRegisterVehicleHandler,
+  cockpitVehicleStatusHandler,
+  cockpitApproveVehicleHandler,
   resetStationDataHandler
 } from '../controllers/stationQueueController.js';
 import {
@@ -176,6 +179,9 @@ router.post('/cockpit/telemetry', cockpitTelemetryHandler);
 router.post('/cockpit/accept-offer', cockpitAcceptOfferHandler);
 router.post('/cockpit/reject-offer', cockpitRejectOfferHandler);
 router.post('/cockpit/verify-pin', cockpitVerifyPinHandler);
+router.post('/cockpit/register-vehicle', cockpitRegisterVehicleHandler);
+router.get('/cockpit/vehicle-status', cockpitVehicleStatusHandler);
+router.post('/cockpit/approve-vehicle', cockpitApproveVehicleHandler);
 router.delete('/station/reset', resetStationDataHandler);
 
 // --- Station Requests Pool (Gom đề xuất mở trạm ảo mới - Hard Whitelist & Zero Roadside Stops) ---

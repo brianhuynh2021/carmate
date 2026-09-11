@@ -11,11 +11,26 @@ import {
   ChevronLeft,
   ShieldCheck,
   Scale,
-  Car
+  Car,
+  Clock,
+  Sparkles,
+  Camera,
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { api } from '../../api/client.js';
+import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
+
+const QUICK_CAR_MODELS = [
+  'Xpander Trắng',
+  'Vios Đen',
+  'Accent Bạc',
+  'Veloz Đỏ',
+  'Innova Bạc',
+  'Carnival Trắng'
+];
 
 export default function CockpitMode({
   tripId = 'TRIP-MY-COCKPIT',
@@ -34,21 +49,29 @@ export default function CockpitMode({
       return {
         plate: currentUser.vehicle.plate,
         model: `${currentUser.vehicle.brand || ''} ${currentUser.vehicle.model || ''} - Màu ${currentUser.vehicle.color || 'Trắng'}`.trim(),
-        seats: currentUser.vehicle.capacity ? Math.min(4, currentUser.vehicle.capacity - 1) : 2
+        seats: currentUser.vehicle.capacity ? Math.min(4, currentUser.vehicle.capacity - 1) : 2,
+        status: currentUser.vehicle.status || (currentUser.isDriverVerified ? 'VERIFIED' : 'PENDING'),
+        photos: currentUser.vehicle.photos || [],
+        amenities: currentUser.vehicle.amenities || ['ac', 'no_smoking']
       };
     }
     return null;
   });
 
-  // State form nhập liệu nhanh 10 giây nếu chưa có xe
-  const [inputPlate, setInputPlate] = useState(() => currentUser?.vehicle?.plate || '');
+  // State form nhập liệu nhanh 10 giây nếu chưa có xe hoặc khi bấm [Đổi xe]
+  const [inputPlate, setInputPlate] = useState(() => vehicle?.plate || currentUser?.vehicle?.plate || '');
   const [inputModel, setInputModel] = useState(() => {
+    if (vehicle?.model) return vehicle.model;
     if (currentUser?.vehicle?.brand || currentUser?.vehicle?.model) {
       return `${currentUser.vehicle.brand || ''} ${currentUser.vehicle.model || ''} - Màu ${currentUser.vehicle.color || 'Trắng'}`.trim();
     }
     return '';
   });
-  const [inputSeats, setInputSeats] = useState(2);
+  const [inputSeats, setInputSeats] = useState(() => vehicle?.seats || 2);
+  const [inputPhotos, setInputPhotos] = useState(() => vehicle?.photos || []);
+  const [inputAmenities, setInputAmenities] = useState(() => vehicle?.amenities || ['ac', 'no_smoking']);
+  const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
+  const [isEditingVehicle, setIsEditingVehicle] = useState(false);
 
   // Cảm biến gia tốc phần cứng chống giả lập GPS (Anti-Spoofing Hardware Sensor)
   const [hasHardwareMotion, setHasHardwareMotion] = useState(false);
@@ -329,8 +352,47 @@ export default function CockpitMode({
     }
   };
 
-  // LƯU CẤU HÌNH XE NHANH 10S (MVP KHÔNG CẦN CHÍNH CHỦ, KHÔNG CẦN DUYỆT GIẤY TỜ)
-  const handleSaveQuickVehicle = (e) => {
+  // XỬ LÝ ẢNH NHẬN DIỆN XE (NÉN WEBP & TỰ ĐỘNG CHE BIỂN SỐ)
+  const handlePhotoSlotChange = async (e, slotIndex) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      onShowToast?.('Vui lòng chọn tệp hình ảnh (.jpg, .png, .webp)');
+      return;
+    }
+    try {
+      const slotType = slotIndex === 0 ? 'front' : slotIndex === 1 ? 'side' : 'interior';
+      const result = await processCarPhotoUpload(file, slotType);
+      setInputPhotos((prev) => {
+        const next = [...prev];
+        next[slotIndex] = result.maskedUrl;
+        return next;
+      });
+      onShowToast?.('Đã tải và tự động che biển số ảnh xe!');
+    } catch (err) {
+      console.warn('[CockpitMode] Lỗi tải ảnh xe:', err);
+      onShowToast?.('Không thể xử lý ảnh xe, vui lòng thử lại');
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleRemovePhoto = (slotIndex) => {
+    setInputPhotos((prev) => {
+      const next = [...prev];
+      next[slotIndex] = null;
+      return next.filter(Boolean);
+    });
+  };
+
+  const handleToggleAmenity = (amenityKey) => {
+    setInputAmenities((prev) =>
+      prev.includes(amenityKey) ? prev.filter((a) => a !== amenityKey) : [...prev, amenityKey]
+    );
+  };
+
+  // LƯU CẤU HÌNH XE NHANH 10S -> GỬI DUYỆT PENDING VÀ BẮN WEBHOOK TELEGRAM
+  const handleSaveQuickVehicle = async (e) => {
     e?.preventDefault();
     const cleanPlate = inputPlate.trim().toUpperCase();
     const cleanModel = inputModel.trim();
@@ -338,30 +400,127 @@ export default function CockpitMode({
       onShowToast?.('Vui lòng nhập biển số xe và hiệu xe');
       return;
     }
+
+    setIsSubmittingVehicle(true);
     const newVehicle = {
       plate: cleanPlate,
       model: cleanModel,
-      seats: inputSeats
+      seats: inputSeats,
+      photos: inputPhotos.filter(Boolean),
+      amenities: inputAmenities,
+      status: 'PENDING',
+      registeredAt: new Date().toISOString()
     };
+
     try {
       localStorage.setItem('carmate_cockpit_vehicle', JSON.stringify(newVehicle));
     } catch {}
+
     setVehicle(newVehicle);
-    setSeatsAvailable(inputSeats);
-    onShowToast?.('Đã lưu cấu hình xe! Chế độ Taplo sẵn sàng đón khách.');
-    speakText('Xe đã sẵn sàng. Chúc bạn có một hành trình an toàn!');
+    setIsEditingVehicle(false);
+
+    try {
+      await api.cockpitRegisterVehicle({
+        plate: cleanPlate,
+        model: cleanModel,
+        seats: inputSeats,
+        photos: inputPhotos.filter(Boolean),
+        amenities: inputAmenities,
+        phone: currentUser?.phone,
+        name: currentUser?.name,
+        userId: currentUser?.id
+      });
+      onShowToast?.('Đã gửi hồ sơ! Chờ hệ thống kích hoạt dưới 5 phút.');
+      playAudioChime();
+    } catch (err) {
+      console.warn('[CockpitMode] Lỗi gửi đăng ký xe:', err);
+      onShowToast?.('Đã lưu hồ sơ cục bộ, đang chờ duyệt kích hoạt...');
+    } finally {
+      setIsSubmittingVehicle(false);
+    }
   };
 
-  // NẾU CHƯA CÓ CẤU HÌNH XE TRONG GARAGE -> BẢNG NHẬP LIỆU 10 GIÂY ĐỂ NGƯỜI ĐI CÙNG NHẬN DIỆN
-  if (!vehicle) {
+  // NÚT MÔ PHỎNG SOLO FOUNDER DUYỆT NGAY (DEV DEMO 1-CHẠM)
+  const handleSimulateFounderApprove = async () => {
+    try {
+      await api.cockpitApproveVehicle({
+        userId: currentUser?.id,
+        phone: currentUser?.phone,
+        plate: vehicle?.plate || inputPlate
+      });
+    } catch (err) {
+      console.warn('[handleSimulateFounderApprove] error:', err);
+    }
+
+    const verified = {
+      ...(vehicle || {
+        plate: inputPlate || '93A-541.86',
+        model: inputModel || 'Mitsubishi Xpander - Trắng',
+        seats: inputSeats || 3,
+        photos: inputPhotos,
+        amenities: inputAmenities
+      }),
+      status: 'VERIFIED'
+    };
+
+    try {
+      localStorage.setItem('carmate_cockpit_vehicle', JSON.stringify(verified));
+    } catch {}
+
+    setVehicle(verified);
+    setSeatsAvailable(verified.seats || inputSeats || 2);
+    playAudioChime();
+    speakText('Hồ sơ xe đã được kích hoạt thành công! Chào mừng chủ xe vào buồng lái Taplo CarMate.');
+    onShowToast?.('🎉 Hồ sơ đã được kích hoạt! Sẵn sàng đón khách dọc QL13.');
+  };
+
+  // AUTO-POLLING LẮNG NGHE TRẠNG THÁI DUYỆT TỪ SERVER (MỖI 3 GIÂY)
+  useEffect(() => {
+    if (!vehicle || vehicle.status === 'VERIFIED') return;
+
+    let pollInterval = null;
+    const checkStatus = async () => {
+      try {
+        const queryId = currentUser?.id || currentUser?.phone || vehicle.plate;
+        const res = await api.cockpitVehicleStatus({ userId: queryId });
+        if (res?.vehicleStatus === 'VERIFIED' || res?.isDriverVerified) {
+          const updated = { ...vehicle, status: 'VERIFIED' };
+          setVehicle(updated);
+          setSeatsAvailable(updated.seats || inputSeats || 2);
+          try {
+            localStorage.setItem('carmate_cockpit_vehicle', JSON.stringify(updated));
+          } catch {}
+          playAudioChime();
+          speakText('Hồ sơ xe đã được kích hoạt! Sẵn sàng đón khách.');
+          onShowToast?.('🎉 Hồ sơ xe đã được phê duyệt! Chúc chuyến đi thượng lộ bình an.');
+        }
+      } catch (err) {
+        // bỏ qua lỗi polling mạng tạm thời
+      }
+    };
+
+    pollInterval = setInterval(checkStatus, 3000);
+    return () => clearInterval(pollInterval);
+  }, [vehicle, currentUser, inputSeats, onShowToast]);
+
+  // =========================================================================
+  // VIEW 1: BẢNG NHẬP LIỆU XE 10 GIÂY (NẾU CHƯA CÓ XE HOẶC BẤM [ĐỔI XE])
+  // =========================================================================
+  if (!vehicle || isEditingVehicle) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between select-none p-4 sm:p-6 font-sans">
         <header className="flex items-center justify-between border-b border-white/[0.08] pb-3 mb-4 max-w-lg mx-auto w-full">
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => {
+              if (isEditingVehicle && vehicle) {
+                setIsEditingVehicle(false);
+              } else {
+                onBack();
+              }
+            }}
             className="w-10 h-10 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center border border-white/[0.08] transition-all cursor-pointer"
-            title="Quay lại sảnh"
+            title="Quay lại"
           >
             <ChevronLeft className="w-5 h-5 text-slate-300" />
           </button>
@@ -372,10 +531,10 @@ export default function CockpitMode({
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-5 my-auto animate-fade-in">
-          <div className="text-center space-y-1.5">
-            <div className="w-14 h-14 rounded-3xl bg-emerald-500/15 border-2 border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-xl">
-              <Car className="w-7 h-7" />
+        <main className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-4 my-auto animate-fade-in pb-4">
+          <div className="text-center space-y-1">
+            <div className="w-13 h-13 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-xl">
+              <Car className="w-6 h-6" />
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide">
               Thông Tin Xe Chia Sẻ
@@ -390,20 +549,20 @@ export default function CockpitMode({
             <div>
               <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5 flex items-center justify-between">
                 <span>1. Biển số xe:</span>
-                <span className="text-[10px] text-slate-500 lowercase font-normal">VD: 93A-123.45, 61K-892.41</span>
+                <span className="text-[10px] text-slate-500 lowercase font-normal">VD: 93A-541.86, 61K-892.41</span>
               </label>
               <input
                 type="text"
                 value={inputPlate}
                 onChange={(e) => setInputPlate(e.target.value.toUpperCase())}
-                placeholder="VD: 93A - 123.45"
+                placeholder="VD: 93A - 541.86"
                 maxLength={14}
                 required
                 className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-sm font-mono font-bold tracking-wider text-white placeholder-slate-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 outline-none uppercase transition-all"
               />
             </div>
 
-            {/* 2. Hiệu xe & Màu sắc */}
+            {/* 2. Hiệu xe & Màu sắc + Quick Chips */}
             <div>
               <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5 flex items-center justify-between">
                 <span>2. Hiệu xe & Màu sắc:</span>
@@ -413,15 +572,28 @@ export default function CockpitMode({
                 type="text"
                 value={inputModel}
                 onChange={(e) => setInputModel(e.target.value)}
-                placeholder="VD: Xpander - Màu Trắng"
+                placeholder="VD: Mitsubishi Xpander - Trắng"
                 required
                 className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 outline-none transition-all"
               />
+              {/* Quick Chips 1-Chạm */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {QUICK_CAR_MODELS.map((modelPreset) => (
+                  <button
+                    key={modelPreset}
+                    type="button"
+                    onClick={() => setInputModel(modelPreset)}
+                    className="px-2.5 py-1 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-[11px] text-slate-300 border border-white/[0.08] cursor-pointer transition-all active:scale-95"
+                  >
+                    + {modelPreset}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* 3. Số ghế chia sẻ tối đa */}
             <div>
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-2 flex items-center justify-between">
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5 flex items-center justify-between">
                 <span>3. Số ghế chia sẻ tối đa:</span>
                 <span className="text-[10px] text-emerald-400 font-mono font-bold">{inputSeats} ghế trống</span>
               </label>
@@ -429,7 +601,7 @@ export default function CockpitMode({
                 <button
                   type="button"
                   onClick={() => setInputSeats((prev) => Math.max(1, prev - 1))}
-                  className="w-12 h-12 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] active:scale-95 text-lg font-mono font-bold text-white flex items-center justify-center transition-all cursor-pointer"
+                  className="w-11 h-11 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] active:scale-95 text-lg font-mono font-bold text-white flex items-center justify-center transition-all cursor-pointer"
                 >
                   -
                 </button>
@@ -440,10 +612,93 @@ export default function CockpitMode({
                 <button
                   type="button"
                   onClick={() => setInputSeats((prev) => Math.min(6, prev + 1))}
-                  className="w-12 h-12 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] active:scale-95 text-lg font-mono font-bold text-white flex items-center justify-center transition-all cursor-pointer"
+                  className="w-11 h-11 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] active:scale-95 text-lg font-mono font-bold text-white flex items-center justify-center transition-all cursor-pointer"
                 >
                   +
                 </button>
+              </div>
+            </div>
+
+            {/* 4. Ảnh nhận diện xe (Tùy chọn tiện lợi) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>4. Ảnh xe nhận diện (Tùy chọn):</span>
+                </label>
+                <span className="text-[10px] text-slate-400">Tự che biển số</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Mặt trước', id: 0 },
+                  { label: 'Thân xe', id: 1 },
+                  { label: 'Nội thất', id: 2 }
+                ].map((slot) => {
+                  const photoUrl = inputPhotos[slot.id];
+                  return (
+                    <div key={slot.id} className="relative group">
+                      {photoUrl ? (
+                        <div className="relative aspect-video rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900">
+                          <img src={photoUrl} alt={slot.label} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhoto(slot.id)}
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs shadow-md cursor-pointer active:scale-90"
+                            title="Xóa ảnh"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                          <span className="absolute bottom-0 inset-x-0 bg-slate-950/80 text-[9px] font-mono text-emerald-300 text-center py-0.5">
+                            {slot.label}
+                          </span>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center aspect-video rounded-xl border border-dashed border-white/[0.15] bg-white/[0.02] hover:bg-white/[0.06] cursor-pointer transition-all">
+                          <Camera className="w-4 h-4 text-slate-400 mb-0.5" />
+                          <span className="text-[10px] text-slate-400 font-medium">{slot.label}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handlePhotoSlotChange(e, slot.id)}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 5. Tiện ích chuyến đi (1-Chạm) */}
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5">
+                5. Tiện nghi chuyến đi:
+              </label>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {[
+                  { key: 'ac', label: '❄️ Máy lạnh mát' },
+                  { key: 'no_smoking', label: '🚭 Không hút thuốc' },
+                  { key: 'usb', label: '🔌 Sạc điện thoại' },
+                  { key: 'trunk', label: '🧳 Cốp rộng rãi' }
+                ].map((item) => {
+                  const isChecked = inputAmenities.includes(item.key);
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => handleToggleAmenity(item.key)}
+                      className={`p-2.5 rounded-xl border text-left flex items-center justify-between cursor-pointer transition-all ${
+                        isChecked
+                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                          : 'bg-white/[0.02] border-white/[0.08] text-slate-400'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      <span className="font-mono text-xs">{isChecked ? '✓' : '+'}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -451,9 +706,10 @@ export default function CockpitMode({
             <div className="pt-2 space-y-2">
               <button
                 type="submit"
-                className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
+                disabled={isSubmittingVehicle}
+                className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all cursor-pointer disabled:opacity-50"
               >
-                <span>BẮT ĐẦU CHIA SẺ GHẾ ➔</span>
+                <span>{isSubmittingVehicle ? 'ĐANG GỬI HỒ SƠ...' : 'BẮT ĐẦU CHIA SẺ GHẾ ➔'}</span>
               </button>
               <p className="text-[11px] text-center text-slate-400 font-sans">
                 Cam kết lái xe an toàn & đúng lộ trình Quốc lộ 13
@@ -462,8 +718,118 @@ export default function CockpitMode({
           </form>
         </main>
 
-        <footer className="text-center text-[11px] font-mono text-slate-500 max-w-lg mx-auto w-full pt-4">
+        <footer className="text-center text-[11px] font-mono text-slate-500 max-w-lg mx-auto w-full pt-2">
           CarMate Platform · Không thu thập giấy tờ phiền hà · Khởi hành ngay
+        </footer>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VIEW 2: MÀN HÌNH CHỜ KÍCH HOẠT (PENDING APPROVAL - DƯỚI 5 PHÚT)
+  // =========================================================================
+  if (vehicle && vehicle.status !== 'VERIFIED') {
+    return (
+      <div className="min-h-screen bg-[#07080d] text-white flex flex-col justify-between select-none p-4 sm:p-6 font-sans">
+        <header className="flex items-center justify-between border-b border-white/[0.08] pb-3 mb-4 max-w-lg mx-auto w-full">
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-10 h-10 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center border border-white/[0.08] transition-all cursor-pointer"
+            title="Quay lại sảnh"
+          >
+            <ChevronLeft className="w-5 h-5 text-slate-300" />
+          </button>
+          <div className="text-right">
+            <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold border border-amber-500/30 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+              <span>CHỜ XÁC THỰC QL13</span>
+            </span>
+          </div>
+        </header>
+
+        <main className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-4 my-auto animate-fade-in">
+          <div className="p-6 sm:p-7 rounded-3xl bg-white/[0.04] border border-amber-500/30 space-y-5 shadow-2xl relative overflow-hidden backdrop-blur-md">
+            <div className="text-center space-y-2.5">
+              <div className="w-16 h-16 rounded-3xl bg-amber-500/15 border-2 border-amber-500/40 flex items-center justify-center mx-auto text-amber-400 shadow-lg shadow-amber-500/10">
+                <Clock className="w-8 h-8 animate-pulse" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide">
+                  HỒ SƠ ĐANG ĐƯỢC KÍCH HOẠT
+                </h1>
+                <p className="text-xs text-amber-300/90 font-mono mt-1">
+                  Trạng thái: Chờ xác thực tuyến QL13
+                </p>
+              </div>
+            </div>
+
+            {/* Khung tóm tắt thông tin xe */}
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2 text-xs">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-slate-400">Phương tiện:</span>
+                <span className="font-bold text-white text-right">{vehicle.model}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-slate-400">Biển số xe:</span>
+                <span className="font-mono font-black text-emerald-400 tracking-wider text-sm">{vehicle.plate}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-slate-400">Số ghế chia sẻ:</span>
+                <span className="font-mono font-bold text-white">{vehicle.seats} ghế trống</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Hành lang:</span>
+                <span className="font-semibold text-slate-200">QL13 (Tân Khai ⇄ TP.HCM)</span>
+              </div>
+            </div>
+
+            {/* Lời nhắn trấn an & Thời gian duyệt */}
+            <div className="p-4 rounded-2xl bg-emerald-950/25 border border-emerald-500/20 space-y-1.5 text-center">
+              <p className="text-xs text-slate-300">
+                CarMate đang kiểm tra thông tin để bảo đảm an toàn cho hành trình.
+              </p>
+              <p className="text-xs font-bold text-emerald-400 font-mono flex items-center justify-center gap-1 pt-1">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Thời gian duyệt: Dưới 5 phút</span>
+              </p>
+              <p className="text-[10.5px] text-slate-400">
+                (Hệ thống sẽ tự động chuyển sang Taplo khi hoàn tất)
+              </p>
+            </div>
+
+            {/* Các nút hành động */}
+            <div className="space-y-2.5 pt-1">
+              <button
+                type="button"
+                onClick={handleSimulateFounderApprove}
+                className="w-full h-12 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-[0.99] border border-amber-500/40 text-amber-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg shadow-amber-500/10"
+                title="Duyệt tức thì (Dành cho Solo Founder & Kiểm thử Dev)"
+              >
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span>⚡ Mô phỏng Founder duyệt ngay (Dev Demo)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setInputPlate(vehicle.plate);
+                  setInputModel(vehicle.model);
+                  setInputSeats(vehicle.seats);
+                  setInputPhotos(vehicle.photos || []);
+                  setInputAmenities(vehicle.amenities || ['ac', 'no_smoking']);
+                  setIsEditingVehicle(true);
+                }}
+                className="w-full text-center text-xs text-slate-400 hover:text-white underline cursor-pointer py-1"
+              >
+                Chỉnh sửa lại thông tin xe
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <footer className="text-center text-[11px] font-mono text-slate-500 max-w-lg mx-auto w-full pt-2">
+          CarMate Platform · Kích hoạt tự động O(1) · Không cần tải lại trang
         </footer>
       </div>
     );
@@ -495,7 +861,14 @@ export default function CockpitMode({
               <span className="text-emerald-400 font-mono font-bold">{vehicle?.plate}</span>
               <button
                 type="button"
-                onClick={() => setVehicle(null)}
+                onClick={() => {
+                  setInputPlate(vehicle?.plate || '');
+                  setInputModel(vehicle?.model || '');
+                  setInputSeats(vehicle?.seats || 2);
+                  setInputPhotos(vehicle?.photos || []);
+                  setInputAmenities(vehicle?.amenities || ['ac', 'no_smoking']);
+                  setIsEditingVehicle(true);
+                }}
                 className="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
                 title="Cấu hình lại xe"
               >
