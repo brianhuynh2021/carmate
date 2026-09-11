@@ -24,13 +24,36 @@ export default function StationRiderView({
   onBack,
   onShowToast
 }) {
-  const [pickupHubId, setPickupHubId] = useState(hubId || 'hub_ql13_tan_khai');
+  // Các điểm mút Sài Gòn (Thủ Đức / Bình Thạnh / Tân Bình)
+  const SAIGON_HUB_IDS = useMemo(() => [
+    'hub_ql13_hang_xanh',
+    'hub_ql13_san_bay_tsn',
+    'hub_ql13_binh_trieu',
+    'hub_ql13_van_phuc_city',
+    'hub_ql13_nga4_binh_phuoc'
+  ], []);
+
+  // Hướng di chuyển: 'TO_SAIGON' (Bình Phước ➔ TP.HCM) | 'TO_BINH_PHUOC' (TP.HCM ➔ Bình Phước)
+  const [direction, setDirection] = useState(() => {
+    return SAIGON_HUB_IDS.includes(hubId) ? 'TO_BINH_PHUOC' : 'TO_SAIGON';
+  });
+
+  const [pickupHubId, setPickupHubId] = useState(hubId || (direction === 'TO_BINH_PHUOC' ? 'hub_ql13_hang_xanh' : 'hub_ql13_tan_khai'));
 
   useEffect(() => {
-    if (hubId) setPickupHubId(hubId);
-  }, [hubId]);
+    if (hubId) {
+      setPickupHubId(hubId);
+      if (SAIGON_HUB_IDS.includes(hubId)) {
+        setDirection('TO_BINH_PHUOC');
+        setDestinationHubId('hub_ql13_binh_long');
+      } else {
+        setDirection('TO_SAIGON');
+        setDestinationHubId('hub_ql13_hang_xanh');
+      }
+    }
+  }, [hubId, SAIGON_HUB_IDS]);
 
-  // Các điểm đón quen thuộc dọc trục QL13 (từ Bình Long về Sài Gòn)
+  // Các điểm đón quen thuộc dọc trục QL13 (Cả 2 chiều Bình Phước ⇄ Sài Gòn)
   const ql13PickupHubs = useMemo(() => [
     { id: 'hub_ql13_binh_long', name: '📍 Cổng chào TX. Bình Long (Vòng xoay An Lộc)' },
     { id: 'hub_ql13_tthc_binh_long', name: '🏛️ TTHC TX. Bình Long / Bến xe Bình Long' },
@@ -45,22 +68,32 @@ export default function StationRiderView({
     { id: 'hub_ql13_bau_bang', name: '🏭 Trạm dừng KCN Bàu Bàng / Mỹ Phước' },
     { id: 'hub_ql13_nga4_so_sao', name: '📍 Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)' },
     { id: 'hub_ql13_vsip1', name: '🛍️ TTTM AEON Mall Canary / KCN VSIP 1' },
-    { id: 'hub_ql13_van_phuc_city', name: '🏙️ Khu đô thị Vạn Phúc City (Thủ Đức)' },
     { id: 'hub_ql13_nga4_binh_phuoc', name: '📍 Ngã 4 Bình Phước (Thủ Đức - Giao QL1A)' },
-    { id: 'hub_ql13_binh_trieu', name: '⛽ Cầu Bình Triệu / Bến xe Miền Đông cũ' }
+    { id: 'hub_ql13_van_phuc_city', name: '🏙️ Khu đô thị Vạn Phúc City (Thủ Đức)' },
+    { id: 'hub_ql13_binh_trieu', name: '⛽ Cầu Bình Triệu / Bến xe Miền Đông cũ' },
+    { id: 'hub_ql13_hang_xanh', name: '📍 Ngã tư Hàng Xanh (Bình Thạnh - Cây xăng Comeco 3)' },
+    { id: 'hub_ql13_san_bay_tsn', name: '✈️ Sân bay Tân Sơn Nhất (Ga T1 / T2 - Phạm Văn Đồng)' }
   ], []);
 
   const handleAutoDetectGPS = () => {
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const nearest = findNearestVirtualHub(pos.coords.latitude, pos.coords.longitude, 'Tuyến QL13');
+          const lat = pos.coords.latitude;
+          const nearest = findNearestVirtualHub(lat, pos.coords.longitude, 'Tuyến QL13');
           if (nearest && ql13PickupHubs.some((h) => h.id === nearest.id)) {
             setPickupHubId(nearest.id);
+            if (lat < 10.9) {
+              setDirection('TO_BINH_PHUOC');
+              setDestinationHubId('hub_ql13_binh_long');
+            } else {
+              setDirection('TO_SAIGON');
+              setDestinationHubId('hub_ql13_hang_xanh');
+            }
             onShowToast?.(`Đã nhận diện vị trí: ${nearest.name}`);
             return;
           }
-          onShowToast?.('Đang dùng điểm đón Bình Long');
+          onShowToast?.(direction === 'TO_BINH_PHUOC' ? 'Đang dùng trạm Hàng Xanh' : 'Đang dùng trạm Bình Long');
         },
         () => {
           onShowToast?.('Không lấy được GPS, bạn có thể chọn trạm bên dưới');
@@ -85,7 +118,9 @@ export default function StationRiderView({
 
   // Trạng thái: 'CHECKIN' (R1) | 'BOARDING_PASS' (R2)
   const [viewStep, setViewStep] = useState('CHECKIN');
-  const [destinationHubId, setDestinationHubId] = useState('hub_ql13_hang_xanh');
+  const [destinationHubId, setDestinationHubId] = useState(() => {
+    return SAIGON_HUB_IDS.includes(hubId) ? 'hub_ql13_binh_long' : 'hub_ql13_hang_xanh';
+  });
   const [showOtherDestinations, setShowOtherDestinations] = useState(false);
   const [seatsNeeded, setSeatsNeeded] = useState(1);
   const [phone, setPhone] = useState(() => {
@@ -103,6 +138,23 @@ export default function StationRiderView({
     return 'Khách đi cùng';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Đổi chiều di chuyển 1-chạm (Toggle Direction)
+  const toggleDirection = useCallback((newDir) => {
+    const targetDir = newDir || (direction === 'TO_SAIGON' ? 'TO_BINH_PHUOC' : 'TO_SAIGON');
+    setDirection(targetDir);
+    if (targetDir === 'TO_BINH_PHUOC') {
+      if (!SAIGON_HUB_IDS.includes(pickupHubId)) {
+        setPickupHubId('hub_ql13_hang_xanh');
+      }
+      setDestinationHubId('hub_ql13_binh_long');
+    } else {
+      if (SAIGON_HUB_IDS.includes(pickupHubId)) {
+        setPickupHubId('hub_ql13_tan_khai');
+      }
+      setDestinationHubId('hub_ql13_hang_xanh');
+    }
+  }, [direction, pickupHubId, SAIGON_HUB_IDS]);
 
   // Tọa độ định vị GPS của thiết bị & Cảnh báo Geofence Khóa kép (Anti-Quishing Layer 2)
   const [clientCoords, setClientCoords] = useState(null);
@@ -144,8 +196,9 @@ export default function StationRiderView({
       { id: 'hub_ql13_tthc_binh_long', name: 'TTHC TX. Bình Long / Bến xe' },
       { id: 'hub_ql13_binh_long', name: 'Cổng chào TX. Bình Long (An Lộc)' }
     ];
-    return allOptions.filter((opt) => opt.id !== currentHub.id);
-  }, [currentHub.id]);
+    const list = direction === 'TO_BINH_PHUOC' ? [...allOptions].reverse() : allOptions;
+    return list.filter((opt) => opt.id !== currentHub.id);
+  }, [currentHub.id, direction]);
 
   // Bảng giá phân đoạn cố định Metro Tariff (Bất biến MIT & Zero Surge)
   const tariff = useMemo(() => {
@@ -297,7 +350,8 @@ export default function StationRiderView({
           intentId: `ST-RIDER-${Date.now().toString().slice(-6)}`,
           hubName: currentHub.name,
           destinationName:
-            destinationOptions.find((d) => d.id === destinationHubId)?.name || 'Ngã tư Hàng Xanh',
+            destinationOptions.find((d) => d.id === destinationHubId)?.name ||
+            (direction === 'TO_BINH_PHUOC' ? 'TX. Bình Long (Vòng xoay An Lộc)' : 'Ngã tư Hàng Xanh'),
           seatsNeeded,
           pin: '8842',
           fuelSurcharge: estimatedFare,
@@ -328,7 +382,7 @@ export default function StationRiderView({
         setIsSubmitting(false);
       }
     },
-    [currentHub.id, currentHub.name, destinationHubId, destinationOptions, estimatedFare, name, onShowToast, phone, seatsNeeded, tariff.driverPayoutPerSeat, clientCoords?.lat, clientCoords?.lng]
+    [currentHub.id, currentHub.name, destinationHubId, destinationOptions, estimatedFare, name, onShowToast, phone, seatsNeeded, tariff.driverPayoutPerSeat, clientCoords?.lat, clientCoords?.lng, direction]
   );
 
   // XÁC NHẬN MÃ OTP (ĐĂNG NHẬP NGẦM PASSWORDLESS)
@@ -604,6 +658,42 @@ export default function StationRiderView({
         {/* ========================================================================= */}
         {viewStep === 'CHECKIN' && (
           <form onSubmit={handleCheckInClick} className="space-y-5 animate-fade-in">
+            {/* ── BỘ CHỌN CHIỀU TUYẾN 1-CHẠM (STANFORD ERGONOMICS: TWO-WAY COMMUTING) ── */}
+            <div className="flex items-center justify-between gap-2 p-1.5 bg-white/[0.04] rounded-2xl border border-white/[0.08]">
+              <div className="grid grid-cols-2 gap-1 flex-1">
+                <button
+                  type="button"
+                  onClick={() => toggleDirection('TO_SAIGON')}
+                  className={`py-2 px-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    direction === 'TO_SAIGON'
+                      ? 'bg-[#0071e3] text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>🚗 ⬇️ Đi Sài Gòn</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleDirection('TO_BINH_PHUOC')}
+                  className={`py-2 px-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    direction === 'TO_BINH_PHUOC'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>🚗 ⬆️ Về Bình Phước</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleDirection()}
+                className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border border-white/[0.08] cursor-pointer transition-all shrink-0"
+                title="Đổi chiều di chuyển"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+              </button>
+            </div>
+
             {/* ── ANTI-QUISHING LAYER 1, 2, 4: BẢO CHỨNG MÃ QR CHÍNH THỨC & KHÓA KÉP GPS ── */}
             <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-emerald-950/40 border border-emerald-500/30 rounded-3xl p-4 space-y-2.5 shadow-lg">
               <div className="flex items-center justify-between">
@@ -700,7 +790,14 @@ export default function StationRiderView({
               <div>
                 <select
                   value={pickupHubId}
-                  onChange={(e) => setPickupHubId(e.target.value)}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    setPickupHubId(newId);
+                    if (SAIGON_HUB_IDS.includes(newId) && direction === 'TO_SAIGON') {
+                      setDirection('TO_BINH_PHUOC');
+                      setDestinationHubId('hub_ql13_binh_long');
+                    }
+                  }}
                   className="w-full h-12 px-3.5 rounded-2xl bg-white/[0.06] border border-emerald-500/30 text-white text-sm font-bold outline-none focus:border-emerald-400 transition-all cursor-pointer"
                 >
                   {ql13PickupHubs.map((h) => (
@@ -719,83 +816,158 @@ export default function StationRiderView({
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
-                  Chọn trạm trả xe tại TP.HCM (1 chạm):
+                  {direction === 'TO_BINH_PHUOC'
+                    ? 'Chọn trạm trả xe tại Bình Phước (1 chạm):'
+                    : 'Chọn trạm trả xe tại TP.HCM (1 chạm):'}
                 </label>
                 <span className="text-[11px] font-mono text-emerald-400 font-bold">
                   {tariff.distanceKm ? `~${tariff.distanceKm} km` : ''}
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {/* 1. NGÃ 4 BÌNH PHƯỚC */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDestinationHubId('hub_ql13_nga4_binh_phuoc');
-                    setShowOtherDestinations(false);
-                  }}
-                  className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
-                    destinationHubId === 'hub_ql13_nga4_binh_phuoc'
-                      ? 'bg-sky-500/20 border-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-sky-400'
-                      : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_nga4_binh_phuoc' ? 'text-sky-400' : 'text-slate-400'}`} />
-                    <span className="text-[10px] font-mono text-sky-400 font-bold">Thủ Đức</span>
-                  </div>
-                  <div className="mt-2.5">
-                    <div className="text-xs font-bold text-white leading-snug">Ngã 4 Bình Phước</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Giao QL1A</div>
-                  </div>
-                </button>
+              {direction === 'TO_BINH_PHUOC' ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {/* 1. TX. CHƠN THÀNH */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationHubId('hub_ql13_vincom_chon_thanh');
+                      setShowOtherDestinations(false);
+                    }}
+                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      destinationHubId === 'hub_ql13_vincom_chon_thanh' || destinationHubId === 'hub_ql13_nga4_chon_thanh'
+                        ? 'bg-amber-500/20 border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.25)] ring-1 ring-amber-400'
+                        : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_vincom_chon_thanh' || destinationHubId === 'hub_ql13_nga4_chon_thanh' ? 'text-amber-400' : 'text-slate-400'}`} />
+                      <span className="text-[10px] font-mono text-amber-400 font-bold">Chơn Thành</span>
+                    </div>
+                    <div className="mt-2.5">
+                      <div className="text-xs font-bold text-white leading-snug">Vincom Chơn Thành</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Ngã 4 QL14</div>
+                    </div>
+                  </button>
 
-                {/* 2. NGÃ TƯ HÀNG XANH */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDestinationHubId('hub_ql13_hang_xanh');
-                    setShowOtherDestinations(false);
-                  }}
-                  className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
-                    destinationHubId === 'hub_ql13_hang_xanh'
-                      ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400'
-                      : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_hang_xanh' ? 'text-emerald-400' : 'text-slate-400'}`} />
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold">Bình Thạnh</span>
-                  </div>
-                  <div className="mt-2.5">
-                    <div className="text-xs font-bold text-white leading-snug">Ngã tư Hàng Xanh</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Đi Q.1, Q.3</div>
-                  </div>
-                </button>
+                  {/* 2. TÂN KHAI (HỚN QUẢN) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationHubId('hub_ql13_tan_khai');
+                      setShowOtherDestinations(false);
+                    }}
+                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      destinationHubId === 'hub_ql13_tan_khai'
+                        ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400'
+                        : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <Fuel className={`w-4 h-4 ${destinationHubId === 'hub_ql13_tan_khai' ? 'text-emerald-400' : 'text-slate-400'}`} />
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold">Hớn Quản</span>
+                    </div>
+                    <div className="mt-2.5">
+                      <div className="text-xs font-bold text-white leading-snug">Petrolimex Tân Khai</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Chợ Tân Khai</div>
+                    </div>
+                  </button>
 
-                {/* 3. SÂN BAY TÂN SƠN NHẤT */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDestinationHubId('hub_ql13_san_bay_tsn');
-                    setShowOtherDestinations(false);
-                  }}
-                  className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
-                    destinationHubId === 'hub_ql13_san_bay_tsn'
-                      ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.25)] ring-1 ring-purple-400'
-                      : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <Plane className={`w-4 h-4 ${destinationHubId === 'hub_ql13_san_bay_tsn' ? 'text-purple-400' : 'text-slate-400'}`} />
-                    <span className="text-[10px] font-mono text-purple-400 font-bold">Sân bay</span>
-                  </div>
-                  <div className="mt-2.5">
-                    <div className="text-xs font-bold text-white leading-snug">Tân Sơn Nhất</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Ga T1 / T2</div>
-                  </div>
-                </button>
-              </div>
+                  {/* 3. TX. BÌNH LONG */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationHubId('hub_ql13_binh_long');
+                      setShowOtherDestinations(false);
+                    }}
+                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      destinationHubId === 'hub_ql13_binh_long'
+                        ? 'bg-sky-500/20 border-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-sky-400'
+                        : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_binh_long' ? 'text-sky-400' : 'text-slate-400'}`} />
+                      <span className="text-[10px] font-mono text-sky-400 font-bold">Ga Cuối</span>
+                    </div>
+                    <div className="mt-2.5">
+                      <div className="text-xs font-bold text-white leading-snug">TX. Bình Long</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Vòng xoay An Lộc</div>
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {/* 1. NGÃ 4 BÌNH PHƯỚC */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationHubId('hub_ql13_nga4_binh_phuoc');
+                      setShowOtherDestinations(false);
+                    }}
+                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      destinationHubId === 'hub_ql13_nga4_binh_phuoc'
+                        ? 'bg-sky-500/20 border-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-sky-400'
+                        : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_nga4_binh_phuoc' ? 'text-sky-400' : 'text-slate-400'}`} />
+                      <span className="text-[10px] font-mono text-sky-400 font-bold">Thủ Đức</span>
+                    </div>
+                    <div className="mt-2.5">
+                      <div className="text-xs font-bold text-white leading-snug">Ngã 4 Bình Phước</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Giao QL1A</div>
+                    </div>
+                  </button>
+
+                  {/* 2. NGÃ TƯ HÀNG XANH */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationHubId('hub_ql13_hang_xanh');
+                      setShowOtherDestinations(false);
+                    }}
+                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      destinationHubId === 'hub_ql13_hang_xanh'
+                        ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400'
+                        : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_hang_xanh' ? 'text-emerald-400' : 'text-slate-400'}`} />
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold">Bình Thạnh</span>
+                    </div>
+                    <div className="mt-2.5">
+                      <div className="text-xs font-bold text-white leading-snug">Ngã tư Hàng Xanh</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Đi Q.1, Q.3</div>
+                    </div>
+                  </button>
+
+                  {/* 3. SÂN BAY TÂN SƠN NHẤT */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationHubId('hub_ql13_san_bay_tsn');
+                      setShowOtherDestinations(false);
+                    }}
+                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      destinationHubId === 'hub_ql13_san_bay_tsn'
+                        ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.25)] ring-1 ring-purple-400'
+                        : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <Plane className={`w-4 h-4 ${destinationHubId === 'hub_ql13_san_bay_tsn' ? 'text-purple-400' : 'text-slate-400'}`} />
+                      <span className="text-[10px] font-mono text-purple-400 font-bold">Sân bay</span>
+                    </div>
+                    <div className="mt-2.5">
+                      <div className="text-xs font-bold text-white leading-snug">Tân Sơn Nhất</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Ga T1 / T2</div>
+                    </div>
+                  </button>
+                </div>
+              )}
 
               {/* TÙY CHỌN: ĐIỂM TRẢ KHÁC DỌC ĐƯỜNG */}
               <div className="pt-0.5">
@@ -917,7 +1089,11 @@ export default function StationRiderView({
                 {isSubmitting
                   ? 'ĐANG KẾT NỐI XE...'
                   : phone && phone.trim().length >= 9
-                  ? '1-CHẠM NHẬN MÃ ĐÓN XE VỀ SÀI GÒN'
+                  ? direction === 'TO_BINH_PHUOC'
+                    ? '1-CHẠM NHẬN MÃ ĐÓN XE VỀ BÌNH PHƯỚC'
+                    : '1-CHẠM NHẬN MÃ ĐÓN XE VỀ SÀI GÒN'
+                  : direction === 'TO_BINH_PHUOC'
+                  ? 'NHẬN MÃ ĐÓN XE VỀ BÌNH PHƯỚC (5 GIÂY)'
                   : 'NHẬN MÃ ĐÓN XE VỀ SÀI GÒN (5 GIÂY)'}
               </span>
             </button>

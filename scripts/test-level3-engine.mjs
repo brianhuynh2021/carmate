@@ -488,6 +488,56 @@ async function runLevel3Suite() {
   assert(fakeCheckIn.intent.geofence.verified === false, 'Phát hiện và cảnh báo quét QR ngoài bán kính an toàn trạm (> 400m)');
   assert(fakeCheckIn.intent.geofence.distanceM > 1000, `Khoảng cách vượt ngưỡng an toàn (${fakeCheckIn.intent.geofence.distanceM}m)`);
 
+  // --- 8.10 Kiểm thử Luồng Khứ hồi 2 chiều (Bidirectional Commuting QL13: SG <-> Bình Phước) ---
+  console.log('\n--- 8.10 Kiểm thử Luồng Khứ hồi 2 chiều (Bidirectional Commuting QL13: SG <-> Bình Phước) ---');
+
+  // 1. Đối xứng bảng giá cố định Metro Tariff: Chiều Đi (BP -> SG) vs Chiều Về (SG -> BP)
+  const tariffGo = getFixedSegmentTariff('hub_ql13_tan_khai', 'hub_ql13_hang_xanh');
+  const tariffReturn = getFixedSegmentTariff('hub_ql13_hang_xanh', 'hub_ql13_tan_khai');
+  assert(tariffGo.pricePerSeat === tariffReturn.pricePerSeat, `Bảng giá đối xứng hoàn hảo: Tân Khai <-> Hàng Xanh = ${tariffGo.pricePerSeat}đ`);
+  assert(tariffReturn.pricePerSeat === 150000, 'Cước chiều về Hàng Xanh ➔ Tân Khai đúng định mức 150.000đ');
+
+  const tariffBinhLongReturn = getFixedSegmentTariff('hub_ql13_hang_xanh', 'hub_ql13_binh_long');
+  assert(tariffBinhLongReturn.pricePerSeat === 180000, 'Cước chiều về Hàng Xanh ➔ Bình Long đúng định mức 180.000đ');
+
+  const tariffAirportReturn = getFixedSegmentTariff('hub_ql13_san_bay_tsn', 'hub_ql13_binh_long');
+  assert(tariffAirportReturn.pricePerSeat === 190000, 'Cước chiều về Sân bay TSN ➔ Bình Long đúng định mức 190.000đ');
+
+  // 2. MIT Interval Scheduling cho Chiều Về (Northbound: xe từ SG s=140 về Bình Phước s=24)
+  // Xe đi từ Hàng Xanh (s=139.5) về Bình Long (s=24.5)
+  // Khách đón tại Hàng Xanh (s=139.5) về Tân Khai (s=44.5) -> HỢP LỆ
+  const feasibleNorthbound = isIntervalSchedulingFeasible(139.5, 24.5, 139.5, 44.5);
+  assert(feasibleNorthbound === true, 'MIT Interval Scheduling: Khớp thành công Chiều Về Hàng Xanh ➔ Tân Khai lọt trong tuyến Hàng Xanh ➔ Bình Long');
+
+  // Khách đón tại Chơn Thành (s=56.5) về Bình Long (s=24.5) trong khi xe xuất phát từ Hàng Xanh -> HỢP LỆ
+  const feasibleMidNorthbound = isIntervalSchedulingFeasible(139.5, 24.5, 56.5, 24.5);
+  assert(feasibleMidNorthbound === true, 'MIT Interval Scheduling: Khớp thành công khách đón giữa đường Chơn Thành ➔ Bình Long');
+
+  // Xe đã chạy qua Chơn Thành (s=50), khách ở Hàng Xanh (s=139.5) mới gọi -> TỪ CHỐI vì ở sau lưng xe
+  const infeasibleBehindNorthbound = isIntervalSchedulingFeasible(50, 24.5, 139.5, 44.5);
+  assert(infeasibleBehindNorthbound === false, 'MIT Interval Scheduling: Từ chối yêu cầu ở sau lưng xe chiều về (khách s=139.5 > xe s=50)');
+
+  // Khách đón tại Hàng Xanh nhưng đi ngược về Nam (s đón 50, s trả 100) trong khi xe đi về Bắc -> TỪ CHỐI
+  const infeasibleSouthInNorthbound = isIntervalSchedulingFeasible(139.5, 24.5, 50, 100);
+  assert(infeasibleSouthInNorthbound === false, 'MIT Interval Scheduling: Từ chối yêu cầu đi ngược chiều về Nam');
+
+  // 3. Check-in chiều về tại trạm Hàng Xanh (Saigon Station Check-in)
+  const hxHubReturn = getVirtualHubById('hub_ql13_hang_xanh');
+  const returnCheckIn = riderCheckIn({
+    hubId: 'hub_ql13_hang_xanh',
+    destinationHubId: 'hub_ql13_binh_long',
+    seatsNeeded: 2,
+    phone: '0988776655',
+    name: 'Khách Về Bình Phước',
+    clientLat: hxHubReturn.lat,
+    clientLng: hxHubReturn.lng
+  });
+  assert(returnCheckIn.intent.hubId === 'hub_ql13_hang_xanh', 'Check-in chiều về tại Ngã tư Hàng Xanh thành công');
+  assert(returnCheckIn.intent.destinationHubId === 'hub_ql13_binh_long', 'Đích đến là Bình Long');
+  assert(returnCheckIn.intent.seatsNeeded === 2, 'Đặt 2 ghế chiều về');
+  assert(returnCheckIn.intent.fuelSurcharge === 360000, 'Tổng cước 2 ghế: 180k * 2 = 360.000đ');
+  assert(returnCheckIn.intent.driverPayout === 324000, 'Chủ xe nhận 90%: 324.000đ');
+
   // =============================================================
 
   console.log('\n=============================================================');
