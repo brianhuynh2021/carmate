@@ -21,13 +21,13 @@ import {
   CheckCheck,
   Zap,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Fuel
 } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
-import { triggerMacNotification } from './AppleMacNotification.jsx';
 import NotificationDropdown from './NotificationDropdown.jsx';
 
 export function LanguageToggle({ className = '' } = {}) {
@@ -52,10 +52,10 @@ export function LanguageToggle({ className = '' } = {}) {
 export default function Header({
   activeTab,
   setActiveTab,
-  onRequestPostTrip,
+  _onRequestPostTrip,
   setShowPolicyModal,
   bookedCount = 0,
-  myTripsCount = 0,
+  _myTripsCount = 0,
   inboxCount = 0,
   onOpenInbox,
   currentUser = null,
@@ -77,10 +77,10 @@ export default function Header({
 }) {
   const { t, lang, setLang } = useI18n();
   const tabs = [
-    { id: 'market', label: t('nav.market'), icon: Compass },
-    { id: 'match', label: t('nav.match'), icon: Sparkles },
-    { id: 'my-trips', label: t('nav.myTrips'), icon: FileText, badge: myTripsCount },
-    { id: 'booked', label: t('nav.booked'), icon: Clock, badge: bookedCount }
+    { id: 'market', label: 'Tuyến Tàu Ảo', icon: Compass },
+    { id: 'station', label: 'Trạm Petrolimex', icon: Fuel },
+    { id: 'cockpit', label: 'Taplo Chủ Xe', icon: Car },
+    { id: 'booked', label: t('nav.booked') || 'Lịch hẹn', icon: Clock, badge: bookedCount }
   ];
 
   const isMac =
@@ -90,10 +90,8 @@ export default function Header({
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isPostMenuOpen, setIsPostMenuOpen] = useState(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const userMenuRef = useRef(null);
-  const postMenuRef = useRef(null);
   const notificationCenterRef = useRef(null);
 
   useEffect(() => {
@@ -110,9 +108,6 @@ export default function Header({
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setIsUserMenuOpen(false);
       }
-      if (postMenuRef.current && !postMenuRef.current.contains(e.target)) {
-        setIsPostMenuOpen(false);
-      }
       if (notificationCenterRef.current && !notificationCenterRef.current.contains(e.target)) {
         setIsNotificationCenterOpen(false);
       }
@@ -120,7 +115,6 @@ export default function Header({
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setIsUserMenuOpen(false);
-        setIsPostMenuOpen(false);
         setIsNotificationCenterOpen(false);
       }
     };
@@ -131,8 +125,6 @@ export default function Header({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
-
-  const recentBookings = (bookedEscrows || []).slice(0, 6);
 
   return (
     <header
@@ -206,103 +198,19 @@ export default function Header({
             </kbd>
           </button>
 
-          {/* Nút 1-chạm vào Chế độ Taplo Ô Tô (Cockpit Mode) */}
+          {/* NÚT 1-CHẠM VÀO CHẾ ĐỘ TAPLO Ô TÔ (COCKPIT MODE) */}
           {onOpenCockpit && (
             <button
               type="button"
               onClick={onOpenCockpit}
               title="Bật Chế độ Taplo Ô Tô (Cockpit Mode)"
-              className="h-8.5 sm:h-9 px-2.5 sm:px-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-[#07080d] dark:bg-slate-800 text-emerald-400 border border-emerald-500/40 hover:border-emerald-500/80 shadow-xs hover:bg-emerald-950/40 active:scale-95 transition-all cursor-pointer select-none shrink-0"
+              className="h-9 px-3.5 rounded-full inline-flex items-center gap-2 text-xs font-black bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer select-none shrink-0"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <Car className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline font-mono">Taplo</span>
+              <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
+              <Car className="w-4 h-4 text-slate-950" strokeWidth={2.4} />
+              <span>BẬT TAPLO</span>
             </button>
           )}
-
-          <div className="hidden sm:block relative" ref={postMenuRef}>
-            <button
-              type="button"
-              onClick={() => setIsPostMenuOpen((prev) => !prev)}
-              aria-expanded={isPostMenuOpen}
-              aria-haspopup="true"
-              className="h-9 pl-3.5 pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white shadow-[0_2px_8px_rgba(0,113,227,0.28)] hover:shadow-[0_4px_16px_rgba(0,113,227,0.38)] active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 group"
-            >
-              <PlusCircle className="w-3.5 h-3.5 text-white/90 group-hover:rotate-90 transition-transform duration-200" strokeWidth={2.4} />
-              <span>{t('nav.post')}</span>
-              <ChevronDown
-                className={`w-3 h-3 text-white/80 transition-transform duration-200 ${isPostMenuOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {isPostMenuOpen && (
-              <div className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.16)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
-                <div className="px-2.5 py-1 mb-1">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#86868b]">{t('postMenu.title')}</p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPostMenuOpen(false);
-                    if (onRequestPostTrip) {
-                      onRequestPostTrip('driver');
-                    } else {
-                      setActiveTab('post');
-                    }
-                  }}
-                  className="w-full p-2.5 rounded-xl flex items-start gap-3 hover:bg-[#0071e3]/8 dark:hover:bg-[#0071e3]/15 transition-all text-left group cursor-pointer border border-transparent hover:border-[#0071e3]/20"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Car className="w-4 h-4 text-[#0071e3]" strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-[#0071e3] transition-colors">
-                        {t('postMenu.driverTitle')}
-                      </span>
-                      <span className="text-[10px] font-semibold text-[#0071e3] bg-[#0071e3]/10 px-1.5 py-0.5 rounded-full">
-                        {t('postMenu.driverBadge')}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                      {t('postMenu.driverDesc')}
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPostMenuOpen(false);
-                    if (onRequestPostTrip) {
-                      onRequestPostTrip('passenger');
-                    } else {
-                      setActiveTab('post');
-                    }
-                  }}
-                  className="w-full p-2.5 rounded-xl flex items-start gap-3 hover:bg-emerald-500/8 dark:hover:bg-emerald-500/15 transition-all text-left group cursor-pointer border border-transparent hover:border-emerald-500/20 mt-1"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Users className="w-4 h-4 text-emerald-600" strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-emerald-600 transition-colors">
-                        {t('postMenu.passengerTitle')}
-                      </span>
-                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
-                        {t('postMenu.passengerBadge')}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                      {t('postMenu.passengerDesc')}
-                    </p>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
 
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>
@@ -519,6 +427,20 @@ export default function Header({
                     <LogOut className="w-3.5 h-3.5 text-slate-400" />
                     <span>{t('userMenu.logout')}</span>
                   </button>
+
+                  {currentUser.role !== 'admin' && onOpenDeleteAccount && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onOpenDeleteAccount();
+                      }}
+                      className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                      <span>{t('userMenu.deleteAccount') || 'Yêu cầu xoá tài khoản'}</span>
+                    </button>
+                  )}
 
                   <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
 

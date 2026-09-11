@@ -17,6 +17,7 @@ import AppleMacNotification from './components/common/AppleMacNotification.jsx';
 import Hero from './components/market/Hero.jsx';
 import TripCard from './components/market/TripCard.jsx';
 import CorridorTimeline from './components/market/CorridorTimeline.jsx';
+import CorridorMetroBoard from './components/market/CorridorMetroBoard.jsx';
 
 // Views
 import PostTripForm from './components/post/PostTripForm.jsx';
@@ -698,8 +699,6 @@ export default function App() {
     visibleCount,
     setVisibleCount,
     resetFilters,
-    filteredItems,
-    temporalGroups,
     displayedMarketItems,
     paginatedMarketItems
   } = useMarketFilters({ driverOffers, passengerRequests });
@@ -1028,8 +1027,23 @@ export default function App() {
       />
 
       <main className="flex-1 pb-24 md:pb-0">
-        {/* ── Tìm chuyến ── */}
+        {/* ── Đường Ống Tiện Tuyến Đoàn Tàu Ảo (Zero Posting Paradigm) ── */}
         {activeTab === 'market' && (
+          <div className={`${container} py-5 sm:py-8`}>
+            <CorridorMetroBoard
+              onOpenCockpit={() => setActiveTab('cockpit')}
+              onOpenStationView={(hub) => {
+                setStationHubId(hub || 'hub_ql13_tan_khai');
+                setActiveTab('station');
+              }}
+              onOpenInbox={() => handleOpenInbox()}
+              activeBookedCount={activeBookedCount}
+            />
+          </div>
+        )}
+
+        {/* ── Lưu trữ chuyến xe cũ (Nếu mở) ── */}
+        {activeTab === 'legacy-archive' && (
           <>
             <Hero
               trips={driverOffers}

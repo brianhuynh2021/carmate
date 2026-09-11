@@ -159,7 +159,8 @@ export default function CockpitMode({
       ttaSeconds: 150,
       riderCount: 2,
       destinationName: 'Ngã tư Hàng Xanh',
-      fuelSurcharge: 240000,
+      fuelSurcharge: 220000,
+      driverPayout: 198000,
       pin: '8842'
     };
 
@@ -170,7 +171,8 @@ export default function CockpitMode({
 
     // Bật chuông và giọng đọc
     playAudioChime();
-    speakText(`Trạm Tân Khai có ${offer.riderCount} khách đi Hàng Xanh, phụ xăng 240 ngàn`);
+    const payoutText = `${Math.round((offer.driverPayout || 198000) / 1000)} ngàn`;
+    speakText(`Trạm Tân Khai có ${offer.riderCount} khách đi Hàng Xanh, bù xăng ${payoutText}`);
   };
 
   // CHỦ XE BẤM [ĐỒNG Ý ĐÓN] (D2 ACCEPT)
@@ -444,9 +446,12 @@ export default function CockpitMode({
               </div>
 
               <div className="bg-emerald-950/40 p-4 rounded-2xl border border-emerald-500/40">
-                <span className="text-xs uppercase text-emerald-400 font-mono block">Phụ xăng nhận ngay</span>
+                <span className="text-xs uppercase text-emerald-400 font-mono block">Phụ xăng thực nhận (90%)</span>
                 <span className="text-2xl sm:text-3xl font-black font-mono text-emerald-400 block mt-0.5">
-                  +{formatVND(activeOffer.fuelSurcharge)}
+                  +{formatVND(activeOffer.driverPayout || activeOffer.fuelSurcharge)}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono block mt-1">
+                  (Cố định · 0% tăng giá giờ cao điểm)
                 </span>
                 <span className="text-xs text-slate-400 block mt-1">
                   Tự động cộng thẳng vào ví khi lên xe

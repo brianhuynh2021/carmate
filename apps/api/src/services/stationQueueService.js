@@ -1,4 +1,9 @@
-import { VIRTUAL_HUBS, getVirtualHubById } from '@carmate/shared';
+import {
+  VIRTUAL_HUBS,
+  getVirtualHubById,
+  getFixedSegmentTariff,
+  DRIVER_STATION_PAYOUT_RATIO
+} from '@carmate/shared';
 
 // BỘ NHỚ LƯU TRỮ TRẠNG THÁI TRẠM ẢO & COCKPIT TẠI RAM (IN-MEMORY DISTRIBUTED ENGINE)
 const stationQueues = new Map(); // stationId -> Array<RiderIntent>
@@ -51,8 +56,10 @@ export function riderCheckIn({
   };
 
   const cleanSeats = Math.max(1, Math.min(4, Number(seatsNeeded) || 1));
-  const ratePerSeat = 120000; // Giá phụ xăng chuẩn hóa tuyến Tân Khai ⇄ Hàng Xanh
+  const tariff = getFixedSegmentTariff(originHub.id, destHub.id);
+  const ratePerSeat = tariff.pricePerSeat;
   const totalSurcharge = ratePerSeat * cleanSeats;
+  const driverPayout = Math.round(totalSurcharge * DRIVER_STATION_PAYOUT_RATIO);
 
   const intentId = `ST-RIDER-${Date.now().toString().slice(-6)}-${Math.floor(10 + Math.random() * 90)}`;
   const pin = generate4DigitPin();
@@ -74,6 +81,9 @@ export function riderCheckIn({
     matchedTripId: null,
     lockExpiresAt: null,
     fuelSurcharge: totalSurcharge,
+    driverPayout,
+    ratePerSeat,
+    noSurge: true,
     carInfo: null
   };
 
@@ -252,6 +262,8 @@ export function telemetryPing({
             riderCount: eligibleRider.seatsNeeded,
             destinationName: eligibleRider.destinationShortName || eligibleRider.destinationName,
             fuelSurcharge: eligibleRider.fuelSurcharge,
+            driverPayout: eligibleRider.driverPayout || Math.round(eligibleRider.fuelSurcharge * DRIVER_STATION_PAYOUT_RATIO),
+            noSurge: true,
             expiresAt: now + 30000 // Chủ xe có 30 giây để bấm
           };
 
@@ -387,16 +399,20 @@ export function driverVerifyPin({ tripId, intentId, pin }) {
 
   // Khớp thành công!
   matchedRider.status = 'BOARDED';
+  const payoutAmount =
+    matchedRider.driverPayout || Math.round(matchedRider.fuelSurcharge * DRIVER_STATION_PAYOUT_RATIO);
+
   session.boardedPassengers.push({
     intentId: matchedRider.intentId,
     name: matchedRider.name,
     seatsNeeded: matchedRider.seatsNeeded,
     fuelSurcharge: matchedRider.fuelSurcharge,
+    driverPayout: payoutAmount,
     boardedAt: Date.now()
   });
 
   session.seatsAvailable = Math.max(0, session.seatsAvailable - matchedRider.seatsNeeded);
-  session.totalEarnings += matchedRider.fuelSurcharge;
+  session.totalEarnings += payoutAmount;
   session.status = 'ROLLING'; // Nhập lại Quốc lộ 13
 
   return {
@@ -406,7 +422,8 @@ export function driverVerifyPin({ tripId, intentId, pin }) {
       intentId: matchedRider.intentId,
       name: matchedRider.name,
       status: matchedRider.status,
-      fuelSurcharge: matchedRider.fuelSurcharge
+      fuelSurcharge: matchedRider.fuelSurcharge,
+      driverPayout: payoutAmount
     },
     session: {
       seatsAvailable: session.seatsAvailable,

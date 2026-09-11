@@ -17,7 +17,9 @@ import {
   DOORSTEP_CONFIG,
   getVirtualHubsByCorridor,
   findNearestVirtualHub,
-  getVirtualHubById
+  getVirtualHubById,
+  getFixedSegmentTariff,
+  CORRIDOR_FIXED_SEGMENTS
 } from '@carmate/shared';
 
 import {
@@ -262,6 +264,28 @@ async function runLevel3Suite() {
   console.log('\n--- 8. Kiểm thử Cockpit Taplo Ô Tô & QR Check-in Trạm Ảo ---');
   resetAllStationData();
 
+  // 8.0 Kiểm thử bảng cước phân đoạn Metro Corridor (Fixed Segment Tariff & Zero-Surge Invariant)
+  assert(Object.keys(CORRIDOR_FIXED_SEGMENTS).length >= 10, 'Bảng cước phân đoạn cố định Metro có ít nhất 10 chặng mẫu');
+
+  const tariffBinhLong = getFixedSegmentTariff('hub_ql13_binh_long', 'hub_ql13_hang_xanh');
+  assert(tariffBinhLong.pricePerSeat === 130000, 'Cước phân đoạn Bình Long ➔ Hàng Xanh chuẩn xác 130.000đ');
+  assert(tariffBinhLong.driverPayoutFor2Seats === 234000, 'Chủ xe nhận 234.000đ cho 2 ghế từ Bình Long');
+  assert(tariffBinhLong.noSurge === true, 'Bất biến: Bình Long ➔ Hàng Xanh noSurge = true');
+
+  const tariffTanKhai = getFixedSegmentTariff('hub_ql13_tan_khai', 'hub_ql13_hang_xanh');
+  assert(tariffTanKhai.pricePerSeat === 110000, 'Cước phân đoạn Tân Khai ➔ Hàng Xanh chuẩn xác 110.000đ');
+  assert(tariffTanKhai.driverPayoutFor2Seats === 198000, 'Chủ xe nhận 198.000đ cho 2 ghế từ Tân Khai');
+  assert(tariffTanKhai.noSurge === true, 'Bất biến: Tân Khai ➔ Hàng Xanh noSurge = true');
+
+  const tariffChonThanh = getFixedSegmentTariff('hub_ql13_nga4_chon_thanh', 'hub_ql13_hang_xanh');
+  assert(tariffChonThanh.pricePerSeat === 90000, 'Cước phân đoạn Chơn Thành ➔ Hàng Xanh chuẩn xác 90.000đ');
+  assert(tariffChonThanh.driverPayoutFor2Seats === 162000, 'Chủ xe nhận 162.000đ cho 2 ghế từ Chơn Thành');
+  assert(tariffChonThanh.noSurge === true, 'Bất biến: Chơn Thành ➔ Hàng Xanh noSurge = true');
+
+  const tariffLocal = getFixedSegmentTariff('hub_ql13_binh_long', 'hub_ql13_nga4_chon_thanh');
+  assert(tariffLocal.pricePerSeat === 45000, 'Cước chặng ngắn Bình Long ➔ Chơn Thành chuẩn xác 45.000đ');
+  assert(tariffLocal.driverPayoutFor2Seats === 81000, 'Chủ xe nhận 81.000đ cho 2 ghế chặng Bình Long ➔ Chơn Thành');
+
   // 8.1 Khách quét QR check-in tại trạm Petrolimex Tân Khai
   const hubInfo = getVirtualHubById('hub_ql13_tan_khai');
   assert(hubInfo && hubInfo.name.includes('Petrolimex'), 'Trạm Petrolimex Tân Khai được định danh chuẩn xác');
@@ -276,7 +300,9 @@ async function runLevel3Suite() {
 
   assert(checkinRes.success === true, 'Khách check-in trạm ảo thành công');
   assert(checkinRes.intent && checkinRes.intent.pin && checkinRes.intent.pin.length === 4, 'Hệ thống sinh mã PIN 4 chữ số bảo mật');
-  assert(checkinRes.intent.fuelSurcharge === 240000, 'Tính mức phụ xăng 2 khách chuẩn xác: 240.000đ');
+  assert(checkinRes.intent.fuelSurcharge === 220000, 'Tính mức phụ xăng 2 khách Tân Khai ➔ Hàng Xanh: 220.000đ (110k x 2)');
+  assert(checkinRes.intent.driverPayout === 198000, 'Mức chia sẻ thực nhận cho chủ xe (90%): 198.000đ');
+  assert(checkinRes.intent.noSurge === true, 'Bất biến: Không phụ thu giờ cao điểm/mưa gió (noSurge: true)');
 
   // 8.2 Kiểm tra hàng đợi trạm
   const queueRes = getStationQueue('hub_ql13_tan_khai');
@@ -305,7 +331,9 @@ async function runLevel3Suite() {
   assert(pingRes.proximityAlert != null, 'Radar kích hoạt cảnh báo khi xe cách trạm <= 3.5 km');
   assert(pingRes.proximityAlert.distanceKm <= 3.5, `Cự ly tiếp cận chính xác: ${pingRes.proximityAlert?.distanceKm} km`);
   assert(pingRes.proximityAlert.riderCount === 2, 'Cảnh báo đúng số lượng 2 khách cần đón');
-  assert(pingRes.proximityAlert.fuelSurcharge === 240000, 'Cảnh báo đúng số tiền phụ xăng +240.000đ');
+  assert(pingRes.proximityAlert.fuelSurcharge === 220000, 'Cảnh báo đúng số tiền phụ xăng +220.000đ');
+  assert(pingRes.proximityAlert.driverPayout === 198000, 'Cảnh báo đúng số tiền chủ xe nhận +198.000đ');
+  assert(pingRes.proximityAlert.noSurge === true, 'Bất biến: Không tăng giá cao điểm');
   assert(pingRes.session.status === 'OFFERING', 'Trạng thái Taplo chuyển sang OFFERING (30s đếm ngược)');
 
   // 8.5 Test cơ chế Bỏ qua (Reject)
@@ -353,7 +381,7 @@ async function runLevel3Suite() {
     pin: checkinRes.intent.pin
   });
   assert(correctPinRes.success === true, 'Khớp mã PIN 4 số thành công');
-  assert(correctPinRes.session.totalEarnings === 240000, 'Tự động ghi nhận số dư ví phụ xăng +240.000đ cho Chủ xe');
+  assert(correctPinRes.session.totalEarnings === 198000, 'Tự động ghi nhận số dư ví phụ xăng +198.000đ cho Chủ xe');
   assert(correctPinRes.session.status === 'ROLLING', 'Xe chuyển trạng thái ROLLING nhập lại Quốc lộ 13');
   assert(correctPinRes.session.seatsAvailable === 0, 'Cập nhật số ghế còn trống = 0 sau khi nhận đủ khách');
 

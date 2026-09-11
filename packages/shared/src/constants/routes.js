@@ -802,3 +802,116 @@ export function getVirtualHubById(hubId) {
     ) || null
   );
 }
+
+/**
+ * BẢNG ĐỊNH GIÁ PHÂN ĐOẠN CỐ ĐỊNH HÀNH LANG QL13 (METRO TARIFF ON QL13)
+ * MIT Invariants: Cước phí phân đoạn cố định như vé metro, bảo đảm minh bạch 100%.
+ * Tuyệt đối KHÔNG surge pricing (no_surge: true) vào giờ cao điểm, ban đêm hay mưa bão.
+ */
+export const CORRIDOR_FIXED_SEGMENTS = {
+  // Bình Long ➔ Hàng Xanh: 130.000đ (Chủ xe nhận 234k/2 ghế)
+  'hub_ql13_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 130000, distanceKm: 115, label: 'Bình Long ➔ Hàng Xanh' },
+  'hub_ql13_binh_long:::hub_ql13_binh_trieu': { pricePerSeat: 130000, distanceKm: 110, label: 'Bình Long ➔ Bình Triệu' },
+  'hub_ql13_binh_long:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 125000, distanceKm: 105, label: 'Bình Long ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_binh_long:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 45000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
+  'hub_ql13_binh_long:::hub_n2_chon_thanh': { pricePerSeat: 45000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
+  'hub_ql13_binh_long:::hub_ql13_tan_khai': { pricePerSeat: 30000, distanceKm: 25, label: 'Bình Long ➔ Tân Khai' },
+
+  // Tân Khai ➔ Hàng Xanh: 110.000đ (Chủ xe nhận 198k/2 ghế)
+  'hub_ql13_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 110000, distanceKm: 95, label: 'Tân Khai ➔ Hàng Xanh' },
+  'hub_ql13_tan_khai:::hub_ql13_binh_trieu': { pricePerSeat: 110000, distanceKm: 90, label: 'Tân Khai ➔ Bình Triệu' },
+  'hub_ql13_tan_khai:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 105000, distanceKm: 85, label: 'Tân Khai ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_tan_khai:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 35000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
+  'hub_ql13_tan_khai:::hub_n2_chon_thanh': { pricePerSeat: 35000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
+  'hub_ql13_tan_khai:::hub_ql13_binh_long': { pricePerSeat: 30000, distanceKm: 25, label: 'Tân Khai ➔ Bình Long' },
+
+  // Chơn Thành ➔ Hàng Xanh: 90.000đ (Chủ xe nhận 162k/2 ghế)
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 90000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_trieu': { pricePerSeat: 90000, distanceKm: 70, label: 'Chơn Thành ➔ Bình Triệu' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 85000, distanceKm: 65, label: 'Chơn Thành ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 45000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_tan_khai': { pricePerSeat: 35000, distanceKm: 20, label: 'Chơn Thành ➔ Tân Khai' },
+  'hub_n2_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 90000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
+  'hub_n2_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 45000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
+
+  // Lộc Ninh / Bù Đốp
+  'hub_ql13_cho_loc_ninh:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 65000, distanceKm: 60, label: 'Lộc Ninh ➔ Chơn Thành' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_binh_long': { pricePerSeat: 35000, distanceKm: 25, label: 'Lộc Ninh ➔ Bình Long' },
+  'hub_ql13_budop:::hub_ql13_hang_xanh': { pricePerSeat: 160000, distanceKm: 155, label: 'Bù Đốp ➔ Hàng Xanh' },
+  'hub_ql13_budop:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 75000, distanceKm: 80, label: 'Bù Đốp ➔ Chơn Thành' },
+  'hub_ql13_budop:::hub_ql13_binh_long': { pricePerSeat: 45000, distanceKm: 45, label: 'Bù Đốp ➔ Bình Long' }
+};
+
+export const DRIVER_STATION_PAYOUT_RATIO = 0.9; // Chủ xe nhận 90% cước chia sẻ cố định
+
+/**
+ * Tra cứu bảng cước phân đoạn cố định Metro Tariff dọc hành lang
+ */
+export function getFixedSegmentTariff(originHubId, destHubId) {
+  if (!originHubId || !destHubId) {
+    return {
+      pricePerSeat: 110000,
+      driverPayoutPerSeat: 99000,
+      driverPayoutFor2Seats: 198000,
+      distanceKm: 95,
+      noSurge: true,
+      label: 'Tân Khai ➔ Hàng Xanh'
+    };
+  }
+
+  const cleanOrigin = String(originHubId).trim().toLowerCase();
+  const cleanDest = String(destHubId).trim().toLowerCase();
+
+  const keyForward = `${cleanOrigin}:::${cleanDest}`;
+  const keyReverse = `${cleanDest}:::${cleanOrigin}`;
+
+  const match = CORRIDOR_FIXED_SEGMENTS[keyForward] || CORRIDOR_FIXED_SEGMENTS[keyReverse];
+
+  if (match) {
+    const pricePerSeat = match.pricePerSeat;
+    const driverPayoutPerSeat = Math.round(pricePerSeat * DRIVER_STATION_PAYOUT_RATIO);
+    return {
+      pricePerSeat,
+      driverPayoutPerSeat,
+      driverPayoutFor2Seats: driverPayoutPerSeat * 2,
+      distanceKm: match.distanceKm,
+      noSurge: true,
+      label: match.label
+    };
+  }
+
+  // Fallback tính theo khoảng cách Haversine nếu trạm chưa nằm trong bảng chi tiết
+  const h1 = getVirtualHubById(originHubId);
+  const h2 = getVirtualHubById(destHubId);
+  let distanceKm = 95;
+  if (h1 && h2) {
+    const dLat = ((h2.lat - h1.lat) * Math.PI) / 180;
+    const dLng = ((h2.lng - h1.lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((h1.lat * Math.PI) / 180) * Math.cos((h2.lat * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    distanceKm = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1.28);
+  }
+
+  let pricePerSeat = 110000;
+  if (distanceKm <= 30) pricePerSeat = 35000;
+  else if (distanceKm <= 50) pricePerSeat = 45000;
+  else if (distanceKm <= 80) pricePerSeat = 90000;
+  else if (distanceKm <= 100) pricePerSeat = 110000;
+  else if (distanceKm <= 125) pricePerSeat = 130000;
+  else if (distanceKm <= 145) pricePerSeat = 150000;
+  else pricePerSeat = 160000;
+
+  const driverPayoutPerSeat = Math.round(pricePerSeat * DRIVER_STATION_PAYOUT_RATIO);
+
+  return {
+    pricePerSeat,
+    driverPayoutPerSeat,
+    driverPayoutFor2Seats: driverPayoutPerSeat * 2,
+    distanceKm,
+    noSurge: true,
+    label: `${h1?.shortName || originHubId} ➔ ${h2?.shortName || destHubId}`
+  };
+}
+

@@ -502,6 +502,60 @@ export const api = {
     return request(`/admin/users/${userId}`, {
       method: 'DELETE'
     });
+  },
+
+  // --- Curbside Station Queue & Cockpit Mode Telemetry ---
+  async fetchJson(endpoint, options = {}) {
+    return request(endpoint, options);
+  },
+
+  async stationCheckIn(hubId, payload) {
+    return request(`/station/${hubId}/checkin`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getStationQueue(hubId) {
+    return request(`/station/${hubId}/status`);
+  },
+
+  async getRiderPass(intentId) {
+    return request(`/station/rider/${intentId}`);
+  },
+
+  async cockpitTelemetry(payload) {
+    return request('/cockpit/telemetry', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitAcceptOffer(payload) {
+    return request('/cockpit/accept-offer', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitRejectOffer(payload) {
+    return request('/cockpit/reject-offer', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitVerifyPin(payload) {
+    return request('/cockpit/verify-pin', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async resetStationData() {
+    return request('/station/reset', {
+      method: 'DELETE'
+    });
   }
 };
 
