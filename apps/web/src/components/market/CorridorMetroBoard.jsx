@@ -176,7 +176,7 @@ export default function CorridorMetroBoard({
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono text-slate-300">
             <span className="flex items-center gap-1.5 bg-emerald-500/15 px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-300 font-bold">
               <Fuel className="w-3.5 h-3.5 text-emerald-400" />
-              Chỉ số xăng RON 95: {formatVND(currentFuelPrice.ron95Price)}/L · Đủ xăng + 4 trạm BOT
+              Chỉ số xăng RON 95: {formatVND(currentFuelPrice.ron95Price)}/L · Cập nhật theo thị trường
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -261,7 +261,7 @@ export default function CorridorMetroBoard({
             <div className="p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-500 dark:text-slate-400">Cước Bình Long / Tân Khai ➔ TP.HCM:</span>
-                <span className="text-[#0071e3] font-bold">150k — 190k (Đã gồm BOT)</span>
+                <span className="text-[#0071e3] font-bold">150k — 190k / vé (Trọn gói)</span>
               </div>
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-500 dark:text-slate-400">Đón xe an toàn:</span>
@@ -291,7 +291,7 @@ export default function CorridorMetroBoard({
               BẢNG GIÁ ĐI GHÉP CÔNG BẰNG QUỐC LỘ 13
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
-              Định Giá Cân Bằng Thị Trường · Bù Đắp Đủ Xăng + Cầu Đường BOT
+              Giá Cố Định Toàn Tuyến · Rẻ Hơn Limousine 25% – 35%
             </h2>
           </div>
           <span className="self-start sm:self-auto px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-mono font-bold border border-emerald-200 dark:border-emerald-800">
@@ -313,8 +313,9 @@ export default function CorridorMetroBoard({
                 <span className="text-xs text-slate-400">/ vé</span>
               </div>
             </div>
-            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700">
-              Chủ xe nhận: <strong>324.000đ</strong> (cho 2 ghế, bù đủ 297k xăng + BOT)
+            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <span>Đã gồm vé cầu đường</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">0đ phụ phí</span>
             </div>
           </div>
 
@@ -334,8 +335,9 @@ export default function CorridorMetroBoard({
                 <span className="text-xs text-slate-400">/ vé</span>
               </div>
             </div>
-            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-emerald-200 dark:border-emerald-800">
-              Chủ xe nhận: <strong>270.000đ</strong> (cho 2 ghế, bù đủ 253k xăng + BOT)
+            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+              <span>Đã gồm vé cầu đường</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">0đ phụ phí</span>
             </div>
           </div>
 
@@ -352,8 +354,9 @@ export default function CorridorMetroBoard({
                 <span className="text-xs text-slate-400">/ vé</span>
               </div>
             </div>
-            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700">
-              Chủ xe nhận: <strong>216.000đ</strong> (cho 2 ghế, bù đủ 198k xăng + BOT)
+            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <span>Đã gồm vé cầu đường</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">0đ phụ phí</span>
             </div>
           </div>
 
@@ -370,8 +373,9 @@ export default function CorridorMetroBoard({
                 <span className="text-xs text-slate-400">/ vé</span>
               </div>
             </div>
-            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700">
-              Chủ xe nhận: <strong>135.000đ</strong> (cho 2 ghế)
+            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <span>Chặng ngắn nội tỉnh</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">0đ phụ phí</span>
             </div>
           </div>
         </div>

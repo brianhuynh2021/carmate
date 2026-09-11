@@ -787,7 +787,7 @@ export default function StationRiderView({
                     Đích đến: <strong>{boardingPass.destinationName}</strong>
                   </span>
                   <span className="font-mono text-emerald-400 font-bold">
-                    Phụ xăng: {formatVND(boardingPass.fuelSurcharge || estimatedFare)}
+                    Cước trọn gói: {formatVND(boardingPass.fuelSurcharge || estimatedFare)}
                   </span>
                 </div>
               </div>
