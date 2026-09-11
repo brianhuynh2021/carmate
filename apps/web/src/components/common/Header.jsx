@@ -52,7 +52,7 @@ export function LanguageToggle({ className = '' } = {}) {
 export default function Header({
   activeTab,
   setActiveTab,
-  _onRequestPostTrip,
+  onRequestPostTrip,
   setShowPolicyModal,
   bookedCount = 0,
   _myTripsCount = 0,
@@ -333,13 +333,37 @@ export default function Header({
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveTab('my-trips');
+                      onRequestPostTrip?.('driver');
                       setIsUserMenuOpen(false);
                     }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer group"
                   >
-                    <Car className="w-3.5 h-3.5 text-[#0071e3]" />
-                    <span>{t('userMenu.myTrips')}</span>
+                    <div className="inline-flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                      <span>Hẹn lịch chuyến xe mai</span>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
+                      Level 3
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('booked');
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-[#0071e3]" />
+                      <span>{t('userMenu.myTrips') || 'Lịch hẹn & Vé xe'}</span>
+                    </div>
+                    {bookedCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#0071e3] text-white">
+                        {bookedCount}
+                      </span>
+                    )}
                   </button>
 
                   {(currentUser.role === 'admin' ||

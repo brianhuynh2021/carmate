@@ -576,6 +576,36 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ status, adminNote })
     });
+  },
+
+  // --- Movement Intents & Batch Matching (Level 3 Autonomous Engine) ---
+  async createMovementIntent(payload) {
+    return request('/intents', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getMovementIntents(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.append(key, val);
+      }
+    });
+    const qs = query.toString();
+    return request(`/intents${qs ? `?${qs}` : ''}`);
+  },
+
+  async runBatchMatch(payload = {}) {
+    return request('/intents/match', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getMatchingEpochs(limit = 20) {
+    return request(`/intents/epochs?limit=${limit}`);
   }
 };
 
