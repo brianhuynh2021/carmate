@@ -327,7 +327,7 @@ export default function StationRiderView({
             <div className="flex items-center gap-2">
               <Fuel className="w-4 h-4 text-emerald-400" />
               <span className="text-xs font-black uppercase tracking-wider font-mono text-emerald-400">
-                TRẠM ĐÓN METRO QL13
+                ĐIỂM ĐÓN CÂY XĂNG QL13
               </span>
             </div>
             <h1 className="text-sm sm:text-base font-bold text-white truncate max-w-[240px] sm:max-w-xs">
@@ -413,7 +413,7 @@ export default function StationRiderView({
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
-                  Cước cố định Metro:
+                  Cước đi ghép cố định:
                 </label>
                 <div className="h-13 px-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 flex flex-col justify-center">
                   <span className="text-base font-black font-mono text-emerald-400">

@@ -77,8 +77,8 @@ export default function Header({
 }) {
   const { t, lang, setLang } = useI18n();
   const tabs = [
-    { id: 'market', label: 'Tuyến Tàu Ảo', icon: Compass },
-    { id: 'station', label: 'Trạm Petrolimex', icon: Fuel },
+    { id: 'market', label: 'Tuyến Tiện Chuyến', icon: Compass },
+    { id: 'station', label: 'Điểm Đón Xe', icon: Fuel },
     { id: 'cockpit', label: 'Taplo Chủ Xe', icon: Car },
     { id: 'booked', label: t('nav.booked') || 'Lịch hẹn', icon: Clock, badge: bookedCount }
   ];

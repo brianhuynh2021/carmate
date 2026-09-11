@@ -8,8 +8,8 @@ export default function BottomNavBar({
   bookedCount = 0
 }) {
   const items = [
-    { id: 'market', label: 'Tuyến tàu', icon: Compass },
-    { id: 'station', label: 'Trạm đón', icon: Fuel },
+    { id: 'market', label: 'Tiện chuyến', icon: Compass },
+    { id: 'station', label: 'Điểm đón', icon: Fuel },
     { id: 'cockpit', label: 'Taplo', icon: Car, fab: true },
     { id: 'booked', label: 'Lịch hẹn', icon: Clock, badge: bookedCount },
     { id: 'inbox', label: 'Hộp thoại', icon: MessageSquare }

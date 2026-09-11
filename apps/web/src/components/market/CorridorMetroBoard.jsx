@@ -298,7 +298,7 @@ export default function CorridorMetroBoard({
           </div>
         </div>
 
-        {/* DANH SÁCH CÁC TRẠM NHƯ TỪNG GA TÀU ĐIỆN */}
+        {/* DANH SÁCH CÁC ĐIỂM ĐÓN CÂY XĂNG DỌC QUỐC LỘ 13 */}
         <div className="space-y-3">
           {ql13Hubs.map((hub, index) => (
             <div
