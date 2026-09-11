@@ -20,7 +20,6 @@ import {
   ShoppingBag,
   Factory,
   Plane,
-  RotateCcw,
   X,
   Printer,
   Smartphone,
@@ -37,7 +36,7 @@ import {
 } from '@carmate/shared';
 
 export default function CorridorMetroBoard({
-  currentUser = null,
+  currentUser: _currentUser = null,
   onOpenCockpit,
   onOpenStationView,
   onOpenIntentModal,
@@ -46,76 +45,29 @@ export default function CorridorMetroBoard({
 }) {
   const currentFuelPrice = getDailyFuelPrice();
 
-  // Tự động nhận diện vai trò người dùng (Chủ xe vs Người đi cùng) theo Stanford Ergonomics (Tải nhận thức = 0)
-  const detectedRoleInfo = useMemo(() => {
-    // 1. Kiểm tra xe trong hồ sơ currentUser
-    if (currentUser?.vehicle?.plate || currentUser?.vehicle?.brand || currentUser?.vehicle?.model) {
-      const detail = currentUser.vehicle.plate || `${currentUser.vehicle.brand || ''} ${currentUser.vehicle.model || ''}`.trim();
-      return { role: 'driver', label: 'Chủ xe', detail };
+  /**
+   * VAI TRÒ ĐANG CHỌN (Chủ xe / Người đi cùng)
+   *
+   * Người dùng đã tuyên bố vai trò khi bấm vào một trong HAI THẺ LỚN phía trên
+   * ("Chế độ Taplo nhận khách" = Chủ xe, "Đón xe về..." = Người đi cùng), nên băng
+   * lên lịch bên dưới KHÔNG hỏi lại — nó tự đi theo lựa chọn đó.
+   * Ghi nhớ qua localStorage để lần sau quay lại vẫn đúng vai trò quen thuộc.
+   */
+  const [activeRole, setActiveRole] = useState(() => {
+    try {
+      return localStorage.getItem('carmate_last_movement_role') === 'driver' ? 'driver' : 'passenger';
+    } catch {
+      return 'passenger';
     }
-    if (currentUser?.role === 'driver') {
-      return { role: 'driver', label: 'Chủ xe', detail: 'Chủ xe chính chủ' };
-    }
-    if (currentUser?.role === 'passenger' || currentUser?.role === 'rider') {
-      return { role: 'passenger', label: 'Người đi cùng', detail: 'Hành khách' };
-    }
+  });
 
-    // 2. Kiểm tra bộ nhớ cục bộ (LocalStorage)
-    if (typeof localStorage !== 'undefined') {
-      try {
-        // Đã từng cấu hình xe trên Cockpit Taplo
-        const cockpitVehRaw = localStorage.getItem('carmate_cockpit_vehicle');
-        if (cockpitVehRaw) {
-          const v = JSON.parse(cockpitVehRaw);
-          if (v?.plate || v?.model) {
-            return { role: 'driver', label: 'Chủ xe', detail: v.plate || v.model };
-          }
-        }
-
-        // Persona Memory của CarMate
-        const personaRaw = localStorage.getItem('carmate_persona_memory_v1');
-        if (personaRaw) {
-          const mem = JSON.parse(personaRaw);
-          if (mem?.driver?.carProfile?.carPlate || mem?.driver?.carProfile?.carType) {
-            return {
-              role: 'driver',
-              label: 'Chủ xe',
-              detail: mem.driver.carProfile.carPlate || mem.driver.carProfile.carType
-            };
-          }
-        }
-
-        // Vai trò đã dùng gần nhất
-        const lastRole = localStorage.getItem('carmate_last_movement_role');
-        if (lastRole === 'driver') {
-          return { role: 'driver', label: 'Chủ xe', detail: 'Lịch lái gần nhất' };
-        }
-        if (lastRole === 'passenger') {
-          return { role: 'passenger', label: 'Người đi cùng', detail: 'Lịch đặt gần nhất' };
-        }
-
-        if (localStorage.getItem('carmate_driver_registered_phone')) {
-          return { role: 'driver', label: 'Chủ xe', detail: 'Đã có xe' };
-        }
-      } catch {}
-    }
-
-    return { role: 'passenger', label: 'Người đi cùng', detail: '' };
-  }, [currentUser]);
-
-  const [roleOverride, setRoleOverride] = useState(null);
-  const activeRole = roleOverride || detectedRoleInfo.role;
-
-  const toggleRole = (e) => {
-    e.stopPropagation();
-    const nextRole = activeRole === 'driver' ? 'passenger' : 'driver';
-    setRoleOverride(nextRole);
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('carmate_last_movement_role', nextRole);
-      } catch {}
-    }
+  const rememberRole = (role) => {
+    setActiveRole(role);
+    try {
+      localStorage.setItem('carmate_last_movement_role', role);
+    } catch {}
   };
+
 
   // Hướng di chuyển: 'TO_SAIGON' (Bình Phước ➔ TP.HCM) | 'TO_BINH_PHUOC' (TP.HCM ➔ Bình Phước)
   const [direction, setDirection] = useState('TO_SAIGON');
@@ -303,6 +255,76 @@ export default function CorridorMetroBoard({
     }
   }, [direction]);
 
+  // Bất biến MIT: Biên độ cước liên tỉnh tính trực tiếp từ getFixedSegmentTariff & giá xăng RON 95
+  const corridorTariffRange = useMemo(() => {
+    const coreHubs = [
+      'hub_ql13_nga4_chon_thanh',
+      'hub_ql13_tan_khai',
+      'hub_ql13_binh_long',
+      'hub_ql13_cho_loc_ninh',
+      'hub_ql13_budop'
+    ];
+    const tariffs = direction === 'TO_SAIGON'
+      ? coreHubs.map((hubId) => getFixedSegmentTariff(hubId, 'hub_ql13_hang_xanh', { fuelPrice: currentFuelPrice.ron95Price }))
+      : coreHubs.map((hubId) => getFixedSegmentTariff(saigonOriginHubId, hubId, { fuelPrice: currentFuelPrice.ron95Price }));
+
+    const payouts = tariffs.map((t) => t.driverPayoutFor2Seats);
+    const fares = tariffs.map((t) => t.pricePerSeat);
+
+    const minPayout = Math.min(...payouts);
+    const maxPayout = Math.max(...payouts);
+    const minFare = Math.min(...fares);
+    const maxFare = Math.max(...fares);
+
+    const formatK = (val) => `${Math.round(val / 1000)}k`;
+
+    return {
+      driverPayoutText: `+${formatK(minPayout)} — +${formatK(maxPayout)}`,
+      riderFareText: `${formatK(minFare)} — ${formatK(maxFare)} / ghế`,
+      minPayout,
+      maxPayout,
+      minFare,
+      maxFare
+    };
+  }, [direction, saigonOriginHubId, currentFuelPrice.ron95Price]);
+
+  // Biểu phí cố định QL13 tính toán động 100% từ getFixedSegmentTariff theo chiều tuyến
+  const samplePricingCards = useMemo(() => {
+    if (direction === 'TO_SAIGON') {
+      const items = [
+        { from: 'hub_ql13_binh_long', to: 'hub_ql13_hang_xanh', note: 'Vé BOT', highlight: false },
+        { from: 'hub_ql13_tan_khai', to: 'hub_ql13_hang_xanh', note: 'Vé BOT', highlight: true },
+        { from: 'hub_ql13_nga4_chon_thanh', to: 'hub_ql13_hang_xanh', note: 'Vé BOT', highlight: false },
+        { from: 'hub_ql13_binh_long', to: 'hub_ql13_nga4_chon_thanh', note: 'Nội tỉnh', highlight: false }
+      ];
+      return items.map((item) => {
+        const tariff = getFixedSegmentTariff(item.from, item.to, { fuelPrice: currentFuelPrice.ron95Price });
+        return {
+          ...item,
+          label: tariff.label,
+          pricePerSeat: tariff.pricePerSeat,
+          distanceKm: tariff.distanceKm
+        };
+      });
+    } else {
+      const items = [
+        { from: saigonOriginHubId, to: 'hub_ql13_budop', note: 'Tuyến gom ĐT759', highlight: true },
+        { from: saigonOriginHubId, to: 'hub_ql13_cho_loc_ninh', note: 'Mặt tiền QL13', highlight: false },
+        { from: saigonOriginHubId, to: 'hub_ql13_binh_long', note: 'Vé BOT', highlight: false },
+        { from: saigonOriginHubId, to: 'hub_ql13_nga4_chon_thanh', note: 'Cửa ngõ Bình Phước', highlight: false }
+      ];
+      return items.map((item) => {
+        const tariff = getFixedSegmentTariff(item.from, item.to, { fuelPrice: currentFuelPrice.ron95Price });
+        return {
+          ...item,
+          label: tariff.label,
+          pricePerSeat: tariff.pricePerSeat,
+          distanceKm: tariff.distanceKm
+        };
+      });
+    }
+  }, [direction, saigonOriginHubId, currentFuelPrice.ron95Price]);
+
   // Tự động định vị GPS để vào ngay điểm đón gần nhất theo hướng đã chọn
   const handleAutoDetectAndOpenRiderView = () => {
     if (direction === 'TO_BINH_PHUOC') {
@@ -395,44 +417,6 @@ export default function CorridorMetroBoard({
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
-      {/* ── BỘ CHỌN CHIỀU TUYẾN 1-CHẠM (STANFORD ERGONOMICS: TWO-WAY COMMUTING) ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 bg-slate-200/70 dark:bg-slate-900/80 backdrop-blur-md rounded-3xl border border-slate-300/60 dark:border-white/[0.08]">
-        <div className="grid grid-cols-2 gap-1.5 p-1 bg-white/80 dark:bg-black/40 rounded-2xl border border-black/[0.05] dark:border-white/[0.06] flex-1">
-          <button
-            type="button"
-            onClick={() => setDirection('TO_SAIGON')}
-            className={`py-3 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              direction === 'TO_SAIGON'
-                ? 'bg-[#0071e3] text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <span>🚗 ⬇️ Bình Phước ➔ Sài Gòn</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/20 font-mono hidden sm:inline">Chiều Đi</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setDirection('TO_BINH_PHUOC')}
-            className={`py-3 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              direction === 'TO_BINH_PHUOC'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <span>🚗 ⬆️ Sài Gòn ➔ Bình Phước</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/20 font-mono hidden sm:inline">Chiều Về</span>
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={() => setDirection((prev) => (prev === 'TO_SAIGON' ? 'TO_BINH_PHUOC' : 'TO_SAIGON'))}
-          className="px-4 py-2.5 rounded-2xl bg-white/80 dark:bg-white/[0.06] hover:bg-white dark:hover:bg-white/[0.12] text-xs font-bold font-mono text-slate-700 dark:text-slate-200 border border-black/[0.05] dark:border-white/[0.08] flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-          <span>⇄ Đổi chiều tuyến</span>
-        </button>
-      </div>
-
       {/* ========================================================================= */}
       {/* 1. HERO BANNER: TUYẾN XE TIỆN CHUYẾN QUỐC LỘ 13                            */}
       {/* ========================================================================= */}
@@ -459,6 +443,40 @@ export default function CorridorMetroBoard({
               ? 'Kết nối trực tiếp Chủ xe và Người đi cùng dọc Quốc lộ 13. Đón trả tại cây xăng Petrolimex và điểm trung tâm.'
               : 'Đón xe chiều về thuận đường từ Tân Sơn Nhất, Hàng Xanh, Ngã 4 Bình Phước về Bàu Bàng, Chơn Thành, Tân Khai, Bình Long.'}
           </p>
+
+          {/*
+            BỘ CHỌN CHIỀU TUYẾN 1-CHẠM (STANFORD ERGONOMICS: TWO-WAY COMMUTING)
+            Đặt ngay trong Hero — đúng ngữ cảnh nội dung mà nó điều khiển (tiêu đề,
+            mô tả, biểu phí bên dưới đều đổi theo chiều), thay vì nổi lơ lửng phía
+            trên Hero như một thanh điều khiển không rõ thuộc về đâu.
+            Nút "⇄ Đổi chiều tuyến" cũ đã bỏ: hai tab dưới đây đã làm trọn việc đó.
+          */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/30 rounded-2xl border border-white/[0.08] max-w-md">
+            <button
+              type="button"
+              onClick={() => setDirection('TO_SAIGON')}
+              className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                direction === 'TO_SAIGON'
+                  ? 'bg-[#0071e3] text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+              }`}
+            >
+              <span>⬇️</span>
+              <span className="whitespace-nowrap">Về Sài Gòn</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDirection('TO_BINH_PHUOC')}
+              className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                direction === 'TO_BINH_PHUOC'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+              }`}
+            >
+              <span>⬆️</span>
+              <span className="whitespace-nowrap">Về Bình Phước</span>
+            </button>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-300 font-mono">
             <span className="flex items-center gap-1.5 bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.1]">
@@ -504,14 +522,19 @@ export default function CorridorMetroBoard({
 
             <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-between text-xs text-slate-300">
               <span className="text-slate-400 font-mono">Bù xăng (2 ghế):</span>
-              <span className="text-emerald-400 font-bold font-mono text-sm">+270k — +324k</span>
+              <span className="text-emerald-400 font-bold font-mono text-sm">
+                {corridorTariffRange.driverPayoutText}
+              </span>
             </div>
           </div>
 
           <div>
             <button
               type="button"
-              onClick={onOpenCockpit}
+              onClick={() => {
+                rememberRole('driver');
+                onOpenCockpit?.();
+              }}
               className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
             >
               <Radio className="w-4 h-4 animate-pulse" />
@@ -543,14 +566,19 @@ export default function CorridorMetroBoard({
 
             <div className="p-3 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
               <span className="text-slate-500 dark:text-slate-400 font-mono">Phụ xăng tham khảo:</span>
-              <span className="text-[#0071e3] font-bold font-mono text-sm">120k — 180k / ghế</span>
+              <span className="text-[#0071e3] font-bold font-mono text-sm">
+                {corridorTariffRange.riderFareText}
+              </span>
             </div>
           </div>
 
           <div>
             <button
               type="button"
-              onClick={handleAutoDetectAndOpenRiderView}
+              onClick={() => {
+                rememberRole('passenger');
+                handleAutoDetectAndOpenRiderView();
+              }}
               className="w-full h-12 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
             >
               <MapPin className="w-4 h-4 text-emerald-300" />
@@ -570,29 +598,33 @@ export default function CorridorMetroBoard({
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-white">
-                  {activeRole === 'driver' ? 'Lên lịch xe sáng mai' : 'Hẹn giờ đón xe sáng mai'}
-                </h3>
-                <span className="px-2.5 py-0.5 rounded-full bg-white/[0.08] text-slate-300 text-[11px] font-mono border border-white/10">
-                  {activeRole === 'driver' ? 'Chủ xe' : 'Người đi cùng'}
-                </span>
-              </div>
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                {activeRole === 'driver' ? 'Lên lịch chuyến sáng mai' : 'Hẹn giờ đón xe sáng mai'}
+              </h3>
               <p className="text-xs text-slate-400 mt-0.5">Tự động ghép bạn đồng hành cùng tuyến QL13</p>
             </div>
           </div>
 
+          {/*
+            CÔNG THÁI HỌC STANFORD (TẢI NHẬN THỨC = 0):
+            Vai trò ĐÃ được chọn ở hai thẻ lớn phía trên (Chủ xe / Người đi cùng),
+            nên ở đây KHÔNG hỏi lại lần nữa — chỉ còn đúng MỘT nút, tự đi theo vai
+            trò người dùng vừa chọn. Hỏi lại cùng một câu hai lần là tải nhận thức thừa.
+          */}
           <button
             type="button"
             onClick={() => onOpenIntentModal?.(activeRole)}
-            className={`h-10 sm:h-11 px-5 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] cursor-pointer transition-all shrink-0 ${
+            className={`h-11 px-5 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] cursor-pointer transition-all shrink-0 w-full sm:w-auto ${
               activeRole === 'driver'
                 ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
                 : 'bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[#0071e3]/25'
             }`}
           >
-            <span>{activeRole === 'driver' ? 'Lên lịch ngay' : 'Đặt chỗ ngay'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            {activeRole === 'driver' ? <Car className="w-4 h-4 shrink-0" /> : <Users className="w-4 h-4 shrink-0" />}
+            <span className="whitespace-nowrap">
+              {activeRole === 'driver' ? 'Lên lịch xe sáng mai' : 'Hẹn giờ đón xe sáng mai'}
+            </span>
+            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
           </button>
         </div>
       </section>
@@ -614,105 +646,36 @@ export default function CorridorMetroBoard({
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {direction === 'TO_SAIGON' ? (
-            <>
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Bình Long ➔ Hàng Xanh
+          {samplePricingCards.map((card, idx) => (
+            <div
+              key={idx}
+              className={`p-3.5 rounded-2xl border space-y-1 ${
+                card.highlight
+                  ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-500/30'
+                  : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/70 dark:border-slate-700/60'
+              }`}
+            >
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                {card.label}
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span
+                  className={`text-xl font-bold font-mono ${
+                    card.highlight ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#0071e3]'
+                  }`}
+                >
+                  {formatVND(card.pricePerSeat)}
                 </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-[#0071e3]">180.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~115 km · Vé BOT</span>
+                <span className="text-[11px] text-slate-400">/ ghế</span>
               </div>
-
-              <div className="p-3.5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Tân Khai ➔ Hàng Xanh
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~95 km · Vé BOT</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Chơn Thành ➔ Hàng Xanh
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-[#0071e3]">120.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~75 km · Vé BOT</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Bình Long ➔ Chơn Thành
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-[#0071e3]">75.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~40 km · Nội tỉnh</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="p-3.5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Hàng Xanh ➔ Bù Đốp
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">240.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~155 km · Tuyến gom ĐT759</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Hàng Xanh ➔ Lộc Ninh
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-[#0071e3]">205.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~135 km · Mặt tiền QL13</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Hàng Xanh ➔ Bình Long
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-[#0071e3]">180.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~115 km · Vé BOT</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-purple-50/40 dark:bg-purple-950/20 border border-purple-500/30 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Sân bay TSN ➔ Bù Đốp
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-purple-600 dark:text-purple-400">255.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~160 km · Vé sân bay</span>
-              </div>
-            </>
-          )}
+              <span className="text-[11px] font-mono text-slate-400 block">
+                ~{card.distanceKm} km · {card.note}
+              </span>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* 4. ĐIỂM ĐÓN DỌC TUYẾN QL13                                                 */}
-      {/* ========================================================================= */}
       {/* ========================================================================= */}
       {/* 4. ĐIỂM ĐÓN DỌC TUYẾN QL13                                                 */}
       {/* ========================================================================= */}
@@ -730,7 +693,7 @@ export default function CorridorMetroBoard({
           </div>
 
           <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-semibold">
-            {direction === 'TO_SAIGON' ? '~3–5 phút / xe' : '4 Cửa ngõ · 6 Điểm trả'}
+            {direction === 'TO_SAIGON' ? '20 Trạm đón · Đón trả linh hoạt' : '4 Cửa ngõ · 6 Điểm trả'}
           </span>
         </div>
 
