@@ -379,7 +379,7 @@ export function buildOrderMatchedNotification({
     return {
       event: 'OrderMatchedEvent',
       recipientRole: 'passenger',
-      title: 'Lệnh đi nhờ của bạn đã KHỚP THÀNH CÔNG 🎉',
+      title: 'Yêu cầu đi cùng của bạn đã KHỚP THÀNH CÔNG 🎉',
       body: `Xe ${vehicleModel} (${plate}) sẽ đón bạn lúc ${rendezvousTime} tại ${stationName}. Mã PIN: ${pinCode}. Bạn nhớ có mặt đúng giờ nhé!`,
       payload: { vehicleModel, plate, rendezvousTime, stationName, pinCode, seats }
     };

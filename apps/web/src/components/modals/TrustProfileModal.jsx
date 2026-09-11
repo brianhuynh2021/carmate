@@ -304,7 +304,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 italic">
-                "Anh Tuấn đi nhờ xe tôi về Bến xe Miền Đông, đứng chờ đúng điểm hẹn, lên xe chào hỏi văn minh, gửi tiền
+                "Anh Tuấn đi cùng xe tôi về Bến xe Miền Đông, đứng chờ đúng điểm hẹn, lên xe chào hỏi văn minh, gửi tiền
                 xăng sòng phẳng."
               </p>
             </div>

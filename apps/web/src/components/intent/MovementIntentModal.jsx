@@ -256,7 +256,7 @@ export default function MovementIntentModal({
                 }`}
               >
                 <Car className="w-4 h-4" />
-                <span>Chủ xe (Lái xe)</span>
+                <span>Chủ xe</span>
               </button>
               <button
                 type="button"
@@ -268,7 +268,7 @@ export default function MovementIntentModal({
                 }`}
               >
                 <Users className="w-4 h-4" />
-                <span>Người đi cùng (Đi nhờ)</span>
+                <span>Người đi cùng</span>
               </button>
             </div>
           </div>
