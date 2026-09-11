@@ -8,8 +8,11 @@ import {
   driverVerifyPin,
   resetAllStationData
 } from '../services/stationQueueService.js';
+import { getUserByPhone, saveUser } from '../db/sqliteStore.js';
+import { generateToken } from '../utils/token.js';
+import { cleanPhoneNumber } from '@carmate/shared';
 
-export function riderCheckInHandler(req, res) {
+export async function riderCheckInHandler(req, res) {
   try {
     const { hubId } = req.params;
     const { destinationHubId, seatsNeeded, phone, name, clientLat, clientLng } = req.body || {};
@@ -23,6 +26,48 @@ export function riderCheckInHandler(req, res) {
       clientLat,
       clientLng
     });
+
+    // Unified Auth / Upsert: Tự động khởi tạo hoặc nạp tài khoản định danh ngầm (0.05s)
+    if (phone) {
+      try {
+        const cleaned = cleanPhoneNumber(phone);
+        if (cleaned) {
+          let userRecord = getUserByPhone(cleaned);
+          const displayName = (name && name.trim() && name.trim() !== 'Khách đi cùng')
+            ? name.trim()
+            : (userRecord?.name || `Khách ${cleaned.slice(-4)}`);
+
+          if (!userRecord) {
+            userRecord = {
+              id: 'USR-' + cleaned,
+              phone: cleaned,
+              name: displayName,
+              avatar: '',
+              role: 'rider',
+              trustScore: 98,
+              safeTripsCount: 0,
+              provider: 'station_quick_checkin'
+            };
+            await saveUser(userRecord);
+          } else if (name && name.trim() && name.trim() !== 'Khách đi cùng' && (!userRecord.name || userRecord.name.startsWith('Khách ') || userRecord.name.startsWith('Thành viên '))) {
+            userRecord.name = name.trim();
+            await saveUser(userRecord);
+          }
+
+          const token = generateToken({
+            userId: userRecord.id,
+            phone: userRecord.phone,
+            role: userRecord.role || 'rider',
+            name: userRecord.name
+          });
+
+          result.token = token;
+          result.user = userRecord;
+        }
+      } catch (authErr) {
+        console.warn('[riderCheckInHandler] Unified auth upsert warning:', authErr.message);
+      }
+    }
 
     return res.status(201).json(result);
   } catch (err) {

@@ -452,6 +452,9 @@ export default function StationRiderView({
         });
 
         if (res?.success && res?.intent) {
+          if (res.token) {
+            setStoredAuthToken(res.token);
+          }
           setBoardingPass(res.intent);
           setViewStep('BOARDING_PASS');
           try {
@@ -579,9 +582,15 @@ export default function StationRiderView({
   const handleCheckInClick = (e) => {
     e?.preventDefault();
 
-    // Nếu đã có SĐT (từ tài khoản đăng nhập hoặc đã ghi nhớ thiết bị) -> Check-in 1-chạm
-    if (phone && phone.trim().length >= 9) {
-      executeCheckIn(phone.trim(), name);
+    // Nếu khách đã gõ SĐT vào ô input (>= 9 số)
+    const cleaned = cleanPhoneNumber(phone);
+    if (cleaned && cleaned.length >= 9 && isValidVietnamesePhone(cleaned)) {
+      executeCheckIn(cleaned, name);
+      return;
+    }
+
+    if (phone && phone.trim().length > 0 && !isValidVietnamesePhone(cleaned)) {
+      onShowToast?.('Vui lòng kiểm tra lại số điện thoại (10 chữ số)');
       return;
     }
 
@@ -951,8 +960,24 @@ export default function StationRiderView({
                   </button>
                 )}
               </div>
+
+              {/* Tùy chọn tên hiển thị ngắn gọn (không bắt buộc) */}
+              <div className="pt-0.5">
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1">
+                  <span>Tên hiển thị (để chủ xe xưng hô):</span>
+                  <span className="text-slate-500">(Không bắt buộc)</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="VD: Hưng, Chị Lan..."
+                  value={name === 'Khách đi cùng' ? '' : name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full h-11 px-3.5 text-sm font-semibold rounded-xl bg-white/[0.04] border border-white/[0.08] text-white placeholder-slate-500 outline-none focus:border-emerald-400 transition-all"
+                />
+              </div>
+
               <p className="text-[11px] text-slate-400 font-mono">
-                *Mã xác thực SMS sẽ tự động điền (WebOTP)
+                *Không cần mật khẩu · Tự động kích hoạt vé &amp; lưu phiên an toàn
               </p>
             </div>
 
