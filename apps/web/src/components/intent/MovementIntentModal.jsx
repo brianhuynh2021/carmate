@@ -29,6 +29,40 @@ import {
 } from '@carmate/shared';
 import api from '../../api/client.js';
 
+// Danh sách Trạm Sài Gòn (TP.HCM & Cửa ngõ)
+export const SAIGON_HUB_IDS = [
+  'hub_ql13_hang_xanh',
+  'hub_ql13_san_bay_tsn',
+  'hub_ql13_binh_trieu',
+  'hub_ql13_van_phuc_city',
+  'hub_ql13_nga4_binh_phuoc'
+];
+
+// Danh sách Trạm Bình Phước (Bù Đốp, Lộc Ninh, Bình Long, Hớn Quản, Chơn Thành, Bàu Bàng)
+export const BINH_PHUOC_HUB_IDS = [
+  'hub_ql13_budop',
+  'hub_ql13_tan_tien',
+  'hub_ql13_hoa_lu',
+  'hub_ql13_loc_hiep',
+  'hub_ql13_loc_tan',
+  'hub_ql13_cho_loc_ninh',
+  'hub_ql13_thanh_luong',
+  'hub_ql13_binh_long',
+  'hub_ql13_tthc_binh_long',
+  'hub_ql13_tan_khai',
+  'hub_ql13_tthc_tan_khai',
+  'hub_ql13_minh_hung',
+  'hub_ql13_vincom_chon_thanh',
+  'hub_ql13_nga4_chon_thanh',
+  'hub_ql13_tthc_chon_thanh',
+  'hub_ql13_becamex_chon_thanh',
+  'hub_ql13_bau_bang',
+  'hub_ql13_tthc_bau_bang',
+  'hub_ql13_nga4_so_sao',
+  'hub_ql13_vsip1',
+  'hub_ql13_cong_chao_lai_thieu'
+];
+
 export default function MovementIntentModal({
   isOpen,
   onClose,
@@ -40,8 +74,34 @@ export default function MovementIntentModal({
   onShowToast
 }) {
   const [role, setRole] = useState(initialRole);
-  const [originHubId, setOriginHubId] = useState(initialOriginHubId || 'hub_ql13_binh_long');
-  const [destHubId, setDestHubId] = useState(initialDestHubId || 'hub_ql13_hang_xanh');
+
+  // Danh sách trạm theo khu vực địa lý để không bị rối (Stanford Ergonomics)
+  const saigonHubs = useMemo(() => {
+    return VIRTUAL_HUBS.filter((h) => SAIGON_HUB_IDS.includes(h.id));
+  }, []);
+
+  const binhPhuocHubs = useMemo(() => {
+    return VIRTUAL_HUBS.filter((h) => !SAIGON_HUB_IDS.includes(h.id));
+  }, []);
+
+  // Hướng di chuyển: 'TO_SAIGON' (Bình Phước ➔ Sài Gòn) | 'TO_BINH_PHUOC' (Sài Gòn ➔ Bình Phước)
+  const [direction, setDirection] = useState(() => {
+    if (initialOriginHubId && SAIGON_HUB_IDS.includes(initialOriginHubId)) {
+      return 'TO_BINH_PHUOC';
+    }
+    return 'TO_SAIGON';
+  });
+
+  const [originHubId, setOriginHubId] = useState(() => {
+    if (initialOriginHubId) return initialOriginHubId;
+    return 'hub_ql13_binh_long';
+  });
+
+  const [destHubId, setDestHubId] = useState(() => {
+    if (initialDestHubId) return initialDestHubId;
+    return 'hub_ql13_hang_xanh';
+  });
+
   const [seats, setSeats] = useState(initialRole === 'driver' ? 3 : 1);
 
   useEffect(() => {
@@ -100,20 +160,63 @@ export default function MovementIntentModal({
   useEffect(() => {
     if (isOpen) {
       setRole(initialRole === 'driver' ? 'driver' : 'passenger');
-      if (initialOriginHubId) setOriginHubId(initialOriginHubId);
-      if (initialDestHubId) setDestHubId(initialDestHubId);
+      const isOriginSaigon = initialOriginHubId && SAIGON_HUB_IDS.includes(initialOriginHubId);
+      const targetDirection = isOriginSaigon ? 'TO_BINH_PHUOC' : 'TO_SAIGON';
+      setDirection(targetDirection);
+
+      if (targetDirection === 'TO_SAIGON') {
+        const validOrigin = initialOriginHubId && !SAIGON_HUB_IDS.includes(initialOriginHubId)
+          ? initialOriginHubId
+          : 'hub_ql13_binh_long';
+        const validDest = initialDestHubId && SAIGON_HUB_IDS.includes(initialDestHubId)
+          ? initialDestHubId
+          : 'hub_ql13_hang_xanh';
+        setOriginHubId(validOrigin);
+        setDestHubId(validDest);
+      } else {
+        const validOrigin = initialOriginHubId && SAIGON_HUB_IDS.includes(initialOriginHubId)
+          ? initialOriginHubId
+          : 'hub_ql13_hang_xanh';
+        const validDest = initialDestHubId && !SAIGON_HUB_IDS.includes(initialDestHubId)
+          ? initialDestHubId
+          : 'hub_ql13_binh_long';
+        setOriginHubId(validOrigin);
+        setDestHubId(validDest);
+      }
+
       if (currentUser?.phone) setPhone(currentUser.phone);
       if (currentUser?.name) setContactName(currentUser.name);
       setPhoneError('');
     }
   }, [isOpen, initialRole, initialOriginHubId, initialDestHubId, currentUser]);
 
-  // Đảo chiều khứ hồi 1-chạm (⇄)
-  const handleSwapDirection = () => {
-    const temp = originHubId;
-    setOriginHubId(destHubId);
-    setDestHubId(temp);
+  // Đổi chiều di chuyển rạch ròi 2 chiều
+  const handleSetDirection = (newDir) => {
+    if (newDir === direction) return;
+    setDirection(newDir);
+
+    if (newDir === 'TO_SAIGON') {
+      // Chiều đi: Đón tại Bình Phước ➔ Đến tại Sài Gòn
+      const nextOrigin = !SAIGON_HUB_IDS.includes(destHubId) ? destHubId : 'hub_ql13_binh_long';
+      const nextDest = SAIGON_HUB_IDS.includes(originHubId) ? originHubId : 'hub_ql13_hang_xanh';
+      setOriginHubId(nextOrigin);
+      setDestHubId(nextDest);
+    } else {
+      // Chiều về: Đón tại Sài Gòn ➔ Đến tại Bình Phước
+      const nextOrigin = SAIGON_HUB_IDS.includes(destHubId) ? destHubId : 'hub_ql13_hang_xanh';
+      const nextDest = !SAIGON_HUB_IDS.includes(originHubId) ? originHubId : 'hub_ql13_binh_long';
+      setOriginHubId(nextOrigin);
+      setDestHubId(nextDest);
+    }
   };
+
+  const handleSwapDirection = () => {
+    const nextDir = direction === 'TO_SAIGON' ? 'TO_BINH_PHUOC' : 'TO_SAIGON';
+    handleSetDirection(nextDir);
+  };
+
+  const pickupHubs = direction === 'TO_SAIGON' ? binhPhuocHubs : saigonHubs;
+  const dropoffHubs = direction === 'TO_SAIGON' ? saigonHubs : binhPhuocHubs;
 
   // Lấy thông tin trạm quy chuẩn dọc QL13
   const originHub = useMemo(() => {
@@ -302,33 +405,58 @@ export default function MovementIntentModal({
             )}
           </div>
 
-          {/* 2. CHỌN HÀNH TRÌNH QL13 (ĐIỂM ĐÓN & ĐIỂM ĐẾN) */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
+          {/* 2. CHỌN HÀNH TRÌNH QL13 (PHÂN ĐỊNH RẠCH RÒI 2 CHIỀU ĐI - VỀ) */}
+          <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400">
                 2. Lộ trình trên Tuyến QL13
               </label>
-              <button
-                type="button"
-                onClick={handleSwapDirection}
-                className="text-xs font-mono font-bold text-[#0071e3] hover:underline inline-flex items-center gap-1 cursor-pointer"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>Đổi chiều khứ hồi</span>
-              </button>
+
+              {/* Phân định rạch ròi 2 chiều di chuyển */}
+              <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => handleSetDirection('TO_SAIGON')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                    direction === 'TO_SAIGON'
+                      ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>Bình Phước ➔ Sài Gòn</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetDirection('TO_BINH_PHUOC')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                    direction === 'TO_BINH_PHUOC'
+                      ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>Sài Gòn ➔ Bình Phước</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Ô 1: ĐIỂM ĐÓN (CHỈ CHỨA TRẠM ĐÚNG VÙNG ĐÓN) */}
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] space-y-1">
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5" /> Điểm Đón
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {direction === 'TO_SAIGON' ? 'Điểm Đón (Bình Phước)' : 'Điểm Đón (Sài Gòn / TP.HCM)'}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-slate-400">
+                    {direction === 'TO_SAIGON' ? 'Bình Phước' : 'TP.HCM'}
+                  </span>
+                </div>
                 <select
                   value={originHubId}
                   onChange={(e) => setOriginHubId(e.target.value)}
                   className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white border-0 outline-none cursor-pointer truncate"
                 >
-                  {VIRTUAL_HUBS.map((hub) => (
+                  {pickupHubs.map((hub) => (
                     <option key={hub.id} value={hub.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                       {hub.shortName || hub.name} — {hub.landmark}
                     </option>
@@ -339,16 +467,23 @@ export default function MovementIntentModal({
                 </div>
               </div>
 
+              {/* Ô 2: ĐIỂM ĐẾN (CHỈ CHỨA TRẠM ĐÚNG VÙNG ĐẾN) */}
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] space-y-1">
-                <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5" /> Điểm Đến
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {direction === 'TO_SAIGON' ? 'Điểm Đến (Sài Gòn / TP.HCM)' : 'Điểm Đến (Bình Phước)'}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-slate-400">
+                    {direction === 'TO_SAIGON' ? 'TP.HCM' : 'Bình Phước'}
+                  </span>
+                </div>
                 <select
                   value={destHubId}
                   onChange={(e) => setDestHubId(e.target.value)}
                   className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white border-0 outline-none cursor-pointer truncate"
                 >
-                  {VIRTUAL_HUBS.map((hub) => (
+                  {dropoffHubs.map((hub) => (
                     <option key={hub.id} value={hub.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                       {hub.shortName || hub.name} — {hub.landmark}
                     </option>
