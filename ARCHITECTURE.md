@@ -9,7 +9,7 @@
 ## MỤC LỤC HỆ THỐNG
 1. [Sơ Đồ Kiến Trúc Hệ Thống Cấp Cao (High-Level Architecture)](#1-sơ-đồ-kiến-trúc-hệ-thống-cấp-cao)
 2. [Quy Trình Khớp Lệnh Tự Động Cấp Độ 3 (Level 3 Autonomous Engine Pipeline)](#2-quy-trình-khớp-lệnh-tự-động-cấp-độ-3)
-3. [Mạng Lưới Trạm Đón Ảo & Đón Tận Cửa 2km (Virtual Hubs & Doorstep Network)](#3-mạng-lưới-trạm-đón-ảo--đón-tận-cửa-2km)
+3. [Mạng Lưới Điểm Đón Ảo Chuẩn Hóa Dọc Tuyến (100% Virtual Hubs — Triệt Tiêu Đón Tận Nhà)](#3-mạng-lưới-điểm-đón-ảo-chuẩn-hóa-dọc-tuyến)
 4. [Các Công Trình & Mô Hình Toán Học Cốt Lõi (Core Mathematical Foundations)](#4-các-công-trình--mô-hình-toán-học-cốt-lõi)
    - [Công trình 1: Phân Phối Chi Phí Công Bằng Shapley Value (Lloyd Shapley, Nobel 2012)](#công-trình-1-phân-phối-chi-phí-công-bằng-shapley-value)
    - [Công trình 2: Đồ Thị Shareability & Thuật Toán Ghép Cặp Gale-Shapley (1962)](#công-trình-2-đồ-thị-shareability--thuật-toán-ghép-cặp-gale-shapley)
@@ -36,7 +36,7 @@ graph TB
     end
 
     subgraph SHARED_CORE ["GÓI CHIA SẺ TRUNG TÂM (@carmate/shared)"]
-        RoutesConst["📍 routes.js<br>28 Trạm đón ảo Tuyến QL13 & N2<br>Bán kính láng giềng ≤ 2.0km"]
+        RoutesConst["📍 routes.js<br>28 Trạm đón ảo Tuyến QL13 & N2<br>100% Cây xăng Petrolimex cố định"]
         PricingMath["⚖️ pricing.js & vehicles.js<br>Mô hình chi phí lăn bánh thực tế<br>Định mức cước kiện hàng & chành xe"]
         TimeSlots["⏰ timeSlots.js<br>Chuẩn hoá 24h không từ thừa"]
         PoliciesConst["📜 policies.js<br>Quy chế văn minh, 0% phí sàn, cam kết trực tiếp"]
@@ -47,9 +47,9 @@ graph TB
         
         subgraph ENGINE_LEVEL3 ["BỘ ĐIỀU PHỐI TỰ ĐỘNG CẤP ĐỘ 3 (Autonomous Engine)"]
             BatchScheduler["⏱️ Micro-Batch Epoch Coordinator<br>Gom phiên tự động mỗi 3 phút (180s)"]
-            GraphBuilder["🕸️ Shareability Graph Builder<br>Lọc đa chiều: Cự ly, Hướng, Ghế, Detour ≤ 2km"]
+            GraphBuilder["🕸️ Shareability Graph Builder<br>Lọc đa chiều: Cự ly, Hướng, Ghế, Trùng trạm cây xăng"]
             GaleShapleyCore["🤝 Gale-Shapley Matching Engine<br>Ghép cặp lưỡng phân tối ưu toàn cục (Pareto-Stable)"]
-            ShapleyFairPricing["💰 Fair Pricing Allocator<br>Phân bổ chi phí lăn bánh + Phụ phí đón tận nhà"]
+            ShapleyFairPricing["💰 Fair Pricing Allocator<br>Phân bổ chi phí lăn bánh công bằng theo chặng"]
             TimeDecayPenalty["⚖️ Time-Decay Penalty Evaluator<br>Suy giảm tín nhiệm & tự động đóng băng tài khoản"]
             StandbyRadar["🚨 Standby Rescue Buffer<br>Radar cứu hộ đệm khẩn cấp ±45 phút"]
         end
@@ -93,26 +93,25 @@ sequenceDiagram
     participant Telegram as Telegram Bot / SMS
 
     Note over Driver,Passenger: 1. GỬI Ý ĐỊNH DI CHUYỂN (SUBMIT RIDE INTENT)
-    Driver->>Engine: Gửi Offer: Tuyến QL13, 07:00, 4 ghế trống, Điểm đón ảo
-    Passenger->>Engine: Gửi Request: Tuyến QL13, 07:15, 1 ghế, Đón tận nhà (ấp Tân Lập, r = 1.4km)
+    Driver->>Engine: Gửi Offer: Tuyến QL13, 07:00, 4 ghế trống, Điểm đón: Cây xăng Petrolimex Lộc Ninh
+    Passenger->>Engine: Gửi Request: Tuyến QL13, 07:15, 1 ghế, Điểm đón: Cây xăng Petrolimex Tân Khai
     Engine->>Store: Ghi nhận Intent vào hàng đợi gom phiên (status = 'active')
 
     Note over Engine: 2. CỬA SỔ GOM PHIÊN VI MÔ (MICRO-BATCH WINDOW = 180s)
     Engine->>Engine: Đợi kết thúc chu kỳ epoch 3 phút (gom đủ mật độ yêu cầu)
 
     Note over Engine: 3. DỰNG ĐỒ THỊ SHAREABILITY GRAPH G = (V_D ∪ V_P, E)
-    Engine->>Engine: Lọc toạ độ Geodesic Haversine (Hành lang QL13, r ≤ 2km)
+    Engine->>Engine: Lọc toạ độ Geodesic Haversine (Hành lang QL13, trùng trục giao thông)
     Engine->>Engine: Lọc khung giờ chênh lệch (|Δt| ≤ 45 phút)
-    Engine->>Engine: Lọc điều kiện đón tận cửa (distToDriver = 1.4km ≤ 2.0km ✅)
+    Engine->>Engine: Lọc trùng khớp trạm đón cây xăng Petrolimex chuẩn hoá ✅
 
     Note over Engine: 4. THI HÀNH THUẬT TOÁN GALE-SHAPLEY ỔN ĐỊNH
     Engine->>Engine: Deferred Acceptance tìm điểm cân bằng không có Blocking Pair
     Engine->>Engine: Khớp thành công: Chủ xe ↔ Người đi cùng
 
-    Note over Engine: 5. ĐỊNH GIÁ CHI PHÍ LĂN BÁNH THỰC TẾ & BỒI THƯỜNG
-    Engine->>Engine: Tính giá chặng 149km: 190.000đ
-    Engine->>Engine: Cộng phụ phí đón tận nhà: +40.000đ (Tổng: 230.000đ)
-    Engine->>Engine: Chia 50% (+20.000đ) đền bù giảm giá cho khách cùng xe khác đón tại Trạm ảo
+    Note over Engine: 5. ĐỊNH GIÁ CHI PHÍ THEO PHÂN ĐOẠN TUYẾN CHUẨN (ZERO-SURGE)
+    Engine->>Engine: Tính giá chặng 149km: 190.000đ (Định chuẩn cước phân đoạn)
+    Engine->>Engine: 100% đón tại cây xăng: Phụ phí đón nhà = 0đ, Tiền đền bù = 0đ
 
     Note over Engine,Store: 6. CHỐT PHIÊN KHỚP LỆNH & THÔNG BÁO TỨC THÌ
     Engine->>Store: Tạo Trip & Booking tự động, khoá ghế nguyên tử (Atomic Transaction)
@@ -123,9 +122,14 @@ sequenceDiagram
 
 ---
 
-## 3. Mạng Lưới Trạm Đón Ảo & Đón Tận Cửa 2km
+## 3. Mạng Lưới Điểm Đón Ảo Chuẩn Hóa Dọc Tuyến (100% Virtual Hubs — Triệt Tiêu Đón Tận Nhà & Chia Chác Phụ Phí)
 
-Để triệt tiêu tình trạng "Tour de Hẻm" (chủ xe phải chạy lòng vòng vào hẻm cụt làm trễ chuyến của cả xe) nhưng vẫn phục vụ được bà con thôn ấp vùng sâu, hệ thống phân tầng đón trả 2 lớp:
+Để triệt tiêu vĩnh viễn tình trạng "Tour de Hẻm" (xe ô tô phải rẽ vào ngõ cụt, đường sỏi đất gập ghềnh đón từng nhà làm trễ giờ cả chuyến đi), hệ thống CarMate chuẩn hoá 100% việc đón trả tại mạng lưới Trạm đón ảo sát trục lộ:
+
+### Vì sao CarMate kiên quyết bãi bỏ "Đón tận nhà chia tiền"?
+1. **Triệt tiêu trễ giờ dây chuyền:** Đường ngõ nông thôn quanh co, sình lầy khiến xe mất từ 15–30 phút cho một cuốc đón tận nhà, phá vỡ toàn bộ lộ trình và thời gian dự kiến của những người đi cùng khác.
+2. **Triệt tiêu xung đột xã hội:** Cơ chế "phụ thu đón nhà rồi chia tiền đền bù cho người khác" trong thực tế gây tâm lý khó chịu, biến chuyến đi sẻ chia văn minh thành một cuộc mặc cả tiền bạc phức tạp.
+3. **An toàn & Công thái học chuẩn mực:** 100% trạm đón là cây xăng Petrolimex / bến xe lớn sát quốc lộ: có sân bãi rộng rãi để tấp lề 60s an toàn, đủ ánh sáng ban đêm, có camera an ninh, nước uống và nhà vệ sinh sạch sẽ. Không có bất kỳ phụ phí đón nhà (+0đ) và không có sự chia chác đền bù.
 
 ```mermaid
 flowchart TD
@@ -133,7 +137,7 @@ flowchart TD
         direction LR
         Hub1["Trạm 1: Chợ Lộc Ninh / Cây xăng 17"] --> Hub2["Trạm 2: Ngã 3 Bù Đốp / Lộc Tấn"]
         Hub2 --> Hub3["Trạm 3: Chợ Bình Long / An Lộc"]
-        Hub3 --> Hub4["Trạm 4: Ngã 3 Tân Khai / Hớn Quản"]
+        Hub3 --> Hub4["Trạm 4: Ngã 3 Tân Khai / Petrolimex Tân Khai"]
         Hub4 --> Hub5["Trạm 5: Ngã 4 Chơn Thành / KCN Minh Hưng"]
         Hub5 --> Hub6["Trạm 6: Bến Cát / KCN Bàu Bàng"]
         Hub6 --> Hub7["Trạm 7: Trạm Thu Phí Suối Giữa (TDM)"]
@@ -141,14 +145,11 @@ flowchart TD
         Hub8 --> Hub9["Trạm 9: Ngã 4 Bình Phước / Cầu Bình Triệu"]
     end
 
-    subgraph PICKUP_LAYER ["CƠ CHẾ ĐÓN TRẢ LINH HOẠT"]
-        VHub["📍 28 TRẠM ĐÓN ẢO CỐ ĐỊNH (VIRTUAL HUBS)<br>• Nằm sát mép trục đường lớn, có chỗ tấp lề đỗ xe êm ái<br>• Cửa sổ dừng đón tối đa 5 phút (300 giây curbside window)<br>• Phụ phí: 0đ (Tiết kiệm tối đa chi phí)"]
-        
-        Doorstep["🚪 ĐÓN TẬN CỬA NHÀ (COMPENSATED DOORSTEP)<br>• Bán kính láng giềng: ≤ 2.0km tính từ tim hành lang<br>• Phù hợp: Người già, con nhỏ, đồ nặng, thôn ấp vùng xa<br>• Phụ phí: +40.000đ (bù xăng nổ máy, hao mòn đường sỏi đá)<br>• Cơ chế đền bù: 50% (+20.000đ) trừ trực tiếp vào giá vé khách cùng xe"]
+    subgraph PICKUP_LAYER ["100% ĐIỂM HẸN TRẠM CÂY XĂNG CHUẨN HOÁ (VIRTUAL HUBS)"]
+        VHub["📍 28 TRẠM CÂY XĂNG PETROLIMEX CỐ ĐỊNH<br>• Nằm sát mép trục đường lớn, có chỗ tấp lề đỗ xe êm ái<br>• Cửa sổ dừng đón tối đa 5 phút (300 giây curbside window)<br>• Phụ phí đón nhà: 0đ (Triệt tiêu rẽ ngõ, zero Tour de Hẻm)<br>• Phụ phí đền bù: 0đ (Định giá phân đoạn cố định, minh bạch)"]
     end
 
-    VHub -.->|"Tiêu chuẩn tối ưu tốc độ"| CORRIDOR_QL13
-    Doorstep -.->|"Rẽ nhánh tối đa 2km"| CORRIDOR_QL13
+    VHub -.->|"Đón trả chuẩn hoá 60s trên trục hành lang"| CORRIDOR_QL13
 ```
 
 ---
@@ -200,11 +201,17 @@ Trong đó:
 $$C = 35.000 + (149 \times 850) + 30.000 = 35.000 + 126.650 + 30.000 = 191.650\text{đ} \xrightarrow{\text{làm tròn}} 190.000\text{đ}$$
 Mức giá này cạnh tranh hoàn hảo với xe khách (220.000đ – 260.000đ) mà đảm bảo chủ xe được san sẻ chi phí hợp lý để sẵn lòng chở bà con.
 
-#### 3. Cơ Chế Bồi Thường Đón Tận Cửa (Compensated Doorstep)
-Khi hành khách $k$ yêu cầu đón tại ngõ xóm trong bán kính $r \le 2.0\text{km}$:
-$$\text{Giá khách } k = C_{\text{base\_seat}} + \Delta C_{\text{doorstep}} = 190.000\text{đ} + 40.000\text{đ} = 230.000\text{đ}$$
-$$\text{Tiền giảm trừ đền bù cho khách khác } j \neq k = \alpha \times \Delta C_{\text{doorstep}} = 0.5 \times 40.000\text{đ} = 20.000\text{đ}$$
-Khách $j$ cùng xe đón tại Trạm ảo được giảm trực tiếp còn $190.000 - 20.000 = 170.000\text{đ}$, tạo ra sự đồng thuận tự nhiên trong xe mà không gây bực bội vì phải chờ đợi.
+#### 3. Chuẩn Hóa Cước Phân Đoạn Cố Định & Bất Biến Không Phụ Thu (Fixed Segment Tariffs & Zero-Surge Invariant)
+Mọi chuyến đi trên trục hành lang đều áp dụng bảng cước phân đoạn cố định minh bạch:
+* **Bình Long ➔ Hàng Xanh:** 130.000đ/ghế (Chủ xe nhận 90% = 234.000đ cho 2 ghế)
+* **Tân Khai ➔ Hàng Xanh:** 110.000đ/ghế (Chủ xe nhận 90% = 198.000đ cho 2 ghế)
+* **Chơn Thành ➔ Hàng Xanh:** 90.000đ/ghế (Chủ xe nhận 90% = 162.000đ cho 2 ghế)
+* **Chặng ngắn nội tỉnh (Bình Long ➔ Chơn Thành):** 45.000đ/ghế (Chủ xe nhận 81.000đ cho 2 ghế)
+
+Hệ thống bảo đảm tuyệt đối 3 bất biến kinh tế:
+1. **Zero-Surge Invariant:** `noSurge: true` — Tuyệt đối không tăng giá giờ cao điểm, lễ tết hay mưa bão.
+2. **Zero-Doorstep Detour Invariant:** `doorstepSurcharge = 0đ` — 100% đón trả tại trạm cây xăng, triệt tiêu đón tận nhà ("Tour de Hẻm").
+3. **Zero-Split Invariant:** `compensationDiscount = 0đ` — Không phát sinh việc chia tiền đền bù phức tạp giữa các hành khách. Mọi người trên xe đều bình đẳng với mức đóng góp chuẩn mực.
 
 ---
 
@@ -212,25 +219,22 @@ Khách $j$ cùng xe đón tại Trạm ảo được giảm trực tiếp còn $
 *(David Gale & Lloyd Shapley, 1962 — Thuyết Ghép Cặp Ổn Định Hai Phía)*
 
 #### 1. Dựng Đồ Thị Shareability $G = (V_D \cup V_P, E)$
-Tập đỉnh bao gồm tập Chủ xe $V_D$ và tập Khách $V_P$. Một cạnh $e = (d, p) \in E$ chỉ được tạo lập khi thỏa mãn đồng thời **4 Bất Biến Ràng Buộc**:
+Tập đỉnh bao gồm tập Chủ xe $V_D$ và tập Khách $V_P$. Một cạnh $e = (d, p) \in E$ chỉ được tạo lập khi thỏa mãn đồng thời **3 Bất Biến Ràng Buộc**:
 1. **Ràng buộc Hướng vector di chuyển (Heading Alignment):**
    $$\vec{u}_d \cdot \vec{u}_p \ge \cos(30^\circ) \approx 0.866$$
 2. **Ràng buộc Cửa sổ thời gian (Temporal Window):**
    $$|t_{\text{depart}}(d) - t_{\text{desired}}(p)| \le \Delta T_{\text{window}} = 45 \text{ phút}$$
 3. **Ràng buộc Dung lượng ghế (Seat Capacity):**
    $$\text{seatsAvailable}(d) \ge \text{seatsRequested}(p)$$
-4. **Ràng buộc Quãng đường đón tận nhà (Doorstep Radius Constraint):**
-   $$\text{isDoorstep}(p) = \text{true} \implies \text{distGeodesic}(p_{\text{doorstep}}, d_{\text{route}}) \le 2.0\text{km}$$
 
 #### 2. Hàm Trọng Số Cạnh Đa Tiêu Chí (Multi-Objective Edge Scoring)
 Mỗi cạnh tương thích được gán một điểm số hấp dẫn $W(d, p) \in [0, 100]$:
 
-$$W(d, p) = 35 \cdot S_{\text{time}} + 25 \cdot S_{\text{route}} + 20 \cdot S_{\text{doorstep}} + 20 \cdot S_{\text{trust}}$$
+$$W(d, p) = 40 \cdot S_{\text{time}} + 35 \cdot S_{\text{route}} + 25 \cdot S_{\text{trust}}$$
 
 Trong đó:
 * $S_{\text{time}} = \max\left(0, 1 - \frac{|t_d - t_p|}{45}\right)$: Điểm trùng khớp thời gian xuất phát.
-* $S_{\text{route}} = 1.0$ (Cùng trạm ảo) hoặc $0.8$ (Trạm lân cận).
-* $S_{\text{doorstep}} = \max\left(0, 1 - \frac{\text{dist}}{2.0}\right)$: Càng gần lộ trình chủ xe thì điểm càng cao.
+* $S_{\text{route}} = 1.0$ (Cùng trạm cây xăng xuất phát) hoặc $0.8$ (Trạm lân cận trên trục hành lang).
 * $S_{\text{trust}} = \frac{\text{trustScore}}{100}$: Điểm tín nhiệm tích lũy từ các chuyến đi văn minh trước đó.
 
 #### 3. Thuật Toán Chấp Nhận Trì Hoãn (Deferred Acceptance Algorithm)
@@ -243,7 +247,7 @@ CarMate áp dụng thuật toán Gale-Shapley cải tiến cho bài toán ghép 
 
 ### Công trình 3: Hình Học Cầu Geodesic Haversine & Hệ Số Uốn Khúc Tuyến Tính
 
-Để định vị trạm đón ảo gần nhất và đo lường khoảng cách đón tận cửa dưới $1\text{ms}$ mà không phụ thuộc vào Google Maps API (vừa chậm, vừa tốn phí, vừa dễ gián đoạn), CarMate sử dụng công thức lượng giác cầu Haversine:
+Để định vị trạm đón ảo gần nhất và tính toán khoảng cách dọc trục hành lang dưới $1\text{ms}$ mà không phụ thuộc vào Google Maps API (vừa chậm, vừa tốn phí, vừa dễ gián đoạn), CarMate sử dụng công thức lượng giác cầu Haversine:
 
 $$\Delta\sigma = 2 \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta\phi}{2}\right) + \cos\phi_1 \cos\phi_2 \sin^2\left(\frac{\Delta\lambda}{2}\right)} \right)$$
 $$d_{\text{geodesic}} = R \cdot \Delta\sigma \quad (R = 6.371\text{km})$$
@@ -253,7 +257,7 @@ Khoảng cách thực tế trên mặt đường luôn lớn hơn đường chim
 
 $$d_{\text{road}} \approx d_{\text{geodesic}} \times 1.28$$
 
-Sai số so với OSRM / Google Directions thực tế chỉ dao động trong khoảng $\pm 3.2\%$, hoàn toàn đáp ứng độ chính xác định giá và kiểm tra bán kính đón tận nhà $\le 2.0\text{km}$.
+Sai số so với OSRM / Google Directions thực tế chỉ dao động trong khoảng $\pm 3.2\%$, hoàn toàn đáp ứng độ chính xác định chuẩn chi phí và xác định trạm đón cây xăng Petrolimex gần nhất dưới 1ms.
 
 ---
 
@@ -390,8 +394,8 @@ carmate/
 │   │       └── services/
 │   │           └── batchMatchingEngine.js # BỘ ĐIỀU PHỐI KHỚP LỆNH TỰ ĐỘNG CẤP ĐỘ 3
 │   │                                       # • Gale-Shapley Bipartite Matching
-│   │                                       # • Shapley Fair Cost Allocator
-│   │                                       # • Doorstep Constraint (≤ 2.0km)
+│   │                                       # • Shapley Fair Cost Allocator (100% Virtual Hubs)
+│   │                                       # • Corridor Station Constraint (Petrolimex Hubs)
 │   │                                       # • Time-Decay Penalty Engine
 │   │                                       # • Standby Buffer Finder
 │   │
@@ -400,7 +404,7 @@ carmate/
 │           ├── App.jsx                 # Điều phối ứng dụng & React Portals
 │           └── components/
 │               ├── market/
-│               │   ├── Hero.jsx        # Thanh đặt chỗ, chọn trạm ảo, đón tận nhà 2km, chip giá
+│               │   ├── Hero.jsx        # Thanh đặt chỗ, chọn trạm đón cây xăng, chip giá phân đoạn
 │               │   └── TripCard.jsx    # Thẻ chuyến đi hiển thị dung tích chuẩn, huy hiệu bán tải
 │               ├── post/
 │               │   ├── PostTripForm.jsx# Đăng chuyến đa dụng (Chở khách, Bán tải, Gửi đồ)
@@ -408,7 +412,7 @@ carmate/
 │               └── modals/             # EscrowBookingModal, TicketShareModal, EditTripModal...
 │
 └── scripts/
-    ├── test-level3-engine.mjs          # Bộ kiểm thử 32 kịch bản tự động Cấp độ 3 (Pass 100%)
+    ├── test-level3-engine.mjs          # Bộ kiểm thử 73 kịch bản tự động Cấp độ 3 (Pass 100%)
     └── test-local-e2e.js               # Bộ kiểm thử 80 kịch bản tích hợp nghiệp vụ (Pass 100%)
 ```
 

@@ -4,7 +4,7 @@
  * ============================================================================
  * 
  * 1. Mạng lưới Trạm đón ảo (Virtual Hubs & DARP-MP)
- * 2. Đón Tận Cửa Bù Trừ Minh Bạch (Compensated Doorstep Pricing)
+ * 2. Phân Bổ Chi Phí Công Bằng Shapley (100% Trạm Cây Xăng Trục Lộ)
  * 3. Đồ Thị Khả Năng Chia Sẻ (MIT Shareability Graph)
  * 4. Ghép Cặp Ổn Định Gale-Shapley (Deferred Acceptance - Nobel Memorial Prize)
  * 5. Thang Phạt Dốc Thời Gian (Time-Decay Penalty Engine)
@@ -23,6 +23,24 @@ import {
 } from '@carmate/shared';
 
 import {
+  calculateShapleyFairPrice,
+  buildShareabilityGraph,
+  galeShapleyStableMatch,
+  findStandbyBufferOffer,
+  runBatchMatchingEpoch
+} from '../apps/api/src/services/batchMatchingEngine.js';
+
+import {
+  initDB,
+  saveUser,
+  getUserByPhone,
+  deleteUserAccount,
+  createIntent,
+  deleteIntent,
+  applyCancellationPenalty
+} from '../apps/api/src/db/sqliteStore.js';
+
+import {
   riderCheckIn,
   getStationQueue,
   getRiderPass,
@@ -33,35 +51,17 @@ import {
   resetAllStationData
 } from '../apps/api/src/services/stationQueueService.js';
 
-import {
-  calculateShapleyFairPrice,
-  buildShareabilityGraph,
-  galeShapleyStableMatch,
-  findStandbyBufferOffer,
-  runBatchMatchingEpoch
-} from '../apps/api/src/services/batchMatchingEngine.js';
-
-import {
-  initDB,
-  createIntent,
-  deleteIntent,
-  applyCancellationPenalty,
-  saveUser,
-  getUserByPhone,
-  deleteUserAccount
-} from '../apps/api/src/db/sqliteStore.js';
-
 let passedTests = 0;
 let failedTests = 0;
 
 function assert(condition, message) {
-  if (condition) {
-    passedTests++;
-    console.log(`  ✅ [PASS] ${message}`);
-  } else {
+  if (!condition) {
     failedTests++;
-    console.error(`  ❌ [FAIL] ${message}`);
+    console.error(`❌ THẤT BẠI: ${message}`);
+    process.exit(1);
   }
+  passedTests++;
+  console.log(`✅ ${message}`);
 }
 
 async function runLevel3Suite() {
@@ -71,8 +71,8 @@ async function runLevel3Suite() {
 
   await initDB();
 
-  // --- 1. KIỂM THỬ MẠNG LƯỚI TRẠM ĐÓN ẢO & CẤU HÌNH DOORSTEP ---
-  console.log('--- 1. Kiểm thử Trạm đón ảo (Virtual Hubs) & Cấu hình Đón Tận Cửa ---');
+  // --- 1. KIỂM THỬ MẠNG LƯỚI TRẠM ĐÓN ẢO & CẤU HÌNH HUB ---
+  console.log('--- 1. Kiểm thử Trạm đón ảo (Virtual Hubs) & Cấu hình 100% Trạm Cây Xăng ---');
   assert(Array.isArray(VIRTUAL_HUBS) && VIRTUAL_HUBS.length >= 15, `Đầy đủ trạm đón ảo (hiện có ${VIRTUAL_HUBS.length} trạm)`);
   
   const ql13Hubs = getVirtualHubsByCorridor('Tuyến QL13');
@@ -89,13 +89,13 @@ async function runLevel3Suite() {
   const nearest = findNearestVirtualHub(11.84, 106.59, 'Tuyến QL13');
   assert(nearest && nearest.name.includes('Lộc Ninh'), `Tìm trạm ảo gần nhất chuẩn xác: ${nearest?.name}`);
 
-  // Cấu hình Đón Tận Nhà
-  assert(DOORSTEP_CONFIG.DEFAULT_SURCHARGE === 40000, 'Phụ phí đón tận nhà chuẩn 40.000đ hỗ trợ xăng ngõ ngách');
-  assert(DOORSTEP_CONFIG.MAX_NEIGHBORHOOD_RADIUS_KM <= 2.0, 'Bán kính láng giềng ghép đón tận nhà <= 2km (tiện lợi cho bà con, an toàn cho chủ xe)');
-  assert(DOORSTEP_CONFIG.COMPENSATION_DISCOUNT_RATIO === 0.5, '50% phụ phí được chia lại đền bù cho các khách khác cùng xe');
+  // Cấu hình Đón Trả 100% Trạm Cây Xăng (Triệt tiêu Đón Tận Nhà & Chia Tiền)
+  assert(DOORSTEP_CONFIG.ENABLED === false, 'Hệ thống chuẩn hoá 100% đón tại trạm cây xăng Petrolimex (doorstep disabled)');
+  assert(DOORSTEP_CONFIG.DEFAULT_SURCHARGE === 0, 'Phụ phí đón tận nhà = 0đ (loại bỏ hoàn toàn phụ thu ngõ ngách)');
+  assert(DOORSTEP_CONFIG.COMPENSATION_DISCOUNT_RATIO === 0, 'Không chia chác tiền đền bù giữa các hành khách');
 
-  // --- 2. KIỂM THỬ ĐỊNH GIÁ SHAPLEY FAIR PRICING & COMPENSATED DOORSTEP ---
-  console.log('\n--- 2. Kiểm thử Định giá Toán học Shapley Value & Bồi thường Đón Cửa ---');
+  // --- 2. KIỂM THỬ ĐỊNH GIÁ SHAPLEY FAIR PRICING (100% TRẠM CÂY XĂNG) ---
+  console.log('\n--- 2. Kiểm thử Định giá Toán học Shapley Value (100% Trạm Cây Xăng) ---');
   // Chuyến chuẩn QL13 (149km): 1 khách thường
   const normalPrice = calculateShapleyFairPrice({
     distanceKm: 149,
@@ -106,32 +106,22 @@ async function runLevel3Suite() {
   });
   assert(normalPrice.finalPrice > 0, `Giá Shapley chuẩn: ${normalPrice.finalPrice.toLocaleString('vi-VN')}đ`);
   assert(normalPrice.doorstepSurcharge === 0, 'Khách đón tại Trạm ảo phụ phí = 0đ');
+  assert(normalPrice.compensationDiscount === 0, 'Không chia tiền đền bù (triệt tiêu đón tận nhà)');
 
-  // 1 khách có con nhỏ chọn đón tận nhà (+40k)
-  const doorstepPrice = calculateShapleyFairPrice({
+  // Bất biến: Giá vé chuẩn hóa 100% theo cự ly, không thu phụ phí đón tận nhà, không chia bù đắp
+  const doorstepAttempt = calculateShapleyFairPrice({
     distanceKm: 149,
     corridor: 'Tuyến QL13',
     numPassengers: 1,
     isDoorstep: true,
-    otherPassengersCount: 0
+    otherPassengersCount: 2
   });
   assert(
-    doorstepPrice.finalPrice === normalPrice.basePrice + 40000,
-    `Khách đón tận cửa trả thêm đúng 40.000đ: ${doorstepPrice.finalPrice.toLocaleString('vi-VN')}đ`
+    doorstepAttempt.finalPrice === normalPrice.basePrice,
+    `Bất biến giá công bằng: 100% khách trả đúng giá phân đoạn ${doorstepAttempt.finalPrice.toLocaleString('vi-VN')}đ (không phụ thu đón nhà, không chia bù đắp)`
   );
-
-  // Khách thứ 2 đón ở trạm ảo được giảm trừ tiền đền bù thời gian chờ
-  const compensatedOther = calculateShapleyFairPrice({
-    distanceKm: 149,
-    corridor: 'Tuyến QL13',
-    numPassengers: 1,
-    isDoorstep: false,
-    otherPassengersCount: 1
-  });
-  assert(
-    compensatedOther.compensationDiscount === 20000,
-    `Khách cùng xe được giảm trừ đúng 20.000đ (50% của 40k): Tiết kiệm còn ${compensatedOther.finalPrice.toLocaleString('vi-VN')}đ`
-  );
+  assert(doorstepAttempt.doorstepSurcharge === 0, 'Phụ phí đón nhà triệt tiêu = 0đ');
+  assert(doorstepAttempt.compensationDiscount === 0, 'Giảm trừ đền bù triệt tiêu = 0đ');
 
   // --- 3. KIỂM THỬ ĐỒ THỊ CHIA SẺ & THUẬT TOÁN GALE-SHAPLEY ---
   console.log('\n--- 3. Kiểm thử Đồ thị Shareability & Thuật toán Ghép Cặp Gale-Shapley ---');
@@ -142,7 +132,7 @@ async function runLevel3Suite() {
 
   const mockPassengers = [
     { id: 'PAS-1', contactName: 'Khách 1', phone: '0988000001', seats: 1, routeCategory: 'Tuyến QL13', trustScore: 98, from: 'Lộc Ninh', to: 'Sài Gòn', isDoorstep: 0 },
-    { id: 'PAS-2', contactName: 'Khách 2', phone: '0988000002', seats: 2, routeCategory: 'Tuyến QL13', trustScore: 92, from: 'Lộc Ninh', to: 'Sài Gòn', isDoorstep: 1 },
+    { id: 'PAS-2', contactName: 'Khách 2', phone: '0988000002', seats: 2, routeCategory: 'Tuyến QL13', trustScore: 92, from: 'Lộc Ninh', to: 'Sài Gòn', isDoorstep: 0 },
     { id: 'PAS-3', contactName: 'Khách 3', phone: '0988000003', seats: 1, routeCategory: 'Tuyến QL13', trustScore: 95, from: 'Bình Long', to: 'Sài Gòn', isDoorstep: 0 },
     { id: 'PAS-4', contactName: 'Khách 4', phone: '0988000004', seats: 1, routeCategory: 'Tuyến QL13', trustScore: 90, from: 'Bình Long', to: 'Sài Gòn', isDoorstep: 0 }
   ];
@@ -240,8 +230,8 @@ async function runLevel3Suite() {
     phone: '0988776655',
     contactName: 'Khách Đi Cùng Test',
     seats: 1,
-    isDoorstep: 1,
-    doorstepAddress: 'Hẻm 12 Lộc Tấn'
+    isDoorstep: 0,
+    doorstepAddress: ''
   });
 
   assert(driverIntent.id && passengerIntent.id, 'Tạo các Intent thành công vào SQLite');

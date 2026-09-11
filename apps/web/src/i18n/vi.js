@@ -142,7 +142,7 @@ export default {
     modalSub: 'Cơ sở tính toán kỹ thuật dựa trên cự ly, hao phí nhiên liệu và phí cầu đường thực tế',
     disclaimerTitle: 'Thông tin tham khảo · Giá cả do hai bên tự do thoả thuận',
     disclaimerBody:
-      'Mức giá gợi ý chỉ mang tính chất tham khảo kỹ thuật (dựa trên hao phí xăng RON 95 và phí cầu đường trung bình để chia sẻ công bằng chi phí lăn bánh, không phải cước taxi hay giá niêm yết cố định). Mức giá chốt sau cùng hoàn toàn phụ thuộc vào sự thống nhất trực tiếp giữa Chủ xe và Người đi cùng (tùy theo điểm đón trả tận nơi, mang nhiều đồ đạc, hoặc đón lệch tuyến). Hai bên vui lòng không vin vào con số này để khiếu nại đối phương hoặc nền tảng CarMate.',
+      'Mức giá gợi ý chỉ mang tính chất tham khảo kỹ thuật (dựa trên hao phí xăng RON 95 và phí cầu đường trung bình để chia sẻ công bằng chi phí lăn bánh, không phải cước taxi hay giá niêm yết cố định). Mức giá chốt sau cùng hoàn toàn phụ thuộc vào sự thống nhất trực tiếp giữa Chủ xe và Người đi cùng (tùy theo điểm hẹn đón trả tại cây xăng, mang nhiều đồ đạc, hoặc phân đoạn di chuyển). Hai bên vui lòng không vin vào con số này để khiếu nại đối phương hoặc nền tảng CarMate.',
     disclaimerShort: 'Giá tham khảo · Tự do thoả thuận',
     heroLabel: 'Định giá tham khảo cho tuyến này',
     heroDesc:

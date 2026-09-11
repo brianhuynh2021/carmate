@@ -735,17 +735,18 @@ export const VIRTUAL_HUBS = [
 ];
 
 /**
- * CẤU HÌNH ĐÓN TẬN CỬA NHÀ (DOORSTEP PICKUP - MIT COMPENSATED PRICING)
- * Cho phép khách có con nhỏ/đồ nặng chọn đón tận cửa với phụ phí xăng ngõ ngách minh bạch.
- * Phụ phí được chia sẻ công bằng (Pareto Optimal) giảm trừ giá vé cho các khách khác cùng xe.
+ * CẤU HÌNH ĐIỂM ĐÓN CỐ ĐỊNH TRỤC LỘ (100% VIRTUAL HUBS - NO DOORSTEP DETOUR)
+ * CarMate vận hành 100% điểm đón/trả chuẩn hoá tại các cây xăng Petrolimex dọc quốc lộ.
+ * Triệt tiêu hoàn toàn việc đón tận nhà ("Tour de Hẻm") và chia chác phụ phí đền bù.
  */
 export const DOORSTEP_CONFIG = {
-  DEFAULT_SURCHARGE: 40000, // +40.000đ phụ phí hỗ trợ xăng ngõ ngách
-  MAX_NEIGHBORHOOD_RADIUS_KM: 2.0, // Bán kính láng giềng tối đa 2.0km (tiện lợi cho bà con xóm ấp)
-  MAX_CURBSIDE_WAIT_SECONDS: 300, // Tối đa 5 phút chờ trước cửa
-  COMPENSATION_DISCOUNT_RATIO: 0.5, // 50% tiền phụ phí chia lại giảm giá cho khách cùng xe
-  LABEL: 'Cần đón tận nhà (+40k phụ phí xăng)',
-  NOTE: 'Đón tận cửa nhà (+40.000đ hỗ trợ xăng ngõ ngách · Bán kính láng giềng ≤ 2km)'
+  ENABLED: false, // 100% đón trả tại trạm cây xăng Petrolimex, không đón tận nhà
+  DEFAULT_SURCHARGE: 0, // Phụ phí = 0đ (không phụ thu đón nhà)
+  MAX_NEIGHBORHOOD_RADIUS_KM: 0,
+  MAX_CURBSIDE_WAIT_SECONDS: 0,
+  COMPENSATION_DISCOUNT_RATIO: 0, // Không chia tiền đền bù giữa các khách
+  LABEL: '100% đón tại trạm cây xăng',
+  NOTE: 'Đón trả chuẩn hoá tại cây xăng Petrolimex trục lộ · Không rẽ ngõ ngách'
 };
 
 /**

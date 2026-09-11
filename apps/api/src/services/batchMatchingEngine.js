@@ -7,13 +7,12 @@
  * 2. DARP-MP: Dial-a-Ride with Meeting Points (Stiglic et al., 2015)
  * 3. WATTER: Wait to be Faster micro-batching (Didi Chuxing, 2018)
  * 4. Nobel Memorial Prize Gale-Shapley Deferred Acceptance (Roth & Sotomayor, 1990)
- * 5. Shapley Value Cooperative Pricing with Compensated Doorstep (Fielbaum & Alonso-Mora, 2021)
+ * 5. Shapley Value Cooperative Pricing on Fixed Corridor Hubs (Fielbaum & Alonso-Mora, 2021)
  * 6. Symmetric Standby Buffer & Emergency Salvage Protocol (Anti-Flake)
  */
 
 import {
   VIRTUAL_HUBS,
-  DOORSTEP_CONFIG,
   ROUTE_BENCHMARKS,
   calculateDistanceKm
 } from '@carmate/shared';
@@ -31,9 +30,9 @@ export const ENGINE_CONFIG = {
   MICRO_BATCH_WINDOW_MS: 3 * 60 * 1000, // Cửa sổ gom phiên vi mô 3 phút
   CURBSIDE_WINDOW_SECONDS: 300, // 5 phút dừng đỗ tối đa tại Trạm ảo
   MAX_DETOUR_RATIO: 0.08, // Tối đa 8% cự ly đi vòng so với hành lang chuẩn
-  MAX_DOORSTEP_RADIUS_KM: DOORSTEP_CONFIG.MAX_NEIGHBORHOOD_RADIUS_KM || 2.0, // <= 2km đón tận cửa
-  DOORSTEP_SURCHARGE: DOORSTEP_CONFIG.DEFAULT_SURCHARGE || 40000, // +40k
-  COMPENSATION_RATIO: DOORSTEP_CONFIG.COMPENSATION_DISCOUNT_RATIO || 0.5, // 50% chia lại cho khách cùng xe
+  MAX_DOORSTEP_RADIUS_KM: 0, // Triệt tiêu đón tận nhà, 100% đón tại trạm cây xăng
+  DOORSTEP_SURCHARGE: 0, // Phụ phí đón tận nhà = 0đ
+  COMPENSATION_RATIO: 0, // Không chia tiền đền bù
   STANDBY_TIME_WINDOW_MINS: 45 // Bán kính thời gian tìm xe dự phòng +-45 phút
 };
 
@@ -60,19 +59,19 @@ export function getCorridorDistanceKm(fromHubIdOrName, toHubIdOrName, corridor =
 }
 
 /**
- * 2. ĐỊNH GIÁ SHAPLEY VALUE (SHAPLEY FAIR PRICING WITH COMPENSATED DOORSTEP)
+ * 2. ĐỊNH GIÁ SHAPLEY VALUE (100% ĐÓN TẠI TRẠM ẢO CÂY XĂNG PETROLIMEX)
  * 
  * - Chi phí cơ sở: Nhiên liệu (1.500đ/km) + Phí cầu đường (BOT).
  * - Mỗi ghế chia sẻ chi phí biên công bằng theo cự ly thực tế.
- * - Nếu có khách đón tận cửa: Khách đó đóng thêm 40k; 50% tiền này (20k) được tự động
- *   trừ giảm giá vé cho các khách khác cùng xe để đền bù 5 phút chờ ở lề đường (Pareto Optimal).
+ * - 100% đón trả tại trạm cây xăng Petrolimex cố định: Không đón tận nhà ("Tour de Hẻm"),
+ *   không thu thêm phụ phí ngõ ngách, không chia chác tiền đền bù giữa các khách.
  */
 export function calculateShapleyFairPrice({
   distanceKm,
   corridor = 'Tuyến QL13',
   _numPassengers = 1,
-  isDoorstep = false,
-  otherPassengersCount = 0
+  _isDoorstep = false,
+  _otherPassengersCount = 0
 }) {
   const dist = Math.max(10, distanceKm || 100);
   const benchmark = ROUTE_BENCHMARKS[corridor] || ROUTE_BENCHMARKS['Tuyến QL13'] || {};
@@ -92,20 +91,10 @@ export function calculateShapleyFairPrice({
   const maxSafe = benchmark.maxSafePrice || 350000;
   fairBasePrice = Math.max(minSafe, Math.min(maxSafe, fairBasePrice));
 
-  let finalPrice = fairBasePrice;
-  let doorstepSurcharge = 0;
-  let compensationDiscount = 0;
-
-  if (isDoorstep) {
-    doorstepSurcharge = ENGINE_CONFIG.DOORSTEP_SURCHARGE;
-    finalPrice += doorstepSurcharge;
-  } else if (otherPassengersCount > 0) {
-    // Khách đón tại trạm ảo được nhận tiền bồi thường chia đều từ khách đón tận cửa
-    compensationDiscount = Math.round(
-      (ENGINE_CONFIG.DOORSTEP_SURCHARGE * ENGINE_CONFIG.COMPENSATION_RATIO) / otherPassengersCount
-    );
-    finalPrice = Math.max(minSafe, finalPrice - compensationDiscount);
-  }
+  // 100% đón trả tại trạm ảo cây xăng Petrolimex: Zero phụ thu, zero chia chác đền bù
+  const doorstepSurcharge = 0;
+  const compensationDiscount = 0;
+  const finalPrice = fairBasePrice;
 
   return {
     basePrice: fairBasePrice,
@@ -116,7 +105,7 @@ export function calculateShapleyFairPrice({
     breakdown: {
       ratePerKm,
       botProportion,
-      isDoorstep: Boolean(isDoorstep)
+      isDoorstep: false
     }
   };
 }
@@ -158,10 +147,10 @@ export function buildShareabilityGraph(driverOffers = [], passengerRequests = []
     date: p.date,
     timeSlot: p.timeSlot,
     seatsNeeded: Number(p.seats || 1),
-    isDoorstep: Boolean(p.isDoorstep),
-    doorstepAddress: p.doorstepAddress || '',
-    doorstepLat: p.doorstepLat,
-    doorstepLng: p.doorstepLng,
+    isDoorstep: false,
+    doorstepAddress: '',
+    doorstepLat: null,
+    doorstepLng: null,
     trustScore: Number(p.trustScore || 98),
     originHub: p.originHubId || p.fromLocation || p.from,
     destHub: p.destinationHubId || p.toLocation || p.to,
@@ -184,29 +173,18 @@ export function buildShareabilityGraph(driverOffers = [], passengerRequests = []
       // 3. Kiểm tra dung lượng ghế
       if (d.capacity < p.seatsNeeded) continue;
 
-      // 4. Kiểm tra điều kiện đón tận cửa (Doorstep Detour Constraint <= 2km)
-      let doorstepScore = 10;
-      if (p.isDoorstep) {
-        if (p.doorstepLat != null && p.doorstepLng != null && d.raw?.lat != null && d.raw?.lng != null) {
-          const distToDriver = calculateDistanceKm(p.doorstepLat, p.doorstepLng, d.raw.lat, d.raw.lng);
-          if (distToDriver > ENGINE_CONFIG.MAX_DOORSTEP_RADIUS_KM) {
-            continue; // Vượt quá bán kính đón tận cửa 2km
-          }
-          doorstepScore = Math.max(0, 20 - distToDriver * 5);
-        }
-      }
-
-      // 5. Tính điểm tương thích toàn diện (Affinity Score: 0 - 100)
+      // 4. Tính điểm tương thích toàn diện (Affinity Score: 0 - 100)
       const trustBonus = (p.trustScore + d.trustScore) / 4; // ~49 điểm
-      const capacityBonus = (d.capacity === p.seatsNeeded ? 20 : 10); // Ưu tiên vừa khít ghế
-      const affinityScore = Math.round(trustBonus + capacityBonus + doorstepScore);
+      const capacityBonus = (d.capacity === p.seatsNeeded ? 25 : 15); // Ưu tiên vừa khít ghế
+      const hubBonus = (p.originHub === d.originHub ? 25 : 15); // Ưu tiên cùng trạm đón cây xăng
+      const affinityScore = Math.round(trustBonus + capacityBonus + hubBonus);
 
       const distanceKm = getCorridorDistanceKm(p.originHub, p.destHub, p.corridor);
       const pricing = calculateShapleyFairPrice({
         distanceKm,
         corridor: p.corridor,
         numPassengers: p.seatsNeeded,
-        isDoorstep: p.isDoorstep,
+        isDoorstep: false,
         otherPassengersCount: 0
       });
 
@@ -309,18 +287,15 @@ export function galeShapleyStableMatch(graph) {
   for (const driver of driverMap.values()) {
     if (driver.matchedPassengers.length === 0) continue;
 
-    const hasDoorstep = driver.matchedPassengers.some((p) => p.isDoorstep);
-    const nonDoorstepCount = driver.matchedPassengers.filter((p) => !p.isDoorstep).length;
-
-    // Tính lại giá vé phân bổ chính xác theo Shapley Value
+    // Tính lại giá vé phân bổ chính xác theo Shapley Value (100% trạm cây xăng, không phụ phí)
     const enrichedPassengers = driver.matchedPassengers.map((p) => {
       const distanceKm = getCorridorDistanceKm(p.originHub, p.destHub, p.corridor);
       const pricing = calculateShapleyFairPrice({
         distanceKm,
         corridor: p.corridor,
         numPassengers: p.seatsNeeded,
-        isDoorstep: p.isDoorstep,
-        otherPassengersCount: hasDoorstep && !p.isDoorstep ? nonDoorstepCount : 0
+        isDoorstep: false,
+        otherPassengersCount: 0
       });
 
       return {
@@ -452,8 +427,8 @@ export async function runBatchMatchingEpoch({
         passengerName: passenger.name,
         seats: passenger.seatsNeeded,
         status: 'zalo_active',
-        doorstepPickup: passenger.isDoorstep ? 1 : 0,
-        doorstepAddress: passenger.doorstepAddress,
+        doorstepPickup: 0,
+        doorstepAddress: null,
         standbyOfferId: standby ? standby.id : null,
         finalPrice: passenger.pricing.finalPrice,
         priceBreakdown: passenger.pricing,

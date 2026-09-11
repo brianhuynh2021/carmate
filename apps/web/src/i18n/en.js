@@ -142,7 +142,7 @@ export default {
     modalSub: 'Technical estimation based on distance, actual fuel consumption, and highway tolls',
     disclaimerTitle: 'Reference information only · Final price mutually agreed',
     disclaimerBody:
-      'The suggested rate is purely a technical benchmark based on average RON 95 fuel consumption and highway tolls for fair vehicle cost-sharing, not a fixed tariff or commercial taxi fare. The final agreed contribution depends 100% on direct agreement between the Car Owner and Passenger (varying by doorstep pickup/drop-off, luggage, or route detour). Neither party should use this reference figure to make claims against each other or the CarMate platform.',
+      'The suggested rate is purely a technical benchmark based on average RON 95 fuel consumption and highway tolls for fair vehicle cost-sharing, not a fixed tariff or commercial taxi fare. The final agreed contribution depends 100% on direct agreement between the Car Owner and Passenger (varying by gas station pickup/drop-off hub, luggage, or segment traveled). Neither party should use this reference figure to make claims against each other or the CarMate platform.',
     disclaimerShort: 'Reference rate · Mutually agreed',
     heroLabel: 'Reference pricing for this route',
     heroDesc:
