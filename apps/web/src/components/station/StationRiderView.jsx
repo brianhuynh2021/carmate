@@ -29,22 +29,22 @@ export default function StationRiderView({
 
   // Các điểm đón quen thuộc dọc trục QL13 (từ Bình Long về Sài Gòn)
   const ql13PickupHubs = useMemo(() => [
-    { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)' },
-    { id: 'hub_ql13_tthc_binh_long', name: 'TTHC TX. Bình Long / Bến xe' },
-    { id: 'hub_ql13_tthc_tan_khai', name: 'TTHC Huyện Hớn Quản (TT. Tân Khai)' },
-    { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)' },
-    { id: 'hub_ql13_minh_hung', name: 'KCN Minh Hưng - Hàn Quốc (Chơn Thành)' },
-    { id: 'hub_ql13_tthc_chon_thanh', name: 'TTHC TX. Chơn Thành / Quảng trường' },
-    { id: 'hub_ql13_vincom_chon_thanh', name: 'Vincom Plaza Chơn Thành' },
-    { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Giao Tuyến N2 & QL14)' },
-    { id: 'hub_ql13_becamex_chon_thanh', name: 'KCN Becamex Bình Phước' },
-    { id: 'hub_ql13_tthc_bau_bang', name: 'TTHC Huyện Bàu Bàng (Lai Uyên)' },
-    { id: 'hub_ql13_bau_bang', name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước' },
-    { id: 'hub_ql13_nga4_so_sao', name: 'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)' },
-    { id: 'hub_ql13_vsip1', name: 'KCN VSIP 1 / AEON Mall Bình Dương' },
-    { id: 'hub_ql13_van_phuc_city', name: 'Khu đô thị Vạn Phúc City (Thủ Đức)' },
-    { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)' },
-    { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / Bến xe Miền Đông cũ' }
+    { id: 'hub_ql13_binh_long', name: '📍 Cổng chào TX. Bình Long (Vòng xoay An Lộc)' },
+    { id: 'hub_ql13_tthc_binh_long', name: '🏛️ TTHC TX. Bình Long / Bến xe Bình Long' },
+    { id: 'hub_ql13_tthc_tan_khai', name: '🏛️ TTHC Huyện Hớn Quản (TT. Tân Khai - Trụ sở Huyện ủy)' },
+    { id: 'hub_ql13_tan_khai', name: '⛽ Cây xăng Petrolimex Tân Khai / Chợ Tân Khai' },
+    { id: 'hub_ql13_minh_hung', name: '🏭 Cổng KCN Minh Hưng - Hàn Quốc (Chơn Thành)' },
+    { id: 'hub_ql13_tthc_chon_thanh', name: '🏛️ TTHC TX. Chơn Thành / Quảng trường' },
+    { id: 'hub_ql13_vincom_chon_thanh', name: '🛍️ Vincom Plaza Chơn Thành (Số 01 QL13)' },
+    { id: 'hub_ql13_nga4_chon_thanh', name: '📍 Ngã 4 Chơn Thành (Bùng binh QL14 & N2)' },
+    { id: 'hub_ql13_becamex_chon_thanh', name: '🏭 Cổng KCN Becamex Bình Phước' },
+    { id: 'hub_ql13_tthc_bau_bang', name: '🏛️ TTHC Huyện Bàu Bàng (TT. Lai Uyên)' },
+    { id: 'hub_ql13_bau_bang', name: '🏭 Trạm dừng KCN Bàu Bàng / Mỹ Phước' },
+    { id: 'hub_ql13_nga4_so_sao', name: '📍 Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)' },
+    { id: 'hub_ql13_vsip1', name: '🛍️ TTTM AEON Mall Canary / KCN VSIP 1' },
+    { id: 'hub_ql13_van_phuc_city', name: '🏙️ Khu đô thị Vạn Phúc City (Thủ Đức)' },
+    { id: 'hub_ql13_nga4_binh_phuoc', name: '📍 Ngã 4 Bình Phước (Thủ Đức - Giao QL1A)' },
+    { id: 'hub_ql13_binh_trieu', name: '⛽ Cầu Bình Triệu / Bến xe Miền Đông cũ' }
   ], []);
 
   const handleAutoDetectGPS = () => {
@@ -60,22 +60,22 @@ export default function StationRiderView({
           onShowToast?.('Đang dùng điểm đón Bình Long');
         },
         () => {
-          onShowToast?.('Không lấy được GPS, bạn có thể chọn cây xăng bên dưới');
+          onShowToast?.('Không lấy được GPS, bạn có thể chọn trạm bên dưới');
         },
         { timeout: 3000 }
       );
     }
   };
 
-  // Thông tin Điểm đón cây xăng hiện tại trên trục QL13
+  // Thông tin Điểm đón hiện tại trên trục QL13
   const currentHub = useMemo(() => {
     return (
       getVirtualHubById(pickupHubId) || {
         id: pickupHubId,
-        name: 'Cây xăng Petrolimex Tân Khai',
-        shortName: 'Petrolimex Tân Khai',
+        name: 'Trạm đón QL13',
+        shortName: 'Trạm QL13',
         corridor: 'Tuyến QL13',
-        landmark: 'Cây xăng Petrolimex Tân Khai - QL13 (Hớn Quản, Bình Phước)'
+        landmark: 'Mặt tiền Đại lộ Quốc Lộ 13'
       }
     );
   }, [pickupHubId]);
@@ -163,6 +163,40 @@ export default function StationRiderView({
       }
     } catch {}
   }, []);
+
+  // 2. POLLING ĐỒNG BỘ TRẠNG THÁI XE THỜI GIAN THỰC (REAL-TIME STATUS SYNC MỖI 3S)
+  useEffect(() => {
+    if (viewStep !== 'BOARDING_PASS' || !boardingPass?.intentId) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await api.getRiderPass(boardingPass.intentId);
+        if (res?.success && res?.intent) {
+          setBoardingPass((prev) => {
+            const updated = {
+              ...prev,
+              ...res.intent,
+              position: res.position ?? prev?.position ?? 1
+            };
+            try {
+              localStorage.setItem(
+                'carmate_active_station_pass',
+                JSON.stringify({
+                  intentId: updated.intentId,
+                  hubId: currentHub.id,
+                  pass: updated,
+                  savedAt: Date.now()
+                })
+              );
+            } catch {}
+            return updated;
+          });
+        }
+      } catch {}
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [boardingPass?.intentId, currentHub.id, viewStep]);
 
   // ĐỒNG BỘ THÔNG TIN NGƯỜI DÙNG HIỆN TẠI
   useEffect(() => {
@@ -380,9 +414,9 @@ export default function StationRiderView({
           )}
           <div>
             <div className="flex items-center gap-2">
-              <Fuel className="w-4 h-4 text-emerald-400" />
+              <MapPin className="w-4 h-4 text-emerald-400" />
               <span className="text-xs font-black uppercase tracking-wider font-mono text-emerald-400">
-                ĐIỂM ĐÓN CÂY XĂNG QL13
+                ĐIỂM ĐÓN TRỌNG ĐIỂM QL13
               </span>
             </div>
             <h1 className="text-sm sm:text-base font-bold text-white truncate max-w-[240px] sm:max-w-xs">
@@ -400,17 +434,17 @@ export default function StationRiderView({
       {/* ── NỘI DUNG CHÍNH (R1 HOẶC R2) ── */}
       <main className="flex-1 flex flex-col justify-center my-auto max-w-lg mx-auto w-full">
         {/* ========================================================================= */}
-        {/* MÀN HÌNH R1: NHẬN MÃ ĐÓN XE TẠI CÂY XĂNG QUEN THUỘC                       */}
+        {/* MÀN HÌNH R1: NHẬN MÃ ĐÓN XE TẠI TRẠM GẦN BẠN NHẤT                         */}
         {/* ========================================================================= */}
         {viewStep === 'CHECKIN' && (
           <form onSubmit={handleCheckInClick} className="space-y-5 animate-fade-in">
-            {/* THẺ ĐỊNH VỊ ĐIỂM ĐÓN CÂY XĂNG */}
+            {/* THẺ ĐỊNH VỊ ĐIỂM ĐÓN TRỌNG ĐIỂM */}
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-5 space-y-3">
               <div className="flex items-center justify-between text-emerald-400">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
                   <span className="text-xs font-bold uppercase font-mono tracking-wider">
-                    Điểm đón cây xăng của bạn:
+                    Điểm đón của bạn (TTHC, Vincom, KCN, Cây xăng):
                   </span>
                 </div>
                 <button
@@ -418,7 +452,7 @@ export default function StationRiderView({
                   onClick={handleAutoDetectGPS}
                   className="text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline cursor-pointer"
                 >
-                  <span>📍 Cây xăng gần nhất</span>
+                  <span>📍 Trạm gần nhất</span>
                 </button>
               </div>
 
@@ -435,7 +469,7 @@ export default function StationRiderView({
                   ))}
                 </select>
                 <p className="text-xs text-slate-400 mt-1.5 font-sans">
-                  {currentHub.landmark || 'Sân cây xăng Petrolimex dọc trục Quốc Lộ 13'}
+                  {currentHub.landmark || 'Mặt tiền Đại lộ Quốc Lộ 13'}
                 </p>
               </div>
             </div>
@@ -631,87 +665,176 @@ export default function StationRiderView({
         {/* ========================================================================= */}
         {/* MÀN HÌNH R2: BOARDING PASS LIVE (THẺ LÊN XE THỜI GIAN THỰC)               */}
         {/* ========================================================================= */}
-        {viewStep === 'BOARDING_PASS' && boardingPass && (
-          <div className="space-y-5 animate-fade-in">
-            {/* TRẠNG THÁI TIẾP CẬN */}
-            <div className="bg-emerald-950/30 border border-emerald-500/50 rounded-3xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-sm font-black font-mono text-emerald-400 uppercase tracking-wide">
-                  XE ĐANG TIẾP CẬN TRẠM
+        {viewStep === 'BOARDING_PASS' && boardingPass && (() => {
+          const isArriving = boardingPass.status === 'ARRIVING';
+          const isBoarded = boardingPass.status === 'BOARDED' || boardingPass.status === 'COMPLETED';
+          const isWaiting = !isArriving && !isBoarded; // 'WAITING' | 'OFFERED'
+
+          return (
+            <div className="space-y-4 animate-fade-in">
+              {/* 1. THANH TRẠNG THÁI TIẾP CẬN */}
+              {isWaiting && (
+                <div className="bg-sky-950/40 border border-sky-500/50 rounded-3xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-sky-400 animate-ping" />
+                    <span className="text-sm font-black font-mono text-sky-400 uppercase tracking-wide">
+                      ĐANG QUÉT XE TIỆN CHUYẾN DỌC QL13
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono text-slate-300">Xe qua ~3-5 phút</span>
+                </div>
+              )}
+
+              {isArriving && (
+                <div className="bg-emerald-950/40 border-2 border-emerald-500/60 rounded-3xl p-4 flex items-center justify-between shadow-[0_0_25px_rgba(16,185,129,0.2)]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="text-sm font-black font-mono text-emerald-400 uppercase tracking-wide">
+                      CHỦ XE ĐÃ NHẬN ĐÓN — XE ĐANG TỚI!
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono text-white font-bold">Dự kiến ~2-3 phút</span>
+                </div>
+              )}
+
+              {isBoarded && (
+                <div className="bg-emerald-950/40 border border-emerald-500/50 rounded-3xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-black font-mono text-emerald-400 uppercase tracking-wide">
+                      ĐÃ LÊN XE AN TOÀN · ĐANG DI CHUYỂN
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono text-emerald-300 font-bold">Chúc chuyến đi vui vẻ</span>
+                </div>
+              )}
+
+              {/* THÔNG ĐIỆP HÀNG ĐỢI KHI ĐANG CHỜ (ZERO RISK REASSURANCE) */}
+              {isWaiting && (
+                <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 text-center space-y-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/15 text-sky-300 text-xs font-mono font-bold">
+                    <span>Vị trí của bạn: #{boardingPass.position || 1} tại {currentHub.shortName || currentHub.name}</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                    Radar CarMate đang phát tín hiệu tới các xe ô tô gia đình chạy trên QL13 cách trạm 3 - 5 km. Ngay khi có chủ xe bấm nhận, màn hình sẽ rung và hiện rõ biển số xe đến đón bạn.
+                  </p>
+                  <div className="text-[11px] font-mono text-emerald-400 font-bold flex items-center justify-center gap-1 pt-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>0đ Rủi ro tài chính: Chưa có xe đón, bạn hoàn toàn chưa bị trừ tiền!</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. KHUNG HIỂN THỊ MÃ PIN 4 SỐ TO RÕ RÀNG */}
+              <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-2 border-emerald-500/60 rounded-3xl p-5 text-center space-y-3 shadow-2xl">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-400 font-mono block">
+                  MÃ LÊN XE CỦA BẠN (ĐỌC CHO CHỦ XE):
                 </span>
+
+                <div className="flex items-center justify-center gap-2 sm:gap-3 py-1">
+                  {(boardingPass.pin || '8842').split('').map((char, i) => (
+                    <span
+                      key={i}
+                      className="w-13 h-16 sm:w-16 sm:h-20 rounded-2xl bg-white/[0.08] border-2 border-emerald-400 text-3xl sm:text-4xl font-black font-mono text-emerald-400 flex items-center justify-center shadow-lg"
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCopyPin}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{copiedPin ? 'Đã sao chép!' : 'Chạm để sao chép mã'}</span>
+                </button>
+
+                <p className="text-xs text-amber-300 font-medium pt-0.5">
+                  {isArriving
+                    ? 'Chủ xe có 60s dừng đón tại sân trạm. Vui lòng di chuyển ra mép sân sảnh đón để bước lên xe.'
+                    : 'Đứng chờ tại sảnh mát / phòng chờ trạm. Đọc mã 4 số này khi bước lên xe.'}
+                </p>
               </div>
-              <span className="text-xs font-mono text-slate-400">Dự kiến ~2-3 phút</span>
-            </div>
 
-            {/* KHUNG HIỂN THỊ MÃ PIN 4 SỐ TO RÕ RÀNG */}
-            <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-2 border-emerald-500/60 rounded-3xl p-6 text-center space-y-3 shadow-2xl">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400 font-mono block">
-                MÃ LÊN XE CỦA BẠN (ĐỌC CHO CHỦ XE):
-              </span>
+              {/* 3. THÔNG TIN XE TIẾP CẬN (THẬT HOẶC ĐANG CHỜ) */}
+              <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-3">
+                {isArriving || boardingPass.carInfo?.plate ? (
+                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-mono block">Biển số xe đón bạn</span>
+                      <span className="text-lg font-black font-mono text-emerald-400">
+                        {boardingPass.carInfo?.plate}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase text-slate-400 font-mono block">Dòng xe & Chủ xe</span>
+                      <span className="text-sm font-bold text-slate-200">
+                        {boardingPass.carInfo?.vehicleModel || 'Ô tô gia đình'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-center text-xs text-slate-300 space-y-1">
+                    <span className="font-mono text-sky-400 block font-bold">Chờ chủ xe bấm nhận đón</span>
+                    <span>Biển số xe, màu xe và tên chủ xe sẽ tự động hiển thị tại đây sau ít phút</span>
+                  </div>
+                )}
 
-              <div className="flex items-center justify-center gap-2 sm:gap-3 py-2">
-                {(boardingPass.pin || '8842').split('').map((char, i) => (
-                  <span
-                    key={i}
-                    className="w-14 h-18 sm:w-16 sm:h-20 rounded-2xl bg-white/[0.08] border-2 border-emerald-400 text-3xl sm:text-4xl font-black font-mono text-emerald-400 flex items-center justify-center shadow-lg"
-                  >
-                    {char}
+                <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                  <span>
+                    Đích đến: <strong>{boardingPass.destinationName}</strong>
                   </span>
-                ))}
+                  <span className="font-mono text-emerald-400 font-bold">
+                    Phụ xăng: {formatVND(boardingPass.fuelSurcharge || estimatedFare)}
+                  </span>
+                </div>
               </div>
 
+              {/* 4. KẾ HOẠCH DỰ PHÒNG: NẾU KHÔNG AI ĐÓN HOẶC CẦN ĐI GẤP (FAIL-SAFE STANDBY) */}
+              {isWaiting && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2 text-xs text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-bold font-mono text-amber-400">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>NẾU CẦN ĐI GẤP HOẶC ĐỢI QUÁ 10 PHÚT?</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400">0đ Rủi ro</span>
+                  </div>
+                  <p className="leading-relaxed text-[11px] text-slate-400">
+                    CarMate là mạng lưới xe gia đình đi làm tiện đường. Nếu ngoài khung giờ hoặc chưa có xe cá nhân nào ghé qua, bạn có thể gọi các nhà xe tuyến cố định bên dưới để đi ngay:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
+                    <a
+                      href="tel:19006969"
+                      className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-between text-slate-200"
+                    >
+                      <span>Xe khách Thành Công (Bình Long - SG)</span>
+                      <span className="text-emerald-400 font-bold">1900 6969</span>
+                    </a>
+                    <a
+                      href="tel:02713999999"
+                      className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-between text-slate-200"
+                    >
+                      <span>Limousine Petro Bình Phước (Tân Khai - TSN)</span>
+                      <span className="text-purple-400 font-bold">0271 399 9999</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. NÚT HỦY HOẶC ĐỔI TRẠM */}
               <button
                 type="button"
-                onClick={handleCopyPin}
-                className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                onClick={handleCancelPass}
+                className="w-full py-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] text-xs font-semibold text-slate-400 hover:text-white uppercase tracking-wider transition-all cursor-pointer"
               >
-                <Copy className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{copiedPin ? 'Đã sao chép!' : 'Chạm để sao chép mã'}</span>
+                Hủy hàng đợi / Đổi trạm khác (Miễn phí 100%)
               </button>
-
-              <p className="text-xs text-amber-300 font-medium pt-1">
-                Vui lòng đứng sẵn tại mép sân cây xăng, đọc mã 4 số này khi bước lên xe.
-              </p>
             </div>
-
-            {/* THÔNG TIN XE TIẾP CẬN */}
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-5 space-y-3">
-              <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-                <div>
-                  <span className="text-[10px] uppercase text-slate-400 font-mono block">Biển số xe</span>
-                  <span className="text-lg font-black font-mono text-white">
-                    {boardingPass.carInfo?.plate || '93A - 123.45'}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] uppercase text-slate-400 font-mono block">Dòng xe</span>
-                  <span className="text-sm font-bold text-slate-200">
-                    {boardingPass.carInfo?.vehicleModel || 'Mitsubishi Xpander (Trắng)'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                <span>
-                  Đích đến: <strong>{boardingPass.destinationName}</strong>
-                </span>
-                <span className="font-mono text-emerald-400 font-bold">
-                  Phụ xăng: {formatVND(boardingPass.fuelSurcharge || estimatedFare)}
-                </span>
-              </div>
-            </div>
-
-            {/* NÚT HỦY HOẶC ĐỔI TRẠM */}
-            <button
-              type="button"
-              onClick={handleCancelPass}
-              className="w-full py-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] text-xs font-semibold text-slate-400 hover:text-white uppercase tracking-wider transition-all cursor-pointer"
-            >
-              Hủy hàng đợi / Đổi trạm khác
-            </button>
-          </div>
-        )}
+          );
+        })()}
       </main>
 
       {/* ========================================================================= */}

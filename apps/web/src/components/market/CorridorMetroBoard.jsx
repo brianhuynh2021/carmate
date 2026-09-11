@@ -165,12 +165,12 @@ export default function CorridorMetroBoard({
           <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white font-display">
             Tuyến Xe Tiện Chuyến QL13 <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-emerald-400 via-sky-400 to-[#0071e3] bg-clip-text text-transparent">
-              Đi Chung Tiện Đường — Đón Trả Tại Cây Xăng
+              Đi Chung Tiện Tuyến — Đón Trả Tại Các Điểm Trọng Điểm QL13
             </span>
           </h1>
 
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-sans">
-            Không cần đăng bài hay tìm chuyến. Tuyến Quốc lộ 13 chạy thẳng về Sài Gòn là trục đường quen thuộc bao năm nay. <strong>Chủ xe</strong> tiện đường chỉ cần bật Taplo là tự động kết nối người đi cùng phía trước. <strong>Người đi cùng</strong> chỉ cần đứng tại cây xăng Petrolimex quen thuộc dọc QL13 là xe ghé đón an toàn với mã 4 số.
+            Không cần đăng bài hay tìm chuyến. Tuyến Quốc lộ 13 chạy thẳng về Sài Gòn là trục đường quen thuộc bao năm nay. <strong>Chủ xe</strong> tiện đường chỉ cần bật Taplo là tự động kết nối người đi cùng phía trước. <strong>Người đi cùng</strong> chỉ cần chọn điểm đón gần mình nhất (Trung tâm hành chính, Vincom Plaza, KCN hoặc Cây xăng Petrolimex mặt tiền đường lớn) là xe ghé đón an toàn với mã 4 số.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono text-slate-300">
@@ -208,10 +208,10 @@ export default function CorridorMetroBoard({
 
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide">
-                Chế Độ Taplo Tự Động (Dành Cho Chủ Xe)
+                Chế Độ Taplo Tự Động (Dành Cho Chủ XE)
               </h2>
               <p className="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
-                Lên xe nổ máy, bật nhận khách và gắn điện thoại lên giá đỡ. Hệ thống tự động thông báo bằng giọng nói tiếng Việt khi có người đi cùng đang chờ ở trạm cây xăng phía trước.
+                Lên xe nổ máy, bật nhận khách và gắn điện thoại lên giá đỡ. Hệ thống tự động thông báo bằng giọng nói tiếng Việt khi có người đi cùng đang chờ ở các điểm đón phía trước (TTHC, Vincom, Cây xăng...).
               </p>
             </div>
 
@@ -254,7 +254,7 @@ export default function CorridorMetroBoard({
                 Đón Xe Dọc Quốc Lộ 13 Về Sài Gòn
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                Tuyến QL13 chạy thẳng về Sài Gòn là trục đường quen thuộc bao năm nay. Hệ thống tự động nhận diện cây xăng Petrolimex bạn đang đứng (hoặc quét mã QR tại cột xăng) để nhận mã 4 số đón xe tiện đường sau vài phút.
+                Tuyến QL13 chạy thẳng về Sài Gòn là trục đường quen thuộc bao năm nay. Hệ thống tự động nhận diện trạm gần bạn nhất (TTHC Huyện, Vincom, KCN hoặc Cây xăng mặt tiền QL13) để nhận mã 4 số đón xe tiện đường sau vài phút.
               </p>
             </div>
 
@@ -275,8 +275,8 @@ export default function CorridorMetroBoard({
             onClick={handleAutoDetectAndOpenRiderView}
             className="w-full h-15 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white font-black text-base uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_4px_20px_rgba(0,113,227,0.3)] cursor-pointer transition-all"
           >
-            <Fuel className="w-5 h-5 text-emerald-300" />
-            <span>ĐÓN XE VỀ SÀI GÒN (TẠI CÂY XĂNG GẦN NHẤT)</span>
+            <MapPin className="w-5 h-5 text-emerald-300" />
+            <span>ĐÓN XE VỀ SÀI GÒN (CHỌN TRẠM GẦN BẠN NHẤT)</span>
           </button>
         </div>
       </section>
