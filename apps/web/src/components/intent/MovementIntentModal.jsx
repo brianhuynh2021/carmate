@@ -51,7 +51,7 @@ export default function MovementIntentModal({
     }
   }, [initialRole, isOpen]);
 
-  // Ngày hẹn: Hôm nay / Ngày mai / Ngày kia
+  // Ngày hẹn: Hôm nay / Ngày mai / Ngày mốt (Hiển thị 2 dòng trực quan theo iOS Calendar)
   const dateOptions = useMemo(() => {
     const today = new Date();
     const tomorrow = new Date(today);
@@ -60,20 +60,20 @@ export default function MovementIntentModal({
     dayAfter.setDate(today.getDate() + 2);
 
     const fmt = (d) => d.toISOString().split('T')[0];
-    const fmtLabel = (d, label) => {
+    const fmtSub = (d) => {
       const dd = String(d.getDate()).padStart(2, '0');
       const mm = String(d.getMonth() + 1).padStart(2, '0');
-      return `${label} (${dd}/${mm})`;
+      return `${dd}/${mm}`;
     };
 
     return [
-      { value: fmt(today), label: fmtLabel(today, 'Hôm nay') },
-      { value: fmt(tomorrow), label: fmtLabel(tomorrow, 'Ngày mai') },
-      { value: fmt(dayAfter), label: fmtLabel(dayAfter, 'Ngày kia') }
+      { value: fmt(today), title: 'Hôm nay', subDate: fmtSub(today) },
+      { value: fmt(tomorrow), title: 'Ngày mai', subDate: fmtSub(tomorrow) },
+      { value: fmt(dayAfter), title: 'Ngày mốt', subDate: fmtSub(dayAfter) }
     ];
   }, []);
 
-  const [date, setDate] = useState(dateOptions[1].value); // Mặc định ngày mai
+  const [date, setDate] = useState(() => dateOptions[1].value); // Mặc định ngày mai
   const [timeSlot, setTimeSlot] = useState('05:00-07:00'); // Giờ cao điểm sáng sớm
 
   // Thông tin liên hệ
@@ -318,7 +318,7 @@ export default function MovementIntentModal({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] space-y-1">
                 <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5" /> Điểm Đón
@@ -326,14 +326,17 @@ export default function MovementIntentModal({
                 <select
                   value={originHubId}
                   onChange={(e) => setOriginHubId(e.target.value)}
-                  className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white border-0 outline-none cursor-pointer"
+                  className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white border-0 outline-none cursor-pointer truncate"
                 >
                   {VIRTUAL_HUBS.map((hub) => (
-                    <option key={hub.id} value={hub.id} className="bg-white dark:bg-slate-900">
-                      {hub.shortName || hub.name} ({hub.landmark})
+                    <option key={hub.id} value={hub.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                      {hub.shortName || hub.name} — {hub.landmark}
                     </option>
                   ))}
                 </select>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate">
+                  📍 {originHub?.landmark}
+                </div>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] space-y-1">
@@ -343,14 +346,17 @@ export default function MovementIntentModal({
                 <select
                   value={destHubId}
                   onChange={(e) => setDestHubId(e.target.value)}
-                  className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white border-0 outline-none cursor-pointer"
+                  className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white border-0 outline-none cursor-pointer truncate"
                 >
                   {VIRTUAL_HUBS.map((hub) => (
-                    <option key={hub.id} value={hub.id} className="bg-white dark:bg-slate-900">
-                      {hub.shortName || hub.name} ({hub.landmark})
+                    <option key={hub.id} value={hub.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                      {hub.shortName || hub.name} — {hub.landmark}
                     </option>
                   ))}
                 </select>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate">
+                  🎯 {destHub?.landmark}
+                </div>
               </div>
             </div>
           </div>
@@ -361,19 +367,20 @@ export default function MovementIntentModal({
               <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" /> 3. Ngày di chuyển
               </label>
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-cols-3 gap-1.5">
                 {dateOptions.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => setDate(opt.value)}
-                    className={`py-2 px-1 text-center rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
+                    className={`py-2 px-1 text-center rounded-xl transition-all cursor-pointer border ${
                       date === opt.value
-                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-xs'
-                        : 'bg-slate-50 dark:bg-white/[0.03] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.08] hover:bg-slate-100'
+                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-sm'
+                        : 'bg-slate-50 dark:bg-white/[0.03] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.06]'
                     }`}
                   >
-                    {opt.label.split(' ')[0]}
+                    <span className="block text-xs font-bold leading-tight">{opt.title}</span>
+                    <span className="block text-[10px] opacity-75 font-mono mt-0.5">{opt.subDate}</span>
                   </button>
                 ))}
               </div>
@@ -386,10 +393,10 @@ export default function MovementIntentModal({
               <select
                 value={timeSlot}
                 onChange={(e) => setTimeSlot(e.target.value)}
-                className="w-full h-9 px-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+                className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
               >
                 {TIME_SLOTS.filter((s) => s.id !== 'all' && !s.isAlias).map((slot) => (
-                  <option key={slot.id} value={slot.id} className="bg-white dark:bg-slate-900">
+                  <option key={slot.id} value={slot.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                     {slot.label}
                   </option>
                 ))}
@@ -397,12 +404,12 @@ export default function MovementIntentModal({
             </div>
           </div>
 
-          {/* 4. SỐ GHẾ & ĐỊNH MỨC TOÁN HỌC SHAPLEY */}
+          {/* 4. SỐ GHẾ & ĐỊNH MỨC CHIA SẺ CHI PHÍ XĂNG XE */}
           <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-500/30 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
                 <Fuel className="w-4 h-4 text-emerald-500" />
-                <span>Định mức chi phí chia sẻ Shapley Value</span>
+                <span>Chi phí chia sẻ xăng xe công bằng (Không phát sinh)</span>
               </span>
               <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-emerald-200 dark:border-emerald-800">
                 <span className="text-[11px] font-mono px-2 text-slate-500">
@@ -435,13 +442,13 @@ export default function MovementIntentModal({
             </div>
             <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5" /> 0đ phí sàn
+                <CheckCircle2 className="w-3.5 h-3.5" /> 0đ phí sàn CarMate
               </span>
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Đã gồm vé cầu đường
+                <CheckCircle2 className="w-3.5 h-3.5" /> Đã gồm vé cầu đường BOT
               </span>
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Không tăng giá
+                <CheckCircle2 className="w-3.5 h-3.5" /> Cố định 100% · Không tăng giá
               </span>
             </div>
           </div>
@@ -470,7 +477,7 @@ export default function MovementIntentModal({
                 type="text"
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
-                placeholder={role === 'driver' ? 'Chủ xe' : 'Khách đi cùng'}
+                placeholder={role === 'driver' ? 'Chủ xe' : 'Người đi cùng'}
                 className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3]"
               />
             </div>
