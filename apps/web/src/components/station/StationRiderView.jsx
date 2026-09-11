@@ -1112,7 +1112,7 @@ export default function StationRiderView({
                         >
                           {formatVND(dest.price)}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-mono block">/ vé</span>
+                        <span className="text-[10px] text-slate-400 font-mono block">/ người</span>
                       </div>
                     </button>
                   );
@@ -1161,10 +1161,10 @@ export default function StationRiderView({
                 </button>
                 <div className="text-center">
                   <span className="text-2xl font-black font-mono text-white tracking-wide">
-                    ( {seatsNeeded} vé )
+                    ( {seatsNeeded} người )
                   </span>
                   <span className="text-[11px] text-emerald-400 font-mono block mt-0.5">
-                    Tổng cước: {formatVND(estimatedFare)}
+                    Phụ xăng: {formatVND(estimatedFare)}
                   </span>
                 </div>
                 <button

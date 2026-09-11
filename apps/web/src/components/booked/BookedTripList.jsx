@@ -15,7 +15,6 @@ import {
   Lock,
   Shield,
   ShieldAlert,
-  PhoneOff,
   User,
   ChevronDown,
   Search,
@@ -148,8 +147,6 @@ export default function BookedTripList({
   onComplete,
   onFindTrip,
   onReview,
-  onReportMismatch,
-  onReportUnreachablePhone,
   onOpenChat
 }) {
   const { t } = useI18n();
@@ -664,23 +661,6 @@ export default function BookedTripList({
                 {/* ── 2. KHỐI CHI TIẾT MỞ RỘNG (EXPANDED ACCORDION) ── */}
                 {isExpanded && (
                   <div className="border-t border-black/[0.06] dark:border-white/[0.06] bg-[#fafafa] dark:bg-slate-900/60 p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
-                    {/* Cảnh báo đã báo cáo sai lệch loại xe nếu có */}
-                    {record.vehicleMismatchReport && (
-                      <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-semibold min-w-0">
-                          <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-                          <span className="truncate">
-                            Đã báo cáo: {record.vehicleMismatchReport.mismatchTitle || 'Sai lệch loại xe'}
-                          </span>
-                        </div>
-                        <span className="shrink-0 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-200/80 dark:bg-rose-900/80 text-rose-900 dark:text-rose-100">
-                          {record.vehicleMismatchReport.status === 'resolved_converted'
-                            ? '✓ Đã chuyển Biển vàng'
-                            : 'Đang xử lý'}
-                        </span>
-                      </div>
-                    )}
-
                     {/* THÔNG BÁO ĐIỀU PHỐI XE HỖ TRỢ (SILENT FALLBACK N+1) */}
                     {hasSilentFailover && (
                       <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 space-y-2 text-xs">
@@ -945,30 +925,6 @@ export default function BookedTripList({
                           >
                             {isConfirmed ? 'Huỷ chuyến' : 'Dừng trao đổi'}
                           </Button>
-                          {onReportMismatch && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={ShieldAlert}
-                              onClick={() => onReportMismatch(record)}
-                              className="flex-1 sm:flex-initial justify-center text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-medium"
-                              title="Báo cáo vi phạm an toàn, nhồi nhét hoặc sang xe giữa đường"
-                            >
-                              Báo sự cố
-                            </Button>
-                          )}
-                          {onReportUnreachablePhone && (record.status === 'confirmed' || record.bothConfirmed) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={PhoneOff}
-                              onClick={() => onReportUnreachablePhone(record)}
-                              className="w-full sm:w-auto justify-center text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-medium"
-                              title="Báo cáo đối tác dùng số điện thoại ảo hoặc không liên lạc được"
-                            >
-                              Báo số ảo / Không nghe máy
-                            </Button>
-                          )}
                           <button
                             type="button"
                             onClick={() => onComplete(record.escrowId, record)}
@@ -988,17 +944,6 @@ export default function BookedTripList({
                                 ? '✓ Chuyến đi đã hoàn tất an toàn'
                                 : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
                             </span>
-                            {onReportMismatch && !record.vehicleMismatchReport && (
-                              <button
-                                type="button"
-                                onClick={() => onReportMismatch(record)}
-                                className="text-[11.5px] text-slate-400 hover:text-rose-600 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer ml-1"
-                                title="Báo cáo nếu xe đón không đúng cam kết"
-                              >
-                                <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
-                                <span>Báo sai xe</span>
-                              </button>
-                            )}
                           </div>
                           {isCompleted && onReview && (
                             <button

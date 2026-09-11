@@ -229,20 +229,6 @@ export const api = {
     });
   },
 
-  async reportVehicleMismatch(id, data = {}) {
-    return request(`/bookings/${id}/report-vehicle-mismatch`, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  },
-
-  async reportUnreachablePhone(id, data = {}) {
-    return request(`/bookings/${id}/report-unreachable-phone`, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  },
-
   async resetBookingBan(id) {
     return request(`/bookings/${id}/reset-ban`, {
       method: 'POST'

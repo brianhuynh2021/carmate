@@ -134,7 +134,7 @@ export function calculateKinematicTriggerDistance(speedKmh = 75, ttaSeconds = 21
   const speedMs = speed / 3.6;
   const triggerMeters = speedMs * ttaSeconds;
   const triggerKm = triggerMeters / 1000;
-  // Ngưỡng tối thiểu là 3.0 km để tài xế luôn có đủ thời gian phản xạ
+  // Ngưỡng tối thiểu là 3.0 km để chủ xe luôn có đủ thời gian phản xạ
   return Math.round(Math.max(3.0, triggerKm) * 10) / 10;
 }
 

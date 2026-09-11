@@ -38,8 +38,6 @@ import CarPhotosModal from './components/modals/CarPhotosModal.jsx';
 import ZaloReentryModal from './components/modals/ZaloReentryModal.jsx';
 import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal.jsx';
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
-import VehicleMismatchModal from './components/modals/VehicleMismatchModal.jsx';
-import UnreachablePhoneModal from './components/modals/UnreachablePhoneModal.jsx';
 import UserProfileModal from './components/profile/UserProfileModal.jsx';
 import InboxModal from './components/modals/InboxModal.jsx';
 
@@ -306,10 +304,6 @@ export default function App() {
     setTicketToShare,
     reviewRecord,
     setReviewRecord,
-    mismatchRecord,
-    setMismatchRecord,
-    unreachablePhoneRecord,
-    setUnreachablePhoneRecord,
     selectedTripForRoute,
     setSelectedTripForRoute,
     editingTrip,
@@ -493,9 +487,7 @@ export default function App() {
     handleConfirmedFromZaloReentry,
     handleSendDelay,
     handleCompleteTrip,
-    handleSubmitReview,
-    handleVehicleMismatchReport,
-    handleUnreachablePhoneReport
+    handleSubmitReview
   } = useTripsData({
     currentUser,
     updateMyTripsCount,
@@ -958,25 +950,31 @@ export default function App() {
   // CHẾ ĐỘ TAPLO Ô TÔ (COCKPIT HUD TOÀN MÀN HÌNH CHO CHỦ XE)
   if (activeTab === 'cockpit') {
     return (
-      <CockpitMode
-        tripId={`TRIP-${currentUser?.id || currentUser?.phone || 'TAPLO'}`}
-        initialCorridor={activeCorridor || 'Tuyến QL13'}
-        currentUser={currentUser}
-        onBack={() => setActiveTab('market')}
-        onShowToast={showToast}
-      />
+      <>
+        <CockpitMode
+          tripId={`TRIP-${currentUser?.id || currentUser?.phone || 'TAPLO'}`}
+          initialCorridor={activeCorridor || 'Tuyến QL13'}
+          currentUser={currentUser}
+          onBack={() => setActiveTab('market')}
+          onShowToast={showToast}
+        />
+        <Toast message={toastMessage} />
+      </>
     );
   }
 
   // CHẾ ĐỘ QUÉT QR ĐIỂM ĐÓN CÂY XĂNG (RIDER STATION LIVE PASS CHO KHÁCH)
   if (activeTab === 'station') {
     return (
-      <StationRiderView
-        hubId={stationHubId}
-        currentUser={currentUser}
-        onBack={() => setActiveTab('market')}
-        onShowToast={showToast}
-      />
+      <>
+        <StationRiderView
+          hubId={stationHubId}
+          currentUser={currentUser}
+          onBack={() => setActiveTab('market')}
+          onShowToast={showToast}
+        />
+        <Toast message={toastMessage} />
+      </>
     );
   }
 
@@ -1037,8 +1035,6 @@ export default function App() {
               onDelay={setDelayRecord}
               onComplete={handleCompleteTrip}
               onReview={setReviewRecord}
-              onReportMismatch={setMismatchRecord}
-              onReportUnreachablePhone={setUnreachablePhoneRecord}
               onFindTrip={() => setActiveTab('market')}
               onOpenChat={(id, opts) => handleOpenInbox(id, opts)}
             />
@@ -1091,7 +1087,6 @@ export default function App() {
           initialBookingId={inboxInitialBookingId}
           autoCall={inboxAutoCall}
           onRefreshBookings={refreshBookings}
-          onReportUnreachablePhone={setUnreachablePhoneRecord}
           onShowToast={showToast}
           onMarkAsRead={markBookingAsRead}
           onMarkAsUnread={markBookingAsUnread}
@@ -1113,9 +1108,9 @@ export default function App() {
             setSelectedItemForEscrow(null);
             handleOpenInbox(bookingId, opts);
           }}
-          onViewBookedTab={(targetTab = 'booked') => {
+          onViewBookedTab={() => {
             setSelectedItemForEscrow(null);
-            setActiveTab(targetTab === 'my-trips' || targetTab === 'my_trips' ? 'my-trips' : 'booked');
+            setActiveTab('booked');
           }}
           onAutoPostDemand={handlePostTrip}
           onShowToast={showToast}
@@ -1168,20 +1163,6 @@ export default function App() {
           booking={reviewRecord}
           onClose={() => setReviewRecord(null)}
           onSubmitReview={handleSubmitReview}
-        />
-      )}
-      {mismatchRecord && (
-        <VehicleMismatchModal
-          record={mismatchRecord}
-          onClose={() => setMismatchRecord(null)}
-          onSubmitReport={handleVehicleMismatchReport}
-        />
-      )}
-      {unreachablePhoneRecord && (
-        <UnreachablePhoneModal
-          record={unreachablePhoneRecord}
-          onClose={() => setUnreachablePhoneRecord(null)}
-          onSubmitReport={handleUnreachablePhoneReport}
         />
       )}
       {selectedTripForRoute && (

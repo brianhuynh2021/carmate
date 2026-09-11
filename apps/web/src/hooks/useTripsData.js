@@ -456,35 +456,6 @@ export default function useTripsData({
     [showToast]
   );
 
-  const handleVehicleMismatchReport = useCallback(
-    async ({ bookingId, mismatchType, actualPlate, passengerNote }) => {
-      try {
-        const res = await api.reportVehicleMismatch(bookingId, { mismatchType, actualPlate, passengerNote });
-        if (res?.success) {
-          setBookedEscrows((prev) =>
-            prev.map((e) => {
-              if (e.escrowId === bookingId || e.id === bookingId) {
-                return {
-                  ...e,
-                  vehicleMismatchReport: res.data
-                };
-              }
-              return e;
-            })
-          );
-          showToast('✓ Đã gửi báo cáo sai lệch xe! Ban Quản Trị sẽ can thiệp ngay.');
-          return res.data;
-        } else {
-          showToast(res?.error || 'Có lỗi xảy ra khi gửi báo cáo');
-        }
-      } catch (err) {
-        console.warn('Vehicle mismatch report error:', err);
-        showToast('Lỗi mạng khi gửi báo cáo, vui lòng thử lại');
-      }
-    },
-    [showToast]
-  );
-
   const refreshBookings = useCallback(async () => {
     try {
       const res = await api.getBookings();
@@ -541,25 +512,6 @@ export default function useTripsData({
     return () => clearInterval(pollInterval);
   }, [currentUser, showToast, bookedEscrows]);
 
-  const handleUnreachablePhoneReport = useCallback(
-    async ({ bookingId, reason, note }) => {
-      try {
-        const res = await api.reportUnreachablePhone(bookingId, { reason, note });
-        if (res?.success) {
-          await refreshBookings();
-          showToast('🚨 Đã tiếp nhận báo cáo. Hệ thống đã trừ 30 điểm tín nhiệm đối tác và huỷ chuyến an toàn cho bạn.');
-          return res.data;
-        } else {
-          showToast(res?.error || 'Có lỗi xảy ra khi gửi báo cáo');
-        }
-      } catch (err) {
-        console.warn('Unreachable phone report error:', err);
-        showToast(err.message || 'Lỗi khi gửi báo cáo, vui lòng thử lại');
-      }
-    },
-    [refreshBookings, showToast]
-  );
-
   return {
     driverOffers,
     setDriverOffers,
@@ -582,8 +534,6 @@ export default function useTripsData({
     handleConfirmedFromZaloReentry,
     handleSendDelay,
     handleCompleteTrip,
-    handleSubmitReview,
-    handleVehicleMismatchReport,
-    handleUnreachablePhoneReport
+    handleSubmitReview
   };
 }

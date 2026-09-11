@@ -128,7 +128,7 @@ export default function MovementIntentModal({
 
   const pricePerSeat = tariff.pricePerSeat || 150000;
   const totalPriceForRider = pricePerSeat * seats;
-  const driverPayout = Math.round(pricePerSeat * seats * 0.9);
+  const driverPayout = pricePerSeat * seats;
 
   // Xử lý gửi Ý định
   const handleSubmit = async (e) => {
@@ -398,7 +398,7 @@ export default function MovementIntentModal({
 
             <div className="flex items-center justify-between pt-1 border-t border-emerald-200/60 dark:border-emerald-800/40 text-xs font-mono">
               <span className="text-slate-600 dark:text-slate-400">
-                {role === 'driver' ? 'Hỗ trợ chi phí xăng dự kiến:' : 'Mức cước chia sẻ cố định:'}
+                {role === 'driver' ? 'Hỗ trợ chi phí xăng dự kiến:' : 'Mức phụ xăng chia sẻ cố định:'}
               </span>
               <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
                 {role === 'driver' ? `+${formatVND(driverPayout)}` : formatVND(totalPriceForRider)}

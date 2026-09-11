@@ -18,8 +18,6 @@ import {
   submitReview,
   getBookingPublicSummary,
   driverConfirmBooking,
-  reportVehicleMismatch,
-  reportUnreachablePhone,
   addBookingMessageHandler,
   preConfirmBookingHandler,
   finalConfirmBookingHandler,
@@ -146,8 +144,6 @@ router.post('/bookings/:id/delay', optionalAuth, requireBookingParty, reportDela
 router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
 router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitReview);
-router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
-router.post('/bookings/:id/report-unreachable-phone', optionalAuth, reportUnreachablePhone);
 router.post('/bookings/:id/reset-ban', optionalAuth, resetBanHandler);
 router.post('/bookings/:id/dispute', optionalAuth, disputeBookingHandler);
 
@@ -162,8 +158,6 @@ router.post('/escrows/:id/delay', optionalAuth, requireBookingParty, reportDelay
 router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);
 router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitReview);
-router.post('/escrows/:id/report-vehicle-mismatch', optionalAuth, reportVehicleMismatch);
-router.post('/escrows/:id/report-unreachable-phone', optionalAuth, reportUnreachablePhone);
 router.post('/escrows/:id/reset-ban', optionalAuth, resetBanHandler);
 router.post('/escrows/:id/dispute', optionalAuth, disputeBookingHandler);
 

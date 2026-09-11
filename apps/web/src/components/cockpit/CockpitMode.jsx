@@ -104,7 +104,16 @@ export default function CockpitMode({
   const [activeCockpitTab, setActiveCockpitTab] = useState('SCHEDULE');
 
   // Trạng thái chu trình: 'STANDBY' (D1) | 'OFFERING' (D2) | 'DWELLING' (D3) | 'CRUISING' (D3.5 Hành trình) | 'DROPOFF' (D4 Trả khách)
-  const [cockpitState, setCockpitState] = useState('STANDBY');
+  const [cockpitState, setCockpitState] = useState(() => {
+    try {
+      const savedPassRaw = localStorage.getItem('carmate_active_station_pass');
+      if (savedPassRaw) {
+        const parsed = JSON.parse(savedPassRaw);
+        if (parsed?.pass?.status === 'BOARDED') return 'CRUISING';
+      }
+    } catch {}
+    return 'STANDBY';
+  });
   const [activeOffer, setActiveOffer] = useState(null);
   const [offerCountdown, setOfferCountdown] = useState(30);
 
@@ -112,7 +121,26 @@ export default function CockpitMode({
   const [dockingCountdown, setDockingCountdown] = useState(60);
   const [pinDigits, setPinDigits] = useState(['', '', '', '']);
   const [pinError, setPinError] = useState('');
-  const [currentRider, setCurrentRider] = useState(null);
+  const [currentRider, setCurrentRider] = useState(() => {
+    try {
+      const savedPassRaw = localStorage.getItem('carmate_active_station_pass');
+      if (savedPassRaw) {
+        const parsed = JSON.parse(savedPassRaw);
+        if (parsed?.pass?.status === 'BOARDED') {
+          return {
+            name: parsed.pass.riderName || 'Khách đi cùng',
+            count: parsed.pass.seatsNeeded || 1,
+            destination: parsed.pass.destinationName || 'Hàng Xanh (Bình Thạnh)',
+            payout: parsed.pass.driverPayout || parsed.pass.fuelSurcharge || 250000,
+            boardedAt: parsed.pass.boardedAt || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            intentId: parsed.pass.intentId,
+            pin: parsed.pass.pin || '8842'
+          };
+        }
+      }
+    } catch {}
+    return null;
+  });
   const [showMutualRating, setShowMutualRating] = useState(false);
 
   // Cơ chế xác thực Khách vắng mặt (Dual Geofence & Dwell Time Invariant)
@@ -276,7 +304,7 @@ export default function CockpitMode({
               riderCount: parsed.pass.seatsNeeded || 1,
               destinationName: parsed.pass.destinationName || 'Hàng Xanh',
               fuelSurcharge: parsed.pass.fuelSurcharge || 250000,
-              driverPayout: parsed.pass.driverPayout || 225000,
+              driverPayout: parsed.pass.driverPayout || parsed.pass.fuelSurcharge || 250000,
               pin: parsed.pass.pin || '8842'
             });
           }

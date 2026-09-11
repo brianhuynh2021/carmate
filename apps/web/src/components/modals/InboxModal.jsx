@@ -56,7 +56,6 @@ export default function InboxModal({
   onRefreshBookings,
   initialBookingId = null,
   autoCall = false,
-  onReportUnreachablePhone = null,
   onShowToast,
   onMarkAsRead = null,
   onMarkAsUnread = null,
@@ -1780,22 +1779,6 @@ export default function InboxModal({
                       <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-100/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-emerald-900 dark:text-emerald-200 text-left leading-relaxed">
                         💡 <strong>Nguyên tắc dứt khoát:</strong> Nếu đối tác không phản hồi tin nhắn hoặc cuộc gọi qua app, bạn có thể bấm <strong>Huỷ chuyến 1-chạm</strong> để tìm xe hoặc đón người khác ngay lập tức.
                       </div>
-
-                      {onReportUnreachablePhone && (
-                        <div className="pt-1.5 text-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onReportUnreachablePhone(activeBooking);
-                              onClose();
-                            }}
-                            className="text-[11.5px] text-slate-500 hover:text-[#0071e3] dark:text-slate-400 dark:hover:text-[#2997ff] font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
-                          >
-                            <PhoneOff className="w-3 h-3 text-rose-500" />
-                            <span>Đối tác không nhấc máy? Gửi báo cáo sự cố</span>
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )
                 )}

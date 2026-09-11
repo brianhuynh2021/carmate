@@ -422,9 +422,9 @@ export default function CorridorMetroBoard({
             <div className="p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-500 dark:text-slate-400">
-                  {direction === 'TO_SAIGON' ? 'Cước Bình Long / Tân Khai ➔ TP.HCM:' : 'Cước TP.HCM ➔ Tân Khai / Bình Long:'}
+                  {direction === 'TO_SAIGON' ? 'Phụ xăng Bình Long / Tân Khai ➔ TP.HCM:' : 'Phụ xăng TP.HCM ➔ Tân Khai / Bình Long:'}
                 </span>
-                <span className="text-[#0071e3] font-bold">150k — 190k / vé (Rẻ hơn Limo 30–50%)</span>
+                <span className="text-[#0071e3] font-bold">150k — 190k / người (Tiết kiệm hơn Limo 30–50%)</span>
               </div>
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-500 dark:text-slate-400">Thời gian di chuyển:</span>
@@ -495,7 +495,7 @@ export default function CorridorMetroBoard({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Bình Long ➔ Hàng Xanh</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black font-mono text-[#0071e3]">180.000đ</span>
-                    <span className="text-xs text-slate-400">/ vé</span>
+                    <span className="text-xs text-slate-400">/ người</span>
                   </div>
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -517,7 +517,7 @@ export default function CorridorMetroBoard({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Tân Khai ➔ Hàng Xanh</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
-                    <span className="text-xs text-slate-400">/ vé</span>
+                    <span className="text-xs text-slate-400">/ người</span>
                   </div>
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
@@ -536,7 +536,7 @@ export default function CorridorMetroBoard({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Chơn Thành ➔ Hàng Xanh</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black font-mono text-[#0071e3]">120.000đ</span>
-                    <span className="text-xs text-slate-400">/ vé</span>
+                    <span className="text-xs text-slate-400">/ người</span>
                   </div>
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -555,7 +555,7 @@ export default function CorridorMetroBoard({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Bình Long ➔ Chơn Thành</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black font-mono text-[#0071e3]">75.000đ</span>
-                    <span className="text-xs text-slate-400">/ vé</span>
+                    <span className="text-xs text-slate-400">/ người</span>
                   </div>
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -576,7 +576,7 @@ export default function CorridorMetroBoard({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Hàng Xanh ➔ Bình Long</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black font-mono text-[#0071e3]">180.000đ</span>
-                    <span className="text-xs text-slate-400">/ vé</span>
+                    <span className="text-xs text-slate-400">/ người</span>
                   </div>
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -598,7 +598,7 @@ export default function CorridorMetroBoard({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Hàng Xanh ➔ Tân Khai</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
-                    <span className="text-xs text-slate-400">/ vé</span>
+                    <span className="text-xs text-slate-400">/ người</span>
                   </div>
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
@@ -617,7 +617,7 @@ export default function CorridorMetroBoard({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Hàng Xanh ➔ Chơn Thành</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black font-mono text-[#0071e3]">120.000đ</span>
-                    <span className="text-xs text-slate-400">/ vé</span>
+                    <span className="text-xs text-slate-400">/ người</span>
                   </div>
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -636,7 +636,7 @@ export default function CorridorMetroBoard({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Sân bay TSN ➔ Bình Long</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black font-mono text-purple-600 dark:text-purple-400">190.000đ</span>
-                    <span className="text-xs text-slate-400">/ vé</span>
+                    <span className="text-xs text-slate-400">/ người</span>
                   </div>
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-purple-200 dark:border-purple-800 flex items-center justify-between">
@@ -778,7 +778,7 @@ export default function CorridorMetroBoard({
                   <>
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-mono text-slate-400 block">
-                        {hub.targetLabel ? `${hub.targetLabel}:` : 'Cước chia sẻ:'}
+                        {hub.targetLabel ? `${hub.targetLabel}:` : 'Phụ xăng:'}
                       </span>
                       <span className="text-sm sm:text-base font-black font-mono text-emerald-400">
                         {formatVND(hub.priceToTarget)}
