@@ -22,7 +22,10 @@ import {
   CORRIDOR_FIXED_SEGMENTS,
   calculateDynamicTariffByDistance,
   getDailyFuelPrice,
-  setDailyFuelPrice
+  setDailyFuelPrice,
+  projectToCorridorFrenet,
+  calculateKinematicTriggerDistance,
+  isIntervalSchedulingFeasible
 } from '@carmate/shared';
 
 import {
@@ -329,8 +332,8 @@ async function runLevel3Suite() {
   const passRes = getRiderPass(checkinRes.intent.intentId);
   assert(passRes.success === true && passRes.intent.status === 'WAITING', 'Thẻ lên xe ở trạng thái WAITING chờ xe tới');
 
-  // 8.4 Chủ xe chạy xe trên QL13 tiếp cận trạm Tân Khai (cách 3.0 km)
-  // Tọa độ Tân Khai: (11.5620, 106.6340) -> Xe ở (11.5350, 106.6340) cách ~3.0 km
+  // 8.4 Chủ xe chạy xe trên QL13 tiếp cận trạm Tân Khai (cách 2.8 km về phía Bắc)
+  // Tọa độ tiếp cận: (11.5860, 106.6264) -> Trạm Tân Khai (11.5620, 106.6340) cách 2.8 km
   const pingRes = telemetryPing({
     tripId: 'TRIP-TEST-COCKPIT-1',
     driverPhone: '0912345678',
@@ -339,8 +342,8 @@ async function runLevel3Suite() {
     vehicleModel: 'Mitsubishi Xpander (Trắng)',
     seatsAvailable: 2,
     corridor: 'Tuyến QL13',
-    lat: 11.5350,
-    lng: 106.6340,
+    lat: 11.5860,
+    lng: 106.6264,
     speed: 75
   });
 
@@ -366,8 +369,8 @@ async function runLevel3Suite() {
   // 8.6 Chủ xe tiếp tục phát tín hiệu và Chấp nhận đón (Accept)
   telemetryPing({
     tripId: 'TRIP-TEST-COCKPIT-1',
-    lat: 11.5350,
-    lng: 106.6340,
+    lat: 11.5860,
+    lng: 106.6264,
     seatsAvailable: 2
   });
 
@@ -402,6 +405,59 @@ async function runLevel3Suite() {
   assert(correctPinRes.session.seatsAvailable === 0, 'Cập nhật số ghế còn trống = 0 sau khi nhận đủ khách');
 
   resetAllStationData();
+
+  // 8.8 Kiểm thử Mô hình Toán học Stanford Frenet Frame 1D & 3 Trạm Trả Lớn (1-Chạm)
+  console.log('\n--- 8.8 Kiểm thử Stanford Frenet Frame 1D & 3 Trạm Trả Lớn (1-Chạm) ---');
+
+  // A. Kiểm thử 3 Trạm Trả Lớn (Terminal Hubs)
+  const airportHub = getVirtualHubById('hub_ql13_san_bay_tsn');
+  assert(airportHub && airportHub.category === 'AIRPORT' && airportHub.isTerminal === true, 'Trạm Sân bay Tân Sơn Nhất được định danh chuẩn AIRPORT và isTerminal = true');
+
+  const hangXanhHub = getVirtualHubById('hub_ql13_hang_xanh');
+  assert(hangXanhHub && hangXanhHub.isTerminal === true, 'Trạm Ngã tư Hàng Xanh có isTerminal = true');
+
+  const binhPhuocHub = getVirtualHubById('hub_ql13_nga4_binh_phuoc');
+  assert(binhPhuocHub && binhPhuocHub.isTerminal === true, 'Trạm Ngã 4 Bình Phước có isTerminal = true');
+
+  // B. Bảng cước đến Sân bay TSN và Ngã 4 Bình Phước
+  const tariffBinhLongToTSN = getFixedSegmentTariff('hub_ql13_binh_long', 'hub_ql13_san_bay_tsn');
+  assert(tariffBinhLongToTSN.pricePerSeat === 190000, 'Cước Bình Long ➔ Sân bay Tân Sơn Nhất chuẩn xác 190.000đ (bù xăng + BOT)');
+
+  const tariffTanKhaiToTSN = getFixedSegmentTariff('hub_ql13_tan_khai', 'hub_ql13_san_bay_tsn');
+  assert(tariffTanKhaiToTSN.pricePerSeat === 160000, 'Cước Tân Khai ➔ Sân bay Tân Sơn Nhất chuẩn xác 160.000đ');
+
+  const tariffBinhLongToBP = getFixedSegmentTariff('hub_ql13_binh_long', 'hub_ql13_nga4_binh_phuoc');
+  assert(tariffBinhLongToBP.pricePerSeat === 160000, 'Cước Bình Long ➔ Ngã 4 Bình Phước chuẩn xác 160.000đ');
+
+  const tariffTanKhaiToBP = getFixedSegmentTariff('hub_ql13_tan_khai', 'hub_ql13_nga4_binh_phuoc');
+  assert(tariffTanKhaiToBP.pricePerSeat === 130000, 'Cước Tân Khai ➔ Ngã 4 Bình Phước chuẩn xác 130.000đ');
+
+  // C. Kiểm thử Chiếu Tọa độ Frenet Frame (2D -> 1D s, d)
+  // Điểm GPS tại QL13 tiếp cận Tân Khai: (11.5860, 106.6264)
+  const frenetRes = projectToCorridorFrenet(11.5860, 106.6264, 'Tuyến QL13');
+  assert(frenetRes.isOnCorridor === true, 'Frenet Frame xác nhận xe đang chạy trên hành lang QL13 (isOnCorridor = true)');
+  assert(frenetRes.d <= 85, `Độ lệch vuông góc tim đường d = ${frenetRes.d}m (nằm trong dung sai 85m)`);
+  assert(frenetRes.s >= 35 && frenetRes.s <= 42, `Tọa độ tuyến tính s = ${frenetRes.s} km chuẩn xác quanh đoạn tiếp cận Tân Khai`);
+
+  // D. Cửa sổ Radar Động học Kinematics: d_trigger = max(3.0, (v / 3.6) * 210 / 1000)
+  const triggerMin = calculateKinematicTriggerDistance(20);
+  assert(triggerMin === 3.0, 'Vận tốc chậm: Radar giữ ngưỡng tối thiểu 3.0 km');
+
+  const triggerHighway = calculateKinematicTriggerDistance(78);
+  assert(triggerHighway >= 4.5 && triggerHighway <= 4.6, `Vận tốc 78 km/h: Radar động học mở rộng lên ${triggerHighway} km (~210s TTA phản xạ an toàn)`);
+
+  // E. MIT Interval Scheduling: Kiểm tra tính khả thi gối đầu tuyến tính
+  // Xe đi từ Bình Long (s=24.5) về Sân bay TSN (s=142.5), khách đón tại Tân Khai (s=44.5) về Hàng Xanh (s=139.5) -> HỢP LỆ
+  const feasibleMatch = isIntervalSchedulingFeasible(24.5, 142.5, 44.5, 139.5);
+  assert(feasibleMatch === true, 'MIT Interval Scheduling: Khớp thành công chặng con Tân Khai ➔ Hàng Xanh lọt trong tuyến Bình Long ➔ Sân bay');
+
+  // Khách ở sau lưng xe (Khách ở Tân Khai s=44.5 nhưng xe đã qua Chơn Thành s=56.5) -> TỪ CHỐI
+  const infeasibleBehind = isIntervalSchedulingFeasible(56.5, 142.5, 44.5, 139.5);
+  assert(infeasibleBehind === false, 'MIT Interval Scheduling: Từ chối yêu cầu ở sau lưng xe (khách s=44.5 < xe s=56.5)');
+
+  // Khách đi ngược chiều về phía Bắc (s đón 100, s trả 40) trong khi xe đi về Nam -> TỪ CHỐI
+  const infeasibleReverse = isIntervalSchedulingFeasible(24.5, 142.5, 100, 40);
+  assert(infeasibleReverse === false, 'MIT Interval Scheduling: Từ chối yêu cầu đi ngược chiều');
 
   // =============================================================
 

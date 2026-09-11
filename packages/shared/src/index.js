@@ -15,3 +15,4 @@ export * from './utils/aiPiiFilter.js';
 export * from './utils/presence.js';
 export * from './utils/emergencyCallGuard.js';
 export * from './utils/dynamicTariff.js';
+export * from './utils/stanfordFrenet.js';

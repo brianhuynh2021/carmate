@@ -424,6 +424,19 @@ export function getCorridorWaypoints(routeCategoryOrKeyword) {
 export const VIRTUAL_HUBS = [
   // ── HÀNH LANG TUYẾN QL13 (TP.HCM ⇄ BÌNH DƯƠNG ⇄ BÌNH PHƯỚC: BÙ ĐỐP - LỘC NINH) ──
   {
+    id: 'hub_ql13_san_bay_tsn',
+    name: 'Sân bay Quốc tế Tân Sơn Nhất (Ga Quốc Nội / Ga Quốc Tế)',
+    shortName: 'Sân bay Tân Sơn Nhất',
+    corridor: 'Tuyến QL13',
+    lat: 10.8185,
+    lng: 106.6660,
+    landmark: 'Cột 12 Ga Quốc Nội / Ga Quốc Tế - Kết nối thẳng Phạm Văn Đồng',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'AIRPORT',
+    isTerminal: true
+  },
+  {
     id: 'hub_ql13_hang_xanh',
     name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)',
     shortName: 'Ngã 4 Hàng Xanh',
@@ -432,7 +445,9 @@ export const VIRTUAL_HUBS = [
     lng: 106.7114,
     landmark: 'Cây xăng Comeco Hàng Xanh / Điện Biên Phủ',
     curbsideWindowSeconds: 300,
-    isMajorJunction: true
+    isMajorJunction: true,
+    category: 'GAS_STATION',
+    isTerminal: true
   },
   {
     id: 'hub_ql13_binh_trieu',
@@ -467,7 +482,9 @@ export const VIRTUAL_HUBS = [
     lng: 106.7214,
     landmark: 'Cây xăng Petrolimex QL13 giao QL1A',
     curbsideWindowSeconds: 300,
-    isMajorJunction: true
+    isMajorJunction: true,
+    category: 'JUNCTION',
+    isTerminal: true
   },
   {
     id: 'hub_ql13_cong_chao_lai_thieu',
@@ -904,7 +921,6 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   // Bình Long ➔ Hàng Xanh: 180.000đ (Chủ xe nhận 324k/2 ghế)
   'hub_ql13_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 180000, distanceKm: 115, label: 'Bình Long ➔ Hàng Xanh' },
   'hub_ql13_binh_long:::hub_ql13_binh_trieu': { pricePerSeat: 180000, distanceKm: 110, label: 'Bình Long ➔ Bình Triệu' },
-  'hub_ql13_binh_long:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 175000, distanceKm: 105, label: 'Bình Long ➔ Ngã 4 Bình Phước' },
   'hub_ql13_binh_long:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 75000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
   'hub_ql13_binh_long:::hub_n2_chon_thanh': { pricePerSeat: 75000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
   'hub_ql13_binh_long:::hub_ql13_tan_khai': { pricePerSeat: 50000, distanceKm: 25, label: 'Bình Long ➔ Tân Khai' },
@@ -913,7 +929,6 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   // Tân Khai ➔ Hàng Xanh: 150.000đ (Chủ xe nhận 270k/2 ghế)
   'hub_ql13_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 95, label: 'Tân Khai ➔ Hàng Xanh' },
   'hub_ql13_tan_khai:::hub_ql13_binh_trieu': { pricePerSeat: 150000, distanceKm: 90, label: 'Tân Khai ➔ Bình Triệu' },
-  'hub_ql13_tan_khai:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 145000, distanceKm: 85, label: 'Tân Khai ➔ Ngã 4 Bình Phước' },
   'hub_ql13_tan_khai:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 60000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
   'hub_ql13_tan_khai:::hub_n2_chon_thanh': { pricePerSeat: 60000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
   'hub_ql13_tan_khai:::hub_ql13_binh_long': { pricePerSeat: 50000, distanceKm: 25, label: 'Tân Khai ➔ Bình Long' },
@@ -922,7 +937,6 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   // Chơn Thành ➔ Hàng Xanh: 120.000đ (Chủ xe nhận 216k/2 ghế)
   'hub_ql13_nga4_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
   'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_trieu': { pricePerSeat: 120000, distanceKm: 70, label: 'Chơn Thành ➔ Bình Triệu' },
-  'hub_ql13_nga4_chon_thanh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 115000, distanceKm: 65, label: 'Chơn Thành ➔ Ngã 4 Bình Phước' },
   'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 75000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
   'hub_ql13_nga4_chon_thanh:::hub_ql13_tan_khai': { pricePerSeat: 60000, distanceKm: 20, label: 'Chơn Thành ➔ Tân Khai' },
   'hub_n2_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
@@ -943,6 +957,24 @@ export const CORRIDOR_FIXED_SEGMENTS = {
 
   // Vạn Phúc City: 35.000đ
   'hub_ql13_van_phuc_city:::hub_ql13_hang_xanh': { pricePerSeat: 35000, distanceKm: 10, label: 'Vạn Phúc City ➔ Hàng Xanh' },
+
+  // CÁC CHẶNG VỀ SÂN BAY TÂN SƠN NHẤT (QUA ĐẠI LỘ PHẠM VĂN ĐỒNG)
+  'hub_ql13_binh_long:::hub_ql13_san_bay_tsn': { pricePerSeat: 190000, distanceKm: 120, label: 'Bình Long ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_tthc_binh_long:::hub_ql13_san_bay_tsn': { pricePerSeat: 190000, distanceKm: 120, label: 'TTHC Bình Long ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_tan_khai:::hub_ql13_san_bay_tsn': { pricePerSeat: 160000, distanceKm: 98, label: 'Tân Khai ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_tthc_tan_khai:::hub_ql13_san_bay_tsn': { pricePerSeat: 160000, distanceKm: 98, label: 'TTHC Tân Khai ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_san_bay_tsn': { pricePerSeat: 130000, distanceKm: 80, label: 'Chơn Thành ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_vincom_chon_thanh:::hub_ql13_san_bay_tsn': { pricePerSeat: 130000, distanceKm: 80, label: 'Vincom Chơn Thành ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_tthc_chon_thanh:::hub_ql13_san_bay_tsn': { pricePerSeat: 130000, distanceKm: 80, label: 'TTHC Chơn Thành ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_bau_bang:::hub_ql13_san_bay_tsn': { pricePerSeat: 100000, distanceKm: 58, label: 'Bàu Bàng ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_nga4_so_sao:::hub_ql13_san_bay_tsn': { pricePerSeat: 75000, distanceKm: 38, label: 'Sở Sao ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_vsip1:::hub_ql13_san_bay_tsn': { pricePerSeat: 60000, distanceKm: 22, label: 'VSIP 1 ➔ Sân bay Tân Sơn Nhất' },
+
+  // CÁC CHẶNG VỀ NGÃ 4 BÌNH PHƯỚC (CỬA NGÕ THỦ ĐỨC - QL1A)
+  'hub_ql13_binh_long:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 160000, distanceKm: 100, label: 'Bình Long ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_tan_khai:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 130000, distanceKm: 80, label: 'Tân Khai ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 100000, distanceKm: 60, label: 'Chơn Thành ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_bau_bang:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 75000, distanceKm: 42, label: 'Bàu Bàng ➔ Ngã 4 Bình Phước' },
 
   // Lộc Ninh / Bù Đốp
   'hub_ql13_cho_loc_ninh:::hub_ql13_hang_xanh': { pricePerSeat: 210000, distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },

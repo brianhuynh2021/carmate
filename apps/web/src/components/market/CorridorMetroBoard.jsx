@@ -18,7 +18,8 @@ import {
   Radio,
   Building2,
   ShoppingBag,
-  Factory
+  Factory,
+  Plane
 } from 'lucide-react';
 import {
   VIRTUAL_HUBS,
@@ -55,7 +56,8 @@ export default function CorridorMetroBoard({
     { id: 'hub_ql13_van_phuc_city', name: 'Khu đô thị Vạn Phúc City / Cân Nhơn Hòa', shortName: 'Vạn Phúc City', landmark: 'Cổng chính Vạn Phúc City - QL13 Hiệp Bình Phước', isHot: false, category: 'URBAN_AREA' },
     { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - QL1A)', shortName: 'Ngã 4 Bình Phước', landmark: 'Cây xăng Petrolimex QL13 giao QL1A', isHot: false, category: 'JUNCTION' },
     { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / BX Miền Đông cũ', shortName: 'Bình Triệu', landmark: 'Cầu Bình Triệu 1 - Đinh Bộ Lĩnh / QL13', isHot: false, category: 'GAS_STATION' },
-    { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)', shortName: 'Hàng Xanh (Đích)', landmark: 'Cây xăng Comeco Hàng Xanh', isTerminal: true, category: 'GAS_STATION' }
+    { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)', shortName: 'Hàng Xanh (Đích)', landmark: 'Cây xăng Comeco Hàng Xanh', isTerminal: true, category: 'GAS_STATION' },
+    { id: 'hub_ql13_san_bay_tsn', name: 'Sân bay Tân Sơn Nhất (Ga T1 / T2 - Tân Bình)', shortName: 'Sân bay TSN (Đích)', landmark: 'Cột 12 Ga Quốc Nội / Quốc Tế - Phạm Văn Đồng', isTerminal: true, category: 'AIRPORT' }
   ].map((hub) => {
     if (hub.isTerminal) return { ...hub, priceToHX: 0 };
     const tariff = getFixedSegmentTariff(hub.id, 'hub_ql13_hang_xanh');
@@ -118,6 +120,13 @@ export default function CorridorMetroBoard({
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-[10px] font-mono font-bold border border-cyan-500/30">
             <Building2 className="w-3 h-3 text-cyan-400" />
             <span>ĐÔ THỊ</span>
+          </span>
+        );
+      case 'AIRPORT':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold border border-indigo-500/30">
+            <Plane className="w-3 h-3 text-indigo-400" />
+            <span>SÂN BAY</span>
           </span>
         );
       case 'GAS_STATION':
@@ -251,8 +260,8 @@ export default function CorridorMetroBoard({
 
             <div className="p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
               <div className="flex items-center justify-between font-mono">
-                <span className="text-slate-500 dark:text-slate-400">Cước Bình Long / Tân Khai ➔ Hàng Xanh:</span>
-                <span className="text-[#0071e3] font-bold">180k / 150k (Đã gồm BOT)</span>
+                <span className="text-slate-500 dark:text-slate-400">Cước Bình Long / Tân Khai ➔ TP.HCM:</span>
+                <span className="text-[#0071e3] font-bold">150k — 190k (Đã gồm BOT)</span>
               </div>
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-500 dark:text-slate-400">Đón xe an toàn:</span>

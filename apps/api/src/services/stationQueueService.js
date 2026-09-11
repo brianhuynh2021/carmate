@@ -2,7 +2,11 @@ import {
   VIRTUAL_HUBS,
   getVirtualHubById,
   getFixedSegmentTariff,
-  DRIVER_STATION_PAYOUT_RATIO
+  DRIVER_STATION_PAYOUT_RATIO,
+  projectToCorridorFrenet,
+  calculateKinematicTriggerDistance,
+  isIntervalSchedulingFeasible,
+  getStationStationKm
 } from '@carmate/shared';
 
 // BỘ NHỚ LƯU TRỮ TRẠNG THÁI TRẠM ẢO & COCKPIT TẠI RAM (IN-MEMORY DISTRIBUTED ENGINE)
@@ -233,18 +237,32 @@ export function telemetryPing({
   // Nếu đang ở trạng thái ACTIVE_SCANNING và còn ghế trống -> Quét các trạm trên hành lang
   let proximityAlert = null;
   if (session.status === 'ACTIVE_SCANNING' && session.seatsAvailable > 0 && !session.activeOffer) {
+    // 1. Stanford Frenet Frame Projection: Chiếu tọa độ ô tô vào tim đường QL13
+    const frenet = projectToCorridorFrenet(session.lat, session.lng, corridor);
+    session.frenet = frenet;
+
+    // 2. Cửa sổ Radar Động học (Kinematic Trigger): Tự động tính ngưỡng theo vận tốc (v * 210s)
+    const triggerDistanceKm = calculateKinematicTriggerDistance(session.speed, 210);
+
     const corridorHubs = VIRTUAL_HUBS.filter(
       (h) => h.corridor === corridor || (corridor.includes('QL13') && h.corridor.includes('QL13'))
     );
 
     for (const hub of corridorHubs) {
       const dist = calculateDistanceKm(session.lat, session.lng, hub.lat, hub.lng);
-      // Ngưỡng tiếp cận: 3.5 km (tương đương TTA ~ 210s)
-      if (dist <= 3.5 && dist >= 0.05) {
+      // Kích hoạt radar khi cự ly <= triggerDistanceKm (và xe đang chạy tiến về phía trạm)
+      if (dist <= triggerDistanceKm && dist >= 0.05) {
         const queue = stationQueues.get(hub.id) || [];
-        const eligibleRider = queue.find(
-          (r) => r.status === 'WAITING' && r.seatsNeeded <= session.seatsAvailable
-        );
+        const eligibleRider = queue.find((r) => {
+          if (r.status !== 'WAITING' || r.seatsNeeded > session.seatsAvailable) return false;
+          // 3. MIT Interval Scheduling: Kiểm tra gối đầu tuyến tính
+          const hubS = getStationStationKm(hub.id);
+          const destS = getStationStationKm(r.destinationHubId);
+          if (hubS != null && destS != null && frenet.s != null) {
+            return isIntervalSchedulingFeasible(frenet.s, destS, hubS, destS);
+          }
+          return true;
+        });
 
         if (eligibleRider) {
           // Khóa mềm nguyên tử (Atomic Soft-Lock 35s)
@@ -258,9 +276,13 @@ export function telemetryPing({
             stationName: hub.name,
             stationShortName: hub.shortName || hub.name,
             distanceKm: dist,
+            frenetS: frenet.s,
+            crossTrackMeters: frenet.d,
+            triggerDistanceKm,
             ttaSeconds: Math.round((dist / Math.max(30, session.speed)) * 3600),
             riderCount: eligibleRider.seatsNeeded,
             destinationName: eligibleRider.destinationShortName || eligibleRider.destinationName,
+            destinationHubId: eligibleRider.destinationHubId,
             fuelSurcharge: eligibleRider.fuelSurcharge,
             driverPayout: eligibleRider.driverPayout || Math.round(eligibleRider.fuelSurcharge * DRIVER_STATION_PAYOUT_RATIO),
             noSurge: true,

@@ -9,7 +9,8 @@ import {
   Send,
   Phone,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Plane
 } from 'lucide-react';
 import { formatVND, getVirtualHubById, getFixedSegmentTariff, isValidVietnamesePhone, cleanPhoneNumber, findNearestVirtualHub } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
@@ -82,6 +83,7 @@ export default function StationRiderView({
   // Trạng thái: 'CHECKIN' (R1) | 'BOARDING_PASS' (R2)
   const [viewStep, setViewStep] = useState('CHECKIN');
   const [destinationHubId, setDestinationHubId] = useState('hub_ql13_hang_xanh');
+  const [showOtherDestinations, setShowOtherDestinations] = useState(false);
   const [seatsNeeded, setSeatsNeeded] = useState(1);
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [name, setName] = useState(currentUser?.name || 'Khách đi cùng');
@@ -103,9 +105,10 @@ export default function StationRiderView({
   const destinationOptions = useMemo(() => {
     const allOptions = [
       { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)' },
+      { id: 'hub_ql13_san_bay_tsn', name: 'Sân bay Quốc tế Tân Sơn Nhất (Phạm Văn Đồng)' },
+      { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)' },
       { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / Bến xe Miền Đông cũ' },
       { id: 'hub_ql13_van_phuc_city', name: 'Khu đô thị Vạn Phúc City (Thủ Đức)' },
-      { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)' },
       { id: 'hub_ql13_vsip1', name: 'KCN VSIP 1 / AEON Mall Bình Dương' },
       { id: 'hub_ql13_nga4_so_sao', name: 'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)' },
       { id: 'hub_ql13_bau_bang', name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước' },
@@ -437,27 +440,114 @@ export default function StationRiderView({
               </div>
             </div>
 
-            {/* CHỌN ĐÍCH ĐẾN */}
-            <div className="space-y-2">
+            {/* 3 NÚT TRẠM TRẢ LỚN 1-CHẠM (STANFORD ERGONOMICS: 3 PRIMARY TERMINAL CHIPS) */}
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
-                  Đích đến của bạn:
+                  Chọn trạm trả xe tại TP.HCM (1 chạm):
                 </label>
-                <span className="text-[11px] font-mono text-emerald-400">
+                <span className="text-[11px] font-mono text-emerald-400 font-bold">
                   {tariff.distanceKm ? `~${tariff.distanceKm} km` : ''}
                 </span>
               </div>
-              <select
-                value={destinationHubId}
-                onChange={(e) => setDestinationHubId(e.target.value)}
-                className="w-full h-13 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-white text-sm font-semibold outline-none focus:border-emerald-500 transition-all cursor-pointer"
-              >
-                {destinationOptions.map((opt) => (
-                  <option key={opt.id} value={opt.id} className="bg-slate-900 text-white">
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
+
+              <div className="grid grid-cols-3 gap-2">
+                {/* 1. NGÃ 4 BÌNH PHƯỚC */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDestinationHubId('hub_ql13_nga4_binh_phuoc');
+                    setShowOtherDestinations(false);
+                  }}
+                  className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                    destinationHubId === 'hub_ql13_nga4_binh_phuoc'
+                      ? 'bg-sky-500/20 border-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-sky-400'
+                      : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_nga4_binh_phuoc' ? 'text-sky-400' : 'text-slate-400'}`} />
+                    <span className="text-[10px] font-mono text-sky-400 font-bold">Thủ Đức</span>
+                  </div>
+                  <div className="mt-2.5">
+                    <div className="text-xs font-bold text-white leading-snug">Ngã 4 Bình Phước</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Giao QL1A</div>
+                  </div>
+                </button>
+
+                {/* 2. NGÃ TƯ HÀNG XANH */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDestinationHubId('hub_ql13_hang_xanh');
+                    setShowOtherDestinations(false);
+                  }}
+                  className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                    destinationHubId === 'hub_ql13_hang_xanh'
+                      ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400'
+                      : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_hang_xanh' ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">Bình Thạnh</span>
+                  </div>
+                  <div className="mt-2.5">
+                    <div className="text-xs font-bold text-white leading-snug">Ngã tư Hàng Xanh</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Đi Q.1, Q.3</div>
+                  </div>
+                </button>
+
+                {/* 3. SÂN BAY TÂN SƠN NHẤT */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDestinationHubId('hub_ql13_san_bay_tsn');
+                    setShowOtherDestinations(false);
+                  }}
+                  className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                    destinationHubId === 'hub_ql13_san_bay_tsn'
+                      ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.25)] ring-1 ring-purple-400'
+                      : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <Plane className={`w-4 h-4 ${destinationHubId === 'hub_ql13_san_bay_tsn' ? 'text-purple-400' : 'text-slate-400'}`} />
+                    <span className="text-[10px] font-mono text-purple-400 font-bold">Sân bay</span>
+                  </div>
+                  <div className="mt-2.5">
+                    <div className="text-xs font-bold text-white leading-snug">Tân Sơn Nhất</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Ga T1 / T2</div>
+                  </div>
+                </button>
+              </div>
+
+              {/* TÙY CHỌN: ĐIỂM TRẢ KHÁC DỌC ĐƯỜNG */}
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowOtherDestinations(!showOtherDestinations)}
+                  className="text-xs text-slate-400 hover:text-emerald-300 flex items-center gap-1 font-mono underline cursor-pointer"
+                >
+                  <span>{showOtherDestinations ? '▲ Thu gọn điểm trả khác' : '▼ Hoặc chọn điểm trả khác dọc đường...'}</span>
+                </button>
+
+                {showOtherDestinations && (
+                  <div className="mt-2 animate-fade-in">
+                    <select
+                      value={destinationHubId}
+                      onChange={(e) => setDestinationHubId(e.target.value)}
+                      className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-white text-sm font-semibold outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                    >
+                      {destinationOptions.map((opt) => (
+                        <option key={opt.id} value={opt.id} className="bg-slate-900 text-white">
+                          {opt.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* CHỌN SỐ VÉ & BẢNG GIÁ PHÂN ĐOẠN CỐ ĐỊNH METRO */}
