@@ -196,7 +196,7 @@ export function galeShapleyStableMatch(graph) {
   const driverMap = new Map(graph.drivers.map((d) => [d.id, { ...d, remainingSeats: d.capacity, matchedPassengers: [] }]));
   const passengerMap = new Map(graph.passengers.map((p) => [p.id, { ...p, matchedDriverId: null }]));
 
-  // Lập danh sách đề xuất của từng khách hàng theo thứ tự ưu tiên điểm số
+  // Lập danh sách đề xuất của từng Người đi cùng theo thứ tự ưu tiên điểm số
   const proposalsMap = new Map();
   for (const p of graph.passengers) {
     const compatibleEdges = graph.edges

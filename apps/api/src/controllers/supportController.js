@@ -124,7 +124,7 @@ export async function sendSupportMessageHandler(req, res) {
         req
       }).catch(() => {});
     } else {
-      // Phản hồi hỗ trợ khách hàng thông thường
+      // Phản hồi hỗ trợ thành viên / người đi cùng thông thường
       platformReply = saveSupportMessage({
         bookingId: bookingId || null,
         userId: effectiveUserId || null,

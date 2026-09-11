@@ -18,7 +18,8 @@ import {
   Navigation,
   ExternalLink,
   Lightbulb,
-  ShieldAlert
+  ShieldAlert,
+  Scale
 } from 'lucide-react';
 import {
   formatVND,
@@ -34,6 +35,7 @@ import {
 } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
 import StationRequestModal from '../modals/StationRequestModal.jsx';
+import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 
 export default function StationRiderView({
   hubId = 'hub_ql13_tan_khai',
@@ -209,6 +211,7 @@ export default function StationRiderView({
   // Dữ liệu Boarding Pass (R2)
   const [boardingPass, setBoardingPass] = useState(null);
   const [copiedPin, setCopiedPin] = useState(false);
+  const [showLegalShield, setShowLegalShield] = useState(false);
 
   // Trạng thái Giả lập Chặng cuối Nội đô (Last-Mile Transit Simulator - Zero External API)
   const [selectedLastMileDestId, setSelectedLastMileDestId] = useState('cho_ba_chieu');
@@ -1301,7 +1304,17 @@ export default function StationRiderView({
                 </p>
               </div>
 
-              {/* 5. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ CHAT ZALO ] */}
+              {/* 5. NÚT XUẤT TRÌNH THẺ PHÁP LÝ HÀNH TRÌNH CHO CSGT/TTGT (1-CHẠM) */}
+              <button
+                type="button"
+                onClick={() => setShowLegalShield(true)}
+                className="w-full h-12 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+              >
+                <Scale className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>🛡️ Thẻ Pháp Lý Hành Trình (Điều 3 BLDS 2015)</span>
+              </button>
+
+              {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ CHAT ZALO ] */}
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <button
                   type="button"
@@ -1324,6 +1337,29 @@ export default function StationRiderView({
           );
         })()}
       </main>
+
+      {/* MODAL THẺ PHÁP LÝ HÀNH TRÌNH DÂN SỰ */}
+      {showLegalShield && (
+        <LegalShieldModal
+          isOpen={showLegalShield}
+          onClose={() => setShowLegalShield(false)}
+          trip={{
+            id: boardingPass?.intentId || 'BP-STATION',
+            author: boardingPass?.carInfo?.driverName || 'Chủ xe cá nhân',
+            licensePlate: boardingPass?.carInfo?.plate || '93A-123.45',
+            carModel: boardingPass?.carInfo?.vehicleModel || 'Xe cá nhân gia đình',
+            from: currentHub?.name || 'Trạm đón QL13',
+            to: boardingPass?.destinationName || 'Hàng Xanh',
+            timeSlotLabel: 'Hôm nay (Tiện chuyến)'
+          }}
+          ticket={{
+            code: boardingPass?.pin || '8842',
+            passengerName: currentUser?.name || 'Người đi cùng',
+            fuelSurcharge: boardingPass?.fuelSurcharge || estimatedFare
+          }}
+          userRole="rider"
+        />
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL XÁC THỰC NGẦM PASSWORDLESS (SMS OTP WEBOTP / TELEGRAM)              */}

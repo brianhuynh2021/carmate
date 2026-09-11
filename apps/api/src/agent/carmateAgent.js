@@ -319,7 +319,7 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
 
   if (benchmark) {
     innerLoopLog.push(
-      `[REFLECT] Phản tư giá cước: Đối chiếu mức phụ xăng với định mức chuẩn (${formatVND(benchmark.suggestedRate)}/ghế).`
+      `[REFLECT] Phản tư chi phí: Đối chiếu mức phụ xăng với định mức chuẩn (${formatVND(benchmark.suggestedRate)}/ghế).`
     );
   }
 
@@ -588,13 +588,13 @@ export async function runCarMateAgent({ message, history = [], userContext = {} 
 
     const systemInstruction = `Bạn là Trợ Lý Điều Phối Ghép Xe Thông Minh của CarMate.vn (CarMate AI Concierge).
 Nhiệm vụ của bạn:
-1. Hiểu ngôn ngữ tự nhiên của khách hàng (tiếng Việt), phân tích nhu cầu đi lại, địa điểm, thời gian, số ghế, hành lý và loại xe.
+1. Hiểu ngôn ngữ tự nhiên của Người đi cùng (tiếng Việt), phân tích nhu cầu đi lại, địa điểm, thời gian, số ghế, hành lý và loại xe.
 2. LUÔN LUÔN gọi các công cụ (tools) được cung cấp:
    - 'searchTrips': để tra cứu chuyến xe thực tế trong cơ sở dữ liệu.
    - 'getRouteBenchmarks': để tra cứu mức giá tham chiếu công bằng.
    - 'checkMemberTrust': để kiểm tra điểm tín nhiệm của Chủ xe.
    - 'calculateEstimatedFare': tính tiền xăng & vé cầu đường san sẻ.
-   - 'draftZaloMessage': tạo tin nhắn mẫu chốt cuốc Zalo.
+   - 'draftZaloMessage': tạo tin nhắn mẫu kết nối ghép xe Zalo.
 3. Luôn trả lời lịch sự, thân thiện, súc tích, mang phong thái văn minh, hỗ trợ kết nối trực tiếp không thu phí sàn.`;
 
     const targetModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';

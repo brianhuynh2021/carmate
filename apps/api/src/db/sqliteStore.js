@@ -2210,4 +2210,64 @@ export async function updateStationRequestStatus(id, status, adminNote = '') {
   return { id, status, updatedAt: now, adminNote };
 }
 
+/**
+ * Thông báo chuẩn về giới hạn 2 lượt di chuyển/ngày
+ */
+export const DRIVER_DAILY_CAP_NOTICE =
+  '⛔ Giới hạn 2 lượt di chuyển/ngày: Theo Nghị định 10/2020/NĐ-CP và Điều 3 Bộ Luật Dân sự 2015, CarMate là nền tảng chia sẻ chi phí hành trình cá nhân (sáng đi làm - chiều về nhà). Mỗi chủ xe chỉ được tạo tối đa 2 chuyến/ngày để bảo đảm bản chất dân sự phi thương mại. Xe chạy tần suất cao bị từ chối để tránh biến tướng thành xe vận tải chuyên nghiệp.';
+
+/**
+ * Đếm số chuyến chủ xe đã đăng hoặc thực hiện trong ngày (Anti-Commercial Capping)
+ * @param {string} phone - Số điện thoại chủ xe
+ * @param {string} targetDate - Ngày mục tiêu (mặc định hôm nay)
+ * @returns {number} Số chuyến trong ngày
+ */
+export function getDailyDriverTripCount(phone, targetDate = '') {
+  const database = getRawDB();
+  const clean = cleanPhoneNumber(phone || '');
+  if (!clean) return 0;
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endOfDay = startOfDay + 24 * 3600 * 1000 - 1;
+
+  const cleanDate = String(targetDate || '').trim();
+  const isToday = !cleanDate || cleanDate === 'Hôm nay';
+
+  const sql = isToday
+    ? `
+      SELECT COUNT(*) as count FROM trips
+      WHERE (phoneReal = ? OR phoneReal = ?)
+        AND type = 'driver_offer'
+        AND status != 'cancelled'
+        AND (
+          (createdAt >= ? AND createdAt <= ?)
+          OR date = 'Hôm nay'
+        )
+    `
+    : `
+      SELECT COUNT(*) as count FROM trips
+      WHERE (phoneReal = ? OR phoneReal = ?)
+        AND type = 'driver_offer'
+        AND status != 'cancelled'
+        AND (date = ? OR date = ?)
+    `;
+
+  const params = isToday
+    ? [clean, '0' + clean.replace(/^0/, ''), startOfDay, endOfDay]
+    : [clean, '0' + clean.replace(/^0/, ''), cleanDate, cleanDate];
+
+  const res = database.prepare(sql).get(...params);
+  return res?.count || 0;
+}
+
+/**
+ * Kiểm tra xem chủ xe đã đạt giới hạn 2 lượt/ngày chưa
+ */
+export function isDriverDailyTripCapped(phone, targetDate = '') {
+  const count = getDailyDriverTripCount(phone, targetDate);
+  return count >= 2;
+}
+
+
 

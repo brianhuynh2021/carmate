@@ -18,7 +18,7 @@ const MISMATCH_OPTIONS = [
   {
     id: 'price_gouging',
     label: 'Chặt chém giá / Đòi thêm tiền ngoài thỏa thuận',
-    desc: 'Đòi thêm tiền vé cầu đường, phụ phí hành lý vô lý hoặc ép giá cao hơn mức đã thỏa thuận trên CarMate.'
+    desc: 'Đòi thêm phí cầu đường BOT, phụ phí hành lý vô lý hoặc ép giá cao hơn mức bù xăng đã thỏa thuận trên CarMate.'
   },
   {
     id: 'different_car',

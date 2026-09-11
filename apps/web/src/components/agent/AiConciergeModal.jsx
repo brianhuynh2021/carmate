@@ -121,7 +121,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                 </span>
               </div>
               <p className="text-[11.5px] text-[#86868b]">
-                Hỏi đáp lộ trình, tìm xe tiện chuyến & kiểm tra giá cước ngay tức thì
+                Hỏi đáp lộ trình, tìm xe tiện chuyến & tính mức phụ xăng chia sẻ tức thì
               </p>
             </div>
           </div>

@@ -9,10 +9,12 @@ import {
   Zap,
   Radio,
   ChevronLeft,
-  ShieldCheck
+  ShieldCheck,
+  Scale
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { api } from '../../api/client.js';
+import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 
 export default function CockpitMode({
   tripId = 'TRIP-MY-COCKPIT',
@@ -52,6 +54,7 @@ export default function CockpitMode({
   const [speed] = useState(78);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [boardedCount, setBoardedCount] = useState(0);
+  const [showLegalShield, setShowLegalShield] = useState(false);
 
   // Trạng thái chu trình vận hành: 'STANDBY' (D1) | 'OFFERING' (D2) | 'DWELLING' (D3) | 'ROLLING'
   const [cockpitState, setCockpitState] = useState('STANDBY');
@@ -398,18 +401,29 @@ export default function CockpitMode({
           </div>
         </div>
 
-        {/* THÔNG SỐ VÍ TIỀN & SỐ KHÁCH ĐÃ ĐÓN */}
-        <div className="flex items-center gap-3">
+        {/* NÚT THẺ PHÁP LÝ (TRÌNH CSGT) & THÔNG SỐ VÍ TIỀN */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => setShowLegalShield(true)}
+            className="px-3 py-1.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            title="Thẻ Pháp Lý Hành Trình Dân Sự (Điều 3 BLDS 2015 · Trình CSGT)"
+          >
+            <Scale className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="hidden sm:inline">Thẻ Pháp lý (CSGT)</span>
+            <span className="sm:hidden">CSGT</span>
+          </button>
+
           <div className="bg-white/[0.04] border border-white/[0.08] px-3.5 py-1.5 rounded-2xl text-right">
-            <span className="text-[10px] text-slate-400 block uppercase font-mono">Thu nhập chuyến</span>
+            <span className="text-[10px] text-slate-400 block uppercase font-mono">Phụ xăng nhận</span>
             <span className="text-sm sm:text-base font-black font-mono text-emerald-400">
               +{formatVND(totalEarnings)}
             </span>
           </div>
           <div className="bg-white/[0.04] border border-white/[0.08] px-3 py-1.5 rounded-2xl text-center hidden sm:block">
-            <span className="text-[10px] text-slate-400 block uppercase font-mono">Đã đón</span>
+            <span className="text-[10px] text-slate-400 block uppercase font-mono">Đã ghép</span>
             <span className="text-sm sm:text-base font-black font-mono text-white">
-              {boardedCount} khách
+              {boardedCount} người
             </span>
           </div>
         </div>
@@ -422,14 +436,14 @@ export default function CockpitMode({
         {/* ========================================================================= */}
         {cockpitState === 'STANDBY' && (
           <div className="space-y-6 animate-fade-in">
-            {/* TOGGLE TO BẬT / TẮT NHẬN KHÁCH DỌC ĐƯỜNG */}
+            {/* TOGGLE TO BẬT / TẮT NHẬN GHÉP XE DỌC ĐƯỜNG */}
             <button
               type="button"
               onClick={() => {
                 const nextState = !isReceivingGuests;
                 setIsReceivingGuests(nextState);
                 if (nextState) {
-                  speakText('Đang bật nhận khách dọc Quốc lộ 13');
+                  speakText('Đang bật nhận ghép xe dọc Quốc lộ 13');
                 }
               }}
               className={`w-full py-6 sm:py-8 px-6 rounded-3xl border-2 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer active:scale-[0.99] ${
@@ -456,7 +470,7 @@ export default function CockpitMode({
                       }`}
                     />
                     <span className="text-lg sm:text-xl font-black tracking-wide uppercase">
-                      {isReceivingGuests ? 'ĐANG BẬT NHẬN KHÁCH' : 'TẠM TẮT NHẬN KHÁCH'}
+                      {isReceivingGuests ? 'ĐANG BẬT NHẬN GHÉP XE' : 'TẠM TẮT NHẬN GHÉP XE'}
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -761,6 +775,29 @@ export default function CockpitMode({
           </div>
         </div>
       </footer>
+
+      {/* 🛡️ MODAL THẺ PHÁP LÝ HÀNH TRÌNH DÂN SỰ (XUẤT TRÌNH CSGT) */}
+      {showLegalShield && (
+        <LegalShieldModal
+          isOpen={showLegalShield}
+          onClose={() => setShowLegalShield(false)}
+          trip={{
+            id: tripId,
+            author: currentUser?.name || 'Chủ xe cá nhân',
+            licensePlate: currentUser?.licensePlate || currentUser?.carInfo?.plate || '93A-385.XX (Biển trắng cá nhân)',
+            carModel: currentUser?.carModel || currentUser?.carInfo?.vehicleModel || 'Xe gia đình cá nhân',
+            from: 'Tân Khai (Bình Phước)',
+            to: 'Hàng Xanh (TP. Hồ Chí Minh)',
+            timeSlotLabel: 'Hôm nay (Tiện chuyến)'
+          }}
+          ticket={{
+            code: tripId,
+            passengerName: currentRider?.author || 'Người đi cùng',
+            fuelSurcharge: totalEarnings || 240000
+          }}
+          userRole="driver"
+        />
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   isIntervalSchedulingFeasible,
   getStationStationKm
 } from '@carmate/shared';
+import { isDriverDailyTripCapped, DRIVER_DAILY_CAP_NOTICE } from '../db/sqliteStore.js';
 
 // BỘ NHỚ LƯU TRỮ TRẠNG THÁI TRẠM ẢO & COCKPIT TẠI RAM (IN-MEMORY DISTRIBUTED ENGINE)
 const stationQueues = new Map(); // stationId -> Array<RiderIntent>
@@ -240,6 +241,15 @@ export function telemetryPing({
     };
   }
 
+  // Khóa cứng kỹ thuật: Tối đa 2 lượt/ngày (Anti-Commercial Capping - NĐ 10/2020/NĐ-CP)
+  if (session.driverPhone && isDriverDailyTripCapped(session.driverPhone)) {
+    return {
+      success: false,
+      isDailyCapped: true,
+      error: DRIVER_DAILY_CAP_NOTICE
+    };
+  }
+
   // Bẫy vi phạm bỏ bom khách (Fly-By Ghosting Penalty): Xe vượt quá trạm > 300m với tốc độ cao không giảm tốc
   if (session.status === 'DWELLING' && session.dockingStationId) {
     const dockingHub = getVirtualHubById(session.dockingStationId);
@@ -396,6 +406,15 @@ export function driverAcceptOffer({ tripId, intentId }) {
 
   if (!rider) {
     return { success: false, error: 'Hành khách không còn trong hàng đợi' };
+  }
+
+  // Khóa cứng kỹ thuật: Tối đa 2 lượt/ngày (Anti-Commercial Capping - NĐ 10/2020/NĐ-CP)
+  if (session.driverPhone && isDriverDailyTripCapped(session.driverPhone)) {
+    return {
+      success: false,
+      isDailyCapped: true,
+      error: DRIVER_DAILY_CAP_NOTICE
+    };
   }
 
   // Chuyển trạng thái hành khách sang ARRIVING (Xe đang tấp lề)

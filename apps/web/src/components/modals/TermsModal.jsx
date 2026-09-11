@@ -3,110 +3,96 @@ import { ShieldCheck, FileText, CheckCircle2, AlertTriangle, Lock, Users, Car, X
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
-export default function TermsModal({ onClose, zIndex = 'z-50' }) {
+export default function TermsModal({ onClose, zIndex = 'z-[9999]' }) {
   return (
     <Modal
       onClose={onClose}
       zIndex={zIndex}
-      size="md"
+      size="lg"
       icon={ShieldCheck}
       iconTone="brand"
-      title="Điều Khoản Dịch Vụ & An Toàn CarMate"
-      subtitle="Quy định cộng đồng · Tôn chỉ phi lợi nhuận · Pháp lý chia sẻ chuyến xe"
+      title="Điều Khoản Dịch Vụ & Pháp Lý Chia Sẻ Chi Phí CarMate"
+      subtitle="Định vị Nền tảng Công nghệ Kết nối Dân sự · Nguyên tắc '3 Không' & '3 Có'"
     >
       <div className="space-y-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
-        {/* Điều 1: Bản chất nền tảng */}
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
-          <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
-            <Car className="w-4 h-4 text-primary-600 dark:text-primary-400 shrink-0" />
-            <span>1. Bản chất & Tôn chỉ Nền tảng CarMate</span>
+        {/* Banner định vị pháp lý */}
+        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900 dark:text-emerald-200">
+          <div className="flex items-center gap-2 font-bold text-sm text-emerald-800 dark:text-emerald-300 mb-1">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>Định vị: Nền tảng Kết nối Chia sẻ Chi phí Hành trình (Carpooling)</span>
           </div>
-          <p>
-            CarMate là nền tảng công nghệ trung gian kết nối cộng đồng <strong>đi chung xe & xe tiện chuyến</strong> tại
-            Việt Nam. CarMate hoạt động theo nguyên tắc:
+          <p className="text-[11px] leading-normal">
+            CarMate là nền tảng công nghệ trung gian theo Nghị định 52/2013/NĐ-CP và Nghị định 85/2021/NĐ-CP, kết nối các cá nhân có chung hành trình di chuyển để san sẻ chi phí nhiên liệu. <strong>CarMate tuyệt đối không phải là đơn vị kinh doanh vận tải hành khách theo Nghị định 10/2020/NĐ-CP.</strong>
           </p>
-          <ul className="list-disc pl-4 space-y-1">
+        </div>
+
+        {/* Phần 1: Trụ cột "3 Không" */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
+          <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
+            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+            <span>Trụ cột "3 Không" (Chống Thương Mại Hóa Xe Cá Nhân)</span>
+          </div>
+          <ul className="list-disc pl-4 space-y-1.5 text-[11.5px]">
             <li>
-              <strong>Không phải hãng vận tải:</strong> CarMate không sở hữu phương tiện, không tuyển dụng tài xế taxi
-              hay xe hợp đồng chuyên nghiệp.
+              <strong>1. Không dùng từ ngữ vận tải thương mại:</strong> Hệ thống không sử dụng các thuật ngữ "giá cước", "tiền vé", "cuốc xe", "tài xế taxi" hay "khách hàng". Toàn bộ giao diện và truyền thông chuẩn hóa danh xưng <em>"Chủ xe cá nhân"</em>, <em>"Người đi cùng"</em> và <em>"Mức bù xăng dầu / đóng góp chi phí hành trình"</em>.
             </li>
             <li>
-              <strong>Chia sẻ chi phí xăng xe phi lợi nhuận:</strong> Số tiền đóng góp giữa hành khách và chủ xe được
-              thỏa thuận nhằm bù đắp chi phí nhiên liệu và phí cầu đường của chuyến đi.
+              <strong>2. Không cho phép chạy thương mại vô hạn (Khóa cứng 2 lượt/ngày):</strong> Mỗi chủ xe / phương tiện chỉ được tạo và thực hiện tối đa <strong>2 chuyến/ngày</strong> (chu kỳ đi làm buổi sáng - về nhà buổi chiều). Hệ thống khóa cứng kỹ thuật để ngăn chặn triệt để hành vi chạy xe dù, taxi công nghệ lậu.
             </li>
             <li>
-              <strong>Kết nối Zalo trực tiếp:</strong> Nền tảng không thu bất kỳ phí sàn, hoa hồng hay phí trung gian
-              nào từ người dùng.
+              <strong>3. Không định giá vượt định mức chi phí thực tế:</strong> Mức đóng góp được tính toán tự động dựa trên cự ly Geodesic Haversine × 1.28 và trạm thu phí BOT thực tế. Tổng mức san sẻ từ người đi cùng bảo đảm không vượt quá chi phí nhiên liệu và hao mòn xe (<em>P ≤ Xăng + BOT</em>), tuân thủ nguyên tắc dân sự phi lợi nhuận theo Điều 3 Bộ Luật Dân sự 2015.
             </li>
           </ul>
         </div>
 
-        {/* Điều 2: Trách nhiệm & Cam kết của Chủ xe */}
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
+        {/* Phần 2: Trụ cột "3 Có" */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
           <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>2. Cam kết của Chủ xe (Lái xe văn minh)</span>
+            <ShieldCheck className="w-4 h-4 text-primary-600 dark:text-primary-400 shrink-0" />
+            <span>Trụ cột "3 Có" (Minh Bạch & Bảo Vệ Thành Viên)</span>
           </div>
-          <ul className="list-disc pl-4 space-y-1">
+          <ul className="list-disc pl-4 space-y-1.5 text-[11.5px]">
             <li>
-              Có Giấy phép lái xe (GPLX) hợp lệ, phương tiện có đầy đủ giấy đăng ký, bảo hiểm trách nhiệm dân sự và đăng
-              kiểm còn hạn.
+              <strong>1. Có đăng ký đúng mã ngành Công Nghệ Thông Tin:</strong>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 pl-1 mt-0.5">
+                • Mã 6201: Hoạt động lập trình máy tính (thuật toán khớp chuyến Haversine).<br />
+                • Mã 6311: Xử lý dữ liệu, cho thuê và các hoạt động liên quan.<br />
+                • Mã 6312: Cổng thông tin điện tử (nền tảng kết nối nhu cầu xã hội).
+              </div>
             </li>
             <li>
-              Tuyệt đối không sử dụng rượu bia, chất kích thích khi điều khiển phương tiện theo Nghị định 100/2019/NĐ-CP
-              & Luật TTATGT đường bộ.
+              <strong>2. Có đăng ký Website Thương mại Điện tử:</strong> Hoạt động minh bạch dưới hình thức nền tảng TMĐT kết nối nhu cầu theo Nghị định 52/2013/NĐ-CP và Nghị định 85/2021/NĐ-CP.
             </li>
             <li>
-              Giữ đúng cam kết về chi phí phụ xăng chia sẻ, không tự ý tăng giá dọc đường, không đón quá số ghế đăng kiểm cho
-              phép.
+              <strong>3. Có Thỏa thuận Dân sự & Thẻ Pháp Lý Hành Trình:</strong> Cung cấp tính năng <em>"Thẻ Pháp Lý Hành Trình Dân Sự"</em> 1-chạm xuất trình cho CSGT / Thanh tra Giao thông, chứng minh quyền tự do giao kết dân sự tương trợ phi thương mại theo Điều 3 Bộ Luật Dân sự 2015.
             </li>
-            <li>Gửi định vị GPS thực tế qua Zalo cho hành khách để xác nhận điểm đón an toàn.</li>
           </ul>
         </div>
 
-        {/* Điều 3: Trách nhiệm của Người đi cùng */}
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
+        {/* Điều 3: Trách nhiệm & An toàn */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
           <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
-            <Users className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-            <span>3. Cam kết của Người đi cùng</span>
+            <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>Cam Kết An Toàn & Điểm Đón Quy Ước</span>
           </div>
-          <ul className="list-disc pl-4 space-y-1">
+          <ul className="list-disc pl-4 space-y-1 text-[11.5px]">
             <li>
-              Có mặt đúng giờ tại điểm đón đã hẹn. Nếu có phát sinh chậm trễ, phải chủ động nhắn tin qua Zalo trước 30
-              phút.
-            </li>
-            <li>Không mang theo hàng cấm, vũ khí, chất cháy nổ hoặc hàng hóa trái quy định pháp luật.</li>
-            <li>Thanh toán trực tiếp chi phí chia sẻ đã thống nhất cho chủ xe khi kết thúc chặng đi.</li>
-            <li>Ứng xử văn minh, giữ gìn vệ sinh chung trên xe.</li>
-          </ul>
-        </div>
-
-        {/* Điều 4: Bảo mật thông tin & Miễn trừ trách nhiệm */}
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
-          <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
-            <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span>4. Bảo mật dữ liệu & Miễn trừ trách nhiệm</span>
-          </div>
-          <ul className="list-disc pl-4 space-y-1">
-            <li>
-              <strong>Bảo vệ số điện thoại:</strong> Số điện thoại chỉ được dùng cho mục đích gọi điện/nhắn tin Zalo
-              phục vụ chuyến đi, không bao giờ cung cấp cho bên thứ ba cho mục đích tiếp thị.
+              <strong>Xe cá nhân biển trắng:</strong> Phương tiện có đầy đủ giấy đăng ký xe, bảo hiểm TNDS bắt buộc và đăng kiểm còn hiệu lực.
             </li>
             <li>
-              <strong>Hộ chiếu tín nhiệm (Karma Rating):</strong> Hệ thống tự động ghi nhận lịch sử báo trễ, huỷ chuyến
-              và đánh giá 2 chiều để loại bỏ các thành viên có hành vi bom xe hoặc thiếu văn minh.
+              <strong>Điểm đón quy ước an toàn:</strong> Tuyệt đối chỉ đón trả tại các trạm xăng lớn, bến xe, điểm dừng quy ước có vỉa hè an toàn trên QL13. Không dừng đỗ tùy tiện cản trở giao thông.
             </li>
             <li>
-              <strong>Miễn trừ trách nhiệm:</strong> Mọi thỏa thuận, giao dịch tài chính và phát sinh trên hành trình do
-              hai bên trực tiếp trao đổi và chịu trách nhiệm pháp lý theo quy định của pháp luật Việt Nam.
+              <strong>Không rượu bia & chất kích thích:</strong> Chủ xe và Người đi cùng tuân thủ nghiêm ngặt Luật Trật tự, An toàn giao thông đường bộ.
             </li>
           </ul>
         </div>
       </div>
 
-      <div className="pt-2 flex items-center justify-end">
+      <div className="pt-3 flex items-center justify-between border-t border-black/[0.06] dark:border-white/[0.06] mt-2">
+        <span className="text-[11px] text-slate-400">Điều 3 BLDS 2015 · NĐ 52/2013/NĐ-CP</span>
         <Button variant="primary" size="sm" onClick={onClose}>
-          Tôi đã hiểu & đồng ý
+          Tôi đã hiểu & Đồng ý
         </Button>
       </div>
     </Modal>

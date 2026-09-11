@@ -10,7 +10,9 @@ import {
   getUserById,
   getUserByPhone,
   saveUser,
-  isUserDeactivated
+  isUserDeactivated,
+  isDriverDailyTripCapped,
+  DRIVER_DAILY_CAP_NOTICE
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import { sendBusinessAlert, sendSmartMatchTelegramAlert } from '../utils/telegramAlert.js';
@@ -275,6 +277,19 @@ export async function createTrip(req, res) {
       }
     }
 
+    // BẤT BIẾN PHÁP LÝ & DÂN SỰ (Anti-Commercial Capping - Tối đa 2 lượt/ngày):
+    // Theo Nghị định 10/2020/NĐ-CP và Điều 3 Bộ Luật Dân sự 2015, CarMate là nền tảng
+    // chia sẻ chi phí hành trình cá nhân có sẵn. Chủ xe chỉ được tạo tối đa 2 chuyến/ngày.
+    if (body.type === 'driver_offer') {
+      if (isDriverDailyTripCapped(posterPhone, body.date)) {
+        return res.status(400).json({
+          success: false,
+          isDailyCapped: true,
+          error: DRIVER_DAILY_CAP_NOTICE
+        });
+      }
+    }
+
     // Đảm bảo mức giá luôn được chuẩn hoá, tránh trường hợp bị render 0đ
     if (!body.basePricePerSeat && body.suggestedContribution) {
       body.basePricePerSeat = Number(body.suggestedContribution);
@@ -507,12 +522,26 @@ export async function deleteTripHandler(req, res) {
  */
 export async function republishTripHandler(req, res) {
   try {
-    const { id } = req.params;
-    const updates = req.body || {};
+    const existingTrip = getTripById(id);
+    if (!existingTrip) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến xe gốc để tái đăng' });
+    }
+
+    // BẤT BIẾN PHÁP LÝ & DÂN SỰ (Anti-Commercial Capping - Tối đa 2 lượt/ngày):
+    if (existingTrip.type === 'driver_offer') {
+      const driverPhone = existingTrip.phoneReal || existingTrip.phone;
+      if (isDriverDailyTripCapped(driverPhone, updates.date || existingTrip.date)) {
+        return res.status(400).json({
+          success: false,
+          isDailyCapped: true,
+          error: DRIVER_DAILY_CAP_NOTICE
+        });
+      }
+    }
 
     const newTrip = await republishTrip(id, updates);
     if (!newTrip) {
-      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến xe gốc để tái đăng' });
+      return res.status(404).json({ success: false, error: 'Không thể tái đăng chuyến xe' });
     }
 
     return res.status(201).json({

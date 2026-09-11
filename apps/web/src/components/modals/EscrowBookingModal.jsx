@@ -21,7 +21,8 @@ import {
   Truck,
   Phone,
   PhoneCall,
-  Lock
+  Lock,
+  Scale
 } from 'lucide-react';
 import {
   formatVND,
@@ -39,6 +40,7 @@ import {
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
+import LegalShieldModal from './LegalShieldModal.jsx';
 import { RouteTimeline, getCarDisplay } from '../market/TripCard.jsx';
 import { triggerMacNotification } from '../common/AppleMacNotification.jsx';
 import api, { setStoredAuthToken } from '../../api/client.js';
@@ -66,6 +68,7 @@ export default function EscrowBookingModal({
   const [guestName, setGuestName] = useState('');
 
   const [bookingCode] = useState(() => `CX-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [showLegalShield, setShowLegalShield] = useState(false);
 
   // BẤT BIẾN MIT: Kiểm tra quyền sở hữu bài đăng để ngăn chặn 100% việc tự ghép chuyến cho chính mình
   const isTripOwner = useMemo(() => {
@@ -435,6 +438,18 @@ export default function EscrowBookingModal({
                 </div>
               </div>
             </div>
+
+            {/* 🛡️ NÚT THẺ PHÁP LÝ HÀNH TRÌNH DÂN SỰ (1-CHẠM TRÌNH CSGT) */}
+            <div className="px-4 sm:px-5 pb-4 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowLegalShield(true)}
+                className="w-full py-2.5 px-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
+              >
+                <Scale className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>🛡️ Thẻ Pháp Lý Hành Trình (Điều 3 BLDS 2015 · Trình CSGT)</span>
+              </button>
+            </div>
           </div>
 
           {/* 💬 2. LIÊN HỆ TRỰC TIẾP TRONG APP (0Đ CƯỚC · BẢO MẬT SĐT) */}
@@ -489,6 +504,21 @@ export default function EscrowBookingModal({
               💡 Hai bên chủ động liên lạc hẹn điểm đón trước giờ đi. Nếu nhắn tin hoặc gọi qua app mà đối tác không phản hồi, bạn có thể <strong>bấm Huỷ chuyến 1-chạm</strong> để tìm xe hoặc đón người khác ngay lập tức, không làm mất thời gian của nhau.
             </p>
           </div>
+
+          {showLegalShield && (
+            <LegalShieldModal
+              isOpen={showLegalShield}
+              onClose={() => setShowLegalShield(false)}
+              trip={item}
+              ticket={{
+                code: bookingCode,
+                passengerName: guestName || currentUser?.name || 'Người đi cùng',
+                fuelSurcharge: pricing.total,
+                pickupPoint: pickupPoint || item.from
+              }}
+              userRole="rider"
+            />
+          )}
         </div>
       </Modal>
     );
