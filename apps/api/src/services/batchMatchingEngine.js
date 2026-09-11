@@ -15,7 +15,9 @@ import {
   VIRTUAL_HUBS,
   ROUTE_BENCHMARKS,
   calculateDistanceKm,
-  calculateDynamicTariffByDistance
+  calculateDynamicTariffByDistance,
+  calculateSystemFailureProbability,
+  formParallelFleetPacket
 } from '@carmate/shared';
 
 import {
@@ -335,7 +337,18 @@ export function findStandbyBufferOffer(request, candidateOffers = []) {
 
   // Chọn xe có điểm tín nhiệm cao nhất và thời gian gần nhất
   sameCorridor.sort((a, b) => Number(b.trustScore || 95) - Number(a.trustScore || 95));
-  return sameCorridor[0];
+  const bestStandby = sameCorridor[0];
+
+  // k-out-of-n Reliability: Tính xác suất đứt gãy chùm xe song song
+  const fleetSize = sameCorridor.length + 1; // 1 xe chính + n xe đệm
+  const reliability = calculateSystemFailureProbability(0.1, fleetSize);
+  bestStandby.parallelFleetStats = {
+    fleetSize,
+    systemFailureProbability: reliability.systemFailureProbability,
+    reliabilityPercentage: reliability.reliabilityPercentage
+  };
+
+  return bestStandby;
 }
 
 /**

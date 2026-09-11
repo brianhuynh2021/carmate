@@ -2004,25 +2004,33 @@ export function getMatchingEpochs(limit = 20) {
  * - 30 <= deltaMinutes <= 120: Cảnh cáo, trừ 15 điểm tín nhiệm.
  * - deltaMinutes < 30 hoặc sau khởi hành: Vi phạm nặng, trừ 40 điểm tín nhiệm, khoá 7 ngày.
  */
-export async function applyCancellationPenalty(booking, cancellingUserPhone, deltaMinutes) {
+export async function applyCancellationPenalty(booking, cancellingUserPhone, deltaMinutes, cancellingRole = null) {
   const cleanPhone = cleanPhoneNumber(cancellingUserPhone);
+  const isDriver =
+    cancellingRole === 'driver' ||
+    (cleanPhone && booking?.driverPhone && cleanPhoneNumber(booking.driverPhone) === cleanPhone);
 
   let penaltyTier = 'safe_free';
   let penaltyPoints = 0;
   let freezeDays = 0;
   let message = 'Huỷ chuyến an toàn trước > 2 tiếng. Không bị trừ điểm tín nhiệm.';
 
-  if (deltaMinutes < 30) {
-    penaltyTier = 'severe_freeze';
-    penaltyPoints = 40;
-    freezeDays = 7;
-    message =
-      'Huỷ chuyến sát giờ (< 30 phút). Trừ 40 điểm tín nhiệm và tạm khoá tài khoản 7 ngày. Hệ thống đã kích hoạt Radar cứu hộ.';
+  if (deltaMinutes < 45) {
+    // 1. GRIM TRIGGER (ĐÒN BẨY THẶNG DƯ TƯƠNG LAI):
+    // Tước quyền tiếp cận dòng tiền thặng dư 4-5 triệu/tháng trong 30 ngày nếu chủ xe huỷ sát giờ
+    penaltyTier = isDriver ? 'grim_trigger_freeze' : 'severe_freeze';
+    penaltyPoints = isDriver ? 35 : 30;
+    freezeDays = isDriver ? 30 : 7;
+    message = isDriver
+      ? 'KÍCH HOẠT GRIM TRIGGER: Chủ xe huỷ chuyến sát giờ (< 45 phút). Trừ 35 điểm tín nhiệm và tước quyền ưu tiên ghép cuốc trong 30 ngày (thiệt hại cơ hội ~4.4 triệu VNĐ). Hệ thống tự động chuyển làn cứu hộ khách.'
+      : 'Huỷ chuyến sát giờ (< 45 phút). Trừ 30 điểm tín nhiệm và tạm khoá quyền đặt chuyến 7 ngày. Hệ thống đã kích hoạt Radar cứu hộ.';
   } else if (deltaMinutes <= 120) {
     penaltyTier = 'warning';
-    penaltyPoints = 15;
-    freezeDays = 0;
-    message = 'Cảnh cáo huỷ chuyến cận giờ (30 phút - 2 tiếng). Trừ 15 điểm tín nhiệm và giãn cách ưu tiên 24h.';
+    penaltyPoints = isDriver ? 20 : 15;
+    freezeDays = isDriver ? 14 : 0;
+    message = isDriver
+      ? 'Cảnh cáo chủ xe huỷ chuyến cận giờ (45 phút - 2 tiếng). Trừ 20 điểm tín nhiệm và giãn cách ghép chuyến 14 ngày.'
+      : 'Cảnh cáo huỷ chuyến cận giờ (45 phút - 2 tiếng). Trừ 15 điểm tín nhiệm và giãn cách ưu tiên 24h.';
   }
 
   // Khấu trừ điểm tín nhiệm nếu có người dùng
@@ -2038,6 +2046,7 @@ export async function applyCancellationPenalty(booking, cancellingUserPhone, del
       if (freezeDays > 0) {
         userUpdates.freezeUntil = Date.now() + freezeDays * 24 * 3600 * 1000;
         userUpdates.freezeReason = message;
+        userUpdates.isSuspended = true;
       }
 
       await saveUser({
@@ -2051,6 +2060,8 @@ export async function applyCancellationPenalty(booking, cancellingUserPhone, del
     penaltyTier,
     penaltyPoints,
     freezeDays,
+    isDriver,
+    grimTriggerApplied: isDriver && freezeDays >= 30,
     message,
     deltaMinutes: Math.round(deltaMinutes)
   };

@@ -456,17 +456,22 @@ export async function cancelBooking(req, res) {
     }
 
     const cancellingPhone = phone || booking.passengerPhone || trip?.phoneReal || '';
-
-    // 2. Tính toán thang phạt dốc thời gian (Time-Decay Penalty)
-    const penaltyResult = await applyCancellationPenalty(booking, cancellingPhone, deltaMinutes);
-
-    // 3. KÍCH HOẠT ĐIỀU PHỐI XE HỖ TRỢ / CHUYỂN LÀN VÔ HÌNH (SILENT FALLBACK N+1)
-    // Tuyệt đối không để khách bị bùng chuyến nếu còn xe trên hành lang
-    let salvageInfo = null;
     const isDriverCancelling =
       req.body?.cancellingRole === 'driver' ||
       cancellingPhone === trip?.phoneReal ||
       cancellingPhone === booking?.driverPhone;
+
+    // 2. Tính toán thang phạt dốc thời gian & Grim Trigger (30 ngày tước quyền nếu chủ xe bùng sát giờ)
+    const penaltyResult = await applyCancellationPenalty(
+      booking,
+      cancellingPhone,
+      deltaMinutes,
+      isDriverCancelling ? 'driver' : 'passenger'
+    );
+
+    // 3. KÍCH HOẠT ĐIỀU PHỐI XE HỖ TRỢ / CHUYỂN LÀN VÔ HÌNH (SILENT FALLBACK N+1)
+    // Tuyệt đối không để khách bị bùng chuyến nếu còn xe trên hành lang
+    let salvageInfo = null;
 
     // Kích hoạt nếu chủ xe huỷ trước giờ chạy hoặc trong vòng 90 phút
     if (isDriverCancelling || deltaMinutes < 90) {
