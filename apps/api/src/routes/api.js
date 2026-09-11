@@ -34,6 +34,12 @@ import {
   getMatchingEpochsHandler
 } from '../controllers/intentController.js';
 import {
+  placeOrderHandler,
+  getOrderBookHandler,
+  getMyOrdersHandler,
+  expireSlidingTTLHandler
+} from '../controllers/seatExchangeController.js';
+import {
   riderCheckInHandler,
   getStationQueueHandler,
   getRiderPassHandler,
@@ -131,6 +137,12 @@ router.get('/intents', optionalAuth, getMovementIntentsHandler);
 router.post('/intents', optionalAuth, createMovementIntentHandler);
 router.post('/intents/match', optionalAuth, runBatchMatchHandler);
 router.get('/intents/epochs', optionalAuth, getMatchingEpochsHandler);
+
+// --- Sàn Giao Dịch Ghế Trống (Seat Exchange - LOB, CDA 24/7 Spot Market & Dynamic Sliding TTL) ---
+router.post('/seat-exchange/order', optionalAuth, placeOrderHandler);
+router.get('/seat-exchange/order-book', optionalAuth, getOrderBookHandler);
+router.get('/seat-exchange/my-orders', optionalAuth, getMyOrdersHandler);
+router.post('/seat-exchange/expire-ttl', optionalAuth, expireSlidingTTLHandler);
 
 // --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
 router.get('/bookings', optionalAuth, listBookings);

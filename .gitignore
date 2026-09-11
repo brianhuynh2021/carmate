@@ -54,3 +54,4 @@ test_Fly.py
 *secrets*.sh
 *secrets*.txt
 deploy-secrets*
+scratch/

@@ -297,6 +297,50 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_stn_req_count ON station_requests(requestCount);
     `);
 
+    // 12. Bảng Sổ Lệnh Hai Chiều & Khớp Lệnh Liên Tục (seat_exchange_orders - LOB & CDA Spot Market)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS seat_exchange_orders (
+        id TEXT PRIMARY KEY,
+        userId TEXT,
+        orderType TEXT NOT NULL,
+        stationId TEXT,
+        stationName TEXT,
+        corridor TEXT DEFAULT 'Tuyến QL13',
+        direction TEXT,
+        date TEXT,
+        targetTime TEXT,
+        targetTimeMinutes INTEGER,
+        deltaMinutes INTEGER DEFAULT 10,
+        timeStartMins INTEGER,
+        timeEndMins INTEGER,
+        seats INTEGER DEFAULT 1,
+        remainingSeats INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'OPEN',
+        orderTier TEXT DEFAULT 'SAFE_ADVANCE',
+        ttlTimestamp INTEGER,
+        ttlTimeString TEXT,
+        phone TEXT,
+        contactName TEXT,
+        plate TEXT,
+        vehicleModel TEXT,
+        trustScore INTEGER DEFAULT 98,
+        matchedWithOrderId TEXT,
+        matchedBookingId TEXT,
+        pinCode TEXT,
+        rendezvousTime TEXT,
+        rendezvousMinutes INTEGER,
+        createdAt INTEGER,
+        matchedAt INTEGER,
+        expiredAt INTEGER,
+        payload TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_exchange_status ON seat_exchange_orders(status);
+      CREATE INDEX IF NOT EXISTS idx_exchange_station ON seat_exchange_orders(stationId);
+      CREATE INDEX IF NOT EXISTS idx_exchange_corridor ON seat_exchange_orders(corridor);
+      CREATE INDEX IF NOT EXISTS idx_exchange_ttl ON seat_exchange_orders(ttlTimestamp);
+      CREATE INDEX IF NOT EXISTS idx_exchange_type ON seat_exchange_orders(orderType);
+    `);
+
   // 9. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
   //
   // BẤT BIẾN SÀN GIAO DỊCH: mọi chuyến hiển thị trên sàn phải liên hệ được với
@@ -1997,6 +2041,222 @@ export function getMatchingEpochs(limit = 20) {
   const database = getRawDB();
   return database.prepare('SELECT * FROM matching_epochs ORDER BY createdAt DESC LIMIT ?').all(limit);
 }
+
+/**
+ * =========================================================================
+ * KHỐI CHỨC NĂNG LEVEL 3.5: SÀN GIAO DỊCH GHẾ TRỐNG (SEAT EXCHANGE - LOB & CDA)
+ * =========================================================================
+ */
+
+/**
+ * Tạo mới một Lệnh trên Sàn Giao Dịch Ghế Trống (Ask hoặc Bid)
+ */
+export async function createExchangeOrderDb(orderData) {
+  const database = getRawDB();
+  const id = orderData.id || `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const now = Date.now();
+  const full = {
+    ...orderData,
+    id,
+    seats: Number(orderData.seats) || 1,
+    remainingSeats: Number(orderData.remainingSeats ?? orderData.seats) || 1,
+    status: orderData.status || 'OPEN',
+    createdAt: orderData.createdAt || now
+  };
+
+  database
+    .prepare(
+      `
+    INSERT OR REPLACE INTO seat_exchange_orders (
+      id, userId, orderType, stationId, stationName, corridor, direction, date,
+      targetTime, targetTimeMinutes, deltaMinutes, timeStartMins, timeEndMins,
+      seats, remainingSeats, status, orderTier, ttlTimestamp, ttlTimeString,
+      phone, contactName, plate, vehicleModel, trustScore,
+      matchedWithOrderId, matchedBookingId, pinCode, rendezvousTime, rendezvousMinutes,
+      createdAt, matchedAt, expiredAt, payload
+    ) VALUES (
+      @id, @userId, @orderType, @stationId, @stationName, @corridor, @direction, @date,
+      @targetTime, @targetTimeMinutes, @deltaMinutes, @timeStartMins, @timeEndMins,
+      @seats, @remainingSeats, @status, @orderTier, @ttlTimestamp, @ttlTimeString,
+      @phone, @contactName, @plate, @vehicleModel, @trustScore,
+      @matchedWithOrderId, @matchedBookingId, @pinCode, @rendezvousTime, @rendezvousMinutes,
+      @createdAt, @matchedAt, @expiredAt, @payload
+    )
+  `
+    )
+    .run({
+      id,
+      userId: full.userId || '',
+      orderType: full.orderType || 'BID',
+      stationId: full.stationId || '',
+      stationName: full.stationName || '',
+      corridor: full.corridor || 'Tuyến QL13',
+      direction: full.direction || '',
+      date: full.date || '',
+      targetTime: full.targetTime || '',
+      targetTimeMinutes: full.targetTimeMinutes || 0,
+      deltaMinutes: full.deltaMinutes || 10,
+      timeStartMins: full.timeStartMins || 0,
+      timeEndMins: full.timeEndMins || 0,
+      seats: full.seats,
+      remainingSeats: full.remainingSeats,
+      status: full.status,
+      orderTier: full.orderTier || 'SAFE_ADVANCE',
+      ttlTimestamp: full.ttlTimestamp || null,
+      ttlTimeString: full.ttlTimeString || '',
+      phone: cleanPhoneNumber(full.phone || ''),
+      contactName: full.contactName || '',
+      plate: full.plate || '',
+      vehicleModel: full.vehicleModel || '',
+      trustScore: Number(full.trustScore || 98),
+      matchedWithOrderId: full.matchedWithOrderId || null,
+      matchedBookingId: full.matchedBookingId || null,
+      pinCode: full.pinCode || null,
+      rendezvousTime: full.rendezvousTime || null,
+      rendezvousMinutes: full.rendezvousMinutes || null,
+      createdAt: full.createdAt,
+      matchedAt: full.matchedAt || null,
+      expiredAt: full.expiredAt || null,
+      payload: JSON.stringify(full)
+    });
+
+  return full;
+}
+
+/**
+ * Lấy danh sách lệnh trên sàn giao dịch theo bộ lọc
+ */
+export function getExchangeOrdersDb(filters = {}) {
+  const database = getRawDB();
+  const conditions = [];
+  const params = [];
+
+  if (filters.status) {
+    conditions.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.orderType) {
+    conditions.push('orderType = ?');
+    params.push(filters.orderType);
+  }
+  if (filters.corridor) {
+    conditions.push('corridor = ?');
+    params.push(filters.corridor);
+  }
+  if (filters.direction) {
+    conditions.push('direction = ?');
+    params.push(filters.direction);
+  }
+  if (filters.stationId) {
+    conditions.push('stationId = ?');
+    params.push(filters.stationId);
+  }
+  if (filters.date) {
+    conditions.push('date = ?');
+    params.push(filters.date);
+  }
+  if (filters.userId) {
+    conditions.push('userId = ?');
+    params.push(filters.userId);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const query = `SELECT payload FROM seat_exchange_orders ${whereClause} ORDER BY createdAt ASC`;
+  const rows = database.prepare(query).all(...params);
+
+  return rows
+    .map((r) => {
+      try {
+        return JSON.parse(r.payload);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Lấy chi tiết lệnh theo ID
+ */
+export function getExchangeOrderByIdDb(id) {
+  const database = getRawDB();
+  const row = database.prepare('SELECT payload FROM seat_exchange_orders WHERE id = ?').get(id);
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cập nhật trạng thái lệnh (FILLED, PARTIALLY_FILLED, EXPIRED, CANCELLED)
+ */
+export async function updateExchangeOrderDb(id, updates = {}) {
+  const current = getExchangeOrderByIdDb(id);
+  if (!current) return null;
+  const updated = { ...current, ...updates, updatedAt: Date.now() };
+
+  const database = getRawDB();
+  database
+    .prepare(
+      `
+    UPDATE seat_exchange_orders
+    SET status = ?, remainingSeats = ?, matchedWithOrderId = ?, matchedBookingId = ?,
+        pinCode = ?, rendezvousTime = ?, rendezvousMinutes = ?, matchedAt = ?, expiredAt = ?, payload = ?
+    WHERE id = ?
+  `
+    )
+    .run(
+      updated.status || 'OPEN',
+      Number(updated.remainingSeats ?? updated.seats ?? 1),
+      updated.matchedWithOrderId || null,
+      updated.matchedBookingId || null,
+      updated.pinCode || null,
+      updated.rendezvousTime || null,
+      updated.rendezvousMinutes || null,
+      updated.matchedAt || null,
+      updated.expiredAt || null,
+      JSON.stringify(updated),
+      id
+    );
+
+  return updated;
+}
+
+/**
+ * Quét các lệnh OPEN trên sàn đã vượt quá TTL trượt động và chuyển sang EXPIRED
+ */
+export async function expireSlidingTTLOrdersDb(currentTimestamp = Date.now()) {
+  const database = getRawDB();
+  const rows = database
+    .prepare(
+      `
+    SELECT payload FROM seat_exchange_orders
+    WHERE (status = 'OPEN' OR status = 'PARTIALLY_FILLED') AND ttlTimestamp IS NOT NULL AND ttlTimestamp <= ?
+  `
+    )
+    .all(currentTimestamp);
+
+  const expiredList = [];
+  for (const row of rows) {
+    try {
+      const order = JSON.parse(row.payload);
+      order.status = 'EXPIRED';
+      order.expiredAt = currentTimestamp;
+      await updateExchangeOrderDb(order.id, {
+        status: 'EXPIRED',
+        expiredAt: currentTimestamp
+      });
+      expiredList.push(order);
+    } catch {
+      // Bỏ qua lỗi parse nếu có
+    }
+  }
+
+  return expiredList;
+}
+
 
 /**
  * Áp dụng kỷ luật hủy chuyến theo hàm suy giảm thời gian (Time-Decay Penalty Engine)
