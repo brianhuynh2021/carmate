@@ -171,7 +171,7 @@ export default function CorridorMetroBoard({
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              Định giá công bằng Nash · 0% chặt chém
+              Định giá công bằng hai bên · 0% chặt chém
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
