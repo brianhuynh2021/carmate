@@ -47,6 +47,10 @@ CarMate tích hợp **Bộ điều phối tự động Cấp độ 3 (Autonomous
 
 > 📊 **Kiểm thử tự động:** Toàn bộ logic đã được bảo chứng bằng **139/139 bài test tự động Cấp độ 3** (`scripts/test-level3-engine.mjs`) đạt tỷ lệ **100% PASS**.
 
+### 📘 Sổ Tay Vận Hành Thực Địa Tuyến QL13 (Tân Khai ⇄ Hàng Xanh):
+Quy chuẩn vận hành 4 nhịp thực tế ngoài đời và mạng lưới an toàn 3 tầng bảo vệ (**Silent Fallback N+1**, **In-Transit VietQR P2P**, **Quy tắc 10 giây Trả khách Hàng Xanh chống phạt nguội camera CSGT**, và **Khóa kép No-Show Dwell-Time 5 phút**) được ghi chép đầy đủ tại:  
+👉 **[`docs/OPERATIONAL_WORKFLOW.md`](docs/OPERATIONAL_WORKFLOW.md)**.
+
 ---
 
 ## 🏛️ 3. Cấu Trúc Mã Nguồn Monorepo
@@ -57,7 +61,9 @@ carmate/
 ├── fly.toml                        # Cấu hình triển khai Fly.io (region Singapore)
 ├── Dockerfile                      # Build 2 stage: build web -> chạy server Node
 ├── .github/workflows/ci.yml        # CI: build + chạy toàn bộ E2E mỗi lần push
-├── ARCHITECTURE.md                 # Tài liệu kiến trúc & lộ trình
+├── ARCHITECTURE.md                 # Tài liệu kiến trúc & nền tảng toán học
+├── docs/
+│   └── OPERATIONAL_WORKFLOW.md     # Sổ tay vận hành thực địa QL13 & Fail-Safe playbook
 │
 ├── scripts/
 │   ├── test-local-e2e.js           # Bộ E2E (API, phân quyền, PII, XSS, AI agent)

@@ -28,6 +28,11 @@
 5. [Hệ Thống Trạng Thái Bất Biến (MIT Invariant State Machines)](#5-hệ-thống-trạng-thái-bất-biến-mit-invariant-state-machines)
 6. [Mô Hình Vận Tải Đa Dụng (Multimodal Passenger, Cargo & Fleet Model)](#6-mô-hình-vận-tải-đa-dụng)
 7. [Cấu Trúc Thư Mục Monorepo Thực Tế & Triển Khai Hạ Tầng](#7-cấu-trúc-thư-mục-monorepo-thực-tế)
+8. [Tiêu Chuẩn Bảo Mật & An Toàn Danh Tính](#8-tiêu-chuẩn-bảo-mật--an-toàn-danh-tính)
+9. [Mô Hình Kinh Tế & Chiến Lược Doanh Thu Bền Vững](#9-mô-hình-kinh-tế--chiến-lược-doanh-thu-bền-vững-monetization-architecture)
+10. [Tấm Khiên Pháp Lý & Kiểm Soát Giá Phi Thương Mại](#10-tấm-khiên-pháp-lý--cơ-chế-kiểm-soát-giá--xe-biển-số-vàng-legal-shield)
+11. [Tam Giác Bảo Chứng Niềm Tin (Trust Triangle)](#11-tam-giác-bảo-chứng-niềm-tin-the-trust-triangle--human-handshake)
+12. [Quy Chuẩn Vận Hành Thực Địa QL13 & Mạng Lưới An Toàn Toàn Diện](#12-quy-chuẩn-vận-hành-thực-địa-tuyến-hành-lang-ql13--mạng-lưới-an-toàn-toàn-diện)
 
 ---
 
@@ -658,4 +663,26 @@ CarMate tuyệt đối không để xảy ra tình trạng "khớp lệnh tự �
 4. **Lưới An Toàn Cứu Hộ:**
    * Chủ xe huỷ sát giờ (< 15 phút) bị trừ 40 điểm tín nhiệm và khóa tài khoản 7 ngày.
    * Radar xe đệm dự phòng (Standby Buffer $\pm 45$ phút) tự động kích hoạt điều chuyển khách sang xe khác cùng tuyến.
+
+---
+
+## 12. Quy Chuẩn Vận Hành Thực Địa Tuyến Hành Lang QL13 & Mạng Lưới An Toàn Toàn Diện
+
+Hệ thống bổ sung chi tiết quy chuẩn vận hành và kiểm soát rủi ro thực địa tuyến **Tân Khai ⇄ Hàng Xanh** theo tài liệu kỹ thuật chi tiết: [`docs/OPERATIONAL_WORKFLOW.md`](file:///Users/huynhnguyen/Desktop/nhat_minh_projects/carmate/docs/OPERATIONAL_WORKFLOW.md).
+
+### 1. Luồng 4 Nhịp Vận Hành Thực Địa (Happy Case):
+* **Nhịp 1: Tối Hôm Trước (21:00) — Khóa sổ & Zero Doubt Seeding:**  
+  Khách chỉ thấy 1 sự thật duy nhất (Xe Mitsubishi Xpander `93A - 541.86`, đón lúc 06:15 tại Cây xăng Petrolimex Tân Khai kèm mã PIN 4 số `8842`). Không hiển thị xe dự phòng ra giao diện để triệt tiêu việc gieo rắc nghi ngờ và ngăn chặn tâm lý hủy chuyến sớm.
+* **Nhịp 2: Sáng Hôm Sau (06:15) — Đón 30 giây bằng mã PIN:**  
+  Xe tấp mép sảnh cây xăng. Khách đọc mã PIN `8842`. Chủ xe bấm 4 số trên Taplo Cockpit. Máy chủ xác thực chuyển Cockpit sang trạng thái **`CRUISING`** và xe tiếp tục lăn bánh trong vòng chưa đầy 45 giây.
+* **Nhịp 3: Lăn Bánh Trên QL13 (Cruising) — Phụ xăng VietQR Trên Xe:**  
+  Người đi cùng mở thẻ VietQR P2P (MB Bank `0938.884.288`, cú pháp `CARMATE PIN 8842`) hoặc chuẩn bị tiền mặt chẵn. **Hoàn tất thanh toán 100% khi xe đang chạy trên QL13**, triệt tiêu việc loay hoay quét QR lúc dừng xe.
+* **Nhịp 4: Tới Hàng Xanh (D4) — Trả khách 10 giây & Đánh giá 2 chiều:**  
+  Nút giao Hàng Xanh có camera phạt nguội và mật độ xe cao. Khách bước xuống vỉa hè trong **10 giây**. Cả hai bên mở Modal Đánh giá 5 sao tương hỗ để tích lũy Karma.
+
+### 2. Mạng Lưới An Toàn Cho Các Kịch Bản Bất Thường (Unhappy Cases):
+* **No-Show Khách Vắng Mặt:** Bắt buộc Dwell-Time $\ge 5\text{ phút}$ dừng đỗ tại trạm mới mở khóa nút báo. Đối chiếu GPS 2 chiều: Khách ở xa $> 500\text{m} \implies$ Phạt 30đ khách, giải phóng chủ xe. Cả 2 cùng ở trạm $\le 80\text{m} \implies$ Chặn báo oan, hướng dẫn bật xi-nhan tìm nhau.
+* **Chủ xe bùng/huỷ sáng sớm:** Thi hành chế tài tức thì (-35đ, khóa 7 ngày); Đền bù Thẻ Ưu Tiên Vàng #1 (Golden Ticket) + 10 Karma; Kích hoạt Phao Cứu Sinh Vật Lý tại trạm xăng (Tuyến Buýt Số 15 tần suất 10-15 phút và các hãng xe khách liên tỉnh QL13).
+* **Silent Fallback N+1:** Khi xe chính gặp sự cố sáng sớm (05:00 - 05:30), hệ thống tự động tráo vé sang xe hỗ trợ (`Toyota Vios 61A-892.41` lúc 06:25) mà không hủy cuốc, giữ nguyên mã PIN và giá vé 50.000đ.
+
 
