@@ -343,7 +343,7 @@ export default function Header({
                       <span>Hẹn lịch chuyến xe mai</span>
                     </div>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
-                      Level 3
+                      0 gõ form
                     </span>
                   </button>
 
