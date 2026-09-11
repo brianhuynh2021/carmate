@@ -284,6 +284,8 @@ export default function App() {
     return 'hub_ql13_tan_khai';
   });
 
+  const [stationDestinationHubId, setStationDestinationHubId] = useState(null);
+
   // Hook quản lý Modals
   const {
     selectedItemForEscrow,
@@ -974,6 +976,7 @@ export default function App() {
       <>
         <StationRiderView
           hubId={stationHubId}
+          initialDestinationHubId={stationDestinationHubId}
           currentUser={currentUser}
           onBack={() => setActiveTab('market')}
           onShowToast={showToast}
@@ -1019,8 +1022,9 @@ export default function App() {
             <CorridorMetroBoard
               currentUser={currentUser}
               onOpenCockpit={() => setActiveTab('cockpit')}
-              onOpenStationView={(hub) => {
+              onOpenStationView={(hub, destHub) => {
                 setStationHubId(hub || 'hub_ql13_tan_khai');
+                setStationDestinationHubId(destHub || null);
                 setActiveTab('station');
               }}
               onOpenIntentModal={(targetRole, hubId) => {

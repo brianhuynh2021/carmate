@@ -8,12 +8,9 @@
 
 import {
   parseTimeToMinutes,
-  minutesToTimeString,
   buildInterval,
   calculateUnifiedOrderTTL,
   matchOrderContinuous,
-  evaluateOrderBookExpirations,
-  buildOrderMatchedNotification,
   buildOrderExpiredNotification,
   cleanPhoneNumber,
   isValidVietnamesePhone,
@@ -21,15 +18,65 @@ import {
 } from '@carmate/shared';
 
 import {
-  createExchangeOrderDb,
   getExchangeOrdersDb,
-  getExchangeOrderByIdDb,
-  updateExchangeOrderDb,
+  commitExchangeMatchDb,
+  createExchangeOrderDb,
   expireSlidingTTLOrdersDb,
-  addBooking
+  getUserByPhone
 } from '../db/sqliteStore.js';
 
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
+
+/**
+ * =========================================================================
+ * LỚP CHẮN PII (NGHỊ ĐỊNH 13/2023/NĐ-CP) CHO SỔ LỆNH CÔNG KHAI
+ * =========================================================================
+ * Sàn công khai TUYỆT ĐỐI không được lộ số điện thoại thật, tên thật hay
+ * biển số đầy đủ. Danh tính thật chỉ hiện ra cho đúng 2 bên SAU khi khớp lệnh
+ * (qua booking + mã PIN), đồng bộ với `sanitizeTripForPublic` của /api/trips.
+ */
+export function sanitizeOrderForPublic(order, reqUser) {
+  if (!order) return null;
+
+  const viewerPhone = reqUser ? cleanPhoneNumber(reqUser.phone || '') : null;
+  const orderPhone = cleanPhoneNumber(order.phone || '');
+  const isOwner = Boolean(
+    (viewerPhone && orderPhone && viewerPhone === orderPhone) ||
+    (reqUser && (reqUser.role === 'admin' || reqUser.role === 'super_admin')) ||
+    (reqUser && reqUser.id && reqUser.id === order.userId)
+  );
+
+  if (isOwner) return { ...order, isOwner: true };
+
+  const safe = { ...order };
+
+  // 1. Che số điện thoại: 098***2233
+  safe.phoneMasked =
+    orderPhone.length >= 7
+      ? `${orderPhone.slice(0, 3)}***${orderPhone.slice(-4)}`
+      : '09x***xxxx';
+  delete safe.phone;
+  delete safe.phoneReal;
+
+  // 2. Bí danh công khai thay cho tên thật
+  const tail = String(order.id || '').slice(-3).toUpperCase() || 'XXX';
+  safe.publicName = order.orderType === 'ASK' ? `Chủ xe CX-${tail}` : `Người đi cùng KX-${tail}`;
+  delete safe.contactName;
+
+  // 3. Che 2 số cuối biển số
+  if (safe.plate && typeof safe.plate === 'string') {
+    safe.plate = safe.plate.replace(/\d{2}$/, 'xx');
+  }
+
+  // 4. Bí mật vận hành: PIN & danh tính đối ứng không bao giờ ra sàn công khai
+  delete safe.pinCode;
+  delete safe.userId;
+  delete safe.matchedBookingId;
+  delete safe.matchedWithOrderId;
+  delete safe.payload;
+
+  return safe;
+}
 
 /**
  * POST /api/seat-exchange/order
@@ -50,11 +97,16 @@ export async function placeOrderHandler(req, res) {
       phone = '',
       contactName = '',
       plate = '',
-      vehicleModel = '',
-      trustScore = 98
+      vehicleModel = ''
     } = req.body || {};
 
-    const clean = cleanPhoneNumber(phone || req.user?.phone || '');
+    // BẤT BIẾN DANH TÍNH (ANTI-SPOOFING):
+    // Khi đã đăng nhập, SĐT trong token LUÔN thắng SĐT gửi từ body — nếu không
+    // kẻ tấn công có thể ném lệnh mang danh người khác. Chỉ khách vãng lai
+    // (chưa đăng nhập) mới được tự khai SĐT của chính mình.
+    const tokenPhone = cleanPhoneNumber(req.user?.phone || '');
+    const clean = tokenPhone || cleanPhoneNumber(phone);
+
     if (!clean || !isValidVietnamesePhone(clean)) {
       return res.status(400).json({
         success: false,
@@ -84,6 +136,12 @@ export async function placeOrderHandler(req, res) {
     const isAsk = orderType.toUpperCase() === 'ASK';
     const parsedSeats = Number(seats) || 1;
 
+    // BẤT BIẾN ĐIỂM TÍN NHIỆM: trustScore quyết định thứ tự ưu tiên khớp lệnh
+    // (candidates.sort) nên TUYỆT ĐỐI không được nhận từ client — nếu không kẻ
+    // tấn công tự cho mình 100 điểm để chiếm mọi cuốc. Luôn đọc từ hồ sơ DB.
+    const ownerProfile = getUserByPhone(clean);
+    const resolvedTrustScore = Number(ownerProfile?.trustScore ?? 98);
+
     const newOrder = {
       id: `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
       userId: req.user?.id || `USR-${clean}`,
@@ -110,7 +168,7 @@ export async function placeOrderHandler(req, res) {
       contactName: contactName || (isAsk ? 'Chủ xe' : 'Người đi cùng'),
       plate: plate || (isAsk ? '93A-541.86' : ''),
       vehicleModel: vehicleModel || (isAsk ? 'Xe 5-7 chỗ' : ''),
-      trustScore: Number(trustScore) || (req.user?.trustScore ?? 98),
+      trustScore: resolvedTrustScore,
       userMessage: ttlResult.userMessage,
       createdAt: now
     };
@@ -130,46 +188,29 @@ export async function placeOrderHandler(req, res) {
       const bidOrder = matchResult.bidOrder;
       const escrowId = `CX-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
 
-      // Cập nhật cả 2 lệnh trong DB
-      if (newOrder.orderType === 'ASK') {
-        await createExchangeOrderDb({ ...askOrder, matchedBookingId: escrowId });
-        await updateExchangeOrderDb(bidOrder.id, {
-          status: bidOrder.status,
-          matchedWithOrderId: askOrder.id,
-          matchedBookingId: escrowId,
-          rendezvousTime: matchResult.rendezvousTime,
-          rendezvousMinutes: matchResult.rendezvousMinutes,
+      // BẤT BIẾN NGUYÊN TỬ (ATOMICITY — MIT INVARIANT):
+      // Khớp lệnh gồm 3 thao tác ghi (lệnh ASK + lệnh BID + booking). Nếu tách rời,
+      // một sự cố giữa chừng sẽ để lại ghế đã bị trừ mà KHÔNG có booking tương ứng —
+      // sàn rơi vào trạng thái mâu thuẫn. Gói toàn bộ trong MỘT transaction SQLite:
+      // hoặc cả 3 cùng thành công, hoặc không gì được ghi.
+      commitExchangeMatchDb({
+        askOrder: { ...askOrder, matchedBookingId: escrowId, matchedAt: now },
+        bidOrder: { ...bidOrder, matchedBookingId: escrowId, matchedAt: now },
+        isNewOrderAsk: newOrder.orderType === 'ASK',
+        booking: {
+          escrowId,
+          tripId: askOrder.id,
+          passengerPhone: bidOrder.phone,
+          passengerName: bidOrder.contactName,
+          driverPhone: askOrder.phone,
+          driverName: askOrder.contactName,
+          seats: matchResult.seatsTraded,
+          status: 'zalo_active',
           pinCode: matchResult.pinCode,
-          matchedAt: now
-        });
-      } else {
-        await createExchangeOrderDb({ ...bidOrder, matchedBookingId: escrowId });
-        await updateExchangeOrderDb(askOrder.id, {
-          status: askOrder.status,
-          remainingSeats: askOrder.remainingSeats,
-          matchedWithOrderId: bidOrder.id,
-          matchedBookingId: escrowId,
+          pickupPoint: bidOrder.stationName,
           rendezvousTime: matchResult.rendezvousTime,
-          rendezvousMinutes: matchResult.rendezvousMinutes,
-          pinCode: matchResult.pinCode,
-          matchedAt: now
-        });
-      }
-
-      // Tạo booking chính thức trong hệ thống
-      await addBooking({
-        escrowId,
-        tripId: askOrder.id,
-        passengerPhone: bidOrder.phone,
-        passengerName: bidOrder.contactName,
-        driverPhone: askOrder.phone,
-        driverName: askOrder.contactName,
-        seats: matchResult.seatsTraded,
-        status: 'zalo_active',
-        pinCode: matchResult.pinCode,
-        pickupPoint: bidOrder.stationName,
-        rendezvousTime: matchResult.rendezvousTime,
-        createdAt: now
+          createdAt: now
+        }
       });
 
       // Bắn thông báo nghiệp vụ
@@ -205,7 +246,7 @@ export async function placeOrderHandler(req, res) {
     return res.status(201).json({
       success: true,
       matched: false,
-      order: savedOrder,
+      order: sanitizeOrderForPublic(savedOrder, { ...(req.user || {}), phone: clean }),
       ttlTimeString: ttlResult.ttlTimeString,
       isSleepCutoff: ttlResult.isSleepCutoff,
       message: ttlResult.userNotice
@@ -241,10 +282,12 @@ export function getOrderBookHandler(req, res) {
         });
       }
       const stn = stationMap.get(stnKey);
+      // Mọi lệnh ra sàn công khai đều phải đi qua lớp chắn PII (Nghị định 13/2023)
+      const publicOrder = sanitizeOrderForPublic(order, req.user);
       if (order.orderType === 'ASK') {
-        stn.asks.push(order);
+        stn.asks.push(publicOrder);
       } else {
-        stn.bids.push(order);
+        stn.bids.push(publicOrder);
       }
     }
 

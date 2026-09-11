@@ -135,6 +135,18 @@ export default function MovementIntentModal({
 
   const [date, setDate] = useState(() => dateOptions[1].value); // Mặc định ngày mai
   const [timeSlot, setTimeSlot] = useState('05:00-07:00'); // Giờ cao điểm sáng sớm
+  const [isRecurring, setIsRecurring] = useState(false); // Lên lịch lặp lại hàng tuần (T2-T6)
+  const [recurringDays, setRecurringDays] = useState(['T2', 'T3', 'T4', 'T5', 'T6']);
+
+  const toggleRecurringDay = (dayKey) => {
+    setRecurringDays((prev) => {
+      if (prev.includes(dayKey)) {
+        if (prev.length === 1) return prev; // Giữ tối thiểu 1 ngày
+        return prev.filter((d) => d !== dayKey);
+      }
+      return [...prev, dayKey];
+    });
+  };
 
   // Thông tin liên hệ
   const [phone, setPhone] = useState(() => {
@@ -274,6 +286,8 @@ export default function MovementIntentModal({
         date,
         timeSlot,
         seats: Number(seats),
+        isRecurring,
+        recurringDays: isRecurring ? recurringDays : [],
         phone: clean,
         contactName: contactName.trim() || (role === 'driver' ? 'Chủ xe' : 'Khách đi cùng')
       };
@@ -301,8 +315,12 @@ export default function MovementIntentModal({
 
       onShowToast?.(
         role === 'driver'
-          ? '⚡ Đã lưu ý định chuyến xe! Hệ thống đang tự động gom khách cùng tuyến vào khung giờ hẹn.'
-          : '⚡ Đã lưu ý định đi chung! Thuật toán Gale-Shapley đang tự động ghép xe tiện đường cho bạn.'
+          ? (isRecurring
+              ? `⚡ Đã lưu lịch xe cố định hàng tuần (${recurringDays.join(', ')})! Hệ thống tự động gom khách cùng giờ mỗi tuần.`
+              : '⚡ Đã lưu ý định chuyến xe! Hệ thống đang tự động gom khách cùng tuyến vào khung giờ hẹn.')
+          : (isRecurring
+              ? `⚡ Đã lưu lịch đi lại hàng tuần (${recurringDays.join(', ')})! Hệ thống tự động ghép xe tiện đường mỗi tuần.`
+              : '⚡ Đã lưu ý định đi chung! Thuật toán Gale-Shapley đang tự động ghép xe tiện đường cho bạn.')
       );
 
       onSuccess?.(res?.data || payload);
@@ -363,53 +381,11 @@ export default function MovementIntentModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* 1. VAI TRÒ CHÍNH CHỦ (LỊCH AI NGƯỜI ĐÓ - KHÔNG TRỘN LẪN) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400">
-              1. Vai trò chính chủ
-            </label>
-            {role === 'driver' ? (
-              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-sm">
-                  <Car className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-black uppercase font-mono tracking-wider text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
-                    <span>Lịch Lăn Bánh Dành Cho Chủ Xe</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
-                      Chính chủ
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Khai báo lộ trình xe chạy để hệ thống tự động đón thêm người đi cùng lấp đầy ghế trống
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#0071e3]/10 border border-[#0071e3]/30 text-[#0071e3] dark:text-[#2997ff]">
-                <div className="w-10 h-10 rounded-xl bg-[#0071e3] text-white flex items-center justify-center font-black shrink-0 shadow-sm">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-black uppercase font-mono tracking-wider text-[#0071e3] dark:text-white flex items-center gap-1.5">
-                    <span>Lịch Đặt Chỗ Dành Cho Người Đi Cùng</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#0071e3]/20 text-[#0071e3] dark:text-[#2997ff] font-bold">
-                      Chính chủ
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Khai báo trạm đón để hệ thống tự động khóa chỗ trên xe ô tô gia đình cùng lộ trình
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 2. CHỌN HÀNH TRÌNH QL13 (PHÂN ĐỊNH RẠCH RÒI 2 CHIỀU ĐI - VỀ) */}
+          {/* 1. CHỌN HÀNH TRÌNH QL13 (PHÂN ĐỊNH RẠCH RÒI 2 CHIỀU ĐI - VỀ) */}
           <div className="space-y-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400">
-                2. Lộ trình trên Tuyến QL13
+                1. Lộ trình trên Tuyến QL13
               </label>
 
               {/* Phân định rạch ròi 2 chiều di chuyển */}
@@ -496,50 +472,161 @@ export default function MovementIntentModal({
             </div>
           </div>
 
-          {/* 3. CHỌN NGÀY & KHUNG GIỜ (EPOCH WINDOW) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" /> 3. Ngày di chuyển
-              </label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {dateOptions.map((opt) => (
+          {/* 2. THỜI GIAN KHỞI HÀNH & LỊCH LẶP LẠI HÀNG TUẦN (ELON MUSK / APPLE ZERO-OVERHEAD) */}
+          <div className="space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Cột 1: Chọn ngày hoặc lặp hàng tuần */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" /> 2. Ngày di chuyển
+                </label>
+                <div className="grid grid-cols-4 gap-1 sm:gap-1.5">
+                  {dateOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setDate(opt.value);
+                        setIsRecurring(false);
+                      }}
+                      className={`py-2 px-1 text-center rounded-xl transition-all cursor-pointer border ${
+                        !isRecurring && date === opt.value
+                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-sm'
+                          : 'bg-slate-50 dark:bg-white/[0.03] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span className="block text-[11px] sm:text-xs font-bold leading-tight">{opt.title}</span>
+                      <span className="block text-[9px] sm:text-[10px] opacity-75 font-mono mt-0.5">{opt.subDate}</span>
+                    </button>
+                  ))}
                   <button
-                    key={opt.value}
                     type="button"
-                    onClick={() => setDate(opt.value)}
+                    onClick={() => setIsRecurring(true)}
                     className={`py-2 px-1 text-center rounded-xl transition-all cursor-pointer border ${
-                      date === opt.value
-                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-sm'
+                      isRecurring
+                        ? (role === 'driver'
+                            ? 'bg-emerald-600 text-white border-transparent shadow-sm'
+                            : 'bg-[#0071e3] text-white border-transparent shadow-sm')
                         : 'bg-slate-50 dark:bg-white/[0.03] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.06]'
                     }`}
                   >
-                    <span className="block text-xs font-bold leading-tight">{opt.title}</span>
-                    <span className="block text-[10px] opacity-75 font-mono mt-0.5">{opt.subDate}</span>
+                    <span className="block text-[11px] sm:text-xs font-bold leading-tight flex items-center justify-center gap-0.5">
+                      <RotateCcw className="w-2.5 h-2.5" /> Hàng tuần
+                    </span>
+                    <span className="block text-[9px] sm:text-[10px] opacity-75 font-mono mt-0.5">Cố định</span>
                   </button>
-                ))}
+                </div>
+              </div>
+
+              {/* Cột 2: Khung giờ khởi hành */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" /> Khung giờ khởi hành
+                </label>
+                <select
+                  value={timeSlot}
+                  onChange={(e) => setTimeSlot(e.target.value)}
+                  className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
+                >
+                  {TIME_SLOTS.filter((s) => s.id !== 'all' && !s.isAlias).map((slot) => (
+                    <option key={slot.id} value={slot.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                      {slot.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" /> 4. Khung giờ khởi hành
-              </label>
-              <select
-                value={timeSlot}
-                onChange={(e) => setTimeSlot(e.target.value)}
-                className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
-              >
-                {TIME_SLOTS.filter((s) => s.id !== 'all' && !s.isAlias).map((slot) => (
-                  <option key={slot.id} value={slot.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    {slot.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* BỘ CHỌN LỊCH LẶP LẠI HÀNG TUẦN (STANFORD ERGONOMICS & APPLE HIG) */}
+            {isRecurring && (
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-500/30 space-y-2.5 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-sky-900 dark:text-sky-300">
+                    <RotateCcw className="w-3.5 h-3.5 text-sky-500" />
+                    <span>Lặp lại tự động các ngày trong tuần:</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-sky-600 dark:text-sky-400 font-bold">
+                    {recurringDays.length} ngày/tuần
+                  </span>
+                </div>
+
+                {/* Preset 1-chạm */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setRecurringDays(['T2', 'T3', 'T4', 'T5', 'T6'])}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                      JSON.stringify(recurringDays.slice().sort()) === JSON.stringify(['T2', 'T3', 'T4', 'T5', 'T6'].sort())
+                        ? 'bg-sky-600 text-white border-transparent'
+                        : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Thứ 2 – Thứ 6 (Đi làm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecurringDays(['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'])}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                      recurringDays.length === 7
+                        ? 'bg-sky-600 text-white border-transparent'
+                        : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Cả tuần (T2–CN)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecurringDays(['T6', 'CN'])}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                      JSON.stringify(recurringDays.slice().sort()) === JSON.stringify(['CN', 'T6'].sort())
+                        ? 'bg-sky-600 text-white border-transparent'
+                        : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Cuối tuần (T6 & CN)
+                  </button>
+                </div>
+
+                {/* Day Chips T2..CN */}
+                <div className="grid grid-cols-7 gap-1 pt-1">
+                  {[
+                    { key: 'T2', label: 'T2' },
+                    { key: 'T3', label: 'T3' },
+                    { key: 'T4', label: 'T4' },
+                    { key: 'T5', label: 'T5' },
+                    { key: 'T6', label: 'T6' },
+                    { key: 'T7', label: 'T7' },
+                    { key: 'CN', label: 'CN' }
+                  ].map((day) => {
+                    const isSelected = recurringDays.includes(day.key);
+                    return (
+                      <button
+                        key={day.key}
+                        type="button"
+                        onClick={() => toggleRecurringDay(day.key)}
+                        className={`h-9 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer border ${
+                          isSelected
+                            ? (role === 'driver'
+                                ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-black shadow-xs'
+                                : 'bg-[#0071e3] text-white border-blue-400 font-black shadow-xs')
+                            : 'bg-white/60 dark:bg-white/[0.04] text-slate-400 border-slate-200 dark:border-white/[0.08] hover:text-slate-600'
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="text-[10px] text-sky-700 dark:text-sky-300/80 font-mono flex items-center gap-1 pt-0.5">
+                  <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />
+                  <span>Tự động khớp xe định kỳ mỗi tuần · Không cần thao tác đặt lại hàng ngày</span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 4. SỐ GHẾ & ĐỊNH MỨC CHIA SẺ CHI PHÍ XĂNG XE */}
+          {/* 3. SỐ GHẾ & ĐỊNH MỨC CHIA SẺ CHI PHÍ XĂNG XE */}
           <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-500/30 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
@@ -588,7 +675,7 @@ export default function MovementIntentModal({
             </div>
           </div>
 
-          {/* 5. THÔNG TIN LIÊN HỆ */}
+          {/* 4. THÔNG TIN LIÊN HỆ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">

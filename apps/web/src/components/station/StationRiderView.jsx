@@ -56,6 +56,7 @@ import Button from '../ui/Button.jsx';
 
 export default function StationRiderView({
   hubId = 'hub_ql13_tan_khai',
+  initialDestinationHubId = null,
   currentUser,
   onBack,
   onShowToast
@@ -81,13 +82,13 @@ export default function StationRiderView({
       setPickupHubId(hubId);
       if (SAIGON_HUB_IDS.includes(hubId)) {
         setDirection('TO_BINH_PHUOC');
-        setDestinationHubId('hub_ql13_binh_long');
+        setDestinationHubId(initialDestinationHubId || 'hub_ql13_binh_long');
       } else {
         setDirection('TO_SAIGON');
-        setDestinationHubId('hub_ql13_hang_xanh');
+        setDestinationHubId(initialDestinationHubId || 'hub_ql13_hang_xanh');
       }
     }
-  }, [hubId, SAIGON_HUB_IDS]);
+  }, [hubId, initialDestinationHubId, SAIGON_HUB_IDS]);
 
   // Các điểm đón quen thuộc dọc trục QL13 (Cả 2 chiều Bình Phước ⇄ Sài Gòn)
   const ql13PickupHubs = useMemo(() => [
@@ -171,6 +172,7 @@ export default function StationRiderView({
   // Trạng thái: 'CHECKIN' (R1) | 'BOARDING_PASS' (R2)
   const [viewStep, setViewStep] = useState('CHECKIN');
   const [destinationHubId, setDestinationHubId] = useState(() => {
+    if (initialDestinationHubId) return initialDestinationHubId;
     return SAIGON_HUB_IDS.includes(hubId) ? 'hub_ql13_binh_long' : 'hub_ql13_hang_xanh';
   });
   const [showOtherDestinations, setShowOtherDestinations] = useState(false);
@@ -366,7 +368,7 @@ export default function StationRiderView({
         }
       ];
     } else {
-      return [
+      const candidates = [
         {
           id: 'hub_ql13_vincom_chon_thanh',
           title: 'TX. Chơn Thành',
@@ -384,8 +386,21 @@ export default function StationRiderView({
           title: 'TX. Bình Long',
           subtitle: 'Vòng xoay An Lộc · TT Bình Long',
           price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_binh_long').pricePerSeat
+        },
+        {
+          id: 'hub_ql13_cho_loc_ninh',
+          title: 'TT. Lộc Ninh',
+          subtitle: 'Chợ Lộc Ninh · Mặt tiền QL13',
+          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_cho_loc_ninh').pricePerSeat
+        },
+        {
+          id: 'hub_ql13_budop',
+          title: 'TT. Bù Đốp',
+          subtitle: 'Chợ Bù Đốp · Tuyến gom ĐT759',
+          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_budop').pricePerSeat
         }
       ];
+      return candidates.filter((c) => c.id !== currentHub.id);
     }
   }, [currentHub.id, direction]);
 

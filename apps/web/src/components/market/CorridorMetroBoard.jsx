@@ -23,7 +23,8 @@ import {
   RotateCcw,
   X,
   Printer,
-  Smartphone
+  Smartphone,
+  Navigation
 } from 'lucide-react';
 import QRCodeLib from 'qrcode';
 import {
@@ -156,6 +157,78 @@ export default function CorridorMetroBoard({
     }).then(setQrCodeDataUrl).catch(() => {});
   }, [selectedQrHub]);
 
+  // 4 Cửa ngõ xuất phát đón xe tại TP.HCM (Chiều về Sài Gòn ➔ Bình Phước)
+  const saigonGateways = useMemo(() => [
+    { id: 'hub_ql13_hang_xanh', shortName: 'Hàng Xanh', name: 'Ngã tư Hàng Xanh', landmark: 'Bình Thạnh · Gần Q1, Q3', icon: '🏢' },
+    { id: 'hub_ql13_san_bay_tsn', shortName: 'Sân bay TSN', name: 'Sân bay Tân Sơn Nhất', landmark: 'Ga T1/T2 · Phạm Văn Đồng', icon: '✈️' },
+    { id: 'hub_ql13_binh_trieu', shortName: 'Bình Triệu', name: 'Cầu Bình Triệu', landmark: 'BX Miền Đông cũ · QL13', icon: '⛽' },
+    { id: 'hub_ql13_nga4_binh_phuoc', shortName: 'Ngã 4 Bình Phước', name: 'Ngã 4 Bình Phước', landmark: 'Thủ Đức · Giao QL1A', icon: '📍' }
+  ], []);
+
+  const [saigonOriginHubId, setSaigonOriginHubId] = useState('hub_ql13_hang_xanh');
+
+  const selectedSaigonGateway = useMemo(() => {
+    return saigonGateways.find((g) => g.id === saigonOriginHubId) || saigonGateways[0];
+  }, [saigonGateways, saigonOriginHubId]);
+
+  // 6 Điểm đến chính tại Bình Phước (Thứ tự Nam lên Bắc dọc Quốc lộ 13)
+  const binhPhuocDestinations = useMemo(() => [
+    {
+      id: 'hub_ql13_bau_bang',
+      shortName: 'Bàu Bàng',
+      name: 'Trạm dừng KCN Bàu Bàng / TT. Lai Uyên',
+      landmark: 'Cổng KCN Bàu Bàng - QL13 (Cửa ngõ Bình Phước)',
+      category: 'INDUSTRIAL',
+      distanceFromSG: '~55 km',
+      isHot: false
+    },
+    {
+      id: 'hub_ql13_vincom_chon_thanh',
+      shortName: 'Chơn Thành',
+      name: 'TX. Chơn Thành (Vincom / Ngã 4 Chơn Thành)',
+      landmark: 'Số 01 QL13 - Bùng binh QL14 & Tuyến N2',
+      category: 'JUNCTION',
+      distanceFromSG: '~75 km',
+      isHot: true
+    },
+    {
+      id: 'hub_ql13_tan_khai',
+      shortName: 'Tân Khai',
+      name: 'TT. Tân Khai (Cây xăng Petrolimex Tân Khai)',
+      landmark: 'Cây xăng Petrolimex Tân Khai QL13 (Hớn Quản)',
+      category: 'GAS_STATION',
+      distanceFromSG: '~95 km',
+      isHot: true
+    },
+    {
+      id: 'hub_ql13_binh_long',
+      shortName: 'Bình Long',
+      name: 'TX. Bình Long (Vòng xoay An Lộc)',
+      landmark: 'Cổng chào TX. Bình Long - Tuyến QL13',
+      category: 'JUNCTION',
+      distanceFromSG: '~115 km',
+      isHot: true
+    },
+    {
+      id: 'hub_ql13_cho_loc_ninh',
+      shortName: 'Lộc Ninh',
+      name: 'TT. Lộc Ninh (Chợ Lộc Ninh / Cây xăng 17)',
+      landmark: 'Mặt tiền QL13 (Khu phố Ninh Thịnh / Cây xăng 17)',
+      category: 'JUNCTION',
+      distanceFromSG: '~135 km',
+      isHot: true
+    },
+    {
+      id: 'hub_ql13_budop',
+      shortName: 'Bù Đốp',
+      name: 'TT. Bù Đốp (Cổng Chợ Bù Đốp / ĐT759)',
+      landmark: 'Chợ Bù Đốp - Tuyến gom ĐT759 nối QL13',
+      category: 'FEEDER_THIN',
+      distanceFromSG: '~155 km',
+      isHot: false
+    }
+  ], []);
+
   // Danh sách các trạm dọc QL13 (tính cước và xếp thứ tự động theo hướng di chuyển 2 chiều)
   const ql13Hubs = useMemo(() => {
     const rawHubs = [
@@ -232,24 +305,28 @@ export default function CorridorMetroBoard({
 
   // Tự động định vị GPS để vào ngay điểm đón gần nhất theo hướng đã chọn
   const handleAutoDetectAndOpenRiderView = () => {
-    const defaultHub = direction === 'TO_SAIGON' ? 'hub_ql13_binh_long' : 'hub_ql13_hang_xanh';
+    if (direction === 'TO_BINH_PHUOC') {
+      onOpenStationView?.(saigonOriginHubId, 'hub_ql13_binh_long');
+      return;
+    }
+    const defaultHub = 'hub_ql13_binh_long';
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const nearest = findNearestVirtualHub(pos.coords.latitude, pos.coords.longitude, 'Tuyến QL13');
           if (nearest && !nearest.isTerminal && ql13Hubs.some((h) => h.id === nearest.id && !h.isTerminal)) {
-            onOpenStationView?.(nearest.id);
+            onOpenStationView?.(nearest.id, 'hub_ql13_hang_xanh');
             return;
           }
-          onOpenStationView?.(defaultHub);
+          onOpenStationView?.(defaultHub, 'hub_ql13_hang_xanh');
         },
         () => {
-          onOpenStationView?.(defaultHub);
+          onOpenStationView?.(defaultHub, 'hub_ql13_hang_xanh');
         },
         { timeout: 3000 }
       );
     } else {
-      onOpenStationView?.(defaultHub);
+      onOpenStationView?.(defaultHub, 'hub_ql13_hang_xanh');
     }
   };
 
@@ -497,14 +574,9 @@ export default function CorridorMetroBoard({
                 <h3 className="text-sm sm:text-base font-bold text-white">
                   {activeRole === 'driver' ? 'Lên lịch xe sáng mai' : 'Hẹn giờ đón xe sáng mai'}
                 </h3>
-                <button
-                  type="button"
-                  onClick={toggleRole}
-                  title="Đổi vai trò giữa Chủ xe và Người đi cùng"
-                  className="px-2 py-0.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-slate-300 hover:text-white text-[11px] font-mono cursor-pointer transition-colors"
-                >
-                  {activeRole === 'driver' ? 'Chủ xe' : 'Người đi cùng'} ⇄
-                </button>
+                <span className="px-2.5 py-0.5 rounded-full bg-white/[0.08] text-slate-300 text-[11px] font-mono border border-white/10">
+                  {activeRole === 'driver' ? 'Chủ xe' : 'Người đi cùng'}
+                </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">Tự động ghép bạn đồng hành cùng tuyến QL13</p>
             </div>
@@ -590,6 +662,28 @@ export default function CorridorMetroBoard({
             </>
           ) : (
             <>
+              <div className="p-3.5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Hàng Xanh ➔ Bù Đốp
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">240.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~155 km · Tuyến gom ĐT759</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Hàng Xanh ➔ Lộc Ninh
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-[#0071e3]">205.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~135 km · Mặt tiền QL13</span>
+              </div>
+
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
                   Hàng Xanh ➔ Bình Long
@@ -601,37 +695,15 @@ export default function CorridorMetroBoard({
                 <span className="text-[11px] font-mono text-slate-400 block">~115 km · Vé BOT</span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Hàng Xanh ➔ Tân Khai
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~95 km · Vé BOT</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Hàng Xanh ➔ Chơn Thành
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-[#0071e3]">120.000đ</span>
-                  <span className="text-[11px] text-slate-400">/ ghế</span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~75 km · Vé BOT</span>
-              </div>
-
               <div className="p-3.5 rounded-2xl bg-purple-50/40 dark:bg-purple-950/20 border border-purple-500/30 space-y-1">
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                  Sân bay TSN ➔ Bình Long
+                  Sân bay TSN ➔ Bù Đốp
                 </span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold font-mono text-purple-600 dark:text-purple-400">190.000đ</span>
+                  <span className="text-xl font-bold font-mono text-purple-600 dark:text-purple-400">255.000đ</span>
                   <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400 block">~120 km · Vé sân bay</span>
+                <span className="text-[11px] font-mono text-slate-400 block">~160 km · Vé sân bay</span>
               </div>
             </>
           )}
@@ -641,106 +713,236 @@ export default function CorridorMetroBoard({
       {/* ========================================================================= */}
       {/* 4. ĐIỂM ĐÓN DỌC TUYẾN QL13                                                 */}
       {/* ========================================================================= */}
-      <section className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-white/[0.08] shadow-xl space-y-4">
+      {/* ========================================================================= */}
+      {/* 4. ĐIỂM ĐÓN DỌC TUYẾN QL13                                                 */}
+      {/* ========================================================================= */}
+      <section className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-white/[0.08] shadow-xl space-y-5">
         <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-white">
-              {direction === 'TO_SAIGON' ? 'Điểm đón về Sài Gòn' : 'Điểm đón về Bình Phước'}
+              {direction === 'TO_SAIGON' ? 'Điểm đón về Sài Gòn' : 'Điểm trả tại Bình Phước (Chiều về từ TP.HCM)'}
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">Cây xăng Petrolimex & TTHC · Đón nhanh 60 giây</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {direction === 'TO_SAIGON'
+                ? 'Cây xăng Petrolimex & TTHC · Đón nhanh 60 giây'
+                : `Xuất phát từ ${selectedSaigonGateway.name} · Trả tận nơi dọc QL13`}
+            </p>
           </div>
 
           <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-semibold">
-            ~3–5 phút / xe
+            {direction === 'TO_SAIGON' ? '~3–5 phút / xe' : '4 Cửa ngõ · 6 Điểm trả'}
           </span>
         </div>
 
-        {/* DANH SÁCH CÁC ĐIỂM ĐÓN CÂY XĂNG DỌC QUỐC LỘ 13 */}
-        <div className="space-y-2.5">
-          {ql13Hubs.map((hub, index) => (
-            <div
-              key={hub.id}
-              className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                hub.isTerminal
-                  ? 'bg-sky-950/20 border-sky-500/30'
-                  : hub.isHot
-                    ? 'bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-400'
-                    : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
-                    hub.isTerminal
-                      ? 'bg-[#0071e3] text-white'
-                      : hub.isHot
-                        ? 'bg-emerald-500 text-slate-950'
-                        : 'bg-white/[0.08] text-slate-300'
-                  }`}
-                >
-                  {hub.isTerminal ? '🏁' : index + 1}
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-white">
-                      {hub.shortName || hub.name}
-                    </h3>
-                    {renderCategoryBadge(hub.category)}
-                    {hub.isTerminal && (
-                      <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-mono font-semibold">
-                        {direction === 'TO_SAIGON' ? 'Ga cuối TP.HCM' : 'Ga cuối Bình Phước'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">{hub.landmark}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
-                {hub.isTerminal ? (
-                  <span className="px-3 py-1.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 font-mono text-xs font-semibold flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                    <span>{direction === 'TO_SAIGON' ? 'Ga cuối Hàng Xanh / TSN' : 'Ga cuối Bình Long'}</span>
-                  </span>
-                ) : (
-                  <>
-                    <span className="text-sm sm:text-base font-bold font-mono text-emerald-400">
-                      {formatVND(hub.priceToTarget)}
-                    </span>
-
+        {direction === 'TO_BINH_PHUOC' ? (
+          <div className="space-y-5">
+            {/* 1. CHỌN CỬA NGÕ XUẤT PHÁT TẠI TP.HCM */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold font-mono uppercase text-slate-400 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                <span>1. Cửa ngõ bạn đón xe tại Sài Gòn:</span>
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {saigonGateways.map((gw) => {
+                  const isSelected = saigonOriginHubId === gw.id;
+                  return (
                     <button
+                      key={gw.id}
                       type="button"
-                      onClick={() => setSelectedQrHub(hub)}
-                      title="Xem mã QR trạm đón"
-                      className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
+                      onClick={() => setSaigonOriginHubId(gw.id)}
+                      className={`p-3 rounded-2xl text-left transition-all cursor-pointer border ${
+                        isSelected
+                          ? 'bg-[#0071e3] text-white border-blue-400 shadow-md ring-1 ring-blue-300'
+                          : 'bg-white/[0.04] text-slate-300 border-white/[0.08] hover:bg-white/[0.08] hover:text-white'
+                      }`}
                     >
-                      <QrCode className="w-4 h-4 text-emerald-400" />
+                      <div className="flex items-center gap-1.5 text-sm font-bold">
+                        <span>{gw.icon}</span>
+                        <span className="truncate">{gw.shortName}</span>
+                      </div>
+                      <div className={`text-[10px] truncate mt-0.5 font-mono ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                        {gw.landmark}
+                      </div>
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onOpenIntentModal?.('passenger', hub.id)}
-                      title="Hẹn giờ đón xe trước cho ngày mai"
-                      className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-[#2997ff] hover:text-blue-300 transition-all cursor-pointer shrink-0 active:scale-95"
-                    >
-                      <Clock className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onOpenStationView?.(hub.id)}
-                      className="h-9 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
-                    >
-                      <span>Đón xe</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                )}
+                  );
+                })}
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* 2. CHỌN ĐIỂM TRẢ TẠI BÌNH PHƯỚC (NAM LÊN BẮC DỌC QL13) */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold font-mono uppercase text-slate-400 flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>2. Chọn điểm trả tại Bình Phước (Cước cố định từ {selectedSaigonGateway.shortName}):</span>
+                </label>
+                <span className="text-[11px] font-mono text-emerald-400 font-bold hidden sm:inline">
+                  Đón thẳng QL13
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {binhPhuocDestinations.map((dest, index) => {
+                  const tariff = getFixedSegmentTariff(saigonOriginHubId, dest.id);
+                  return (
+                    <div
+                      key={dest.id}
+                      className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        dest.isHot
+                          ? 'bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-400'
+                          : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
+                            dest.isHot
+                              ? 'bg-emerald-500 text-slate-950'
+                              : 'bg-white/[0.08] text-slate-300'
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-white">
+                              {dest.shortName} — {dest.name}
+                            </h3>
+                            {renderCategoryBadge(dest.category)}
+                            <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 text-[10px] font-mono">
+                              {dest.distanceFromSG}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">{dest.landmark}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
+                        <span className="text-sm sm:text-base font-bold font-mono text-emerald-400">
+                          {formatVND(tariff.pricePerSeat)}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedQrHub(dest)}
+                          title="Xem mã QR trạm đón"
+                          className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
+                        >
+                          <QrCode className="w-4 h-4 text-emerald-400" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onOpenIntentModal?.('passenger', saigonOriginHubId, dest.id)}
+                          title="Hẹn giờ xe trước cho ngày mai"
+                          className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-[#2997ff] hover:text-blue-300 transition-all cursor-pointer shrink-0 active:scale-95"
+                        >
+                          <Clock className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onOpenStationView?.(saigonOriginHubId, dest.id)}
+                          className="h-9 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                        >
+                          <span>Đón xe về {dest.shortName}</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {ql13Hubs.map((hub, index) => (
+              <div
+                key={hub.id}
+                className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  hub.isTerminal
+                    ? 'bg-sky-950/20 border-sky-500/30'
+                    : hub.isHot
+                      ? 'bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-400'
+                      : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
+                      hub.isTerminal
+                        ? 'bg-[#0071e3] text-white'
+                        : hub.isHot
+                          ? 'bg-emerald-500 text-slate-950'
+                          : 'bg-white/[0.08] text-slate-300'
+                    }`}
+                  >
+                    {hub.isTerminal ? '🏁' : index + 1}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-white">
+                        {hub.shortName || hub.name}
+                      </h3>
+                      {renderCategoryBadge(hub.category)}
+                      {hub.isTerminal && (
+                        <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-mono font-semibold">
+                          Ga cuối TP.HCM
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-mono mt-0.5">{hub.landmark}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
+                  {hub.isTerminal ? (
+                    <span className="px-3 py-1.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 font-mono text-xs font-semibold flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Ga cuối Hàng Xanh / TSN</span>
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-sm sm:text-base font-bold font-mono text-emerald-400">
+                        {formatVND(hub.priceToTarget)}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQrHub(hub)}
+                        title="Xem mã QR trạm đón"
+                        className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
+                      >
+                        <QrCode className="w-4 h-4 text-emerald-400" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onOpenIntentModal?.('passenger', hub.id, 'hub_ql13_hang_xanh')}
+                        title="Hẹn giờ đón xe trước cho ngày mai"
+                        className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-[#2997ff] hover:text-blue-300 transition-all cursor-pointer shrink-0 active:scale-95"
+                      >
+                        <Clock className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onOpenStationView?.(hub.id, 'hub_ql13_hang_xanh')}
+                        className="h-9 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
+                      >
+                        <span>Đón xe</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ========================================================================= */}
