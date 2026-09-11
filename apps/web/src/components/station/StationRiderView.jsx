@@ -167,7 +167,33 @@ export default function StationRiderView({
   const [showStationPicker, setShowStationPicker] = useState(false);
   const [showNoShowRescueModal, setShowNoShowRescueModal] = useState(false);
   const [hasGoldenTicket, setHasGoldenTicket] = useState(false);
+  const [failoverInfo, setFailoverInfo] = useState(null);
   const [seatsNeeded, setSeatsNeeded] = useState(1);
+
+  // KÍCH HOẠT TRÁO VÉ MƯỢT MÀ SANG XE BÓNG MA (SILENT FAILOVER D2)
+  const handleTriggerShadowFailover = () => {
+    const shadowCar = {
+      plate: '61A - 892.41',
+      vehicleModel: 'Toyota Vios (Đen)',
+      driverName: 'Anh Hải (Chủ xe)',
+      time: '06:25'
+    };
+    setFailoverInfo(shadowCar);
+    setBoardingPass((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        scheduledPickupTime: shadowCar.time,
+        carInfo: {
+          ...prev.carInfo,
+          plate: shadowCar.plate,
+          vehicleModel: shadowCar.vehicleModel,
+          driverName: shadowCar.driverName
+        }
+      };
+    });
+    onShowToast?.('✓ Hệ thống điều phối xe hỗ trợ: Đã chuyển sang xe Toyota Vios Đen (61A-892.41)');
+  };
   const [phone, setPhone] = useState(() => {
     if (currentUser?.phone) return currentUser.phone;
     if (typeof localStorage !== 'undefined') {
@@ -1193,6 +1219,41 @@ export default function StationRiderView({
                 </span>
               </div>
 
+              {/* CHỨNG NHẬN CHẮC CHẮN 100% - ZERO-ANXIETY TRUST SHIELD */}
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs font-mono space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wide">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>VÉ ĐÃ XÁC NHẬN · GHẾ ĐÃ ĐƯỢC KHÓA RIÊNG CHO BẠN</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-300 pt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Tuyến thẳng QL13 về {boardingPass.destinationName || 'Hàng Xanh'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Bảo hộ chỗ ngồi tự động tại trạm đón</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* THÔNG BÁO ĐIỀU PHỐI MƯỢT MÀ KHI XE D1 GẶP SỰ CỐ (SILENT FAILOVER D2) */}
+              {failoverInfo && (
+                <div className="p-3.5 rounded-2xl bg-sky-500/15 border border-sky-500/35 space-y-2 animate-fade-in text-left">
+                  <div className="flex items-center gap-2 text-sky-300 font-bold text-xs uppercase tracking-wider font-mono">
+                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+                    <span>HỆ THỐNG ĐIỀU PHỐI XE HỖ TRỢ HÀNH TRÌNH</span>
+                  </div>
+                  <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                    Chuyến đi của bạn đã được chuyển sang xe <strong>{failoverInfo.vehicleModel}</strong> (<strong>{failoverInfo.plate}</strong>), do <strong>{failoverInfo.driverName}</strong> đón bạn lúc <strong>{failoverInfo.time}</strong> tại mép trạm.
+                  </p>
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Ghế ngồi &amp; Lộ trình QL13 giữ nguyên 100% · Không phát sinh phụ phí</span>
+                  </div>
+                </div>
+              )}
+
               {/* 1. MÃ PIN LÊN XE (ĐẶT Ở VỊ TRÍ ĐẬP VÀO MẮT ĐẦU TIÊN) */}
               <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-2 border-emerald-500/60 rounded-3xl p-5 text-center space-y-3 shadow-2xl">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400 font-mono block">
@@ -1333,6 +1394,17 @@ export default function StationRiderView({
               >
                 <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
                 <span>🚨 Báo Chủ Xe Không Đến (Cứu Hộ Tại Trạm)</span>
+              </button>
+
+              {/* 5.6 MÔ PHỎNG TRÁO VÉ SANG XE BÓNG MA D2 (TEST N+1 SHADOW FAILOVER) */}
+              <button
+                type="button"
+                onClick={handleTriggerShadowFailover}
+                className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                title="Mô phỏng tráo vé sang xe bóng ma D2 đón lúc 06:25 mà không gây hoang mang"
+              >
+                <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
+                <span>⚡ Mô phỏng Tráo vé sang xe bóng ma D2 (06:25)</span>
               </button>
 
               {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
