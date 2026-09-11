@@ -423,8 +423,10 @@ export function driverAcceptOffer({ tripId, intentId }) {
       name: rider.name,
       seatsNeeded: rider.seatsNeeded,
       destinationName: rider.destinationShortName || rider.destinationName,
-      fuelSurcharge: rider.fuelSurcharge,
-      pin: rider.pin
+      fuelSurcharge: rider.fuelSurcharge
+      // BẢO MẬT BẮT TAY 2 CHIỀU: Tuyệt đối KHÔNG trả về rider.pin cho chủ xe!
+      // Mã PIN 4 số là bằng chứng xác thực (Proof of Possession) chỉ hiển thị trên vé của khách.
+      // Khách phải đọc bằng miệng cho chủ xe khi mở cửa bước lên xe.
     }
   };
 }
