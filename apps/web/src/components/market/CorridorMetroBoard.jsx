@@ -56,7 +56,7 @@ export default function CorridorMetroBoard({
     { id: 'hub_ql13_van_phuc_city', name: 'Khu đô thị Vạn Phúc City / Cân Nhơn Hòa', shortName: 'Vạn Phúc City', landmark: 'Cổng chính Vạn Phúc City - QL13 Hiệp Bình Phước', isHot: false, category: 'URBAN_AREA' },
     { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - QL1A)', shortName: 'Ngã 4 Bình Phước', landmark: 'Cây xăng Petrolimex QL13 giao QL1A', isHot: false, category: 'JUNCTION' },
     { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / BX Miền Đông cũ', shortName: 'Bình Triệu', landmark: 'Cầu Bình Triệu 1 - Đinh Bộ Lĩnh / QL13', isHot: false, category: 'GAS_STATION' },
-    { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)', shortName: 'Hàng Xanh (Đích)', landmark: 'Cây xăng Comeco Hàng Xanh', isTerminal: true, category: 'GAS_STATION' },
+    { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)', shortName: 'Hàng Xanh (Đích)', landmark: 'Cây xăng Comeco Hàng Xanh / Vòng xoay Điện Biên Phủ', isTerminal: true, category: 'JUNCTION' },
     { id: 'hub_ql13_san_bay_tsn', name: 'Sân bay Tân Sơn Nhất (Ga T1 / T2 - Tân Bình)', shortName: 'Sân bay TSN (Đích)', landmark: 'Cột 12 Ga Quốc Nội / Quốc Tế - Phạm Văn Đồng', isTerminal: true, category: 'AIRPORT' }
   ].map((hub) => {
     if (hub.isTerminal) return { ...hub, priceToHX: 0 };
@@ -75,7 +75,7 @@ export default function CorridorMetroBoard({
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const nearest = findNearestVirtualHub(pos.coords.latitude, pos.coords.longitude, 'Tuyến QL13');
-          if (nearest && ql13Hubs.some((h) => h.id === nearest.id)) {
+          if (nearest && !nearest.isTerminal && ql13Hubs.some((h) => h.id === nearest.id && !h.isTerminal)) {
             onOpenStationView?.(nearest.id);
             return;
           }
@@ -414,9 +414,11 @@ export default function CorridorMetroBoard({
             <div
               key={hub.id}
               className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                hub.isHot
-                  ? 'bg-gradient-to-r from-emerald-950/40 via-white/[0.03] to-white/[0.02] border-emerald-500/40 hover:border-emerald-400'
-                  : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.15] hover:bg-white/[0.05]'
+                hub.isTerminal
+                  ? 'bg-gradient-to-r from-sky-950/30 via-white/[0.03] to-white/[0.02] border-sky-500/30'
+                  : hub.isHot
+                    ? 'bg-gradient-to-r from-emerald-950/40 via-white/[0.03] to-white/[0.02] border-emerald-500/40 hover:border-emerald-400'
+                    : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.15] hover:bg-white/[0.05]'
               }`}
             >
               <div className="flex items-start sm:items-center gap-3.5">
@@ -424,13 +426,13 @@ export default function CorridorMetroBoard({
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
                       hub.isTerminal
-                        ? 'bg-[#0071e3] text-white'
+                        ? 'bg-[#0071e3] text-white shadow-[0_0_15px_rgba(0,113,227,0.4)]'
                         : hub.isHot
                           ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
                           : 'bg-white/[0.1] text-slate-300'
                     }`}
                   >
-                    {index + 1}
+                    {hub.isTerminal ? '🏁' : index + 1}
                   </div>
                 </div>
 
@@ -445,33 +447,43 @@ export default function CorridorMetroBoard({
                         TRỌNG ĐIỂM
                       </span>
                     )}
+                    {hub.isTerminal && (
+                      <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-mono font-bold border border-sky-500/40">
+                        ĐÍCH ĐẾN TP.HCM
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">{hub.landmark}</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
-                {hub.priceToHX > 0 ? (
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase font-mono text-slate-400 block">Về Hàng Xanh:</span>
-                    <span className="text-sm sm:text-base font-black font-mono text-emerald-400">
-                      {formatVND(hub.priceToHX)}
+              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
+                {hub.isTerminal ? (
+                  <div className="flex items-center gap-2">
+                    <span className="px-3.5 py-2 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 font-mono text-xs font-bold flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                      <span>ĐIỂM TRẢ KHÁCH (GA CUỐI)</span>
                     </span>
                   </div>
                 ) : (
-                  <span className="text-xs font-mono text-sky-400 font-bold px-3 py-1 rounded-xl bg-sky-500/10 border border-sky-500/20">
-                    Trạm Cuối (TP.HCM)
-                  </span>
-                )}
+                  <>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-mono text-slate-400 block">Về Hàng Xanh:</span>
+                      <span className="text-sm sm:text-base font-black font-mono text-emerald-400">
+                        {formatVND(hub.priceToHX)}
+                      </span>
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={() => onOpenStationView?.(hub.id)}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
-                >
-                  <span>ĐÓN XE TẠI ĐÂY</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenStationView?.(hub.id)}
+                      className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                    >
+                      <span>ĐÓN XE TẠI ĐÂY</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
