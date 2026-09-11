@@ -67,7 +67,7 @@ export default function MovementIntentModal({
   }, []);
 
   const [date, setDate] = useState(dateOptions[1].value); // Mặc định ngày mai
-  const [timeSlot, setTimeSlot] = useState('06:30 - 08:30'); // Giờ cao điểm sáng
+  const [timeSlot, setTimeSlot] = useState('05:00-07:00'); // Giờ cao điểm sáng sớm
 
   // Thông tin liên hệ
   const [phone, setPhone] = useState(() => {
@@ -359,9 +359,9 @@ export default function MovementIntentModal({
                 onChange={(e) => setTimeSlot(e.target.value)}
                 className="w-full h-9 px-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
               >
-                {TIME_SLOTS.map((slot) => (
-                  <option key={slot} value={slot} className="bg-white dark:bg-slate-900">
-                    {slot}
+                {TIME_SLOTS.filter((s) => s.id !== 'all' && !s.isAlias).map((slot) => (
+                  <option key={slot.id} value={slot.id} className="bg-white dark:bg-slate-900">
+                    {slot.label}
                   </option>
                 ))}
               </select>
