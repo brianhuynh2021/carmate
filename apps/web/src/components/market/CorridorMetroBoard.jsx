@@ -61,8 +61,8 @@ export default function CorridorMetroBoard({
   // Danh sách các trạm dọc QL13 (tính cước và xếp thứ tự động theo hướng di chuyển 2 chiều)
   const ql13Hubs = useMemo(() => {
     const rawHubs = [
-      { id: 'hub_ql13_budop', name: 'TT. Bù Đốp (Cổng Chợ Bù Đốp / ĐT759)', shortName: 'Bù Đốp', landmark: 'Chợ Bù Đốp - ĐT759 (Vùng gom nối chuyến)', isHot: false, category: 'FEEDER_THIN' },
-      { id: 'hub_ql13_cho_loc_ninh', name: 'Chợ Lộc Ninh (Ngã 3 QL13 & ĐT757)', shortName: 'Lộc Ninh', landmark: 'Chợ Lộc Ninh - QL13 (Vùng gom nối chuyến)', isHot: false, category: 'FEEDER_THIN' },
+      { id: 'hub_ql13_budop', name: 'TT. Bù Đốp (Cổng Chợ Bù Đốp / ĐT759)', shortName: 'Bù Đốp', landmark: 'Chợ Bù Đốp - ĐT759 (Vùng gom nối chuyến ra Lộc Ninh)', isHot: false, category: 'FEEDER_THIN' },
+      { id: 'hub_ql13_cho_loc_ninh', name: 'TT. Lộc Ninh (Chợ Lộc Ninh / Cây xăng 17)', shortName: 'Lộc Ninh', landmark: 'Mặt tiền QL13 (Khu phố Ninh Thịnh / Cây xăng 17)', isHot: true, category: 'JUNCTION' },
       { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)', shortName: 'Bình Long', landmark: 'Cổng chào TX. Bình Long QL13', isHot: true, category: 'JUNCTION' },
       { id: 'hub_ql13_tthc_binh_long', name: 'Trung tâm Hành chính TX. Bình Long / Bến xe', shortName: 'TTHC Bình Long', landmark: 'Ngã 3 Nguyễn Huệ - QL13', isHot: false, category: 'ADMIN_CENTER' },
       { id: 'hub_ql13_tthc_tan_khai', name: 'Trung tâm Hành chính Huyện Hớn Quản (TT. Tân Khai)', shortName: 'TTHC Hớn Quản', landmark: 'Mặt tiền QL13 (Ấp 1, TT. Tân Khai) - Trụ sở Huyện ủy', isHot: true, category: 'ADMIN_CENTER' },

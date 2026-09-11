@@ -562,15 +562,22 @@ async function runLevel3Suite() {
   assert(lastMileTSN.distanceToHubKm === 0.2, 'Cự ly chặng cuối sảnh sân bay 0.2km');
   assert(lastMileTSN.grabBikeVND === 0, 'Đi bộ thẳng vào ga, 0đ phí GrabBike');
 
-  // 3. Kiểm tra Hub-Hopping Feeder cho Vùng thưa xe Bù Đốp & Lộc Ninh
+  // 3. Kiểm tra Hub Liquidity cho Trục QL13 & Nhánh Vùng thưa xe Bù Đốp
   const budopStatus = getHubLiquidityStatus('hub_ql13_budop');
   assert(budopStatus.isThin === true, 'Trạm Bù Đốp được phân loại là Vùng thưa xe (THIN)');
-  assert(budopStatus.feederRecommendation.targetHubId === 'hub_ql13_binh_long', 'Bù Đốp đề xuất nối chuyến ra Trạm Bình Long');
-  assert(budopStatus.feederRecommendation.distanceKm === 24, 'Cự ly nối chuyến Bù Đốp ➔ Bình Long là 24km');
+  assert(budopStatus.feederRecommendation.targetHubId === 'hub_ql13_cho_loc_ninh', 'Bù Đốp đề xuất nối chuyến ra Trạm TT. Lộc Ninh');
+  assert(budopStatus.feederRecommendation.distanceKm === 15, 'Cự ly nối chuyến Bù Đốp ➔ Lộc Ninh là 15km');
 
+  // Lộc Ninh là đầu tuyến QL13 có mật độ xe dồi dào (DENSE), hỗ trợ đón trực tiếp không cần chuyển trạm
   const locNinhStatus = getHubLiquidityStatus('hub_ql13_cho_loc_ninh');
-  assert(locNinhStatus.isThin === true, 'Trạm Lộc Ninh được phân loại là Vùng thưa xe (THIN)');
-  assert(locNinhStatus.feederRecommendation.targetHubId === 'hub_ql13_binh_long', 'Lộc Ninh đề xuất nối chuyến ra Trạm Bình Long');
+  assert(locNinhStatus.isThin === false, 'Trạm Lộc Ninh có mật độ xe dồi dào (isThin = false), hỗ trợ đón trực tiếp');
+  assert(locNinhStatus.status === 'DENSE', 'Trạm Lộc Ninh đạt chuẩn DENSE (Đầu tuyến QL13)');
+
+  const tariffLocNinhHangXanh = getFixedSegmentTariff('hub_ql13_cho_loc_ninh', 'hub_ql13_hang_xanh');
+  assert(tariffLocNinhHangXanh.pricePerSeat === 205000, 'Cước Lộc Ninh ➔ Hàng Xanh chuẩn 205.000đ (135km)');
+
+  const tariffLocNinhAirport = getFixedSegmentTariff('hub_ql13_cho_loc_ninh', 'hub_ql13_san_bay_tsn');
+  assert(tariffLocNinhAirport.pricePerSeat === 215000, 'Cước Lộc Ninh ➔ Sân bay TSN chuẩn 215.000đ (140km)');
 
   const binhLongStatus = getHubLiquidityStatus('hub_ql13_binh_long');
   assert(binhLongStatus.isThin === false, 'Trạm Bình Long là Vùng đậm đặc (DENSE), không cần nối chuyến');

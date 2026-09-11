@@ -10,27 +10,24 @@
  */
 
 export const HUB_LIQUIDITY_MAP = {
-  // ── VÙNG ĐẦU NGUỒN (THANH KHOẢN MỎNG - THIN) ──
+  // ── VÙNG NHÁNH ĐẦU NGUỒN (THANH KHOẢN MỎNG - THIN) ──
   hub_ql13_budop: {
     status: 'THIN',
     badgeLabel: 'VÙNG GOM ĐẶT TRƯỚC',
-    recommendedFeederHubId: 'hub_ql13_binh_long',
-    recommendedFeederHubName: 'TX. Bình Long (Cổng chào An Lộc)',
-    distanceToFeederKm: 24,
-    transitAdvice: 'Nên đặt trước từ tối hoặc đi xe máy ~20 phút ra Trạm Bình Long để có xe đón ngay',
-    densityRatio: 'gấp 6 lần'
-  },
-  hub_ql13_cho_loc_ninh: {
-    status: 'THIN',
-    badgeLabel: 'VÙNG GOM ĐẶT TRƯỚC',
-    recommendedFeederHubId: 'hub_ql13_binh_long',
-    recommendedFeederHubName: 'TX. Bình Long (Cổng chào An Lộc)',
+    recommendedFeederHubId: 'hub_ql13_cho_loc_ninh',
+    recommendedFeederHubName: 'TT. Lộc Ninh (Chợ Lộc Ninh / Cây xăng 17 QL13)',
     distanceToFeederKm: 15,
-    transitAdvice: 'Nên đặt trước hoặc chạy xe máy ~15 phút ra Trạm Cổng chào TX. Bình Long',
+    transitAdvice: 'Nên đặt trước hoặc chạy xe máy ~15 phút ra Trạm Lộc Ninh (hoặc Bình Long) trên trục QL13 để đón xe ngay',
     densityRatio: 'gấp 4 lần'
   },
 
-  // ── VÙNG TRUNG LƯU & HẠ LƯU (THANH KHOẢN DÀY - DENSE) ──
+  // ── ĐẦU TUYẾN QL13 & TRUNG LƯU (MẬT ĐỘ XE DỒI DÀO - DENSE) ──
+  hub_ql13_cho_loc_ninh: {
+    status: 'DENSE',
+    badgeLabel: 'ĐẦU TUYẾN QL13 - XE CHẠY THƯỜNG XUYÊN',
+    densityNotice: 'Trục chính QL13, lượng xe cá nhân và tiện chuyến di chuyển về TP.HCM dồi dào'
+  },
+  hub_ql13_hoa_lu: { status: 'DENSE', badgeLabel: 'CỬA KHẨU QUỐC TẾ - XE CHẠY THƯỜNG XUYÊN' },
   hub_ql13_binh_long: { status: 'DENSE', badgeLabel: 'XE TIỆN CHUYẾN LIÊN TỤC' },
   hub_ql13_tthc_binh_long: { status: 'DENSE', badgeLabel: 'XE TIỆN CHUYẾN LIÊN TỤC' },
   hub_ql13_tan_khai: { status: 'MEDIUM', badgeLabel: 'MẬT ĐỘ XE TỐT (~3-5 PHÚT)' },

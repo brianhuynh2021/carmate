@@ -67,7 +67,7 @@ export default function StationRiderView({
   // Các điểm đón quen thuộc dọc trục QL13 (Cả 2 chiều Bình Phước ⇄ Sài Gòn)
   const ql13PickupHubs = useMemo(() => [
     { id: 'hub_ql13_budop', name: '🌾 TT. Bù Đốp (Cổng Chợ Bù Đốp / ĐT759) - Vùng gom' },
-    { id: 'hub_ql13_cho_loc_ninh', name: '🏪 Chợ Lộc Ninh (Ngã 3 QL13 & ĐT757) - Vùng gom' },
+    { id: 'hub_ql13_cho_loc_ninh', name: '🏪 TT. Lộc Ninh (Chợ Lộc Ninh / Cây xăng 17 QL13)' },
     { id: 'hub_ql13_binh_long', name: '📍 Cổng chào TX. Bình Long (Vòng xoay An Lộc)' },
     { id: 'hub_ql13_tthc_binh_long', name: '🏛️ TTHC TX. Bình Long / Bến xe Bình Long' },
     { id: 'hub_ql13_tthc_tan_khai', name: '🏛️ TTHC Huyện Hớn Quản (TT. Tân Khai - Trụ sở Huyện ủy)' },
@@ -887,7 +887,7 @@ export default function StationRiderView({
               </div>
 
               {direction === 'TO_BINH_PHUOC' ? (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {/* 1. TX. CHƠN THÀNH */}
                   <button
                     type="button"
@@ -949,11 +949,34 @@ export default function StationRiderView({
                   >
                     <div className="flex items-center justify-between">
                       <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_binh_long' ? 'text-sky-400' : 'text-slate-400'}`} />
-                      <span className="text-[10px] font-mono text-sky-400 font-bold">Ga Cuối</span>
+                      <span className="text-[10px] font-mono text-sky-400 font-bold">Bình Long</span>
                     </div>
                     <div className="mt-2.5">
                       <div className="text-xs font-bold text-white leading-snug">TX. Bình Long</div>
                       <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Vòng xoay An Lộc</div>
+                    </div>
+                  </button>
+
+                  {/* 4. TT. LỘC NINH */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationHubId('hub_ql13_cho_loc_ninh');
+                      setShowOtherDestinations(false);
+                    }}
+                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      destinationHubId === 'hub_ql13_cho_loc_ninh'
+                        ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.25)] ring-1 ring-purple-400'
+                        : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <MapPin className={`w-4 h-4 ${destinationHubId === 'hub_ql13_cho_loc_ninh' ? 'text-purple-400' : 'text-slate-400'}`} />
+                      <span className="text-[10px] font-mono text-purple-400 font-bold">Lộc Ninh</span>
+                    </div>
+                    <div className="mt-2.5">
+                      <div className="text-xs font-bold text-white leading-snug">TT. Lộc Ninh</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Cây xăng 17 QL13</div>
                     </div>
                   </button>
                 </div>

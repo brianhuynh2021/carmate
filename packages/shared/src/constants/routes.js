@@ -976,8 +976,11 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   'hub_ql13_nga4_chon_thanh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 100000, distanceKm: 60, label: 'Chơn Thành ➔ Ngã 4 Bình Phước' },
   'hub_ql13_bau_bang:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 75000, distanceKm: 42, label: 'Bàu Bàng ➔ Ngã 4 Bình Phước' },
 
-  // Lộc Ninh / Bù Đốp
+  // Lộc Ninh / Bù Đốp (Đầu tuyến QL13)
   'hub_ql13_cho_loc_ninh:::hub_ql13_hang_xanh': { pricePerSeat: 210000, distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_san_bay_tsn': { pricePerSeat: 220000, distanceKm: 140, label: 'Lộc Ninh ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 190000, distanceKm: 120, label: 'Lộc Ninh ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_binh_long': { pricePerSeat: 40000, distanceKm: 18, label: 'Lộc Ninh ➔ Bình Long' },
   'hub_ql13_budop:::hub_ql13_hang_xanh': { pricePerSeat: 230000, distanceKm: 155, label: 'Bù Đốp ➔ Hàng Xanh' }
 };
 
