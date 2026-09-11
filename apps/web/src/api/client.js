@@ -611,6 +611,25 @@ export const api = {
 
   async getMatchingEpochs(limit = 20) {
     return request(`/intents/epochs?limit=${limit}`);
+  },
+
+  // --- Cockpit Incidents & Unhappy Cases Protocols ---
+  async reportCockpitIncident(payload) {
+    return request('/cockpit/report-incident', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getCockpitIncidents(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.append(key, val);
+      }
+    });
+    const qs = query.toString();
+    return request(`/cockpit/incidents${qs ? `?${qs}` : ''}`);
   }
 };
 

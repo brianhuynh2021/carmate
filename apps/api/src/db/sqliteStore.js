@@ -341,6 +341,31 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_exchange_type ON seat_exchange_orders(orderType);
     `);
 
+    // 13. Bảng Quản Lý Sự Cố Tuyến & Chế Tài Unhappy Cases (trip_incidents)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS trip_incidents (
+        id TEXT PRIMARY KEY,
+        bookingId TEXT,
+        tripId TEXT,
+        incidentType TEXT NOT NULL,
+        reporterRole TEXT NOT NULL,
+        reporterPhone TEXT,
+        riderPhone TEXT,
+        driverPhone TEXT,
+        sanctionAction TEXT,
+        driverPenalty INTEGER DEFAULT 0,
+        riderPenalty INTEGER DEFAULT 0,
+        fareExempt INTEGER DEFAULT 0,
+        isBanned INTEGER DEFAULT 0,
+        note TEXT,
+        createdAt TEXT,
+        payload TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_incident_type ON trip_incidents(incidentType);
+      CREATE INDEX IF NOT EXISTS idx_incident_rider ON trip_incidents(riderPhone);
+      CREATE INDEX IF NOT EXISTS idx_incident_driver ON trip_incidents(driverPhone);
+    `);
+
   // 9. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
   //
   // BẤT BIẾN SÀN GIAO DỊCH: mọi chuyến hiển thị trên sàn phải liên hệ được với
@@ -2540,5 +2565,100 @@ export function isDriverDailyTripCapped(_phone, _targetDate = '') {
   return false;
 }
 
+/**
+ * Ghi nhận sự cố chuyến đi (Unhappy Cases) vào cơ sở dữ liệu
+ */
+export async function reportTripIncidentDb(incident) {
+  const db = getRawDB();
+  const id = incident.id || `inc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const now = new Date().toISOString();
 
+  const record = {
+    id,
+    bookingId: incident.bookingId || null,
+    tripId: incident.tripId || null,
+    incidentType: incident.incidentType,
+    reporterRole: incident.reporterRole || 'Chủ xe',
+    reporterPhone: incident.reporterPhone ? cleanPhoneNumber(incident.reporterPhone) : null,
+    riderPhone: incident.riderPhone ? cleanPhoneNumber(incident.riderPhone) : null,
+    driverPhone: incident.driverPhone ? cleanPhoneNumber(incident.driverPhone) : null,
+    sanctionAction: incident.sanctionAction || null,
+    driverPenalty: Number(incident.driverPenalty || 0),
+    riderPenalty: Number(incident.riderPenalty || 0),
+    fareExempt: incident.fareExempt ? 1 : 0,
+    isBanned: incident.isBanned ? 1 : 0,
+    note: incident.note || null,
+    createdAt: incident.createdAt || now,
+    payload: JSON.stringify(incident)
+  };
 
+  db.prepare(`
+    INSERT INTO trip_incidents (
+      id, bookingId, tripId, incidentType, reporterRole, reporterPhone,
+      riderPhone, driverPhone, sanctionAction, driverPenalty, riderPenalty,
+      fareExempt, isBanned, note, createdAt, payload
+    ) VALUES (
+      @id, @bookingId, @tripId, @incidentType, @reporterRole, @reporterPhone,
+      @riderPhone, @driverPhone, @sanctionAction, @driverPenalty, @riderPenalty,
+      @fareExempt, @isBanned, @note, @createdAt, @payload
+    )
+  `).run(record);
+
+  return record;
+}
+
+/**
+ * Truy vấn danh sách sự cố chuyến đi
+ */
+export function getTripIncidents({ riderPhone, driverPhone, incidentType, limit = 50 } = {}) {
+  const db = getRawDB();
+  let sql = 'SELECT * FROM trip_incidents WHERE 1=1';
+  const params = [];
+
+  if (riderPhone) {
+    sql += ' AND riderPhone = ?';
+    params.push(cleanPhoneNumber(riderPhone));
+  }
+  if (driverPhone) {
+    sql += ' AND driverPhone = ?';
+    params.push(cleanPhoneNumber(driverPhone));
+  }
+  if (incidentType) {
+    sql += ' AND incidentType = ?';
+    params.push(incidentType);
+  }
+
+  sql += ' ORDER BY createdAt DESC LIMIT ?';
+  params.push(Number(limit));
+
+  const rows = db.prepare(sql).all(...params);
+  return rows.map(r => {
+    try {
+      return { ...JSON.parse(r.payload), ...r };
+    } catch {
+      return r;
+    }
+  });
+}
+
+/**
+ * Permaban vĩnh viễn người dùng (áp dụng cho hành vi quỵt tiền phụ xăng UNPAID_FARE_FRAUD)
+ */
+export async function permabanUser(phone, reason = 'UNPAID_FARE_FRAUD') {
+  if (!phone) return null;
+  const cleanPhone = cleanPhoneNumber(phone);
+  const user = getUserByPhone(cleanPhone);
+  const userId = user?.id || cleanPhone;
+
+  const updated = await updateUserStatus(userId, {
+    isBanned: true,
+    status: 'banned',
+    bannedAt: new Date().toISOString(),
+    banReason: reason,
+    trustScore: 0
+  });
+
+  return updated;
+}
+
+export { updateUserStatus as updateUser };

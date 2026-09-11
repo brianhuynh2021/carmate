@@ -8,9 +8,18 @@ import {
   driverVerifyPin,
   resetAllStationData
 } from '../services/stationQueueService.js';
-import { getUserByPhone, getUserById, getAllUsers, saveUser } from '../db/sqliteStore.js';
+import {
+  getUserByPhone,
+  getUserById,
+  getAllUsers,
+  saveUser,
+  updateUser,
+  reportTripIncidentDb,
+  getTripIncidents,
+  permabanUser
+} from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
-import { cleanPhoneNumber } from '@carmate/shared';
+import { cleanPhoneNumber, evaluateIncidentSanctions, UNHAPPY_CASE_CODES } from '@carmate/shared';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 export async function riderCheckInHandler(req, res) {
@@ -322,3 +331,103 @@ export async function cockpitApproveVehicleHandler(req, res) {
   }
 }
 
+/**
+ * Báo cáo sự cố chuyến đi (Unhappy Cases) từ buồng lái Cockpit
+ * Hỗ trợ 7 kịch bản: GHOST_PASSENGER, LUGGAGE_VIOLATION, MOTION_SICKNESS_SOILING,
+ * OFF_CORRIDOR_DETOUR, EN_ROUTE_BREAKDOWN, UNPAID_FARE_FRAUD, RIDER_NO_SHOW
+ */
+export async function cockpitReportIncidentHandler(req, res) {
+  try {
+    const {
+      bookingId,
+      tripId,
+      incidentType,
+      reporterRole = 'Chủ xe',
+      reporterPhone,
+      riderPhone,
+      driverPhone,
+      note,
+      context = {}
+    } = req.body || {};
+
+    if (!incidentType) {
+      return res.status(400).json({ success: false, error: 'Thiếu mã sự cố (incidentType)' });
+    }
+
+    // 1. Đánh giá chế tài theo bất biến toán học
+    const sanctions = evaluateIncidentSanctions(incidentType, context);
+
+    // 2. Chế tài đối với tài khoản khách
+    let bannedUserResult = null;
+    if (sanctions.isBanned && riderPhone) {
+      bannedUserResult = await permabanUser(riderPhone, sanctions.banReason || incidentType);
+    } else if (sanctions.riderPenalty > 0 && riderPhone) {
+      const cleanRider = cleanPhoneNumber(riderPhone);
+      const riderUser = getUserByPhone(cleanRider);
+      if (riderUser) {
+        const currentScore = Number(riderUser.trustScore ?? 100);
+        const newScore = Math.max(0, currentScore - sanctions.riderPenalty);
+        await updateUser(riderUser.id || cleanRider, { trustScore: newScore });
+      }
+    }
+
+    // 3. Ghi nhật ký sự cố vào cơ sở dữ liệu
+    const incidentRecord = await reportTripIncidentDb({
+      bookingId,
+      tripId,
+      incidentType,
+      reporterRole,
+      reporterPhone,
+      riderPhone,
+      driverPhone,
+      sanctionAction: sanctions.action,
+      driverPenalty: sanctions.driverPenalty || 0,
+      riderPenalty: sanctions.riderPenalty || 0,
+      fareExempt: sanctions.fareExempt || false,
+      isBanned: sanctions.isBanned || false,
+      note,
+      context,
+      sanctions
+    });
+
+    // 4. Bắn thông báo Telegram nội bộ cho vận hành nếu có sự cố nghiêm trọng
+    try {
+      if (sanctions.isBanned || sanctions.fareExempt || sanctions.action === 'ABSOLUTE_VETO_CANCEL') {
+        await sendBusinessAlert(
+          `⚠️ [SỰ CỐ CARMATE] ${sanctions.action}\n` +
+          `• Loại sự cố: ${incidentType}\n` +
+          `• Người báo cáo: ${reporterRole} (${reporterPhone || 'Ẩn danh'})\n` +
+          `• Khách đi cùng: ${riderPhone || 'N/A'}\n` +
+          `• Chủ xe: ${driverPhone || 'N/A'}\n` +
+          `• Ghi chú: ${note || 'Không có'}\n` +
+          `• Kết quả: ${sanctions.message}`
+        );
+      }
+    } catch {}
+
+    return res.json({
+      success: true,
+      incident: incidentRecord,
+      sanctions,
+      bannedUser: bannedUserResult,
+      message: sanctions.message
+    });
+  } catch (err) {
+    console.error('[cockpitReportIncidentHandler] error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * Lấy lịch sử sự cố chuyến đi
+ */
+export async function cockpitGetIncidentsHandler(req, res) {
+  try {
+    const { riderPhone, driverPhone, incidentType, limit } = req.query || {};
+    const incidents = getTripIncidents({ riderPhone, driverPhone, incidentType, limit });
+    return res.json({ success: true, incidents });
+  } catch (err) {
+    console.error('[cockpitGetIncidentsHandler] error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}

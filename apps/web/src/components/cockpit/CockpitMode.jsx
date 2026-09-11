@@ -18,9 +18,23 @@ import {
   MapPin,
   Users,
   QrCode,
-  AlertCircle
+  AlertCircle,
+  Luggage,
+  Ban,
+  Navigation,
+  LifeBuoy,
+  PhoneCall,
+  Wrench
 } from 'lucide-react';
-import { formatVND } from '@carmate/shared';
+import {
+  formatVND,
+  UNHAPPY_CASE_CODES,
+  LUGGAGE_POLICY,
+  CORRIDOR_1D_POLICY,
+  MOTION_SICKNESS_POLICY,
+  EMERGENCY_TRANSIT_LIFEBUOYS,
+  evaluateIncidentSanctions
+} from '@carmate/shared';
 import { api } from '../../api/client.js';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 import DriverScheduleCardView from './DriverScheduleCardView.jsx';
@@ -147,6 +161,13 @@ export default function CockpitMode({
   const [showAbsentModal, setShowAbsentModal] = useState(false);
   const [absentSimGpsStatus, setAbsentSimGpsStatus] = useState('FAR'); // 'FAR' (ở xa) | 'NEAR' (ở trạm)
 
+  // Bộ 7 Luồng Xử Lý Sự Cố Tuyến QL13 (Unhappy Case Protocols)
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [selectedIncidentType, setSelectedIncidentType] = useState(null); // 'GHOST_PASSENGER' | 'LUGGAGE_VIOLATION'
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
+  const [showUnpaidFraudModal, setShowUnpaidFraudModal] = useState(false);
+  const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
+
   // Giả lập khoảng cách tiếp cận trạm (km)
   const [simDistanceKm, setSimDistanceKm] = useState(6.2);
 
@@ -229,6 +250,69 @@ export default function CockpitMode({
     setSimDistanceKm(6.2);
     onShowToast?.('Đã bỏ qua yêu cầu.');
   }, [activeOffer, onShowToast, tripId]);
+
+  // XỬ LÝ SỰ CỐ CHUYẾN ĐI (UNHAPPY CASES ENGINE)
+  const handleIncidentReport = async (incidentType, note = '') => {
+    try {
+      setIsSubmittingIncident(true);
+      const riderPhone = currentRider?.phone || '0988884288';
+      const driverPhone = vehicle?.phone || currentUser?.phone || '0912345678';
+
+      const payload = {
+        bookingId: currentRider?.intentId || 'BK-QL13',
+        tripId,
+        incidentType,
+        reporterRole: 'Chủ xe',
+        reporterPhone: driverPhone,
+        riderPhone,
+        driverPhone,
+        note,
+        context: {
+          stationId: currentStation?.id || 'hub-tan-khai',
+          corridor: currentCorridor,
+          plate: vehicle?.plate
+        }
+      };
+
+      let res = null;
+      try {
+        res = await api.reportCockpitIncident(payload);
+      } catch (err) {
+        console.warn('API reportCockpitIncident error, using fallback:', err);
+      }
+
+      const sanctions = evaluateIncidentSanctions(incidentType);
+      const message = res?.message || sanctions.message;
+
+      onShowToast?.(`✓ ${message}`);
+
+      if (incidentType === UNHAPPY_CASE_CODES.UNPAID_FARE_FRAUD) {
+        speakText('Đã khoá vĩnh viễn tài khoản người đi cùng do gian lận quỵt tiền phụ xăng.');
+        setShowUnpaidFraudModal(false);
+        setShowMutualRating(false);
+        setCockpitState('STANDBY');
+        setCurrentRider(null);
+      } else if (incidentType === UNHAPPY_CASE_CODES.EN_ROUTE_BREAKDOWN) {
+        speakText('Đã miễn phí toàn bộ cước cho khách và kích hoạt phao cứu sinh xe buýt.');
+        setShowBreakdownModal(false);
+        setCockpitState('STANDBY');
+        setCurrentRider(null);
+      } else if (incidentType === UNHAPPY_CASE_CODES.GHOST_PASSENGER) {
+        speakText('Đã thực thi quyền phủ quyết do sai số lượng khách. Bạn được giải phóng cuốc đi an toàn.');
+        setShowIncidentModal(false);
+        handleRejectOffer();
+      } else if (incidentType === UNHAPPY_CASE_CODES.LUGGAGE_VIOLATION) {
+        speakText('Đã từ chối do hành lý vi phạm quy chuẩn. Bạn được giải phóng cuốc đi an toàn.');
+        setShowIncidentModal(false);
+        handleRejectOffer();
+      }
+    } catch (err) {
+      console.error('[handleIncidentReport] error:', err);
+      onShowToast?.(`⚠️ Lỗi khi gửi báo cáo sự cố: ${err.message}`);
+    } finally {
+      setIsSubmittingIncident(false);
+    }
+  };
 
   // 3. ĐẾM LÙI MÀN HÌNH D2: 30 GIÂY CHẤP NHẬN CUỐC
   useEffect(() => {
@@ -1272,8 +1356,43 @@ export default function CockpitMode({
                   title="Xác thực khách không đến theo bất biến Geofence & Dwell-Time"
                 >
                   <XCircle className="w-3.5 h-3.5" />
-                  <span>Khách vắng mặt / Hủy</span>
+                  <span>Khách vắng mặt</span>
                 </button>
+              </div>
+
+              {/* ⚠️ XỬ LÝ SỰ CỐ TẠI SÂN TRẠM (QUYỀN PHỦ QUYẾT CHỦ XE - 0Đ PHẠT) */}
+              <div className="pt-2.5 border-t border-white/[0.08] space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                  <span className="uppercase tracking-wider">Xử lý sự cố tại trạm (Unhappy Cases):</span>
+                  <span className="text-amber-400 font-bold">Phủ quyết chủ xe (0đ phạt)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedIncidentType(UNHAPPY_CASE_CODES.GHOST_PASSENGER);
+                      setShowIncidentModal(true);
+                    }}
+                    className="h-11 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-bold text-amber-300 flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Khách dắt thêm người ngoài thỏa thuận vé đặt - Quyền phủ quyết tuyệt đối"
+                  >
+                    <Users className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span className="truncate">Sai số lượng khách</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedIncidentType(UNHAPPY_CASE_CODES.LUGGAGE_VIOLATION);
+                      setShowIncidentModal(true);
+                    }}
+                    className="h-11 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-xs font-bold text-purple-300 flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Hành lý quá khổ hoặc có mùi sầu riêng, hải sản, thú cưng"
+                  >
+                    <Luggage className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span className="truncate">Từ chối do hành lý</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1316,6 +1435,28 @@ export default function CockpitMode({
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>Khách đang chuẩn bị chuyển khoản VietQR trên xe hoặc trả tiền mặt khi tới nơi.</span>
               </div>
+
+              {/* BANNER 1: BẤT BIẾN ĐƯỜNG ỐNG 1D (CORRIDOR 1D INVARIANT) */}
+              <div className="p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 text-left text-xs space-y-1">
+                <div className="flex items-center gap-2 text-cyan-300 font-bold font-mono">
+                  <Navigation className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>{CORRIDOR_1D_POLICY.title}</span>
+                </div>
+                <p className="text-cyan-200/80 text-[11.5px] leading-relaxed">
+                  {CORRIDOR_1D_POLICY.ruleText}
+                </p>
+              </div>
+
+              {/* BANNER 2: VĂN HÓA ĐỒNG HÀNH & NHẮC NHỞ SAY XE */}
+              <div className="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-500/25 text-left text-xs space-y-1">
+                <div className="flex items-center gap-2 text-amber-300 font-bold font-mono">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Văn hóa chuyến đi & Nhắc nhở say xe:</span>
+                </div>
+                <p className="text-amber-200/80 text-[11.5px] leading-relaxed">
+                  {MOTION_SICKNESS_POLICY.reminderText} {MOTION_SICKNESS_POLICY.obligationText}
+                </p>
+              </div>
             </div>
 
             {/* NÚT LỚN TAPLO: [ 🏁 TỚI TRẠM HÀNG XANH · TRẢ KHÁCH (D4) ] */}
@@ -1341,6 +1482,16 @@ export default function CockpitMode({
                 >
                   <Scale className="w-4 h-4 text-amber-400" />
                   <span>Thẻ Pháp Lý (CSGT)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowBreakdownModal(true)}
+                  className="flex-1 h-12 rounded-2xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-xs font-mono font-bold text-rose-300 uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                  title="Xe gặp sự cố nổ lốp, chết máy giữa đường - Kích hoạt phao cứu sinh"
+                >
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span>🚨 Xe gặp sự cố</span>
                 </button>
               </div>
             </div>
@@ -1402,6 +1553,16 @@ export default function CockpitMode({
               >
                 <CheckCircle2 className="w-6 h-6" />
                 <span>✓ ĐÃ NHẬN ĐỦ PHỤ XĂNG · HOÀN TẤT CUỐC</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowUnpaidFraudModal(true)}
+                className="w-full h-12 rounded-2xl bg-rose-950/30 hover:bg-rose-900/50 border border-rose-500/40 text-rose-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                title="Khách quỵt tiền phụ xăng chia sẻ 110.000đ - Kích hoạt Permaban"
+              >
+                <Ban className="w-4 h-4 text-rose-400" />
+                <span>⛔ BÁO CÁO: KHÁCH KHÔNG TRẢ TIỀN (PERMABAN)</span>
               </button>
             </div>
           </div>
@@ -1640,6 +1801,224 @@ export default function CockpitMode({
                   Khách cùng ở trạm (18m)
                 </button>
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ⚠️ MODAL SỰ CỐ TẠI TRẠM: SAI SỐ LƯỢNG KHÁCH HOẶC HÀNH LÝ VI PHẠM */}
+      {showIncidentModal && selectedIncidentType && (
+        <Modal
+          onClose={() => setShowIncidentModal(false)}
+          size="md"
+          icon={selectedIncidentType === UNHAPPY_CASE_CODES.GHOST_PASSENGER ? Users : Luggage}
+          iconTone="warning"
+          title={
+            selectedIncidentType === UNHAPPY_CASE_CODES.GHOST_PASSENGER
+              ? 'Quyền Phủ Quyết: Sai Số Lượng Khách'
+              : 'Từ Chối Chở: Hành Lý Vi Phạm Quy Chuẩn'
+          }
+          subtitle="Quyền bảo hộ an toàn giao thông & Giải phóng chủ xe 0đ phạt"
+          footer={
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <Button variant="outline" onClick={() => setShowIncidentModal(false)} disabled={isSubmittingIncident}>
+                Quay lại
+              </Button>
+              <Button
+                variant="danger"
+                disabled={isSubmittingIncident}
+                onClick={() => handleIncidentReport(selectedIncidentType)}
+                className="font-bold"
+              >
+                {isSubmittingIncident ? (
+                  <span>Đang xử lý...</span>
+                ) : selectedIncidentType === UNHAPPY_CASE_CODES.GHOST_PASSENGER ? (
+                  <span>Xác nhận Phủ Quyết (-25đ khách)</span>
+                ) : (
+                  <span>Từ chối chở (-15đ khách)</span>
+                )}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
+            {selectedIncidentType === UNHAPPY_CASE_CODES.GHOST_PASSENGER ? (
+              <>
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-amber-400 uppercase font-bold">Số khách đăng ký trên app:</span>
+                    <span className="font-black text-white">1 người ({currentRider?.name || 'Khách đi cùng'})</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-rose-400 uppercase font-bold">Thực tế tại điểm đón:</span>
+                    <span className="font-black text-rose-400">Kẹp thêm người (Ghost Passenger)</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] space-y-1.5 text-xs text-slate-300">
+                  <p className="font-bold text-amber-300">⚖️ Bất biến Luật Giao thông & Ghế ngồi:</p>
+                  <p>
+                    Xe cá nhân bị giới hạn số chỗ ngồi theo quy định luật và thắt dây an toàn. CarMate trao cho chủ xe <strong>Quyền phủ quyết tuyệt đối (Absolute Veto)</strong>.
+                  </p>
+                  <p>
+                    ✓ Chủ xe được giải phóng cuốc ngay lập tức, <strong>0đ phạt</strong> và bảo toàn 100% điểm tín nhiệm.
+                  </p>
+                  <p className="text-rose-400">
+                    ⚠️ Người đi cùng bị trừ <strong>25 điểm tín nhiệm</strong> do vi phạm an toàn chở quá người.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/25 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-purple-300 uppercase font-bold">Quy chuẩn hành lý CarMate:</span>
+                    <span className="font-black text-white">Tối đa 1 kiện (≤ {LUGGAGE_POLICY.maxWeightKg}kg)</span>
+                  </div>
+                  <p className="text-[11.5px] text-purple-200/80">
+                    {LUGGAGE_POLICY.summaryText}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] space-y-1.5 text-xs text-slate-300">
+                  <p className="font-bold text-rose-400">🚫 Danh mục hành lý bị nghiêm cấm:</p>
+                  <ul className="list-disc list-inside space-y-1 text-slate-400">
+                    {LUGGAGE_POLICY.prohibitedItems.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                  <p className="pt-1.5 text-emerald-400">
+                    ✓ Chủ xe có quyền từ chối và nổ máy đi tiếp với <strong>0đ phạt</strong>. Người đi cùng bị trừ <strong>15 điểm tín nhiệm</strong>.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* 🚨 MODAL XE GẶP SỰ CỐ GIỮA ĐƯỜNG (EN-ROUTE BREAKDOWN) */}
+      {showBreakdownModal && (
+        <Modal
+          onClose={() => setShowBreakdownModal(false)}
+          size="lg"
+          icon={AlertTriangle}
+          iconTone="danger"
+          title="Xe Gặp Sự Cố Giữa Đường (Bất Khả Kháng)"
+          subtitle="Cắt đứt trách nhiệm dân sự & Kích hoạt Phao cứu sinh chuyển tiếp"
+          footer={
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <Button variant="outline" onClick={() => setShowBreakdownModal(false)} disabled={isSubmittingIncident}>
+                Đã tự khắc phục được
+              </Button>
+              <Button
+                variant="danger"
+                disabled={isSubmittingIncident}
+                onClick={() => handleIncidentReport(UNHAPPY_CASE_CODES.EN_ROUTE_BREAKDOWN)}
+                className="font-bold"
+              >
+                {isSubmittingIncident ? 'Đang xử lý...' : 'Xác nhận Dừng Chuyến (Miễn 0đ cước)'}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 space-y-1.5 text-xs">
+              <p className="font-bold text-rose-400 text-sm">🛑 Cắt đứt trách nhiệm & Miễn 100% cước phí:</p>
+              <p className="text-slate-300">
+                Bản chất chuyến đi là chia sẻ chi phí lăn bánh phi thương mại giữa công dân. Trách nhiệm kết thúc tại thời điểm phát sinh sự cố bất khả kháng (bể lốp, hỏng động cơ).
+              </p>
+              <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-xs">
+                <div className="p-2 rounded-xl bg-black/30 border border-white/10">
+                  <span className="text-slate-400 block text-[10px]">CƯỚC THU KHÁCH</span>
+                  <span className="text-emerald-400 font-bold text-base">0đ (MIỄN PHÍ)</span>
+                </div>
+                <div className="p-2 rounded-xl bg-black/30 border border-white/10">
+                  <span className="text-slate-400 block text-[10px]">ĐIỂM TÍN NHIỆM CHỦ XE</span>
+                  <span className="text-cyan-400 font-bold text-base">BẢO TOÀN (0đ phạt)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* PHAO CỨU SINH CHUYỂN TIẾP TRÊN TRỤC QL13 */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-cyan-400 uppercase">
+                <LifeBuoy className="w-4 h-4 text-cyan-400" />
+                <span>Phao cứu sinh chuyển tiếp dọc QL13:</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {EMERGENCY_TRANSIT_LIFEBUOYS.map((lb) => (
+                  <div key={lb.id} className="p-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] space-y-1">
+                    <span className="font-bold text-white block">{lb.name}</span>
+                    <span className="text-slate-400 block text-[11px] font-mono">Tần suất: {lb.frequency}</span>
+                    <div className="flex items-center gap-1.5 pt-1 text-emerald-400 font-mono font-bold text-[11px]">
+                      <PhoneCall className="w-3.5 h-3.5" />
+                      <span>{lb.contact}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ⛔ MODAL BÁO CÁO KHÁCH QUỴT TIỀN (UNPAID FARE FRAUD - PERMABAN) */}
+      {showUnpaidFraudModal && (
+        <Modal
+          onClose={() => setShowUnpaidFraudModal(false)}
+          size="md"
+          icon={Ban}
+          iconTone="danger"
+          title="Báo Cáo Gian Lận: Khách Không Trả Tiền"
+          subtitle="Cơ chế Chế tài Cực đoan (Permaban Vĩnh Viễn)"
+          footer={
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <Button variant="outline" onClick={() => setShowUnpaidFraudModal(false)} disabled={isSubmittingIncident}>
+                Hủy / Kiểm tra lại
+              </Button>
+              <Button
+                variant="danger"
+                disabled={isSubmittingIncident}
+                onClick={() => handleIncidentReport(UNHAPPY_CASE_CODES.UNPAID_FARE_FRAUD)}
+                className="font-bold"
+              >
+                {isSubmittingIncident ? 'Đang kích hoạt...' : '⛔ XÁC NHẬN PERMABAN'}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border-2 border-rose-500/40 space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-400 uppercase font-bold">Người đi cùng liên quan:</span>
+                <span className="font-black text-rose-400">{currentRider?.name || 'Khách đi cùng'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-400 uppercase font-bold">Số điện thoại khách:</span>
+                <span className="font-black text-white">{currentRider?.phone || '0988.884.288'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-400 uppercase font-bold">Phụ xăng bị quỵt:</span>
+                <span className="font-black text-rose-400 text-sm">
+                  {formatVND(currentRider?.fuelSurcharge || totalEarnings || 220000)}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-xs space-y-2 text-rose-200">
+              <strong className="block font-bold text-sm text-rose-300">
+                ⚠️ HÀNH ĐỘNG CỰC ĐOAN - BẤT KHẢ NGHỊCH:
+              </strong>
+              <p>
+                Khi xác nhận báo cáo, hệ thống CarMate sẽ lập tức <strong>PERMABAN VĨNH VIỄN</strong> số điện thoại và thiết bị của khách này:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-slate-300">
+                <li>Khóa tài khoản vĩnh viễn: <code className="text-rose-400 font-mono">isBanned = true</code></li>
+                <li>Hạ điểm tín nhiệm về <code className="text-rose-400 font-mono">trustScore = 0</code></li>
+                <li>Đưa vào danh sách đen (Blacklist) toàn mạng lưới QL13 vĩnh viễn.</li>
+              </ul>
             </div>
           </div>
         </Modal>
