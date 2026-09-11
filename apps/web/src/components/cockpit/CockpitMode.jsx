@@ -159,8 +159,8 @@ export default function CockpitMode({
       ttaSeconds: 150,
       riderCount: 2,
       destinationName: 'Ngã tư Hàng Xanh',
-      fuelSurcharge: 220000,
-      driverPayout: 198000,
+      fuelSurcharge: 300000,
+      driverPayout: 270000,
       pin: '8842'
     };
 
@@ -171,7 +171,7 @@ export default function CockpitMode({
 
     // Bật chuông và giọng đọc
     playAudioChime();
-    const payoutText = `${Math.round((offer.driverPayout || 198000) / 1000)} ngàn`;
+    const payoutText = `${Math.round((offer.driverPayout || 270000) / 1000)} ngàn`;
     speakText(`Trạm Tân Khai có ${offer.riderCount} khách đi Hàng Xanh, bù xăng ${payoutText}`);
   };
 

@@ -29,11 +29,19 @@ export default function StationRiderView({
   // Các điểm đón quen thuộc dọc trục QL13 (từ Bình Long về Sài Gòn)
   const ql13PickupHubs = useMemo(() => [
     { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)' },
+    { id: 'hub_ql13_tthc_binh_long', name: 'TTHC TX. Bình Long / Bến xe' },
+    { id: 'hub_ql13_tthc_tan_khai', name: 'TTHC Huyện Hớn Quản (TT. Tân Khai)' },
     { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)' },
-    { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Bình Phước)' },
+    { id: 'hub_ql13_minh_hung', name: 'KCN Minh Hưng - Hàn Quốc (Chơn Thành)' },
+    { id: 'hub_ql13_tthc_chon_thanh', name: 'TTHC TX. Chơn Thành / Quảng trường' },
+    { id: 'hub_ql13_vincom_chon_thanh', name: 'Vincom Plaza Chơn Thành' },
+    { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Giao Tuyến N2 & QL14)' },
+    { id: 'hub_ql13_becamex_chon_thanh', name: 'KCN Becamex Bình Phước' },
+    { id: 'hub_ql13_tthc_bau_bang', name: 'TTHC Huyện Bàu Bàng (Lai Uyên)' },
     { id: 'hub_ql13_bau_bang', name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước' },
     { id: 'hub_ql13_nga4_so_sao', name: 'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)' },
-    { id: 'hub_ql13_vsip1', name: 'KCN VSIP 1 / Lái Thiêu (Thuận An)' },
+    { id: 'hub_ql13_vsip1', name: 'KCN VSIP 1 / AEON Mall Bình Dương' },
+    { id: 'hub_ql13_van_phuc_city', name: 'Khu đô thị Vạn Phúc City (Thủ Đức)' },
     { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)' },
     { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / Bến xe Miền Đông cũ' }
   ], []);
@@ -96,12 +104,20 @@ export default function StationRiderView({
     const allOptions = [
       { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)' },
       { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / Bến xe Miền Đông cũ' },
+      { id: 'hub_ql13_van_phuc_city', name: 'Khu đô thị Vạn Phúc City (Thủ Đức)' },
       { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)' },
       { id: 'hub_ql13_vsip1', name: 'KCN VSIP 1 / AEON Mall Bình Dương' },
       { id: 'hub_ql13_nga4_so_sao', name: 'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)' },
       { id: 'hub_ql13_bau_bang', name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước' },
+      { id: 'hub_ql13_tthc_bau_bang', name: 'TTHC Huyện Bàu Bàng (Lai Uyên)' },
+      { id: 'hub_ql13_becamex_chon_thanh', name: 'KCN Becamex Bình Phước' },
       { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Giao Tuyến N2 & QL14)' },
+      { id: 'hub_ql13_vincom_chon_thanh', name: 'Vincom Plaza Chơn Thành' },
+      { id: 'hub_ql13_tthc_chon_thanh', name: 'TTHC TX. Chơn Thành / Quảng trường' },
+      { id: 'hub_ql13_minh_hung', name: 'KCN Minh Hưng - Hàn Quốc (Chơn Thành)' },
       { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)' },
+      { id: 'hub_ql13_tthc_tan_khai', name: 'TTHC Huyện Hớn Quản (TT. Tân Khai)' },
+      { id: 'hub_ql13_tthc_binh_long', name: 'TTHC TX. Bình Long / Bến xe' },
       { id: 'hub_ql13_binh_long', name: 'Cổng chào TX. Bình Long (An Lộc)' }
     ];
     return allOptions.filter((opt) => opt.id !== currentHub.id);

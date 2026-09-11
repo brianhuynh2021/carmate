@@ -14,7 +14,8 @@
 import {
   VIRTUAL_HUBS,
   ROUTE_BENCHMARKS,
-  calculateDistanceKm
+  calculateDistanceKm,
+  calculateDynamicTariffByDistance
 } from '@carmate/shared';
 
 import {
@@ -74,38 +75,21 @@ export function calculateShapleyFairPrice({
   _otherPassengersCount = 0
 }) {
   const dist = Math.max(10, distanceKm || 100);
-  const benchmark = ROUTE_BENCHMARKS[corridor] || ROUTE_BENCHMARKS['Tuyến QL13'] || {};
-  
-  // Định mức chi phí chia sẻ thực tế theo cự ly lăn bánh (Xăng RON 95 + Khấu hao bảo dưỡng + Phí BOT cầu đường)
-  const isN2 = corridor?.includes('N2') || corridor?.includes('Kiên Giang');
-  const ratePerKm = isN2 ? 750 : 850;
-  const botFee = benchmark.botFee || 45000;
-  const botProportion = Math.min(botFee, Math.round((dist / (benchmark.distanceKm || 140)) * 25000));
-
-  // Cước cơ bản đón trả: 35.000đ + cước cự ly + BOT phân bổ theo chặng
-  const calculatedPerSeat = 35000 + Math.round(dist * ratePerKm) + botProportion;
-  let fairBasePrice = Math.round(calculatedPerSeat / 5000) * 5000;
-
-  // Ràng buộc cận an toàn theo quy chuẩn
-  const minSafe = benchmark.minSafePrice || 80000;
-  const maxSafe = benchmark.maxSafePrice || 350000;
-  fairBasePrice = Math.max(minSafe, Math.min(maxSafe, fairBasePrice));
-
-  // 100% đón trả tại trạm ảo cây xăng Petrolimex: Zero phụ thu, zero chia chác đền bù
-  const doorstepSurcharge = 0;
-  const compensationDiscount = 0;
-  const finalPrice = fairBasePrice;
+  const dynamicTariff = calculateDynamicTariffByDistance(dist, { corridor });
+  const finalPrice = dynamicTariff.pricePerSeat;
 
   return {
-    basePrice: fairBasePrice,
-    doorstepSurcharge,
-    compensationDiscount,
+    basePrice: finalPrice,
+    doorstepSurcharge: 0,
+    compensationDiscount: 0,
     finalPrice,
     distanceKm: dist,
     breakdown: {
-      ratePerKm,
-      botProportion,
-      isDoorstep: false
+      ratePerKm: Math.round(dynamicTariff.pricePerSeat / dist),
+      botProportion: dynamicTariff.botFee,
+      isDoorstep: false,
+      fuelPrice: dynamicTariff.fuelPricePerLiter,
+      totalTripCost: dynamicTariff.totalTripCost
     }
   };
 }

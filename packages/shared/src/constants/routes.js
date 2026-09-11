@@ -1,4 +1,5 @@
 import { parseLocation } from '../utils/geo.js';
+import { calculateDynamicTariffByDistance } from '../utils/dynamicTariff.js';
 
 export const DEFAULT_FALLBACK_ROUTES = [
   { from: 'Lộc Ninh', to: 'Sài Gòn', count: 0 },
@@ -442,7 +443,20 @@ export const VIRTUAL_HUBS = [
     lng: 106.7118,
     landmark: 'Cầu Bình Triệu 1 - Đinh Bộ Lĩnh / QL13',
     curbsideWindowSeconds: 300,
-    isMajorJunction: true
+    isMajorJunction: true,
+    category: 'GAS_STATION'
+  },
+  {
+    id: 'hub_ql13_van_phuc_city',
+    name: 'Khu đô thị Vạn Phúc City / Cân Nhơn Hòa (Thủ Đức)',
+    shortName: 'Vạn Phúc City (Thủ Đức)',
+    corridor: 'Tuyến QL13',
+    lat: 10.8410,
+    lng: 106.7125,
+    landmark: 'Cổng chính Vạn Phúc City - QL13 Hiệp Bình Phước',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'URBAN_AREA'
   },
   {
     id: 'hub_ql13_nga4_binh_phuoc',
@@ -497,7 +511,32 @@ export const VIRTUAL_HUBS = [
     lng: 106.6125,
     landmark: 'Cổng KCN Bàu Bàng - QL13',
     curbsideWindowSeconds: 300,
-    isMajorJunction: false
+    isMajorJunction: false,
+    category: 'INDUSTRIAL'
+  },
+  {
+    id: 'hub_ql13_tthc_bau_bang',
+    name: 'Trung tâm Hành chính Huyện Bàu Bàng',
+    shortName: 'TTHC Huyện Bàu Bàng',
+    corridor: 'Tuyến QL13',
+    lat: 11.2410,
+    lng: 106.6110,
+    landmark: 'Mặt tiền Đại lộ QL13 (TT. Lai Uyên, Bàu Bàng) - Làn gom rộng rãi',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'ADMIN_CENTER'
+  },
+  {
+    id: 'hub_ql13_becamex_chon_thanh',
+    name: 'Cổng KCN & Đô thị Becamex Bình Phước',
+    shortName: 'KCN Becamex Chơn Thành',
+    corridor: 'Tuyến QL13',
+    lat: 11.4550,
+    lng: 106.6720,
+    landmark: 'Cổng chính Becamex Bình Phước - Mặt tiền QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'INDUSTRIAL'
   },
   {
     id: 'hub_ql13_nga4_chon_thanh',
@@ -508,7 +547,32 @@ export const VIRTUAL_HUBS = [
     lng: 106.6694,
     landmark: 'Bùng binh Chơn Thành - Trạm xăng Tín Nghĩa',
     curbsideWindowSeconds: 300,
-    isMajorJunction: true
+    isMajorJunction: true,
+    category: 'JUNCTION'
+  },
+  {
+    id: 'hub_ql13_vincom_chon_thanh',
+    name: 'Vincom Plaza Chơn Thành',
+    shortName: 'Vincom Chơn Thành',
+    corridor: 'Tuyến QL13',
+    lat: 11.4810,
+    lng: 106.6690,
+    landmark: 'Số 01 QL13 (Trung tâm TX. Chơn Thành) - Sảnh đón ô tô',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'MALL'
+  },
+  {
+    id: 'hub_ql13_tthc_chon_thanh',
+    name: 'Trung tâm Hành chính TX. Chơn Thành / Quảng trường',
+    shortName: 'TTHC TX. Chơn Thành',
+    corridor: 'Tuyến QL13',
+    lat: 11.4820,
+    lng: 106.6680,
+    landmark: 'Mặt tiền QL13 (P. Hưng Long, Chơn Thành)',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'ADMIN_CENTER'
   },
   {
     id: 'hub_ql13_minh_hung',
@@ -519,7 +583,8 @@ export const VIRTUAL_HUBS = [
     lng: 106.6520,
     landmark: 'Cổng KCN Minh Hưng Hàn Quốc - QL13',
     curbsideWindowSeconds: 300,
-    isMajorJunction: false
+    isMajorJunction: false,
+    category: 'INDUSTRIAL'
   },
   {
     id: 'hub_ql13_tan_khai',
@@ -528,20 +593,46 @@ export const VIRTUAL_HUBS = [
     corridor: 'Tuyến QL13',
     lat: 11.5620,
     lng: 106.6340,
-    landmark: 'Cây xăng Petrolimex Tân Khai / Cổng Huyện ủy Hớn Quản QL13',
+    landmark: 'Cây xăng Petrolimex Tân Khai QL13',
     curbsideWindowSeconds: 300,
-    isMajorJunction: true
+    isMajorJunction: true,
+    category: 'GAS_STATION'
+  },
+  {
+    id: 'hub_ql13_tthc_tan_khai',
+    name: 'Trung tâm Hành chính Huyện Hớn Quản (TT. Tân Khai)',
+    shortName: 'TTHC Huyện Hớn Quản',
+    corridor: 'Tuyến QL13',
+    lat: 11.5645,
+    lng: 106.6325,
+    landmark: 'Mặt tiền QL13 (Ấp 1, TT. Tân Khai) - Trụ sở Huyện ủy & UBND',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'ADMIN_CENTER'
+  },
+  {
+    id: 'hub_ql13_tthc_binh_long',
+    name: 'Trung tâm Hành chính TX. Bình Long / Bến xe Bình Long',
+    shortName: 'TTHC TX. Bình Long',
+    corridor: 'Tuyến QL13',
+    lat: 11.6450,
+    lng: 106.6040,
+    landmark: 'Ngã 3 Nguyễn Huệ - QL13 (P. An Lộc)',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'ADMIN_CENTER'
   },
   {
     id: 'hub_ql13_binh_long',
-    name: 'Cổng chào TX. Bình Long / Bến xe Bình Long',
+    name: 'Cổng chào TX. Bình Long / Vòng xoay An Lộc',
     shortName: 'TX. Bình Long (An Lộc)',
     corridor: 'Tuyến QL13',
     lat: 11.6482,
     lng: 106.6025,
     landmark: 'Cổng chào Thị xã Bình Long QL13 - Vòng xoay An Lộc',
     curbsideWindowSeconds: 300,
-    isMajorJunction: true
+    isMajorJunction: true,
+    category: 'JUNCTION'
   },
   {
     id: 'hub_ql13_thanh_luong',
@@ -810,83 +901,76 @@ export function getVirtualHubById(hubId) {
  * Tuyệt đối KHÔNG surge pricing (no_surge: true) vào giờ cao điểm, ban đêm hay mưa bão.
  */
 export const CORRIDOR_FIXED_SEGMENTS = {
-  // Bình Long ➔ Hàng Xanh: 130.000đ (Chủ xe nhận 234k/2 ghế)
-  'hub_ql13_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 130000, distanceKm: 115, label: 'Bình Long ➔ Hàng Xanh' },
-  'hub_ql13_binh_long:::hub_ql13_binh_trieu': { pricePerSeat: 130000, distanceKm: 110, label: 'Bình Long ➔ Bình Triệu' },
-  'hub_ql13_binh_long:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 125000, distanceKm: 105, label: 'Bình Long ➔ Ngã 4 Bình Phước' },
-  'hub_ql13_binh_long:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 45000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
-  'hub_ql13_binh_long:::hub_n2_chon_thanh': { pricePerSeat: 45000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
-  'hub_ql13_binh_long:::hub_ql13_tan_khai': { pricePerSeat: 30000, distanceKm: 25, label: 'Bình Long ➔ Tân Khai' },
+  // Bình Long ➔ Hàng Xanh: 180.000đ (Chủ xe nhận 324k/2 ghế)
+  'hub_ql13_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 180000, distanceKm: 115, label: 'Bình Long ➔ Hàng Xanh' },
+  'hub_ql13_binh_long:::hub_ql13_binh_trieu': { pricePerSeat: 180000, distanceKm: 110, label: 'Bình Long ➔ Bình Triệu' },
+  'hub_ql13_binh_long:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 175000, distanceKm: 105, label: 'Bình Long ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_binh_long:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 75000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
+  'hub_ql13_binh_long:::hub_n2_chon_thanh': { pricePerSeat: 75000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
+  'hub_ql13_binh_long:::hub_ql13_tan_khai': { pricePerSeat: 50000, distanceKm: 25, label: 'Bình Long ➔ Tân Khai' },
+  'hub_ql13_tthc_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 180000, distanceKm: 115, label: 'TTHC Bình Long ➔ Hàng Xanh' },
 
-  // Tân Khai ➔ Hàng Xanh: 110.000đ (Chủ xe nhận 198k/2 ghế)
-  'hub_ql13_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 110000, distanceKm: 95, label: 'Tân Khai ➔ Hàng Xanh' },
-  'hub_ql13_tan_khai:::hub_ql13_binh_trieu': { pricePerSeat: 110000, distanceKm: 90, label: 'Tân Khai ➔ Bình Triệu' },
-  'hub_ql13_tan_khai:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 105000, distanceKm: 85, label: 'Tân Khai ➔ Ngã 4 Bình Phước' },
-  'hub_ql13_tan_khai:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 35000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
-  'hub_ql13_tan_khai:::hub_n2_chon_thanh': { pricePerSeat: 35000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
-  'hub_ql13_tan_khai:::hub_ql13_binh_long': { pricePerSeat: 30000, distanceKm: 25, label: 'Tân Khai ➔ Bình Long' },
+  // Tân Khai ➔ Hàng Xanh: 150.000đ (Chủ xe nhận 270k/2 ghế)
+  'hub_ql13_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 95, label: 'Tân Khai ➔ Hàng Xanh' },
+  'hub_ql13_tan_khai:::hub_ql13_binh_trieu': { pricePerSeat: 150000, distanceKm: 90, label: 'Tân Khai ➔ Bình Triệu' },
+  'hub_ql13_tan_khai:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 145000, distanceKm: 85, label: 'Tân Khai ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_tan_khai:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 60000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
+  'hub_ql13_tan_khai:::hub_n2_chon_thanh': { pricePerSeat: 60000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
+  'hub_ql13_tan_khai:::hub_ql13_binh_long': { pricePerSeat: 50000, distanceKm: 25, label: 'Tân Khai ➔ Bình Long' },
+  'hub_ql13_tthc_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 95, label: 'TTHC Tân Khai ➔ Hàng Xanh' },
 
-  // Chơn Thành ➔ Hàng Xanh: 90.000đ (Chủ xe nhận 162k/2 ghế)
-  'hub_ql13_nga4_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 90000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
-  'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_trieu': { pricePerSeat: 90000, distanceKm: 70, label: 'Chơn Thành ➔ Bình Triệu' },
-  'hub_ql13_nga4_chon_thanh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 85000, distanceKm: 65, label: 'Chơn Thành ➔ Ngã 4 Bình Phước' },
-  'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 45000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
-  'hub_ql13_nga4_chon_thanh:::hub_ql13_tan_khai': { pricePerSeat: 35000, distanceKm: 20, label: 'Chơn Thành ➔ Tân Khai' },
-  'hub_n2_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 90000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
-  'hub_n2_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 45000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
+  // Chơn Thành ➔ Hàng Xanh: 120.000đ (Chủ xe nhận 216k/2 ghế)
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_trieu': { pricePerSeat: 120000, distanceKm: 70, label: 'Chơn Thành ➔ Bình Triệu' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 115000, distanceKm: 65, label: 'Chơn Thành ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 75000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_tan_khai': { pricePerSeat: 60000, distanceKm: 20, label: 'Chơn Thành ➔ Tân Khai' },
+  'hub_n2_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
+  'hub_n2_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 75000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
+  'hub_ql13_vincom_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Vincom Chơn Thành ➔ Hàng Xanh' },
+  'hub_ql13_tthc_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'TTHC Chơn Thành ➔ Hàng Xanh' },
+  'hub_ql13_becamex_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 115000, distanceKm: 70, label: 'Becamex Chơn Thành ➔ Hàng Xanh' },
+
+  // Bàu Bàng: 90.000đ
+  'hub_ql13_bau_bang:::hub_ql13_hang_xanh': { pricePerSeat: 90000, distanceKm: 55, label: 'Bàu Bàng ➔ Hàng Xanh' },
+  'hub_ql13_tthc_bau_bang:::hub_ql13_hang_xanh': { pricePerSeat: 90000, distanceKm: 55, label: 'TTHC Bàu Bàng ➔ Hàng Xanh' },
+
+  // Sở Sao / Thủ Dầu Một: 70.000đ
+  'hub_ql13_nga4_so_sao:::hub_ql13_hang_xanh': { pricePerSeat: 70000, distanceKm: 35, label: 'Sở Sao ➔ Hàng Xanh' },
+
+  // VSIP 1 / Thuận An: 60.000đ
+  'hub_ql13_vsip1:::hub_ql13_hang_xanh': { pricePerSeat: 60000, distanceKm: 20, label: 'VSIP 1 ➔ Hàng Xanh' },
+
+  // Vạn Phúc City: 35.000đ
+  'hub_ql13_van_phuc_city:::hub_ql13_hang_xanh': { pricePerSeat: 35000, distanceKm: 10, label: 'Vạn Phúc City ➔ Hàng Xanh' },
 
   // Lộc Ninh / Bù Đốp
-  'hub_ql13_cho_loc_ninh:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },
-  'hub_ql13_cho_loc_ninh:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 65000, distanceKm: 60, label: 'Lộc Ninh ➔ Chơn Thành' },
-  'hub_ql13_cho_loc_ninh:::hub_ql13_binh_long': { pricePerSeat: 35000, distanceKm: 25, label: 'Lộc Ninh ➔ Bình Long' },
-  'hub_ql13_budop:::hub_ql13_hang_xanh': { pricePerSeat: 160000, distanceKm: 155, label: 'Bù Đốp ➔ Hàng Xanh' },
-  'hub_ql13_budop:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 75000, distanceKm: 80, label: 'Bù Đốp ➔ Chơn Thành' },
-  'hub_ql13_budop:::hub_ql13_binh_long': { pricePerSeat: 45000, distanceKm: 45, label: 'Bù Đốp ➔ Bình Long' }
+  'hub_ql13_cho_loc_ninh:::hub_ql13_hang_xanh': { pricePerSeat: 210000, distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },
+  'hub_ql13_budop:::hub_ql13_hang_xanh': { pricePerSeat: 230000, distanceKm: 155, label: 'Bù Đốp ➔ Hàng Xanh' }
 };
 
 export const DRIVER_STATION_PAYOUT_RATIO = 0.9; // Chủ xe nhận 90% cước chia sẻ cố định
 
 /**
  * Tra cứu bảng cước phân đoạn cố định Metro Tariff dọc hành lang
+ * Tự động tính toán theo DynamicMarketTariffEngine (Cân bằng Nash + Chỉ số xăng dầu + BOT)
  */
-export function getFixedSegmentTariff(originHubId, destHubId) {
-  if (!originHubId || !destHubId) {
-    return {
-      pricePerSeat: 110000,
-      driverPayoutPerSeat: 99000,
-      driverPayoutFor2Seats: 198000,
-      distanceKm: 95,
-      noSurge: true,
-      label: 'Tân Khai ➔ Hàng Xanh'
-    };
-  }
+export function getFixedSegmentTariff(originHubId, destHubId, options = {}) {
+  const h1 = getVirtualHubById(originHubId);
+  const h2 = getVirtualHubById(destHubId);
 
-  const cleanOrigin = String(originHubId).trim().toLowerCase();
-  const cleanDest = String(destHubId).trim().toLowerCase();
+  const cleanOrigin = String(originHubId || '').trim().toLowerCase();
+  const cleanDest = String(destHubId || '').trim().toLowerCase();
 
   const keyForward = `${cleanOrigin}:::${cleanDest}`;
   const keyReverse = `${cleanDest}:::${cleanOrigin}`;
 
   const match = CORRIDOR_FIXED_SEGMENTS[keyForward] || CORRIDOR_FIXED_SEGMENTS[keyReverse];
 
-  if (match) {
-    const pricePerSeat = match.pricePerSeat;
-    const driverPayoutPerSeat = Math.round(pricePerSeat * DRIVER_STATION_PAYOUT_RATIO);
-    return {
-      pricePerSeat,
-      driverPayoutPerSeat,
-      driverPayoutFor2Seats: driverPayoutPerSeat * 2,
-      distanceKm: match.distanceKm,
-      noSurge: true,
-      label: match.label
-    };
-  }
+  let distanceKm = match?.distanceKm;
+  let label = match?.label;
 
-  // Fallback tính theo khoảng cách Haversine nếu trạm chưa nằm trong bảng chi tiết
-  const h1 = getVirtualHubById(originHubId);
-  const h2 = getVirtualHubById(destHubId);
-  let distanceKm = 95;
-  if (h1 && h2) {
+  if (!distanceKm && h1 && h2) {
     const dLat = ((h2.lat - h1.lat) * Math.PI) / 180;
     const dLng = ((h2.lng - h1.lng) * Math.PI) / 180;
     const a =
@@ -895,24 +979,16 @@ export function getFixedSegmentTariff(originHubId, destHubId) {
     distanceKm = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1.28);
   }
 
-  let pricePerSeat = 110000;
-  if (distanceKm <= 30) pricePerSeat = 35000;
-  else if (distanceKm <= 50) pricePerSeat = 45000;
-  else if (distanceKm <= 80) pricePerSeat = 90000;
-  else if (distanceKm <= 100) pricePerSeat = 110000;
-  else if (distanceKm <= 125) pricePerSeat = 130000;
-  else if (distanceKm <= 145) pricePerSeat = 150000;
-  else pricePerSeat = 160000;
+  if (!distanceKm) distanceKm = 95;
+  if (!label) {
+    label = `${h1?.shortName || h1?.name || originHubId || 'Điểm đón'} ➔ ${h2?.shortName || h2?.name || destHubId || 'Điểm đến'}`;
+  }
 
-  const driverPayoutPerSeat = Math.round(pricePerSeat * DRIVER_STATION_PAYOUT_RATIO);
-
-  return {
-    pricePerSeat,
-    driverPayoutPerSeat,
-    driverPayoutFor2Seats: driverPayoutPerSeat * 2,
-    distanceKm,
-    noSurge: true,
-    label: `${h1?.shortName || originHubId} ➔ ${h2?.shortName || destHubId}`
-  };
+  // Tự động định giá theo DynamicMarketTariffEngine
+  return calculateDynamicTariffByDistance(distanceKm, {
+    label,
+    corridor: h1?.corridor || h2?.corridor || 'Tuyến QL13',
+    ...options
+  });
 }
 

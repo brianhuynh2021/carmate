@@ -15,9 +15,19 @@ import {
   Sparkles,
   QrCode,
   Truck,
-  Radio
+  Radio,
+  Building2,
+  ShoppingBag,
+  Factory
 } from 'lucide-react';
-import { VIRTUAL_HUBS, CORRIDOR_FIXED_SEGMENTS, formatVND, findNearestVirtualHub } from '@carmate/shared';
+import {
+  VIRTUAL_HUBS,
+  CORRIDOR_FIXED_SEGMENTS,
+  formatVND,
+  findNearestVirtualHub,
+  getDailyFuelPrice,
+  getFixedSegmentTariff
+} from '@carmate/shared';
 
 export default function CorridorMetroBoard({
   onOpenCockpit,
@@ -25,19 +35,37 @@ export default function CorridorMetroBoard({
   _onOpenInbox,
   _activeBookedCount = 0
 }) {
+  const currentFuelPrice = getDailyFuelPrice();
 
-  // Lọc các trạm thuộc hành lang Tuyến QL13 theo thứ tự địa lý từ Bắc xuống Nam (Khởi tuyến từ Bình Long)
+  // Danh sách các trạm dọc QL13 (từ Bình Long về Sài Gòn), tính cước tự động theo DynamicMarketTariffEngine
   const ql13Hubs = [
-    { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)', shortName: 'Bình Long', priceToHX: 130000, landmark: 'Cổng chào TX. Bình Long QL13', isHot: true },
-    { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai', shortName: 'Tân Khai', priceToHX: 110000, landmark: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)', isHot: true },
-    { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Giao Tuyến N2)', shortName: 'Chơn Thành', priceToHX: 90000, landmark: 'Bùng binh Chơn Thành - Trạm xăng Tín Nghĩa', isHot: true },
-    { id: 'hub_ql13_bau_bang', name: 'Trạm dừng KCN Bàu Bàng', shortName: 'Bàu Bàng', priceToHX: 70000, landmark: 'Cổng KCN Bàu Bàng QL13' },
-    { id: 'hub_ql13_nga4_so_sao', name: 'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)', shortName: 'Sở Sao / Đại Nam', priceToHX: 50000, landmark: 'Ngã 4 Sở Sao QL13' },
-    { id: 'hub_ql13_vsip1', name: 'Cổng KCN VSIP 1 / AEON Mall', shortName: 'VSIP 1 / AEON Mall', priceToHX: 40000, landmark: 'Đại lộ Bình Dương' },
-    { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức)', shortName: 'Ngã 4 Bình Phước', priceToHX: 25000, landmark: 'Cây xăng Petrolimex QL13 giao QL1A' },
-    { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / BX Miền Đông cũ', shortName: 'Bình Triệu', priceToHX: 20000, landmark: 'Cầu Bình Triệu 1' },
-    { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh)', shortName: 'Hàng Xanh (Đích)', priceToHX: 0, landmark: 'Cây xăng Comeco Hàng Xanh', isTerminal: true }
-  ];
+    { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)', shortName: 'Bình Long', landmark: 'Cổng chào TX. Bình Long QL13', isHot: true, category: 'JUNCTION' },
+    { id: 'hub_ql13_tthc_binh_long', name: 'Trung tâm Hành chính TX. Bình Long / Bến xe', shortName: 'TTHC Bình Long', landmark: 'Ngã 3 Nguyễn Huệ - QL13', isHot: false, category: 'ADMIN_CENTER' },
+    { id: 'hub_ql13_tthc_tan_khai', name: 'Trung tâm Hành chính Huyện Hớn Quản (TT. Tân Khai)', shortName: 'TTHC Hớn Quản', landmark: 'Mặt tiền QL13 (Ấp 1, TT. Tân Khai) - Trụ sở Huyện ủy', isHot: true, category: 'ADMIN_CENTER' },
+    { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai / Chợ Tân Khai', shortName: 'Tân Khai', landmark: 'Cây xăng Petrolimex Tân Khai QL13', isHot: true, category: 'GAS_STATION' },
+    { id: 'hub_ql13_minh_hung', name: 'KCN Minh Hưng - Hàn Quốc (Chơn Thành)', shortName: 'KCN Minh Hưng', landmark: 'Cổng KCN Minh Hưng Hàn Quốc - QL13', isHot: false, category: 'INDUSTRIAL' },
+    { id: 'hub_ql13_tthc_chon_thanh', name: 'Trung tâm Hành chính TX. Chơn Thành / Quảng trường', shortName: 'TTHC Chơn Thành', landmark: 'Mặt tiền QL13 (P. Hưng Long, Chơn Thành)', isHot: true, category: 'ADMIN_CENTER' },
+    { id: 'hub_ql13_vincom_chon_thanh', name: 'Vincom Plaza Chơn Thành', shortName: 'Vincom Chơn Thành', landmark: 'Số 01 QL13 (Trung tâm TX. Chơn Thành)', isHot: true, category: 'MALL' },
+    { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Giao Tuyến N2 & QL14)', shortName: 'Chơn Thành', landmark: 'Bùng binh Chơn Thành - Trạm xăng Tín Nghĩa', isHot: true, category: 'JUNCTION' },
+    { id: 'hub_ql13_becamex_chon_thanh', name: 'Cổng KCN & Đô thị Becamex Bình Phước', shortName: 'KCN Becamex', landmark: 'Cổng chính Becamex Bình Phước - QL13', isHot: false, category: 'INDUSTRIAL' },
+    { id: 'hub_ql13_tthc_bau_bang', name: 'Trung tâm Hành chính Huyện Bàu Bàng', shortName: 'TTHC Bàu Bàng', landmark: 'Mặt tiền Đại lộ QL13 (TT. Lai Uyên, Bàu Bàng)', isHot: false, category: 'ADMIN_CENTER' },
+    { id: 'hub_ql13_bau_bang', name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước', shortName: 'KCN Bàu Bàng', landmark: 'Cổng KCN Bàu Bàng QL13', isHot: false, category: 'INDUSTRIAL' },
+    { id: 'hub_ql13_nga4_so_sao', name: 'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)', shortName: 'Sở Sao / Đại Nam', landmark: 'Ngã 4 Sở Sao QL13', isHot: false, category: 'JUNCTION' },
+    { id: 'hub_ql13_vsip1', name: 'Cổng KCN VSIP 1 / TTTM AEON Mall Canary', shortName: 'VSIP 1 / AEON Mall', landmark: 'Đại lộ Bình Dương (Thuận An)', isHot: true, category: 'MALL' },
+    { id: 'hub_ql13_van_phuc_city', name: 'Khu đô thị Vạn Phúc City / Cân Nhơn Hòa', shortName: 'Vạn Phúc City', landmark: 'Cổng chính Vạn Phúc City - QL13 Hiệp Bình Phước', isHot: false, category: 'URBAN_AREA' },
+    { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - QL1A)', shortName: 'Ngã 4 Bình Phước', landmark: 'Cây xăng Petrolimex QL13 giao QL1A', isHot: false, category: 'JUNCTION' },
+    { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / BX Miền Đông cũ', shortName: 'Bình Triệu', landmark: 'Cầu Bình Triệu 1 - Đinh Bộ Lĩnh / QL13', isHot: false, category: 'GAS_STATION' },
+    { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)', shortName: 'Hàng Xanh (Đích)', landmark: 'Cây xăng Comeco Hàng Xanh', isTerminal: true, category: 'GAS_STATION' }
+  ].map((hub) => {
+    if (hub.isTerminal) return { ...hub, priceToHX: 0 };
+    const tariff = getFixedSegmentTariff(hub.id, 'hub_ql13_hang_xanh');
+    return {
+      ...hub,
+      priceToHX: tariff.pricePerSeat,
+      driverPayout2Seats: tariff.driverPayoutFor2Seats,
+      distanceKm: tariff.distanceKm
+    };
+  });
 
   // Tự động định vị GPS để vào ngay cây xăng gần nhất trên trục QL13
   const handleAutoDetectAndOpenRiderView = () => {
@@ -58,6 +86,55 @@ export default function CorridorMetroBoard({
       );
     } else {
       onOpenStationView?.('hub_ql13_binh_long');
+    }
+  };
+
+  // Helper hiển thị Huy hiệu phân loại điểm dừng đỗ
+  const renderCategoryBadge = (category) => {
+    switch (category) {
+      case 'ADMIN_CENTER':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-[10px] font-mono font-bold border border-purple-500/30">
+            <Building2 className="w-3 h-3 text-purple-400" />
+            <span>TTHC</span>
+          </span>
+        );
+      case 'MALL':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold border border-rose-500/30">
+            <ShoppingBag className="w-3 h-3 text-rose-400" />
+            <span>TTTM</span>
+          </span>
+        );
+      case 'INDUSTRIAL':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold border border-amber-500/30">
+            <Factory className="w-3 h-3 text-amber-400" />
+            <span>KCN</span>
+          </span>
+        );
+      case 'URBAN_AREA':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-[10px] font-mono font-bold border border-cyan-500/30">
+            <Building2 className="w-3 h-3 text-cyan-400" />
+            <span>ĐÔ THỊ</span>
+          </span>
+        );
+      case 'GAS_STATION':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/30">
+            <Fuel className="w-3 h-3 text-emerald-400" />
+            <span>CÂY XĂNG</span>
+          </span>
+        );
+      case 'JUNCTION':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-mono font-bold border border-sky-500/30">
+            <MapPin className="w-3 h-3 text-sky-400" />
+            <span>NÚT GIAO</span>
+          </span>
+        );
     }
   };
 
@@ -88,17 +165,17 @@ export default function CorridorMetroBoard({
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono text-slate-300">
+            <span className="flex items-center gap-1.5 bg-emerald-500/15 px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-300 font-bold">
+              <Fuel className="w-3.5 h-3.5 text-emerald-400" />
+              Chỉ số xăng RON 95: {formatVND(currentFuelPrice.ron95Price)}/L · Đủ xăng + 4 trạm BOT
+            </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              Giá cước cố định · 0% tăng giá cao điểm
+              Định giá công bằng Nash · 0% chặt chém
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
               Bảo mật SĐT · Lên xe đọc mã 4 số
-            </span>
-            <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Đón trả an toàn tại sân cây xăng
             </span>
           </div>
         </div>
@@ -132,11 +209,11 @@ export default function CorridorMetroBoard({
             <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.06] space-y-1.5 text-xs text-slate-300">
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-400">Hỗ trợ tiền xăng (2 ghế):</span>
-                <span className="text-emerald-400 font-bold">+198.000đ — +234.000đ</span>
+                <span className="text-emerald-400 font-bold">+270.000đ — +324.000đ</span>
               </div>
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-400">Điểm hẹn đón khách:</span>
-                <span className="text-white font-bold">Sân cây xăng Petrolimex dọc đường</span>
+                <span className="text-white font-bold">TTHC, TTTM & Cây xăng dọc QL13</span>
               </div>
             </div>
           </div>
@@ -175,7 +252,7 @@ export default function CorridorMetroBoard({
             <div className="p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-500 dark:text-slate-400">Cước Bình Long / Tân Khai ➔ Hàng Xanh:</span>
-                <span className="text-[#0071e3] font-bold">130k / 110k (Cố định)</span>
+                <span className="text-[#0071e3] font-bold">180k / 150k (Đã gồm BOT)</span>
               </div>
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-500 dark:text-slate-400">Đón xe an toàn:</span>
@@ -202,10 +279,10 @@ export default function CorridorMetroBoard({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#0071e3]">
-              BẢNG GIÁ ĐI GHÉP CỐ ĐỊNH QUỐC LỘ 13
+              BẢNG GIÁ ĐI GHÉP CÔNG BẰNG QUỐC LỘ 13
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
-              Chi Phí Cố Định Từng Chặng · Không Tăng Giá Giờ Cao Điểm
+              Định Giá Cân Bằng Thị Trường · Bù Đắp Đủ Xăng + Cầu Đường BOT
             </h2>
           </div>
           <span className="self-start sm:self-auto px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-mono font-bold border border-emerald-200 dark:border-emerald-800">
@@ -218,17 +295,17 @@ export default function CorridorMetroBoard({
           <div className="p-5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
               <span>Cự ly ~115 km</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">Tiết kiệm 50%</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 28%</span>
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Bình Long ➔ Hàng Xanh</h3>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-2xl font-black font-mono text-[#0071e3]">130.000đ</span>
+                <span className="text-2xl font-black font-mono text-[#0071e3]">180.000đ</span>
                 <span className="text-xs text-slate-400">/ vé</span>
               </div>
             </div>
             <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700">
-              Chủ xe nhận: <strong>234.000đ</strong> (cho 2 ghế)
+              Chủ xe nhận: <strong>324.000đ</strong> (cho 2 ghế, bù đủ 297k xăng + BOT)
             </div>
           </div>
 
@@ -239,17 +316,17 @@ export default function CorridorMetroBoard({
             </span>
             <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
               <span>Cự ly ~95 km</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">Cây xăng Petrolimex</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 32%</span>
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Tân Khai ➔ Hàng Xanh</h3>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">110.000đ</span>
+                <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
                 <span className="text-xs text-slate-400">/ vé</span>
               </div>
             </div>
             <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-emerald-200 dark:border-emerald-800">
-              Chủ xe nhận: <strong>198.000đ</strong> (cho 2 ghế)
+              Chủ xe nhận: <strong>270.000đ</strong> (cho 2 ghế, bù đủ 253k xăng + BOT)
             </div>
           </div>
 
@@ -262,12 +339,12 @@ export default function CorridorMetroBoard({
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Chơn Thành ➔ Hàng Xanh</h3>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-2xl font-black font-mono text-[#0071e3]">90.000đ</span>
+                <span className="text-2xl font-black font-mono text-[#0071e3]">120.000đ</span>
                 <span className="text-xs text-slate-400">/ vé</span>
               </div>
             </div>
             <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700">
-              Chủ xe nhận: <strong>162.000đ</strong> (cho 2 ghế)
+              Chủ xe nhận: <strong>216.000đ</strong> (cho 2 ghế, bù đủ 198k xăng + BOT)
             </div>
           </div>
 
@@ -280,12 +357,12 @@ export default function CorridorMetroBoard({
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Bình Long ➔ Chơn Thành</h3>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-2xl font-black font-mono text-[#0071e3]">45.000đ</span>
+                <span className="text-2xl font-black font-mono text-[#0071e3]">75.000đ</span>
                 <span className="text-xs text-slate-400">/ vé</span>
               </div>
             </div>
             <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700">
-              Chủ xe nhận: <strong>81.000đ</strong> (cho 2 ghế)
+              Chủ xe nhận: <strong>135.000đ</strong> (cho 2 ghế)
             </div>
           </div>
         </div>
@@ -300,13 +377,13 @@ export default function CorridorMetroBoard({
           <div>
             <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono font-bold uppercase">
               <Fuel className="w-4 h-4" />
-              <span>DANH SÁCH ĐIỂM ĐÓN AN TOÀN DỌC TUYẾN QL13</span>
+              <span>DANH SÁCH ĐIỂM ĐÓN TRỌNG ĐIỂM & CÂY XĂNG DỌC QL13</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
-              Các Điểm Đón Cây Xăng Quen Thuộc Dọc QL13
+              Các Điểm Đón Trung Tâm Hành Chính, TTTM & Cây Xăng Dọc QL13
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Trục độc đạo từ Bình Long về Sài Gòn — Cây xăng Petrolimex sáng đèn, đỗ xe an toàn bao năm nay
+              Trục độc đạo từ Bình Long về Sài Gòn — TTHC Huyện, Vincom Plaza, KCN Becamex & Cây xăng Petrolimex đón xe văn minh
             </p>
           </div>
 
@@ -345,10 +422,11 @@ export default function CorridorMetroBoard({
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-sm sm:text-base font-bold text-white">
                       {hub.name}
                     </h3>
+                    {renderCategoryBadge(hub.category)}
                     {hub.isHot && (
                       <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/40">
                         TRỌNG ĐIỂM

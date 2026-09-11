@@ -19,7 +19,10 @@ import {
   findNearestVirtualHub,
   getVirtualHubById,
   getFixedSegmentTariff,
-  CORRIDOR_FIXED_SEGMENTS
+  CORRIDOR_FIXED_SEGMENTS,
+  calculateDynamicTariffByDistance,
+  getDailyFuelPrice,
+  setDailyFuelPrice
 } from '@carmate/shared';
 
 import {
@@ -254,27 +257,50 @@ async function runLevel3Suite() {
   console.log('\n--- 8. Kiểm thử Cockpit Taplo Ô Tô & QR Check-in Trạm Ảo ---');
   resetAllStationData();
 
-  // 8.0 Kiểm thử bảng cước phân đoạn Metro Corridor (Fixed Segment Tariff & Zero-Surge Invariant)
+  // 8.0 Kiểm thử bảng cước phân đoạn Metro Corridor (Dynamic Tariff & Fair Market Invariant)
   assert(Object.keys(CORRIDOR_FIXED_SEGMENTS).length >= 10, 'Bảng cước phân đoạn cố định Metro có ít nhất 10 chặng mẫu');
 
   const tariffBinhLong = getFixedSegmentTariff('hub_ql13_binh_long', 'hub_ql13_hang_xanh');
-  assert(tariffBinhLong.pricePerSeat === 130000, 'Cước phân đoạn Bình Long ➔ Hàng Xanh chuẩn xác 130.000đ');
-  assert(tariffBinhLong.driverPayoutFor2Seats === 234000, 'Chủ xe nhận 234.000đ cho 2 ghế từ Bình Long');
+  assert(tariffBinhLong.pricePerSeat === 180000, 'Cước phân đoạn Bình Long ➔ Hàng Xanh chuẩn xác 180.000đ (Bù xăng 24k + 4 trạm BOT)');
+  assert(tariffBinhLong.driverPayoutFor2Seats === 324000, 'Chủ xe nhận 324.000đ cho 2 ghế từ Bình Long (bù đủ 297k chi phí trực tiếp)');
   assert(tariffBinhLong.noSurge === true, 'Bất biến: Bình Long ➔ Hàng Xanh noSurge = true');
 
   const tariffTanKhai = getFixedSegmentTariff('hub_ql13_tan_khai', 'hub_ql13_hang_xanh');
-  assert(tariffTanKhai.pricePerSeat === 110000, 'Cước phân đoạn Tân Khai ➔ Hàng Xanh chuẩn xác 110.000đ');
-  assert(tariffTanKhai.driverPayoutFor2Seats === 198000, 'Chủ xe nhận 198.000đ cho 2 ghế từ Tân Khai');
+  assert(tariffTanKhai.pricePerSeat === 150000, 'Cước phân đoạn Tân Khai ➔ Hàng Xanh chuẩn xác 150.000đ');
+  assert(tariffTanKhai.driverPayoutFor2Seats === 270000, 'Chủ xe nhận 270.000đ cho 2 ghế từ Tân Khai (bù đủ 253k chi phí trực tiếp)');
   assert(tariffTanKhai.noSurge === true, 'Bất biến: Tân Khai ➔ Hàng Xanh noSurge = true');
 
   const tariffChonThanh = getFixedSegmentTariff('hub_ql13_nga4_chon_thanh', 'hub_ql13_hang_xanh');
-  assert(tariffChonThanh.pricePerSeat === 90000, 'Cước phân đoạn Chơn Thành ➔ Hàng Xanh chuẩn xác 90.000đ');
-  assert(tariffChonThanh.driverPayoutFor2Seats === 162000, 'Chủ xe nhận 162.000đ cho 2 ghế từ Chơn Thành');
+  assert(tariffChonThanh.pricePerSeat === 120000, 'Cước phân đoạn Chơn Thành ➔ Hàng Xanh chuẩn xác 120.000đ');
+  assert(tariffChonThanh.driverPayoutFor2Seats === 216000, 'Chủ xe nhận 216.000đ cho 2 ghế từ Chơn Thành (bù đủ 198k chi phí trực tiếp)');
   assert(tariffChonThanh.noSurge === true, 'Bất biến: Chơn Thành ➔ Hàng Xanh noSurge = true');
 
   const tariffLocal = getFixedSegmentTariff('hub_ql13_binh_long', 'hub_ql13_nga4_chon_thanh');
-  assert(tariffLocal.pricePerSeat === 45000, 'Cước chặng ngắn Bình Long ➔ Chơn Thành chuẩn xác 45.000đ');
-  assert(tariffLocal.driverPayoutFor2Seats === 81000, 'Chủ xe nhận 81.000đ cho 2 ghế chặng Bình Long ➔ Chơn Thành');
+  assert(tariffLocal.pricePerSeat === 75000, 'Cước chặng ngắn Bình Long ➔ Chơn Thành chuẩn xác 75.000đ');
+  assert(tariffLocal.driverPayoutFor2Seats === 135000, 'Chủ xe nhận 135.000đ cho 2 ghế chặng Bình Long ➔ Chơn Thành');
+
+  // Kiểm thử các trạm trọng điểm mới thêm (TTHC Tân Khai, Vincom Chơn Thành, Vạn Phúc City)
+  const hubTthcTanKhai = getVirtualHubById('hub_ql13_tthc_tan_khai');
+  assert(hubTthcTanKhai && hubTthcTanKhai.category === 'ADMIN_CENTER', 'Trạm TTHC Hớn Quản (Tân Khai) được định danh chuẩn ADMIN_CENTER');
+
+  const hubVincom = getVirtualHubById('hub_ql13_vincom_chon_thanh');
+  assert(hubVincom && hubVincom.category === 'MALL', 'Trạm Vincom Plaza Chơn Thành được định danh chuẩn MALL');
+
+  const hubVanPhuc = getVirtualHubById('hub_ql13_van_phuc_city');
+  assert(hubVanPhuc && hubVanPhuc.category === 'URBAN_AREA', 'Trạm Vạn Phúc City được định danh chuẩn URBAN_AREA');
+
+  // Kiểm thử Dynamic Pricing Engine tự động điều chỉnh theo chỉ số giá xăng hàng ngày
+  const originalFuel = getDailyFuelPrice();
+  assert(originalFuel.ron95Price === 24120, 'Giá xăng mặc định RON 95 là 24.120đ/L');
+
+  // Thử nghiệm xăng tăng lên 26.500đ/L
+  setDailyFuelPrice(26500);
+  const updatedTariffBinhLong = calculateDynamicTariffByDistance(115, 'Tuyến QL13');
+  assert(updatedTariffBinhLong.pricePerSeat >= 180000, 'Giá vé tự động điều chỉnh linh hoạt theo giá xăng mới');
+  assert(updatedTariffBinhLong.breakevenCovered === true, 'Bất biến MIT: 2 ghế luôn bù đắp 100% chi phí xăng + BOT');
+
+  // Khôi phục lại giá ban đầu
+  setDailyFuelPrice(originalFuel.ron95Price);
 
   // 8.1 Khách quét QR check-in tại trạm Petrolimex Tân Khai
   const hubInfo = getVirtualHubById('hub_ql13_tan_khai');
@@ -290,8 +316,8 @@ async function runLevel3Suite() {
 
   assert(checkinRes.success === true, 'Khách check-in trạm ảo thành công');
   assert(checkinRes.intent && checkinRes.intent.pin && checkinRes.intent.pin.length === 4, 'Hệ thống sinh mã PIN 4 chữ số bảo mật');
-  assert(checkinRes.intent.fuelSurcharge === 220000, 'Tính mức phụ xăng 2 khách Tân Khai ➔ Hàng Xanh: 220.000đ (110k x 2)');
-  assert(checkinRes.intent.driverPayout === 198000, 'Mức chia sẻ thực nhận cho chủ xe (90%): 198.000đ');
+  assert(checkinRes.intent.fuelSurcharge === 300000, 'Tính mức phụ xăng 2 khách Tân Khai ➔ Hàng Xanh: 300.000đ (150k x 2)');
+  assert(checkinRes.intent.driverPayout === 270000, 'Mức chia sẻ thực nhận cho chủ xe (90%): 270.000đ');
   assert(checkinRes.intent.noSurge === true, 'Bất biến: Không phụ thu giờ cao điểm/mưa gió (noSurge: true)');
 
   // 8.2 Kiểm tra hàng đợi trạm
@@ -321,8 +347,8 @@ async function runLevel3Suite() {
   assert(pingRes.proximityAlert != null, 'Radar kích hoạt cảnh báo khi xe cách trạm <= 3.5 km');
   assert(pingRes.proximityAlert.distanceKm <= 3.5, `Cự ly tiếp cận chính xác: ${pingRes.proximityAlert?.distanceKm} km`);
   assert(pingRes.proximityAlert.riderCount === 2, 'Cảnh báo đúng số lượng 2 khách cần đón');
-  assert(pingRes.proximityAlert.fuelSurcharge === 220000, 'Cảnh báo đúng số tiền phụ xăng +220.000đ');
-  assert(pingRes.proximityAlert.driverPayout === 198000, 'Cảnh báo đúng số tiền chủ xe nhận +198.000đ');
+  assert(pingRes.proximityAlert.fuelSurcharge === 300000, 'Cảnh báo đúng số tiền phụ xăng +300.000đ');
+  assert(pingRes.proximityAlert.driverPayout === 270000, 'Cảnh báo đúng số tiền chủ xe nhận +270.000đ');
   assert(pingRes.proximityAlert.noSurge === true, 'Bất biến: Không tăng giá cao điểm');
   assert(pingRes.session.status === 'OFFERING', 'Trạng thái Taplo chuyển sang OFFERING (30s đếm ngược)');
 
@@ -371,7 +397,7 @@ async function runLevel3Suite() {
     pin: checkinRes.intent.pin
   });
   assert(correctPinRes.success === true, 'Khớp mã PIN 4 số thành công');
-  assert(correctPinRes.session.totalEarnings === 198000, 'Tự động ghi nhận số dư ví phụ xăng +198.000đ cho Chủ xe');
+  assert(correctPinRes.session.totalEarnings === 270000, 'Tự động ghi nhận số dư ví phụ xăng +270.000đ cho Chủ xe');
   assert(correctPinRes.session.status === 'ROLLING', 'Xe chuyển trạng thái ROLLING nhập lại Quốc lộ 13');
   assert(correctPinRes.session.seatsAvailable === 0, 'Cập nhật số ghế còn trống = 0 sau khi nhận đủ khách');
 
