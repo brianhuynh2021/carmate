@@ -43,7 +43,9 @@ export function riderCheckIn({
   destinationHubId = 'hub_ql13_hang_xanh',
   seatsNeeded = 1,
   phone = '',
-  name = 'Người đi cùng'
+  name = 'Người đi cùng',
+  clientLat = null,
+  clientLng = null
 }) {
   const originHub = getVirtualHubById(hubId) || {
     id: hubId,
@@ -58,6 +60,19 @@ export function riderCheckIn({
     shortName: 'Ngã 4 Hàng Xanh',
     corridor: 'Tuyến QL13'
   };
+
+  // Khóa kép tọa độ GPS (Anti-Quishing Layer 2 Geofence)
+  let geofence = null;
+  if (clientLat != null && clientLng != null && originHub.lat != null && originHub.lng != null) {
+    const distKm = calculateDistanceKm(clientLat, clientLng, originHub.lat, originHub.lng);
+    const distM = Math.round(distKm * 1000);
+    geofence = {
+      verified: distM <= 400, // Dung sai an toàn 400m cho khuôn viên cây xăng lớn / TTHC
+      distanceM: distM,
+      clientLat,
+      clientLng
+    };
+  }
 
   const cleanSeats = Math.max(1, Math.min(4, Number(seatsNeeded) || 1));
   const tariff = getFixedSegmentTariff(originHub.id, destHub.id);
@@ -88,7 +103,8 @@ export function riderCheckIn({
     driverPayout,
     ratePerSeat,
     noSurge: true,
-    carInfo: null
+    carInfo: null,
+    geofence
   };
 
   if (!stationQueues.has(originHub.id)) {

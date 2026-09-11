@@ -10,9 +10,12 @@ import {
   Phone,
   CheckCircle2,
   AlertCircle,
-  Plane
+  Plane,
+  QrCode,
+  Smartphone,
+  RefreshCw
 } from 'lucide-react';
-import { formatVND, getVirtualHubById, getFixedSegmentTariff, isValidVietnamesePhone, cleanPhoneNumber, findNearestVirtualHub } from '@carmate/shared';
+import { formatVND, getVirtualHubById, getFixedSegmentTariff, isValidVietnamesePhone, cleanPhoneNumber, findNearestVirtualHub, calculateDistanceKm } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
 
 export default function StationRiderView({
@@ -85,15 +88,33 @@ export default function StationRiderView({
   const [destinationHubId, setDestinationHubId] = useState('hub_ql13_hang_xanh');
   const [showOtherDestinations, setShowOtherDestinations] = useState(false);
   const [seatsNeeded, setSeatsNeeded] = useState(1);
-  const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [name, setName] = useState(currentUser?.name || 'Khách đi cùng');
+  const [phone, setPhone] = useState(() => {
+    if (currentUser?.phone) return currentUser.phone;
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('carmate_rider_phone') || '';
+    }
+    return '';
+  });
+  const [name, setName] = useState(() => {
+    if (currentUser?.name) return currentUser.name;
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('carmate_rider_name') || 'Khách đi cùng';
+    }
+    return 'Khách đi cùng';
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Modal Xác thực Vô hình (Just-In-Time Auth Sheet: Telegram / SĐT - Zero Zalo)
+  // Tọa độ định vị GPS của thiết bị & Cảnh báo Geofence Khóa kép (Anti-Quishing Layer 2)
+  const [clientCoords, setClientCoords] = useState(null);
+  const [geofenceDistanceM, setGeofenceDistanceM] = useState(null);
+
+  // Modal Xác thực Vô hình (Passwordless Phone SMS WebOTP / Telegram)
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authTelegramInput, setAuthTelegramInput] = useState('');
   const [authPhoneInput, setAuthPhoneInput] = useState('');
   const [authNameInput, setAuthNameInput] = useState('');
+  const [otpStep, setOtpStep] = useState(false); // false: nhập SĐT, true: nhập mã OTP
+  const [otpCode, setOtpCode] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -198,6 +219,27 @@ export default function StationRiderView({
     return () => clearInterval(pollInterval);
   }, [boardingPass?.intentId, currentHub.id, viewStep]);
 
+  // 3. TỰ ĐỘNG LẤY TỌA ĐỘ GPS & ĐỐI SOÁT GEOFENCE KHUÔN VIÊN TRẠM (ANTI-QUISHING)
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setClientCoords({ lat, lng });
+          if (currentHub.lat != null && currentHub.lng != null) {
+            const distKm = calculateDistanceKm(lat, lng, currentHub.lat, currentHub.lng);
+            if (distKm != null) {
+              setGeofenceDistanceM(Math.round(distKm * 1000));
+            }
+          }
+        },
+        () => {},
+        { timeout: 4000, enableHighAccuracy: true }
+      );
+    }
+  }, [currentHub.lat, currentHub.lng]);
+
   // ĐỒNG BỘ THÔNG TIN NGƯỜI DÙNG HIỆN TẠI
   useEffect(() => {
     if (currentUser?.phone) {
@@ -215,12 +257,20 @@ export default function StationRiderView({
       const finalPhone = verifiedPhone || phone || '0988112233';
       const finalName = verifiedName || name || 'Khách đi cùng';
 
+      // Lưu chìa khóa danh tính ngầm vào máy để các lần sau không cần nhập lại
+      try {
+        localStorage.setItem('carmate_rider_phone', finalPhone);
+        localStorage.setItem('carmate_rider_name', finalName);
+      } catch {}
+
       try {
         const res = await api.stationCheckIn(currentHub.id, {
           destinationHubId,
           seatsNeeded,
           phone: finalPhone,
-          name: finalName
+          name: finalName,
+          clientLat: clientCoords?.lat ?? null,
+          clientLng: clientCoords?.lng ?? null
         });
 
         if (res?.success && res?.intent) {
@@ -278,22 +328,122 @@ export default function StationRiderView({
         setIsSubmitting(false);
       }
     },
-    [currentHub.id, currentHub.name, destinationHubId, destinationOptions, estimatedFare, name, onShowToast, phone, seatsNeeded, tariff.driverPayoutPerSeat]
+    [currentHub.id, currentHub.name, destinationHubId, destinationOptions, estimatedFare, name, onShowToast, phone, seatsNeeded, tariff.driverPayoutPerSeat, clientCoords?.lat, clientCoords?.lng]
   );
+
+  // XÁC NHẬN MÃ OTP (ĐĂNG NHẬP NGẦM PASSWORDLESS)
+  const handleVerifyOtpSubmit = useCallback(
+    async (codeToVerify) => {
+      const code = String(codeToVerify || otpCode).trim();
+      if (!code || code.length < 4) {
+        setAuthError('Vui lòng nhập mã OTP gửi về tin nhắn');
+        return;
+      }
+      setAuthLoading(true);
+      setAuthError('');
+      const clean = cleanPhoneNumber(authPhoneInput);
+      const finalName = authNameInput.trim() || 'Khách đi cùng';
+      try {
+        const res = await api.verifyOtp({ phone: clean, otp: code, name: finalName });
+        if (res?.success) {
+          if (res.token) setStoredAuthToken(res.token);
+          setPhone(clean);
+          setName(finalName);
+          try {
+            localStorage.setItem('carmate_rider_phone', clean);
+            localStorage.setItem('carmate_rider_name', finalName);
+          } catch {}
+          setShowAuthModal(false);
+          setOtpStep(false);
+          executeCheckIn(clean, finalName);
+        } else {
+          setAuthError(res?.error || 'Mã OTP không đúng hoặc đã hết hạn');
+        }
+      } catch {
+        // Offline fallback
+        setPhone(clean);
+        setName(finalName);
+        try {
+          localStorage.setItem('carmate_rider_phone', clean);
+          localStorage.setItem('carmate_rider_name', finalName);
+        } catch {}
+        setShowAuthModal(false);
+        setOtpStep(false);
+        executeCheckIn(clean, finalName);
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    [authNameInput, authPhoneInput, executeCheckIn, otpCode]
+  );
+
+  // WebOTP Listener: Tự động bắt mã SMS OTP trên trình duyệt điện thoại (0-touch)
+  useEffect(() => {
+    if (!otpStep || typeof window === 'undefined' || !('OTPCredential' in window)) return;
+    const ac = new AbortController();
+    navigator.credentials
+      ?.get({
+        otp: { transport: ['sms'] },
+        signal: ac.signal
+      })
+      .then((otp) => {
+        if (otp?.code) {
+          setOtpCode(otp.code);
+          handleVerifyOtpSubmit(otp.code);
+        }
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [otpStep, handleVerifyOtpSubmit]);
 
   // XỬ LÝ KHÁCH BẤM [VÀO HÀNG ĐỢI ĐÓN XE] (R1)
   const handleCheckInClick = (e) => {
     e?.preventDefault();
 
-    // Nếu đã có SĐT (từ tài khoản đăng nhập hoặc đã nhập trước) -> Check-in trực tiếp
+    // Nếu đã có SĐT (từ tài khoản đăng nhập hoặc đã ghi nhớ thiết bị) -> Check-in 1-chạm
     if (phone && phone.trim().length >= 9) {
       executeCheckIn(phone.trim(), name);
       return;
     }
 
-    // Nếu chưa có thông tin -> Mở modal Xác thực 1-chạm (Telegram / SĐT - Không có Zalo)
+    // Nếu chưa có thông tin -> Mở modal Xác thực ngầm 5s (SMS OTP WebOTP / Telegram)
     setAuthError('');
+    setOtpStep(false);
     setShowAuthModal(true);
+  };
+
+  // GỬI MÃ XÁC THỰC OTP QUA SMS
+  const handleRequestOtp = async (e) => {
+    e?.preventDefault();
+    const clean = cleanPhoneNumber(authPhoneInput);
+    if (!clean || clean.length < 9) {
+      setAuthError('Vui lòng nhập số điện thoại hợp lệ (10 chữ số)');
+      return;
+    }
+    if (!isValidVietnamesePhone(clean)) {
+      setAuthError('Số điện thoại không đúng định dạng nhà mạng Việt Nam');
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      const res = await api.requestOtp(clean);
+      if (res?.success) {
+        setOtpStep(true);
+        if (res.devOtp) {
+          setOtpCode(res.devOtp);
+        }
+        onShowToast?.('Đã gửi mã xác thực SMS về số điện thoại của bạn');
+      } else {
+        setAuthError(res?.error || 'Không gửi được mã xác thực');
+      }
+    } catch {
+      // Fallback dev mode
+      setOtpStep(true);
+      setOtpCode('123456');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   // XÁC THỰC NHANH QUA TELEGRAM (DEV/MOCK HOẶC SĐT TELEGRAM)
@@ -343,12 +493,20 @@ export default function StationRiderView({
         const resolvedName = res.user.name || authPayload.first_name;
         setPhone(resolvedPhone);
         setName(resolvedName);
+        try {
+          localStorage.setItem('carmate_rider_phone', resolvedPhone);
+          localStorage.setItem('carmate_rider_name', resolvedName);
+        } catch {}
         setShowAuthModal(false);
         executeCheckIn(resolvedPhone, resolvedName);
       } else {
         // Fallback local auth
         setPhone(cleanPhone);
         setName(authPayload.first_name);
+        try {
+          localStorage.setItem('carmate_rider_phone', cleanPhone);
+          localStorage.setItem('carmate_rider_name', authPayload.first_name);
+        } catch {}
         setShowAuthModal(false);
         executeCheckIn(cleanPhone, authPayload.first_name);
       }
@@ -358,6 +516,10 @@ export default function StationRiderView({
       const fallbackName = authNameInput.trim() || 'Khách đi cùng';
       setPhone(fallbackPhone);
       setName(fallbackName);
+      try {
+        localStorage.setItem('carmate_rider_phone', fallbackPhone);
+        localStorage.setItem('carmate_rider_name', fallbackName);
+      } catch {}
       setShowAuthModal(false);
       executeCheckIn(fallbackPhone, fallbackName);
     } finally {
@@ -365,7 +527,7 @@ export default function StationRiderView({
     }
   };
 
-  // XÁC THỰC TRỰC TIẾP QUA SĐT NHANH
+  // XÁC THỰC TRỰC TIẾP QUA SĐT NHANH (KHÔNG CẦN CHỜ OTP NẾU ĐI GẤP)
   const handleDirectPhoneSubmit = (e) => {
     e?.preventDefault();
     const clean = cleanPhoneNumber(authPhoneInput);
@@ -376,6 +538,10 @@ export default function StationRiderView({
     const finalName = authNameInput.trim() || 'Khách đi cùng';
     setPhone(clean);
     setName(finalName);
+    try {
+      localStorage.setItem('carmate_rider_phone', clean);
+      localStorage.setItem('carmate_rider_name', finalName);
+    } catch {}
     setShowAuthModal(false);
     executeCheckIn(clean, finalName);
   };
@@ -438,6 +604,81 @@ export default function StationRiderView({
         {/* ========================================================================= */}
         {viewStep === 'CHECKIN' && (
           <form onSubmit={handleCheckInClick} className="space-y-5 animate-fade-in">
+            {/* ── ANTI-QUISHING LAYER 1, 2, 4: BẢO CHỨNG MÃ QR CHÍNH THỨC & KHÓA KÉP GPS ── */}
+            <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-emerald-950/40 border border-emerald-500/30 rounded-3xl p-4 space-y-2.5 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-white font-mono tracking-wide">
+                        carmate.vn CHÍNH THỨC
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[9px] font-bold text-emerald-400 font-mono">
+                        0đ RỦI RO
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 font-sans mt-0.5">
+                      Trạm đón an toàn · Chỉ chuyển khoản VietQR khi đã lên xe · 0 hỏi số thẻ/CVV
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* KHÓA KÉP GPS GEOFENCE (ANTI-QUISHING LAYER 2) */}
+              {geofenceDistanceM !== null && (
+                <div className="pt-1">
+                  {geofenceDistanceM <= 400 ? (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-300 font-mono">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>Định vị GPS chuẩn xác: Trong khuôn viên trạm (~{geofenceDistanceM}m)</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 font-mono">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>Lưu ý vị trí: GPS phát hiện bạn cách trạm ~{(geofenceDistanceM / 1000).toFixed(1)}km. Hãy chắc chắn bạn đang quét mã tại cột trạm chính thức.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── RETURNING USER RECOGNITION (ĐĂNG NHẬP NGẦM 0-TOUCH LẦN 2 TRỞ ĐI) ── */}
+            {phone && phone.trim().length >= 9 && (
+              <div className="bg-sky-950/40 border border-sky-500/30 rounded-2xl px-4 py-3 flex items-center justify-between animate-fade-in">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white">
+                        Chào anh/chị {name && name !== 'Khách đi cùng' ? name : 'bạn'}
+                      </span>
+                      <span className="text-[10px] font-mono text-sky-400 font-semibold">({phone})</span>
+                    </div>
+                    <span className="text-[11px] text-sky-300/80 font-sans block mt-0.5">
+                      Thiết bị đã ghi nhớ sẵn · Đang tại {currentHub.shortName || currentHub.name} · 1-chạm vào hàng đợi
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthPhoneInput(phone);
+                    setAuthNameInput(name);
+                    setOtpStep(false);
+                    setShowAuthModal(true);
+                  }}
+                  className="text-[11px] font-mono text-sky-400 hover:text-sky-300 underline cursor-pointer shrink-0 ml-2"
+                >
+                  Đổi SĐT
+                </button>
+              </div>
+            )}
+
             {/* THẺ ĐỊNH VỊ ĐIỂM ĐÓN TRỌNG ĐIỂM */}
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-5 space-y-3">
               <div className="flex items-center justify-between text-emerald-400">
@@ -624,35 +865,61 @@ export default function StationRiderView({
               </div>
             </div>
 
-            {/* SỐ ĐIỆN THOẠI NHẬN DẠNG */}
+            {/* SỐ ĐIỆN THOẠI NHẬN DẠNG (ĐĂNG NHẬP NGẦM PASSWORDLESS) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
-                  Số điện thoại nhận diện:
+                  {phone ? 'Số điện thoại nhận diện (Đã lưu thiết bị):' : 'Số điện thoại nhận diện (Xác thực 5s):'}
                 </label>
-                {phone && (
-                  <span className="text-[10px] font-bold text-emerald-400 font-mono">
-                    Đã lưu phiên
+                {phone ? (
+                  <span className="text-[10px] font-bold text-emerald-400 font-mono flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Đã nhớ máy
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono text-slate-400">
+                    Chủ xe gọi khi đến
                   </span>
                 )}
               </div>
-              <input
-                type="tel"
-                placeholder="Nhập số điện thoại của bạn (hoặc xác thực Telegram)"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full h-13 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-white text-sm font-semibold outline-none focus:border-emerald-500 transition-all"
-              />
+              <div className="relative">
+                <input
+                  type="tel"
+                  placeholder="Nhập số điện thoại của bạn (VD: 0988 123 456)"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full h-13 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-white text-sm font-semibold outline-none focus:border-emerald-500 transition-all font-mono"
+                />
+                {!phone && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthPhoneInput('');
+                      setOtpStep(false);
+                      setShowAuthModal(true);
+                    }}
+                    className="absolute right-2 top-2 h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold font-mono flex items-center gap-1 transition-all"
+                  >
+                    <span>SMS OTP</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* NÚT VÀO HÀNG ĐỢI 1-CHẠM */}
+            {/* NÚT VÀO HÀNG ĐỢI 1-CHẠM (STANFORD ERGONOMICS: COGNITIVE LOAD -> 0) */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-16 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-lg uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(16,185,129,0.3)] cursor-pointer transition-all disabled:opacity-50"
+              className="w-full h-16 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-base sm:text-lg uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(16,185,129,0.3)] cursor-pointer transition-all disabled:opacity-50"
             >
               <Sparkles className="w-5 h-5" />
-              <span>{isSubmitting ? 'ĐANG KẾT NỐI XE...' : 'NHẬN MÃ ĐÓN XE VỀ SÀI GÒN'}</span>
+              <span>
+                {isSubmitting
+                  ? 'ĐANG KẾT NỐI XE...'
+                  : phone && phone.trim().length >= 9
+                  ? '1-CHẠM NHẬN MÃ ĐÓN XE VỀ SÀI GÒN'
+                  : 'NHẬN MÃ ĐÓN XE VỀ SÀI GÒN (5 GIÂY)'}
+              </span>
             </button>
 
             <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 text-center">
@@ -838,7 +1105,7 @@ export default function StationRiderView({
       </main>
 
       {/* ========================================================================= */}
-      {/* MODAL XÁC THỰC VÔ HÌNH 1-CHẠM (TELEGRAM / SĐT - TUYỆT ĐỐI KHÔNG DÙNG ZALO)  */}
+      {/* MODAL XÁC THỰC NGẦM PASSWORDLESS (SMS OTP WEBOTP / TELEGRAM)              */}
       {/* ========================================================================= */}
       {showAuthModal && (
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
@@ -846,19 +1113,27 @@ export default function StationRiderView({
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">Xác thực 1-chạm đón xe</h3>
+                <h3 className="text-base font-bold text-white">
+                  {otpStep ? 'Xác thực mã SMS OTP' : 'Định danh ngầm đón xe (5 giây)'}
+                </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowAuthModal(false)}
-                className="text-slate-400 hover:text-white text-xs font-semibold px-2 py-1 rounded-lg"
+                onClick={() => {
+                  setShowAuthModal(false);
+                  setOtpStep(false);
+                  setAuthError('');
+                }}
+                className="text-slate-400 hover:text-white text-xs font-semibold px-2 py-1 rounded-lg cursor-pointer"
               >
                 Đóng
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Xác thực nhanh để Chủ xe nhận diện đúng khách khi xe tấp vào trạm. Thẻ lên xe sẽ được bảo lưu tự động.
+            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+              {otpStep
+                ? `Mã 6 chữ số đã được gửi về số điện thoại ${authPhoneInput}. Hệ thống sẽ tự động bắt mã qua WebOTP.`
+                : 'Chỉ cần Số điện thoại để Chủ xe nhận diện khi xe tới đón. Thiết bị sẽ tự động ghi nhớ cho các lần đón sau (0 thao tác thừa).'}
             </p>
 
             {authError && (
@@ -868,67 +1143,141 @@ export default function StationRiderView({
               </div>
             )}
 
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
-                Tên / Biệt danh gọi xe (Tùy chọn)
-              </label>
-              <input
-                type="text"
-                placeholder="Ví dụ: Anh Minh, Chị Lan..."
-                value={authNameInput}
-                onChange={(e) => setAuthNameInput(e.target.value)}
-                className="w-full h-11 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-xs outline-none focus:border-white/20"
-              />
-            </div>
+            {!otpStep ? (
+              /* BƯỚC 1: NHẬP SĐT ĐỂ GỬI SMS OTP (HOẶC VÀO GẤP) */
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
+                    Tên / Biệt danh gọi xe (Tùy chọn)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: Anh Minh, Chị Lan..."
+                    value={authNameInput}
+                    onChange={(e) => setAuthNameInput(e.target.value)}
+                    className="w-full h-11 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-xs outline-none focus:border-white/20"
+                  />
+                </div>
 
-            {/* CÁCH 1: 1-CHẠM TELEGRAM */}
-            <form onSubmit={handleTelegramAuthSubmit} className="space-y-3">
-              <label className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <Send className="w-3.5 h-3.5" />
-                <span>Cách 1: Xác thực qua Telegram</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Nhập @username hoặc SĐT Telegram"
-                value={authTelegramInput}
-                onChange={(e) => setAuthTelegramInput(e.target.value)}
-                className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-sky-500/30 text-white text-xs font-semibold outline-none focus:border-sky-400"
-              />
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full h-12 rounded-2xl bg-sky-500 hover:bg-sky-400 active:scale-[0.99] text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
-              >
-                <Send className="w-4 h-4" />
-                <span>{authLoading ? 'ĐANG KẾT NỐI...' : 'XÁC THỰC TELEGRAM & VÀO ĐÓN XE'}</span>
-              </button>
-            </form>
+                <form onSubmit={handleRequestOtp} className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 font-mono mb-1.5">
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>Số điện thoại di động:</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Ví dụ: 0988 123 456"
+                      value={authPhoneInput}
+                      onChange={(e) => setAuthPhoneInput(e.target.value)}
+                      className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-emerald-500/30 text-white text-sm font-bold font-mono outline-none focus:border-emerald-400"
+                    />
+                  </div>
 
-            <div className="relative flex items-center justify-center">
-              <div className="border-t border-white/[0.08] w-full" />
-              <span className="bg-slate-900 px-3 text-[11px] text-slate-500 font-mono uppercase">HOẶC</span>
-            </div>
+                  <button
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-full h-13 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    <span>{authLoading ? 'ĐANG GỬI MÃ...' : 'GỬI MÃ SMS (TỰ ĐỘNG BẮT MÃ WEBOTP)'}</span>
+                  </button>
+                </form>
 
-            {/* CÁCH 2: SỐ ĐIỆN THOẠI TRỰC TIẾP */}
-            <form onSubmit={handleDirectPhoneSubmit} className="space-y-3">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Cách 2: Nhập số điện thoại di động</span>
-              </label>
-              <input
-                type="tel"
-                placeholder="Ví dụ: 0988 123 456"
-                value={authPhoneInput}
-                onChange={(e) => setAuthPhoneInput(e.target.value)}
-                className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-white text-xs font-semibold outline-none focus:border-emerald-400"
-              />
-              <button
-                type="submit"
-                className="w-full h-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all"
-              >
-                <span>TIẾP TỤC BẰNG SĐT NÀY</span>
-              </button>
-            </form>
+                <div className="pt-1 space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleDirectPhoneSubmit}
+                    className="w-full h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <span>⚡ Đi gấp? Bỏ qua OTP, dùng số này vào ngay</span>
+                  </button>
+
+                  {/* TÙY CHỌN: XÁC THỰC QUA TELEGRAM */}
+                  <form onSubmit={handleTelegramAuthSubmit} className="pt-2 border-t border-white/[0.06] space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                      <span>Hoặc xác thực qua Telegram:</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="@username hoặc SĐT Telegram"
+                        value={authTelegramInput}
+                        onChange={(e) => setAuthTelegramInput(e.target.value)}
+                        className="flex-1 h-10 px-3 rounded-xl bg-white/[0.05] border border-sky-500/30 text-white text-xs outline-none focus:border-sky-400"
+                      />
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        className="px-3.5 h-10 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 text-xs font-bold font-mono shrink-0 transition-all cursor-pointer"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              /* BƯỚC 2: NHẬP MÃ SMS OTP HOẶC CHỜ WEBOTP TỰ BẮT MÃ (0-TOUCH) */
+              <form onSubmit={(e) => { e.preventDefault(); handleVerifyOtpSubmit(); }} className="space-y-4">
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 font-mono">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>WebOTP Đang Chờ Bắt Mã Tự Động</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
+                    Nếu máy bạn hỗ trợ WebOTP, mã xác thực từ tin nhắn SMS sẽ được điền tự động. Bạn cũng có thể gõ trực tiếp 6 số:
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5 font-mono">
+                    Mã xác thực SMS (6 số):
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="123456"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full h-14 px-4 rounded-2xl bg-white/[0.08] border-2 border-emerald-400 text-white text-2xl font-black font-mono tracking-widest text-center outline-none focus:border-emerald-300 shadow-inner"
+                    autoFocus
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full h-13 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                >
+                  <span>{authLoading ? 'ĐANG XÁC NHẬN...' : 'XÁC THỰC & VÀO HÀNG ĐỢI ĐÓN XE'}</span>
+                </button>
+
+                <div className="flex items-center justify-between pt-1 text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={handleRequestOtp}
+                    disabled={authLoading}
+                    className="text-slate-400 hover:text-emerald-400 flex items-center gap-1 underline cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Gửi lại mã</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtpStep(false);
+                      setAuthError('');
+                    }}
+                    className="text-slate-400 hover:text-white underline cursor-pointer"
+                  >
+                    Đổi số điện thoại
+                  </button>
+                </div>
+              </form>
+            )}
 
             <p className="text-[10px] text-slate-500 text-center font-mono">
               Bảo mật 100% · Không bao giờ spam · 0đ phí trung gian

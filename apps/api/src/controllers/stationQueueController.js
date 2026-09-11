@@ -12,14 +12,16 @@ import {
 export function riderCheckInHandler(req, res) {
   try {
     const { hubId } = req.params;
-    const { destinationHubId, seatsNeeded, phone, name } = req.body || {};
+    const { destinationHubId, seatsNeeded, phone, name, clientLat, clientLng } = req.body || {};
 
     const result = riderCheckIn({
       hubId,
       destinationHubId,
       seatsNeeded,
       phone,
-      name
+      name,
+      clientLat,
+      clientLng
     });
 
     return res.status(201).json(result);

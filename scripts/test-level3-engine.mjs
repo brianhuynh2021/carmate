@@ -459,6 +459,35 @@ async function runLevel3Suite() {
   const infeasibleReverse = isIntervalSchedulingFeasible(24.5, 142.5, 100, 40);
   assert(infeasibleReverse === false, 'MIT Interval Scheduling: Từ chối yêu cầu đi ngược chiều');
 
+  // --- 8.9 Kiểm thử Anti-Quishing & Khóa kép Geofence Station Check-in ---
+  console.log('\n--- 8.9 Kiểm thử Anti-Quishing & Khóa kép Geofence Station Check-in ---');
+  const tanKhaiHub = getVirtualHubById('hub_ql13_tan_khai');
+
+  // Trường hợp 1: Người dùng đứng tại khuôn viên cây xăng (cách ~35m)
+  const validCheckIn = riderCheckIn({
+    hubId: 'hub_ql13_tan_khai',
+    destinationHubId: 'hub_ql13_hang_xanh',
+    seatsNeeded: 1,
+    phone: '0988123456',
+    clientLat: tanKhaiHub.lat + 0.0003,
+    clientLng: tanKhaiHub.lng
+  });
+  assert(validCheckIn.intent.geofence !== null, 'Hệ thống đã đính kèm đối soát GPS Geofence');
+  assert(validCheckIn.intent.geofence.verified === true, 'Xác thực Geofence thành công khi khách đứng trong bán kính trạm <= 400m');
+  assert(validCheckIn.intent.geofence.distanceM <= 400, `Cự ly đối soát chuẩn xác (${validCheckIn.intent.geofence.distanceM}m <= 400m)`);
+
+  // Trường hợp 2: Quét mã QR giả mạo từ xa (cách trạm ~5.5 km)
+  const fakeCheckIn = riderCheckIn({
+    hubId: 'hub_ql13_tan_khai',
+    destinationHubId: 'hub_ql13_hang_xanh',
+    seatsNeeded: 1,
+    phone: '0988123456',
+    clientLat: tanKhaiHub.lat + 0.05,
+    clientLng: tanKhaiHub.lng
+  });
+  assert(fakeCheckIn.intent.geofence.verified === false, 'Phát hiện và cảnh báo quét QR ngoài bán kính an toàn trạm (> 400m)');
+  assert(fakeCheckIn.intent.geofence.distanceM > 1000, `Khoảng cách vượt ngưỡng an toàn (${fakeCheckIn.intent.geofence.distanceM}m)`);
+
   // =============================================================
 
   console.log('\n=============================================================');
