@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { formatVND, getVirtualHubById, getFixedSegmentTariff, isValidVietnamesePhone, cleanPhoneNumber } from '@carmate/shared';
+import { formatVND, getVirtualHubById, getFixedSegmentTariff, isValidVietnamesePhone, cleanPhoneNumber, findNearestVirtualHub } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
 
 export default function StationRiderView({
@@ -20,18 +20,56 @@ export default function StationRiderView({
   onBack,
   onShowToast
 }) {
-  // Tìm thông tin Trạm đón ảo
+  const [pickupHubId, setPickupHubId] = useState(hubId || 'hub_ql13_tan_khai');
+
+  useEffect(() => {
+    if (hubId) setPickupHubId(hubId);
+  }, [hubId]);
+
+  // Các điểm đón quen thuộc dọc trục QL13 (từ Bình Long về Sài Gòn)
+  const ql13PickupHubs = useMemo(() => [
+    { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)' },
+    { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)' },
+    { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Bình Phước)' },
+    { id: 'hub_ql13_bau_bang', name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước' },
+    { id: 'hub_ql13_nga4_so_sao', name: 'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)' },
+    { id: 'hub_ql13_vsip1', name: 'KCN VSIP 1 / Lái Thiêu (Thuận An)' },
+    { id: 'hub_ql13_nga4_binh_phuoc', name: 'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)' },
+    { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / Bến xe Miền Đông cũ' }
+  ], []);
+
+  const handleAutoDetectGPS = () => {
+    if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const nearest = findNearestVirtualHub(pos.coords.latitude, pos.coords.longitude, 'Tuyến QL13');
+          if (nearest && ql13PickupHubs.some((h) => h.id === nearest.id)) {
+            setPickupHubId(nearest.id);
+            onShowToast?.(`Đã nhận diện vị trí: ${nearest.name}`);
+            return;
+          }
+          onShowToast?.('Đang dùng điểm đón Bình Long');
+        },
+        () => {
+          onShowToast?.('Không lấy được GPS, bạn có thể chọn cây xăng bên dưới');
+        },
+        { timeout: 3000 }
+      );
+    }
+  };
+
+  // Thông tin Điểm đón cây xăng hiện tại trên trục QL13
   const currentHub = useMemo(() => {
     return (
-      getVirtualHubById(hubId) || {
-        id: hubId,
-        name: 'Cây xăng Petrolimex Tân Khai / Chợ Tân Khai',
+      getVirtualHubById(pickupHubId) || {
+        id: pickupHubId,
+        name: 'Cây xăng Petrolimex Tân Khai',
         shortName: 'Petrolimex Tân Khai',
         corridor: 'Tuyến QL13',
         landmark: 'Cây xăng Petrolimex Tân Khai - QL13 (Hớn Quản, Bình Phước)'
       }
     );
-  }, [hubId]);
+  }, [pickupHubId]);
 
   // Trạng thái: 'CHECKIN' (R1) | 'BOARDING_PASS' (R2)
   const [viewStep, setViewStep] = useState('CHECKIN');
@@ -343,22 +381,44 @@ export default function StationRiderView({
       {/* ── NỘI DUNG CHÍNH (R1 HOẶC R2) ── */}
       <main className="flex-1 flex flex-col justify-center my-auto max-w-lg mx-auto w-full">
         {/* ========================================================================= */}
-        {/* MÀN HÌNH R1: CHECK-IN TRẠM ẢO (KHÁCH QUÉT QR TẠI CỘT XĂNG)                */}
+        {/* MÀN HÌNH R1: NHẬN MÃ ĐÓN XE TẠI CÂY XĂNG QUEN THUỘC                       */}
         {/* ========================================================================= */}
         {viewStep === 'CHECKIN' && (
           <form onSubmit={handleCheckInClick} className="space-y-5 animate-fade-in">
-            {/* THẺ ĐỊNH VỊ TRẠM XĂNG */}
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-5 space-y-2">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <MapPin className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase font-mono tracking-wider">
-                  Vị trí trạm đón của bạn:
-                </span>
+            {/* THẺ ĐỊNH VỊ ĐIỂM ĐÓN CÂY XĂNG */}
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-5 space-y-3">
+              <div className="flex items-center justify-between text-emerald-400">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase font-mono tracking-wider">
+                    Điểm đón cây xăng của bạn:
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAutoDetectGPS}
+                  className="text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline cursor-pointer"
+                >
+                  <span>📍 Cây xăng gần nhất</span>
+                </button>
               </div>
-              <h2 className="text-lg font-black text-white">{currentHub.name}</h2>
-              <p className="text-xs text-slate-400">
-                {currentHub.landmark || 'Sân cây xăng Petrolimex dọc trục Quốc Lộ 13'}
-              </p>
+
+              <div>
+                <select
+                  value={pickupHubId}
+                  onChange={(e) => setPickupHubId(e.target.value)}
+                  className="w-full h-12 px-3.5 rounded-2xl bg-white/[0.06] border border-emerald-500/30 text-white text-sm font-bold outline-none focus:border-emerald-400 transition-all cursor-pointer"
+                >
+                  {ql13PickupHubs.map((h) => (
+                    <option key={h.id} value={h.id} className="bg-slate-900 text-white">
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-400 mt-1.5 font-sans">
+                  {currentHub.landmark || 'Sân cây xăng Petrolimex dọc trục Quốc Lộ 13'}
+                </p>
+              </div>
             </div>
 
             {/* CHỌN ĐÍCH ĐẾN */}
@@ -452,7 +512,7 @@ export default function StationRiderView({
               className="w-full h-16 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-lg uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(16,185,129,0.3)] cursor-pointer transition-all disabled:opacity-50"
             >
               <Sparkles className="w-5 h-5" />
-              <span>{isSubmitting ? 'ĐANG KẾT NỐI XE...' : 'VÀO HÀNG ĐỢI ĐÓN XE'}</span>
+              <span>{isSubmitting ? 'ĐANG KẾT NỐI XE...' : 'NHẬN MÃ ĐÓN XE VỀ SÀI GÒN'}</span>
             </button>
 
             <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 text-center">

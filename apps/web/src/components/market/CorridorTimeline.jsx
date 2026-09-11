@@ -164,7 +164,7 @@ export default function CorridorTimeline({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10.5px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                Trạm ảo DARP-MP
+                Điểm đón cây xăng QL13
               </span>
               <span className="text-xs text-slate-500 dark:text-zinc-400">
                 · Dừng đón 60 giây tại sân cây xăng

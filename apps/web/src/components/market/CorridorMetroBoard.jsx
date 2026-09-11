@@ -17,7 +17,7 @@ import {
   Truck,
   Radio
 } from 'lucide-react';
-import { VIRTUAL_HUBS, CORRIDOR_FIXED_SEGMENTS, formatVND } from '@carmate/shared';
+import { VIRTUAL_HUBS, CORRIDOR_FIXED_SEGMENTS, formatVND, findNearestVirtualHub } from '@carmate/shared';
 
 export default function CorridorMetroBoard({
   onOpenCockpit,
@@ -26,7 +26,7 @@ export default function CorridorMetroBoard({
   _activeBookedCount = 0
 }) {
 
-  // Lọc các trạm ảo thuộc hành lang Tuyến QL13 theo thứ tự địa lý từ Bắc xuống Nam (Khởi tuyến từ Bình Long)
+  // Lọc các trạm thuộc hành lang Tuyến QL13 theo thứ tự địa lý từ Bắc xuống Nam (Khởi tuyến từ Bình Long)
   const ql13Hubs = [
     { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)', shortName: 'Bình Long', priceToHX: 130000, landmark: 'Cổng chào TX. Bình Long QL13', isHot: true },
     { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai', shortName: 'Tân Khai', priceToHX: 110000, landmark: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)', isHot: true },
@@ -38,6 +38,28 @@ export default function CorridorMetroBoard({
     { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / BX Miền Đông cũ', shortName: 'Bình Triệu', priceToHX: 20000, landmark: 'Cầu Bình Triệu 1' },
     { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh)', shortName: 'Hàng Xanh (Đích)', priceToHX: 0, landmark: 'Cây xăng Comeco Hàng Xanh', isTerminal: true }
   ];
+
+  // Tự động định vị GPS để vào ngay cây xăng gần nhất trên trục QL13
+  const handleAutoDetectAndOpenRiderView = () => {
+    if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const nearest = findNearestVirtualHub(pos.coords.latitude, pos.coords.longitude, 'Tuyến QL13');
+          if (nearest && ql13Hubs.some((h) => h.id === nearest.id)) {
+            onOpenStationView?.(nearest.id);
+            return;
+          }
+          onOpenStationView?.('hub_ql13_binh_long');
+        },
+        () => {
+          onOpenStationView?.('hub_ql13_binh_long');
+        },
+        { timeout: 3000 }
+      );
+    } else {
+      onOpenStationView?.('hub_ql13_binh_long');
+    }
+  };
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
@@ -62,7 +84,7 @@ export default function CorridorMetroBoard({
           </h1>
 
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-sans">
-            Không cần đăng bài hay tìm chuyến. <strong>Chủ xe</strong> tiện đường chỉ cần bật Taplo là tự động kết nối người đi cùng phía trước. <strong>Người đi cùng</strong> chỉ cần chọn cây xăng Petrolimex gần nhất để nhận mã đón xe 4 số an toàn.
+            Không cần đăng bài hay tìm chuyến. Tuyến Quốc lộ 13 chạy thẳng về Sài Gòn là trục đường quen thuộc bao năm nay. <strong>Chủ xe</strong> tiện đường chỉ cần bật Taplo là tự động kết nối người đi cùng phía trước. <strong>Người đi cùng</strong> chỉ cần đứng tại cây xăng Petrolimex quen thuộc dọc QL13 là xe ghé đón an toàn với mã 4 số.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono text-slate-300">
@@ -143,32 +165,32 @@ export default function CorridorMetroBoard({
 
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-wide">
-                Đón Xe Tại Cây Xăng Petrolimex
+                Đón Xe Dọc Quốc Lộ 13 Về Sài Gòn
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                Đến cây xăng Petrolimex gần nhất hoặc chọn trạm trên bản đồ. Bấm nhận mã đón xe 4 số để xe tiện đường ghé đón an toàn sau vài phút.
+                Tuyến QL13 chạy thẳng về Sài Gòn là trục đường quen thuộc bao năm nay. Hệ thống tự động nhận diện cây xăng Petrolimex bạn đang đứng (hoặc quét mã QR tại cột xăng) để nhận mã 4 số đón xe tiện đường sau vài phút.
               </p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
               <div className="flex items-center justify-between font-mono">
-                <span className="text-slate-500 dark:text-slate-400">Cước Tân Khai ➔ Hàng Xanh:</span>
-                <span className="text-[#0071e3] font-bold">110.000đ (Cố định)</span>
+                <span className="text-slate-500 dark:text-slate-400">Cước Bình Long / Tân Khai ➔ Hàng Xanh:</span>
+                <span className="text-[#0071e3] font-bold">130k / 110k (Cố định)</span>
               </div>
               <div className="flex items-center justify-between font-mono">
-                <span className="text-slate-500 dark:text-slate-400">Thanh toán an toàn:</span>
-                <span className="text-slate-900 dark:text-white font-bold">Lên đúng xe, đọc mã mới gửi tiền</span>
+                <span className="text-slate-500 dark:text-slate-400">Đón xe an toàn:</span>
+                <span className="text-slate-900 dark:text-white font-bold">Lên đúng biển số xe, đọc mã 4 số</span>
               </div>
             </div>
           </div>
 
           <button
             type="button"
-            onClick={() => onOpenStationView?.('hub_ql13_tan_khai')}
+            onClick={handleAutoDetectAndOpenRiderView}
             className="w-full h-15 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white font-black text-base uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_4px_20px_rgba(0,113,227,0.3)] cursor-pointer transition-all"
           >
             <Fuel className="w-5 h-5 text-emerald-300" />
-            <span>CHỌN CÂY XĂNG ĐÓN XE GẦN NHẤT</span>
+            <span>ĐÓN XE VỀ SÀI GÒN (TẠI CÂY XĂNG GẦN NHẤT)</span>
           </button>
         </div>
       </section>
@@ -281,10 +303,10 @@ export default function CorridorMetroBoard({
               <span>DANH SÁCH ĐIỂM ĐÓN AN TOÀN DỌC TUYẾN QL13</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
-              Hệ Thống Trạm Dừng Cây Xăng Petrolimex
+              Các Điểm Đón Cây Xăng Quen Thuộc Dọc QL13
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Chọn cây xăng bạn đang đứng để vào hàng đợi và nhận Thẻ đón xe trực tiếp
+              Trục độc đạo từ Bình Long về Sài Gòn — Cây xăng Petrolimex sáng đèn, đỗ xe an toàn bao năm nay
             </p>
           </div>
 
@@ -356,7 +378,7 @@ export default function CorridorMetroBoard({
                   onClick={() => onOpenStationView?.(hub.id)}
                   className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
                 >
-                  <span>VÀO ĐÓN XE</span>
+                  <span>ĐÓN XE TẠI ĐÂY</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

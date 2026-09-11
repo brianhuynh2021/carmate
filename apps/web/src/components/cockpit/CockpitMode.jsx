@@ -415,7 +415,7 @@ export default function CockpitMode({
                 </div>
                 <div>
                   <span className="text-[11px] font-black uppercase tracking-widest text-amber-400 font-mono block">
-                    CẢNH BÁO TIẾP CẬN TRẠM ẢO ({activeOffer.distanceKm} KM)
+                    CẢNH BÁO TIẾP CẬN ĐIỂM ĐÓN CÂY XĂNG ({activeOffer.distanceKm} KM)
                   </span>
                   <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
                     {activeOffer.stationName}

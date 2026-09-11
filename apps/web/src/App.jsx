@@ -985,7 +985,7 @@ export default function App() {
     );
   }
 
-  // CHẾ ĐỘ QUÉT QR TRẠM ẢO (RIDER STATION LIVE PASS CHO KHÁCH)
+  // CHẾ ĐỘ QUÉT QR ĐIỂM ĐÓN CÂY XĂNG (RIDER STATION LIVE PASS CHO KHÁCH)
   if (activeTab === 'station') {
     return (
       <StationRiderView
