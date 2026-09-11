@@ -136,6 +136,7 @@ export default function StationRiderView({
     return SAIGON_HUB_IDS.includes(hubId) ? 'hub_ql13_binh_long' : 'hub_ql13_hang_xanh';
   });
   const [showOtherDestinations, setShowOtherDestinations] = useState(false);
+  const [showStationPicker, setShowStationPicker] = useState(false);
   const [seatsNeeded, setSeatsNeeded] = useState(1);
   const [phone, setPhone] = useState(() => {
     if (currentUser?.phone) return currentUser.phone;
@@ -772,10 +773,21 @@ export default function StationRiderView({
                 {viewStep === 'CHECKIN' ? 'CARMATE • TRẠM VẬN TẢI ẢO' : 'VÉ ĐÓN XE ĐIỆN TỬ'}
               </span>
             </div>
-            <h1 className="text-base sm:text-lg font-black text-white flex items-center gap-1.5 mt-0.5">
-              <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{currentHub.shortName || currentHub.name}</span>
-            </h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <h1 className="text-base sm:text-lg font-black text-white flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{currentHub.shortName || currentHub.name}</span>
+              </h1>
+              {viewStep === 'CHECKIN' && (
+                <button
+                  type="button"
+                  onClick={() => setShowStationPicker(!showStationPicker)}
+                  className="text-[11px] font-mono text-sky-400 hover:text-sky-300 underline cursor-pointer"
+                >
+                  {showStationPicker ? '▲ Đóng' : '▼ Đổi trạm'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -793,6 +805,37 @@ export default function StationRiderView({
           </div>
         )}
       </header>
+
+      {/* DROPDOWN CHỌN TRẠM ĐÓN DỌC TUYẾN QL13 (TIỆN LỢI THỬ NGHIỆM TRÊN WEB & MOBILE) */}
+      {showStationPicker && viewStep === 'CHECKIN' && (
+        <div className="mb-4 p-3.5 rounded-2xl bg-white/[0.06] border border-white/[0.12] max-w-lg mx-auto w-full animate-fade-in space-y-2 shadow-xl">
+          <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-300">
+            <span>CHỌN TRẠM ĐÓN DỌC QUỐC LỘ 13:</span>
+            <button
+              type="button"
+              onClick={handleAutoDetectGPS}
+              className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+            >
+              <span>📍 Tự tìm qua GPS</span>
+            </button>
+          </div>
+          <select
+            value={pickupHubId}
+            onChange={(e) => {
+              setPickupHubId(e.target.value);
+              setShowStationPicker(false);
+              onShowToast?.(`Đã chuyển sang trạm: ${ql13PickupHubs.find(h => h.id === e.target.value)?.name || e.target.value}`);
+            }}
+            className="w-full h-11 px-3 rounded-xl bg-slate-900 border border-white/[0.2] text-white text-xs font-semibold cursor-pointer outline-none focus:border-emerald-400"
+          >
+            {ql13PickupHubs.map((h) => (
+              <option key={h.id} value={h.id} className="bg-slate-900 text-white">
+                {h.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* ── NỘI DUNG CHÍNH (ĐÚNG 2 MÀN HÌNH DUY NHẤT: MÀN HÌNH 1 HOẶC MÀN HÌNH 2) ── */}
       <main className="flex-1 flex flex-col justify-center my-auto max-w-lg mx-auto w-full">

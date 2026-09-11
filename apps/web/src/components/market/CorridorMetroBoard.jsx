@@ -20,8 +20,12 @@ import {
   ShoppingBag,
   Factory,
   Plane,
-  RotateCcw
+  RotateCcw,
+  X,
+  Printer,
+  Smartphone
 } from 'lucide-react';
+import QRCodeLib from 'qrcode';
 import {
   VIRTUAL_HUBS,
   CORRIDOR_FIXED_SEGMENTS,
@@ -57,6 +61,27 @@ export default function CorridorMetroBoard({
       );
     }
   }, []);
+
+  // Quản lý Modal hiển thị mã QR trạm để in dán hoặc quét thử bằng điện thoại
+  const [selectedQrHub, setSelectedQrHub] = useState(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+
+  useEffect(() => {
+    if (!selectedQrHub) {
+      setQrCodeDataUrl('');
+      return;
+    }
+    const originUrl = typeof window !== 'undefined' ? window.location.origin : 'https://carmate.vn';
+    const targetUrl = `${originUrl}/tram?hub=${selectedQrHub.id}`;
+    QRCodeLib.toDataURL(targetUrl, {
+      width: 260,
+      margin: 2,
+      color: {
+        dark: '#020617',
+        light: '#ffffff'
+      }
+    }).then(setQrCodeDataUrl).catch(() => {});
+  }, [selectedQrHub]);
 
   // Danh sách các trạm dọc QL13 (tính cước và xếp thứ tự động theo hướng di chuyển 2 chiều)
   const ql13Hubs = useMemo(() => {
@@ -741,6 +766,16 @@ export default function CorridorMetroBoard({
 
                     <button
                       type="button"
+                      onClick={() => setSelectedQrHub(hub)}
+                      title="Xem mã QR để quét trên điện thoại hoặc in dán tại trạm"
+                      className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0 flex items-center gap-1.5 text-xs font-mono"
+                    >
+                      <QrCode className="w-4 h-4 text-emerald-400" />
+                      <span className="hidden sm:inline">Mã QR</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => onOpenStationView?.(hub.id)}
                       className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
                     >
@@ -803,6 +838,84 @@ export default function CorridorMetroBoard({
           </div>
         </div>
       </section>
+
+      {/* ========================================================================= */}
+      {/* MODAL MÃ QR TRẠM ẢO (MÔ PHỎNG TEM DÁN CỘT XĂNG ĐỂ QUÉT BẰNG ĐIỆN THOẠI)     */}
+      {/* ========================================================================= */}
+      {selectedQrHub && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-slate-900 border border-white/[0.15] rounded-3xl p-6 w-full max-w-sm space-y-4 text-white shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setSelectedQrHub(null)}
+              className="absolute right-4 top-4 w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
+                CARMATE • TEM STICKER TRẠM ẢO
+              </span>
+              <h3 className="text-base font-bold text-white leading-tight">
+                {selectedQrHub.name}
+              </h3>
+              <p className="text-xs text-slate-400 font-mono">
+                {selectedQrHub.landmark}
+              </p>
+            </div>
+
+            {/* Khung mã QR mica mô phỏng thực địa ngoài cây xăng */}
+            <div className="p-4 bg-white rounded-2xl shadow-inner flex flex-col items-center justify-center space-y-2">
+              {qrCodeDataUrl ? (
+                <img
+                  src={qrCodeDataUrl}
+                  alt={`Mã QR ${selectedQrHub.name}`}
+                  className="w-52 h-52 object-contain"
+                />
+              ) : (
+                <div className="w-52 h-52 flex items-center justify-center text-slate-400 font-mono text-xs">
+                  Đang tạo mã QR...
+                </div>
+              )}
+              <div className="text-center pt-1 border-t border-slate-200 w-full">
+                <span className="text-[11px] font-black tracking-wider text-slate-900 uppercase block font-sans">
+                  QUÉT ĐÓN XE TIỆN CHUYẾN QL13
+                </span>
+                <span className="text-[10px] text-slate-600 font-mono">
+                  10s vào hàng đợi · 0đ tải ứng dụng
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const hubToOpen = selectedQrHub.id;
+                  setSelectedQrHub(null);
+                  onOpenStationView?.(hubToOpen);
+                }}
+                className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>Trải nghiệm Kiosk Đón Xe Ngay ➔</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  window.print();
+                }}
+                className="w-full h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 text-xs font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>In tem dán cột xăng / quầy thu ngân</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
