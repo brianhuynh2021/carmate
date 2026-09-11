@@ -13,14 +13,10 @@ import {
   Scale,
   Car,
   Clock,
-  Sparkles,
-  Camera,
-  Trash2,
-  Image as ImageIcon
+  Sparkles
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { api } from '../../api/client.js';
-import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 
 const QUICK_CAR_MODELS = [
@@ -68,7 +64,6 @@ export default function CockpitMode({
     return '';
   });
   const [inputSeats, setInputSeats] = useState(() => vehicle?.seats || 2);
-  const [inputPhotos, setInputPhotos] = useState(() => vehicle?.photos || []);
   const [inputAmenities, setInputAmenities] = useState(() => vehicle?.amenities || ['ac', 'no_smoking']);
   const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
   const [isEditingVehicle, setIsEditingVehicle] = useState(false);
@@ -352,39 +347,6 @@ export default function CockpitMode({
     }
   };
 
-  // XỬ LÝ ẢNH NHẬN DIỆN XE (NÉN WEBP & TỰ ĐỘNG CHE BIỂN SỐ)
-  const handlePhotoSlotChange = async (e, slotIndex) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      onShowToast?.('Vui lòng chọn tệp hình ảnh (.jpg, .png, .webp)');
-      return;
-    }
-    try {
-      const slotType = slotIndex === 0 ? 'front' : slotIndex === 1 ? 'side' : 'interior';
-      const result = await processCarPhotoUpload(file, slotType);
-      setInputPhotos((prev) => {
-        const next = [...prev];
-        next[slotIndex] = result.maskedUrl;
-        return next;
-      });
-      onShowToast?.('Đã tải và tự động che biển số ảnh xe!');
-    } catch (err) {
-      console.warn('[CockpitMode] Lỗi tải ảnh xe:', err);
-      onShowToast?.('Không thể xử lý ảnh xe, vui lòng thử lại');
-    } finally {
-      if (e.target) e.target.value = '';
-    }
-  };
-
-  const handleRemovePhoto = (slotIndex) => {
-    setInputPhotos((prev) => {
-      const next = [...prev];
-      next[slotIndex] = null;
-      return next.filter(Boolean);
-    });
-  };
-
   const handleToggleAmenity = (amenityKey) => {
     setInputAmenities((prev) =>
       prev.includes(amenityKey) ? prev.filter((a) => a !== amenityKey) : [...prev, amenityKey]
@@ -406,7 +368,6 @@ export default function CockpitMode({
       plate: cleanPlate,
       model: cleanModel,
       seats: inputSeats,
-      photos: inputPhotos.filter(Boolean),
       amenities: inputAmenities,
       status: 'PENDING',
       registeredAt: new Date().toISOString()
@@ -424,7 +385,6 @@ export default function CockpitMode({
         plate: cleanPlate,
         model: cleanModel,
         seats: inputSeats,
-        photos: inputPhotos.filter(Boolean),
         amenities: inputAmenities,
         phone: currentUser?.phone,
         name: currentUser?.name,
@@ -457,7 +417,6 @@ export default function CockpitMode({
         plate: inputPlate || '93A-541.86',
         model: inputModel || 'Mitsubishi Xpander - Trắng',
         seats: inputSeats || 3,
-        photos: inputPhotos,
         amenities: inputAmenities
       }),
       status: 'VERIFIED'
@@ -619,61 +578,10 @@ export default function CockpitMode({
               </div>
             </div>
 
-            {/* 4. Ảnh nhận diện xe (Tùy chọn tiện lợi) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>4. Ảnh xe nhận diện (Tùy chọn):</span>
-                </label>
-                <span className="text-[10px] text-slate-400">Tự che biển số</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: 'Mặt trước', id: 0 },
-                  { label: 'Thân xe', id: 1 },
-                  { label: 'Nội thất', id: 2 }
-                ].map((slot) => {
-                  const photoUrl = inputPhotos[slot.id];
-                  return (
-                    <div key={slot.id} className="relative group">
-                      {photoUrl ? (
-                        <div className="relative aspect-video rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900">
-                          <img src={photoUrl} alt={slot.label} className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePhoto(slot.id)}
-                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs shadow-md cursor-pointer active:scale-90"
-                            title="Xóa ảnh"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                          <span className="absolute bottom-0 inset-x-0 bg-slate-950/80 text-[9px] font-mono text-emerald-300 text-center py-0.5">
-                            {slot.label}
-                          </span>
-                        </div>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center aspect-video rounded-xl border border-dashed border-white/[0.15] bg-white/[0.02] hover:bg-white/[0.06] cursor-pointer transition-all">
-                          <Camera className="w-4 h-4 text-slate-400 mb-0.5" />
-                          <span className="text-[10px] text-slate-400 font-medium">{slot.label}</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handlePhotoSlotChange(e, slot.id)}
-                            className="hidden"
-                          />
-                        </label>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 5. Tiện ích chuyến đi (1-Chạm) */}
+            {/* 4. Tiện ích chuyến đi (Tùy chọn 1-Chạm) */}
             <div>
               <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5">
-                5. Tiện nghi chuyến đi:
+                4. Tiện nghi chuyến đi (Tùy chọn):
               </label>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {[
@@ -816,7 +724,6 @@ export default function CockpitMode({
                   setInputPlate(vehicle.plate);
                   setInputModel(vehicle.model);
                   setInputSeats(vehicle.seats);
-                  setInputPhotos(vehicle.photos || []);
                   setInputAmenities(vehicle.amenities || ['ac', 'no_smoking']);
                   setIsEditingVehicle(true);
                 }}
@@ -865,7 +772,6 @@ export default function CockpitMode({
                   setInputPlate(vehicle?.plate || '');
                   setInputModel(vehicle?.model || '');
                   setInputSeats(vehicle?.seats || 2);
-                  setInputPhotos(vehicle?.photos || []);
                   setInputAmenities(vehicle?.amenities || ['ac', 'no_smoking']);
                   setIsEditingVehicle(true);
                 }}
