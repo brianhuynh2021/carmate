@@ -61,6 +61,8 @@ export default function CorridorMetroBoard({
   // Danh sách các trạm dọc QL13 (tính cước và xếp thứ tự động theo hướng di chuyển 2 chiều)
   const ql13Hubs = useMemo(() => {
     const rawHubs = [
+      { id: 'hub_ql13_budop', name: 'TT. Bù Đốp (Cổng Chợ Bù Đốp / ĐT759)', shortName: 'Bù Đốp', landmark: 'Chợ Bù Đốp - ĐT759 (Vùng gom nối chuyến)', isHot: false, category: 'FEEDER_THIN' },
+      { id: 'hub_ql13_cho_loc_ninh', name: 'Chợ Lộc Ninh (Ngã 3 QL13 & ĐT757)', shortName: 'Lộc Ninh', landmark: 'Chợ Lộc Ninh - QL13 (Vùng gom nối chuyến)', isHot: false, category: 'FEEDER_THIN' },
       { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)', shortName: 'Bình Long', landmark: 'Cổng chào TX. Bình Long QL13', isHot: true, category: 'JUNCTION' },
       { id: 'hub_ql13_tthc_binh_long', name: 'Trung tâm Hành chính TX. Bình Long / Bến xe', shortName: 'TTHC Bình Long', landmark: 'Ngã 3 Nguyễn Huệ - QL13', isHot: false, category: 'ADMIN_CENTER' },
       { id: 'hub_ql13_tthc_tan_khai', name: 'Trung tâm Hành chính Huyện Hớn Quản (TT. Tân Khai)', shortName: 'TTHC Hớn Quản', landmark: 'Mặt tiền QL13 (Ấp 1, TT. Tân Khai) - Trụ sở Huyện ủy', isHot: true, category: 'ADMIN_CENTER' },
@@ -106,6 +108,17 @@ export default function CorridorMetroBoard({
         if (isTerm) {
           return { ...hub, isTerminal: true, priceToTarget: 0, targetLabel: 'Đích đến Bình Phước' };
         }
+        if (hub.id === 'hub_ql13_budop' || hub.id === 'hub_ql13_cho_loc_ninh') {
+          const tariffFromSG = getFixedSegmentTariff('hub_ql13_hang_xanh', hub.id);
+          return {
+            ...hub,
+            isTerminal: false,
+            priceToTarget: tariffFromSG.pricePerSeat,
+            targetLabel: 'Từ Hàng Xanh',
+            driverPayout2Seats: tariffFromSG.driverPayoutFor2Seats,
+            distanceKm: tariffFromSG.distanceKm
+          };
+        }
         const tariff = getFixedSegmentTariff(hub.id, 'hub_ql13_binh_long');
         return {
           ...hub,
@@ -145,6 +158,13 @@ export default function CorridorMetroBoard({
   // Helper hiển thị Huy hiệu phân loại điểm dừng đỗ
   const renderCategoryBadge = (category) => {
     switch (category) {
+      case 'FEEDER_THIN':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold border border-amber-500/30">
+            <Radio className="w-3 h-3 text-amber-400" />
+            <span>VÙNG GOM</span>
+          </span>
+        );
       case 'ADMIN_CENTER':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-[10px] font-mono font-bold border border-purple-500/30">

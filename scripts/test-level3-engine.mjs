@@ -25,7 +25,10 @@ import {
   setDailyFuelPrice,
   projectToCorridorFrenet,
   calculateKinematicTriggerDistance,
-  isIntervalSchedulingFeasible
+  isIntervalSchedulingFeasible,
+  calculateLastMileOption,
+  POPULAR_LAST_MILE_DESTINATIONS,
+  getHubLiquidityStatus
 } from '@carmate/shared';
 
 import {
@@ -537,6 +540,40 @@ async function runLevel3Suite() {
   assert(returnCheckIn.intent.seatsNeeded === 2, 'Đặt 2 ghế chiều về');
   assert(returnCheckIn.intent.fuelSurcharge === 360000, 'Tổng cước 2 ghế: 180k * 2 = 360.000đ');
   assert(returnCheckIn.intent.driverPayout === 324000, 'Chủ xe nhận 90%: 324.000đ');
+
+  // =============================================================
+  // 8.11 BỘ GIẢ LẬP CHẶNG CUỐI (LAST-MILE CALCULATOR) & NỐI CHUYẾN (HUB FEEDER)
+  // =============================================================
+  console.log('\n--- 8.11 BỘ GIẢ LẬP CHẶNG CUỐI & NỐI CHUYẾN VÙNG THƯA XE ---');
+
+  // 1. Kiểm tra tính toán chặng cuối (Last-Mile Transit Calculator)
+  assert(POPULAR_LAST_MILE_DESTINATIONS.length >= 7, 'Danh mục chặng cuối mẫu có ít nhất 7 điểm đến phổ biến');
+  const lastMileBaChieu = calculateLastMileOption('Chợ Bà Chiểu', 'hub_ql13_tan_khai');
+  assert(lastMileBaChieu.bestHubId === 'hub_ql13_hang_xanh', 'Chợ Bà Chiểu tự động ghép với Trạm Hàng Xanh');
+  assert(lastMileBaChieu.distanceToHubKm === 1.5, 'Cự ly chặng cuối Chợ Bà Chiểu là 1.5km');
+  assert(lastMileBaChieu.carmateFareVND === 150000, 'Cước CarMate Tân Khai ➔ Hàng Xanh là 150.000đ');
+  assert(lastMileBaChieu.grabBikeVND === 15000, 'Ước lượng GrabBike chặng cuối 1.5km là 15.000đ');
+  assert(lastMileBaChieu.totalCostVND === 165000, 'Tổng chi phí về tận nhà: 150k + 15k = 165.000đ');
+  assert(lastMileBaChieu.savingsVND > 500000, 'Tiết kiệm hơn 500k so với taxi đường dài liên tỉnh');
+
+  // 2. Kiểm tra điểm đến Sân bay TSN
+  const lastMileTSN = calculateLastMileOption('Sân bay', 'hub_ql13_tan_khai');
+  assert(lastMileTSN.bestHubId === 'hub_ql13_san_bay_tsn', 'Sân bay TSN tự động ghép với Trạm Ga Sân Bay TSN');
+  assert(lastMileTSN.distanceToHubKm === 0.2, 'Cự ly chặng cuối sảnh sân bay 0.2km');
+  assert(lastMileTSN.grabBikeVND === 0, 'Đi bộ thẳng vào ga, 0đ phí GrabBike');
+
+  // 3. Kiểm tra Hub-Hopping Feeder cho Vùng thưa xe Bù Đốp & Lộc Ninh
+  const budopStatus = getHubLiquidityStatus('hub_ql13_budop');
+  assert(budopStatus.isThin === true, 'Trạm Bù Đốp được phân loại là Vùng thưa xe (THIN)');
+  assert(budopStatus.feederRecommendation.targetHubId === 'hub_ql13_binh_long', 'Bù Đốp đề xuất nối chuyến ra Trạm Bình Long');
+  assert(budopStatus.feederRecommendation.distanceKm === 24, 'Cự ly nối chuyến Bù Đốp ➔ Bình Long là 24km');
+
+  const locNinhStatus = getHubLiquidityStatus('hub_ql13_cho_loc_ninh');
+  assert(locNinhStatus.isThin === true, 'Trạm Lộc Ninh được phân loại là Vùng thưa xe (THIN)');
+  assert(locNinhStatus.feederRecommendation.targetHubId === 'hub_ql13_binh_long', 'Lộc Ninh đề xuất nối chuyến ra Trạm Bình Long');
+
+  const binhLongStatus = getHubLiquidityStatus('hub_ql13_binh_long');
+  assert(binhLongStatus.isThin === false, 'Trạm Bình Long là Vùng đậm đặc (DENSE), không cần nối chuyến');
 
   // =============================================================
 

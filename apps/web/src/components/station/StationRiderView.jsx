@@ -15,7 +15,18 @@ import {
   Smartphone,
   RefreshCw
 } from 'lucide-react';
-import { formatVND, getVirtualHubById, getFixedSegmentTariff, isValidVietnamesePhone, cleanPhoneNumber, findNearestVirtualHub, calculateDistanceKm } from '@carmate/shared';
+import {
+  formatVND,
+  getVirtualHubById,
+  getFixedSegmentTariff,
+  isValidVietnamesePhone,
+  cleanPhoneNumber,
+  findNearestVirtualHub,
+  calculateDistanceKm,
+  calculateLastMileOption,
+  POPULAR_LAST_MILE_DESTINATIONS,
+  getHubLiquidityStatus
+} from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
 
 export default function StationRiderView({
@@ -55,6 +66,8 @@ export default function StationRiderView({
 
   // Các điểm đón quen thuộc dọc trục QL13 (Cả 2 chiều Bình Phước ⇄ Sài Gòn)
   const ql13PickupHubs = useMemo(() => [
+    { id: 'hub_ql13_budop', name: '🌾 TT. Bù Đốp (Cổng Chợ Bù Đốp / ĐT759) - Vùng gom' },
+    { id: 'hub_ql13_cho_loc_ninh', name: '🏪 Chợ Lộc Ninh (Ngã 3 QL13 & ĐT757) - Vùng gom' },
     { id: 'hub_ql13_binh_long', name: '📍 Cổng chào TX. Bình Long (Vòng xoay An Lộc)' },
     { id: 'hub_ql13_tthc_binh_long', name: '🏛️ TTHC TX. Bình Long / Bến xe Bình Long' },
     { id: 'hub_ql13_tthc_tan_khai', name: '🏛️ TTHC Huyện Hớn Quản (TT. Tân Khai - Trụ sở Huyện ủy)' },
@@ -174,6 +187,16 @@ export default function StationRiderView({
   const [boardingPass, setBoardingPass] = useState(null);
   const [copiedPin, setCopiedPin] = useState(false);
 
+  // Trạng thái Giả lập Chặng cuối Nội đô (Last-Mile Transit Simulator - Zero External API)
+  const [selectedLastMileDestId, setSelectedLastMileDestId] = useState('cho_ba_chieu');
+  const [customLastMileText, setCustomLastMileText] = useState('');
+  const [showLastMileCalc, setShowLastMileCalc] = useState(false);
+
+  const lastMileOption = useMemo(() => {
+    const input = customLastMileText.trim() || selectedLastMileDestId;
+    return calculateLastMileOption(input, pickupHubId);
+  }, [customLastMileText, selectedLastMileDestId, pickupHubId]);
+
   // Danh sách các điểm đến khả dĩ trên hành lang QL13 (loại trừ trạm đang đứng)
   const destinationOptions = useMemo(() => {
     const allOptions = [
@@ -194,7 +217,9 @@ export default function StationRiderView({
       { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)' },
       { id: 'hub_ql13_tthc_tan_khai', name: 'TTHC Huyện Hớn Quản (TT. Tân Khai)' },
       { id: 'hub_ql13_tthc_binh_long', name: 'TTHC TX. Bình Long / Bến xe' },
-      { id: 'hub_ql13_binh_long', name: 'Cổng chào TX. Bình Long (An Lộc)' }
+      { id: 'hub_ql13_binh_long', name: 'Cổng chào TX. Bình Long (An Lộc)' },
+      { id: 'hub_ql13_cho_loc_ninh', name: 'Chợ Lộc Ninh (Ngã 3 QL13 & ĐT757)' },
+      { id: 'hub_ql13_budop', name: 'TT. Bù Đốp (Chợ Bù Đốp / ĐT759)' }
     ];
     const list = direction === 'TO_BINH_PHUOC' ? [...allOptions].reverse() : allOptions;
     return list.filter((opt) => opt.id !== currentHub.id);
@@ -809,6 +834,42 @@ export default function StationRiderView({
                 <p className="text-xs text-slate-400 mt-1.5 font-sans">
                   {currentHub.landmark || 'Mặt tiền Đại lộ Quốc Lộ 13'}
                 </p>
+
+                {/* CẢNH BÁO NỐI CHUYẾN VÙNG THƯA XE (HUB-HOPPING FEEDER) */}
+                {(() => {
+                  const liq = getHubLiquidityStatus(pickupHubId);
+                  if (!liq?.isThin || !liq?.feederRecommendation) return null;
+                  const rec = liq.feederRecommendation;
+                  return (
+                    <div className="mt-2.5 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 animate-fade-in">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                        <div className="flex-1 text-xs leading-relaxed">
+                          <div className="flex flex-wrap items-center gap-2 font-bold text-amber-300">
+                            <span>{liq.badgeLabel}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 font-mono">
+                              Cách Trạm Bình Long {rec.distanceKm}km
+                            </span>
+                          </div>
+                          <p className="mt-1 text-slate-300">
+                            {rec.transitAdvice}. Lượng xe tại Trạm Bình Long dày hơn <strong className="text-amber-300">{rec.densityRatio}</strong>, rút ngắn đáng kể thời gian chờ xe.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPickupHubId(rec.targetHubId);
+                              onShowToast?.(`Đã chuyển điểm đón sang ${rec.targetHubName}`);
+                            }}
+                            className="mt-2.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <span>1-Chạm chuyển sang đón tại Bình Long ({rec.targetHubName})</span>
+                            <span>➔</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -966,6 +1027,146 @@ export default function StationRiderView({
                       <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Ga T1 / T2</div>
                     </div>
                   </button>
+                </div>
+              )}
+
+              {/* BỘ GIẢ LẬP CHẶNG CUỐI NỘI ĐÔ (LAST-MILE TRANSIT CALCULATOR - 0đ API) */}
+              {direction === 'TO_SAIGON' && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/30 via-slate-900/60 to-purple-950/20 border border-indigo-500/30 shadow-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xs">
+                        🎯
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-white leading-tight">
+                          Giả lập Chặng cuối về Tận nhà
+                        </h4>
+                        <p className="text-[10px] text-slate-400">
+                          Chủ xe không vào hẻm, từ Trạm về đích thế nào?
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowLastMileCalc(!showLastMileCalc)}
+                      className="px-2.5 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-[11px] font-mono font-bold text-indigo-300 border border-white/[0.1] transition-all cursor-pointer"
+                    >
+                      {showLastMileCalc ? 'Thu gọn ▲' : 'Mở xem ▼'}
+                    </button>
+                  </div>
+
+                  {showLastMileCalc && (
+                    <div className="space-y-3 pt-1 border-t border-white/[0.08] animate-fade-in">
+                      <div>
+                        <label className="text-[11px] font-medium text-slate-300 block mb-1.5 font-mono">
+                          Chọn nhanh điểm đến nội đô TP.HCM:
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {POPULAR_LAST_MILE_DESTINATIONS.map((dest) => {
+                            const isSelected = selectedLastMileDestId === dest.id && !customLastMileText;
+                            return (
+                              <button
+                                key={dest.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedLastMileDestId(dest.id);
+                                  setCustomLastMileText('');
+                                  setDestinationHubId(dest.bestHubId);
+                                  setShowOtherDestinations(false);
+                                }}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                                  isSelected
+                                    ? 'bg-indigo-600 text-white font-bold shadow-[0_0_12px_rgba(99,102,241,0.4)] ring-1 ring-indigo-400'
+                                    : 'bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 border border-white/[0.08]'
+                                }`}
+                              >
+                                <span>{dest.icon}</span>
+                                <span>{dest.shortName}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={customLastMileText}
+                          onChange={(e) => {
+                            setCustomLastMileText(e.target.value);
+                          }}
+                          placeholder="Hoặc gõ điểm đến tự do (VD: BV Ung Bướu, Landmark...)"
+                          className="w-full h-10 px-3 text-xs rounded-xl bg-white/[0.04] border border-white/[0.1] text-white placeholder-slate-500 outline-none focus:border-indigo-400 transition-all font-sans"
+                        />
+                      </div>
+
+                      {/* KẾT QUẢ PHÂN TÍCH CHẶNG CUỐI */}
+                      {lastMileOption && (
+                        <div className="p-3 rounded-xl bg-black/40 border border-indigo-500/20 space-y-2.5">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="text-[11px] text-slate-400 font-mono">Trạm xe trả tối ưu:</div>
+                              <div className="text-xs font-bold text-emerald-400 flex items-center gap-1 mt-0.5">
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span>{lastMileOption.bestHubName}</span>
+                              </div>
+                            </div>
+                            {destinationHubId !== lastMileOption.bestHubId && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDestinationHubId(lastMileOption.bestHubId);
+                                  setShowOtherDestinations(false);
+                                  onShowToast?.(`Đã đổi trạm trả sang ${lastMileOption.bestHubName}`);
+                                }}
+                                className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-[10px] font-mono text-emerald-300 font-bold border border-emerald-500/40 cursor-pointer"
+                              >
+                                Chọn trạm này
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="text-xs text-slate-300 bg-white/[0.03] p-2 rounded-lg border border-white/[0.05] leading-relaxed">
+                            <div className="flex items-center justify-between font-mono text-[11px] text-indigo-300 font-semibold mb-1">
+                              <span>Chặng cuối: ~{lastMileOption.distanceToHubKm} km</span>
+                              <span>
+                                {lastMileOption.isWalkable
+                                  ? `🚶 Đi bộ ~${lastMileOption.walkingMinutes}p hoặc 🏍️ ~${formatVND(lastMileOption.grabBikeVND)}`
+                                  : `🏍️ GrabBike ~${lastMileOption.rideMinutes}p (~${formatVND(lastMileOption.grabBikeVND)})`}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400">
+                              {lastMileOption.destination.note}
+                            </p>
+                          </div>
+
+                          {/* BẢNG TỔNG CHI PHÍ & MỨC TIẾT KIỆM */}
+                          <div className="pt-1.5 border-t border-white/[0.08] flex items-center justify-between">
+                            <div>
+                              <div className="text-[10px] text-slate-400 font-mono uppercase">
+                                Tổng chi phí về tận nhà:
+                              </div>
+                              <div className="text-sm font-black font-mono text-white">
+                                {formatVND(lastMileOption.totalCostVND)}{' '}
+                                <span className="text-[10px] text-slate-400 font-normal">
+                                  ({formatVND(lastMileOption.carmateFareVND)} CarMate + {formatVND(lastMileOption.grabBikeVND)} xe ôm)
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/30">
+                                Tiết kiệm ~{formatVND(lastMileOption.savingsVND)}
+                              </span>
+                              <div className="text-[9px] text-slate-500 mt-0.5">
+                                so với taxi liên tỉnh ~{formatVND(lastMileOption.taxiEstimatedFareVND)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

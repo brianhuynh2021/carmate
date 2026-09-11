@@ -16,3 +16,5 @@ export * from './utils/presence.js';
 export * from './utils/emergencyCallGuard.js';
 export * from './utils/dynamicTariff.js';
 export * from './utils/stanfordFrenet.js';
+export * from './utils/lastMileCalculator.js';
+export * from './utils/hubFeeder.js';
