@@ -188,7 +188,7 @@ export default function Hero({
             Đi chung xe tiện chuyến
           </h1>
           <p className="text-xs sm:text-sm text-[#515154] dark:text-slate-400 font-medium max-w-lg mx-auto">
-            Đường ống tiện chuyến đa phương tiện · Tiết kiệm ~50% so với xe khách · 0đ phí sàn
+            Đi ghép xe tiện chuyến đa phương tiện · Tiết kiệm ~50% so với xe khách · 0đ phí sàn
           </p>
         </div>
 

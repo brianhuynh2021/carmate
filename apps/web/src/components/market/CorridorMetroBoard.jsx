@@ -44,7 +44,7 @@ export default function CorridorMetroBoard({
   return (
     <div className="space-y-8 animate-fade-in pb-12">
       {/* ========================================================================= */}
-      {/* 1. HERO BANNER: NGUYÊN LÝ ĐOÀN TÀU ẢO (ZERO POSTING PARADIGM)              */}
+      {/* 1. HERO BANNER: TUYẾN XE TIỆN CHUYẾN QUỐC LỘ 13                            */}
       {/* ========================================================================= */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-[#0d1322] to-slate-950 text-white p-6 sm:p-10 border border-white/[0.08] shadow-2xl">
         <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#0071e3]/20 blur-3xl pointer-events-none" />
@@ -53,24 +53,24 @@ export default function CorridorMetroBoard({
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>ĐOÀN TÀU ẢO QUỐC LỘ 13 · 0Đ PHÍ SÀN · KHÔNG CẦN ĐĂNG BÀI</span>
+            <span>TUYẾN ĐI GHÉP XE TIỆN CHUYẾN QL13 · BÌNH PHƯỚC ⇄ TP.HCM</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white font-display">
-            Đường Ống Tiện Tuyến <br className="hidden sm:inline" />
+            Tuyến Xe Tiện Chuyến QL13 <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-emerald-400 via-sky-400 to-[#0071e3] bg-clip-text text-transparent">
-              Lăn Bánh Rảnh Tay — Đón Tại Cây Xăng
+              Đi Chung Tiện Đường — Đón Trả Tại Cây Xăng
             </span>
           </h1>
 
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-sans">
-            Triệt tiêu 100% việc gõ bài đăng. <strong>Chủ xe</strong> lên xe chỉ cần bật Chế độ Taplo để tự động nhận khách cách 3.5km. <strong>Người đi cùng</strong> chỉ cần đến cây xăng Petrolimex bấm vào hàng đợi để nhận Mã lên xe 4 số.
+            Không cần đăng bài hay tìm chuyến. <strong>Chủ xe</strong> tiện đường chỉ cần bật Taplo là tự động kết nối người đi cùng phía trước. <strong>Người đi cùng</strong> chỉ cần chọn cây xăng Petrolimex gần nhất để nhận mã đón xe 4 số an toàn.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono text-slate-300">
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              0% Tăng giá giờ cao điểm (Zero Surge)
+              Giá cước cố định · 0% tăng giá cao điểm
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
@@ -78,7 +78,7 @@ export default function CorridorMetroBoard({
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Tấp lề sân cây xăng 60s
+              Đón trả an toàn tại sân cây xăng
             </span>
           </div>
         </div>
@@ -102,21 +102,21 @@ export default function CorridorMetroBoard({
 
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide">
-                Chế Độ Taplo Ô Tô (Cockpit Mode)
+                Chế Độ Taplo Tự Động (Dành Cho Chủ Xe)
               </h2>
               <p className="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
-                Lên xe nổ máy, gạt công tắc nhận khách và gắn điện thoại lên taplo. Hệ thống tự động cảnh báo giọng nói tiếng Việt và nổ chuông khi xe cách trạm 3.5 km.
+                Lên xe nổ máy, bật nhận khách và gắn điện thoại lên giá đỡ. Hệ thống tự động thông báo bằng giọng nói tiếng Việt khi có người đi cùng đang chờ ở trạm cây xăng phía trước.
               </p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.06] space-y-1.5 text-xs text-slate-300">
               <div className="flex items-center justify-between font-mono">
-                <span className="text-slate-400">Thu nhập bù xăng 2 ghế:</span>
-                <span className="text-emerald-400 font-bold">+198.000đ - +234.000đ</span>
+                <span className="text-slate-400">Hỗ trợ tiền xăng (2 ghế):</span>
+                <span className="text-emerald-400 font-bold">+198.000đ — +234.000đ</span>
               </div>
               <div className="flex items-center justify-between font-mono">
-                <span className="text-slate-400">Thời gian tấp lề đón:</span>
-                <span className="text-white font-bold">Đúng 60 giây tại cây xăng</span>
+                <span className="text-slate-400">Điểm hẹn đón khách:</span>
+                <span className="text-white font-bold">Sân cây xăng Petrolimex dọc đường</span>
               </div>
             </div>
           </div>
@@ -127,7 +127,7 @@ export default function CorridorMetroBoard({
             className="w-full h-15 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-base uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(16,185,129,0.3)] cursor-pointer transition-all"
           >
             <Radio className="w-5 h-5 animate-pulse" />
-            <span>BẬT CHẾ ĐỘ TAPLO / COCKPIT</span>
+            <span>BẬT TAPLO NHẬN KHÁCH TIỆN ĐƯỜNG</span>
           </button>
         </div>
 
@@ -145,10 +145,10 @@ export default function CorridorMetroBoard({
 
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-wide">
-                Đón Xe Tại Trạm Petrolimex
+                Đón Xe Tại Cây Xăng Petrolimex
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                Đến cây xăng Petrolimex gần nhất trên QL13 hoặc chọn trạm trên sơ đồ. Bấm vào hàng đợi là có ngay Mã lên xe 4 chữ số, xe ghé đón sau 3-5 phút.
+                Đến cây xăng Petrolimex gần nhất hoặc chọn trạm trên bản đồ. Bấm nhận mã đón xe 4 số để xe tiện đường ghé đón an toàn sau vài phút.
               </p>
             </div>
 
@@ -158,8 +158,8 @@ export default function CorridorMetroBoard({
                 <span className="text-[#0071e3] font-bold">110.000đ (Cố định)</span>
               </div>
               <div className="flex items-center justify-between font-mono">
-                <span className="text-slate-500 dark:text-slate-400">Cách thanh toán:</span>
-                <span className="text-slate-900 dark:text-white font-bold">Lên xe đọc mã mới gửi tiền</span>
+                <span className="text-slate-500 dark:text-slate-400">Thanh toán an toàn:</span>
+                <span className="text-slate-900 dark:text-white font-bold">Lên đúng xe, đọc mã mới gửi tiền</span>
               </div>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function CorridorMetroBoard({
             className="w-full h-15 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white font-black text-base uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-[0_4px_20px_rgba(0,113,227,0.3)] cursor-pointer transition-all"
           >
             <Fuel className="w-5 h-5 text-emerald-300" />
-            <span>VÀO TRẠM ĐÓN PETROLIMEX GẦN NHẤT</span>
+            <span>CHỌN CÂY XĂNG ĐÓN XE GẦN NHẤT</span>
           </button>
         </div>
       </section>
@@ -182,14 +182,14 @@ export default function CorridorMetroBoard({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#0071e3]">
-              BẢNG CƯỚC METRO TARIFF QUỐC LỘ 13
+              BẢNG GIÁ ĐI GHÉP CỐ ĐỊNH QUỐC LỘ 13
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
-              Cước Phí Phân Đoạn Cố Định · Không Tăng Giá Cao Điểm
+              Chi Phí Cố Định Từng Chặng · Không Tăng Giá Giờ Cao Điểm
             </h2>
           </div>
           <span className="self-start sm:self-auto px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-mono font-bold border border-emerald-200 dark:border-emerald-800">
-            no_surge: true (0% Surge)
+            Cam kết 0% tăng giá cao điểm
           </span>
         </div>
 
@@ -272,25 +272,26 @@ export default function CorridorMetroBoard({
       </section>
 
       {/* ========================================================================= */}
-      {/* 4. SƠ ĐỒ TRẠM ĐÓN ẢO DỌC TUYẾN (INTERACTIVE METRO TUBE LINE)               */}
+      {/* ========================================================================= */}
+      {/* 4. SƠ ĐỒ ĐIỂM ĐÓN CÂY XĂNG DỌC TUYẾN QL13                                   */}
       {/* ========================================================================= */}
       <section className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-white/[0.08] shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
           <div>
             <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono font-bold uppercase">
               <Fuel className="w-4 h-4" />
-              <span>SƠ ĐỒ TRẠM DỌC TRỤC QUỐC LỘ 13</span>
+              <span>DANH SÁCH ĐIỂM ĐÓN AN TOÀN DỌC TUYẾN QL13</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
-              Các Ga Dừng Cây Xăng Petrolimex
+              Hệ Thống Trạm Dừng Cây Xăng Petrolimex
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Nhấp vào trạm bạn đang đứng để vào hàng đợi và nhận Thẻ lên xe (Boarding Pass Live)
+              Chọn cây xăng bạn đang đứng để vào hàng đợi và nhận Thẻ đón xe trực tiếp
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-slate-400">Tần suất lưu thông:</span>
+            <span className="text-xs font-mono text-slate-400">Thời gian xe qua lại:</span>
             <span className="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
               ~3-5 phút / xe
             </span>
@@ -348,7 +349,7 @@ export default function CorridorMetroBoard({
                   </div>
                 ) : (
                   <span className="text-xs font-mono text-sky-400 font-bold px-3 py-1 rounded-xl bg-sky-500/10 border border-sky-500/20">
-                    Ga Cuối
+                    Trạm Cuối (TP.HCM)
                   </span>
                 )}
 
@@ -367,18 +368,18 @@ export default function CorridorMetroBoard({
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. ĐA DẠNG PHƯƠNG TIỆN THAM GIA ĐƯỜNG ỐNG (MULTI-VEHICLE PIPELINE)         */}
+      {/* 5. ĐA DẠNG PHƯƠNG TIỆN THAM GIA TIỆN TUYẾN                                 */}
       {/* ========================================================================= */}
       <section className="bg-[#f5f5f7] dark:bg-slate-850 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-4">
         <div className="space-y-1">
           <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500">
-            HẠ TẦNG LƯU THÔNG TOÀN DIỆN
+            KẾT NỐI ĐA DẠNG PHƯƠNG TIỆN
           </span>
           <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-            Mọi Loại Phương Tiện Đều Tham Gia Được Vào Đường Ống
+            Mọi Xe Tiện Chuyến Đều Có Thể Tham Gia Đi Ghép
           </h2>
           <p className="text-xs text-slate-600 dark:text-slate-400">
-            Tận dụng triệt để mọi khoảng trống lăn bánh (ghế xe, thùng xe, khoang cốp) để chi phí chia sẻ rẻ nhất cho bà con:
+            Tận dụng ghế trống và khoang xe để cùng chia sẻ tiền xăng, mang lại mức chi phí tiết kiệm nhất cho bà con:
           </p>
         </div>
 

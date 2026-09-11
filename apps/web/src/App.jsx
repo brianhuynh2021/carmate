@@ -1027,7 +1027,7 @@ export default function App() {
       />
 
       <main className="flex-1 pb-24 md:pb-0">
-        {/* ── Đường Ống Tiện Tuyến Đoàn Tàu Ảo (Zero Posting Paradigm) ── */}
+        {/* ── Tuyến Xe Tiện Chuyến Quốc Lộ 13 (Zero Posting Paradigm) ── */}
         {activeTab === 'market' && (
           <div className={`${container} py-5 sm:py-8`}>
             <CorridorMetroBoard
