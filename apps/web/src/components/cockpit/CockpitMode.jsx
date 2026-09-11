@@ -10,7 +10,8 @@ import {
   Radio,
   ChevronLeft,
   ShieldCheck,
-  Scale
+  Scale,
+  Car
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { api } from '../../api/client.js';
@@ -23,15 +24,31 @@ export default function CockpitMode({
   onBack,
   onShowToast
 }) {
-  // Trạng thái kiểm duyệt tài khoản chủ xe (Driver Whitelist Guard)
-  const [isDemoApproved, setIsDemoApproved] = useState(false);
-  const isDriverVerified = Boolean(
-    isDemoApproved ||
-    currentUser?.isDriverVerified ||
-    (currentUser?.isCccdVerified && currentUser?.isGplxVerified) ||
-    currentUser?.role === 'driver' ||
-    currentUser?.role === 'admin'
-  );
+  // Cấu hình xe chia sẻ (Lấy từ Garage hoặc bộ nhớ máy, không bắt chính chủ)
+  const [vehicle, setVehicle] = useState(() => {
+    try {
+      const saved = localStorage.getItem('carmate_cockpit_vehicle');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    if (currentUser?.vehicle?.plate) {
+      return {
+        plate: currentUser.vehicle.plate,
+        model: `${currentUser.vehicle.brand || ''} ${currentUser.vehicle.model || ''} - Màu ${currentUser.vehicle.color || 'Trắng'}`.trim(),
+        seats: currentUser.vehicle.capacity ? Math.min(4, currentUser.vehicle.capacity - 1) : 2
+      };
+    }
+    return null;
+  });
+
+  // State form nhập liệu nhanh 10 giây nếu chưa có xe
+  const [inputPlate, setInputPlate] = useState(() => currentUser?.vehicle?.plate || '');
+  const [inputModel, setInputModel] = useState(() => {
+    if (currentUser?.vehicle?.brand || currentUser?.vehicle?.model) {
+      return `${currentUser.vehicle.brand || ''} ${currentUser.vehicle.model || ''} - Màu ${currentUser.vehicle.color || 'Trắng'}`.trim();
+    }
+    return '';
+  });
+  const [inputSeats, setInputSeats] = useState(2);
 
   // Cảm biến gia tốc phần cứng chống giả lập GPS (Anti-Spoofing Hardware Sensor)
   const [hasHardwareMotion, setHasHardwareMotion] = useState(false);
@@ -283,8 +300,31 @@ export default function CockpitMode({
     }
   };
 
-  // MÀN HÌNH KHÓA CHẶN DUYỆT HỒ SƠ CHỦ XE (DRIVER WHITELIST GUARD — CỬA ĐÓNG THEN CÀI)
-  if (!isDriverVerified) {
+  // LƯU CẤU HÌNH XE NHANH 10S (MVP KHÔNG CẦN CHÍNH CHỦ, KHÔNG CẦN DUYỆT GIẤY TỜ)
+  const handleSaveQuickVehicle = (e) => {
+    e?.preventDefault();
+    const cleanPlate = inputPlate.trim().toUpperCase();
+    const cleanModel = inputModel.trim();
+    if (!cleanPlate || !cleanModel) {
+      onShowToast?.('Vui lòng nhập biển số xe và hiệu xe');
+      return;
+    }
+    const newVehicle = {
+      plate: cleanPlate,
+      model: cleanModel,
+      seats: inputSeats
+    };
+    try {
+      localStorage.setItem('carmate_cockpit_vehicle', JSON.stringify(newVehicle));
+    } catch {}
+    setVehicle(newVehicle);
+    setSeatsAvailable(inputSeats);
+    onShowToast?.('Đã lưu cấu hình xe! Chế độ Taplo sẵn sàng đón khách.');
+    speakText('Xe đã sẵn sàng. Chúc bạn có một hành trình an toàn!');
+  };
+
+  // NẾU CHƯA CÓ CẤU HÌNH XE TRONG GARAGE -> BẢNG NHẬP LIỆU 10 GIÂY ĐỂ NGƯỜI ĐI CÙNG NHẬN DIỆN
+  if (!vehicle) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between select-none p-4 sm:p-6 font-sans">
         <header className="flex items-center justify-between border-b border-white/[0.08] pb-3 mb-4 max-w-lg mx-auto w-full">
@@ -297,79 +337,104 @@ export default function CockpitMode({
             <ChevronLeft className="w-5 h-5 text-slate-300" />
           </button>
           <div className="text-right">
-            <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-mono font-bold border border-amber-500/30">
-              PENDING_VERIFICATION
+            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/30">
+              SETUP 10 GIÂY
             </span>
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full space-y-5 my-auto animate-fade-in">
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 rounded-3xl bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-xl">
-              <ShieldCheck className="w-8 h-8" />
+        <main className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-5 my-auto animate-fade-in">
+          <div className="text-center space-y-1.5">
+            <div className="w-14 h-14 rounded-3xl bg-emerald-500/15 border-2 border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-xl">
+              <Car className="w-7 h-7" />
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide">
-              Xác Thực Chủ Xe Chính Chủ
+              Thông Tin Xe Chia Sẻ
             </h1>
-            <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
-              Để bảo vệ an toàn 100% cho hành khách và ngăn chặn cuốc ảo, mọi chủ xe đều phải được Ban Quản Trị đối soát hồ sơ trước khi kích hoạt Chế độ Taplo.
+            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+              Để người đi cùng nhận diện đúng xe tại các trạm đón dọc Quốc lộ 13.
             </p>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-3xl bg-white/[0.04] border border-white/[0.08] space-y-3">
-            <span className="text-xs font-mono font-bold uppercase text-amber-300 block">
-              3 HỒ SƠ TỐI THIỂU CẦN ĐỐI SOÁT:
-            </span>
-            <div className="space-y-2 text-xs font-mono text-slate-300">
-              <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                <span className="text-base">🪪</span>
-                <div>
-                  <div className="font-bold text-white">1. Căn cước công dân (CCCD)</div>
-                  <div className="text-[11px] text-slate-400">CCCD gắn chip chính chủ còn hạn</div>
+          <form onSubmit={handleSaveQuickVehicle} className="p-5 sm:p-6 rounded-3xl bg-white/[0.04] border border-white/[0.08] space-y-4 shadow-xl">
+            {/* 1. Biển số xe */}
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>1. Biển số xe:</span>
+                <span className="text-[10px] text-slate-500 lowercase font-normal">VD: 93A-123.45, 61K-892.41</span>
+              </label>
+              <input
+                type="text"
+                value={inputPlate}
+                onChange={(e) => setInputPlate(e.target.value.toUpperCase())}
+                placeholder="VD: 93A - 123.45"
+                maxLength={14}
+                required
+                className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-sm font-mono font-bold tracking-wider text-white placeholder-slate-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 outline-none uppercase transition-all"
+              />
+            </div>
+
+            {/* 2. Hiệu xe & Màu sắc */}
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>2. Hiệu xe & Màu sắc:</span>
+                <span className="text-[10px] text-slate-500 lowercase font-normal">VD: Xpander Trắng, Vios Đen</span>
+              </label>
+              <input
+                type="text"
+                value={inputModel}
+                onChange={(e) => setInputModel(e.target.value)}
+                placeholder="VD: Xpander - Màu Trắng"
+                required
+                className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 outline-none transition-all"
+              />
+            </div>
+
+            {/* 3. Số ghế chia sẻ tối đa */}
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-2 flex items-center justify-between">
+                <span>3. Số ghế chia sẻ tối đa:</span>
+                <span className="text-[10px] text-emerald-400 font-mono font-bold">{inputSeats} ghế trống</span>
+              </label>
+              <div className="flex items-center justify-between p-2 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setInputSeats((prev) => Math.max(1, prev - 1))}
+                  className="w-12 h-12 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] active:scale-95 text-lg font-mono font-bold text-white flex items-center justify-center transition-all cursor-pointer"
+                >
+                  -
+                </button>
+                <div className="text-center">
+                  <span className="text-2xl font-black font-mono text-emerald-400">{inputSeats}</span>
+                  <span className="text-[11px] text-slate-400 block font-mono">ghế khách</span>
                 </div>
-              </div>
-              <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                <span className="text-base">🚗</span>
-                <div>
-                  <div className="font-bold text-white">2. Giấy phép lái xe (GPLX)</div>
-                  <div className="text-[11px] text-slate-400">Hạng B2 trở lên, không có tiền sử vi phạm nặng</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                <span className="text-base">📋</span>
-                <div>
-                  <div className="font-bold text-white">3. Cà-vẹt xe &amp; Đăng kiểm</div>
-                  <div className="text-[11px] text-slate-400">Biển số Bình Phước (93) / Bình Dương (61) / TP.HCM (51)</div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setInputSeats((prev) => Math.min(6, prev + 1))}
+                  className="w-12 h-12 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] active:scale-95 text-lg font-mono font-bold text-white flex items-center justify-center transition-all cursor-pointer"
+                >
+                  +
+                </button>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-2 pt-1">
-            <a
-              href="https://zalo.me/"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full h-14 rounded-2xl bg-[#0068ff] hover:bg-[#0058df] active:scale-[0.99] text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg"
-            >
-              <span>Gửi Hồ Sơ Qua Zalo Ban Quản Trị ➔</span>
-            </a>
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsDemoApproved(true);
-                onShowToast?.('Đã kích hoạt chế độ Taplo thử nghiệm (Dev Demo)');
-              }}
-              className="w-full h-11 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-mono text-slate-400 hover:text-emerald-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span>⚡ Kích hoạt chế độ kiểm thử nhanh (Dev Demo)</span>
-            </button>
-          </div>
+            {/* Nút bắt đầu chia sẻ */}
+            <div className="pt-2 space-y-2">
+              <button
+                type="submit"
+                className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
+              >
+                <span>BẮT ĐẦU CHIA SẺ GHẾ ➔</span>
+              </button>
+              <p className="text-[11px] text-center text-slate-400 font-sans">
+                Cam kết lái xe an toàn & đúng lộ trình Quốc lộ 13
+              </p>
+            </div>
+          </form>
         </main>
 
         <footer className="text-center text-[11px] font-mono text-slate-500 max-w-lg mx-auto w-full pt-4">
-          CarMate Platform · Kiểm duyệt 100% hồ sơ trước khi lăn bánh
+          CarMate Platform · Không thu thập giấy tờ phiền hà · Khởi hành ngay
         </footer>
       </div>
     );
@@ -395,8 +460,18 @@ export default function CockpitMode({
                 COCKPIT MODE · {initialCorridor.toUpperCase()}
               </h1>
             </div>
-            <p className="text-xs text-slate-400 font-medium">
-              TÂN KHAI ──&gt; TP.HCM (HÀNG XANH)
+            <p className="text-xs text-slate-400 font-medium flex items-center gap-2">
+              <span>TÂN KHAI ──&gt; TP.HCM (HÀNG XANH)</span>
+              <span>•</span>
+              <span className="text-emerald-400 font-mono font-bold">{vehicle?.plate}</span>
+              <button
+                type="button"
+                onClick={() => setVehicle(null)}
+                className="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
+                title="Cấu hình lại xe"
+              >
+                [Đổi xe]
+              </button>
             </p>
           </div>
         </div>
@@ -784,8 +859,8 @@ export default function CockpitMode({
           trip={{
             id: tripId,
             author: currentUser?.name || 'Chủ xe cá nhân',
-            licensePlate: currentUser?.licensePlate || currentUser?.carInfo?.plate || '93A-385.XX (Biển trắng cá nhân)',
-            carModel: currentUser?.carModel || currentUser?.carInfo?.vehicleModel || 'Xe gia đình cá nhân',
+            licensePlate: vehicle?.plate || currentUser?.licensePlate || currentUser?.carInfo?.plate || '93A-123.45',
+            carModel: vehicle?.model || currentUser?.carModel || currentUser?.carInfo?.vehicleModel || 'Xe gia đình cá nhân',
             from: 'Tân Khai (Bình Phước)',
             to: 'Hàng Xanh (TP. Hồ Chí Minh)',
             timeSlotLabel: 'Hôm nay (Tiện chuyến)'
