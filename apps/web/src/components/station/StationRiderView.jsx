@@ -19,7 +19,8 @@ import {
   ExternalLink,
   Lightbulb,
   ShieldAlert,
-  Scale
+  Scale,
+  MessageSquare
 } from 'lucide-react';
 import {
   formatVND,
@@ -36,6 +37,7 @@ import {
 import { api, setStoredAuthToken } from '../../api/client.js';
 import StationRequestModal from '../modals/StationRequestModal.jsx';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
+import StationContactModal from '../modals/StationContactModal.jsx';
 
 export default function StationRiderView({
   hubId = 'hub_ql13_tan_khai',
@@ -212,6 +214,7 @@ export default function StationRiderView({
   const [boardingPass, setBoardingPass] = useState(null);
   const [copiedPin, setCopiedPin] = useState(false);
   const [showLegalShield, setShowLegalShield] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   // Trạng thái Giả lập Chặng cuối Nội đô (Last-Mile Transit Simulator - Zero External API)
   const [selectedLastMileDestId, setSelectedLastMileDestId] = useState('cho_ba_chieu');
@@ -1314,7 +1317,7 @@ export default function StationRiderView({
                 <span>🛡️ Thẻ Pháp Lý Hành Trình (Điều 3 BLDS 2015)</span>
               </button>
 
-              {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ CHAT ZALO ] */}
+              {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <button
                   type="button"
@@ -1323,15 +1326,14 @@ export default function StationRiderView({
                 >
                   <span>Huỷ vé</span>
                 </button>
-                <a
-                  href={boardingPass.carInfo?.phone ? `tel:${boardingPass.carInfo.phone}` : `https://zalo.me/`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="h-14 rounded-2xl bg-[#0068ff]/20 hover:bg-[#0068ff]/30 border border-[#0068ff]/40 text-xs font-mono font-bold text-sky-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
+                <button
+                  type="button"
+                  onClick={() => setShowContactModal(true)}
+                  className="h-14 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-mono font-bold text-sky-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shadow-[0_0_20px_rgba(14,165,233,0.15)]"
                 >
-                  <Phone className="w-4 h-4 text-sky-400" />
-                  <span>Chat Zalo / Gọi</span>
-                </a>
+                  <MessageSquare className="w-4 h-4 text-sky-400" />
+                  <span>Liên Lạc An Toàn</span>
+                </button>
               </div>
             </div>
           );
@@ -1358,6 +1360,18 @@ export default function StationRiderView({
             fuelSurcharge: boardingPass?.fuelSurcharge || estimatedFare
           }}
           userRole="rider"
+        />
+      )}
+
+      {/* MODAL LIÊN LẠC AN TOÀN NỘI BỘ TẠI TRẠM (ZERO PII EXPOSURE) */}
+      {showContactModal && (
+        <StationContactModal
+          isOpen={showContactModal}
+          onClose={() => setShowContactModal(false)}
+          boardingPass={boardingPass}
+          currentHub={currentHub}
+          currentUser={currentUser}
+          onShowToast={onShowToast}
         />
       )}
 
