@@ -222,6 +222,35 @@ export default function CockpitMode({
     speakText(`Trạm Tân Khai có ${offer.riderCount} khách đi Hàng Xanh, bù xăng ${payoutText}`);
   };
 
+  // 6. QUÉT TỰ ĐỘNG KHÁCH ĐANG CHỜ TẠI TRẠM (AUTO-SCANNING SENTINEL)
+  useEffect(() => {
+    if (cockpitState !== 'STANDBY' || !isReceivingGuests) return;
+    const interval = setInterval(() => {
+      try {
+        const savedPassRaw = localStorage.getItem('carmate_active_station_pass');
+        if (savedPassRaw) {
+          const parsed = JSON.parse(savedPassRaw);
+          if (parsed?.pass && parsed?.pass?.status === 'ARRIVING' && !activeOffer) {
+            triggerApproachRadar({
+              intentId: parsed.pass.intentId,
+              stationId: parsed.hubId || 'hub_ql13_tan_khai',
+              stationName: parsed.pass.hubName || 'Cây xăng Petrolimex Tân Khai',
+              stationShortName: parsed.pass.hubName || 'Petrolimex Tân Khai',
+              distanceKm: 3.2,
+              ttaSeconds: 140,
+              riderCount: parsed.pass.seatsNeeded || 1,
+              destinationName: parsed.pass.destinationName || 'Hàng Xanh',
+              fuelSurcharge: parsed.pass.fuelSurcharge || 250000,
+              driverPayout: parsed.pass.driverPayout || 225000,
+              pin: parsed.pass.pin || '8842'
+            });
+          }
+        }
+      } catch {}
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [cockpitState, isReceivingGuests, activeOffer]);
+
   // CHỦ XE BẤM [ĐỒNG Ý ĐÓN] (D2 ACCEPT)
   const handleAcceptOffer = async () => {
     if (!activeOffer) return;
@@ -606,6 +635,27 @@ export default function CockpitMode({
                   <span className="text-[10px] text-slate-400 font-mono block">km/h</span>
                 </div>
               </div>
+            </div>
+
+            {/* HỘP KÍCH HOẠT MÔ PHỎNG TIẾP CẬN TRẠM THỰC CHIẾN */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+              <div className="text-left space-y-0.5">
+                <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 font-mono uppercase">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Kích hoạt radar đón khách tại trạm:</span>
+                </span>
+                <p className="text-[11.5px] text-slate-300">
+                  Bấm nút để mô phỏng xe đang tiến vào trạm Petrolimex Tân Khai (cách 3.4km) và phát hiện khách chờ.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => triggerApproachRadar()}
+                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer shrink-0 transition-all"
+              >
+                <Zap className="w-4 h-4 fill-slate-950" />
+                <span>NỔ RADAR ĐÓN KHÁCH (3.5 KM)</span>
+              </button>
             </div>
           </div>
         )}
