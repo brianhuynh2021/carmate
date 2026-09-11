@@ -23,7 +23,14 @@ import {
   MessageSquare,
   Bus,
   Award,
-  AlertTriangle
+  AlertTriangle,
+  Clock,
+  Ban,
+  PhoneCall,
+  LifeBuoy,
+  Cigarette,
+  DollarSign,
+  UserX
 } from 'lucide-react';
 import {
   formatVND,
@@ -35,7 +42,9 @@ import {
   calculateDistanceKm,
   calculateLastMileOption,
   POPULAR_LAST_MILE_DESTINATIONS,
-  getHubLiquidityStatus
+  getHubLiquidityStatus,
+  FIXED_CORRIDOR_COACH_SCHEDULES,
+  UNHAPPY_CASE_CODES
 } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
 import StationRequestModal from '../modals/StationRequestModal.jsx';
@@ -278,6 +287,15 @@ export default function StationRiderView({
   const [copiedPin, setCopiedPin] = useState(false);
   const [showLegalShield, setShowLegalShield] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+
+  // Unhappy Cases & Safety Protocols (Chủ xe trễ hẹn > 5 phút, Báo cáo vi phạm văn hóa, Phao cứu sinh xe khách)
+  const [showCultureViolationModal, setShowCultureViolationModal] = useState(false);
+  const [cultureViolationType, setCultureViolationType] = useState('SMOKING');
+  const [cultureViolationNote, setCultureViolationNote] = useState('');
+  const [cultureSubmitting, setCultureSubmitting] = useState(false);
+  const [showCoachLifebuoyModal, setShowCoachLifebuoyModal] = useState(false);
+  const [driverLateDelayMinutes, setDriverLateDelayMinutes] = useState(0);
+  const [isGraceCancelLoading, setIsGraceCancelLoading] = useState(false);
 
   // Trạng thái Giả lập Chặng cuối Nội đô (Last-Mile Transit Simulator - Zero External API)
   const [selectedLastMileDestId, setSelectedLastMileDestId] = useState('cho_ba_chieu');
@@ -874,6 +892,53 @@ export default function StationRiderView({
     setViewStep('CHECKIN');
     setBoardingPass(null);
     onShowToast?.('Đã rời khỏi hàng đợi.');
+  };
+
+  const handleGraceCancel = async () => {
+    setIsGraceCancelLoading(true);
+    try {
+      await api.riderCancelGrace({
+        intentId: boardingPass?.intentId,
+        driverPhone: boardingPass?.carInfo?.driverPhone,
+        riderPhone: currentUser?.phone,
+        delayMinutes: Math.max(5, driverLateDelayMinutes)
+      });
+      try {
+        localStorage.removeItem('carmate_active_station_pass');
+      } catch {}
+      setBoardingPass(null);
+      setViewStep('CHECKIN');
+      setShowCoachLifebuoyModal(true);
+      onShowToast?.('Đã hủy chuyến miễn phạt (0đ). Điểm tín nhiệm bảo toàn 100%.');
+    } catch (err) {
+      console.error('Grace cancel error:', err);
+      onShowToast?.(err.message || 'Lỗi khi thực hiện hủy vé miễn phạt');
+    } finally {
+      setIsGraceCancelLoading(false);
+    }
+  };
+
+  const handleReportCultureViolation = async (e) => {
+    e?.preventDefault?.();
+    setCultureSubmitting(true);
+    try {
+      const res = await api.reportRiderCultureViolation({
+        bookingId: boardingPass?.intentId,
+        tripId: boardingPass?.matchedTripId,
+        driverPhone: boardingPass?.carInfo?.driverPhone,
+        reporterPhone: currentUser?.phone,
+        violationType: cultureViolationType,
+        note: cultureViolationNote
+      });
+      setShowCultureViolationModal(false);
+      setCultureViolationNote('');
+      onShowToast?.(res.message || 'Đã kích hoạt Cơ chế Grim Trigger: Đình chỉ Chủ xe 30 ngày.');
+    } catch (err) {
+      console.error('Culture violation report error:', err);
+      onShowToast?.(err.message || 'Lỗi khi gửi báo cáo');
+    } finally {
+      setCultureSubmitting(false);
+    }
   };
 
   return (
@@ -1670,6 +1735,51 @@ export default function StationRiderView({
                     <span>⚡ Mô phỏng Lên xe (En-Route &amp; VietQR)</span>
                   </button>
 
+                  {/* 5.8 BẢO HỘ GIỜ GIẤC: CHỦ XE TRỄ > 5 PHÚT -> HỦY KHÔNG PHẠT & CỨU SINH XE KHÁCH */}
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-mono font-bold uppercase text-amber-300 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Bảo hộ giờ giấc lăn bánh (0 bùng chuyến)</span>
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 font-bold">
+                        Trễ: {driverLateDelayMinutes} phút
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Nếu Chủ xe trễ hẹn quá 5 phút tại trạm đón, bạn có quyền <strong>Hủy Miễn Phạt (0đ)</strong> để đón xe khách QL13, điểm tín nhiệm bảo toàn 100%.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDriverLateDelayMinutes((m) => (m >= 5 ? 0 : 6))}
+                        className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-mono text-slate-300 transition-all cursor-pointer"
+                      >
+                        {driverLateDelayMinutes >= 5 ? '↺ Đặt lại trễ' : '⏱️ Giả lập trễ > 5p'}
+                      </button>
+                      {driverLateDelayMinutes >= 5 ? (
+                        <button
+                          type="button"
+                          onClick={handleGraceCancel}
+                          disabled={isGraceCancelLoading}
+                          className="flex-1 h-9 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-[11px] font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 animate-pulse"
+                        >
+                          <Ban className="w-3.5 h-3.5 text-rose-400" />
+                          <span>HỦY KHÔNG PHẠT (CHỦ XE TRỄ &gt; 5P)</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowCoachLifebuoyModal(true)}
+                          className="flex-1 h-9 px-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-[11px] font-mono font-bold text-indigo-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Bus className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Lịch Xe Khách QL13 Cứu Sinh</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <button
@@ -1686,6 +1796,18 @@ export default function StationRiderView({
                     >
                       <MessageSquare className="w-4 h-4 text-sky-400" />
                       <span>Liên Lạc An Toàn</span>
+                    </button>
+                  </div>
+
+                  {/* NÚT BÁO CÁO VI PHẠM VĂN HÓA (GRIM TRIGGER 30 NGÀY) */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowCultureViolationModal(true)}
+                      className="w-full py-2.5 px-3 rounded-2xl bg-white/[0.03] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/30 text-[11px] font-mono font-bold text-slate-400 hover:text-rose-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-400" />
+                      <span>Báo Cáo Vi Phạm Văn Hóa (Đình chỉ Chủ xe 30 ngày)</span>
                     </button>
                   </div>
                 </div>
@@ -2045,6 +2167,173 @@ export default function StationRiderView({
             onShowToast?.('🌟 Cảm ơn bạn! Đã gửi đánh giá chuyến đi cho chủ xe.');
           }}
         />
+      )}
+
+      {/* 🚨 MODAL BÁO CÁO VI PHẠM VĂN HÓA (GRIM TRIGGER 30 NGÀY) */}
+      {showCultureViolationModal && (
+        <Modal
+          onClose={() => setShowCultureViolationModal(false)}
+          size="md"
+          icon={ShieldAlert}
+          iconTone="danger"
+          title="Báo Cáo Vi Phạm Văn Hóa Chuyến Đi"
+          subtitle="Kích hoạt Cơ chế Trừng phạt Grim Trigger (Đình chỉ Chủ xe 30 ngày)"
+          footer={
+            <div className="flex items-center justify-between gap-3 w-full">
+              <Button variant="outline" onClick={() => setShowCultureViolationModal(false)}>
+                Đóng lại
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleReportCultureViolation}
+                disabled={cultureSubmitting}
+                className="font-bold"
+              >
+                {cultureSubmitting ? 'Đang kích hoạt...' : 'Xác Nhận Thi Hành Grim Trigger'}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
+            <p className="text-xs text-slate-400">
+              Chủ xe: <strong>{boardingPass?.carInfo?.driverName || 'Chủ xe'}</strong> ({boardingPass?.carInfo?.plate || '93A-123.45'})
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold font-mono uppercase text-slate-400 block">
+                Hành vi vi phạm cam kết văn hóa CarMate:
+              </label>
+
+              {[
+                {
+                  id: 'SMOKING',
+                  icon: Cigarette,
+                  title: 'Hút thuốc lá / Vape trong xe',
+                  desc: 'Chủ xe hút thuốc hoặc để người khác hút thuốc gây ám mùi không gian kín.'
+                },
+                {
+                  id: 'PICKUP_SOLICITING',
+                  icon: UserX,
+                  title: 'Bắt khách dù / vẫy khách ngoài app',
+                  desc: 'Dừng đỗ bắt thêm khách lạ dọc đường ngoài thỏa thuận nền tảng.'
+                },
+                {
+                  id: 'PRICE_GOUGING',
+                  icon: DollarSign,
+                  title: 'Vòi vĩnh tăng giá / Đòi thêm tiền',
+                  desc: 'Yêu cầu phụ thu bất hợp lý ngoài định mức chi phí chia sẻ Shapley.'
+                }
+              ].map((opt) => {
+                const IconComponent = opt.icon;
+                const isSelected = cultureViolationType === opt.id;
+                return (
+                  <div
+                    key={opt.id}
+                    onClick={() => setCultureViolationType(opt.id)}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
+                      isSelected
+                        ? 'bg-rose-500/15 border-rose-500/50 text-white'
+                        : 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] text-slate-300'
+                    }`}
+                  >
+                    <IconComponent className={`w-5 h-5 mt-0.5 shrink-0 ${isSelected ? 'text-rose-400' : 'text-slate-400'}`} />
+                    <div className="space-y-0.5 flex-1">
+                      <div className="text-xs font-bold">{opt.title}</div>
+                      <div className="text-[11px] text-slate-400">{opt.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-mono text-slate-400 block">
+                Ghi chú thêm (tùy chọn):
+              </label>
+              <textarea
+                value={cultureViolationNote}
+                onChange={(e) => setCultureViolationNote(e.target.value)}
+                placeholder="Ví dụ: Vừa mở cửa xe đã nồng nặc mùi thuốc lá..."
+                className="w-full h-18 p-3 rounded-xl bg-white/[0.04] border border-white/[0.1] text-xs text-white placeholder-slate-500 outline-none resize-none"
+              />
+            </div>
+
+            <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.08] text-[11px] text-slate-400 leading-relaxed">
+              ⚖️ <strong>Cơ sở Toán học & Kinh tế:</strong> CarMate áp dụng chiến lược <em>Grim Trigger</em> (Robert Aumann - Nobel Kinh tế). Mọi hành vi phá vỡ cam kết văn hóa đều dẫn đến việc đình chỉ vĩnh viễn quyền lợi tương lai của Chủ xe trong 30 ngày.
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 🚌 MODAL PHAO CỨU SINH: LỊCH XE KHÁCH QL13 DỰ PHÒNG */}
+      {showCoachLifebuoyModal && (
+        <Modal
+          onClose={() => setShowCoachLifebuoyModal(false)}
+          size="lg"
+          icon={Bus}
+          iconTone="primary"
+          title="Phao Cứu Sinh: Xe Khách Tuyến Cố Định QL13"
+          subtitle="Không để bạn lỡ giờ làm việc • Đón xe an toàn ngay mép cổng cây xăng"
+          footer={
+            <div className="flex items-center justify-end w-full">
+              <Button variant="outline" onClick={() => setShowCoachLifebuoyModal(false)}>
+                Đóng lại
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
+            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300 space-y-1">
+              <strong>⛽ Vị trí đón xe hiện tại: {currentHub.name} (Mặt tiền QL13)</strong>
+              <p className="text-slate-300">
+                Các tuyến xe khách bên dưới chạy liên tục theo biểu đồ cố định. Bạn chỉ cần bước ra cổng cây xăng vẫy tay hoặc bấm gọi hotline trước 10 phút.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {FIXED_CORRIDOR_COACH_SCHEDULES.map((bus) => (
+                <div
+                  key={bus.id}
+                  className="p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-emerald-500/40 transition-all space-y-2 text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono text-xs font-black">
+                        {bus.pickupTime}
+                      </span>
+                      <h4 className="text-xs font-bold text-white">{bus.operator}</h4>
+                    </div>
+                    <span className="text-xs font-mono font-black text-amber-400">
+                      {formatVND(bus.ticketPrice)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300 font-mono">
+                    <div>• Đón: {bus.departureStation}</div>
+                    <div>• Đến: {bus.destinationStation}</div>
+                    <div>• Tần suất: {bus.frequency}</div>
+                    <div>• Dự kiến tới: {bus.estimatedArrival}</div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 italic">
+                    💡 {bus.notes}
+                  </p>
+
+                  <div className="pt-1 flex items-center justify-between">
+                    <a
+                      href={`tel:${bus.hotline.replace(/\s+/g, '')}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-mono font-bold text-emerald-300 transition-all"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Gọi Hotline: {bus.hotline}</span>
+                    </a>
+                    <span className="text-[10px] font-mono text-slate-500">Đón dọc QL13</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* FOOTER BẢO CHỨNG */}

@@ -6,6 +6,8 @@ import {
   driverAcceptOffer,
   driverRejectOffer,
   driverVerifyPin,
+  cancelRiderIntent,
+  getActiveCockpitSessions,
   resetAllStationData
 } from '../services/stationQueueService.js';
 import {
@@ -19,7 +21,15 @@ import {
   permabanUser
 } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
-import { cleanPhoneNumber, evaluateIncidentSanctions, UNHAPPY_CASE_CODES } from '@carmate/shared';
+import {
+  cleanPhoneNumber,
+  evaluateIncidentSanctions,
+  UNHAPPY_CASE_CODES,
+  FIXED_CORRIDOR_COACH_SCHEDULES,
+  calculateEarlyFailureRisk,
+  evaluateRadarSweepCheckpoint,
+  RADAR_CHECKPOINTS
+} from '@carmate/shared';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 export async function riderCheckInHandler(req, res) {
@@ -357,8 +367,9 @@ export async function cockpitReportIncidentHandler(req, res) {
     // 1. Đánh giá chế tài theo bất biến toán học
     const sanctions = evaluateIncidentSanctions(incidentType, context);
 
-    // 2. Chế tài đối với tài khoản khách
+    // 2. Chế tài đối với tài khoản khách hoặc chủ xe
     let bannedUserResult = null;
+    let suspendedDriverResult = null;
     if (sanctions.isBanned && riderPhone) {
       bannedUserResult = await permabanUser(riderPhone, sanctions.banReason || incidentType);
     } else if (sanctions.riderPenalty > 0 && riderPhone) {
@@ -368,6 +379,29 @@ export async function cockpitReportIncidentHandler(req, res) {
         const currentScore = Number(riderUser.trustScore ?? 100);
         const newScore = Math.max(0, currentScore - sanctions.riderPenalty);
         await updateUser(riderUser.id || cleanRider, { trustScore: newScore });
+      }
+    }
+
+    if (driverPhone) {
+      const cleanDriver = cleanPhoneNumber(driverPhone);
+      const driverUser = getUserByPhone(cleanDriver);
+      if (driverUser) {
+        if (sanctions.isSuspended) {
+          const days = sanctions.suspensionDays || 30;
+          const suspendedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+          const currentScore = Number(driverUser.trustScore ?? 100);
+          const newScore = Math.max(0, currentScore - (sanctions.driverPenalty || 50));
+          suspendedDriverResult = await updateUser(driverUser.id || cleanDriver, {
+            isSuspended: true,
+            suspendedUntil,
+            suspensionReason: incidentType,
+            trustScore: newScore
+          });
+        } else if (sanctions.driverPenalty > 0) {
+          const currentScore = Number(driverUser.trustScore ?? 100);
+          const newScore = Math.max(0, currentScore - sanctions.driverPenalty);
+          await updateUser(driverUser.id || cleanDriver, { trustScore: newScore });
+        }
       }
     }
 
@@ -392,7 +426,7 @@ export async function cockpitReportIncidentHandler(req, res) {
 
     // 4. Bắn thông báo Telegram nội bộ cho vận hành nếu có sự cố nghiêm trọng
     try {
-      if (sanctions.isBanned || sanctions.fareExempt || sanctions.action === 'ABSOLUTE_VETO_CANCEL') {
+      if (sanctions.isBanned || sanctions.isSuspended || sanctions.fareExempt || sanctions.action === 'ABSOLUTE_VETO_CANCEL') {
         await sendBusinessAlert(
           `⚠️ [SỰ CỐ CARMATE] ${sanctions.action}\n` +
           `• Loại sự cố: ${incidentType}\n` +
@@ -410,6 +444,7 @@ export async function cockpitReportIncidentHandler(req, res) {
       incident: incidentRecord,
       sanctions,
       bannedUser: bannedUserResult,
+      suspendedDriver: suspendedDriverResult,
       message: sanctions.message
     });
   } catch (err) {
@@ -431,3 +466,204 @@ export async function cockpitGetIncidentsHandler(req, res) {
     return res.status(500).json({ success: false, error: err.message });
   }
 }
+
+/**
+ * 11. NGƯỜI ĐI CÙNG BÁO CÁO VI PHẠM VĂN HÓA (HÚT THUỐC, BẮT KHÁCH DÙ, TĂNG GIÁ) -> GRIM TRIGGER 30 NGÀY
+ */
+export async function riderReportCultureViolationHandler(req, res) {
+  try {
+    const {
+      bookingId,
+      tripId,
+      violationType, // 'SMOKING' | 'PICKUP_SOLICITING' | 'PRICE_GOUGING'
+      reporterPhone,
+      driverPhone,
+      note
+    } = req.body || {};
+
+    let incidentType = UNHAPPY_CASE_CODES.CULTURE_VIOLATION_SMOKING;
+    if (violationType === 'PICKUP_SOLICITING' || violationType === UNHAPPY_CASE_CODES.CULTURE_VIOLATION_PICKUP_SOLICITING) {
+      incidentType = UNHAPPY_CASE_CODES.CULTURE_VIOLATION_PICKUP_SOLICITING;
+    } else if (violationType === 'PRICE_GOUGING' || violationType === UNHAPPY_CASE_CODES.CULTURE_VIOLATION_PRICE_GOUGING) {
+      incidentType = UNHAPPY_CASE_CODES.CULTURE_VIOLATION_PRICE_GOUGING;
+    }
+
+    const sanctions = evaluateIncidentSanctions(incidentType, { violationType, note });
+
+    // Kích hoạt Grim Trigger: đình chỉ Chủ xe 30 ngày
+    let suspendedDriver = null;
+    if (driverPhone) {
+      const cleanDriver = cleanPhoneNumber(driverPhone);
+      const driverUser = getUserByPhone(cleanDriver);
+      if (driverUser) {
+        const days = sanctions.suspensionDays || 30;
+        const suspendedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        const currentScore = Number(driverUser.trustScore ?? 100);
+        const newScore = Math.max(0, currentScore - (sanctions.driverPenalty || 50));
+        suspendedDriver = await updateUser(driverUser.id || cleanDriver, {
+          isSuspended: true,
+          suspendedUntil,
+          suspensionReason: incidentType,
+          trustScore: newScore
+        });
+      }
+    }
+
+    const incidentRecord = await reportTripIncidentDb({
+      bookingId,
+      tripId,
+      incidentType,
+      reporterRole: 'Người đi cùng',
+      reporterPhone,
+      driverPhone,
+      sanctionAction: sanctions.action,
+      driverPenalty: sanctions.driverPenalty || 50,
+      riderPenalty: 0,
+      fareExempt: true,
+      note,
+      sanctions
+    });
+
+    try {
+      await sendBusinessAlert(
+        `🚨 [BÁO CÁO VI PHẠM VĂN HÓA - GRIM TRIGGER 30 NGÀY]\n` +
+        `• Vi phạm: ${incidentType}\n` +
+        `• Khách báo: ${reporterPhone || 'Ẩn danh'}\n` +
+        `• Chủ xe vi phạm: ${driverPhone || 'N/A'}\n` +
+        `• Ghi chú: ${note || 'Không có'}\n` +
+        `• Chế tài: Đình chỉ 30 ngày, trừ 50 điểm tín nhiệm Chủ xe.`
+      );
+    } catch {}
+
+    return res.json({
+      success: true,
+      sanctions,
+      incident: incidentRecord,
+      suspendedDriver,
+      message: 'Đã tiếp nhận báo cáo vi phạm văn hóa. Cơ chế Grim Trigger đã kích hoạt đình chỉ quyền chia sẻ chuyến đi của Chủ xe 30 ngày.'
+    });
+  } catch (err) {
+    console.error('[riderReportCultureViolationHandler] error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * 12. NGƯỜI ĐI CÙNG HỦY CHUYẾN MIỄN PHẠT DO CHỦ XE TRỄ QUÁ 5 PHÚT
+ */
+export async function riderCancelGraceHandler(req, res) {
+  try {
+    const {
+      bookingId,
+      intentId,
+      tripId,
+      riderPhone,
+      driverPhone,
+      delayMinutes = 5,
+      note = 'Chủ xe trễ hẹn quá 5 phút tại trạm'
+    } = req.body || {};
+
+    const sanctions = evaluateIncidentSanctions(UNHAPPY_CASE_CODES.DRIVER_LATE_CANCELLATION, { delayMinutes });
+
+    // Trừ điểm chủ xe vì trễ hẹn
+    if (driverPhone) {
+      const cleanDriver = cleanPhoneNumber(driverPhone);
+      const driverUser = getUserByPhone(cleanDriver);
+      if (driverUser) {
+        const currentScore = Number(driverUser.trustScore ?? 100);
+        const newScore = Math.max(0, currentScore - (sanctions.driverPenalty || 15));
+        await updateUser(driverUser.id || cleanDriver, { trustScore: newScore });
+      }
+    }
+
+    // Hủy vé nếu có intentId
+    if (intentId) {
+      cancelRiderIntent(intentId, 'DRIVER_LATE_GRACE_CANCEL');
+    }
+
+    const incidentRecord = await reportTripIncidentDb({
+      bookingId,
+      tripId,
+      incidentType: UNHAPPY_CASE_CODES.DRIVER_LATE_CANCELLATION,
+      reporterRole: 'Người đi cùng',
+      reporterPhone: riderPhone,
+      driverPhone,
+      sanctionAction: sanctions.action,
+      driverPenalty: sanctions.driverPenalty || 15,
+      riderPenalty: 0,
+      fareExempt: true,
+      note,
+      sanctions
+    });
+
+    return res.json({
+      success: true,
+      sanctions,
+      incident: incidentRecord,
+      fare: 0,
+      lifebuoys: FIXED_CORRIDOR_COACH_SCHEDULES,
+      message: sanctions.message
+    });
+  } catch (err) {
+    console.error('[riderCancelGraceHandler] error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * 13. TRA CỨU ĐIỂM RỦI RO BÙNG CHUYẾN SỚM (EARLY RISK & RADAR SWEEP)
+ */
+export async function riderGetRadarRiskHandler(req, res) {
+  try {
+    const {
+      driverPhone,
+      trustScore,
+      lastHeartbeatMinutesAgo = 0,
+      speedKmh = 0,
+      distanceToStationKm = 0,
+      checkpoint = RADAR_CHECKPOINTS.T_MINUS_45M,
+      driverConfirmed = true,
+      isStationary = false
+    } = req.query || {};
+
+    let effectiveTrust = Number(trustScore);
+    if (isNaN(effectiveTrust) && driverPhone) {
+      const user = getUserByPhone(cleanPhoneNumber(driverPhone));
+      if (user) effectiveTrust = Number(user.trustScore ?? 100);
+    }
+    if (isNaN(effectiveTrust)) effectiveTrust = 100;
+
+    const risk = calculateEarlyFailureRisk({
+      trustScore: effectiveTrust,
+      lastHeartbeatMinutesAgo: Number(lastHeartbeatMinutesAgo) || 0,
+      speedKmh: Number(speedKmh) || 0,
+      distanceToStationKm: Number(distanceToStationKm) || 0,
+      isVehicleStationaryAtT45: checkpoint === RADAR_CHECKPOINTS.T_MINUS_45M && (isStationary === 'true' || isStationary === true)
+    });
+
+    const activeSessions = getActiveCockpitSessions();
+    const candidateShadowTrips = activeSessions.filter(s => s.seatsAvailable > 0);
+
+    const checkpointEvaluation = evaluateRadarSweepCheckpoint({
+      checkpoint,
+      driverConfirmed: driverConfirmed === 'true' || driverConfirmed === true,
+      lastHeartbeatMinutesAgo: Number(lastHeartbeatMinutesAgo) || 0,
+      isStationary: isStationary === 'true' || isStationary === true,
+      distanceToStationKm: Number(distanceToStationKm) || 0,
+      trustScore: effectiveTrust,
+      candidateShadowTrips
+    });
+
+    return res.json({
+      success: true,
+      risk,
+      checkpointEvaluation,
+      candidateShadowTrips,
+      fixedCoachSchedules: FIXED_CORRIDOR_COACH_SCHEDULES
+    });
+  } catch (err) {
+    console.error('[riderGetRadarRiskHandler] error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+

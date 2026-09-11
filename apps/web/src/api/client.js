@@ -630,6 +630,32 @@ export const api = {
     });
     const qs = query.toString();
     return request(`/cockpit/incidents${qs ? `?${qs}` : ''}`);
+  },
+
+  // --- Rider Unhappy Cases, Grim Trigger & Radar Sweep ---
+  async reportRiderCultureViolation(payload) {
+    return request('/station/rider/report-culture-violation', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async riderCancelGrace(payload) {
+    return request('/station/rider/cancel-grace', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getRiderRadarRisk(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.append(key, val);
+      }
+    });
+    const qs = query.toString();
+    return request(`/station/rider/radar-risk${qs ? `?${qs}` : ''}`);
   }
 };
 

@@ -525,9 +525,33 @@ export function driverVerifyPin({ tripId, intentId, pin }) {
 }
 
 /**
- * 8. DỌN SẠCH DỮ LIỆU ĐỂ KIỂM THỬ (TEST SUITE CLEANUP)
+ * 8. HỦY LỆNH / THẺ LÊN XE MIỄN PHẠT (GRACE CANCEL)
+ */
+export function cancelRiderIntent(intentId, reason = 'CANCEL_DRIVER_LATE') {
+  for (const [, queue] of stationQueues.entries()) {
+    const intent = queue.find((i) => i.intentId === intentId);
+    if (intent) {
+      intent.status = 'CANCELLED';
+      intent.cancelReason = reason;
+      intent.cancelledAt = new Date().toISOString();
+      return { success: true, intent };
+    }
+  }
+  return { success: false, error: 'Không tìm thấy yêu cầu' };
+}
+
+/**
+ * 9. LẤY DANH SÁCH PHIÊN COCKPIT ĐANG HOẠT ĐỘNG (SHADOW FLEET DISCOVERY)
+ */
+export function getActiveCockpitSessions() {
+  return Array.from(cockpitSessions.values());
+}
+
+/**
+ * 10. DỌN SẠCH DỮ LIỆU ĐỂ KIỂM THỬ (TEST SUITE CLEANUP)
  */
 export function resetAllStationData() {
   stationQueues.clear();
   cockpitSessions.clear();
 }
+

@@ -52,6 +52,9 @@ import {
   cockpitApproveVehicleHandler,
   cockpitReportIncidentHandler,
   cockpitGetIncidentsHandler,
+  riderReportCultureViolationHandler,
+  riderCancelGraceHandler,
+  riderGetRadarRiskHandler,
   resetStationDataHandler
 } from '../controllers/stationQueueController.js';
 import {
@@ -182,6 +185,9 @@ router.post('/support/messages', optionalAuth, sendSupportMessageHandler);
 // --- Station Curbside Queue & Cockpit Mode Live Dispatch ---
 router.post('/station/:hubId/checkin', riderCheckInHandler);
 router.get('/station/:hubId/status', getStationQueueHandler);
+router.get('/station/rider/radar-risk', riderGetRadarRiskHandler);
+router.post('/station/rider/report-culture-violation', riderReportCultureViolationHandler);
+router.post('/station/rider/cancel-grace', riderCancelGraceHandler);
 router.get('/station/rider/:intentId', getRiderPassHandler);
 router.post('/cockpit/telemetry', cockpitTelemetryHandler);
 router.post('/cockpit/accept-offer', cockpitAcceptOfferHandler);
