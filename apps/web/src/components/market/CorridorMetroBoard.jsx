@@ -36,6 +36,7 @@ import {
 } from '@carmate/shared';
 
 export default function CorridorMetroBoard({
+  currentUser = null,
   onOpenCockpit,
   onOpenStationView,
   onOpenIntentModal,
@@ -43,6 +44,77 @@ export default function CorridorMetroBoard({
   _activeBookedCount = 0
 }) {
   const currentFuelPrice = getDailyFuelPrice();
+
+  // Tự động nhận diện vai trò người dùng (Chủ xe vs Người đi cùng) theo Stanford Ergonomics (Tải nhận thức = 0)
+  const detectedRoleInfo = useMemo(() => {
+    // 1. Kiểm tra xe trong hồ sơ currentUser
+    if (currentUser?.vehicle?.plate || currentUser?.vehicle?.brand || currentUser?.vehicle?.model) {
+      const detail = currentUser.vehicle.plate || `${currentUser.vehicle.brand || ''} ${currentUser.vehicle.model || ''}`.trim();
+      return { role: 'driver', label: 'Chủ xe', detail };
+    }
+    if (currentUser?.role === 'driver') {
+      return { role: 'driver', label: 'Chủ xe', detail: 'Chủ xe chính chủ' };
+    }
+    if (currentUser?.role === 'passenger' || currentUser?.role === 'rider') {
+      return { role: 'passenger', label: 'Người đi cùng', detail: 'Hành khách' };
+    }
+
+    // 2. Kiểm tra bộ nhớ cục bộ (LocalStorage)
+    if (typeof localStorage !== 'undefined') {
+      try {
+        // Đã từng cấu hình xe trên Cockpit Taplo
+        const cockpitVehRaw = localStorage.getItem('carmate_cockpit_vehicle');
+        if (cockpitVehRaw) {
+          const v = JSON.parse(cockpitVehRaw);
+          if (v?.plate || v?.model) {
+            return { role: 'driver', label: 'Chủ xe', detail: v.plate || v.model };
+          }
+        }
+
+        // Persona Memory của CarMate
+        const personaRaw = localStorage.getItem('carmate_persona_memory_v1');
+        if (personaRaw) {
+          const mem = JSON.parse(personaRaw);
+          if (mem?.driver?.carProfile?.carPlate || mem?.driver?.carProfile?.carType) {
+            return {
+              role: 'driver',
+              label: 'Chủ xe',
+              detail: mem.driver.carProfile.carPlate || mem.driver.carProfile.carType
+            };
+          }
+        }
+
+        // Vai trò đã dùng gần nhất
+        const lastRole = localStorage.getItem('carmate_last_movement_role');
+        if (lastRole === 'driver') {
+          return { role: 'driver', label: 'Chủ xe', detail: 'Lịch lái gần nhất' };
+        }
+        if (lastRole === 'passenger') {
+          return { role: 'passenger', label: 'Người đi cùng', detail: 'Lịch đặt gần nhất' };
+        }
+
+        if (localStorage.getItem('carmate_driver_registered_phone')) {
+          return { role: 'driver', label: 'Chủ xe', detail: 'Đã có xe' };
+        }
+      } catch {}
+    }
+
+    return { role: 'passenger', label: 'Người đi cùng', detail: '' };
+  }, [currentUser]);
+
+  const [roleOverride, setRoleOverride] = useState(null);
+  const activeRole = roleOverride || detectedRoleInfo.role;
+
+  const toggleRole = (e) => {
+    e.stopPropagation();
+    const nextRole = activeRole === 'driver' ? 'passenger' : 'driver';
+    setRoleOverride(nextRole);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('carmate_last_movement_role', nextRole);
+      } catch {}
+    }
+  };
 
   // Hướng di chuyển: 'TO_SAIGON' (Bình Phước ➔ TP.HCM) | 'TO_BINH_PHUOC' (TP.HCM ➔ Bình Phước)
   const [direction, setDirection] = useState('TO_SAIGON');
@@ -374,7 +446,7 @@ export default function CorridorMetroBoard({
             </div>
           </div>
 
-          <div className="space-y-2.5">
+          <div>
             <button
               type="button"
               onClick={onOpenCockpit}
@@ -382,14 +454,6 @@ export default function CorridorMetroBoard({
             >
               <Radio className="w-5 h-5 animate-pulse" />
               <span>BẬT TAPLO NHẬN KHÁCH TIỆN ĐƯỜNG</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenIntentModal?.('driver')}
-              className="w-full h-11 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-emerald-400 font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-2 border border-emerald-500/30 cursor-pointer transition-all active:scale-[0.99]"
-            >
-              <Clock className="w-4 h-4" />
-              <span>Hẹn giờ / Lên lịch chuyến mai (0 gõ form)</span>
             </button>
           </div>
         </div>
@@ -437,7 +501,7 @@ export default function CorridorMetroBoard({
             </div>
           </div>
 
-          <div className="space-y-2.5">
+          <div>
             <button
               type="button"
               onClick={handleAutoDetectAndOpenRiderView}
@@ -450,14 +514,89 @@ export default function CorridorMetroBoard({
                   : 'ĐÓN XE VỀ BÌNH PHƯỚC (CHỌN TRẠM GẦN BẠN NHẤT)'}
               </span>
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 2.1 BĂNG ĐIỀU HÀNH LÊN LỊCH CHUYẾN MAI (UNIFIED AUTO-DETECT ADVANCE BAR)   */}
+      {/* ========================================================================= */}
+      <section className="relative overflow-hidden rounded-3xl bg-slate-900 border border-slate-700/70 p-5 sm:p-7 shadow-xl backdrop-blur-xl transition-all">
+        <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-[#0071e3]/15 via-emerald-500/10 to-transparent pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+          {/* Vùng Thông Tin & Tự Động Nhận Diện Danh Xưng */}
+          <div className="space-y-2.5 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30 text-xs font-mono font-bold uppercase tracking-wider">
+                <Clock className="w-3.5 h-3.5" />
+                LÊN LỊCH CHUYẾN MAI (0 GÕ FORM)
+              </span>
+
+              {/* Chip Tự Động Nhận Diện Vai Trò & Nút 1-Chạm Đổi */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.08] border border-white/15 text-xs font-medium text-slate-300">
+                {activeRole === 'driver' ? (
+                  <>
+                    <Car className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>
+                      Tự nhận diện: <strong className="text-emerald-400 font-bold">Chủ xe</strong>
+                      {detectedRoleInfo.detail ? ` (${detectedRoleInfo.detail})` : ''}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Users className="w-3.5 h-3.5 text-[#2997ff]" />
+                    <span>
+                      Tự nhận diện: <strong className="text-[#2997ff] font-bold">Người đi cùng</strong>
+                    </span>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleRole}
+                  title="Bấm để đổi vai trò sang Chủ xe hoặc Người đi cùng"
+                  className="ml-1 text-slate-400 hover:text-white underline decoration-dotted text-[11px] cursor-pointer transition-colors"
+                >
+                  (Đổi ⇄)
+                </button>
+              </div>
+            </div>
+
+            <h3 className="text-lg sm:text-xl font-black text-white tracking-wide">
+              {activeRole === 'driver'
+                ? 'Lên Lịch Xe Đi Sáng / Chiều Mai — Tự Động Gom Khách Cùng Tuyến QL13'
+                : 'Hẹn Giờ Đón Xe Sáng Mai — Thuật Toán Ghép Xe Cố Định & Giữ Chỗ Sớm'}
+            </h3>
+
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              {activeRole === 'driver'
+                ? 'Định sẵn khung giờ xuất bến sáng mai. Hệ thống tự động ghép người đi cùng đang chờ tại các trạm đón dọc QL13 vào lộ trình xe của bạn.'
+                : 'Chọn trạm và khung giờ cần đón xe ngày mai. Hệ thống tự động ghép vào xe trống tiện đường đi ngang qua trạm của bạn, có mã PIN và vé điện tử xuất sớm.'}
+            </p>
+          </div>
+
+          {/* NÚT DUY NHẤT TOÀN MÀN HÌNH CHO LÊN LỊCH CHUYẾN MAI */}
+          <div className="flex flex-col sm:flex-row md:flex-col items-stretch sm:items-center md:items-end justify-center gap-2 flex-shrink-0">
             <button
               type="button"
-              onClick={() => onOpenIntentModal?.('passenger')}
-              className="w-full h-11 rounded-xl bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.12] text-[#0071e3] dark:text-[#2997ff] font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-2 border border-[#0071e3]/30 cursor-pointer transition-all active:scale-[0.99]"
+              onClick={() => onOpenIntentModal?.(activeRole)}
+              className={`h-13 sm:h-14 px-6 sm:px-8 rounded-2xl font-black text-sm sm:text-base uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-xl active:scale-[0.99] cursor-pointer transition-all ${
+                activeRole === 'driver'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/25'
+                  : 'bg-gradient-to-r from-[#0071e3] to-blue-600 hover:from-[#0077ed] hover:to-blue-500 text-white shadow-[#0071e3]/30'
+              }`}
             >
-              <Clock className="w-4 h-4" />
-              <span>Hẹn giờ / Đặt chỗ trước chuyến mai</span>
+              <Clock className="w-5 h-5 animate-pulse" />
+              <span>
+                {activeRole === 'driver'
+                  ? 'LÊN LỊCH CHỦ XE (CHUYẾN MAI)'
+                  : 'HẸN GIỜ ĐẶT CHỖ (CHUYẾN MAI)'}
+              </span>
+              <ArrowRight className="w-4 h-4 ml-0.5" />
             </button>
+            <span className="text-[11px] text-slate-400 text-center md:text-right font-mono">
+              Khớp lệnh 2 chiều · 0 gõ form rườm rà
+            </span>
           </div>
         </div>
       </section>

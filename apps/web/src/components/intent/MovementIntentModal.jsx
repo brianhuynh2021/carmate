@@ -178,6 +178,13 @@ export default function MovementIntentModal({
       // 1. Tạo Intent trong cơ sở dữ liệu
       const res = await api.createMovementIntent(payload);
 
+      // Lưu vai trò gần nhất vào LocalStorage để trang chủ tự động nhận diện
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('carmate_last_movement_role', role);
+        } catch {}
+      }
+
       // 2. Tự động kích hoạt phiên gom khớp lệnh WATTER tức thời
       try {
         await api.runBatchMatch({

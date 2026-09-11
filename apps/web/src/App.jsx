@@ -1012,6 +1012,7 @@ export default function App() {
         {activeTab === 'market' && (
           <div className={`${container} py-5 sm:py-8`}>
             <CorridorMetroBoard
+              currentUser={currentUser}
               onOpenCockpit={() => setActiveTab('cockpit')}
               onOpenStationView={(hub) => {
                 setStationHubId(hub || 'hub_ql13_tan_khai');
