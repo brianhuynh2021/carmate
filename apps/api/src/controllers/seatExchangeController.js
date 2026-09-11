@@ -10,7 +10,7 @@ import {
   parseTimeToMinutes,
   minutesToTimeString,
   buildInterval,
-  calculateOrderTTL,
+  calculateUnifiedOrderTTL,
   matchOrderContinuous,
   evaluateOrderBookExpirations,
   buildOrderMatchedNotification,
@@ -74,8 +74,8 @@ export async function placeOrderHandler(req, res) {
     const timeInterval = buildInterval(targetTimeMinutes, deltaMinutes);
     const now = Date.now();
 
-    // Tính toán TTL và phân tầng kỳ vọng
-    const ttlResult = calculateOrderTTL({
+    // Tính toán TTL hợp nhất: TTL = min(T_sleep, T_pickup - delta t_switch)
+    const ttlResult = calculateUnifiedOrderTTL({
       orderCreatedAt: now,
       targetPickupMinutes: targetTimeMinutes,
       pickupDate: date
@@ -102,9 +102,10 @@ export async function placeOrderHandler(req, res) {
       seats: parsedSeats,
       remainingSeats: parsedSeats,
       status: 'OPEN',
-      orderTier: ttlResult.tier,
       ttlTimestamp: ttlResult.ttlTimestamp,
       ttlTimeString: ttlResult.ttlTimeString,
+      isSleepCutoff: ttlResult.isSleepCutoff,
+      userNotice: ttlResult.userNotice,
       phone: clean,
       contactName: contactName || (isAsk ? 'Chủ xe' : 'Người đi cùng'),
       plate: plate || (isAsk ? '93A-541.86' : ''),
@@ -205,10 +206,9 @@ export async function placeOrderHandler(req, res) {
       success: true,
       matched: false,
       order: savedOrder,
-      tier: ttlResult.tier,
-      tierLabel: ttlResult.tierLabel,
       ttlTimeString: ttlResult.ttlTimeString,
-      message: ttlResult.userMessage
+      isSleepCutoff: ttlResult.isSleepCutoff,
+      message: ttlResult.userNotice
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

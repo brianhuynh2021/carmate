@@ -59,60 +59,92 @@ export function calculateRendezvousTime(intervalA, intervalB) {
 }
 
 /**
- * 2. CÔNG THỨC TÍNH TTL ĐỘNG & PHÂN TẦNG KỲ VỌNG (DYNAMIC SLIDING TTL & TIERED EXPECTATION)
+ * 2. PHƯƠNG TRÌNH TTL HỢP NHẤT (UNIFIED TTL EQUATION)
  *
- * - Đặt trước 21:30 của đêm hôm trước: TTL cố định 21:30 đêm đó. Tier: 'SAFE_ADVANCE'
- * - Đặt sau 21:30 hoặc đặt trong cùng ngày: TTL trượt = T_pickup - 45 phút. Tier: 'LAST_MINUTE_TAKER'
+ * Theo các công trình toán học:
+ * - Online Bipartite Matching with Deadlines (Karp, Vazirani & Vazirani, 1990)
+ * - Perishable Asset Revenue Management
+ * - Optimal Stopping & Switching Costs
+ *
+ * Mọi lệnh chỉ tuân theo đúng MỘT CÔNG THỨC DUY NHẤT:
+ * TTL = min(T_sleep, T_pickup - delta t_switch)
+ *
+ * Trong đó:
+ * - T_pickup: Thời điểm xe đón khách tại trạm.
+ * - delta t_switch: Khoảng đệm thời gian an toàn để chuyển sang xe khách/xe đò (45 phút).
+ * - T_sleep: Giờ giới nghiêm sinh học (21:30 tối hôm trước — chỉ kích hoạt khi đặt trước 21:30
+ *   cho các chuyến sáng sớm hôm sau). Các trường hợp còn lại (trong ngày hoặc đặt sau 21:30): T_sleep = Infinity.
  */
-export function calculateOrderTTL({
+export function calculateUnifiedOrderTTL({
   orderCreatedAt = Date.now(),
   targetPickupMinutes = 375, // 06:15
-  pickupDate = null // 'YYYY-MM-DD'
+  pickupDate = null, // 'YYYY-MM-DD'
+  switchBufferMinutes = 45, // delta t_switch = 45 phút
+  sleepCutoffHourMinute = '21:30' // T_sleep
 } = {}) {
   const createdDate = new Date(orderCreatedAt);
-  const targetDate = pickupDate ? new Date(`${pickupDate}T00:00:00`) : new Date(orderCreatedAt);
 
-  // Tính số ngày chênh lệch giữa ngày đặt lệnh và ngày đi
-  const diffDays = Math.round((targetDate.setHours(0,0,0,0) - new Date(createdDate).setHours(0,0,0,0)) / (24 * 3600 * 1000));
-  const createdMinutes = createdDate.getHours() * 60 + createdDate.getMinutes();
-
-  // Mốc 21:30 tối = 21 * 60 + 30 = 1290 phút
-  const NIGHT_CUTOFF_MINUTES = 21 * 60 + 30; // 1290
-  const isAdvanceBeforeNight = diffDays >= 1 && createdMinutes < NIGHT_CUTOFF_MINUTES;
-
-  if (isAdvanceBeforeNight) {
-    // Đặt trước 21:30 đêm trước: TTL là 21:30 đêm hôm trước ngày đi
-    const cutoffTimestamp = new Date(createdDate).setHours(21, 30, 0, 0);
-    return {
-      tier: 'SAFE_ADVANCE',
-      tierLabel: 'Vé an tâm cao cấp',
-      ttlMinutes: NIGHT_CUTOFF_MINUTES,
-      ttlTimeString: '21:30',
-      ttlTimestamp: cutoffTimestamp,
-      dynamicSliding: false,
-      userMessage: 'Hệ thống đang tìm xe đối ứng cho bạn. Cam kết chốt kết quả trước 21:30 tối nay để bạn hoàn toàn yên tâm nghỉ ngơi.'
-    };
+  // Xác định ngày đón khách
+  let pickupDateObj;
+  if (pickupDate && typeof pickupDate === 'string' && pickupDate.includes('-')) {
+    const [y, m, d] = pickupDate.split('-').map((v) => parseInt(v, 10));
+    pickupDateObj = new Date(y, m - 1, d);
+  } else {
+    pickupDateObj = new Date(createdDate);
   }
 
-  // Đặt sau 21:30 hoặc đặt trong ngày đi -> Thị trường giao ngay (Spot Market)
-  // Dynamic Sliding TTL = T_pickup - 45 phút
-  const slidingTTLMinutes = Math.max(0, targetPickupMinutes - 45);
-  const slidingTTLString = minutesToTimeString(slidingTTLMinutes);
+  // Thời điểm đón khách chính xác T_pickup (timestamp)
+  const pickupTimestamp = new Date(pickupDateObj).setHours(
+    Math.floor(targetPickupMinutes / 60),
+    targetPickupMinutes % 60,
+    0,
+    0
+  );
 
-  // Thời điểm timestamp hết hạn
-  const ttlTime = new Date(pickupDate ? `${pickupDate}T00:00:00` : orderCreatedAt);
-  ttlTime.setHours(Math.floor(slidingTTLMinutes / 60), slidingTTLMinutes % 60, 0, 0);
+  // 1. T_switch = T_pickup - delta t_switch (trừ 45 phút)
+  const switchTimestamp = pickupTimestamp - switchBufferMinutes * 60 * 1000;
+
+  // 2. T_sleep: Giờ giới nghiêm sinh học lúc 21:30 tối đêm hôm trước ngày đón
+  const createdDayStart = new Date(createdDate).setHours(0, 0, 0, 0);
+  const pickupDayStart = new Date(pickupDateObj).setHours(0, 0, 0, 0);
+  const isFutureDay = pickupDayStart > createdDayStart;
+
+  let sleepTimestamp = Infinity;
+  if (isFutureDay) {
+    const sleepCutoffParts = sleepCutoffHourMinute.split(':').map((v) => parseInt(v, 10));
+    const nightBeforePickup = new Date(pickupDayStart - 24 * 3600 * 1000);
+    nightBeforePickup.setHours(sleepCutoffParts[0] || 21, sleepCutoffParts[1] || 30, 0, 0);
+    const cutoffMs = nightBeforePickup.getTime();
+
+    // Nếu lúc đặt lệnh chưa qua 21:30 đêm trước
+    if (orderCreatedAt < cutoffMs) {
+      sleepTimestamp = cutoffMs;
+    }
+  }
+
+  // 3. TTL = min(T_sleep, T_switch)
+  const ttlTimestamp = Math.min(sleepTimestamp, switchTimestamp);
+  const isSleepCutoff = ttlTimestamp === sleepTimestamp;
+
+  const ttlDate = new Date(ttlTimestamp);
+  const ttlTimeString = `${String(ttlDate.getHours()).padStart(2, '0')}:${String(ttlDate.getMinutes()).padStart(2, '0')}`;
+
+  const userNotice = isSleepCutoff
+    ? `Hạn chót bảo vệ giấc ngủ lúc ${ttlTimeString} tối để bạn yên tâm nghỉ ngơi. Nếu chưa có xe, lệnh sẽ tự hủy để bạn chuẩn bị phương án sáng mai.`
+    : `Hạn chót chuyển đổi an toàn lúc ${ttlTimeString} (trước giờ khởi hành 45 phút) để bạn kịp vẫy xe khách hoặc đón xe buýt dọc tuyến.`;
 
   return {
-    tier: 'LAST_MINUTE_TAKER',
-    tierLabel: 'Lệnh vớt / Giao ngay 24/7',
-    ttlMinutes: slidingTTLMinutes,
-    ttlTimeString: slidingTTLString,
-    ttlTimestamp: ttlTime.getTime(),
-    dynamicSliding: true,
-    userMessage: `Bạn đang đặt chuyến vào khung giờ muộn (Giao ngay 24/7). Hệ thống đang treo lệnh tìm xe trống trên trục QL13. Lệnh sẽ tự động hủy lúc ${slidingTTLString} nếu không có xe nhận.`
+    ttlTimestamp,
+    ttlTimeString,
+    isSleepCutoff,
+    sleepTimestamp: sleepTimestamp === Infinity ? null : sleepTimestamp,
+    switchTimestamp,
+    userNotice
   };
 }
+
+// Export alias tương thích
+export const calculateOrderTTL = calculateUnifiedOrderTTL;
 
 /**
  * 3. MÁY CHỦ KHỚP LỆNH LIÊN TỤC (CONTINUOUS DOUBLE AUCTION - CDA MATCHING ENGINE)
@@ -364,27 +396,22 @@ export function buildOrderMatchedNotification({
 
 export function buildOrderExpiredNotification({
   order = {},
-  cutoffTimeStr = '21:30'
+  cutoffTimeStr = ''
 } = {}) {
-  const isAdvance = order.orderTier === 'SAFE_ADVANCE' || !order.orderTier;
-  const targetTime = order.targetTime || 'sáng mai';
+  const targetTime = order.targetTime || 'chuyến đi';
   const station = order.stationName || 'trạm đón';
-
-  if (isAdvance) {
-    return {
-      event: 'OrderExpiredEvent',
-      orderId: order.id,
-      title: 'Thông báo kết quả ghép chuyến lúc 21:30',
-      body: `Đến 21:30 chưa có xe nào cùng khung giờ với bạn cho chuyến ${targetTime} tại ${station}. Lệnh đã đóng để bạn yên tâm nghỉ ngơi. Bạn chủ động chuẩn bị phương án xe khách liên tỉnh sáng mai nhé!`,
-      lifebuoyRecommendation: 'Gợi ý: Tuyến xe khách Chơn Thành - Sài Gòn hoặc Buýt 15 xuất phát chuyến đầu lúc 04:45 và 05:00 ngay cổng trạm.'
-    };
-  }
+  const timeLabel = cutoffTimeStr || order.ttlTimeString || 'hạn chót';
+  const isSleep = order.isSleepCutoff;
 
   return {
     event: 'OrderExpiredEvent',
     orderId: order.id,
-    title: `Lệnh giao ngay đã tự động đóng lúc ${cutoffTimeStr}`,
-    body: `Đã đến hạn chót ${cutoffTimeStr} nhưng chưa có ghế trống phù hợp với chuyến ${targetTime}. Lệnh đã hủy tự động để bạn kịp bắt xe khách hoặc buýt dọc tuyến QL13.`,
-    lifebuoyRecommendation: 'Gợi ý: Ra cổng trạm vẫy xe khách liên tỉnh tuyến QL13 (chuyến kế tiếp cách 15 phút).'
+    title: isSleep
+      ? `Thông báo chốt sổ an tâm lúc ${timeLabel}`
+      : `Lệnh ghép chuyến đã tự động đóng lúc ${timeLabel}`,
+    body: isSleep
+      ? `Đến ${timeLabel} tối chưa có xe nào cùng khung giờ với bạn cho chuyến ${targetTime} tại ${station}. Lệnh đã đóng để bạn yên tâm nghỉ ngơi. Bạn chủ động chuẩn bị phương án xe khách liên tỉnh sáng mai nhé!`
+      : `Đã đến hạn chót ${timeLabel} (trước giờ đi 45 phút) nhưng chưa có ghế trống phù hợp với chuyến ${targetTime}. Lệnh đã hủy tự động để bạn kịp bắt xe khách hoặc buýt dọc tuyến QL13.`,
+    lifebuoyRecommendation: 'Phao cứu sinh: Tuyến xe khách liên tỉnh QL13 (Chơn Thành - Sài Gòn) hoặc Buýt 15 xuất phát ngay cổng trạm (chuyến kế tiếp cách 15 phút).'
   };
 }
