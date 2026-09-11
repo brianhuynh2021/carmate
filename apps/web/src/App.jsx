@@ -1413,6 +1413,7 @@ export default function App() {
               onRePublishTrip={handleRePublishTrip}
               onViewInMarket={handleViewTripInMarket}
               onViewTrip={(trip) => setTicketToShare(trip)}
+              onShare={(trip) => setTicketToShare(trip)}
               onViewCarPhotos={setSelectedTripForPhotos}
               bookedEscrows={bookedEscrows}
               onViewBookings={() => setActiveTab('booked')}

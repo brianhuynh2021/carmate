@@ -17,7 +17,8 @@ import {
   Camera,
   Check,
   Truck,
-  Package
+  Package,
+  Share2
 } from 'lucide-react';
 import {
   formatVND,
@@ -179,6 +180,7 @@ export default function MyTripsView({
   onRePublishTrip,
   onViewInMarket,
   onViewTrip,
+  onShare,
   onViewCarPhotos,
   bookedEscrows = [],
   onViewBookings
@@ -260,7 +262,7 @@ export default function MyTripsView({
   const getBookingsForTrip = (tripId) => {
     if (!bookedEscrows || bookedEscrows.length === 0) return [];
     return bookedEscrows.filter(
-      (b) => b.tripId === tripId || b.targetItem?.id === tripId || b.targetTrip?.id === tripId
+      (b) => b.tripId === tripId || b.targetTripId === tripId || b.targetItem?.id === tripId || b.targetTrip?.id === tripId
     );
   };
 
@@ -630,7 +632,18 @@ export default function MyTripsView({
                           <span>⚡ Tái đăng chuyến này cho ngày mai</span>
                         </button>
                       ) : (
-                        <div className="flex items-center gap-2 w-full">
+                        <div className="flex items-center gap-2 w-full flex-wrap sm:flex-nowrap">
+                          {/* Nút Chia sẻ Zalo 1-chạm */}
+                          <button
+                            type="button"
+                            onClick={() => (onShare ? onShare(trip) : onViewTrip ? onViewTrip(trip) : null)}
+                            className="h-9 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 border border-blue-200/80 font-bold text-xs active:scale-95 transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs whitespace-nowrap"
+                            title="Chia sẻ link giữ chỗ vào Zalo hoặc tải ảnh vé"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                            <span>Chia sẻ Zalo</span>
+                          </button>
+
                           {/* Nút Toggle 1-chạm: Nhận khách ⇄ Tạm đóng */}
                           <button
                             type="button"
