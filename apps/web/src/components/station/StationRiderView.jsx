@@ -41,6 +41,7 @@ import { api, setStoredAuthToken } from '../../api/client.js';
 import StationRequestModal from '../modals/StationRequestModal.jsx';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 import StationContactModal from '../modals/StationContactModal.jsx';
+import MutualReviewModal from '../modals/MutualReviewModal.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
@@ -169,6 +170,8 @@ export default function StationRiderView({
   const [hasGoldenTicket, setHasGoldenTicket] = useState(false);
   const [failoverInfo, setFailoverInfo] = useState(null);
   const [seatsNeeded, setSeatsNeeded] = useState(1);
+  const [paidStatus, setPaidStatus] = useState(false);
+  const [showRiderReviewModal, setShowRiderReviewModal] = useState(false);
 
   // KÍCH HOẠT TRÁO VÉ MƯỢT MÀ SANG XE BÓNG MA (SILENT FAILOVER D2)
   const handleTriggerShadowFailover = () => {
@@ -193,6 +196,33 @@ export default function StationRiderView({
       };
     });
     onShowToast?.('✓ Hệ thống điều phối xe hỗ trợ: Đã chuyển sang xe Toyota Vios Đen (61A-892.41)');
+  };
+
+  // MÔ PHỎNG ĐỔI TRẠNG THÁI: ĐANG ĐỨNG CHỜ TẠI TRẠM ⟷ ĐÃ LÊN XE EN-ROUTE
+  const handleToggleBoardedDemo = () => {
+    setBoardingPass((prev) => {
+      if (!prev) return prev;
+      const isNowBoarded = prev.status === 'BOARDED';
+      const nextStatus = isNowBoarded ? 'ARRIVING' : 'BOARDED';
+      const updated = { ...prev, status: nextStatus };
+      try {
+        localStorage.setItem(
+          'carmate_active_station_pass',
+          JSON.stringify({
+            intentId: updated.intentId,
+            hubId,
+            pass: updated,
+            savedAt: Date.now()
+          })
+        );
+      } catch {}
+      onShowToast?.(
+        isNowBoarded
+          ? 'Đã chuyển về màn hình Chờ đón tại trạm'
+          : '🟢 Đã lên xe an toàn! Chuyển sang màn hình En-Route & VietQR'
+      );
+      return updated;
+    });
   };
   const [phone, setPhone] = useState(() => {
     if (currentUser?.phone) return currentUser.phone;
@@ -409,9 +439,12 @@ export default function StationRiderView({
             .getRiderPass(saved.intentId)
             .then((res) => {
               if (res?.success && res?.intent) {
-                if (['WAITING', 'OFFERED', 'ARRIVING'].includes(res.intent.status)) {
+                if (['WAITING', 'OFFERED', 'ARRIVING', 'BOARDED'].includes(res.intent.status)) {
                   setBoardingPass(res.intent);
-                } else if (['BOARDED', 'COMPLETED', 'CANCELLED'].includes(res.intent.status)) {
+                } else if (res.intent.status === 'COMPLETED') {
+                  setBoardingPass(res.intent);
+                  setShowRiderReviewModal(true);
+                } else if (res.intent.status === 'CANCELLED') {
                   localStorage.removeItem('carmate_active_station_pass');
                   setBoardingPass(null);
                   setViewStep('CHECKIN');
@@ -422,6 +455,25 @@ export default function StationRiderView({
         }
       }
     } catch {}
+  }, []);
+
+  // 1.5. LẮNG NGHE ĐỒNG BỘ CROSS-TAB QUA STORAGE EVENT (KHI CHỦ XE BẤM LÊN XE HOẶC TRẢ KHÁCH)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'carmate_active_station_pass' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed?.pass) {
+            setBoardingPass((prev) => ({ ...prev, ...parsed.pass }));
+            if (parsed.pass.status === 'COMPLETED') {
+              setShowRiderReviewModal(true);
+            }
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // 2. POLLING ĐỒNG BỘ TRẠNG THÁI XE THỜI GIAN THỰC (REAL-TIME STATUS SYNC MỖI 3S)
@@ -1254,177 +1306,390 @@ export default function StationRiderView({
                 </div>
               )}
 
-              {/* 1. MÃ PIN LÊN XE (ĐẶT Ở VỊ TRÍ ĐẬP VÀO MẮT ĐẦU TIÊN) */}
-              <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-2 border-emerald-500/60 rounded-3xl p-5 text-center space-y-3 shadow-2xl">
-                <span className="text-xs font-black uppercase tracking-widest text-slate-400 font-mono block">
-                  MÃ PIN LÊN XE
-                </span>
-                <div className="flex items-center justify-center gap-2 sm:gap-3 py-1">
-                  {(boardingPass.pin || '8842').split('').map((char, i) => (
-                    <span
-                      key={i}
-                      className="w-14 h-18 sm:w-16 sm:h-20 rounded-2xl bg-white/[0.08] border-2 border-emerald-400 text-3xl sm:text-4xl font-black font-mono text-emerald-400 flex items-center justify-center shadow-lg"
-                    >
-                      {char}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-amber-300 font-medium pt-0.5">
-                  (Đọc cho chủ xe khi mở cửa)
-                </p>
-              </div>
-
-              {/* 2. TRẠNG THÁI XE TIẾP CẬN (RADAR, COUNTDOWN & DISTANCE) */}
-              <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                    TRẠNG THÁI XE TIẾP CẬN
-                  </span>
-                  {isArriving ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                      <span>🟢 Có xe đang tới trạm</span>
-                    </span>
-                  ) : isBoarded ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Đã lên xe an toàn</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 text-xs font-mono font-bold">
-                      <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-                      <span>🟡 Đang quét radar QL13</span>
-                    </span>
-                  )}
-                </div>
-
-                {isArriving ? (
-                  <div className="space-y-2 pt-1">
-                    <div className="flex items-baseline justify-between">
-                      <div className="flex items-center gap-2 text-sm sm:text-base font-black text-white font-mono">
-                        <span>⏱️ Dự kiến đón sau:</span>
-                        <span className="text-emerald-400 text-lg sm:text-xl font-mono">
-                          {formatEtaMinutesSeconds(etaSeconds)} phút
-                        </span>
-                      </div>
-                      <span className="text-xs font-mono text-slate-300 font-bold">
-                        Cách ~{dynamicDistanceKm} km
+              {isBoarded ? (
+                /* ========================================================================= */
+                /* TRẠNG THÁI 1: ĐÃ LÊN XE (EN-ROUTE) - VIETQR PHỤ XĂNG TRÊN XE & DROP-OFF  */
+                /* ========================================================================= */
+                <div className="space-y-4 animate-fade-in">
+                  {/* 1. STATUS BAR: XE ĐANG CHẠY TRÊN TUYẾN QL13 VỀ ĐIỂM ĐẾN */}
+                  <div className="bg-gradient-to-br from-emerald-500/15 via-sky-500/10 to-transparent border border-emerald-500/40 rounded-3xl p-5 space-y-3 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-mono font-bold uppercase tracking-wider">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        <span>🟢 ĐANG TRÊN HÀNH TRÌNH VỀ {boardingPass.destinationName || 'HÀNG XANH'}</span>
+                      </span>
+                      <span className="text-[11px] font-mono text-slate-400">
+                        QL13 Express
                       </span>
                     </div>
 
-                    {/* Thanh tiến trình khoảng cách trực quan */}
-                    <div className="w-full h-3 bg-white/[0.08] rounded-full overflow-hidden p-0.5 relative">
-                      <div
-                        className="h-full bg-gradient-to-r from-emerald-500 to-sky-400 rounded-full transition-all duration-1000 ease-out"
-                        style={{ width: `${dynamicProgressPercent}%` }}
-                      />
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-black text-white font-mono">
+                        {boardingPass.carInfo?.vehicleModel || 'Mitsubishi Xpander (Trắng)'}
+                      </h3>
+                      <p className="text-sm font-mono text-emerald-300 font-bold">
+                        Biển số: {boardingPass.carInfo?.plate || '93A - 541.86'} · Chủ xe: {boardingPass.carInfo?.driverName || 'Anh Tuấn'}
+                      </p>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                      <span>Radar QL13 (3.5 km)</span>
-                      <span className="text-emerald-400 font-bold">Trạm đón (0 km)</span>
+
+                    <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.08] text-xs font-mono text-slate-300 flex items-center justify-between">
+                      <span className="text-slate-400">Đón tại trạm:</span>
+                      <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        Đã khớp mã PIN ({boardingPass.pin || '8842'}) lúc 06:15
+                      </span>
                     </div>
                   </div>
-                ) : (
-                  <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-1">
-                    <p className="text-xs text-slate-300 font-sans">
-                      Radar CarMate đang phát tín hiệu tới các xe ô tô gia đình chạy trên QL13 cách trạm 3 - 5 km.
+
+                  {/* 2. THẺ VIETQR PHỤ XĂNG TRỰC TIẾP TRÊN XE (IN-TRANSIT SETTLEMENT) */}
+                  <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-2 border-emerald-500/60 rounded-3xl p-5 space-y-4 shadow-2xl text-left">
+                    <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 text-emerald-400 font-mono font-bold text-xs uppercase tracking-wider">
+                          <QrCode className="w-4 h-4" />
+                          <span>VIETQR PHỤ XĂNG TRỰC TIẾP (P2P)</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          Chuyển khoản trực tiếp cho chủ xe khi đang ngồi trên xe
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-slate-400 font-mono">Mức phụ xăng</div>
+                        <div className="text-lg font-black text-emerald-400 font-mono">
+                          {formatVND(boardingPass.fuelSurcharge || estimatedFare || 50000)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {paidStatus ? (
+                      <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-center space-y-2 animate-fade-in">
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center mx-auto text-emerald-300">
+                          <CheckCircle2 className="w-7 h-7" />
+                        </div>
+                        <div className="text-sm font-black text-emerald-300 font-mono uppercase tracking-wide">
+                          ✓ ĐÃ HOÀN TẤT PHỤ XĂNG
+                        </div>
+                        <p className="text-xs text-slate-300">
+                          Bạn đã sẵn sàng bước xuống xe tại trạm đến mà không cần thanh toán thêm bất kỳ khoản nào.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* MÃ VIETQR DÀNH CHO RIDER QUÉT HOẶC LƯU ẢNH */}
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 py-2">
+                          <div className="p-3 bg-white rounded-2xl shadow-xl border border-white/20 shrink-0">
+                            <img
+                              src={`https://img.vietqr.io/image/MB-0938884288-compact2.png?amount=${boardingPass.fuelSurcharge || estimatedFare || 50000}&addInfo=CARMATE%20PIN%20${boardingPass.pin || '8842'}&accountName=CHU%20XE%20CARMATE`}
+                              alt="VietQR Phụ xăng CarMate"
+                              className="w-36 h-36 object-contain"
+                              loading="lazy"
+                            />
+                          </div>
+                          <div className="space-y-2 text-xs font-mono w-full sm:w-auto text-left">
+                            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+                              <span className="text-slate-400 block text-[10px]">NGÂN HÀNG:</span>
+                              <span className="font-bold text-white">MB Bank (Quân Đội)</span>
+                            </div>
+                            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between gap-2">
+                              <div>
+                                <span className="text-slate-400 block text-[10px]">SỐ TÀI KHOẢN CHỦ XE:</span>
+                                <span className="font-black text-emerald-400 text-sm tracking-wider">0938.884.288</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard?.writeText('0938884288');
+                                  onShowToast?.('✓ Đã sao chép số tài khoản MB Bank');
+                                }}
+                                className="p-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] text-slate-300 hover:text-white transition-all cursor-pointer"
+                                title="Sao chép STK"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between gap-2">
+                              <div>
+                                <span className="text-slate-400 block text-[10px]">NỘI DUNG CHUYỂN KHOẢN:</span>
+                                <span className="font-bold text-amber-300">CARMATE PIN {boardingPass.pin || '8842'}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard?.writeText(`CARMATE PIN ${boardingPass.pin || '8842'}`);
+                                  onShowToast?.('✓ Đã sao chép cú pháp chuyển khoản');
+                                }}
+                                className="p-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] text-slate-300 hover:text-white transition-all cursor-pointer"
+                                title="Sao chép cú pháp"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPaidStatus(true);
+                              onShowToast?.('✓ Đã xác nhận chuyển khoản phụ xăng!');
+                            }}
+                            className="h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Đã chuyển khoản VietQR</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPaidStatus(true);
+                              onShowToast?.('✓ Đã ghi nhận: Trả tiền mặt 50.000đ khi bước xuống xe');
+                            }}
+                            className="h-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/[0.12] text-slate-200 font-bold text-xs font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                          >
+                            <span>💵 Trả tiền mặt khi xuống</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* 3. ⚠️ NGUYÊN TẮC TRẢ KHÁCH HÀNG XANH TRONG 10 GIÂY (CSGT & CAMERA PHẠT NGUỘI) */}
+                  <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-200 space-y-2 text-left">
+                    <div className="font-bold font-mono uppercase tracking-wide text-rose-300 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>QUY TẮC XUỐNG XE 10 GIÂY TẠI HÀNG XANH</span>
+                    </div>
+                    <p className="text-slate-300 leading-relaxed text-[11.5px] pl-5">
+                      • Nút giao Hàng Xanh có mật độ xe rất cao và <strong>camera phạt nguội dừng đỗ</strong>.<br />
+                      • Quý khách vui lòng chuyển khoản hoặc chuẩn bị tiền chẵn trước khi xe đến.<br />
+                      • Khi xe tấp lề an toàn: mở cửa, bước xuống vỉa hè trong vòng <strong>10 giây</strong> để tránh gây ùn tắc và bảo vệ chủ xe khỏi bị phạt.
                     </p>
-                    <div className="text-[11px] font-mono text-sky-400 font-bold">
-                      Vị trí của bạn: #{boardingPass.position || 1} tại Trạm • Xe qua trạm mỗi 3–5 phút
+                  </div>
+
+                  {/* 4. NÚT XÁC NHẬN ĐÃ TỚI NƠI AN TOÀN & ĐÁNH GIÁ 5 SAO */}
+                  <button
+                    type="button"
+                    onClick={() => setShowRiderReviewModal(true)}
+                    className="w-full h-14 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-sm font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(16,185,129,0.35)] active:scale-98"
+                  >
+                    <span>🏁 ĐÃ TỚI HÀNG XANH AN TOÀN · ĐÁNH GIÁ CHỦ XE</span>
+                  </button>
+
+                  {/* 5. NÚT THẺ PHÁP LÝ & LIÊN LẠC AN TOÀN */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowLegalShield(true)}
+                      className="h-12 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                    >
+                      <Scale className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>🛡️ Thẻ Pháp Lý</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowContactModal(true)}
+                      className="h-12 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-mono font-bold text-sky-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shadow-[0_0_20px_rgba(14,165,233,0.15)]"
+                    >
+                      <MessageSquare className="w-4 h-4 text-sky-400" />
+                      <span>Liên Lạc An Toàn</span>
+                    </button>
+                  </div>
+
+                  {/* 6. NÚT MÔ PHỎNG: ĐẢO VỀ MÀN HÌNH CHỜ ĐÓN */}
+                  <button
+                    type="button"
+                    onClick={handleToggleBoardedDemo}
+                    className="w-full h-11 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-xs font-mono text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                    <span>⚡ Thử nghiệm: Chuyển về màn hình Chờ đón tại trạm</span>
+                  </button>
+                </div>
+              ) : (
+                /* ========================================================================= */
+                /* TRẠNG THÁI 2: ĐANG ĐỨNG CHỜ TẠI TRẠM ĐÓN - MÃ PIN & RADAR TIẾP CẬN        */
+                /* ========================================================================= */
+                <div className="space-y-4">
+                  {/* 1. MÃ PIN LÊN XE (ĐẶT Ở VỊ TRÍ ĐẬP VÀO MẮT ĐẦU TIÊN) */}
+                  <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-2 border-emerald-500/60 rounded-3xl p-5 text-center space-y-3 shadow-2xl">
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-400 font-mono block">
+                      MÃ PIN LÊN XE
+                    </span>
+                    <div className="flex items-center justify-center gap-2 sm:gap-3 py-1">
+                      {(boardingPass.pin || '8842').split('').map((char, i) => (
+                        <span
+                          key={i}
+                          className="w-14 h-18 sm:w-16 sm:h-20 rounded-2xl bg-white/[0.08] border-2 border-emerald-400 text-3xl sm:text-4xl font-black font-mono text-emerald-400 flex items-center justify-center shadow-lg"
+                        >
+                          {char}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-amber-300 font-medium pt-0.5">
+                      (Đọc cho chủ xe khi mở cửa)
+                    </p>
+                  </div>
+
+                  {/* 2. TRẠNG THÁI XE TIẾP CẬN (RADAR, COUNTDOWN & DISTANCE) */}
+                  <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                        TRẠNG THÁI XE TIẾP CẬN
+                      </span>
+                      {isArriving ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                          <span>🟢 Có xe đang tới trạm</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 text-xs font-mono font-bold">
+                          <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+                          <span>🟡 Đang quét radar QL13</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {isArriving ? (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-baseline justify-between">
+                          <div className="flex items-center gap-2 text-sm sm:text-base font-black text-white font-mono">
+                            <span>⏱️ Dự kiến đón sau:</span>
+                            <span className="text-emerald-400 text-lg sm:text-xl font-mono">
+                              {formatEtaMinutesSeconds(etaSeconds)} phút
+                            </span>
+                          </div>
+                          <span className="text-xs font-mono text-slate-300 font-bold">
+                            Cách ~{dynamicDistanceKm} km
+                          </span>
+                        </div>
+
+                        {/* Thanh tiến trình khoảng cách trực quan */}
+                        <div className="w-full h-3 bg-white/[0.08] rounded-full overflow-hidden p-0.5 relative">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-sky-400 rounded-full transition-all duration-1000 ease-out"
+                            style={{ width: `${dynamicProgressPercent}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                          <span>Radar QL13 (3.5 km)</span>
+                          <span className="text-emerald-400 font-bold">Trạm đón (0 km)</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-1">
+                        <p className="text-xs text-slate-300 font-sans">
+                          Radar CarMate đang phát tín hiệu tới các xe ô tô gia đình chạy trên QL13 cách trạm 3 - 5 km.
+                        </p>
+                        <div className="text-[11px] font-mono text-sky-400 font-bold">
+                          Vị trí của bạn: #{boardingPass.position || 1} tại Trạm • Xe qua trạm mỗi 3–5 phút
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. THÔNG TIN PHƯƠNG TIỆN */}
+                  <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-2.5 text-left">
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 block">
+                      THÔNG TIN PHƯƠNG TIỆN
+                    </span>
+                    <div className="space-y-2 text-xs font-mono">
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                        <span className="text-slate-400">• Loại xe:</span>
+                        <span className="text-sm font-bold text-white">
+                          {boardingPass.carInfo?.vehicleModel || 'Mitsubishi Xpander (Trắng)'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                        <span className="text-slate-400">• Biển số:</span>
+                        <span className="text-base font-black text-emerald-400">
+                          {boardingPass.carInfo?.plate || '93A - 123.45'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                        <span className="text-slate-400">• Chủ xe:</span>
+                        <span className="text-sm font-bold text-slate-200">
+                          {boardingPass.carInfo?.driverName || 'Anh Tuấn (Chủ xe)'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* 3. THÔNG TIN PHƯƠNG TIỆN */}
-              <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-2.5">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 block">
-                  THÔNG TIN PHƯƠNG TIỆN
-                </span>
-                <div className="space-y-2 text-xs font-mono">
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                    <span className="text-slate-400">• Loại xe:</span>
-                    <span className="text-sm font-bold text-white">
-                      {boardingPass.carInfo?.vehicleModel || 'Mitsubishi Xpander (Trắng)'}
-                    </span>
+                  {/* 4. ⚠️ QUY TẮC AN TOÀN TRẠM XĂNG / SẢNH ĐÓN */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1 text-left">
+                    <div className="font-bold font-mono uppercase tracking-wide text-amber-300 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>QUY TẮC AN TOÀN TRẠM XĂNG</span>
+                    </div>
+                    <p className="text-slate-300 leading-relaxed text-[11.5px] pl-5">
+                      • Xe chỉ tấp mép sân trạm đúng <strong>45–60 giây</strong>.<br />
+                      • Vui lòng đứng sẵn tại mép ngoài quầy / sảnh đón.
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                    <span className="text-slate-400">• Biển số:</span>
-                    <span className="text-base font-black text-emerald-400">
-                      {boardingPass.carInfo?.plate || '93A - 123.45'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                    <span className="text-slate-400">• Chủ xe:</span>
-                    <span className="text-sm font-bold text-slate-200">
-                      {boardingPass.carInfo?.driverName || 'Anh Tuấn (Chủ xe)'}
-                    </span>
+
+                  {/* 5. NÚT XUẤT TRÌNH THẺ PHÁP LÝ HÀNH TRÌNH CHO CSGT/TTGT (1-CHẠM) */}
+                  <button
+                    type="button"
+                    onClick={() => setShowLegalShield(true)}
+                    className="w-full h-12 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                  >
+                    <Scale className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>🛡️ Thẻ Pháp Lý Hành Trình (Điều 3 BLDS 2015)</span>
+                  </button>
+
+                  {/* 5.5 NÚT BÁO CHỦ XE BỎ CHUYẾN / CỨU HỘ VẬT LÝ TẠI TRẠM */}
+                  <button
+                    type="button"
+                    onClick={() => setShowNoShowRescueModal(true)}
+                    className="w-full h-12 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-xs font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                    title="Báo chủ xe không đến và kích hoạt phao cứu sinh đón xe buýt/xe khách tại trạm"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>🚨 Báo Chủ Xe Không Đến (Cứu Hộ Tại Trạm)</span>
+                  </button>
+
+                  {/* 5.6 MÔ PHỎNG TRÁO VÉ SANG XE HỖ TRỢ D2 (TEST N+1 SILENT FAILOVER) */}
+                  <button
+                    type="button"
+                    onClick={handleTriggerShadowFailover}
+                    className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                    title="Mô phỏng xe chính D1 đứt gãy lúc sáng sớm -> Hệ thống âm thầm tráo vé sang xe D2 lúc 06:25"
+                  >
+                    <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <span>⚡ Mô phỏng Xe D1 đứt gãy ➔ Tráo êm sang xe D2 (06:25)</span>
+                  </button>
+
+                  {/* 5.7 MÔ PHỎNG LÊN XE (EN-ROUTE & VIETQR) */}
+                  <button
+                    type="button"
+                    onClick={handleToggleBoardedDemo}
+                    className="w-full h-11 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                    title="Mô phỏng khách đã đọc mã PIN và lên xe -> Chuyển sang màn hình En-Route & VietQR"
+                  >
+                    <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>⚡ Mô phỏng Lên xe (En-Route &amp; VietQR)</span>
+                  </button>
+
+                  {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleCancelPass}
+                      className="h-14 rounded-2xl bg-white/[0.06] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/30 text-xs font-mono font-bold text-slate-300 hover:text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
+                    >
+                      <span>Huỷ vé</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowContactModal(true)}
+                      className="h-14 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-mono font-bold text-sky-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shadow-[0_0_20px_rgba(14,165,233,0.15)]"
+                    >
+                      <MessageSquare className="w-4 h-4 text-sky-400" />
+                      <span>Liên Lạc An Toàn</span>
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              {/* 4. ⚠️ QUY TẮC AN TOÀN TRẠM XĂNG / SẢNH ĐÓN */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1">
-                <div className="font-bold font-mono uppercase tracking-wide text-amber-300 flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>QUY TẮC AN TOÀN TRẠM XĂNG</span>
-                </div>
-                <p className="text-slate-300 leading-relaxed text-[11.5px] pl-5">
-                  • Xe chỉ tấp mép sân trạm đúng <strong>45–60 giây</strong>.<br />
-                  • Vui lòng đứng sẵn tại mép ngoài quầy / sảnh đón.
-                </p>
-              </div>
-
-              {/* 5. NÚT XUẤT TRÌNH THẺ PHÁP LÝ HÀNH TRÌNH CHO CSGT/TTGT (1-CHẠM) */}
-              <button
-                type="button"
-                onClick={() => setShowLegalShield(true)}
-                className="w-full h-12 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-              >
-                <Scale className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>🛡️ Thẻ Pháp Lý Hành Trình (Điều 3 BLDS 2015)</span>
-              </button>
-
-              {/* 5.5 NÚT BÁO CHỦ XE BỎ CHUYẾN / CỨU HỘ VẬT LÝ TẠI TRẠM */}
-              <button
-                type="button"
-                onClick={() => setShowNoShowRescueModal(true)}
-                className="w-full h-12 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-xs font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                title="Báo chủ xe không đến và kích hoạt phao cứu sinh đón xe buýt/xe khách tại trạm"
-              >
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>🚨 Báo Chủ Xe Không Đến (Cứu Hộ Tại Trạm)</span>
-              </button>
-
-              {/* 5.6 MÔ PHỎNG TRÁO VÉ SANG XE HỖ TRỢ D2 (TEST N+1 SILENT FAILOVER) */}
-              <button
-                type="button"
-                onClick={handleTriggerShadowFailover}
-                className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                title="Mô phỏng xe chính D1 đứt gãy lúc sáng sớm -> Hệ thống âm thầm tráo vé sang xe D2 lúc 06:25"
-              >
-                <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
-                <span>⚡ Mô phỏng Xe D1 đứt gãy ➔ Tráo êm sang xe D2 (06:25)</span>
-              </button>
-
-              {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={handleCancelPass}
-                  className="h-14 rounded-2xl bg-white/[0.06] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/30 text-xs font-mono font-bold text-slate-300 hover:text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
-                >
-                  <span>Huỷ vé</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowContactModal(true)}
-                  className="h-14 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-mono font-bold text-sky-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shadow-[0_0_20px_rgba(14,165,233,0.15)]"
-                >
-                  <MessageSquare className="w-4 h-4 text-sky-400" />
-                  <span>Liên Lạc An Toàn</span>
-                </button>
-              </div>
+              )}
             </div>
           );
         })()}
@@ -1754,6 +2019,32 @@ export default function StationRiderView({
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* 🌟 MODAL ĐÁNH GIÁ 2 CHIỀU (MUTUAL RATING HÀNH KHÁCH -> CHỦ XE) */}
+      {showRiderReviewModal && (
+        <MutualReviewModal
+          booking={{
+            partyRole: 'Khách đi cùng',
+            contactName: boardingPass?.carInfo?.driverName || 'Anh Tuấn (Chủ xe)',
+            licensePlate: boardingPass?.carInfo?.plate || '93A-541.86',
+            vehicleModel: boardingPass?.carInfo?.vehicleModel || 'Mitsubishi Xpander',
+            fuelSurcharge: boardingPass?.fuelSurcharge || estimatedFare || 50000,
+            seats: 1
+          }}
+          onClose={() => {
+            setShowRiderReviewModal(false);
+          }}
+          onSubmitReview={() => {
+            setShowRiderReviewModal(false);
+            try {
+              localStorage.removeItem('carmate_active_station_pass');
+            } catch {}
+            setBoardingPass(null);
+            setViewStep('CHECKIN');
+            onShowToast?.('🌟 Cảm ơn bạn! Đã gửi đánh giá chuyến đi cho chủ xe.');
+          }}
+        />
       )}
 
       {/* FOOTER BẢO CHỨNG */}

@@ -14,12 +14,17 @@ import {
   Car,
   Clock,
   Sparkles,
-  Calendar
+  Calendar,
+  MapPin,
+  Users,
+  QrCode,
+  AlertCircle
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { api } from '../../api/client.js';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 import DriverScheduleCardView from './DriverScheduleCardView.jsx';
+import MutualReviewModal from '../modals/MutualReviewModal.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 
@@ -98,7 +103,7 @@ export default function CockpitMode({
   // Chuyển đổi giữa [ 📅 LỊCH TRÌNH CỦA BẠN ] và [ ⚡ BUỒNG LÁI RADAR QL13 ]
   const [activeCockpitTab, setActiveCockpitTab] = useState('SCHEDULE');
 
-  // Trạng thái chu trình vận hành: 'STANDBY' (D1) | 'OFFERING' (D2) | 'DWELLING' (D3) | 'ROLLING'
+  // Trạng thái chu trình: 'STANDBY' (D1) | 'OFFERING' (D2) | 'DWELLING' (D3) | 'CRUISING' (D3.5 Hành trình) | 'DROPOFF' (D4 Trả khách)
   const [cockpitState, setCockpitState] = useState('STANDBY');
   const [activeOffer, setActiveOffer] = useState(null);
   const [offerCountdown, setOfferCountdown] = useState(30);
@@ -108,6 +113,7 @@ export default function CockpitMode({
   const [pinDigits, setPinDigits] = useState(['', '', '', '']);
   const [pinError, setPinError] = useState('');
   const [currentRider, setCurrentRider] = useState(null);
+  const [showMutualRating, setShowMutualRating] = useState(false);
 
   // Cơ chế xác thực Khách vắng mặt (Dual Geofence & Dwell Time Invariant)
   const [showAbsentModal, setShowAbsentModal] = useState(false);
@@ -330,12 +336,24 @@ export default function CockpitMode({
         setTotalEarnings((prev) => prev + (currentRider?.fuelSurcharge || 240000));
         setBoardedCount((prev) => prev + (currentRider?.seatsNeeded || 2));
         setSeatsAvailable((prev) => Math.max(0, prev - (currentRider?.seatsNeeded || 2)));
-        setCockpitState('STANDBY');
-        setSimDistanceKm(8.5);
+        setCockpitState('CRUISING');
+        setSimDistanceKm(42.5);
         setActiveOffer(null);
-        setCurrentRider(null);
-        onShowToast?.('Khớp mã PIN thành công! Chúc chuyến đi thượng lộ bình an.');
-        speakText('Xác thực thành công. Tiếp tục hành trình theo Quốc lộ 13.');
+
+        // Đồng bộ trạng thái khách lên xe (BOARDED) qua localStorage
+        try {
+          const savedPassRaw = localStorage.getItem('carmate_active_station_pass');
+          if (savedPassRaw) {
+            const parsed = JSON.parse(savedPassRaw);
+            if (parsed && parsed.pass) {
+              parsed.pass.status = 'BOARDED';
+              localStorage.setItem('carmate_active_station_pass', JSON.stringify(parsed));
+            }
+          }
+        } catch {}
+
+        onShowToast?.('✓ Khớp mã PIN thành công! Đang chuyển bánh trên Quốc lộ 13.');
+        speakText('Xác thực thành công. Mời khách thắt dây an toàn. Tiếp tục hành trình theo Quốc lộ 13.');
       } else {
         setPinError(res?.error || 'Mã PIN không khớp. Vui lòng hỏi lại khách.');
       }
@@ -349,12 +367,24 @@ export default function CockpitMode({
       setTotalEarnings((prev) => prev + (currentRider?.fuelSurcharge || 240000));
       setBoardedCount((prev) => prev + (currentRider?.seatsNeeded || 2));
       setSeatsAvailable((prev) => Math.max(0, prev - (currentRider?.seatsNeeded || 2)));
-      setCockpitState('STANDBY');
-      setSimDistanceKm(8.5);
+      setCockpitState('CRUISING');
+      setSimDistanceKm(42.5);
       setActiveOffer(null);
-      setCurrentRider(null);
-      onShowToast?.('Khớp mã thành công! Mời khách lên xe.');
-      speakText('Xác thực thành công. Tiếp tục hành trình.');
+
+      // Đồng bộ trạng thái khách lên xe (BOARDED) qua localStorage
+      try {
+        const savedPassRaw = localStorage.getItem('carmate_active_station_pass');
+        if (savedPassRaw) {
+          const parsed = JSON.parse(savedPassRaw);
+          if (parsed && parsed.pass) {
+            parsed.pass.status = 'BOARDED';
+            localStorage.setItem('carmate_active_station_pass', JSON.stringify(parsed));
+          }
+        }
+      } catch {}
+
+      onShowToast?.('✓ Khớp mã thành công! Mời khách lên xe.');
+      speakText('Xác thực thành công. Mời khách thắt dây an toàn. Tiếp tục hành trình theo Quốc lộ 13.');
     }
   };
 
@@ -1192,6 +1222,134 @@ export default function CockpitMode({
             </div>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* MÀN HÌNH D3.5: CRUISING (ĐANG LĂN BÁNH TRÊN QL13 CÙNG KHÁCH)             */}
+        {/* ========================================================================= */}
+        {cockpitState === 'CRUISING' && (
+          <div className="space-y-5 animate-fade-in text-center">
+            {/* HUD TRẠNG THÁI LĂN BÁNH */}
+            <div className="p-6 rounded-3xl bg-gradient-to-b from-emerald-950/50 to-white/[0.02] border-2 border-emerald-500/60 space-y-3 shadow-[0_0_40px_rgba(16,185,129,0.15)]">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>🚗 ĐANG LĂN BÁNH TRÊN QL13 ➔ VỀ HÀNG XANH</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 py-2 text-left">
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/[0.06]">
+                  <span className="text-[11px] font-mono text-slate-400 block uppercase">Khách trên xe</span>
+                  <span className="text-base font-bold text-white flex items-center gap-1.5 pt-0.5">
+                    <Users className="w-4 h-4 text-cyan-400" />
+                    <span>{currentRider?.name || 'Khách đi cùng'} ({currentRider?.seatsNeeded || boardedCount || 2} người)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-400 block pt-0.5">
+                    Mã PIN: {currentRider?.pin || '8842'} (Đã khớp)
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/[0.06]">
+                  <span className="text-[11px] font-mono text-slate-400 block uppercase">Phụ xăng nhận</span>
+                  <span className="text-lg font-black font-mono text-emerald-400 block pt-0.5">
+                    +{formatVND(currentRider?.fuelSurcharge || totalEarnings || 220000)}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-mono">VietQR / Tiền mặt trao tay</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-left text-xs text-amber-200 flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Khách đang chuẩn bị chuyển khoản VietQR trên xe hoặc trả tiền mặt khi tới nơi.</span>
+              </div>
+            </div>
+
+            {/* NÚT LỚN TAPLO: [ 🏁 TỚI TRẠM HÀNG XANH · TRẢ KHÁCH (D4) ] */}
+            <div className="space-y-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCockpitState('DROPOFF');
+                  playAudioChime();
+                  speakText('Đã tới điểm đến Hàng Xanh. Vui lòng tấp lề trả khách nhanh trong 10 giây.');
+                }}
+                className="w-full h-20 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 active:scale-[0.99] text-slate-950 font-black text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_35px_rgba(16,185,129,0.3)] cursor-pointer transition-all"
+              >
+                <MapPin className="w-7 h-7" />
+                <span>🏁 TỚI TRẠM HÀNG XANH · TRẢ KHÁCH (D4)</span>
+              </button>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLegalShield(true)}
+                  className="flex-1 h-12 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                >
+                  <Scale className="w-4 h-4 text-amber-400" />
+                  <span>Thẻ Pháp Lý (CSGT)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MÀN HÌNH D4: DROPOFF (TRẢ KHÁCH NHANH 10 GIÂY & NHẬN PHỤ XĂNG VIETQR)      */}
+        {/* ========================================================================= */}
+        {cockpitState === 'DROPOFF' && (
+          <div className="space-y-5 animate-fade-in text-center">
+            <div className="p-6 rounded-3xl bg-slate-900 border-2 border-emerald-500/80 space-y-4 shadow-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold">
+                <span>🏁 ĐÃ TỚI TRẠM HÀNG XANH · TRẢ KHÁCH NHANH</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-200 text-left">
+                ⚠️ <strong>Lưu ý camera phạt nguội:</strong> Vui lòng dừng sát lề và trả khách trong dưới 30 giây.
+              </div>
+
+              {/* MÃ VIETQR HIỆN TRÊN TAPLO ĐỂ KHÁCH QUÉT NẾU CHƯA CHUYỂN TRƯỚC */}
+              <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex flex-col items-center space-y-3">
+                <span className="text-xs font-mono text-slate-300 uppercase">Mã VietQR nhận phụ xăng:</span>
+                <img
+                  src={`https://img.vietqr.io/image/MB-0938884288-compact.png?amount=${currentRider?.fuelSurcharge || totalEarnings || 220000}&addInfo=CARMATE%20PIN%20${currentRider?.pin || '8842'}&accountName=CHU%20XE%20CARMATE`}
+                  alt="Mã VietQR phụ xăng"
+                  className="w-44 h-44 rounded-xl bg-white p-2 shadow-lg"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+                <div className="text-emerald-400 font-mono font-bold text-lg">
+                  +{formatVND(currentRider?.fuelSurcharge || totalEarnings || 220000)}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playAudioChime();
+                  speakText('Chúc mừng đã hoàn tất cuốc đi an toàn. Cảm ơn bạn!');
+                  onShowToast?.('🎉 Đã hoàn tất chuyến đi an toàn! Điểm tín nhiệm tăng +1');
+
+                  // Đồng bộ trạng thái khách hoàn tất cuốc qua localStorage
+                  try {
+                    const savedPassRaw = localStorage.getItem('carmate_active_station_pass');
+                    if (savedPassRaw) {
+                      const parsed = JSON.parse(savedPassRaw);
+                      if (parsed && parsed.pass) {
+                        parsed.pass.status = 'COMPLETED';
+                        localStorage.setItem('carmate_active_station_pass', JSON.stringify(parsed));
+                      }
+                    }
+                  } catch {}
+
+                  setShowMutualRating(true);
+                }}
+                className="w-full h-18 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-lg uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 cursor-pointer active:scale-[0.99] transition-all"
+              >
+                <CheckCircle2 className="w-6 h-6" />
+                <span>✓ ĐÃ NHẬN ĐỦ PHỤ XĂNG · HOÀN TẤT CUỐC</span>
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ── FOOTER: BỘ CÔNG CỤ MÔ PHỎNG THỰC TẾ (SIMULATION TOOLBAR) ── */}
@@ -1222,6 +1380,46 @@ export default function CockpitMode({
             >
               <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
               <span>Thử Loa & Giọng đọc</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentRider({
+                  name: 'Bạn Hoàng (Khách đi cùng)',
+                  seatsNeeded: 2,
+                  destinationName: 'Hàng Xanh',
+                  fuelSurcharge: 220000,
+                  pin: '8842'
+                });
+                setCockpitState('CRUISING');
+                playAudioChime();
+                speakText('Đang thử nghiệm chế độ Cruising lăn bánh trên Quốc lộ 13.');
+              }}
+              className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <Car className="w-3.5 h-3.5" />
+              <span>Thử Cruising (QL13)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentRider({
+                  name: 'Bạn Hoàng (Khách đi cùng)',
+                  seatsNeeded: 2,
+                  destinationName: 'Hàng Xanh',
+                  fuelSurcharge: 220000,
+                  pin: '8842'
+                });
+                setCockpitState('DROPOFF');
+                playAudioChime();
+                speakText('Đã tới Hàng Xanh, trả khách nhanh 10 giây.');
+              }}
+              className="px-3 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Thử Trả khách (D4)</span>
             </button>
 
             <button
@@ -1389,6 +1587,33 @@ export default function CockpitMode({
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* 🌟 MODAL ĐÁNH GIÁ 2 CHIỀU (MUTUAL RATING CHỦ XE -> HÀNH KHÁCH) */}
+      {showMutualRating && (
+        <MutualReviewModal
+          booking={{
+            partyRole: 'Chủ xe đón',
+            contactName: currentRider?.name || 'Bạn Hoàng (Khách đi cùng)',
+            fuelSurcharge: currentRider?.fuelSurcharge || totalEarnings || 220000,
+            seats: currentRider?.seatsNeeded || 2
+          }}
+          onClose={() => {
+            setShowMutualRating(false);
+            setCockpitState('STANDBY');
+            setCurrentRider(null);
+            setActiveOffer(null);
+            setSimDistanceKm(6.2);
+          }}
+          onSubmitReview={() => {
+            setShowMutualRating(false);
+            setCockpitState('STANDBY');
+            setCurrentRider(null);
+            setActiveOffer(null);
+            setSimDistanceKm(6.2);
+            onShowToast?.('🌟 Đã gửi đánh giá 5 sao cho khách! Cảm ơn bạn.');
+          }}
+        />
       )}
     </div>
   );
