@@ -20,7 +20,10 @@ import {
   Lightbulb,
   ShieldAlert,
   Scale,
-  MessageSquare
+  MessageSquare,
+  Bus,
+  Award,
+  AlertTriangle
 } from 'lucide-react';
 import {
   formatVND,
@@ -38,6 +41,8 @@ import { api, setStoredAuthToken } from '../../api/client.js';
 import StationRequestModal from '../modals/StationRequestModal.jsx';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 import StationContactModal from '../modals/StationContactModal.jsx';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
 
 export default function StationRiderView({
   hubId = 'hub_ql13_tan_khai',
@@ -160,6 +165,8 @@ export default function StationRiderView({
   });
   const [showOtherDestinations, setShowOtherDestinations] = useState(false);
   const [showStationPicker, setShowStationPicker] = useState(false);
+  const [showNoShowRescueModal, setShowNoShowRescueModal] = useState(false);
+  const [hasGoldenTicket, setHasGoldenTicket] = useState(false);
   const [seatsNeeded, setSeatsNeeded] = useState(1);
   const [phone, setPhone] = useState(() => {
     if (currentUser?.phone) return currentUser.phone;
@@ -1317,6 +1324,17 @@ export default function StationRiderView({
                 <span>🛡️ Thẻ Pháp Lý Hành Trình (Điều 3 BLDS 2015)</span>
               </button>
 
+              {/* 5.5 NÚT BÁO CHỦ XE BỎ CHUYẾN / CỨU HỘ VẬT LÝ TẠI TRẠM */}
+              <button
+                type="button"
+                onClick={() => setShowNoShowRescueModal(true)}
+                className="w-full h-12 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-xs font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                title="Báo chủ xe không đến và kích hoạt phao cứu sinh đón xe buýt/xe khách tại trạm"
+              >
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>🚨 Báo Chủ Xe Không Đến (Cứu Hộ Tại Trạm)</span>
+              </button>
+
               {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <button
@@ -1565,6 +1583,105 @@ export default function StationRiderView({
           currentUser={currentUser}
           onShowToast={onShowToast}
         />
+      )}
+
+      {/* 🚨 MODAL CỨU HỘ TRẠM & BÁO CHỦ XE BỎ CHUYẾN (MULTI-MODAL ESCAPE) */}
+      {showNoShowRescueModal && (
+        <Modal
+          onClose={() => setShowNoShowRescueModal(false)}
+          size="lg"
+          icon={AlertTriangle}
+          iconTone="danger"
+          title="Xử Lý Sự Cố: Chủ Xe Bỏ Hẹn / Không Đến"
+          subtitle="Thi hành chế tài tức thì & Kích hoạt Phao Cứu Sinh Vật Lý tại Trạm"
+          footer={
+            <div className="flex items-center justify-between gap-3 w-full">
+              <Button variant="outline" onClick={() => setShowNoShowRescueModal(false)}>
+                Đóng lại
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setHasGoldenTicket(true);
+                  handleCancelPass();
+                  setShowNoShowRescueModal(false);
+                  onShowToast?.('🎉 Đã cấp Thẻ Ưu Tiên Vàng #1! Bạn đã được giải phóng vé để bắt xe khách/buýt.');
+                }}
+                className="font-bold"
+              >
+                <span>Xác nhận & Nhận Thẻ Ưu Tiên Vàng</span>
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
+            {/* TẦNG 1: THI HÀNH CÔNG LÝ TỨC THÌ */}
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs space-y-1.5 text-rose-900 dark:text-rose-200">
+              <strong className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>1. Thi Hành Chế Tài Tự Động Đối Với Chủ Xe:</span>
+              </strong>
+              <p>
+                Hệ thống xác nhận chủ xe <strong>{boardingPass?.carInfo?.plate || '93A-123.45'}</strong> ({boardingPass?.carInfo?.driverName || 'Chủ xe'}) đã trễ hẹn không lý do chính đáng.
+              </p>
+              <div className="p-2 rounded-xl bg-black/10 dark:bg-black/30 font-mono text-[11px] text-rose-600 dark:text-rose-400">
+                • Trừ <strong>-35 điểm tín nhiệm</strong> của chủ xe.<br />
+                • Tạm đình chỉ quyền nhận người đi cùng trong <strong>7 ngày</strong>.
+              </div>
+            </div>
+
+            {/* TẦNG 2: ĐỀN BÙ BẰNG THẺ ƯU TIÊN VÀNG */}
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-1.5 text-amber-900 dark:text-amber-200">
+              <strong className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <Award className="w-4 h-4 shrink-0" />
+                <span>2. Quyền Lợi Đền Bù Dành Riêng Cho Bạn:</span>
+              </strong>
+              <p>
+                Để tạ lỗi vì sự bất tiện này, tài khoản của bạn được kích hoạt ngay:
+              </p>
+              <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-950 dark:text-amber-100 font-mono text-xs font-bold flex items-center justify-between">
+                <span>⭐ THẺ ƯU TIÊN VÀNG #1 (GOLDEN TICKET)</span>
+                <span className="text-emerald-500">+10 Điểm Karma</span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                * Lần đặt xe tiếp theo, thuật toán Gale-Shapley sẽ tự động khóa chỗ cho bạn đầu tiên với các chủ xe Uy Tín Hạng Vàng.
+              </p>
+            </div>
+
+            {/* TẦNG 3: PHAO CỨU SINH VẬT LÝ TẠI CÂY XĂNG QL13 */}
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs space-y-2">
+              <strong className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                <Bus className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>3. Phao Cứu Sinh Vật Lý Tại Cây Xăng (Để Kịp Giờ Làm):</span>
+              </strong>
+              <p className="text-slate-600 dark:text-slate-300">
+                Bạn đang đứng tại <strong>{currentHub.name} (Mặt tiền QL13)</strong>. Hãy bước ra mép cổng cây xăng để vẫy các tuyến xe đang chạy liên tục:
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11.5px] pt-1">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-black/30 border border-black/[0.06] dark:border-white/[0.06] space-y-1">
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 block font-mono">
+                    🚌 Tuyến Buýt Số 15:
+                  </span>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    Chơn Thành ➔ Thủ Dầu Một / Sài Gòn.<br />
+                    Tần suất: <strong>10 - 15 phút/chuyến</strong>. Giá vé: ~25.000đ.
+                  </p>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-white dark:bg-black/30 border border-black/[0.06] dark:border-white/[0.06] space-y-1">
+                  <span className="font-bold text-sky-600 dark:text-sky-400 block font-mono">
+                    🚐 Xe Khách Liên Tỉnh QL13:
+                  </span>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    Thành Công, Chín Tèo, Quốc Đạt...<br />
+                    Bấm kèn vẫy tay ngay cổng trạm là đón thẳng về Miền Đông.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* FOOTER BẢO CHỨNG */}

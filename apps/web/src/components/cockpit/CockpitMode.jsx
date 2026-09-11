@@ -20,6 +20,8 @@ import { formatVND } from '@carmate/shared';
 import { api } from '../../api/client.js';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 import DriverScheduleCardView from './DriverScheduleCardView.jsx';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
 
 const QUICK_CAR_MODELS = [
   'Xpander Trắng',
@@ -106,6 +108,10 @@ export default function CockpitMode({
   const [pinDigits, setPinDigits] = useState(['', '', '', '']);
   const [pinError, setPinError] = useState('');
   const [currentRider, setCurrentRider] = useState(null);
+
+  // Cơ chế xác thực Khách vắng mặt (Dual Geofence & Dwell Time Invariant)
+  const [showAbsentModal, setShowAbsentModal] = useState(false);
+  const [absentSimGpsStatus, setAbsentSimGpsStatus] = useState('FAR'); // 'FAR' (ở xa) | 'NEAR' (ở trạm)
 
   // Giả lập khoảng cách tiếp cận trạm (km)
   const [simDistanceKm, setSimDistanceKm] = useState(6.2);
@@ -1175,8 +1181,9 @@ export default function CockpitMode({
 
                 <button
                   type="button"
-                  onClick={handleRejectOffer}
-                  className="h-11 px-4 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-xs font-semibold text-rose-300 flex items-center justify-center gap-1.5 cursor-pointer border border-rose-500/30"
+                  onClick={() => setShowAbsentModal(true)}
+                  className="h-11 px-4 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-xs font-semibold text-rose-300 flex items-center justify-center gap-1.5 cursor-pointer border border-rose-500/30 active:scale-95 transition-all"
+                  title="Xác thực khách không đến theo bất biến Geofence & Dwell-Time"
                 >
                   <XCircle className="w-3.5 h-3.5" />
                   <span>Khách vắng mặt / Hủy</span>
@@ -1254,6 +1261,134 @@ export default function CockpitMode({
           }}
           userRole="driver"
         />
+      )}
+
+      {/* ⚠️ MODAL XÁC THỰC KHÁCH VẮNG MẶT (DUAL GEOFENCE & DWELL-TIME INVARIANT) */}
+      {showAbsentModal && (
+        <Modal
+          onClose={() => setShowAbsentModal(false)}
+          size="md"
+          icon={AlertTriangle}
+          iconTone="warning"
+          title="Xác thực Khách vắng mặt tại Trạm"
+          subtitle="Đối chiếu dữ liệu Geofence 2 chiều & Thời gian dừng đỗ (Dwell-Time)"
+          footer={
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <Button variant="outline" onClick={() => setShowAbsentModal(false)}>
+                Quay lại đợi thêm
+              </Button>
+              {absentSimGpsStatus === 'FAR' ? (
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    handleRejectOffer();
+                    setShowAbsentModal(false);
+                    onShowToast?.(
+                      '✓ Đã xác thực Khách vắng mặt (Khách bị trừ 30 điểm tín nhiệm). Bạn được phép tiếp tục hành trình!'
+                    );
+                    speakText('Đã xác thực khách vắng mặt. Bạn được giải phóng cuốc đi an toàn.');
+                  }}
+                  className="font-bold"
+                >
+                  <span>Xác nhận No-Show (-30đ)</span>
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    onShowToast?.('💡 Đang bật đèn xi-nhan và phát tín hiệu tìm nhau tại sân trạm!');
+                    speakText('Cả hai bạn đều đang ở trong trạm. Vui lòng bật xi-nhan tìm nhau.');
+                  }}
+                  className="font-bold"
+                >
+                  <span>Bật xi-nhan tìm nhau</span>
+                </Button>
+              )}
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
+            {/* 1. ĐIỀU KIỆN DWELL-TIME DỪNG ĐỖ */}
+            <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] space-y-1">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-500 uppercase font-bold">1. Thời gian dừng tại trạm:</span>
+                <span className="font-black text-emerald-500">ĐÃ DỪNG ĐỦ 5 PHÚT (05:00)</span>
+              </div>
+              <p className="text-[11.5px] text-slate-500 dark:text-slate-400">
+                ✓ Thỏa mãn bất biến dừng đỗ tối thiểu 5 phút để hành khách kịp bước ra xe.
+              </p>
+            </div>
+
+            {/* 2. ĐỐI CHIẾU GPS 2 CHIỀU */}
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-black/30 border border-black/[0.08] dark:border-white/[0.08] space-y-2">
+              <span className="text-xs font-mono font-bold uppercase text-slate-500 block">
+                2. Đối chiếu GPS Không Gian 2 Chiều:
+              </span>
+
+              <div className="space-y-2 text-xs">
+                {/* Vị trí xe */}
+                <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <span>🚗 Xe của bạn ({vehicle?.plate}):</span>
+                  <span className="font-mono font-bold text-emerald-500">Trong sân trạm (R = 12m)</span>
+                </div>
+
+                {/* Vị trí khách */}
+                {absentSimGpsStatus === 'FAR' ? (
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                    <span>👤 Điện thoại khách:</span>
+                    <span className="font-mono font-bold text-rose-500">Cách trạm 2.3 km (Vắng mặt)</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                    <span>👤 Điện thoại khách:</span>
+                    <span className="font-mono font-bold text-cyan-500">Trong sân trạm (Cách xe 18m)</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* THÔNG ĐIỆP KẾT LUẬN */}
+            {absentSimGpsStatus === 'FAR' ? (
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-900 dark:text-rose-200">
+                <strong className="block font-bold mb-0.5">Xác thực: Khách không có mặt tại điểm đón!</strong>
+                Hệ thống sẽ trừ 30 điểm tín nhiệm của hành khách này. Bạn không vi phạm bất cứ điều gì và được phép đạp ga lăn bánh tiếp tục lộ trình.
+              </div>
+            ) : (
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200">
+                <strong className="block font-bold mb-0.5">⚠️ Chú ý: Khách cũng đang ở trong trạm xăng!</strong>
+                GPS cho thấy khách chỉ cách xe bạn 18m (có thể đang đứng gần quầy thu ngân hoặc quầy tiện lợi). Hệ thống <strong>KHÔNG</strong> trừ điểm ai khi cả hai đều đã đến trạm. Vui lòng bấm còi nhẹ hoặc bật xi-nhan!
+              </div>
+            )}
+
+            {/* CÔNG CỤ CHUYỂN ĐỔI MÔ PHỎNG TEST */}
+            <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between text-xs">
+              <span className="text-slate-400 font-mono text-[11px]">Mô phỏng thử nghiệm GPS:</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setAbsentSimGpsStatus('FAR')}
+                  className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
+                    absentSimGpsStatus === 'FAR'
+                      ? 'bg-rose-500 text-white font-bold'
+                      : 'bg-white/[0.05] text-slate-400'
+                  }`}
+                >
+                  Khách ở xa (2.3km)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAbsentSimGpsStatus('NEAR')}
+                  className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
+                    absentSimGpsStatus === 'NEAR'
+                      ? 'bg-cyan-500 text-slate-950 font-bold'
+                      : 'bg-white/[0.05] text-slate-400'
+                  }`}
+                >
+                  Khách cùng ở trạm (18m)
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

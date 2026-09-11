@@ -109,6 +109,11 @@ export default function DriverScheduleCardView({
   const [newSeats, setNewSeats] = useState(2);
   const [isRecurringCommute, setIsRecurringCommute] = useState(true);
 
+  // 3-TIER CHECKPOINTS STATE (QUY TRÌNH GÁC CỔNG 3 MỐC)
+  const [activeCheckpoint, setActiveCheckpoint] = useState('MORNING_WAKE');
+  const [nightConfirmed, setNightConfirmed] = useState(true);
+  const [morningAwakeConfirmed, setMorningAwakeConfirmed] = useState(false);
+
   // Lưu lịch trình vào localStorage khi có thay đổi
   const updateSchedulesState = (newScheds) => {
     setSchedules(newScheds);
@@ -411,6 +416,97 @@ export default function DriverScheduleCardView({
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* QUY TRÌNH GÁC CỔNG 3 MỐC THỜI GIAN (TRIỆT TIÊU RỦI RO NGỦ QUÊN / HỦY SÁNG) */}
+                {isMatched && (
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Gác cổng 3 mốc: {activeCheckpoint === 'NIGHT_LOCK' ? '21:00 Đêm (Khóa sổ)' : activeCheckpoint === 'MORNING_WAKE' ? '05:15 Sáng (Báo thức)' : '05:30 Sáng (Lằn ranh đỏ)'}</span>
+                      </span>
+                      {/* Selector mô phỏng 3 mốc */}
+                      <div className="flex items-center gap-1 text-[10px] font-mono">
+                        <button
+                          type="button"
+                          onClick={() => setActiveCheckpoint('NIGHT_LOCK')}
+                          className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'NIGHT_LOCK' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
+                          title="Mốc 21:00 đêm hôm trước"
+                        >
+                          21h Đêm
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveCheckpoint('MORNING_WAKE')}
+                          className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'MORNING_WAKE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
+                          title="Mốc 05:15 sáng (T - 60p)"
+                        >
+                          05h15 Sáng
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveCheckpoint('RED_LINE')}
+                          className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'RED_LINE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
+                          title="Mốc 05:30 sáng (T - 45p Fail-safe)"
+                        >
+                          05h30 Lằn ranh đỏ
+                        </button>
+                      </div>
+                    </div>
+
+                    {activeCheckpoint === 'NIGHT_LOCK' && (
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <p className="text-xs text-slate-300">
+                          🌙 <strong>21:00 Tối:</strong> Xác nhận chắc chắn chuyến đi sáng mai để khách an tâm ngủ ngon.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNightConfirmed(true);
+                            onShowToast?.('✓ Đã chốt sổ ban đêm! Khách nhận được thông báo an tâm.');
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold font-mono text-xs shrink-0 cursor-pointer active:scale-95 transition-all"
+                        >
+                          {nightConfirmed ? '✓ Đã chốt sổ 21h' : 'Chốt sổ ngay'}
+                        </button>
+                      </div>
+                    )}
+
+                    {activeCheckpoint === 'MORNING_WAKE' && (
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <p className="text-xs text-slate-300">
+                          ⏰ <strong>05:15 Sáng (T-60p):</strong> Báo thức 1-chạm xác nhận đã thức dậy và chuẩn bị xe.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMorningAwakeConfirmed(true);
+                            onShowToast?.('⏰ Đã xác nhận thức dậy! Đường ống mở sẵn sàng đón khách lúc 06:15.');
+                          }}
+                          className={`px-3 py-1.5 rounded-xl font-bold font-mono text-xs shrink-0 cursor-pointer active:scale-95 transition-all ${
+                            morningAwakeConfirmed
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 animate-pulse'
+                          }`}
+                        >
+                          {morningAwakeConfirmed ? '✓ Đã thức dậy (05:15)' : 'Tôi đã thức dậy'}
+                        </button>
+                      </div>
+                    )}
+
+                    {activeCheckpoint === 'RED_LINE' && (
+                      <div className="space-y-1.5 pt-0.5">
+                        <div className="flex items-center justify-between text-xs text-rose-300">
+                          <span>🚨 <strong>05:30 Sáng (T-45p):</strong> Lằn ranh đỏ Fail-safe</span>
+                          <span className="font-mono text-[10px] text-rose-400 font-bold">Tự hủy nếu vắng mặt</span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          Nếu chủ xe chưa bấm "Đã thức dậy" hoặc mất mạng 4G trước 05:30, hệ thống <strong>hủy tự động ngay lúc 05:30</strong> để khách còn nguyên 45 phút đón xe khách/buýt sớm, không bị lỡ giờ làm việc ở Sài Gòn!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
