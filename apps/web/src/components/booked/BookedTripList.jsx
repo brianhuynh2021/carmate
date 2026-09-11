@@ -33,9 +33,10 @@ import PresenceDot from '../ui/PresenceDot.jsx';
 
 
 
-function TripProgressStepper({ status, delayedMinutes }) {
+function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
   const isCompleted = status === 'completed';
-  const isCancelled = status === 'cancelled';
+  const isReassigned = status === 'reassigned' || Boolean(hasSilentFailover);
+  const isCancelled = status === 'cancelled' && !isReassigned;
   const isDelayed = status === 'delayed';
 
   const steps = [
@@ -47,9 +48,9 @@ function TripProgressStepper({ status, delayedMinutes }) {
     },
     {
       id: 2,
-      label: isDelayed ? `Trễ +${delayedMinutes || 15}p` : 'Trao đổi',
-      desc: isCancelled ? 'Đã dừng kết nối' : 'Điểm đón & hành lý',
-      state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active'
+      label: isDelayed ? `Trễ +${delayedMinutes || 15}p` : isReassigned ? 'Xe hỗ trợ' : 'Trao đổi',
+      desc: isReassigned ? 'Đang điều phối tiếp quản' : isCancelled ? 'Đã dừng kết nối' : 'Điểm đón & hành lý',
+      state: isCompleted ? 'completed' : isReassigned ? 'active' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active'
     },
     {
       id: 3,
@@ -80,11 +81,13 @@ function TripProgressStepper({ status, delayedMinutes }) {
         <span className="text-[11px] font-semibold text-[#86868b] tabular">
           {isCompleted
             ? '4/4 hoàn tất'
-            : isCancelled
-              ? 'Đã dừng'
-              : isDelayed
-                ? 'Bước 2/4 (Báo trễ)'
-                : 'Bước 2/4 đang kết nối'}
+            : isReassigned
+              ? 'Bước 2/4 (Xe hỗ trợ)'
+              : isCancelled
+                ? 'Đã dừng'
+                : isDelayed
+                  ? 'Bước 2/4 (Báo trễ)'
+                  : 'Bước 2/4 đang kết nối'}
         </span>
       </div>
 
@@ -482,8 +485,12 @@ export default function BookedTripList({
         <div className="space-y-3">
           {paginatedList.map((record) => {
             const totalCost = record.fullTripAmount || record.totalDeal || 0;
+            const hasSilentFailover =
+              record.status === 'reassigned' ||
+              Boolean(record.salvageInfo?.supportDispatched) ||
+              Boolean(record.supportDispatched);
             const isCompleted = record.status === 'completed';
-            const isCancelled = record.status === 'cancelled';
+            const isCancelled = record.status === 'cancelled' && !hasSilentFailover;
             const isDelayed = record.status === 'delayed';
             const isConfirmed = record.status === 'confirmed' || record.bothConfirmed === true;
             const partnerOnline = getUserOnlineStatus(record.targetItem || record, currentUser?.phone || currentUser?.id);
@@ -542,6 +549,10 @@ export default function BookedTripList({
                       {isCompleted ? (
                         <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
                           Đã hoàn tất an toàn
+                        </Badge>
+                      ) : hasSilentFailover ? (
+                        <Badge tone="primary" icon={Sparkles} className="h-6.5 px-2.5 text-[11px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                          Xe hỗ trợ đang đón
                         </Badge>
                       ) : isCancelled ? (
                         <Badge tone="danger" icon={XCircle} className="h-6.5 px-2.5 text-[11px] font-semibold">
@@ -670,8 +681,25 @@ export default function BookedTripList({
                       </div>
                     )}
 
+                    {/* THÔNG BÁO ĐIỀU PHỐI XE HỖ TRỢ (SILENT FALLBACK N+1) */}
+                    {hasSilentFailover && (
+                      <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 space-y-2 text-xs">
+                        <div className="flex items-center gap-2 text-sky-700 dark:text-sky-300 font-bold uppercase tracking-wider">
+                          <Sparkles className="w-4 h-4 text-sky-500 shrink-0" />
+                          <span>HỆ THỐNG ĐIỀU PHỐI XE HỖ TRỢ HÀNH TRÌNH</span>
+                        </div>
+                        <p className="text-slate-700 dark:text-slate-200 leading-relaxed font-sans">
+                          Chuyến đi của bạn đã được chuyển sang xe <strong>{record.salvageInfo?.supportVehicleModel || 'Toyota Vios (Đen)'}</strong> (<strong>{record.salvageInfo?.supportPlate || '61A - 892.41'}</strong>), do <strong>{record.salvageInfo?.supportDriverName || 'Anh Hải (Chủ xe)'}</strong> đón bạn lúc <strong>{record.salvageInfo?.supportPickupTime || '06:25'}</strong>.
+                        </p>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>Ghế ngồi &amp; Lộ trình giữ nguyên 100% · Không phát sinh phụ phí</span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Quy trình kết nối an toàn 4 bước */}
-                    <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} />
+                    <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} hasSilentFailover={hasSilentFailover} />
 
                     {/* Lộ Trình & Thời Gian Chi Tiết */}
                     <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.06] dark:border-white/[0.08]">

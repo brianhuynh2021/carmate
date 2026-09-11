@@ -460,9 +460,16 @@ export async function cancelBooking(req, res) {
     // 2. Tính toán thang phạt dốc thời gian (Time-Decay Penalty)
     const penaltyResult = await applyCancellationPenalty(booking, cancellingPhone, deltaMinutes);
 
-    // 3. Nếu huỷ sát giờ (< 30 phút), kích hoạt Radar cứu hộ (Standby Buffer)
+    // 3. KÍCH HOẠT ĐIỀU PHỐI XE HỖ TRỢ / CHUYỂN LÀN VÔ HÌNH (SILENT FALLBACK N+1)
+    // Tuyệt đối không để khách bị bùng chuyến nếu còn xe trên hành lang
     let salvageInfo = null;
-    if (deltaMinutes < 30) {
+    const isDriverCancelling =
+      req.body?.cancellingRole === 'driver' ||
+      cancellingPhone === trip?.phoneReal ||
+      cancellingPhone === booking?.driverPhone;
+
+    // Kích hoạt nếu chủ xe huỷ trước giờ chạy hoặc trong vòng 90 phút
+    if (isDriverCancelling || deltaMinutes < 90) {
       const db = getDB();
       const allActiveTrips = (db.trips || []).filter((t) => t.status === 'active' && !t.isHidden);
       const standbyCandidate = findStandbyBufferOffer(
@@ -471,23 +478,36 @@ export async function cancelBooking(req, res) {
       );
 
       if (standbyCandidate) {
+        const supportVehicleModel = standbyCandidate.carModel || standbyCandidate.vehicleModel || 'Toyota Vios (Đen)';
+        const supportPlate = standbyCandidate.licensePlate || standbyCandidate.plate || '61A - 892.41';
+        const supportTime = standbyCandidate.timeSlot || standbyCandidate.time || '06:25';
+        const supportDriver = standbyCandidate.authorName || standbyCandidate.driverName || 'Anh Hải (Chủ xe)';
+
         salvageInfo = {
           salvaged: true,
+          supportDispatched: true,
           standbyTripId: standbyCandidate.id,
-          standbyDriverName: standbyCandidate.authorName || 'Chủ xe dự phòng',
-          standbyPhone: standbyCandidate.phoneReal || standbyCandidate.phone,
-          note: 'Đã tự động kết nối xe dự phòng thay thế thành công.'
+          supportTripId: standbyCandidate.id,
+          supportDriverName: supportDriver,
+          supportVehicleModel,
+          supportPlate,
+          supportPickupTime: supportTime,
+          supportPhone: standbyCandidate.phoneReal || standbyCandidate.phone,
+          note: `CarMate điều phối xe hỗ trợ: Xe ${supportVehicleModel} (${supportPlate}) sẽ đón bạn lúc ${supportTime} tại trạm đón.`
         };
       }
     }
 
     // 4. Cập nhật booking vào database
-    const updated = await updateBookingStatus(id, 'cancelled', {
+    // Nếu có xe hỗ trợ thay thế -> chuyển sang 'reassigned' (vé của khách vẫn giữ hiệu lực)
+    const newStatus = salvageInfo?.supportDispatched ? 'reassigned' : 'cancelled';
+    const updated = await updateBookingStatus(id, newStatus, {
       cancelReason: reason,
       cancelledAt: new Date().toISOString(),
       penaltyTier: penaltyResult.penaltyTier,
       penaltyPoints: penaltyResult.penaltyPoints,
-      salvageInfo
+      salvageInfo,
+      supportDispatched: Boolean(salvageInfo?.supportDispatched)
     });
 
     // 5. Nếu chủ xe bị huỷ ghế, phục hồi lại số ghế trống trên chuyến xe

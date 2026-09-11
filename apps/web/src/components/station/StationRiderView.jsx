@@ -1396,15 +1396,15 @@ export default function StationRiderView({
                 <span>🚨 Báo Chủ Xe Không Đến (Cứu Hộ Tại Trạm)</span>
               </button>
 
-              {/* 5.6 MÔ PHỎNG TRÁO VÉ SANG XE BÓNG MA D2 (TEST N+1 SHADOW FAILOVER) */}
+              {/* 5.6 MÔ PHỎNG TRÁO VÉ SANG XE HỖ TRỢ D2 (TEST N+1 SILENT FAILOVER) */}
               <button
                 type="button"
                 onClick={handleTriggerShadowFailover}
                 className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                title="Mô phỏng tráo vé sang xe bóng ma D2 đón lúc 06:25 mà không gây hoang mang"
+                title="Mô phỏng xe chính D1 đứt gãy lúc sáng sớm -> Hệ thống âm thầm tráo vé sang xe D2 lúc 06:25"
               >
                 <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
-                <span>⚡ Mô phỏng Tráo vé sang xe bóng ma D2 (06:25)</span>
+                <span>⚡ Mô phỏng Xe D1 đứt gãy ➔ Tráo êm sang xe D2 (06:25)</span>
               </button>
 
               {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
