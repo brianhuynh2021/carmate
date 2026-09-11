@@ -45,6 +45,11 @@ import {
   cockpitVerifyPinHandler,
   resetStationDataHandler
 } from '../controllers/stationQueueController.js';
+import {
+  createStationRequestHandler,
+  listStationRequestsHandler,
+  updateStationRequestStatusHandler
+} from '../controllers/stationRequestController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -172,6 +177,11 @@ router.post('/cockpit/accept-offer', cockpitAcceptOfferHandler);
 router.post('/cockpit/reject-offer', cockpitRejectOfferHandler);
 router.post('/cockpit/verify-pin', cockpitVerifyPinHandler);
 router.delete('/station/reset', resetStationDataHandler);
+
+// --- Station Requests Pool (Gom đề xuất mở trạm ảo mới - Hard Whitelist & Zero Roadside Stops) ---
+router.post('/station-requests', optionalAuth, createStationRequestHandler);
+router.get('/station-requests', optionalAuth, listStationRequestsHandler);
+router.patch('/admin/station-requests/:id', requireAdmin, updateStationRequestStatusHandler);
 
 // --- Admin Management Portal Engine ---
 router.post('/admin/auth', adminAuth);

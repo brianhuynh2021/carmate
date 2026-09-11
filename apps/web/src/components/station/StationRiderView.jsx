@@ -14,7 +14,11 @@ import {
   QrCode,
   Smartphone,
   RefreshCw,
-  Zap
+  Zap,
+  Navigation,
+  ExternalLink,
+  Lightbulb,
+  ShieldAlert
 } from 'lucide-react';
 import {
   formatVND,
@@ -29,6 +33,7 @@ import {
   getHubLiquidityStatus
 } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
+import StationRequestModal from '../modals/StationRequestModal.jsx';
 
 export default function StationRiderView({
   hubId = 'hub_ql13_tan_khai',
@@ -94,25 +99,39 @@ export default function StationRiderView({
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const lat = pos.coords.latitude;
-          const nearest = findNearestVirtualHub(lat, pos.coords.longitude, 'Tuyến QL13');
-          if (nearest && ql13PickupHubs.some((h) => h.id === nearest.id)) {
-            setPickupHubId(nearest.id);
-            if (lat < 10.9) {
-              setDirection('TO_BINH_PHUOC');
-              setDestinationHubId('hub_ql13_binh_long');
-            } else {
-              setDirection('TO_SAIGON');
-              setDestinationHubId('hub_ql13_hang_xanh');
+          const lng = pos.coords.longitude;
+          setClientCoords({ lat, lng });
+
+          const nearest = findNearestVirtualHub(lat, lng, 'Tuyến QL13');
+          if (nearest) {
+            const dKm = nearest.distanceKm != null ? nearest.distanceKm : calculateDistanceKm(lat, lng, nearest.lat, nearest.lng);
+            const distM = Math.round(dKm * 1000);
+            setNearestHubInfo({
+              ...nearest,
+              distanceKm: dKm,
+              distanceMeters: distM
+            });
+            setGeofenceDistanceM(distM);
+
+            if (ql13PickupHubs.some((h) => h.id === nearest.id)) {
+              setPickupHubId(nearest.id);
+              if (lat < 10.9) {
+                setDirection('TO_BINH_PHUOC');
+                setDestinationHubId('hub_ql13_binh_long');
+              } else {
+                setDirection('TO_SAIGON');
+                setDestinationHubId('hub_ql13_hang_xanh');
+              }
+              onShowToast?.(`Đã kéo về trạm gần nhất: ${nearest.shortName || nearest.name} (${distM < 1000 ? distM + 'm' : dKm.toFixed(1) + 'km'})`);
+              return;
             }
-            onShowToast?.(`Đã nhận diện vị trí: ${nearest.name}`);
-            return;
           }
           onShowToast?.(direction === 'TO_BINH_PHUOC' ? 'Đang dùng trạm Hàng Xanh' : 'Đang dùng trạm Bình Long');
         },
         () => {
           onShowToast?.('Không lấy được GPS, bạn có thể chọn trạm bên dưới');
         },
-        { timeout: 3000 }
+        { timeout: 5000, enableHighAccuracy: true }
       );
     }
   };
@@ -174,6 +193,8 @@ export default function StationRiderView({
   // Tọa độ định vị GPS của thiết bị & Cảnh báo Geofence Khóa kép (Anti-Quishing Layer 2)
   const [clientCoords, setClientCoords] = useState(null);
   const [geofenceDistanceM, setGeofenceDistanceM] = useState(null);
+  const [nearestHubInfo, setNearestHubInfo] = useState(null);
+  const [showStationRequestModal, setShowStationRequestModal] = useState(false);
 
   // Modal Xác thực Vô hình (Passwordless Phone SMS WebOTP / Telegram)
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -398,7 +419,7 @@ export default function StationRiderView({
     return () => clearInterval(pollInterval);
   }, [boardingPass?.intentId, currentHub.id, viewStep]);
 
-  // 3. TỰ ĐỘNG LẤY TỌA ĐỘ GPS & ĐỐI SOÁT GEOFENCE KHUÔN VIÊN TRẠM (ANTI-QUISHING)
+  // 3. TỰ ĐỘNG LẤY TỌA ĐỘ GPS, KÉO VỀ TRẠM GẦN NHẤT & ĐỐI SOÁT GEOFENCE (SNAP-TO-STATION)
   useEffect(() => {
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -406,7 +427,18 @@ export default function StationRiderView({
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           setClientCoords({ lat, lng });
-          if (currentHub.lat != null && currentHub.lng != null) {
+
+          const nearest = findNearestVirtualHub(lat, lng, 'Tuyến QL13');
+          if (nearest) {
+            const dKm = nearest.distanceKm != null ? nearest.distanceKm : calculateDistanceKm(lat, lng, nearest.lat, nearest.lng);
+            const distM = Math.round(dKm * 1000);
+            setNearestHubInfo({
+              ...nearest,
+              distanceKm: dKm,
+              distanceMeters: distM
+            });
+            setGeofenceDistanceM(distM);
+          } else if (currentHub.lat != null && currentHub.lng != null) {
             const distKm = calculateDistanceKm(lat, lng, currentHub.lat, currentHub.lng);
             if (distKm != null) {
               setGeofenceDistanceM(Math.round(distKm * 1000));
@@ -414,7 +446,7 @@ export default function StationRiderView({
           }
         },
         () => {},
-        { timeout: 4000, enableHighAccuracy: true }
+        { timeout: 5000, enableHighAccuracy: true }
       );
     }
   }, [currentHub.lat, currentHub.lng]);
@@ -779,13 +811,24 @@ export default function StationRiderView({
                 <span>{currentHub.shortName || currentHub.name}</span>
               </h1>
               {viewStep === 'CHECKIN' && (
-                <button
-                  type="button"
-                  onClick={() => setShowStationPicker(!showStationPicker)}
-                  className="text-[11px] font-mono text-sky-400 hover:text-sky-300 underline cursor-pointer"
-                >
-                  {showStationPicker ? '▲ Đóng' : '▼ Đổi trạm'}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowStationPicker(!showStationPicker)}
+                    className="text-[11px] font-mono text-sky-400 hover:text-sky-300 underline cursor-pointer"
+                  >
+                    {showStationPicker ? '▲ Đóng' : '▼ Đổi trạm'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowStationRequestModal(true)}
+                    className="text-[10px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-500/20 transition-all"
+                    title="Đề xuất mở trạm mới nếu chưa có điểm đón bạn muốn"
+                  >
+                    <Lightbulb className="w-3 h-3 text-amber-400" />
+                    <span>Đề xuất trạm</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -834,6 +877,20 @@ export default function StationRiderView({
               </option>
             ))}
           </select>
+          <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-xs">
+            <span className="text-[11px] text-slate-400 font-mono">Chưa có điểm đón bạn cần?</span>
+            <button
+              type="button"
+              onClick={() => {
+                setShowStationPicker(false);
+                setShowStationRequestModal(true);
+              }}
+              className="text-[11px] font-bold font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+            >
+              <Lightbulb className="w-3.5 h-3.5" />
+              <span>💡 Đề xuất mở trạm mới (&gt;50 đề xuất)</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -844,6 +901,69 @@ export default function StationRiderView({
         {/* ========================================================================= */}
         {viewStep === 'CHECKIN' && (
           <form onSubmit={handleCheckInClick} className="space-y-4 animate-fade-in">
+            {/* CƠ CHẾ KÉO VỀ TRẠM GẦN NHẤT (SNAP-TO-STATION BANNER - ZERO ROADSIDE STOPS) */}
+            {nearestHubInfo && (
+              <div className="p-3.5 sm:p-4 rounded-3xl bg-gradient-to-br from-sky-950/70 via-slate-900/85 to-slate-950/90 border border-sky-500/30 backdrop-blur-md text-white shadow-xl space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                      <Navigation className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono uppercase font-black tracking-wider text-sky-400 flex items-center gap-1.5">
+                        <span>ĐỊNH VỊ GPS • SNAP-TO-STATION</span>
+                      </div>
+                      <div className="text-xs sm:text-sm font-bold text-white mt-0.5">
+                        Trạm hợp lệ gần bạn nhất: <span className="text-sky-300 font-extrabold">{nearestHubInfo.shortName || nearestHubInfo.name}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-mono font-bold text-[11px] shrink-0 border border-sky-500/30">
+                    {nearestHubInfo.distanceMeters < 1000
+                      ? `Cách ~${nearestHubInfo.distanceMeters}m`
+                      : `Cách ~${nearestHubInfo.distanceKm.toFixed(1)} km`}
+                  </span>
+                </div>
+
+                <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+                  Vui lòng di chuyển ra trạm để vào hàng đợi. Chủ xe chỉ dừng đón <strong>30–45 giây</strong> tại sân trạm an toàn ngoài hành lang QL13, <strong>tuyệt đối không đón điểm tự do</strong> (tránh camera phạt nguội biển <strong>P.130</strong> và nguy hiểm container).
+                </p>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-white/[0.08]">
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                    <span>🚶 ~{Math.max(1, Math.round(nearestHubInfo.distanceKm * 12))}p đi bộ</span>
+                    <span>•</span>
+                    <span>🛵 ~{Math.max(1, Math.round(nearestHubInfo.distanceKm * 2.5))}p xe ôm</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {pickupHubId !== nearestHubInfo.id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPickupHubId(nearestHubInfo.id);
+                          onShowToast?.(`Đã kéo về trạm gần nhất: ${nearestHubInfo.shortName || nearestHubInfo.name}`);
+                        }}
+                        className="px-2.5 py-1 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-xs font-bold font-mono transition-all cursor-pointer"
+                      >
+                        📍 Chọn trạm này
+                      </button>
+                    )}
+                    {nearestHubInfo.lat && nearestHubInfo.lng && (
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${nearestHubInfo.lat},${nearestHubInfo.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold font-mono flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <span>🗺️ Chỉ đường</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 1. BẠN MUỐN ĐẾN ĐÂU? (DÀN PHẲNG 3 NÚT BẤM KÍCH THƯỚC LỚN >= 56PX) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -1385,6 +1505,16 @@ export default function StationRiderView({
             </p>
           </div>
         </div>
+      )}
+
+      {/* MODAL GOM YÊU CẦU MỞ TRẠM MỚI (STATION REQUEST POOL - >50 LƯỢT ĐỀ XUẤT) */}
+      {showStationRequestModal && (
+        <StationRequestModal
+          onClose={() => setShowStationRequestModal(false)}
+          clientCoords={clientCoords}
+          currentUser={currentUser}
+          onShowToast={onShowToast}
+        />
       )}
 
       {/* FOOTER BẢO CHỨNG */}

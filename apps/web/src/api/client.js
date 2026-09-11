@@ -556,6 +556,26 @@ export const api = {
     return request('/station/reset', {
       method: 'DELETE'
     });
+  },
+
+  // --- Station Requests Pool (Gom đề xuất mở trạm ảo mới) ---
+  async createStationRequest(payload) {
+    return request('/station-requests', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getStationRequests(status = '') {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return request(`/station-requests${qs}`);
+  },
+
+  async updateStationRequestStatus(id, status, adminNote = '') {
+    return request(`/admin/station-requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, adminNote })
+    });
   }
 };
 

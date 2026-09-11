@@ -275,6 +275,28 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_epochs_created ON matching_epochs(createdAt);
     `);
 
+    // 11. Bảng Gom Yêu Cầu Mở Trạm Ảo Mới (station_requests - Hard Whitelist & Zero Roadside Stops)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS station_requests (
+        id TEXT PRIMARY KEY,
+        stationName TEXT NOT NULL,
+        normalizedName TEXT NOT NULL,
+        note TEXT,
+        lat REAL,
+        lng REAL,
+        userPhone TEXT,
+        requestCount INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'pending',
+        createdAt INTEGER NOT NULL,
+        updatedAt INTEGER NOT NULL,
+        payload TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_stn_req_norm ON station_requests(normalizedName);
+      CREATE INDEX IF NOT EXISTS idx_stn_req_phone ON station_requests(userPhone);
+      CREATE INDEX IF NOT EXISTS idx_stn_req_status ON station_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_stn_req_count ON station_requests(requestCount);
+    `);
+
   // 9. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
   //
   // BẤT BIẾN SÀN GIAO DỊCH: mọi chuyến hiển thị trên sàn phải liên hệ được với
@@ -2033,4 +2055,159 @@ export async function applyCancellationPenalty(booking, cancellingUserPhone, del
     deltaMinutes: Math.round(deltaMinutes)
   };
 }
+
+/**
+ * Chuẩn hóa tên trạm để gom nhóm các yêu cầu trùng hoặc gần trùng
+ */
+function normalizeStationRequestName(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[đĐ]/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Thêm hoặc gộp yêu cầu mở trạm ảo mới (Station Request Pool)
+ * - Tự động gom nhóm dựa trên tên chuẩn hóa
+ * - Tăng số lượt đề xuất (requestCount) khi có nhiều người cùng đề xuất
+ * - Ngưỡng kích hoạt khảo sát: >= 50 lượt
+ */
+export async function addStationRequest({ stationName, note = '', lat = null, lng = null, userPhone = '' }) {
+  const database = getRawDB();
+  const rawName = String(stationName || '').trim();
+  if (!rawName) {
+    throw new Error('Tên trạm đề xuất không được để trống');
+  }
+
+  const cleanPhone = cleanPhoneNumber(userPhone || '');
+  const normName = normalizeStationRequestName(rawName);
+  const now = Date.now();
+
+  // Kiểm tra xem đã có trạm tương tự trong pool chưa
+  const existing = database
+    .prepare('SELECT * FROM station_requests WHERE normalizedName = ? OR stationName LIKE ? LIMIT 1')
+    .get(normName, rawName);
+
+  if (existing) {
+    let phones = [];
+    try {
+      const payload = existing.payload ? JSON.parse(existing.payload) : {};
+      phones = Array.isArray(payload.phones) ? payload.phones : [];
+    } catch {
+      phones = [];
+    }
+
+    if (cleanPhone && !phones.includes(cleanPhone)) {
+      phones.push(cleanPhone);
+    }
+
+    const newCount = (existing.requestCount || 1) + 1;
+    const newStatus = newCount >= 50 && existing.status === 'pending' ? 'threshold_met' : existing.status;
+
+    const payloadStr = JSON.stringify({
+      phones,
+      lastNote: note || existing.note || '',
+      history: [
+        { at: now, phone: cleanPhone, note: note || '' }
+      ]
+    });
+
+    database
+      .prepare(`
+        UPDATE station_requests
+        SET requestCount = ?,
+            status = ?,
+            updatedAt = ?,
+            note = CASE WHEN (note IS NULL OR note = '') AND ? != '' THEN ? ELSE note END,
+            lat = COALESCE(?, lat),
+            lng = COALESCE(?, lng),
+            payload = ?
+        WHERE id = ?
+      `)
+      .run(newCount, newStatus, now, note, note, lat != null ? Number(lat) : null, lng != null ? Number(lng) : null, payloadStr, existing.id);
+
+    return {
+      ...existing,
+      requestCount: newCount,
+      status: newStatus,
+      updatedAt: now,
+      isGrouped: true
+    };
+  }
+
+  // Tạo yêu cầu mới
+  const id = `STR-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
+  const payloadStr = JSON.stringify({
+    phones: cleanPhone ? [cleanPhone] : [],
+    history: [{ at: now, phone: cleanPhone, note: note || '' }]
+  });
+
+  database
+    .prepare(`
+      INSERT INTO station_requests (
+        id, stationName, normalizedName, note, lat, lng, userPhone,
+        requestCount, status, createdAt, updatedAt, payload
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'pending', ?, ?, ?)
+    `)
+    .run(
+      id,
+      rawName,
+      normName,
+      note || '',
+      lat != null ? Number(lat) : null,
+      lng != null ? Number(lng) : null,
+      cleanPhone,
+      now,
+      now,
+      payloadStr
+    );
+
+  return {
+    id,
+    stationName: rawName,
+    normalizedName: normName,
+    note,
+    lat: lat != null ? Number(lat) : null,
+    lng: lng != null ? Number(lng) : null,
+    userPhone: cleanPhone,
+    requestCount: 1,
+    status: 'pending',
+    createdAt: now,
+    updatedAt: now,
+    isGrouped: false
+  };
+}
+
+/**
+ * Lấy danh sách các đề xuất mở trạm mới
+ */
+export function getStationRequests(status = '') {
+  const database = getRawDB();
+  if (status) {
+    return database
+      .prepare('SELECT * FROM station_requests WHERE status = ? ORDER BY requestCount DESC, updatedAt DESC')
+      .all(status);
+  }
+  return database
+    .prepare('SELECT * FROM station_requests ORDER BY requestCount DESC, updatedAt DESC')
+    .all();
+}
+
+/**
+ * Cập nhật trạng thái đề xuất trạm (pending, surveying, approved, rejected)
+ */
+export async function updateStationRequestStatus(id, status, adminNote = '') {
+  const database = getRawDB();
+  const now = Date.now();
+  database
+    .prepare('UPDATE station_requests SET status = ?, updatedAt = ? WHERE id = ?')
+    .run(status, now, id);
+  return { id, status, updatedAt: now, adminNote };
+}
+
 
