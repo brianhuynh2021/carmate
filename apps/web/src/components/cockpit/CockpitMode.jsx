@@ -13,11 +13,13 @@ import {
   Scale,
   Car,
   Clock,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { api } from '../../api/client.js';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
+import DriverScheduleCardView from './DriverScheduleCardView.jsx';
 
 const QUICK_CAR_MODELS = [
   'Xpander Trắng',
@@ -90,6 +92,9 @@ export default function CockpitMode({
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [boardedCount, setBoardedCount] = useState(0);
   const [showLegalShield, setShowLegalShield] = useState(false);
+
+  // Chuyển đổi giữa [ 📅 LỊCH TRÌNH CỦA BẠN ] và [ ⚡ BUỒNG LÁI RADAR QL13 ]
+  const [activeCockpitTab, setActiveCockpitTab] = useState('SCHEDULE');
 
   // Trạng thái chu trình vận hành: 'STANDBY' (D1) | 'OFFERING' (D2) | 'DWELLING' (D3) | 'ROLLING'
   const [cockpitState, setCockpitState] = useState('STANDBY');
@@ -812,12 +817,60 @@ export default function CockpitMode({
         </div>
       </header>
 
-      {/* ── NỘI DUNG CHÍNH (3 CHẾ ĐỘ MÀN HÌNH TAPLO) ── */}
+      {/* ── THANH ĐIỀU HƯỚNG TAB: LỊCH TRÌNH ⟷ BUỒNG LÁI RADAR ── */}
+      <div className="flex items-center justify-center mb-4">
+        <div className="bg-white/[0.04] p-1 rounded-2xl border border-white/[0.08] flex items-center gap-1 shadow-lg">
+          <button
+            type="button"
+            onClick={() => setActiveCockpitTab('SCHEDULE')}
+            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeCockpitTab === 'SCHEDULE'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>📅 LỊCH TRÌNH CỦA BẠN</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveCockpitTab('RADAR')}
+            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeCockpitTab === 'RADAR'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>⚡ BUỒNG LÁI RADAR QL13</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── NỘI DUNG CHÍNH (QUẢN LÝ LỊCH TRÌNH HOẶC BUỒNG LÁI TAPLO) ── */}
       <main className="flex-1 flex flex-col justify-center my-auto max-w-2xl mx-auto w-full">
         {/* ========================================================================= */}
-        {/* MÀN HÌNH D1: TAPLO CHỜ (STANDBY)                                         */}
+        {/* VIEW A: QUẢN LÝ LỊCH TRÌNH DẠNG THẺ (CARD VIEW & TRUST ENGINE)             */}
         {/* ========================================================================= */}
-        {cockpitState === 'STANDBY' && (
+        {activeCockpitTab === 'SCHEDULE' && cockpitState === 'STANDBY' && (
+          <DriverScheduleCardView
+            vehicle={vehicle}
+            onSwitchToRadar={() => setActiveCockpitTab('RADAR')}
+            onShowToast={onShowToast}
+            onChangeVehicle={() => {
+              setInputPlate(vehicle?.plate || '');
+              setInputModel(vehicle?.model || '');
+              setInputSeats(vehicle?.seats || 2);
+              setInputAmenities(vehicle?.amenities || ['ac', 'no_smoking']);
+              setIsEditingVehicle(true);
+            }}
+          />
+        )}
+
+        {/* ========================================================================= */}
+        {/* MÀN HÌNH D1: TAPLO CHỜ (STANDBY) KHI Ở TAB RADAR                          */}
+        {/* ========================================================================= */}
+        {activeCockpitTab === 'RADAR' && cockpitState === 'STANDBY' && (
           <div className="space-y-6 animate-fade-in">
             {/* TOGGLE TO BẬT / TẮT NHẬN GHÉP XE DỌC ĐƯỜNG */}
             <button
