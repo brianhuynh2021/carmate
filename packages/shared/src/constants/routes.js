@@ -984,7 +984,7 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   'hub_ql13_budop:::hub_ql13_hang_xanh': { pricePerSeat: 230000, distanceKm: 155, label: 'Bù Đốp ➔ Hàng Xanh' }
 };
 
-export const DRIVER_STATION_PAYOUT_RATIO = 0.9; // Chủ xe nhận 90% cước chia sẻ cố định
+export const DRIVER_STATION_PAYOUT_RATIO = 1.0; // Chủ xe nhận 100% phụ xăng chia sẻ trực tiếp P2P (0đ phí sàn)
 
 /**
  * Tra cứu bảng cước phân đoạn cố định Metro Tariff dọc hành lang

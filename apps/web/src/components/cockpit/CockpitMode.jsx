@@ -288,12 +288,40 @@ export default function CockpitMode({
   // 6. QUÉT TỰ ĐỘNG KHÁCH ĐANG CHỜ TẠI TRẠM (AUTO-SCANNING SENTINEL)
   useEffect(() => {
     if (cockpitState !== 'STANDBY' || !isReceivingGuests) return;
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
+      // 1. Quét từ Backend Telemetry Radar (Đồng bộ thời gian thực xuyên suốt giữa 2 thiết bị / trình duyệt)
+      try {
+        const res = await api.fetchJson('/cockpit/telemetry', {
+          method: 'POST',
+          body: JSON.stringify({
+            tripId,
+            driverPhone: currentUser?.phone || '0912345678',
+            driverName: currentUser?.name || 'Chủ xe CarMate',
+            plate: vehicle?.plate || '93A-541.86',
+            vehicleModel: vehicle?.model || 'Mitsubishi Xpander (Trắng)',
+            seatsAvailable,
+            corridor: initialCorridor || 'Tuyến QL13',
+            lat: 11.5300,
+            lng: 106.6340,
+            speed: 78
+          })
+        });
+        if (res?.success && res?.proximityAlert && !activeOffer) {
+          triggerApproachRadar(res.proximityAlert);
+          return;
+        }
+      } catch {}
+
+      // 2. Quét dự phòng từ localStorage (nếu mô phỏng nội bộ cùng 1 trình duyệt)
       try {
         const savedPassRaw = localStorage.getItem('carmate_active_station_pass');
         if (savedPassRaw) {
           const parsed = JSON.parse(savedPassRaw);
-          if (parsed?.pass && parsed?.pass?.status === 'ARRIVING' && !activeOffer) {
+          if (
+            parsed?.pass &&
+            (parsed?.pass?.status === 'WAITING' || parsed?.pass?.status === 'ARRIVING') &&
+            !activeOffer
+          ) {
             triggerApproachRadar({
               intentId: parsed.pass.intentId,
               stationId: parsed.hubId || 'hub_ql13_tan_khai',
@@ -312,7 +340,7 @@ export default function CockpitMode({
       } catch {}
     }, 2500);
     return () => clearInterval(interval);
-  }, [cockpitState, isReceivingGuests, activeOffer]);
+  }, [cockpitState, isReceivingGuests, activeOffer, tripId, currentUser, vehicle, seatsAvailable, initialCorridor]);
 
   // CHỦ XE BẤM [ĐỒNG Ý ĐÓN] (D2 ACCEPT)
   const handleAcceptOffer = async () => {
