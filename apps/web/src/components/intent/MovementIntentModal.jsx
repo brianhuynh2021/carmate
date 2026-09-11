@@ -42,7 +42,14 @@ export default function MovementIntentModal({
   const [role, setRole] = useState(initialRole);
   const [originHubId, setOriginHubId] = useState(initialOriginHubId || 'hub_ql13_binh_long');
   const [destHubId, setDestHubId] = useState(initialDestHubId || 'hub_ql13_hang_xanh');
-  const [seats, setSeats] = useState(1);
+  const [seats, setSeats] = useState(initialRole === 'driver' ? 3 : 1);
+
+  useEffect(() => {
+    if (initialRole) {
+      setRole(initialRole);
+      setSeats(initialRole === 'driver' ? 3 : 1);
+    }
+  }, [initialRole, isOpen]);
 
   // Ngày hẹn: Hôm nay / Ngày mai / Ngày kia
   const dateOptions = useMemo(() => {
@@ -218,14 +225,20 @@ export default function MovementIntentModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
-                  Khai Báo Ý Định Di Chuyển
+                  {role === 'driver' ? 'Lên Lịch Chuyến Xe (Chủ Xe)' : 'Hẹn Giờ / Đặt Chỗ Trước (Người Đi Cùng)'}
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-500 border border-amber-500/30">
-                  Level 3
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                  role === 'driver'
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : 'bg-[#0071e3]/20 text-[#0071e3] dark:text-[#2997ff] border-[#0071e3]/30'
+                }`}>
+                  {role === 'driver' ? 'Chủ xe' : 'Người đi cùng'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Nobel Game-Theoretic Coordination · Tự động ghép đôi không cần đăng bài
+                {role === 'driver'
+                  ? 'Chủ xe tiện chuyến · Tự động ghép thêm người đi cùng bù tiền xăng'
+                  : 'Người đi cùng · Tự động ghép đúng xe ô tô gia đình tiện đường'}
               </p>
             </div>
           </div>
@@ -240,37 +253,46 @@ export default function MovementIntentModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* 1. CHỌN VAI TRÒ (CHỦ XE HOẶC NGƯỜI ĐI CÙNG) */}
+          {/* 1. VAI TRÒ CHÍNH CHỦ (LỊCH AI NGƯỜI ĐÓ - KHÔNG TRỘN LẪN) */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold font-mono uppercase text-slate-500 dark:text-slate-400">
-              1. Vai trò của bạn
+              1. Vai trò chính chủ
             </label>
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/[0.06]">
-              <button
-                type="button"
-                onClick={() => setRole('driver')}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  role === 'driver'
-                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Car className="w-4 h-4" />
-                <span>Chủ xe</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('passenger')}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  role === 'passenger'
-                    ? 'bg-[#0071e3] text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                <span>Người đi cùng</span>
-              </button>
-            </div>
+            {role === 'driver' ? (
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-sm">
+                  <Car className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-black uppercase font-mono tracking-wider text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                    <span>Lịch Lăn Bánh Dành Cho Chủ Xe</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
+                      Chính chủ
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Khai báo lộ trình xe chạy để hệ thống tự động đón thêm người đi cùng lấp đầy ghế trống
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#0071e3]/10 border border-[#0071e3]/30 text-[#0071e3] dark:text-[#2997ff]">
+                <div className="w-10 h-10 rounded-xl bg-[#0071e3] text-white flex items-center justify-center font-black shrink-0 shadow-sm">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-black uppercase font-mono tracking-wider text-[#0071e3] dark:text-white flex items-center gap-1.5">
+                    <span>Lịch Đặt Chỗ Dành Cho Người Đi Cùng</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#0071e3]/20 text-[#0071e3] dark:text-[#2997ff] font-bold">
+                      Chính chủ
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Khai báo trạm đón để hệ thống tự động khóa chỗ trên xe ô tô gia đình cùng lộ trình
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. CHỌN HÀNH TRÌNH QL13 (ĐIỂM ĐÓN & ĐIỂM ĐẾN) */}
@@ -469,7 +491,7 @@ export default function MovementIntentModal({
               <>
                 <Zap className="w-4 h-4 fill-current" />
                 <span>
-                  {role === 'driver' ? 'LƯU LỊCH CHUYẾN XE (TỰ ĐỘNG GOM KHÁCH)' : 'LƯU LỊCH ĐI CHUNG (TỰ ĐỘNG GHÉP XE)'}
+                  {role === 'driver' ? 'LƯU LỊCH CHỦ XE (TỰ ĐỘNG NHẬN KHÁCH TIỆN ĐƯỜNG)' : 'LƯU LỊCH ĐẶT CHỖ (TỰ ĐỘNG GHÉP XE TIỆN CHUYẾN)'}
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </>
