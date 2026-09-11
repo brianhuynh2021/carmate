@@ -64,9 +64,7 @@ export default function StationRiderView({
       { id: 'hub_ql13_bau_bang', name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước' },
       { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Giao Tuyến N2 & QL14)' },
       { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)' },
-      { id: 'hub_ql13_binh_long', name: 'Cổng chào TX. Bình Long (An Lộc)' },
-      { id: 'hub_ql13_cho_loc_ninh', name: 'Chợ Lộc Ninh / Cây xăng 17 (Bình Phước)' },
-      { id: 'hub_ql13_budop', name: 'Chợ Bù Đốp (TT. Thanh Bình)' }
+      { id: 'hub_ql13_binh_long', name: 'Cổng chào TX. Bình Long (An Lộc)' }
     ];
     return allOptions.filter((opt) => opt.id !== currentHub.id);
   }, [currentHub.id]);

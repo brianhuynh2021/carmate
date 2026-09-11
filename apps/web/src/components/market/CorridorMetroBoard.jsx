@@ -26,10 +26,8 @@ export default function CorridorMetroBoard({
   _activeBookedCount = 0
 }) {
 
-  // Lọc các trạm ảo thuộc hành lang Tuyến QL13 theo thứ tự địa lý từ Bắc xuống Nam
+  // Lọc các trạm ảo thuộc hành lang Tuyến QL13 theo thứ tự địa lý từ Bắc xuống Nam (Khởi tuyến từ Bình Long)
   const ql13Hubs = [
-    { id: 'hub_ql13_budop', name: 'Chợ Bù Đốp (TT. Thanh Bình)', shortName: 'Bù Đốp', priceToHX: 160000, landmark: 'Cây xăng Petrolimex Thanh Bình' },
-    { id: 'hub_ql13_cho_loc_ninh', name: 'Chợ Lộc Ninh / Cây xăng 17', shortName: 'Lộc Ninh', priceToHX: 150000, landmark: 'Cây xăng 17 QL13' },
     { id: 'hub_ql13_binh_long', name: 'TX. Bình Long (Vòng xoay An Lộc)', shortName: 'Bình Long', priceToHX: 130000, landmark: 'Cổng chào TX. Bình Long QL13', isHot: true },
     { id: 'hub_ql13_tan_khai', name: 'Cây xăng Petrolimex Tân Khai', shortName: 'Tân Khai', priceToHX: 110000, landmark: 'Cây xăng Petrolimex Tân Khai (Hớn Quản)', isHot: true },
     { id: 'hub_ql13_nga4_chon_thanh', name: 'Ngã 4 Chơn Thành (Giao Tuyến N2)', shortName: 'Chơn Thành', priceToHX: 90000, landmark: 'Bùng binh Chơn Thành - Trạm xăng Tín Nghĩa', isHot: true },

@@ -135,14 +135,13 @@ sequenceDiagram
 flowchart TD
     subgraph CORRIDOR_QL13 ["HÀNH LANG HUYẾT MẠCH TUYẾN QUỐC LỘ 13 (BÌNH PHƯỚC ⇄ TP.HCM)"]
         direction LR
-        Hub1["Trạm 1: Chợ Lộc Ninh / Cây xăng 17"] --> Hub2["Trạm 2: Ngã 3 Bù Đốp / Lộc Tấn"]
-        Hub2 --> Hub3["Trạm 3: Chợ Bình Long / An Lộc"]
-        Hub3 --> Hub4["Trạm 4: Ngã 3 Tân Khai / Petrolimex Tân Khai"]
-        Hub4 --> Hub5["Trạm 5: Ngã 4 Chơn Thành / KCN Minh Hưng"]
-        Hub5 --> Hub6["Trạm 6: Bến Cát / KCN Bàu Bàng"]
-        Hub6 --> Hub7["Trạm 7: Trạm Thu Phí Suối Giữa (TDM)"]
-        Hub7 --> Hub8["Trạm 8: Cầu Ông Bố / Lái Thiêu (Thuận An)"]
-        Hub8 --> Hub9["Trạm 9: Ngã 4 Bình Phước / Cầu Bình Triệu"]
+        Hub1["Trạm 1: TX. Bình Long / An Lộc (Khởi tuyến chính)"] --> Hub2["Trạm 2: Ngã 3 Tân Khai / Petrolimex Tân Khai"]
+        Hub2 --> Hub3["Trạm 3: Ngã 4 Chơn Thành / KCN Minh Hưng"]
+        Hub3 --> Hub4["Trạm 4: Trạm dừng KCN Bàu Bàng"]
+        Hub4 --> Hub5["Trạm 5: Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)"]
+        Hub5 --> Hub6["Trạm 6: Cổng KCN VSIP 1 / AEON Mall"]
+        Hub6 --> Hub7["Trạm 7: Ngã 4 Bình Phước / Cầu Bình Triệu"]
+        Hub7 --> Hub8["Trạm 8: Cây xăng Comeco Hàng Xanh (Đích TP.HCM)"]
     end
 
     subgraph PICKUP_LAYER ["100% ĐIỂM HẸN TRẠM CÂY XĂNG CHUẨN HOÁ (VIRTUAL HUBS)"]
