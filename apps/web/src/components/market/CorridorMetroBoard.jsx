@@ -484,495 +484,262 @@ export default function CorridorMetroBoard({
       </section>
 
       {/* ========================================================================= */}
-      {/* 2.1 BĂNG ĐIỀU HÀNH LÊN LỊCH CHUYẾN MAI (UNIFIED AUTO-DETECT ADVANCE BAR)   */}
+      {/* 2.1 BĂNG LÊN LỊCH CHUYẾN MAI (SLEEK 1-ROW ACTION BAR)                      */}
       {/* ========================================================================= */}
-      <section className="relative overflow-hidden rounded-3xl bg-slate-900 border border-slate-800 p-5 sm:p-6 shadow-lg backdrop-blur-xl transition-all">
-        <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-[#0071e3]/10 via-emerald-500/10 to-transparent pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Vùng Thông Tin & Tự Động Nhận Diện Danh Xưng */}
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30 text-xs font-mono font-medium">
-                <Clock className="w-3.5 h-3.5" />
-                Lên lịch chuyến mai
-              </span>
-
-              {/* Chip Tự Động Nhận Diện Vai Trò & Nút 1-Chạm Đổi */}
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/10 text-xs text-slate-300">
-                {activeRole === 'driver' ? (
-                  <>
-                    <Car className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>
-                      Vai trò: <strong className="text-emerald-400 font-semibold">Chủ xe</strong>
-                      {detectedRoleInfo.detail ? ` (${detectedRoleInfo.detail})` : ''}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Users className="w-3.5 h-3.5 text-[#2997ff]" />
-                    <span>
-                      Vai trò: <strong className="text-[#2997ff] font-semibold">Người đi cùng</strong>
-                    </span>
-                  </>
-                )}
+      <section className="relative overflow-hidden rounded-3xl bg-slate-900 border border-slate-800 p-4 sm:p-5 shadow-lg backdrop-blur-xl transition-all">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-white">
+                  {activeRole === 'driver' ? 'Lên lịch xe sáng mai' : 'Hẹn giờ đón xe sáng mai'}
+                </h3>
                 <button
                   type="button"
                   onClick={toggleRole}
-                  title="Bấm để đổi vai trò sang Chủ xe hoặc Người đi cùng"
-                  className="ml-1 text-slate-400 hover:text-white text-[11px] cursor-pointer transition-colors"
+                  title="Đổi vai trò giữa Chủ xe và Người đi cùng"
+                  className="px-2 py-0.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-slate-300 hover:text-white text-[11px] font-mono cursor-pointer transition-colors"
                 >
-                  (Đổi ⇄)
+                  {activeRole === 'driver' ? 'Chủ xe' : 'Người đi cùng'} ⇄
                 </button>
               </div>
+              <p className="text-xs text-slate-400 mt-0.5">Tự động ghép bạn đồng hành cùng tuyến QL13</p>
             </div>
-
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-              {activeRole === 'driver'
-                ? 'Lên lịch xuất bến ngày mai — Tự động ghép người đi cùng'
-                : 'Hẹn giờ đón xe ngày mai — Tự động giữ chỗ tiện đường'}
-            </h3>
-
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {activeRole === 'driver'
-                ? 'Định sẵn khung giờ khởi hành sáng hoặc chiều mai. Hệ thống tự động ghép người đi cùng tại các trạm đón dọc QL13.'
-                : 'Chọn trạm và khung giờ cần đón xe ngày mai. Hệ thống tự động ghép với xe trống tiện chuyến đi qua trạm của bạn.'}
-            </p>
           </div>
 
-          {/* Nút thao tác lên lịch */}
-          <div className="flex flex-col items-stretch sm:items-end justify-center gap-1.5 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => onOpenIntentModal?.(activeRole)}
-              className={`h-11 sm:h-12 px-6 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.98] cursor-pointer transition-all ${
-                activeRole === 'driver'
-                  ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
-                  : 'bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[#0071e3]/25'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              <span>
-                {activeRole === 'driver' ? 'Lên lịch chuyến mai' : 'Hẹn giờ đón xe'}
-              </span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <span className="text-[11px] text-slate-400 text-center sm:text-right font-mono">
-              Ghép đôi tự động · Không mất phí
-            </span>
-          </div>
+          <button
+            type="button"
+            onClick={() => onOpenIntentModal?.(activeRole)}
+            className={`h-10 sm:h-11 px-5 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] cursor-pointer transition-all shrink-0 ${
+              activeRole === 'driver'
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
+                : 'bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[#0071e3]/25'
+            }`}
+          >
+            <span>{activeRole === 'driver' ? 'Lên lịch ngay' : 'Đặt chỗ ngay'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. BẢNG CƯỚC METRO TARIFF CỐ ĐỊNH MINH BẠCH (FIXED SEGMENT PRICING TABLE)  */}
+      {/* 3. BIỂU PHÍ CỐ ĐỊNH QL13 (MINIMAL APPLE CARDS)                              */}
       {/* ========================================================================= */}
-      <section className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+      <section className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div>
-            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#0071e3]">
-              BIỂU PHÍ CỐ ĐỊNH QL13
-            </span>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">
-              {direction === 'TO_SAIGON'
-                ? 'Biểu phí tuyến về Sài Gòn'
-                : 'Biểu phí tuyến về Bình Phước'}
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              {direction === 'TO_SAIGON' ? 'Biểu phí tuyến về Sài Gòn' : 'Biểu phí tuyến về Bình Phước'}
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Đã trọn gói xăng xe và vé trạm BOT · Tiết kiệm 30%–50% so với limousine
-            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Trọn gói xăng xe & vé BOT · 0đ phụ thu cao điểm</p>
           </div>
-          <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-mono font-semibold border border-emerald-200 dark:border-emerald-800">
-            0đ phụ phí cao điểm
+          <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-medium border border-emerald-200 dark:border-emerald-800">
+            0đ phụ phí
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {direction === 'TO_SAIGON' ? (
             <>
-              {/* PHÂN ĐOẠN 1: BÌNH LONG -> HÀNG XANH */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span>Cự ly ~115 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">-35% vs Limo</span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Bình Long ➔ Hàng Xanh</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono text-[#0071e3]">180.000đ</span>
-                    <span className="text-xs text-slate-400">/ ghế</span>
-                  </div>
-                </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-                  <span>Đã gồm vé BOT</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">0đ phụ phí</span>
-                </div>
-              </div>
-
-              {/* PHÂN ĐOẠN 2: TÂN KHAI -> HÀNG XANH */}
-              <div className="p-4 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-2 relative">
-                <span className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px] font-mono">
-                  PHỔ BIẾN
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Bình Long ➔ Hàng Xanh
                 </span>
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span>Cự ly ~95 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">-40% vs Limo</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-[#0071e3]">180.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Tân Khai ➔ Hàng Xanh</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
-                    <span className="text-xs text-slate-400">/ ghế</span>
-                  </div>
-                </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between">
-                  <span>Đã gồm vé BOT</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">0đ phụ phí</span>
-                </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~115 km · Vé BOT</span>
               </div>
 
-              {/* PHÂN ĐOẠN 3: CHƠN THÀNH -> HÀNG XANH */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span>Cự ly ~75 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">-45% vs Limo</span>
+              <div className="p-3.5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Tân Khai ➔ Hàng Xanh
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Chơn Thành ➔ Hàng Xanh</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono text-[#0071e3]">120.000đ</span>
-                    <span className="text-xs text-slate-400">/ ghế</span>
-                  </div>
-                </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-                  <span>Đã gồm vé BOT</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">0đ phụ phí</span>
-                </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~95 km · Vé BOT</span>
               </div>
 
-              {/* PHÂN ĐOẠN 4: BÌNH LONG -> CHƠN THÀNH */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span>Cự ly ~40 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">-50% vs Taxi</span>
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Chơn Thành ➔ Hàng Xanh
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-[#0071e3]">120.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Bình Long ➔ Chơn Thành</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono text-[#0071e3]">75.000đ</span>
-                    <span className="text-xs text-slate-400">/ ghế</span>
-                  </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~75 km · Vé BOT</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Bình Long ➔ Chơn Thành
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-[#0071e3]">75.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-                  <span>Chặng nội tỉnh</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">0đ phụ phí</span>
-                </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~40 km · Nội tỉnh</span>
               </div>
             </>
           ) : (
             <>
-              {/* CHIỀU VỀ 1: HÀNG XANH -> BÌNH LONG */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span>Cự ly ~115 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">-35% vs Limo</span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Hàng Xanh ➔ Bình Long</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono text-[#0071e3]">180.000đ</span>
-                    <span className="text-xs text-slate-400">/ ghế</span>
-                  </div>
-                </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-                  <span>Đã gồm vé BOT</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">0đ phụ phí</span>
-                </div>
-              </div>
-
-              {/* CHIỀU VỀ 2: HÀNG XANH -> TÂN KHAI */}
-              <div className="p-4 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-2 relative">
-                <span className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px] font-mono">
-                  PHỔ BIẾN
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Hàng Xanh ➔ Bình Long
                 </span>
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span>Cự ly ~95 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">-40% vs Limo</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-[#0071e3]">180.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Hàng Xanh ➔ Tân Khai</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
-                    <span className="text-xs text-slate-400">/ ghế</span>
-                  </div>
-                </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between">
-                  <span>Đã gồm vé BOT</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">0đ phụ phí</span>
-                </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~115 km · Vé BOT</span>
               </div>
 
-              {/* CHIỀU VỀ 3: HÀNG XANH -> CHƠN THÀNH */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span>Cự ly ~75 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">-45% vs Limo</span>
+              <div className="p-3.5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Hàng Xanh ➔ Tân Khai
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">150.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Hàng Xanh ➔ Chơn Thành</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono text-[#0071e3]">120.000đ</span>
-                    <span className="text-xs text-slate-400">/ ghế</span>
-                  </div>
-                </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-                  <span>Đã gồm vé BOT</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">0đ phụ phí</span>
-                </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~95 km · Vé BOT</span>
               </div>
 
-              {/* CHIỀU VỀ 4: SÂN BAY TSN -> BÌNH LONG */}
-              <div className="p-4 rounded-2xl bg-purple-50/40 dark:bg-purple-950/20 border border-purple-500/30 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span>Cự ly ~120 km</span>
-                  <span className="text-purple-600 dark:text-purple-400 font-medium">-35% vs Limo</span>
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Hàng Xanh ➔ Chơn Thành
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-[#0071e3]">120.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Sân bay TSN ➔ Bình Long</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono text-purple-600 dark:text-purple-400">190.000đ</span>
-                    <span className="text-xs text-slate-400">/ ghế</span>
-                  </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~75 km · Vé BOT</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-purple-50/40 dark:bg-purple-950/20 border border-purple-500/30 space-y-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
+                  Sân bay TSN ➔ Bình Long
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold font-mono text-purple-600 dark:text-purple-400">190.000đ</span>
+                  <span className="text-[11px] text-slate-400">/ ghế</span>
                 </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-purple-200 dark:border-purple-800/50 flex items-center justify-between">
-                  <span>Đã gồm vé sân bay</span>
-                  <span className="text-purple-600 dark:text-purple-400 font-medium">0đ phụ phí</span>
-                </div>
+                <span className="text-[11px] font-mono text-slate-400 block">~120 km · Vé sân bay</span>
               </div>
             </>
           )}
         </div>
-
-        {/* 3 GIÁ TRỊ CỐT LÕI: APPLE TRUST STRIP (TẢI NHẬN THỨC = 0) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">Đi thẳng QL13</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
-                Không chạy lòng vòng ngõ hẻm, nhanh hơn 45–60 phút so với xe khách.
-              </p>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">Xe gia đình văn minh</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
-                Ô tô 4–7 chỗ sạch sẽ, tối đa 3–4 khách, đúng giờ hẹn, không nhồi nhét.
-              </p>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">Chia sẻ chi phí gốc</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
-                Gồm tiền xăng và vé BOT thực tế, tiết kiệm 30%–50% so với limousine.
-              </p>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 4. SƠ ĐỒ ĐIỂM ĐÓN CÂY XĂNG DỌC TUYẾN QL13                                   */}
+      {/* 4. ĐIỂM ĐÓN DỌC TUYẾN QL13                                                 */}
       {/* ========================================================================= */}
-      <section className="bg-slate-900 text-white rounded-3xl p-5 sm:p-7 border border-white/[0.08] shadow-xl space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+      <section className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-white/[0.08] shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
           <div>
-            <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-mono font-medium">
-              <Fuel className="w-3.5 h-3.5" />
-              <span>ĐIỂM ĐÓN CỐ ĐỊNH QL13</span>
-            </div>
-            <h2 className="text-lg sm:text-xl font-bold text-white mt-1">
-              {direction === 'TO_SAIGON'
-                ? 'Điểm đón dọc QL13 về Sài Gòn'
-                : 'Điểm đón chiều về Bình Phước'}
+            <h2 className="text-base sm:text-lg font-bold text-white">
+              {direction === 'TO_SAIGON' ? 'Điểm đón về Sài Gòn' : 'Điểm đón về Bình Phước'}
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {direction === 'TO_SAIGON'
-                ? 'Cây xăng Petrolimex & Trung tâm hành chính · Xe ghé đón nhanh 60 giây'
-                : 'Đón xe tiện chuyến từ TP.HCM về Bàu Bàng, Chơn Thành, Hớn Quản, Bình Long'}
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5">Cây xăng Petrolimex & TTHC · Đón nhanh 60 giây</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-slate-400">Tần suất xe qua:</span>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-semibold">
-              ~3–5 phút / xe
-            </span>
-          </div>
+          <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-semibold">
+            ~3–5 phút / xe
+          </span>
         </div>
 
         {/* DANH SÁCH CÁC ĐIỂM ĐÓN CÂY XĂNG DỌC QUỐC LỘ 13 */}
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {ql13Hubs.map((hub, index) => (
             <div
               key={hub.id}
-              className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+              className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                 hub.isTerminal
-                  ? 'bg-gradient-to-r from-sky-950/30 via-white/[0.03] to-white/[0.02] border-sky-500/30'
+                  ? 'bg-sky-950/20 border-sky-500/30'
                   : hub.isHot
-                    ? 'bg-gradient-to-r from-emerald-950/40 via-white/[0.03] to-white/[0.02] border-emerald-500/40 hover:border-emerald-400'
-                    : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.15] hover:bg-white/[0.05]'
+                    ? 'bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-400'
+                    : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]'
               }`}
             >
-              <div className="flex items-start sm:items-center gap-3.5">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
-                      hub.isTerminal
-                        ? 'bg-[#0071e3] text-white shadow-[0_0_15px_rgba(0,113,227,0.4)]'
-                        : hub.isHot
-                          ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                          : 'bg-white/[0.1] text-slate-300'
-                    }`}
-                  >
-                    {hub.isTerminal ? '🏁' : index + 1}
-                  </div>
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
+                    hub.isTerminal
+                      ? 'bg-[#0071e3] text-white'
+                      : hub.isHot
+                        ? 'bg-emerald-500 text-slate-950'
+                        : 'bg-white/[0.08] text-slate-300'
+                  }`}
+                >
+                  {hub.isTerminal ? '🏁' : index + 1}
                 </div>
 
                 <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-white">
-                      {hub.name}
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-white">
+                      {hub.shortName || hub.name}
                     </h3>
                     {renderCategoryBadge(hub.category)}
-                    {hub.isHot && (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/40">
-                        TRỌNG ĐIỂM
-                      </span>
-                    )}
                     {hub.isTerminal && (
-                      <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-mono font-bold border border-sky-500/40">
-                        {direction === 'TO_SAIGON' ? 'ĐÍCH ĐẾN TP.HCM (GA CUỐI)' : 'ĐÍCH ĐẾN BÌNH PHƯỚC (GA CUỐI)'}
+                      <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-mono font-semibold">
+                        {direction === 'TO_SAIGON' ? 'Ga cuối TP.HCM' : 'Ga cuối Bình Phước'}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">{hub.landmark}</p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">{hub.landmark}</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
+              <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
                 {hub.isTerminal ? (
-                  <div className="flex items-center gap-2">
-                    <span className="px-3.5 py-2 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 font-mono text-xs font-bold flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                      <span>{direction === 'TO_SAIGON' ? 'ĐIỂM TRẢ KHÁCH (GA CUỐI)' : 'ĐIỂM TRẢ BÌNH LONG (GA CUỐI)'}</span>
-                    </span>
-                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 font-mono text-xs font-semibold flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                    <span>{direction === 'TO_SAIGON' ? 'Ga cuối Hàng Xanh / TSN' : 'Ga cuối Bình Long'}</span>
+                  </span>
                 ) : (
                   <>
-                    <div className="text-right">
-                      <span className="text-[10px] uppercase font-mono text-slate-400 block">
-                        {hub.targetLabel ? `${hub.targetLabel}:` : 'Phụ xăng:'}
-                      </span>
-                      <span className="text-sm sm:text-base font-black font-mono text-emerald-400">
-                        {formatVND(hub.priceToTarget)}
-                      </span>
-                    </div>
+                    <span className="text-sm sm:text-base font-bold font-mono text-emerald-400">
+                      {formatVND(hub.priceToTarget)}
+                    </span>
 
                     <button
                       type="button"
                       onClick={() => setSelectedQrHub(hub)}
-                      title="Xem mã QR để quét trên điện thoại hoặc in dán tại trạm"
-                      className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0 flex items-center gap-1.5 text-xs font-mono"
+                      title="Xem mã QR trạm đón"
+                      className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
                     >
                       <QrCode className="w-4 h-4 text-emerald-400" />
-                      <span className="hidden sm:inline">Mã QR</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => onOpenIntentModal?.('passenger', hub.id)}
                       title="Hẹn giờ đón xe trước cho ngày mai"
-                      className="px-3 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-[#2997ff] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95"
+                      className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-[#2997ff] hover:text-blue-300 transition-all cursor-pointer shrink-0 active:scale-95"
                     >
-                      <Clock className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Hẹn trước</span>
+                      <Clock className="w-4 h-4" />
                     </button>
 
                     <button
                       type="button"
                       onClick={() => onOpenStationView?.(hub.id)}
-                      className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                      className="h-9 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
                     >
-                      <span>ĐÓN XE</span>
-                      <ChevronRight className="w-4 h-4" />
+                      <span>Đón xe</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </>
                 )}
               </div>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 5. ĐA DẠNG PHƯƠNG TIỆN THAM GIA TIỆN TUYẾN                                 */}
-      {/* ========================================================================= */}
-      <section className="bg-[#f5f5f7] dark:bg-slate-850 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 space-y-3">
-        <div className="space-y-0.5">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
-            PHƯƠNG TIỆN THAM GIA
-          </span>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-            Mọi phương tiện tiện chuyến đều có thể đi ghép
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Chia sẻ ghế trống và khoang xe để cùng tối ưu chi phí nhiên liệu.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1">
-          <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center space-y-0.5">
-            <span className="text-2xl block">🚗</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white block">Xe 4–5 chỗ</span>
-            <span className="text-[11px] text-slate-500">2–3 ghế sau</span>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center space-y-0.5">
-            <span className="text-2xl block">🚙</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white block">Xe 7 chỗ</span>
-            <span className="text-[11px] text-slate-500">Gia đình, cốp rộng</span>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center space-y-0.5">
-            <span className="text-2xl block">🛻</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white block">Bán tải Pickup</span>
-            <span className="text-[11px] text-slate-500">Người & hàng cồng kềnh</span>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center space-y-0.5">
-            <span className="text-2xl block">🚚</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white block">Xe tải nhẹ</span>
-            <span className="text-[11px] text-slate-500">Chở xe máy, dọn đồ</span>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center space-y-0.5">
-            <span className="text-2xl block">🚕</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white block">Xe tiện chuyến</span>
-            <span className="text-[11px] text-slate-500">Chiều về trống xe</span>
-          </div>
         </div>
       </section>
 
