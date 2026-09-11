@@ -162,13 +162,23 @@ export default function BookedTripList({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
+  const validBookings = useMemo(() => {
+    return (bookedEscrows || []).filter((b) => {
+      if (!b) return false;
+      const target = b.targetItem || b.targetTrip || {};
+      const from = b.from || b.fromLocation || target.from || target.fromLocation;
+      const to = b.to || b.toLocation || target.to || target.toLocation;
+      return Boolean(from && to);
+    });
+  }, [bookedEscrows]);
+
   const activeBookings = useMemo(
-    () => bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled'),
-    [bookedEscrows]
+    () => validBookings.filter((b) => b.status !== 'completed' && b.status !== 'cancelled'),
+    [validBookings]
   );
   const historyBookings = useMemo(
-    () => bookedEscrows.filter((b) => b.status === 'completed' || b.status === 'cancelled'),
-    [bookedEscrows]
+    () => validBookings.filter((b) => b.status === 'completed' || b.status === 'cancelled'),
+    [validBookings]
   );
 
   const baseList = activeTab === 'active' ? activeBookings : historyBookings;

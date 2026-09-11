@@ -1021,6 +1021,18 @@ export async function removeBooking(id) {
   return info.changes > 0;
 }
 
+export function clearAllBookings() {
+  const database = getRawDB();
+  const info = database.prepare('DELETE FROM bookings').run();
+  return info.changes;
+}
+
+export function clearTestBookings() {
+  const database = getRawDB();
+  const info = database.prepare("DELETE FROM bookings WHERE escrowId LIKE 'TEST-%' OR tripId LIKE 'INT-%' OR tripId LIKE 'TRIP-TEST-%'").run();
+  return info.changes;
+}
+
 export function getUserByPhone(phone) {
   const database = getRawDB();
   const clean = cleanPhoneNumber(phone);

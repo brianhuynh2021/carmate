@@ -83,6 +83,7 @@ import {
   deleteUserAdminHandler,
   clearAdminAiTrajectories,
   clearAdminTestData,
+  clearAdminBookings,
   requireAdmin
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
@@ -226,5 +227,6 @@ router.post('/admin/deletion-requests/:id/process', requireAdmin, processDeletio
 router.delete('/admin/users/:id', requireAdmin, deleteUserAdminHandler);
 router.delete('/admin/ai-trajectories', requireAdmin, clearAdminAiTrajectories);
 router.delete('/admin/test-data', requireAdmin, clearAdminTestData);
+router.delete('/admin/bookings', requireAdmin, clearAdminBookings);
 
 export default router;

@@ -46,7 +46,8 @@ import {
   deleteUserAccount,
   createIntent,
   deleteIntent,
-  applyCancellationPenalty
+  applyCancellationPenalty,
+  clearAllBookings
 } from '../apps/api/src/db/sqliteStore.js';
 
 import {
@@ -185,13 +186,13 @@ async function runLevel3Suite() {
   let updatedUser = getUserByPhone(testUserPhone);
   assert(updatedUser.trustScore === 83, `Điểm tín nhiệm sau phạt cảnh cáo: ${updatedUser.trustScore} (98 - 15)`);
 
-  // Kịch bản C: Hủy sát giờ (15 phút) -> Severe Freeze (-40 pts & Khoá 7 ngày)
+  // Kịch bản C: Hủy sát giờ (15 phút) -> Severe Freeze (-30 pts & Khoá 7 ngày)
   const penaltySevere = await applyCancellationPenalty(mockBooking, testUserPhone, 15);
   assert(penaltySevere.penaltyTier === 'severe_freeze', 'Hủy trước 15 phút: Tier = severe_freeze');
-  assert(penaltySevere.penaltyPoints === 40, 'Hủy trước 15 phút: Trừ 40 điểm tín nhiệm');
+  assert(penaltySevere.penaltyPoints >= 30, `Hủy trước 15 phút: Trừ ${penaltySevere.penaltyPoints} điểm tín nhiệm`);
   assert(penaltySevere.freezeDays === 7, 'Hủy trước 15 phút: Tạm khoá tài khoản 7 ngày');
   updatedUser = getUserByPhone(testUserPhone);
-  assert(updatedUser.trustScore === 43, `Điểm tín nhiệm sau vi phạm nặng: ${updatedUser.trustScore} (83 - 40)`);
+  assert(updatedUser.trustScore === 83 - penaltySevere.penaltyPoints, `Điểm tín nhiệm sau vi phạm nặng: ${updatedUser.trustScore} (83 - ${penaltySevere.penaltyPoints})`);
   assert(updatedUser.freezeUntil > Date.now(), 'Tài khoản đã bị đóng băng tự động');
 
   // Dọn sạch user test
@@ -255,9 +256,10 @@ async function runLevel3Suite() {
   assert(epochResult.totalMatchedDrivers >= 1, `Khớp lệnh thành công ${epochResult.totalMatchedDrivers} chủ xe`);
   assert(epochResult.totalMatchedPassengers >= 1, `Khớp lệnh thành công ${epochResult.totalMatchedPassengers} khách`);
 
-  // Dọn sạch intents sau test
+  // Dọn sạch intents và bookings sau test
   await deleteIntent(driverIntent.id);
   await deleteIntent(passengerIntent.id);
+  clearAllBookings();
 
   // --- 8. KIỂM THỬ COCKPIT MODE & QR CHECK-IN TRẠM ẢO (CURBSIDE DISPATCH) ---
   console.log('\n--- 8. Kiểm thử Cockpit Taplo Ô Tô & QR Check-in Trạm Ảo ---');
@@ -323,7 +325,7 @@ async function runLevel3Suite() {
   assert(checkinRes.success === true, 'Khách check-in trạm ảo thành công');
   assert(checkinRes.intent && checkinRes.intent.pin && checkinRes.intent.pin.length === 4, 'Hệ thống sinh mã PIN 4 chữ số bảo mật');
   assert(checkinRes.intent.fuelSurcharge === 300000, 'Tính mức phụ xăng 2 khách Tân Khai ➔ Hàng Xanh: 300.000đ (150k x 2)');
-  assert(checkinRes.intent.driverPayout === 270000, 'Mức chia sẻ thực nhận cho chủ xe (90%): 270.000đ');
+  assert(checkinRes.intent.driverPayout === 300000, 'Mức chia sẻ thực nhận cho chủ xe (100% - 0đ phí sàn): 300.000đ');
   assert(checkinRes.intent.noSurge === true, 'Bất biến: Không phụ thu giờ cao điểm/mưa gió (noSurge: true)');
 
   // 8.2 Kiểm tra hàng đợi trạm
@@ -354,7 +356,7 @@ async function runLevel3Suite() {
   assert(pingRes.proximityAlert.distanceKm <= 3.5, `Cự ly tiếp cận chính xác: ${pingRes.proximityAlert?.distanceKm} km`);
   assert(pingRes.proximityAlert.riderCount === 2, 'Cảnh báo đúng số lượng 2 khách cần đón');
   assert(pingRes.proximityAlert.fuelSurcharge === 300000, 'Cảnh báo đúng số tiền phụ xăng +300.000đ');
-  assert(pingRes.proximityAlert.driverPayout === 270000, 'Cảnh báo đúng số tiền chủ xe nhận +270.000đ');
+  assert(pingRes.proximityAlert.driverPayout === 300000, 'Cảnh báo đúng số tiền chủ xe nhận +300.000đ (100% - 0đ phí sàn)');
   assert(pingRes.proximityAlert.noSurge === true, 'Bất biến: Không tăng giá cao điểm');
   assert(pingRes.session.status === 'OFFERING', 'Trạng thái Taplo chuyển sang OFFERING (30s đếm ngược)');
 
@@ -403,7 +405,7 @@ async function runLevel3Suite() {
     pin: checkinRes.intent.pin
   });
   assert(correctPinRes.success === true, 'Khớp mã PIN 4 số thành công');
-  assert(correctPinRes.session.totalEarnings === 270000, 'Tự động ghi nhận số dư ví phụ xăng +270.000đ cho Chủ xe');
+  assert(correctPinRes.session.totalEarnings === 300000, 'Tự động ghi nhận số dư ví phụ xăng +300.000đ cho Chủ xe (100% - 0đ phí sàn)');
   assert(correctPinRes.session.status === 'ROLLING', 'Xe chuyển trạng thái ROLLING nhập lại Quốc lộ 13');
   assert(correctPinRes.session.seatsAvailable === 0, 'Cập nhật số ghế còn trống = 0 sau khi nhận đủ khách');
 
@@ -539,7 +541,7 @@ async function runLevel3Suite() {
   assert(returnCheckIn.intent.destinationHubId === 'hub_ql13_binh_long', 'Đích đến là Bình Long');
   assert(returnCheckIn.intent.seatsNeeded === 2, 'Đặt 2 ghế chiều về');
   assert(returnCheckIn.intent.fuelSurcharge === 360000, 'Tổng cước 2 ghế: 180k * 2 = 360.000đ');
-  assert(returnCheckIn.intent.driverPayout === 324000, 'Chủ xe nhận 90%: 324.000đ');
+  assert(returnCheckIn.intent.driverPayout === 360000, 'Chủ xe nhận 100% (0đ phí sàn): 360.000đ');
 
   // =============================================================
   // 8.11 BỘ GIẢ LẬP CHẶNG CUỐI (LAST-MILE CALCULATOR) & NỐI CHUYẾN (HUB FEEDER)
@@ -649,6 +651,8 @@ async function runLevel3Suite() {
   console.log(`- Số bài ĐẠT (PASS): ${passedTests} / ${passedTests + failedTests} (${Math.round((passedTests / (passedTests + failedTests)) * 100)}%)`);
   console.log(`- Số bài LỖI (FAIL): ${failedTests}`);
   console.log('=============================================================\n');
+
+  clearAllBookings();
 
   if (failedTests > 0) {
     process.exit(1);

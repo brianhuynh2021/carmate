@@ -944,7 +944,12 @@ export default function App() {
     setActiveTab('market');
   };
 
-  const activeBookedCount = bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled').length;
+  const activeBookedCount = (bookedEscrows || []).filter((b) => {
+    const target = b?.targetItem || b?.targetTrip || {};
+    const from = b?.from || b?.fromLocation || target?.from || target?.fromLocation;
+    const to = b?.to || b?.toLocation || target?.to || target?.toLocation;
+    return Boolean(from && to) && b?.status !== 'completed' && b?.status !== 'cancelled';
+  }).length;
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
 
   // CHẾ ĐỘ TAPLO Ô TÔ (COCKPIT HUD TOÀN MÀN HÌNH CHO CHỦ XE)

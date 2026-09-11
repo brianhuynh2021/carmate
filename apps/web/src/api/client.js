@@ -442,6 +442,12 @@ export const api = {
     });
   },
 
+  async adminClearBookings() {
+    return request('/admin/bookings', {
+      method: 'DELETE'
+    });
+  },
+
   // Agentic AI Concierge & Dispatcher (Stanford Inner Loop)
   async agentChat(message, history = []) {
     return request('/agent/chat', {

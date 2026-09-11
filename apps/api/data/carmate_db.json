@@ -709,74 +709,7 @@
       "createdAt": 1789001862372
     }
   ],
-  "bookings": [
-    {
-      "escrowId": "ESC-ZALO-483-01",
-      "tripId": "DRV-2928",
-      "tripMaskedCode": "CX-483",
-      "status": "zalo_active",
-      "commitmentType": "zalo_direct",
-      "partyRole": "Chủ xe kết nối Khách",
-      "contactName": "Văn Long",
-      "contactPhone": "0900.000.018",
-      "driverPhone": "0984883750",
-      "driverName": "Nguyễn Thành Huỳnh",
-      "seats": 1,
-      "totalDeal": 150000,
-      "paidToEscrow": 0,
-      "remainingCash": 150000,
-      "from": "trung tâm hành chính Tân Khai, Hớn Quản, Bình Phước",
-      "to": "Đường Cống Quỳnh (Quận 1)",
-      "timeSlot": "16:00-18:00",
-      "pickupNote": "Đón tại cổng Chợ Tân Khai đúng 16:15",
-      "createdAt": "Hôm nay, 14:20"
-    },
-    {
-      "escrowId": "ESC-PAID-108-02",
-      "tripId": "DRV-0984-MORNING",
-      "tripMaskedCode": "CX-BP108",
-      "status": "escrow_paid",
-      "commitmentType": "escrow_deposit",
-      "partyRole": "Chủ xe kết nối Khách",
-      "contactName": "Chị Lan Bình Phước",
-      "contactPhone": "0900.000.025",
-      "driverPhone": "0984883750",
-      "driverName": "Nguyễn Thành Huỳnh",
-      "seats": 2,
-      "depositAmount": 100000,
-      "totalDeal": 360000,
-      "paidToEscrow": 100000,
-      "remainingCash": 260000,
-      "from": "Bù Đốp (Cây xăng Petrolimex 17, QL13)",
-      "to": "Sài Gòn (Ngã 4 Hàng Xanh)",
-      "timeSlot": "05:00-07:00",
-      "pickupNote": "Đón tại ngã 3 Lộc Tấn lúc 05:30",
-      "createdAt": "Hôm nay, 15:00"
-    },
-    {
-      "escrowId": "ESC-DONE-110-03",
-      "tripId": "DRV-0984-PAST",
-      "tripMaskedCode": "CX-CT110",
-      "status": "completed",
-      "commitmentType": "zalo_direct",
-      "partyRole": "Chủ xe kết nối Khách",
-      "contactName": "Bác Tuấn",
-      "contactPhone": "0900.000.026",
-      "driverPhone": "0984883750",
-      "driverName": "Nguyễn Thành Huỳnh",
-      "seats": 1,
-      "totalDeal": 140000,
-      "from": "Chợ Chơn Thành (Bình Phước)",
-      "to": "Sân bay Tân Sơn Nhất",
-      "timeSlot": "08:00-10:00",
-      "completedAt": "2026-09-09T02:57:42.372Z",
-      "feedback": {
-        "rating": 5,
-        "review": "Chủ xe lái xe rất êm ái, xe gia đình sạch sẽ, không mùi thuốc lá, tới sân bay kịp giờ check-in!"
-      },
-      "createdAt": "Hôm qua"
-    }
-  ],
+  "bookings": [],
   "users": [
     {
       "id": "USR-0984883750",

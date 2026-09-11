@@ -459,6 +459,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
       } else if (clearTarget === 'ai') {
         const res = await api.adminClearAiTrajectories();
         showNotice(res?.message || 'Đã dọn sạch dữ liệu nhật ký điều phối!');
+      } else if (clearTarget === 'bookings') {
+        const res = await api.adminClearBookings();
+        showNotice(res?.message || 'Đã dọn sạch toàn bộ lịch hẹn chuyến xe!');
       } else {
         const res = await api.adminClearTestData();
         showNotice(res?.message || 'Đã dọn sạch toàn bộ dữ liệu kiểm thử & log!');
@@ -2204,6 +2207,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
               ? 'Dọn sạch Phễu & Sự kiện phân tích'
               : clearTarget === 'ai'
               ? 'Dọn sạch Nhật ký điều phối'
+              : clearTarget === 'bookings'
+              ? 'Dọn sạch Lịch hẹn chuyến xe'
               : 'Dọn sạch toàn bộ dữ liệu kiểm thử'
           }
           subtitle="Tác vụ quản trị hệ thống"
@@ -2236,7 +2241,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 ? 'Hệ thống sẽ xoá toàn bộ sự kiện đã ghi nhận trong bảng analytics_events, đưa chỉ số Phễu và lượt tương tác về 0.'
                 : clearTarget === 'ai'
                 ? 'Hệ thống sẽ xoá toàn bộ lịch sử điều phối tự động, làm sạch bảng điều khiển.'
-                : 'Hệ thống sẽ xoá toàn bộ sự kiện phân tích (Analytics), nhật ký điều phối (Trajectories) và tin nhắn kiểm thử CSKH để đưa Dashboard về trạng thái sạch sẽ nhất.'}
+                : clearTarget === 'bookings'
+                ? 'Hệ thống sẽ xoá toàn bộ lịch hẹn chuyến xe kiểm thử, đưa giao diện Lịch hẹn về trạng thái ban đầu.'
+                : 'Hệ thống sẽ xoá toàn bộ sự kiện phân tích (Analytics), nhật ký điều phối (Trajectories), tin nhắn kiểm thử CSKH và toàn bộ lịch hẹn test để đưa Dashboard về trạng thái sạch sẽ nhất.'}
             </p>
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11.5px] text-amber-800 dark:text-amber-300 font-medium">
               ⚠️ Các chuyến xe thật và tài khoản thành viên sẽ được giữ nguyên an toàn 100%.

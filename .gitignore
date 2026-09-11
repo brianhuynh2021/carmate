@@ -36,6 +36,8 @@ apps/api/data/.dev_jwt_secret
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+*.sqlite.bak
+*.bak
 *.db
 
 # Editor & OS
