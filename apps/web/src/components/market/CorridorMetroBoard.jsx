@@ -291,13 +291,17 @@ export default function CorridorMetroBoard({
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono text-slate-300">
-            <span className="flex items-center gap-1.5 bg-emerald-500/15 px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-300 font-bold">
+            <span className="flex items-center gap-1.5 bg-emerald-500/20 px-3 py-1.5 rounded-xl border border-emerald-500/40 text-emerald-300 font-bold shadow-xs">
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              Rẻ hơn Limousine 30% – 50% · Nhanh hơn 45 – 60 phút
+            </span>
+            <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <Fuel className="w-3.5 h-3.5 text-emerald-400" />
-              Chỉ số xăng RON 95: {formatVND(currentFuelPrice.ron95Price)}/L · Cập nhật theo thị trường
+              Xăng RON 95: {formatVND(currentFuelPrice.ron95Price)}/L
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              Định giá công bằng hai bên · 0% chặt chém
+              Không chạy rùa gom khách · Đi thẳng QL13
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.06] px-3 py-1.5 rounded-xl border border-white/[0.08]">
               <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
@@ -384,7 +388,11 @@ export default function CorridorMetroBoard({
                 <span className="text-slate-500 dark:text-slate-400">
                   {direction === 'TO_SAIGON' ? 'Cước Bình Long / Tân Khai ➔ TP.HCM:' : 'Cước TP.HCM ➔ Tân Khai / Bình Long:'}
                 </span>
-                <span className="text-[#0071e3] font-bold">150k — 190k / vé (Trọn gói)</span>
+                <span className="text-[#0071e3] font-bold">150k — 190k / vé (Rẻ hơn Limo 30–50%)</span>
+              </div>
+              <div className="flex items-center justify-between font-mono">
+                <span className="text-slate-500 dark:text-slate-400">Thời gian di chuyển:</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Nhanh hơn 45–60p · Đi thẳng QL13</span>
               </div>
               <div className="flex items-center justify-between font-mono">
                 <span className="text-slate-500 dark:text-slate-400">Đón xe an toàn:</span>
@@ -419,8 +427,8 @@ export default function CorridorMetroBoard({
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
               {direction === 'TO_SAIGON'
-                ? 'Giá Cố Định Tuyến Đi (Về Sài Gòn) · Rẻ Hơn Limousine 25% – 35%'
-                : 'Giá Cố Định Tuyến Về (Về Bình Phước) · Rẻ Hơn Limousine 25% – 35%'}
+                ? 'Giá Cố Định Tuyến Đi (Về Sài Gòn) · Rẻ Hơn Limousine 30% – 50% · Nhanh Hơn 45–60 Phút'
+                : 'Giá Cố Định Tuyến Về (Về Bình Phước) · Rẻ Hơn Limousine 30% – 50% · Nhanh Hơn 45–60 Phút'}
             </h2>
           </div>
           <span className="self-start sm:self-auto px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-mono font-bold border border-emerald-200 dark:border-emerald-800">
@@ -435,7 +443,7 @@ export default function CorridorMetroBoard({
               <div className="p-5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>Cự ly ~115 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 28%</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 35%</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Bình Long ➔ Hàng Xanh</h3>
@@ -457,7 +465,7 @@ export default function CorridorMetroBoard({
                 </span>
                 <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>Cự ly ~95 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 32%</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 40%</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Tân Khai ➔ Hàng Xanh</h3>
@@ -476,7 +484,7 @@ export default function CorridorMetroBoard({
               <div className="p-5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>Cự ly ~75 km</span>
-                  <span className="text-slate-500 font-bold">Giao Tuyến N2</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 45%</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Chơn Thành ➔ Hàng Xanh</h3>
@@ -495,7 +503,7 @@ export default function CorridorMetroBoard({
               <div className="p-5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>Cự ly ~40 km</span>
-                  <span className="text-slate-500 font-bold">Nội tỉnh tiện đường</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Taxi 50%</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Bình Long ➔ Chơn Thành</h3>
@@ -516,7 +524,7 @@ export default function CorridorMetroBoard({
               <div className="p-5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>Cự ly ~115 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 28%</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 35%</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Hàng Xanh ➔ Bình Long</h3>
@@ -538,7 +546,7 @@ export default function CorridorMetroBoard({
                 </span>
                 <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>Cự ly ~95 km</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 32%</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 40%</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Hàng Xanh ➔ Tân Khai</h3>
@@ -557,7 +565,7 @@ export default function CorridorMetroBoard({
               <div className="p-5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>Cự ly ~75 km</span>
-                  <span className="text-slate-500 font-bold">Về TX. Chơn Thành</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rẻ hơn Limo 45%</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Hàng Xanh ➔ Chơn Thành</h3>
@@ -576,7 +584,7 @@ export default function CorridorMetroBoard({
               <div className="p-5 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border-2 border-purple-500/40 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>Cự ly ~120 km</span>
-                  <span className="text-purple-600 dark:text-purple-400 font-bold">Đón tại Ga T1/T2</span>
+                  <span className="text-purple-600 dark:text-purple-400 font-bold">Rẻ hơn Limo 35%</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Sân bay TSN ➔ Bình Long</h3>
@@ -592,6 +600,40 @@ export default function CorridorMetroBoard({
               </div>
             </>
           )}
+        </div>
+
+        {/* GIẢI THÍCH GIÁ TRỊ CỐT LÕI: VÌ SAO VỪA RẺ HƠN 30-50%, VỪA NHANH HƠN 45-60 PHÚT */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-emerald-50/80 dark:from-slate-800/80 dark:via-slate-850 dark:to-emerald-950/30 border border-blue-200/70 dark:border-slate-700/80 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-[#0071e3] dark:text-blue-400">
+            <Zap className="w-4 h-4 text-emerald-500" />
+            <span>HIỆU QUẢ VƯỢT TRỘI: TẠI SAO CARMATE VỪA RẺ HƠN 30%–50%, VỪA NHANH HƠN 45–60 PHÚT?</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            <div className="p-4 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/60 dark:border-slate-800 space-y-1.5 shadow-xs">
+              <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span className="text-base">💰</span> Rẻ hơn Limousine 30% – 50%
+              </div>
+              <p className="text-[12px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                Mô hình chia sẻ chi phí lăn bánh thực tế (xăng + BOT) giữa chủ xe và người đi cùng, triệt tiêu 100% chi phí nuôi bến bãi, tổng đài và hoa hồng trung gian taxi truyền thống.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/60 dark:border-slate-800 space-y-1.5 shadow-xs">
+              <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span className="text-base">⚡</span> Nhanh hơn 45 – 60 phút
+              </div>
+              <p className="text-[12px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                Không chạy rùa lòng vòng đón khách trong ngõ hẻm như xe khách / limousine. Xe đi thẳng trục Quốc lộ 13 tốc độ tối ưu, chỉ tấp lề 60 giây tại điểm đón quy chuẩn để đón khách.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/60 dark:border-slate-800 space-y-1.5 shadow-xs">
+              <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span className="text-base">🚗</span> 100% Xe gia đình sạch sẽ
+              </div>
+              <p className="text-[12px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                100% ô tô gia đình 4-7 chỗ sạch sẽ, mát mẻ, không nhồi nhét hành khách. Chủ xe tiện đường đúng giờ hẹn, văn minh lịch sự và cam kết không huỷ chuyến giờ chót.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

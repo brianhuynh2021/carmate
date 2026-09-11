@@ -13,7 +13,8 @@ import {
   Plane,
   QrCode,
   Smartphone,
-  RefreshCw
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import {
   formatVND,
@@ -1255,10 +1256,18 @@ export default function StationRiderView({
                     {formatVND(estimatedFare)}
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">
-                    {formatVND(tariff.pricePerSeat)} / vé · Không tăng giá
+                    {formatVND(tariff.pricePerSeat)} / vé · Rẻ hơn Limousine 30%–50%
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* VALUE PROPOSITION MICRO-BANNER: RẺ HƠN 30-50% & NHANH HƠN 45-60P */}
+            <div className="px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-2 text-xs font-mono text-emerald-300">
+              <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="leading-tight">
+                <strong>Đi thẳng QL13 không chạy rùa gom khách:</strong> Nhanh hơn 45–60 phút · Tiết kiệm 30%–50% so với Limousine
+              </span>
             </div>
 
             {/* SỐ ĐIỆN THOẠI NHẬN DẠNG (ĐĂNG NHẬP NGẦM PASSWORDLESS) */}
@@ -1456,6 +1465,13 @@ export default function StationRiderView({
                   <span className="font-mono text-emerald-400 font-bold">
                     Cước trọn gói: {formatVND(boardingPass.fuelSurcharge || estimatedFare)}
                   </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400/90 pt-1.5 border-t border-white/[0.06]">
+                  <span className="flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-emerald-400" />
+                    <span>Đi thẳng QL13 · Nhanh hơn 45–60p</span>
+                  </span>
+                  <span>Rẻ hơn Limousine 30%–50%</span>
                 </div>
               </div>
 
