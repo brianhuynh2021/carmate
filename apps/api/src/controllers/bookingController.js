@@ -9,6 +9,7 @@ import {
   updateTrip,
   getUserById,
   getUserByPhone,
+  saveUser,
   updateUserStatus,
   saveSupportMessage,
   resolveDisputeAndUnban,
@@ -18,6 +19,7 @@ import {
 import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
 import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import crypto from 'crypto';
+import { generateToken } from '../utils/token.js';
 import { sendBusinessAlert, sendTelegramMessage, sendDirectBookingTelegramAlert } from '../utils/telegramAlert.js';
 import { sendEmailNotification } from '../utils/emailAlert.js';
 
@@ -205,6 +207,63 @@ export async function createBooking(req, res) {
     body.passengerName = body.passengerName || body.userName || body.contactName || req.user?.name || 'Người đi cùng';
     body.driverName = body.driverName || 'Chủ xe';
 
+    // UNIFIED AUTH / UPSERT FLOW: Khách giữ chỗ trước bằng SĐT không cần tài khoản hay mật khẩu từ trước
+    let guestUserRecord = null;
+    let guestToken = null;
+    if (!req.user && body.passengerPhone) {
+      const cleaned = cleanPhoneNumber(body.passengerPhone);
+      if (isValidVietnamesePhone(cleaned)) {
+        try {
+          guestUserRecord = getUserByPhone(cleaned);
+          const rawName = body.passengerName;
+          const displayName =
+            rawName && rawName.trim() && rawName.trim() !== 'Người đi cùng' && rawName.trim() !== 'Khách đi cùng'
+              ? rawName.trim()
+              : (guestUserRecord?.name || `Khách ${cleaned.slice(-4)}`);
+
+          if (!guestUserRecord) {
+            guestUserRecord = {
+              id: 'USR-' + cleaned,
+              phone: cleaned,
+              name: displayName,
+              avatar: '',
+              role: 'rider',
+              trustScore: 98,
+              safeTripsCount: 0,
+              provider: 'quick_advance_booking'
+            };
+            await saveUser(guestUserRecord);
+          } else if (
+            rawName &&
+            rawName.trim() &&
+            rawName.trim() !== 'Người đi cùng' &&
+            rawName.trim() !== 'Khách đi cùng' &&
+            (!guestUserRecord.name ||
+              guestUserRecord.name.startsWith('Khách ') ||
+              guestUserRecord.name.startsWith('Người ') ||
+              guestUserRecord.name.startsWith('Thành viên '))
+          ) {
+            guestUserRecord.name = rawName.trim();
+            await saveUser(guestUserRecord);
+          }
+
+          guestToken = generateToken({
+            userId: guestUserRecord.id,
+            phone: guestUserRecord.phone,
+            role: guestUserRecord.role || 'rider',
+            name: guestUserRecord.name
+          });
+
+          body.userId = guestUserRecord.id;
+          body.passengerId = guestUserRecord.id;
+          body.passengerPhone = guestUserRecord.phone;
+          body.passengerName = guestUserRecord.name;
+        } catch (authErr) {
+          console.warn('[createBooking] Unified auth upsert warning:', authErr.message);
+        }
+      }
+    }
+
     // BẤT BIẾN MIT: Kiểm tra tính hợp lệ của chi phí thoả thuận (Price Guardrail)
     const dealPrice = Number(body.totalDeal || body.price || 0);
     const seatsCount = Math.max(1, Number(body.seats || 1));
@@ -311,11 +370,18 @@ export async function createBooking(req, res) {
       passengerPhone: maskPhoneNumber(booking.passengerPhone || '')
     };
 
-    return res.status(201).json({
+    const responsePayload = {
       success: true,
       message: 'Đã gửi yêu cầu ghép chuyến thành công',
       data: sanitizedBooking
-    });
+    };
+
+    if (guestToken && guestUserRecord) {
+      responsePayload.token = guestToken;
+      responsePayload.user = guestUserRecord;
+    }
+
+    return res.status(201).json(responsePayload);
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }

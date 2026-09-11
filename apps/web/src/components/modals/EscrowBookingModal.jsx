@@ -29,6 +29,8 @@ import {
   getTimeSlotLabel,
   toPublicAlias,
   normalizePhoneNumber,
+  cleanPhoneNumber,
+  isValidVietnamesePhone,
   getPriceGuardrail,
   CARGO_TYPES,
   getRecommendedCargoPrice,
@@ -39,7 +41,7 @@ import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { RouteTimeline, getCarDisplay } from '../market/TripCard.jsx';
 import { triggerMacNotification } from '../common/AppleMacNotification.jsx';
-import api from '../../api/client.js';
+import api, { setStoredAuthToken } from '../../api/client.js';
 
 export default function EscrowBookingModal({
   item,
@@ -47,6 +49,7 @@ export default function EscrowBookingModal({
   currentUser,
   onClose,
   onConfirmBooking,
+  onAuthSuccess,
   onViewTrustProfile,
   onViewBookedTab,
   _onAutoPostDemand,
@@ -59,6 +62,8 @@ export default function EscrowBookingModal({
   const [passengerNote, setPassengerNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestName, setGuestName] = useState('');
 
   const [bookingCode] = useState(() => `CX-${Math.floor(1000 + Math.random() * 9000)}`);
 
@@ -153,6 +158,21 @@ export default function EscrowBookingModal({
       return;
     }
     if (submitting) return;
+
+    let effectivePhone = currentUser?.phone;
+    let effectiveName = currentUser?.name;
+
+    // UNIFIED AUTH: Kiểm tra SĐT nếu khách chưa đăng nhập tài khoản từ trước
+    if (!currentUser) {
+      const cleaned = cleanPhoneNumber(guestPhone);
+      if (!isValidVietnamesePhone(cleaned)) {
+        onShowToast?.('Vui lòng nhập số điện thoại hợp lệ (10 số, ví dụ: 0912 345 678) để nhận vé & đón xe.');
+        return;
+      }
+      effectivePhone = cleaned;
+      effectiveName = guestName.trim() || 'Người đi cùng';
+    }
+
     setSubmitting(true);
 
     const isCargoBooking = bookingMode === 'cargo';
@@ -180,9 +200,10 @@ export default function EscrowBookingModal({
           proposedPricePerSeat: effectiveCargoTotal,
           originalPricePerSeat: recommendedCargoPrice,
           timeSlot,
-          passengerPhone: currentUser?.phone || undefined,
+          passengerPhone: effectivePhone || undefined,
+          passengerName: effectiveName || 'Người đi cùng',
           driverPhone: item.phoneReal,
-          contactPhone: currentUser?.phone || item.phoneReal,
+          contactPhone: effectivePhone || item.phoneReal,
           status: 'inquiring',
           commitmentType: 'inquiry_chat',
           partyRole: 'Người gửi đồ ➔ Chủ xe',
@@ -205,9 +226,10 @@ export default function EscrowBookingModal({
           proposedPricePerSeat: effectiveUnitPrice !== baseSeatPrice ? effectiveUnitPrice : undefined,
           originalPricePerSeat: baseSeatPrice,
           timeSlot,
-          passengerPhone: currentUser?.phone || undefined,
+          passengerPhone: effectivePhone || undefined,
+          passengerName: effectiveName || 'Người đi cùng',
           driverPhone: item.phoneReal,
-          contactPhone: currentUser?.phone || item.phoneReal,
+          contactPhone: effectivePhone || item.phoneReal,
           status: 'inquiring',
           commitmentType: 'inquiry_chat',
           partyRole: isDriverItem ? 'Người đi cùng Chủ Xe' : 'Chủ xe đón Người đi cùng',
@@ -221,25 +243,31 @@ export default function EscrowBookingModal({
         throw new Error(res?.error || 'Không thể chốt chuyến đi');
       }
 
+      // Lưu phiên đăng nhập tự động cho khách (Unified Auth)
+      if (res?.token && res?.user) {
+        try {
+          setStoredAuthToken(res.token);
+          onAuthSuccess?.(res.user);
+        } catch (authErr) {
+          console.warn('[EscrowBookingModal] Lưu phiên đăng nhập khách cảnh báo:', authErr);
+        }
+      }
+
       const createdBooking = res?.data || bookingData;
       onConfirmBooking?.(createdBooking, { keepModalOpen: true });
-      onShowToast?.('✓ Đã chốt chuyến thành công! Mở cuộc trò chuyện...', 'success');
+      onShowToast?.('✓ Đã giữ chỗ trước thành công! 0đ cọc', 'success');
       triggerMacNotification({
-        title: '🚗 Đã chốt chuyến đi thành công!',
+        title: '🚗 Đã giữ chỗ trước thành công (0đ cọc)!',
         message: `Mã vé #${bookingCode}: Vui lòng trao đổi điểm đón qua Chat hoặc Gọi thoại.`,
         type: 'confirmed',
         bookingId: bookingCode,
         partnerName: toPublicAlias(item),
-        actionLabel: 'Mở chat ngay',
+        actionLabel: 'Xem vé ngay',
         duration: 6000
       });
 
-      if (onOpenInbox) {
-        onClose();
-        onOpenInbox(bookingCode);
-      } else {
-        setIsSubmitted(true);
-      }
+      // Hiển thị ngay thẻ vé điện tử để khách theo dõi mã vé #CX-xxxx
+      setIsSubmitted(true);
     } catch (apiErr) {
       const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể chốt chuyến đi';
       onShowToast?.(errMsg);
@@ -288,7 +316,7 @@ export default function EscrowBookingModal({
         size="md"
         icon={CheckCircle2}
         iconTone="success"
-        title="✓ ĐÃ XÁC NHẬN KẾT NỐI CHUYẾN ĐI"
+        title="✓ ĐÃ GIỮ CHỖ TRƯỚC THÀNH CÔNG"
         subtitle={`Mã vé điện tử #${bookingCode} · Giữ chỗ chắc chắn 0đ cọc`}
         footer={
           <div className="w-full space-y-2">
@@ -506,7 +534,7 @@ export default function EscrowBookingModal({
                 {bookingMode === 'cargo'
                   ? '⚡ Chốt Chuyển Đồ & Vào Chat (0đ cọc)'
                   : isDriverItem
-                  ? '⚡ Chốt Chuyến & Vào Chat Ngay (0đ cọc)'
+                  ? '⚡ Giữ Chỗ Trước (0đ cọc) ➔'
                   : '⚡ Chốt Đón & Vào Chat Ngay (0đ cọc)'}
               </span>
             </>
@@ -526,8 +554,8 @@ export default function EscrowBookingModal({
       size="md"
       icon={MessageSquare}
       iconTone="primary"
-      title={isTripOwner ? 'Quản lý chuyến đi của bạn' : (isDriverItem ? 'Chốt Chuyến Đi Chung Cùng Chủ Xe' : 'Chốt Đón Người Đi Cùng')}
-      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : '0đ cọc · Khớp là chốt luôn · Trao đổi điểm đón & hành lý qua Chat'}
+      title={isTripOwner ? 'Quản lý chuyến đi của bạn' : (isDriverItem ? 'Giữ Chỗ Trước Cùng Chủ Xe (0đ cọc)' : 'Chốt Đón Người Đi Cùng')}
+      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : 'Giữ chỗ chắc chắn 0đ cọc · Nhận mã vé điện tử · Lên xe mới gửi tiền xăng'}
       footer={footer}
     >
       <div className="space-y-4">
@@ -563,6 +591,54 @@ export default function EscrowBookingModal({
           </div>
           <RouteTimeline from={item.from} to={item.to} compact />
         </div>
+
+        {/* Nhập SĐT để giữ chỗ (Zero Registration / Unified Auth cho khách vãng lai) */}
+        {!currentUser && !isTripOwner && (
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-200/80 dark:border-blue-900/40 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-[#0071e3]" />
+                Thông tin nhận vé & đón xe:
+              </span>
+              <span className="text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                0đ cọc · Không cần mật khẩu
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  Số điện thoại của bạn <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="0912 345 678"
+                  className="w-full text-xs font-mono font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  Tên xưng hô
+                </label>
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="VD: Anh Minh, Chị Hoa..."
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
+                />
+              </div>
+            </div>
+
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-normal flex items-start gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+              <span>Chủ xe sẽ gọi hoặc gửi tin nhắn xác nhận đón bạn đúng giờ. Số điện thoại được mã hóa an toàn.</span>
+            </p>
+          </div>
+        )}
 
         {/* Lựa chọn Ghép Ghế vs Gửi Đồ (Nếu xe nhận chở đồ hoặc xe bán tải) */}
         {acceptsCargo && isDriverItem && !item.isCargoOnly && !isTripOwner && (

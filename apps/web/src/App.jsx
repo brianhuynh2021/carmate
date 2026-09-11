@@ -832,16 +832,7 @@ export default function App() {
       return;
     }
     trackViewTrip(trip.id, `${trip.from} - ${trip.to}`);
-    if (!currentUser) {
-      setPendingBookingTrip(trip);
-      openAuthWithContext({
-        title: 'Xác Thực Để Ghép Chuyến',
-        subtitle: 'Bảo vệ số điện thoại · Kết nối an toàn với chủ xe',
-        contextNotice: `Ghép chuyến tuyến ${trip.from} ⇄ ${trip.to}`
-      });
-      showToast('Vui lòng xác thực số điện thoại để kết nối trực tiếp với chủ xe');
-      return;
-    }
+    // BẤT BIẾN STANFORD: Triệt tiêu rào cản đăng nhập. Khách đặt chỗ trước trực tiếp bằng SĐT (0đ cọc)
     setSelectedItemForEscrow(trip);
   };
 
@@ -1508,6 +1499,7 @@ export default function App() {
           currentUser={currentUser}
           onClose={() => setSelectedItemForEscrow(null)}
           onConfirmBooking={handleConfirmBooking}
+          onAuthSuccess={handleAuthSuccess}
           onViewTrustProfile={setSelectedDriverForTrust}
           onOpenInbox={(bookingId, opts) => {
             setSelectedItemForEscrow(null);
