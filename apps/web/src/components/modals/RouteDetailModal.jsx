@@ -200,7 +200,7 @@ export default function RouteDetailModal({
                     : 'text-white bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] shadow-sm shadow-[#0071e3]/20'
                 }`}
               >
-                <span>{isTripFull ? (isDriver ? 'Đã kín chỗ' : 'Đã có xe') : isDriver ? 'Ghép chuyến này' : 'Đón khách này'}</span>
+                <span>{isTripFull ? (isDriver ? 'Đã kín chỗ' : 'Đã có xe') : isDriver ? 'Giữ chỗ trước (0đ cọc)' : 'Đón khách này'}</span>
                 {!isTripFull && <ArrowRight className="w-3.5 h-3.5" />}
               </button>
             )}
