@@ -232,6 +232,54 @@ export function telemetryPing({
     session.lastPing = Date.now();
   }
 
+  if (session.isBanned) {
+    return {
+      success: false,
+      isBanned: true,
+      error: session.banReason || '⛔ TÀI KHOẢN ĐÃ BỊ KHÓA VĨNH VIỄN DO VI PHẠM AN TOÀN ĐÓN KHÁCH.'
+    };
+  }
+
+  // Bẫy vi phạm bỏ bom khách (Fly-By Ghosting Penalty): Xe vượt quá trạm > 300m với tốc độ cao không giảm tốc
+  if (session.status === 'DWELLING' && session.dockingStationId) {
+    const dockingHub = getVirtualHubById(session.dockingStationId);
+    if (dockingHub) {
+      const frenet = projectToCorridorFrenet(session.lat, session.lng, corridor);
+      const hubS = getStationStationKm(session.dockingStationId);
+      const hasOvershot = hubS != null && frenet.s != null && (frenet.s - hubS) > 0.3;
+      const distDirect = calculateDistanceKm(session.lat, session.lng, dockingHub.lat, dockingHub.lng);
+
+      if ((hasOvershot || distDirect > 0.5) && session.speed > 35) {
+        const queue = stationQueues.get(session.dockingStationId) || [];
+        const rider = queue.find((i) => i.intentId === session.dockingIntentId);
+        if (rider && rider.status === 'ARRIVING') {
+          rider.status = 'WAITING';
+          rider.carInfo = null;
+          rider.lockExpiresAt = null;
+          rider.matchedTripId = null;
+          const idx = queue.indexOf(rider);
+          if (idx > 0) {
+            queue.splice(idx, 1);
+            queue.unshift(rider);
+          }
+        }
+        session.status = 'BANNED';
+        session.isBanned = true;
+        session.banReason = 'FLY_BY_GHOSTING: Xe vượt quá trạm > 300m với tốc độ cao không giảm tốc đón khách theo cam kết';
+        return {
+          success: false,
+          isBanned: true,
+          error: '⛔ TÀI KHOẢN ĐÃ BỊ KHÓA VĨNH VIỄN: Vi phạm nghiêm trọng không đón khách đã nhận tại trạm.',
+          session: {
+            tripId: session.tripId,
+            status: 'BANNED',
+            isBanned: true
+          }
+        };
+      }
+    }
+  }
+
   // Tự động giải phóng nếu offer đã quá hạn 30s
   const now = Date.now();
   if (session.activeOffer && session.activeOffer.expiresAt < now) {
@@ -361,6 +409,8 @@ export function driverAcceptOffer({ tripId, intentId }) {
 
   // Chuyển trạng thái chủ xe sang DWELLING (Hạn dừng tại trạm 60 giây)
   session.status = 'DWELLING';
+  session.dockingStationId = hubId;
+  session.dockingIntentId = intentId;
   session.dockingExpiresAt = Date.now() + 60000;
   session.activeOffer = null;
 

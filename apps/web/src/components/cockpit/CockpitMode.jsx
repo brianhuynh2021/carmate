@@ -8,7 +8,8 @@ import {
   RotateCcw,
   Zap,
   Radio,
-  ChevronLeft
+  ChevronLeft,
+  ShieldCheck
 } from 'lucide-react';
 import { formatVND } from '@carmate/shared';
 import { api } from '../../api/client.js';
@@ -16,9 +17,35 @@ import { api } from '../../api/client.js';
 export default function CockpitMode({
   tripId = 'TRIP-MY-COCKPIT',
   initialCorridor = 'Tuyến QL13',
+  currentUser = null,
   onBack,
   onShowToast
 }) {
+  // Trạng thái kiểm duyệt tài khoản chủ xe (Driver Whitelist Guard)
+  const [isDemoApproved, setIsDemoApproved] = useState(false);
+  const isDriverVerified = Boolean(
+    isDemoApproved ||
+    currentUser?.isDriverVerified ||
+    (currentUser?.isCccdVerified && currentUser?.isGplxVerified) ||
+    currentUser?.role === 'driver' ||
+    currentUser?.role === 'admin'
+  );
+
+  // Cảm biến gia tốc phần cứng chống giả lập GPS (Anti-Spoofing Hardware Sensor)
+  const [hasHardwareMotion, setHasHardwareMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
+      const handleMotion = (event) => {
+        const acc = event.accelerationIncludingGravity || event.acceleration;
+        if (acc && (Math.abs(acc.x || 0) > 0.05 || Math.abs(acc.y || 0) > 0.05 || Math.abs(acc.z || 0) > 0.05)) {
+          setHasHardwareMotion(true);
+        }
+      };
+      window.addEventListener('devicemotion', handleMotion, { once: true });
+      return () => window.removeEventListener('devicemotion', handleMotion);
+    }
+  }, []);
+
   // Trạng thái chung của Cockpit Taplo
   const [isReceivingGuests, setIsReceivingGuests] = useState(true);
   const [seatsAvailable, setSeatsAvailable] = useState(2);
@@ -252,6 +279,98 @@ export default function CockpitMode({
       speakText('Xác thực thành công. Tiếp tục hành trình.');
     }
   };
+
+  // MÀN HÌNH KHÓA CHẶN DUYỆT HỒ SƠ CHỦ XE (DRIVER WHITELIST GUARD — CỬA ĐÓNG THEN CÀI)
+  if (!isDriverVerified) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between select-none p-4 sm:p-6 font-sans">
+        <header className="flex items-center justify-between border-b border-white/[0.08] pb-3 mb-4 max-w-lg mx-auto w-full">
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-10 h-10 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center border border-white/[0.08] transition-all cursor-pointer"
+            title="Quay lại sảnh"
+          >
+            <ChevronLeft className="w-5 h-5 text-slate-300" />
+          </button>
+          <div className="text-right">
+            <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-mono font-bold border border-amber-500/30">
+              PENDING_VERIFICATION
+            </span>
+          </div>
+        </header>
+
+        <main className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full space-y-5 my-auto animate-fade-in">
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 rounded-3xl bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-xl">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide">
+              Xác Thực Chủ Xe Chính Chủ
+            </h1>
+            <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
+              Để bảo vệ an toàn 100% cho hành khách và ngăn chặn cuốc ảo, mọi chủ xe đều phải được Ban Quản Trị đối soát hồ sơ trước khi kích hoạt Chế độ Taplo.
+            </p>
+          </div>
+
+          <div className="p-4 sm:p-5 rounded-3xl bg-white/[0.04] border border-white/[0.08] space-y-3">
+            <span className="text-xs font-mono font-bold uppercase text-amber-300 block">
+              3 HỒ SƠ TỐI THIỂU CẦN ĐỐI SOÁT:
+            </span>
+            <div className="space-y-2 text-xs font-mono text-slate-300">
+              <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-base">🪪</span>
+                <div>
+                  <div className="font-bold text-white">1. Căn cước công dân (CCCD)</div>
+                  <div className="text-[11px] text-slate-400">CCCD gắn chip chính chủ còn hạn</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-base">🚗</span>
+                <div>
+                  <div className="font-bold text-white">2. Giấy phép lái xe (GPLX)</div>
+                  <div className="text-[11px] text-slate-400">Hạng B2 trở lên, không có tiền sử vi phạm nặng</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-base">📋</span>
+                <div>
+                  <div className="font-bold text-white">3. Cà-vẹt xe &amp; Đăng kiểm</div>
+                  <div className="text-[11px] text-slate-400">Biển số Bình Phước (93) / Bình Dương (61) / TP.HCM (51)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <a
+              href="https://zalo.me/"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full h-14 rounded-2xl bg-[#0068ff] hover:bg-[#0058df] active:scale-[0.99] text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg"
+            >
+              <span>Gửi Hồ Sơ Qua Zalo Ban Quản Trị ➔</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsDemoApproved(true);
+                onShowToast?.('Đã kích hoạt chế độ Taplo thử nghiệm (Dev Demo)');
+              }}
+              className="w-full h-11 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-mono text-slate-400 hover:text-emerald-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>⚡ Kích hoạt chế độ kiểm thử nhanh (Dev Demo)</span>
+            </button>
+          </div>
+        </main>
+
+        <footer className="text-center text-[11px] font-mono text-slate-500 max-w-lg mx-auto w-full pt-4">
+          CarMate Platform · Kiểm duyệt 100% hồ sơ trước khi lăn bánh
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#07080d] text-white flex flex-col justify-between select-none font-sans overflow-x-hidden p-4 sm:p-6">

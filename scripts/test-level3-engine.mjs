@@ -583,6 +583,65 @@ async function runLevel3Suite() {
   assert(binhLongStatus.isThin === false, 'Trạm Bình Long là Vùng đậm đặc (DENSE), không cần nối chuyến');
 
   // =============================================================
+  // 8.12 KIỂM THỬ BẪY ĐỘNG HỌC & XỬ PHẠT CHỦ XE BỎ BOM KHÁCH (FLY-BY GHOSTING PENALTY)
+  // =============================================================
+  console.log('\n--- 8.12 Kiểm thử Bẫy động học & Xử phạt Bỏ bom khách (Ghosting Penalty) ---');
+  resetAllStationData();
+
+  // 1. Khách check-in tại Tân Khai
+  const ghostTestCheckIn = riderCheckIn({
+    hubId: 'hub_ql13_tan_khai',
+    destinationHubId: 'hub_ql13_hang_xanh',
+    seatsNeeded: 1,
+    phone: '0977889900',
+    name: 'Khách Thử Bẫy'
+  });
+  assert(ghostTestCheckIn.success === true, 'Khách check-in tại Tân Khai thành công');
+
+  // 2. Xe tiếp cận trạm và nhận offer
+  const ghostCarTripId = 'TRIP-GHOST-CAR-1';
+  const ghostCarPing1 = telemetryPing({
+    tripId: ghostCarTripId,
+    driverPhone: '0933112233',
+    driverName: 'Chủ Xe Thử Bẫy',
+    plate: '93A-999.99',
+    corridor: 'Tuyến QL13',
+    lat: 11.5860,
+    lng: 106.6264,
+    speed: 70,
+    seatsAvailable: 3
+  });
+  assert(ghostCarPing1.proximityAlert != null, 'Radar kích hoạt offer cho xe tiếp cận trạm Tân Khai');
+
+  const ghostAcceptRes = driverAcceptOffer({
+    tripId: ghostCarTripId,
+    intentId: ghostTestCheckIn.intent.intentId
+  });
+  assert(ghostAcceptRes.success === true, 'Chủ xe bấm ĐỒNG Ý ĐÓN, chuyển trạng thái DWELLING');
+
+  // 3. Kịch bản xấu: Xe không dừng tấp lề mà chạy vù qua trạm Tân Khai (> 300m) với tốc độ 75 km/h
+  // Tân Khai s ~ 38.6 km, xe vượt qua cọc s ~ 39.5 km
+  const ghostCarFlyByPing = telemetryPing({
+    tripId: ghostCarTripId,
+    lat: 11.5000,
+    lng: 106.6340,
+    speed: 75 // Không giảm tốc về 0 km/h
+  });
+  assert(ghostCarFlyByPing.isBanned === true, 'Hệ thống kích hoạt Bẫy Động Học và Khóa Vĩnh Viễn xe bỏ bom khách');
+
+  // 4. Kiểm tra khách được giải phóng an toàn về vị trí #1 hàng đợi
+  const riderPassAfterGhost = getRiderPass(ghostTestCheckIn.intent.intentId);
+  assert(riderPassAfterGhost.intent.status === 'WAITING', 'Khách được tự động hoàn trả về trạng thái WAITING');
+  assert(riderPassAfterGhost.intent.carInfo === null, 'Xóa bỏ thông tin xe đã bỏ bom khách');
+  assert(riderPassAfterGhost.position === 1, 'Khách được ưu tiên giữ nguyên vị trí số 1 để đón xe tiếp theo');
+
+  // 5. Xe bị khóa vĩnh viễn không thể tiếp tục quét trạm
+  const ghostCarRetryPing = telemetryPing({
+    tripId: ghostCarTripId,
+    speed: 50
+  });
+  assert(ghostCarRetryPing.success === false, 'Xe bị khóa vĩnh viễn bị từ chối mọi hoạt động radar');
+  assert(ghostCarRetryPing.isBanned === true, 'Cờ isBanned = true được bảo toàn tuyệt đối (Zero Tolerance)');
 
   console.log('\n=============================================================');
   console.log('📊 TỔNG KẾT BỘ KIỂM THỬ CARMATE CẤP ĐỘ 3 (LEVEL 3):');

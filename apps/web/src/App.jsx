@@ -979,6 +979,7 @@ export default function App() {
       <CockpitMode
         tripId={`TRIP-${currentUser?.id || currentUser?.phone || 'TAPLO'}`}
         initialCorridor={activeCorridor || 'Tuyến QL13'}
+        currentUser={currentUser}
         onBack={() => setActiveTab('market')}
         onShowToast={showToast}
       />
