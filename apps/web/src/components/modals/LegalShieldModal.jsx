@@ -46,7 +46,7 @@ export default function LegalShieldModal({
 - Người đi cùng: ${riderName}.
 - Lộ trình: ${routeFrom} ──> ${routeTo}.
 - Mức đóng góp chi phí nhiên liệu: ${formatVND(fuelContribution)} (Bù đắp tiền xăng và trạm BOT, P ≤ Chi phí thực tế).
-- Giới hạn hệ thống: Tối đa 2 lượt/ngày (chu kỳ đi làm - về nhà), không chạy taxi dịch vụ.`;
+- Tính chất chuyến đi: Chuyến đi cá nhân tiện đường, chia sẻ chi phí nhiên liệu phi lợi nhuận theo Điều 3 BLDS 2015.`;
 
   const handleCopy = () => {
     navigator.clipboard?.writeText(statutoryStatement);
@@ -89,7 +89,7 @@ export default function LegalShieldModal({
             </span>
           </div>
           <p className="text-[12px] sm:text-[12.5px] leading-relaxed font-medium">
-            "Hành trình này là <strong>thỏa thuận dân sự tương trợ</strong> giữa Chủ xe cá nhân và Người đi cùng để chia sẻ tiền xăng và phí cầu đường BOT theo <strong>Điều 3 Bộ Luật Dân sự 2015</strong>. Phương tiện là <strong>xe cá nhân biển trắng</strong>, không thuộc đối tượng kinh doanh vận tải theo <strong>Nghị định 10/2020/NĐ-CP</strong> và tuân thủ định mức không quá 2 chuyến/ngày của nền tảng CarMate."
+            "Hành trình này là <strong>thỏa thuận dân sự tương trợ</strong> giữa Chủ xe cá nhân và Người đi cùng để chia sẻ tiền xăng và phí cầu đường BOT theo <strong>Điều 3 Bộ Luật Dân sự 2015</strong>. Phương tiện là <strong>xe cá nhân biển trắng</strong>, không thuộc đối tượng kinh doanh vận tải theo <strong>Nghị định 10/2020/NĐ-CP</strong>. Chủ xe tự cam kết hành trình cá nhân tiện đường, phi thương mại."
           </p>
         </div>
 

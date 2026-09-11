@@ -37,7 +37,7 @@ export default function TermsModal({ onClose, zIndex = 'z-[9999]' }) {
               <strong>1. Không dùng từ ngữ vận tải thương mại:</strong> Hệ thống không sử dụng các thuật ngữ "giá cước", "tiền vé", "cuốc xe", "tài xế taxi" hay "khách hàng". Toàn bộ giao diện và truyền thông chuẩn hóa danh xưng <em>"Chủ xe cá nhân"</em>, <em>"Người đi cùng"</em> và <em>"Mức bù xăng dầu / đóng góp chi phí hành trình"</em>.
             </li>
             <li>
-              <strong>2. Không cho phép chạy thương mại vô hạn (Khóa cứng 2 lượt/ngày):</strong> Mỗi chủ xe / phương tiện chỉ được tạo và thực hiện tối đa <strong>2 chuyến/ngày</strong> (chu kỳ đi làm buổi sáng - về nhà buổi chiều). Hệ thống khóa cứng kỹ thuật để ngăn chặn triệt để hành vi chạy xe dù, taxi công nghệ lậu.
+              <strong>2. Không biến tướng taxi dịch vụ (Chủ xe tự chủ & Tự chịu trách nhiệm):</strong> CarMate là nền tảng kết nối nhu cầu chia sẻ chi phí dân sự, không can thiệp hay giới hạn số chuyến của cá nhân. Chủ xe tự cam kết hành trình cá nhân tiện đường và tự chịu trách nhiệm về tần suất di chuyển theo quy định của Luật Giao thông đường bộ.
             </li>
             <li>
               <strong>3. Không định giá vượt định mức chi phí thực tế:</strong> Mức đóng góp được tính toán tự động dựa trên cự ly Geodesic Haversine × 1.28 và trạm thu phí BOT thực tế. Tổng mức san sẻ từ người đi cùng bảo đảm không vượt quá chi phí nhiên liệu và hao mòn xe (<em>P ≤ Xăng + BOT</em>), tuân thủ nguyên tắc dân sự phi lợi nhuận theo Điều 3 Bộ Luật Dân sự 2015.

@@ -4,10 +4,11 @@
  * ============================================================================
  * 
  * Tests the "3 Không" and "3 Có" statutory civil positioning:
- * 1. Anti-Commercial Capping: Hard limit of 2 trips/day for drivers (NĐ 10/2020/NĐ-CP & Điều 3 BLDS 2015)
- * 2. Fuel & BOT Cost Guardrail Invariant: P <= Xăng + BOT (Phi thương mại, tự do dân sự)
- * 3. Station Queue & Telemetry: Daily cap blocks runaway commercial operations
- * 4. Commercial Terminology Purge: No "tài xế", "bác tài" in customer-facing core
+ * 1. Self-Responsible Civil Commute: Platform does not technically block/cap trips (driver self-responsible)
+ * 2. Unblocked Multi-Trip Flow: Trips 1, 2, 3 create smoothly without 400 rejection
+ * 3. Fuel & BOT Cost Guardrail Invariant: P <= Xăng + BOT (Phi thương mại, tự do dân sự)
+ * 4. Station Queue & Telemetry: Unblocked radar access for valid drivers
+ * 5. Commercial Terminology Purge: No "tài xế", "bác tài" in customer-facing core
  */
 
 import assert from 'assert/strict';
@@ -17,17 +18,13 @@ import {
   getTrips,
   getDailyDriverTripCount,
   isDriverDailyTripCapped,
-  DRIVER_DAILY_CAP_NOTICE,
   deleteTrip
 } from '../apps/api/src/db/sqliteStore.js';
 import {
   telemetryPing,
-  driverAcceptOffer,
-  riderCheckIn,
   resetAllStationData
 } from '../apps/api/src/services/stationQueueService.js';
 import {
-  calculatePricing,
   getPriceGuardrail
 } from '../packages/shared/src/index.js';
 
@@ -64,8 +61,8 @@ async function main() {
   console.log('🧪 INITIALIZING DATABASE & RUNNING COST-SHARING COMPLIANCE TESTS...\n');
   await initDB();
 
-  // --- 1. HARD DAILY TRIP CAPPING (MAX 2 TRIPS / DAY) ---
-  console.log('── 1. Anti-Commercial Capping (Max 2 trips/day) ──');
+  // --- 1. UNBLOCKED CIVIL COMMUTE (CHỦ XE TỰ CHỦ & TỰ CHỊU TRÁCH NHIỆM) ---
+  console.log('── 1. Civil Commute Flow (No Hard Block, Driver Self-Responsible) ──');
 
   const testPhone = '0988776655';
   const testDate = '2026-09-12';
@@ -83,9 +80,9 @@ async function main() {
     assert.equal(capped, false);
   });
 
-  await runAsyncTest('Tạo chuyến thứ 1 (buổi sáng đi làm): count = 1, isDriverDailyTripCapped = false', async () => {
-    await addTrip({
-      id: `test-cap-1-${Date.now()}`,
+  await runAsyncTest('Tạo chuyến thứ 1 (buổi sáng đi làm): thành công, không bị chặn', async () => {
+    const trip1 = await addTrip({
+      id: `test-trip-1-${Date.now()}`,
       type: 'driver_offer',
       author: 'Chủ xe Anh Minh',
       phoneReal: testPhone,
@@ -97,15 +94,16 @@ async function main() {
       status: 'OPEN'
     });
 
+    assert.ok(trip1?.id);
     const count = getDailyDriverTripCount(testPhone, testDate);
     const capped = isDriverDailyTripCapped(testPhone, testDate);
     assert.equal(count, 1);
     assert.equal(capped, false);
   });
 
-  await runAsyncTest('Tạo chuyến thứ 2 (buổi chiều về nhà): count = 2, isDriverDailyTripCapped = true', async () => {
-    await addTrip({
-      id: `test-cap-2-${Date.now()}`,
+  await runAsyncTest('Tạo chuyến thứ 2 (buổi chiều về nhà): thành công, không bị chặn', async () => {
+    const trip2 = await addTrip({
+      id: `test-trip-2-${Date.now()}`,
       type: 'driver_offer',
       author: 'Chủ xe Anh Minh',
       phoneReal: testPhone,
@@ -117,88 +115,50 @@ async function main() {
       status: 'OPEN'
     });
 
+    assert.ok(trip2?.id);
     const count = getDailyDriverTripCount(testPhone, testDate);
     const capped = isDriverDailyTripCapped(testPhone, testDate);
     assert.equal(count, 2);
-    assert.equal(capped, true);
+    assert.equal(capped, false); // Không khóa cứng kỹ thuật
   });
 
-  it('Thông báo chặn trích dẫn đầy đủ Nghị định 10/2020/NĐ-CP và Điều 3 BLDS 2015', () => {
-    assert.ok(DRIVER_DAILY_CAP_NOTICE.includes('Nghị định 10/2020/NĐ-CP'));
-    assert.ok(DRIVER_DAILY_CAP_NOTICE.includes('Điều 3 Bộ Luật Dân sự 2015'));
-    assert.ok(DRIVER_DAILY_CAP_NOTICE.includes('tối đa 2 chuyến/ngày'));
+  await runAsyncTest('Tạo chuyến thứ 3 (chuyến phát sinh): thành công 100%, không chặn 400', async () => {
+    const trip3 = await addTrip({
+      id: `test-trip-3-${Date.now()}`,
+      type: 'driver_offer',
+      author: 'Chủ xe Anh Minh',
+      phoneReal: testPhone,
+      date: testDate,
+      from: 'Hàng Xanh',
+      to: 'Thủ Dầu Một',
+      price: 60000,
+      seatsAvailable: 2,
+      status: 'OPEN'
+    });
+
+    assert.ok(trip3?.id);
+    const count = getDailyDriverTripCount(testPhone, testDate);
+    const capped = isDriverDailyTripCapped(testPhone, testDate);
+    assert.equal(count, 3);
+    assert.equal(capped, false); // Chủ xe tự chủ, nền tảng không chặn
   });
 
-  it('Ngày khác (testDate + 1) không bị ảnh hưởng bởi hạn mức ngày hôm nay', () => {
-    const anotherDate = '2026-09-13';
-    const count = getDailyDriverTripCount(testPhone, anotherDate);
-    const capped = isDriverDailyTripCapped(testPhone, anotherDate);
-    assert.equal(count, 0);
-    assert.equal(capped, false);
-  });
+  // --- 2. STATION QUEUE & COCKPIT TELEMETRY ACCESS ---
+  console.log('\n── 2. Station Queue & Cockpit Telemetry Access ──');
 
-  // --- 2. STATION QUEUE & COCKPIT ANTI-COMMERCIAL SHIELD ---
-  console.log('\n── 2. Station Queue & Cockpit Telemetry Cap Check ──');
-
-  it('Telemetry Ping bị chặn nếu chủ xe đã đạt định mức 2 lượt/ngày', () => {
-    // Với date = testDate
+  it('Telemetry Ping hoạt động bình thường, không bị chặn bởi số chuyến trong ngày', () => {
     const pingRes = telemetryPing({
-      tripId: 'TRIP-TEST-CAPPED',
+      tripId: 'TRIP-TEST-UNBLOCKED',
       driverPhone: testPhone,
       driverName: 'Chủ xe Anh Minh',
       seatsAvailable: 2
     });
 
-    // testPhone đã có 2 chuyến trong DB, getDailyDriverTripCount checks date = 'Hôm nay' or today ISO
-    // Let's test by setting a trip for today as well
+    assert.equal(pingRes.success, true);
+    assert.equal(pingRes.session?.status, 'ACTIVE_SCANNING');
   });
 
-  await runAsyncTest('Telemetry Ping bị chặn khi chủ xe có 2 chuyến hôm nay', async () => {
-    const todayPhone = '0977889900';
-    await addTrip({
-      id: `today-cap-1-${Date.now()}`,
-      type: 'driver_offer',
-      author: 'Chủ xe Tuấn',
-      phoneReal: todayPhone,
-      date: 'Hôm nay',
-      from: 'Tân Khai',
-      to: 'Hàng Xanh',
-      price: 120000,
-      seatsAvailable: 3,
-      status: 'OPEN'
-    });
-    await addTrip({
-      id: `today-cap-2-${Date.now()}`,
-      type: 'driver_offer',
-      author: 'Chủ xe Tuấn',
-      phoneReal: todayPhone,
-      date: 'Hôm nay',
-      from: 'Hàng Xanh',
-      to: 'Tân Khai',
-      price: 120000,
-      seatsAvailable: 3,
-      status: 'OPEN'
-    });
-
-    const pingRes = telemetryPing({
-      tripId: 'TRIP-TODAY-CAPPED',
-      driverPhone: todayPhone,
-      driverName: 'Chủ xe Tuấn',
-      seatsAvailable: 2
-    });
-
-    assert.equal(pingRes.success, false);
-    assert.equal(pingRes.isDailyCapped, true);
-    assert.ok(pingRes.error.includes('Nghị định 10/2020/NĐ-CP'));
-
-    // Cleanup today trips
-    const cleanupToday = getTrips().filter(t => t.phoneReal === todayPhone);
-    for (const t of cleanupToday) {
-      await deleteTrip(t.id);
-    }
-  });
-
-  it('Chủ xe khác chưa đạt hạn mức vẫn hoạt động bình thường', () => {
+  it('Chủ xe mới hoạt động mượt mà trong chế độ buồng lái', () => {
     const cleanPhone = '0911223344';
     const pingRes = telemetryPing({
       tripId: 'TRIP-CLEAN-DRIVER',

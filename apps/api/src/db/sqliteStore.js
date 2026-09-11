@@ -2262,11 +2262,11 @@ export function getDailyDriverTripCount(phone, targetDate = '') {
 }
 
 /**
- * Kiểm tra xem chủ xe đã đạt giới hạn 2 lượt/ngày chưa
+ * Kiểm tra xem chủ xe có bị giới hạn chuyến hay không.
+ * Theo yêu cầu: CarMate không giới hạn số chuyến, chủ xe tự chịu trách nhiệm dân sự về tần suất di chuyển.
  */
-export function isDriverDailyTripCapped(phone, targetDate = '') {
-  const count = getDailyDriverTripCount(phone, targetDate);
-  return count >= 2;
+export function isDriverDailyTripCapped(_phone, _targetDate = '') {
+  return false;
 }
 
 
