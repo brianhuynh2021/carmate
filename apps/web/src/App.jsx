@@ -24,6 +24,8 @@ import PostTripAuthGuard from './components/post/PostTripAuthGuard.jsx';
 import MatchRadarView from './components/radar/MatchRadarView.jsx';
 import BookedTripList from './components/booked/BookedTripList.jsx';
 import MyTripsView from './components/post/MyTripsView.jsx';
+import CockpitMode from './components/cockpit/CockpitMode.jsx';
+import StationRiderView from './components/station/StationRiderView.jsx';
 const AdminDashboardView = React.lazy(() => import('./components/admin/AdminDashboardView.jsx'));
 
 // Modals
@@ -91,13 +93,15 @@ export default function App() {
   const canAccessAdmin = isOpsPortal || isLocalhost;
 
   // Danh mục Tab hợp lệ trên toàn hệ sinh thái CarMate
-  const VALID_TABS = ['market', 'match', 'post', 'my-trips', 'booked', 'admin'];
+  const VALID_TABS = ['market', 'match', 'post', 'my-trips', 'booked', 'admin', 'cockpit', 'station'];
 
   // Ánh xạ Clean URL Pathname chuẩn Apple & Vercel (Zero #)
   const getPathForTab = (tab) => {
     if (tab === 'market') return '/';
     if (tab === 'match') return '/radar';
     if (tab === 'admin') return '/admin';
+    if (tab === 'cockpit') return '/cockpit';
+    if (tab === 'station') return '/tram';
     return `/${tab}`; // '/my-trips', '/post', '/booked'
   };
 
@@ -115,10 +119,14 @@ export default function App() {
       return 'admin';
     }
 
-    // 2. Nhận diện Clean URL Pathname (/my-trips, /booked, /post, /radar, /match, /market, /admin)
+    // 2. Nhận diện Clean URL Pathname (/my-trips, /booked, /post, /radar, /match, /market, /admin, /cockpit, /tram)
     const rawPath = window.location.pathname.replace(/^\/+/, '').split('/')[0].trim().toLowerCase();
     if (rawPath === 'admin' && !canAccessAdmin) {
       // Chặn truy cập /admin trên domain chính (MIT Zero Attack Surface)
+    } else if (rawPath === 'cockpit') {
+      return 'cockpit';
+    } else if (rawPath === 'tram' || rawPath === 'station') {
+      return 'station';
     } else if (rawPath === 'radar' || rawPath === 'match') {
       return 'match';
     } else if (rawPath === 'my-trips' || rawPath === 'my_trips' || rawPath === 'mytrips') {
@@ -131,10 +139,14 @@ export default function App() {
       return 'market';
     }
 
-    // 3. Tương thích ngược với URL Hash cũ (#my-trips, #booked, #post, #match, #radar)
+    // 3. Tương thích ngược với URL Hash cũ (#my-trips, #booked, #post, #match, #radar, #cockpit, #tram)
     const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
     if (rawHash === 'admin' && !canAccessAdmin) {
       // Chặn truy cập #admin trên domain chính
+    } else if (rawHash === 'cockpit') {
+      return 'cockpit';
+    } else if (rawHash === 'tram' || rawHash === 'station') {
+      return 'station';
     } else if (rawHash === 'radar' || rawHash === 'match') {
       return 'match';
     } else if (rawHash === 'my-trips' || rawHash === 'my_trips' || rawHash === 'mytrips') {
@@ -271,6 +283,19 @@ export default function App() {
   });
 
   const [myTripsCount, setMyTripsCount] = useState(0);
+
+  // State Trạm đón ảo được quét QR hoặc chọn từ bản đồ
+  const [stationHubId, setStationHubId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const parts = window.location.pathname.split('/');
+      if ((parts[1] === 'tram' || parts[1] === 'station') && parts[2]) {
+        return parts[2];
+      }
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('hub')) return params.get('hub');
+    }
+    return 'hub_ql13_tan_khai';
+  });
 
   // Hook quản lý Modals
   const {
@@ -949,11 +974,36 @@ export default function App() {
   const activeBookedCount = bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled').length;
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
 
+  // CHẾ ĐỘ TAPLO Ô TÔ (COCKPIT HUD TOÀN MÀN HÌNH CHO CHỦ XE)
+  if (activeTab === 'cockpit') {
+    return (
+      <CockpitMode
+        tripId={`TRIP-${currentUser?.id || currentUser?.phone || 'TAPLO'}`}
+        initialCorridor={activeCorridor || 'Tuyến QL13'}
+        onBack={() => setActiveTab('market')}
+        onShowToast={showToast}
+      />
+    );
+  }
+
+  // CHẾ ĐỘ QUÉT QR TRẠM ẢO (RIDER STATION LIVE PASS CHO KHÁCH)
+  if (activeTab === 'station') {
+    return (
+      <StationRiderView
+        hubId={stationHubId}
+        currentUser={currentUser}
+        onBack={() => setActiveTab('market')}
+        onShowToast={showToast}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f5f7] dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 antialiased transition-colors selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onOpenCockpit={() => setActiveTab('cockpit')}
         onRequestPostTrip={handleRequestPostTrip}
         setShowPolicyModal={setShowPolicyModal}
         bookedCount={activeBookedCount}
@@ -1021,6 +1071,10 @@ export default function App() {
                     destHub={activeCorridorContext?.destHub}
                     timeSlot={activeCorridorContext?.timeSlot}
                     onOpenBooking={(trip) => handleInitiateBook(trip)}
+                    onOpenStationView={(hub) => {
+                      setStationHubId(hub || 'hub_ql13_tan_khai');
+                      setActiveTab('station');
+                    }}
                     onShowAllNationwide={() => setMarketLayoutView('cards')}
                   />
                 </div>

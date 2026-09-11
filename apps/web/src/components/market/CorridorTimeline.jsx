@@ -11,7 +11,8 @@ import {
   Truck,
   ShieldCheck,
   PhoneCall,
-  MessageSquare
+  MessageSquare,
+  Fuel
 } from 'lucide-react';
 import { toPublicAlias } from '@carmate/shared';
 
@@ -27,6 +28,7 @@ export default function CorridorTimeline({
   destHub,
   timeSlot,
   onOpenBooking,
+  onOpenStationView,
   onShowAllNationwide,
   className = ''
 }) {
@@ -151,6 +153,40 @@ export default function CorridorTimeline({
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
+      </div>
+
+      {/* BANNER TRẠM ĐÓN ẢO DỌC TUYẾN (PETROLIMEX TÂN KHAI) */}
+      <div className="p-4 rounded-3xl bg-gradient-to-r from-emerald-500/[0.08] via-emerald-500/[0.04] to-transparent border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Fuel className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10.5px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                Trạm ảo DARP-MP
+              </span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400">
+                · Dừng đón 60 giây tại sân cây xăng
+              </span>
+            </div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+              Cây xăng Petrolimex Tân Khai (QL13)
+            </h3>
+            <p className="text-[11.5px] text-slate-500 dark:text-zinc-400">
+              Khách quét QR tại cây xăng để vào hàng đợi đón xe tức thì · 0đ phí sàn
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onOpenStationView?.('hub_ql13_tan_khai')}
+          className="px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 cursor-pointer transition-all self-stretch sm:self-auto justify-center"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Quét QR Trạm Này</span>
+        </button>
       </div>
 
       {corridorTrips.length === 0 ? (

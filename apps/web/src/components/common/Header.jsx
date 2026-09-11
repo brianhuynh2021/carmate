@@ -72,7 +72,8 @@ export default function Header({
   onMarkAsUnread,
   readBookingTimestamps = {},
   unreadBookingIds = [],
-  socialMatches = []
+  socialMatches = [],
+  onOpenCockpit
 }) {
   const { t, lang, setLang } = useI18n();
   const tabs = [
@@ -204,6 +205,20 @@ export default function Header({
               {isMac ? '⌘K' : 'Ctrl K'}
             </kbd>
           </button>
+
+          {/* Nút 1-chạm vào Chế độ Taplo Ô Tô (Cockpit Mode) */}
+          {onOpenCockpit && (
+            <button
+              type="button"
+              onClick={onOpenCockpit}
+              title="Bật Chế độ Taplo Ô Tô (Cockpit Mode)"
+              className="h-8.5 sm:h-9 px-2.5 sm:px-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-[#07080d] dark:bg-slate-800 text-emerald-400 border border-emerald-500/40 hover:border-emerald-500/80 shadow-xs hover:bg-emerald-950/40 active:scale-95 transition-all cursor-pointer select-none shrink-0"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <Car className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline font-mono">Taplo</span>
+            </button>
+          )}
 
           <div className="hidden sm:block relative" ref={postMenuRef}>
             <button
@@ -388,6 +403,23 @@ export default function Header({
                         {inboxCount}
                       </span>
                     )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenCockpit?.();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer group"
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                      <span>Chế độ Taplo Ô Tô (Cockpit)</span>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
+                      Radar
+                    </span>
                   </button>
 
                   <button

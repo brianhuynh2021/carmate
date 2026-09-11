@@ -35,6 +35,16 @@ import {
   runBatchMatchHandler,
   getMatchingEpochsHandler
 } from '../controllers/intentController.js';
+import {
+  riderCheckInHandler,
+  getStationQueueHandler,
+  getRiderPassHandler,
+  cockpitTelemetryHandler,
+  cockpitAcceptOfferHandler,
+  cockpitRejectOfferHandler,
+  cockpitVerifyPinHandler,
+  resetStationDataHandler
+} from '../controllers/stationQueueController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -152,6 +162,16 @@ router.post('/escrows/:id/dispute', optionalAuth, disputeBookingHandler);
 // --- Kênh Hỗ Trợ & Kháng Nghị Trực Tiếp Platform CSKH CarMate ---
 router.get('/support/messages', optionalAuth, getSupportMessagesHandler);
 router.post('/support/messages', optionalAuth, sendSupportMessageHandler);
+
+// --- Station Curbside Queue & Cockpit Mode Live Dispatch ---
+router.post('/station/:hubId/checkin', riderCheckInHandler);
+router.get('/station/:hubId/status', getStationQueueHandler);
+router.get('/station/rider/:intentId', getRiderPassHandler);
+router.post('/cockpit/telemetry', cockpitTelemetryHandler);
+router.post('/cockpit/accept-offer', cockpitAcceptOfferHandler);
+router.post('/cockpit/reject-offer', cockpitRejectOfferHandler);
+router.post('/cockpit/verify-pin', cockpitVerifyPinHandler);
+router.delete('/station/reset', resetStationDataHandler);
 
 // --- Admin Management Portal Engine ---
 router.post('/admin/auth', adminAuth);

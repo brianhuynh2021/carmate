@@ -16,8 +16,20 @@ import {
   VIRTUAL_HUBS,
   DOORSTEP_CONFIG,
   getVirtualHubsByCorridor,
-  findNearestVirtualHub
+  findNearestVirtualHub,
+  getVirtualHubById
 } from '@carmate/shared';
+
+import {
+  riderCheckIn,
+  getStationQueue,
+  getRiderPass,
+  telemetryPing,
+  driverAcceptOffer,
+  driverRejectOffer,
+  driverVerifyPin,
+  resetAllStationData
+} from '../apps/api/src/services/stationQueueService.js';
 
 import {
   calculateShapleyFairPrice,
@@ -246,7 +258,109 @@ async function runLevel3Suite() {
   await deleteIntent(driverIntent.id);
   await deleteIntent(passengerIntent.id);
 
+  // --- 8. KIỂM THỬ COCKPIT MODE & QR CHECK-IN TRẠM ẢO (CURBSIDE DISPATCH) ---
+  console.log('\n--- 8. Kiểm thử Cockpit Taplo Ô Tô & QR Check-in Trạm Ảo ---');
+  resetAllStationData();
+
+  // 8.1 Khách quét QR check-in tại trạm Petrolimex Tân Khai
+  const hubInfo = getVirtualHubById('hub_ql13_tan_khai');
+  assert(hubInfo && hubInfo.name.includes('Petrolimex'), 'Trạm Petrolimex Tân Khai được định danh chuẩn xác');
+
+  const checkinRes = riderCheckIn({
+    hubId: 'hub_ql13_tan_khai',
+    destinationHubId: 'hub_ql13_hang_xanh',
+    seatsNeeded: 2,
+    phone: '0988112233',
+    name: 'Khách Chờ Cây Xăng'
+  });
+
+  assert(checkinRes.success === true, 'Khách check-in trạm ảo thành công');
+  assert(checkinRes.intent && checkinRes.intent.pin && checkinRes.intent.pin.length === 4, 'Hệ thống sinh mã PIN 4 chữ số bảo mật');
+  assert(checkinRes.intent.fuelSurcharge === 240000, 'Tính mức phụ xăng 2 khách chuẩn xác: 240.000đ');
+
+  // 8.2 Kiểm tra hàng đợi trạm
+  const queueRes = getStationQueue('hub_ql13_tan_khai');
+  assert(queueRes.waitingCount === 1, 'Hàng đợi trạm Tân Khai ghi nhận đúng 1 yêu cầu');
+  assert(queueRes.queue[0].position === 1, 'Khách ở vị trí số 1 trong hàng đợi');
+
+  // 8.3 Kiểm tra thẻ lên xe thời gian thực của khách
+  const passRes = getRiderPass(checkinRes.intent.intentId);
+  assert(passRes.success === true && passRes.intent.status === 'WAITING', 'Thẻ lên xe ở trạng thái WAITING chờ xe tới');
+
+  // 8.4 Chủ xe chạy xe trên QL13 tiếp cận trạm Tân Khai (cách 3.0 km)
+  // Tọa độ Tân Khai: (11.5620, 106.6340) -> Xe ở (11.5350, 106.6340) cách ~3.0 km
+  const pingRes = telemetryPing({
+    tripId: 'TRIP-TEST-COCKPIT-1',
+    driverPhone: '0912345678',
+    driverName: 'Chủ xe CX-Test',
+    plate: '93A-123.45',
+    vehicleModel: 'Mitsubishi Xpander (Trắng)',
+    seatsAvailable: 2,
+    corridor: 'Tuyến QL13',
+    lat: 11.5350,
+    lng: 106.6340,
+    speed: 75
+  });
+
+  assert(pingRes.proximityAlert != null, 'Radar kích hoạt cảnh báo khi xe cách trạm <= 3.5 km');
+  assert(pingRes.proximityAlert.distanceKm <= 3.5, `Cự ly tiếp cận chính xác: ${pingRes.proximityAlert?.distanceKm} km`);
+  assert(pingRes.proximityAlert.riderCount === 2, 'Cảnh báo đúng số lượng 2 khách cần đón');
+  assert(pingRes.proximityAlert.fuelSurcharge === 240000, 'Cảnh báo đúng số tiền phụ xăng +240.000đ');
+  assert(pingRes.session.status === 'OFFERING', 'Trạng thái Taplo chuyển sang OFFERING (30s đếm ngược)');
+
+  // 8.5 Test cơ chế Bỏ qua (Reject)
+  const rejectRes = driverRejectOffer({
+    tripId: 'TRIP-TEST-COCKPIT-1',
+    intentId: checkinRes.intent.intentId
+  });
+  assert(rejectRes.success === true, 'Chủ xe bấm bỏ qua thành công');
+
+  // Khách được hoàn trả lại hàng đợi ở trạng thái WAITING
+  const afterRejectPass = getRiderPass(checkinRes.intent.intentId);
+  assert(afterRejectPass.intent.status === 'WAITING', 'Khách được hoàn trả lại trạng thái WAITING sau khi bỏ qua');
+
+  // 8.6 Chủ xe tiếp tục phát tín hiệu và Chấp nhận đón (Accept)
+  telemetryPing({
+    tripId: 'TRIP-TEST-COCKPIT-1',
+    lat: 11.5350,
+    lng: 106.6340,
+    seatsAvailable: 2
+  });
+
+  const acceptRes = driverAcceptOffer({
+    tripId: 'TRIP-TEST-COCKPIT-1',
+    intentId: checkinRes.intent.intentId
+  });
+  assert(acceptRes.success === true, 'Chủ xe bấm ĐỒNG Ý ĐÓN 1-chạm thành công');
+  assert(acceptRes.dockingTimeSeconds === 60, 'Kích hoạt hạn dừng sân trạm đúng 60 giây (Curbside Window)');
+
+  // Kiểm tra màn hình khách cập nhật trạng thái ARRIVING và nhận thông tin xe
+  const arrivingPass = getRiderPass(checkinRes.intent.intentId);
+  assert(arrivingPass.intent.status === 'ARRIVING', 'Trạng thái thẻ khách chuyển sang ARRIVING');
+  assert(arrivingPass.intent.carInfo?.plate === '93A-123.45', 'Khách thấy đúng biển số xe 93A-123.45 của Chủ xe');
+
+  // 8.7 Bắt tay xác thực mã PIN 4 số tại sân cây xăng
+  const wrongPinRes = driverVerifyPin({
+    tripId: 'TRIP-TEST-COCKPIT-1',
+    intentId: checkinRes.intent.intentId,
+    pin: '0000'
+  });
+  assert(wrongPinRes.success === false, 'Từ chối mã PIN sai để bảo vệ an toàn');
+
+  const correctPinRes = driverVerifyPin({
+    tripId: 'TRIP-TEST-COCKPIT-1',
+    intentId: checkinRes.intent.intentId,
+    pin: checkinRes.intent.pin
+  });
+  assert(correctPinRes.success === true, 'Khớp mã PIN 4 số thành công');
+  assert(correctPinRes.session.totalEarnings === 240000, 'Tự động ghi nhận số dư ví phụ xăng +240.000đ cho Chủ xe');
+  assert(correctPinRes.session.status === 'ROLLING', 'Xe chuyển trạng thái ROLLING nhập lại Quốc lộ 13');
+  assert(correctPinRes.session.seatsAvailable === 0, 'Cập nhật số ghế còn trống = 0 sau khi nhận đủ khách');
+
+  resetAllStationData();
+
   // =============================================================
+
   console.log('\n=============================================================');
   console.log('📊 TỔNG KẾT BỘ KIỂM THỬ CARMATE CẤP ĐỘ 3 (LEVEL 3):');
   console.log(`- Tổng số bài test: ${passedTests + failedTests}`);

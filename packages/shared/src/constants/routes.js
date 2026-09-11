@@ -523,12 +523,12 @@ export const VIRTUAL_HUBS = [
   },
   {
     id: 'hub_ql13_tan_khai',
-    name: 'Chợ Tân Khai / Trung tâm Huyện Hớn Quản',
-    shortName: 'Chợ Tân Khai (Hớn Quản)',
+    name: 'Cây xăng Petrolimex Tân Khai / Chợ Tân Khai (Hớn Quản)',
+    shortName: 'Petrolimex Tân Khai',
     corridor: 'Tuyến QL13',
     lat: 11.5620,
     lng: 106.6340,
-    landmark: 'Chợ Tân Khai - Cổng Huyện ủy Hớn Quản QL13',
+    landmark: 'Cây xăng Petrolimex Tân Khai / Cổng Huyện ủy Hớn Quản QL13',
     curbsideWindowSeconds: 300,
     isMajorJunction: true
   },
@@ -785,4 +785,20 @@ export function findNearestVirtualHub(lat, lng, corridorKey = null) {
   }
 
   return bestHub;
+}
+
+/**
+ * Lấy thông tin Trạm đón ảo theo mã ID trạm (hỗ trợ cả slug linh hoạt)
+ */
+export function getVirtualHubById(hubId) {
+  if (!hubId) return null;
+  const clean = String(hubId).trim().toLowerCase().replace(/-/g, '_');
+  return (
+    VIRTUAL_HUBS.find(
+      (hub) =>
+        hub.id.toLowerCase() === clean ||
+        hub.id.toLowerCase().replace(/-/g, '_') === clean ||
+        hub.id.toLowerCase().includes(clean)
+    ) || null
+  );
 }
