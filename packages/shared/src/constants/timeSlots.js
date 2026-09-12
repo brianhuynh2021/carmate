@@ -326,50 +326,79 @@ export const DEPARTURE_WINDOWS = Object.freeze([
 export function buildDepartureChips({ now = new Date(), limit = 3, minLeadMinutes = 45 } = {}) {
   const ref = now instanceof Date ? now : new Date(now);
   const nowMinutes = ref.getHours() * 60 + ref.getMinutes();
-  const chips = [];
+  const candidates = [];
 
-  // Duyệt hôm nay trước, rồi tới ngày mai
-  for (let dayOffset = 0; dayOffset <= 1 && chips.length < limit; dayOffset++) {
+  for (let dayOffset = 0; dayOffset <= 2; dayOffset++) {
     for (const w of DEPARTURE_WINDOWS) {
-      if (chips.length >= limit) break;
-
+      const isOvernight = w.toHour > 24;
+      const startMinutes = w.fromHour * 60;
       const endMinutes = w.toHour * 60;
-      // Khung hôm nay đã trôi qua hoặc sắp đóng thì bỏ
+
+      // Khung hôm nay chỉ còn ý nghĩa nếu vẫn đủ thời gian đặt trước khi nó đóng
       if (dayOffset === 0 && endMinutes - nowMinutes < minLeadMinutes) continue;
 
-      const dayLabel = dayOffset === 0 ? 'Hôm nay' : 'Ngày mai';
-      const startHour = String(w.fromHour % 24).padStart(2, '0');
-      // Nhãn gộp ngày + khung giờ thành MỘT câu đọc thẳng: "Chiều nay (14h-17h)".
-      // Tách rời thành hai dòng bắt mắt phải ghép lại, thêm một nhịp suy nghĩ vô ích.
-      // "Khuya" vắt qua nửa đêm (22h-4h) nên "Khuya nay" gây hiểu nhầm là còn
-      // trong ngày hôm nay. Người Việt nói "đêm nay" / "đêm mai" cho khung này.
-      const isOvernight = w.toHour > 24;
-      const dayWord = isOvernight
-        ? dayOffset === 0 ? 'đêm nay' : 'đêm mai'
-        : dayOffset === 0 ? 'nay' : 'mai';
-      const shortHint = `${w.fromHour % 24}h-${w.toHour % 24}h`;
+      // CẮT PHẦN GIỜ ĐÃ TRÔI QUA: 16h30 thì "Chiều nay" phải là (16h30-18h),
+      // không phải (14h-18h) — nửa đầu khung đã không còn đặt được nữa, ghi
+      // nguyên khung là nói sai với khách.
+      const isPartial = dayOffset === 0 && nowMinutes > startMinutes;
+      const effectiveStart = isPartial ? nowMinutes : startMinutes;
 
-      chips.push({
+      const fmt = (mins) => {
+        const h = Math.floor(mins / 60) % 24;
+        const m = mins % 60;
+        return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`;
+      };
+      const shortHint = `${fmt(effectiveStart)}-${fmt(endMinutes)}`;
+
+      const dayWord = isOvernight
+        ? dayOffset === 0
+          ? 'đêm nay'
+          : 'đêm mai'
+        : dayOffset === 0
+          ? 'nay'
+          : dayOffset === 1
+            ? 'mai'
+            : 'ngày kia';
+      const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+      const label = isOvernight ? cap(dayWord) : `${w.label} ${dayWord}`;
+
+      // ƯU TIÊN THEO NHU CẦU THẬT CỦA TUYẾN LIÊN TỈNH.
+      // Người Bù Đốp / Lái Thiêu chiều tối tìm xe là để đi làm, đi khám bệnh
+      // SÁNG MAI — rất ít ai đi xe gia đình khung 22h-4h. Nên sau 16h, khung
+      // đêm bị đẩy xuống sau các khung sáng mai, dù nó đến sớm hơn về thời gian.
+      // Phạt phải đủ lớn để vượt qua ranh giới NGÀY (mỗi ngày cách nhau 10000),
+      // nếu không khung đêm hôm nay (key ~6000) vẫn luôn thắng mọi khung sáng
+      // mai (key >10000) và việc hạ ưu tiên trở thành vô nghĩa.
+      // +10000 đẩy nó xuống ngang ngày mai, +720 để nằm SAU khung sáng mai.
+      const deprioritizeOvernight = isOvernight && nowMinutes >= 16 * 60;
+      const sortKey =
+        dayOffset * 10000 + effectiveStart + (deprioritizeOvernight ? 10000 + 720 : 0);
+
+      candidates.push({
         id: `${w.id}_d${dayOffset}`,
         windowId: w.id,
-        label: isOvernight ? dayWord.charAt(0).toUpperCase() + dayWord.slice(1) : `${w.label} ${dayWord}`,
+        label,
         labelEn: dayOffset === 0 ? w.labelEn : `${w.labelEn} tomorrow`,
         hint: shortHint,
-        // Chuỗi hoàn chỉnh để giao diện in thẳng, không phải tự ghép
-        display: isOvernight
-          ? `${dayWord.charAt(0).toUpperCase() + dayWord.slice(1)} (${shortHint})`
-          : `${w.label} ${dayWord} (${shortHint})`,
+        display: `${label} (${shortHint})`,
         dayOffset,
-        dayLabel,
+        dayLabel: dayOffset === 0 ? 'Hôm nay' : dayOffset === 1 ? 'Ngày mai' : 'Ngày kia',
         fromHour: w.fromHour,
         toHour: w.toHour,
-        // Khung giờ gửi lên máy chủ để dò chuyến
-        timeSlot: `${startHour}:00`
+        isPartial,
+        // Khung giờ gửi lên máy chủ: nếu đã cắt thì dò từ đúng mốc còn lại
+        timeSlot: `${String(Math.floor(effectiveStart / 60) % 24).padStart(2, '0')}:${String(
+          effectiveStart % 60
+        ).padStart(2, '0')}`,
+        sortKey
       });
     }
   }
 
-  return chips;
+  candidates.sort((a, b) => a.sortKey - b.sortKey);
+  // Bỏ sortKey khỏi kết quả: nó là chi tiết nội bộ của việc xếp hạng,
+  // không phải dữ liệu mà giao diện cần biết.
+  return candidates.slice(0, limit).map(({ sortKey: _sortKey, ...chip }) => chip);
 }
 
 /** Ngày (YYYY-MM-DD) tương ứng với một chip. */

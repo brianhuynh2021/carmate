@@ -30,6 +30,13 @@ function ok(cond, label) {
   passed += 1;
 }
 
+/** Mốc giờ cố định trong ngày hôm nay, để kết quả không đổi theo lúc chạy test. */
+const at = (h, m = 0) => {
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+};
+
 console.log('\n🧪 KIỂM THỬ CHỈ SỐ AN TÂM & TRẢI NGHIỆM KHÁCH\n');
 
 // ── 1. Chỉ số an tâm ───────────────────────────────────────────────────
@@ -86,8 +93,8 @@ ok(VIRTUAL_HUBS.every((h) => getHubAmenities(h).length > 0),
 // ── 3. Chip khởi hành ──────────────────────────────────────────────────
 console.log('\n── 3. CHIP KHỞI HÀNH ──');
 
-const at6 = new Date(); at6.setHours(6, 0, 0, 0);
-const at23 = new Date(); at23.setHours(23, 0, 0, 0);
+const at6 = at(6);
+const at23 = at(23);
 
 const chips6 = buildDepartureChips({ now: at6 });
 const chips23 = buildDepartureChips({ now: at23 });
@@ -96,14 +103,15 @@ ok(chips6.length === 3 && chips23.length === 3,
    'Trả về 3 chip, nhường ô thứ 4 trong lưới 2x2 cho nút "Chọn ngày khác"');
 ok(chips6.every((c) => /\(\d+h-\d+h\)$/.test(c.display)),
    'Mỗi chip in thẳng được một câu "Chiều nay (14h-18h)", giao diện không phải tự ghép');
-const overnight = buildDepartureChips({ now: at23 })[0];
-ok(overnight.display.startsWith('Đêm'),
-   'Khung vắt qua nửa đêm gọi là "Đêm nay", không phải "Khuya nay" gây hiểu nhầm còn trong ngày');
+// Khung vắt qua nửa đêm phải gọi "Đêm", không phải "Khuya nay" (gây hiểu nhầm
+// là còn trong ngày hôm nay). Sau 16h nó bị đẩy xuống sau các khung sáng mai,
+// nên tìm nó ở bất kỳ vị trí nào trong danh sách chứ không riêng chip đầu.
+const overnightChip = buildDepartureChips({ now: at(15) }).find((c) => c.windowId === 'late_night');
+ok(overnightChip && overnightChip.display.startsWith('Đêm'),
+   'Khung vắt qua nửa đêm gọi là "Đêm nay", không phải "Khuya nay"');
 ok(chips6.every((c) => c.dayOffset === 0), '6h sáng: cả 4 chip đều trong hôm nay');
-ok(chips23.filter((c) => c.dayOffset === 1).length >= 2,
-   '23h đêm: phần lớn chip đã chuyển sang ngày mai');
-ok(!chips23.some((c) => c.dayOffset === 0 && c.windowId !== 'late_night'),
-   '23h đêm: KHÔNG còn chìa ra khung nào của hôm nay ngoài khung đêm đang diễn ra');
+ok(chips23.every((c) => c.dayOffset === 1),
+   '23h đêm: cả 3 chip đều là ngày mai — nhu cầu thật lúc này là chuyến sáng mai');
 ok(chips6.every((c) => /^\d{2}:00$/.test(c.timeSlot)), 'Mỗi chip mang khung giờ hợp lệ để tra cứu');
 ok(chips6.every((c) => c.label && c.hint && c.dayLabel && c.display), 'Chip đủ nhãn, gợi ý giờ và nhãn ngày');
 
@@ -114,7 +122,7 @@ ok(custom.timeSlot === '04:00' && custom.date === '2026-12-25', 'Chip tự chọ
 ok(['id','label','hint','display','timeSlot','windowId'].every((k) => k in custom),
    'Chip tự chọn có đủ các trường như chip tự sinh');
 
-const at15 = new Date(); at15.setHours(15, 0, 0, 0);
+const at15 = at(15);
 const chips15 = buildDepartureChips({ now: at15 });
 ok(!chips15.some((c) => c.dayOffset === 0 && c.windowId === 'early_morning'),
    '15h chiều: KHÔNG còn chìa ra "Sáng sớm hôm nay" đã trôi qua');
@@ -140,8 +148,54 @@ const emergency = EMERGENCY_TRANSIT_LIFEBUOYS.find((l) => l.hotline);
 ok(!emergency || emergency.hotline === '113',
    'Số duy nhất còn lại là 113 — số công khai toàn quốc, luôn đúng');
 
+// ── Chip trượt động theo giờ thực ──────────────────────────────────────
+console.log('\n── 5. CHIP TRƯỢT ĐỘNG THEO GIỜ THỰC ──');
+
+const chipsAt = (h, m = 0) => buildDepartureChips({ now: at(h, m) });
+
+// Không bao giờ chìa ra khung đã trôi qua
+for (const [h, m] of [[7, 0], [13, 0], [16, 30], [20, 0], [23, 30]]) {
+  const first = chipsAt(h, m)[0];
+  const endMin = (first.toHour % 24 || 24) * 60 + (first.dayOffset > 0 ? 1440 : 0);
+  ok(endMin > h * 60 + m || first.dayOffset > 0,
+     `${h}h${m || ''}: chip đầu (${first.display}) vẫn còn đặt được, không phải khung đã qua`);
+}
+
+// CẮT GIỜ ĐÃ TRÔI QUA: 16h30 phải là "Chiều nay (16h30-18h)", không phải (14h-18h)
+const at1630 = chipsAt(16, 30)[0];
+ok(at1630.isPartial === true, '16h30: chip đầu được đánh dấu là khung đã bị cắt');
+ok(at1630.display.includes('16h30'),
+   `16h30 hiển thị "${at1630.display}" — cắt đúng phần giờ đã trôi qua, không ghi nguyên 14h`);
+ok(at1630.timeSlot === '16:30', 'Khung gửi lên máy chủ cũng là 16:30, khớp với thứ khách nhìn thấy');
+
+const at20 = chipsAt(20)[0];
+ok(at20.display.includes('20h'), `20h hiển thị "${at20.display}" — cắt từ đúng giờ hiện tại`);
+
+// ƯU TIÊN SÁNG MAI HƠN ĐÊM NAY sau 16h (nhu cầu thật của tuyến liên tỉnh)
+const evening = chipsAt(18);
+ok(evening[1].dayOffset === 1 && evening[1].windowId.includes('morning'),
+   `18h: chip 2 là "${evening[1].display}" — Sáng mai được đẩy lên trước Đêm nay`);
+ok(!evening.slice(1).some((c) => c.windowId === 'late_night' && c.dayOffset === 0),
+   'Sau 16h, "Đêm nay" không còn chiếm chỗ của các khung sáng mai');
+
+// Trước 16h thì khung đêm vẫn giữ thứ tự thời gian bình thường
+const noon = chipsAt(13);
+ok(noon.every((c) => c.dayOffset === 0), '13h: cả 3 chip vẫn trong hôm nay, chưa cần nhảy sang mai');
+
+// Khuya thì bỏ qua hẳn phần còn lại của đêm, nhảy thẳng sang sáng mai
+const lateNight = chipsAt(23, 30);
+ok(lateNight[0].dayOffset === 1,
+   `23h30: chip đầu là "${lateNight[0].display}" — nhu cầu thật là chuyến sáng mai`);
+
+// Luôn đủ 3 chip ở MỌI giờ trong ngày, không giờ nào bị trống
+for (let h = 0; h < 24; h++) {
+  const c = chipsAt(h, 30);
+  assert.ok(c.length === 3, `${h}h30 phải có đủ 3 chip, đang có ${c.length}`);
+}
+ok(true, 'Quét cả 24 giờ: giờ nào cũng có đủ 3 chip, không khung nào để trống');
+
 // Chống tái phát: toISOString() quy về UTC làm lệch ngày ở múi giờ UTC+7
-console.log('\n── 5. NGÀY THEO LỊCH ĐỊA PHƯƠNG ──');
+console.log('\n── 6. NGÀY THEO LỊCH ĐỊA PHƯƠNG ──');
 for (const day of ['2026-12-25', '2026-01-01', '2026-06-15']) {
   const c = buildCustomChip({ date: day, windowId: 'early_morning' });
   ok(c.date === day, `Chọn ${day} trả về đúng ${day} — không lệch một ngày vì quy đổi UTC`);

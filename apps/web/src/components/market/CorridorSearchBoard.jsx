@@ -156,9 +156,13 @@ export default function CorridorSearchBoard({
   // lặp lại một khung giờ — ai quen chuyến 4h sáng thì lần sau vẫn 4h sáng. Nhớ
   // khung họ chọn lần trước và tự bật sẵn, để họ không phải chọn lại mỗi lần.
   const [chipId, setChipId] = useState(() => {
+    // Ưu tiên khung khách hay đi (ai quen chuyến 4h sáng thì vẫn 4h sáng), NHƯNG
+    // chỉ khi khung đó còn nằm trong 3 chip khả thi lúc này. Khung đã trôi qua
+    // thì rơi về chip 1 — khách luôn bấm được TÌM CHUYẾN XE ngay một chạm,
+    // không bao giờ rơi vào cảnh chip đang chọn lại là khung không đặt được.
     const remembered = readStore(WINDOW_KEY);
-    const hit = remembered && departureChips.find((c) => c.windowId === remembered);
-    return (hit || departureChips[0])?.id || null;
+    const stillFeasible = remembered && departureChips.find((c) => c.windowId === remembered);
+    return (stillFeasible || departureChips[0])?.id || null;
   });
   const [customChip, setCustomChip] = useState(null);
   const [showDatePanel, setShowDatePanel] = useState(false);
