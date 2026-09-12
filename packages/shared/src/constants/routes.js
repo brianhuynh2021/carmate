@@ -557,7 +557,7 @@ export const VIRTUAL_HUBS = [
   },
   {
     id: 'hub_ql13_nga4_chon_thanh',
-    name: 'Ngã 4 Chơn Thành (Giao Tuyến N2 & QL14)',
+    name: 'Ngã 4 Chơn Thành (Giao QL14 & QL13)',
     shortName: 'Ngã 4 Chơn Thành',
     corridor: 'Tuyến QL13',
     lat: 11.4791,

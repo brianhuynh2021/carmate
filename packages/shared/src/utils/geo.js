@@ -131,7 +131,7 @@ export const ROUTE_CORRIDORS = {
       },
       {
         name: 'Ngã 4 Chơn Thành',
-        sub: 'Nút giao QL13, Tuyến N2 & QL14',
+        sub: 'Nút giao QL13 & QL14',
         lat: 11.4791,
         lng: 106.6694,
         type: 'waypoint'

@@ -53,7 +53,7 @@ export const CORRIDORS = [
     shortName: 'N2',
     name: 'Hành lang N2 - Miền Tây',
     isDefault: false,
-    status: 'beta',
+    status: 'draft',
     endpoints: {
       a: {
         id: 'saigon',
@@ -71,9 +71,9 @@ export const CORRIDORS = [
   }
 ];
 
-/** Lấy toàn bộ hành lang đang phục vụ (ẩn tuyến chưa mở). */
+/** Lấy toàn bộ hành lang đang phục vụ (chỉ tuyến live đang chạy thực tế). */
 export function getActiveCorridors() {
-  return CORRIDORS.filter((c) => c.status !== 'draft');
+  return CORRIDORS.filter((c) => c.status === 'live');
 }
 
 export function getCorridorById(id) {

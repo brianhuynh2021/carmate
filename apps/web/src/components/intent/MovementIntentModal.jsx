@@ -61,7 +61,7 @@ export default function MovementIntentModal({
   }, []);
 
   const binhPhuocHubs = useMemo(() => {
-    return VIRTUAL_HUBS.filter((h) => !SAIGON_HUB_IDS.includes(h.id));
+    return VIRTUAL_HUBS.filter((h) => h.corridor === 'Tuyến QL13' && !SAIGON_HUB_IDS.includes(h.id));
   }, []);
 
   // Hướng di chuyển: 'TO_SAIGON' (Bình Phước ➔ Sài Gòn) | 'TO_BINH_PHUOC' (Sài Gòn ➔ Bình Phước)
