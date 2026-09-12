@@ -53,6 +53,7 @@ import StationContactModal from '../modals/StationContactModal.jsx';
 import MutualReviewModal from '../modals/MutualReviewModal.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function StationRiderView({
   hubId = 'hub_ql13_tan_khai',
@@ -61,6 +62,7 @@ export default function StationRiderView({
   onBack,
   onShowToast
 }) {
+  const { t } = useI18n();
   // Các điểm mút Sài Gòn (Thủ Đức / Bình Thạnh / Tân Bình)
   const SAIGON_HUB_IDS = useMemo(() => [
     'hub_ql13_hang_xanh',
@@ -988,16 +990,16 @@ export default function StationRiderView({
                     onClick={() => setShowStationPicker(!showStationPicker)}
                     className="text-[11px] font-mono text-sky-400 hover:text-sky-300 underline cursor-pointer"
                   >
-                    {showStationPicker ? '▲ Đóng' : '▼ Đổi trạm'}
+                    {showStationPicker ? t('station.collapse') : t('station.changeHub')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowStationRequestModal(true)}
                     className="text-[10px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-500/20 transition-all"
-                    title="Đề xuất mở trạm mới nếu chưa có điểm đón bạn muốn"
+                    title={t('station.suggestHubTitle')}
                   >
                     <Lightbulb className="w-3 h-3 text-amber-400" />
-                    <span>Đề xuất trạm</span>
+                    <span>{t('station.suggestHub')}</span>
                   </button>
                 </div>
               )}
@@ -1015,7 +1017,7 @@ export default function StationRiderView({
             <span className="text-base font-black font-mono text-emerald-400 block">
               {formatVND(boardingPass?.fuelSurcharge || estimatedFare)}
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">Trọn gói</span>
+            <span className="text-[10px] text-slate-400 font-mono">{t('station.allInclusive')}</span>
           </div>
         )}
       </header>
@@ -1024,13 +1026,13 @@ export default function StationRiderView({
       {showStationPicker && viewStep === 'CHECKIN' && (
         <div className="mb-4 p-3.5 rounded-2xl bg-white/[0.06] border border-white/[0.12] max-w-lg mx-auto w-full animate-fade-in space-y-2 shadow-xl">
           <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-300">
-            <span>CHỌN TRẠM ĐÓN DỌC QUỐC LỘ 13:</span>
+            <span>{t('station.chooseHub')}</span>
             <button
               type="button"
               onClick={handleAutoDetectGPS}
               className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
             >
-              <span>📍 Tự tìm qua GPS</span>
+              <span>{t('station.findByGps')}</span>
             </button>
           </div>
           <select
@@ -1049,7 +1051,7 @@ export default function StationRiderView({
             ))}
           </select>
           <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-xs">
-            <span className="text-[11px] text-slate-400 font-mono">Chưa có điểm đón bạn cần?</span>
+            <span className="text-[11px] text-slate-400 font-mono">{t('station.noHubYet')}</span>
             <button
               type="button"
               onClick={() => {
@@ -1059,7 +1061,7 @@ export default function StationRiderView({
               className="text-[11px] font-bold font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
             >
               <Lightbulb className="w-3.5 h-3.5" />
-              <span>💡 Đề xuất mở trạm mới (&gt;50 đề xuất)</span>
+              <span>{t('station.suggestNewHub')}</span>
             </button>
           </div>
         </div>
@@ -1082,10 +1084,10 @@ export default function StationRiderView({
                     </div>
                     <div>
                       <div className="text-[10px] font-mono uppercase font-black tracking-wider text-sky-400 flex items-center gap-1.5">
-                        <span>ĐỊNH VỊ GPS • SNAP-TO-STATION</span>
+                        <span>{t('station.gpsSnap')}</span>
                       </div>
                       <div className="text-xs sm:text-sm font-bold text-white mt-0.5">
-                        Trạm hợp lệ gần bạn nhất: <span className="text-sky-300 font-extrabold">{nearestHubInfo.shortName || nearestHubInfo.name}</span>
+                        {t('station.nearestValidHub')} <span className="text-sky-300 font-extrabold">{nearestHubInfo.shortName || nearestHubInfo.name}</span>
                       </div>
                     </div>
                   </div>
@@ -1097,7 +1099,7 @@ export default function StationRiderView({
                 </div>
 
                 <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
-                  Vui lòng di chuyển ra trạm để vào hàng đợi. Chủ xe chỉ dừng đón <strong>30–45 giây</strong> tại sân trạm an toàn ngoài hành lang QL13, <strong>tuyệt đối không đón điểm tự do</strong> (tránh camera phạt nguội biển <strong>P.130</strong> và nguy hiểm container).
+                  {t('station.moveToHub1')} <strong>{t('station.dwell3045')}</strong> {t('station.moveToHub2')} <strong>{t('station.noFreePickup')}</strong> {t('station.moveToHub3')} <strong>P.130</strong> {t('station.moveToHub4')}
                 </p>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-white/[0.08]">
@@ -1116,7 +1118,7 @@ export default function StationRiderView({
                         }}
                         className="px-2.5 py-1 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-xs font-bold font-mono transition-all cursor-pointer"
                       >
-                        📍 Chọn trạm này
+                        {t('station.pickThisHub')}
                       </button>
                     )}
                     {nearestHubInfo.lat && nearestHubInfo.lng && (
@@ -1126,7 +1128,7 @@ export default function StationRiderView({
                         rel="noopener noreferrer"
                         className="px-2.5 py-1 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold font-mono flex items-center gap-1 transition-all cursor-pointer"
                       >
-                        <span>🗺️ Chỉ đường</span>
+                        <span>{t('station.directions')}</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
@@ -1139,7 +1141,7 @@ export default function StationRiderView({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black uppercase font-mono tracking-wider text-slate-200">
-                  1. BẠN MUỐN ĐẾN ĐÂU?
+                  {t('station.step1Where')}
                 </label>
                 <button
                   type="button"
@@ -1192,7 +1194,7 @@ export default function StationRiderView({
                         >
                           {formatVND(dest.price)}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-mono block">/ người</span>
+                        <span className="text-[10px] text-slate-400 font-mono block">{t('station.perPerson')}</span>
                       </div>
                     </button>
                   );
@@ -1229,7 +1231,7 @@ export default function StationRiderView({
             {/* 2. SỐ LƯỢNG GHẾ */}
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase font-mono tracking-wider text-slate-200 block">
-                2. SỐ LƯỢNG GHẾ:
+                {t('station.step2Seats')}
               </label>
               <div className="flex items-center justify-between p-2 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
                 <button
@@ -1261,12 +1263,12 @@ export default function StationRiderView({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black uppercase font-mono tracking-wider text-slate-200 block">
-                  3. SỐ ĐIỆN THOẠI ĐỂ CHỦ XE NHẬN DIỆN:
+                  {t('station.step3Phone')}
                 </label>
                 {phone && (
                   <span className="text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    Đã nhớ máy
+                    {t('station.remembered')}
                   </span>
                 )}
               </div>
@@ -1298,12 +1300,12 @@ export default function StationRiderView({
               {/* Tùy chọn tên hiển thị ngắn gọn (không bắt buộc) */}
               <div className="pt-0.5">
                 <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1">
-                  <span>Tên hiển thị (để chủ xe xưng hô):</span>
-                  <span className="text-slate-500">(Không bắt buộc)</span>
+                  <span>{t('station.displayName')}</span>
+                  <span className="text-slate-500">{t('station.optional')}</span>
                 </div>
                 <input
                   type="text"
-                  placeholder="VD: Hưng, Chị Lan..."
+                  placeholder={t('station.namePlaceholder')}
                   value={name === 'Khách đi cùng' ? '' : name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full h-11 px-3.5 text-sm font-semibold rounded-xl bg-white/[0.04] border border-white/[0.08] text-white placeholder-slate-500 outline-none focus:border-emerald-400 transition-all"
@@ -1311,7 +1313,7 @@ export default function StationRiderView({
               </div>
 
               <p className="text-[11px] text-slate-400 font-mono">
-                *Không cần mật khẩu · Tự động kích hoạt vé &amp; lưu phiên an toàn
+                {t('station.noPasswordNote')}
               </p>
             </div>
 
@@ -1326,7 +1328,7 @@ export default function StationRiderView({
                 <span>{isSubmitting ? 'ĐANG KẾT NỐI XE...' : 'VÀO HÀNG ĐỢI ĐÓN XE'}</span>
               </button>
               <p className="text-center text-[11px] font-mono text-slate-400">
-                Giá cố định • Xe cá nhân 4-7 chỗ êm ái • Rẻ hơn Limousine 30%–50%
+                {t('station.fixedPriceNote')}
               </p>
             </div>
           </form>
@@ -1355,7 +1357,7 @@ export default function StationRiderView({
               <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs font-mono space-y-1.5">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wide">
                   <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>VÉ ĐÃ XÁC NHẬN · GHẾ ĐÃ ĐƯỢC KHÓA RIÊNG CHO BẠN</span>
+                  <span>{t('station.ticketConfirmed')}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-300 pt-0.5">
                   <div className="flex items-center gap-1.5">
@@ -1364,7 +1366,7 @@ export default function StationRiderView({
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Bảo hộ chỗ ngồi tự động tại trạm đón</span>
+                    <span>{t('station.seatProtected')}</span>
                   </div>
                 </div>
               </div>
@@ -1374,14 +1376,14 @@ export default function StationRiderView({
                 <div className="p-3.5 rounded-2xl bg-sky-500/15 border border-sky-500/35 space-y-2 animate-fade-in text-left">
                   <div className="flex items-center gap-2 text-sky-300 font-bold text-xs uppercase tracking-wider font-mono">
                     <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-                    <span>HỆ THỐNG ĐIỀU PHỐI XE HỖ TRỢ HÀNH TRÌNH</span>
+                    <span>{t('station.dispatchSystem')}</span>
                   </div>
                   <p className="text-xs text-slate-200 leading-relaxed font-sans">
-                    Chuyến đi của bạn đã được chuyển sang xe <strong>{failoverInfo.vehicleModel}</strong> (<strong>{failoverInfo.plate}</strong>), do <strong>{failoverInfo.driverName}</strong> đón bạn lúc <strong>{failoverInfo.time}</strong> tại mép trạm.
+                    {t('station.switchedToCar')} <strong>{failoverInfo.vehicleModel}</strong> (<strong>{failoverInfo.plate}</strong>), do <strong>{failoverInfo.driverName}</strong> {t('station.picksYouUpAt')} <strong>{failoverInfo.time}</strong> {t('station.atHubEdge')}
                   </p>
                   <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Ghế ngồi &amp; Lộ trình QL13 giữ nguyên 100% · Không phát sinh phụ phí</span>
+                    <span>{t('station.seatRouteKept')}</span>
                   </div>
                 </div>
               )}
@@ -1413,7 +1415,7 @@ export default function StationRiderView({
                     </div>
 
                     <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.08] text-xs font-mono text-slate-300 flex items-center justify-between">
-                      <span className="text-slate-400">Đón tại trạm:</span>
+                      <span className="text-slate-400">{t('station.pickupAtHub')}</span>
                       <span className="text-emerald-400 font-bold flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                         Đã khớp mã PIN ({boardingPass.pin || '8842'}) lúc 06:15
@@ -1427,14 +1429,14 @@ export default function StationRiderView({
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2 text-emerald-400 font-mono font-bold text-xs uppercase tracking-wider">
                           <QrCode className="w-4 h-4" />
-                          <span>VIETQR PHỤ XĂNG TRỰC TIẾP (P2P)</span>
+                          <span>{t('station.vietqrTitle')}</span>
                         </div>
                         <p className="text-[11px] text-slate-400">
-                          Chuyển khoản trực tiếp cho chủ xe khi đang ngồi trên xe
+                          {t('station.vietqrDesc')}
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-slate-400 font-mono">Mức phụ xăng</div>
+                        <div className="text-xs text-slate-400 font-mono">{t('station.fuelShareLevel')}</div>
                         <div className="text-lg font-black text-emerald-400 font-mono">
                           {formatVND(boardingPass.fuelSurcharge || estimatedFare || 50000)}
                         </div>
@@ -1447,10 +1449,10 @@ export default function StationRiderView({
                           <CheckCircle2 className="w-7 h-7" />
                         </div>
                         <div className="text-sm font-black text-emerald-300 font-mono uppercase tracking-wide">
-                          ✓ ĐÃ HOÀN TẤT PHỤ XĂNG
+                          {t('station.fuelDone')}
                         </div>
                         <p className="text-xs text-slate-300">
-                          Bạn đã sẵn sàng bước xuống xe tại trạm đến mà không cần thanh toán thêm bất kỳ khoản nào.
+                          {t('station.fuelDoneDesc')}
                         </p>
                       </div>
                     ) : (
@@ -1460,19 +1462,19 @@ export default function StationRiderView({
                           <div className="p-3 bg-white rounded-2xl shadow-xl border border-white/20 shrink-0">
                             <img
                               src={`https://img.vietqr.io/image/MB-0938884288-compact2.png?amount=${boardingPass.fuelSurcharge || estimatedFare || 50000}&addInfo=CARMATE%20PIN%20${boardingPass.pin || '8842'}&accountName=CHU%20XE%20CARMATE`}
-                              alt="VietQR Phụ xăng CarMate"
+                              alt={t('station.vietqrAlt')}
                               className="w-36 h-36 object-contain"
                               loading="lazy"
                             />
                           </div>
                           <div className="space-y-2 text-xs font-mono w-full sm:w-auto text-left">
                             <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08]">
-                              <span className="text-slate-400 block text-[10px]">NGÂN HÀNG:</span>
-                              <span className="font-bold text-white">MB Bank (Quân Đội)</span>
+                              <span className="text-slate-400 block text-[10px]">{t('station.bank')}</span>
+                              <span className="font-bold text-white">{t('station.bankName')}</span>
                             </div>
                             <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between gap-2">
                               <div>
-                                <span className="text-slate-400 block text-[10px]">SỐ TÀI KHOẢN CHỦ XE:</span>
+                                <span className="text-slate-400 block text-[10px]">{t('station.driverAccount')}</span>
                                 <span className="font-black text-emerald-400 text-sm tracking-wider">0938.884.288</span>
                               </div>
                               <button
@@ -1482,14 +1484,14 @@ export default function StationRiderView({
                                   onShowToast?.('✓ Đã sao chép số tài khoản MB Bank');
                                 }}
                                 className="p-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] text-slate-300 hover:text-white transition-all cursor-pointer"
-                                title="Sao chép STK"
+                                title={t('station.copyAccount')}
                               >
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
                             </div>
                             <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between gap-2">
                               <div>
-                                <span className="text-slate-400 block text-[10px]">NỘI DUNG CHUYỂN KHOẢN:</span>
+                                <span className="text-slate-400 block text-[10px]">{t('station.transferNote')}</span>
                                 <span className="font-bold text-amber-300">CARMATE PIN {boardingPass.pin || '8842'}</span>
                               </div>
                               <button
@@ -1499,7 +1501,7 @@ export default function StationRiderView({
                                   onShowToast?.('✓ Đã sao chép cú pháp chuyển khoản');
                                 }}
                                 className="p-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] text-slate-300 hover:text-white transition-all cursor-pointer"
-                                title="Sao chép cú pháp"
+                                title={t('station.copySyntax')}
                               >
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
@@ -1517,7 +1519,7 @@ export default function StationRiderView({
                             className="h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                           >
                             <CheckCircle2 className="w-4 h-4" />
-                            <span>Đã chuyển khoản VietQR</span>
+                            <span>{t('station.paidByVietqr')}</span>
                           </button>
                           <button
                             type="button"
@@ -1527,7 +1529,7 @@ export default function StationRiderView({
                             }}
                             className="h-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/[0.12] text-slate-200 font-bold text-xs font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
                           >
-                            <span>💵 Trả tiền mặt khi xuống</span>
+                            <span>{t('station.payCash')}</span>
                           </button>
                         </div>
                       </>
@@ -1538,12 +1540,12 @@ export default function StationRiderView({
                   <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-200 space-y-2 text-left">
                     <div className="font-bold font-mono uppercase tracking-wide text-rose-300 flex items-center gap-1.5">
                       <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                      <span>QUY TẮC XUỐNG XE 10 GIÂY TẠI HÀNG XANH</span>
+                      <span>{t('station.rule10sTitle')}</span>
                     </div>
                     <p className="text-slate-300 leading-relaxed text-[11.5px] pl-5">
-                      • Nút giao Hàng Xanh có mật độ xe rất cao và <strong>camera phạt nguội dừng đỗ</strong>.<br />
-                      • Quý khách vui lòng chuyển khoản hoặc chuẩn bị tiền chẵn trước khi xe đến.<br />
-                      • Khi xe tấp lề an toàn: mở cửa, bước xuống vỉa hè trong vòng <strong>10 giây</strong> để tránh gây ùn tắc và bảo vệ chủ xe khỏi bị phạt.
+                      {t('station.rule10s1')} <strong>{t('station.trafficCamera')}</strong>.<br />
+                      {t('station.rule10s2')}<br />
+                      {t('station.rule10s3')} <strong>{t('station.tenSeconds')}</strong> {t('station.rule10s4')}
                     </p>
                   </div>
 
@@ -1553,7 +1555,7 @@ export default function StationRiderView({
                     onClick={() => setShowRiderReviewModal(true)}
                     className="w-full h-14 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-sm font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(16,185,129,0.35)] active:scale-98"
                   >
-                    <span>🏁 ĐÃ TỚI HÀNG XANH AN TOÀN · ĐÁNH GIÁ CHỦ XE</span>
+                    <span>{t('station.arrivedRate')}</span>
                   </button>
 
                   {/* 5. NÚT THẺ PHÁP LÝ & LIÊN LẠC AN TOÀN */}
@@ -1564,7 +1566,7 @@ export default function StationRiderView({
                       className="h-12 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
                     >
                       <Scale className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>🛡️ Thẻ Pháp Lý</span>
+                      <span>{t('station.legalCard')}</span>
                     </button>
                     <button
                       type="button"
@@ -1572,7 +1574,7 @@ export default function StationRiderView({
                       className="h-12 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-mono font-bold text-sky-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shadow-[0_0_20px_rgba(14,165,233,0.15)]"
                     >
                       <MessageSquare className="w-4 h-4 text-sky-400" />
-                      <span>Liên Lạc An Toàn</span>
+                      <span>{t('station.safeContact')}</span>
                     </button>
                   </div>
 
@@ -1583,7 +1585,7 @@ export default function StationRiderView({
                     className="w-full h-11 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-xs font-mono text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-                    <span>⚡ Thử nghiệm: Chuyển về màn hình Chờ đón tại trạm</span>
+                    <span>{t('station.simBackToWaiting')}</span>
                   </button>
                 </div>
               ) : (
@@ -1594,7 +1596,7 @@ export default function StationRiderView({
                   {/* 1. MÃ PIN LÊN XE (ĐẶT Ở VỊ TRÍ ĐẬP VÀO MẮT ĐẦU TIÊN) */}
                   <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-2 border-emerald-500/60 rounded-3xl p-5 text-center space-y-3 shadow-2xl">
                     <span className="text-xs font-black uppercase tracking-widest text-slate-400 font-mono block">
-                      MÃ PIN LÊN XE
+                      {t('station.boardingPin')}
                     </span>
                     <div className="flex items-center justify-center gap-2 sm:gap-3 py-1">
                       {(boardingPass.pin || '8842').split('').map((char, i) => (
@@ -1607,7 +1609,7 @@ export default function StationRiderView({
                       ))}
                     </div>
                     <p className="text-xs text-amber-300 font-medium pt-0.5">
-                      (Đọc cho chủ xe khi mở cửa)
+                      {t('station.readPinToDriver')}
                     </p>
                   </div>
 
@@ -1615,17 +1617,17 @@ export default function StationRiderView({
                   <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                        TRẠNG THÁI XE TIẾP CẬN
+                        {t('station.approachStatus')}
                       </span>
                       {isArriving ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
                           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                          <span>🟢 Có xe đang tới trạm</span>
+                          <span>{t('station.carComing')}</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 text-xs font-mono font-bold">
                           <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-                          <span>🟡 Đang quét radar QL13</span>
+                          <span>{t('station.scanningRadar')}</span>
                         </span>
                       )}
                     </div>
@@ -1634,7 +1636,7 @@ export default function StationRiderView({
                       <div className="space-y-2 pt-1">
                         <div className="flex items-baseline justify-between">
                           <div className="flex items-center gap-2 text-sm sm:text-base font-black text-white font-mono">
-                            <span>⏱️ Dự kiến đón sau:</span>
+                            <span>{t('station.etaPickup')}</span>
                             <span className="text-emerald-400 text-lg sm:text-xl font-mono">
                               {formatEtaMinutesSeconds(etaSeconds)} phút
                             </span>
@@ -1653,13 +1655,13 @@ export default function StationRiderView({
                         </div>
                         <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                           <span>Radar QL13 (3.5 km)</span>
-                          <span className="text-emerald-400 font-bold">Trạm đón (0 km)</span>
+                          <span className="text-emerald-400 font-bold">{t('station.hubZero')}</span>
                         </div>
                       </div>
                     ) : (
                       <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-1">
                         <p className="text-xs text-slate-300 font-sans">
-                          Radar CarMate đang phát tín hiệu tới các xe ô tô gia đình chạy trên QL13 cách trạm 3 - 5 km.
+                          {t('station.radarDesc')}
                         </p>
                         <div className="text-[11px] font-mono text-sky-400 font-bold">
                           Vị trí của bạn: #{boardingPass.position || 1} tại Trạm • Xe qua trạm mỗi 3–5 phút
@@ -1671,23 +1673,23 @@ export default function StationRiderView({
                   {/* 3. THÔNG TIN PHƯƠNG TIỆN */}
                   <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-2.5 text-left">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 block">
-                      THÔNG TIN PHƯƠNG TIỆN
+                      {t('station.vehicleInfo')}
                     </span>
                     <div className="space-y-2 text-xs font-mono">
                       <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                        <span className="text-slate-400">• Loại xe:</span>
+                        <span className="text-slate-400">{t('station.vehicleType')}</span>
                         <span className="text-sm font-bold text-white">
                           {boardingPass.carInfo?.vehicleModel || 'Mitsubishi Xpander (Trắng)'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                        <span className="text-slate-400">• Biển số:</span>
+                        <span className="text-slate-400">{t('station.plate')}</span>
                         <span className="text-base font-black text-emerald-400">
                           {boardingPass.carInfo?.plate || '93A - 123.45'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                        <span className="text-slate-400">• Chủ xe:</span>
+                        <span className="text-slate-400">{t('station.owner')}</span>
                         <span className="text-sm font-bold text-slate-200">
                           {boardingPass.carInfo?.driverName || 'Anh Tuấn (Chủ xe)'}
                         </span>
@@ -1699,11 +1701,11 @@ export default function StationRiderView({
                   <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1 text-left">
                     <div className="font-bold font-mono uppercase tracking-wide text-amber-300 flex items-center gap-1.5">
                       <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>QUY TẮC AN TOÀN TRẠM XĂNG</span>
+                      <span>{t('station.gasSafetyTitle')}</span>
                     </div>
                     <p className="text-slate-300 leading-relaxed text-[11.5px] pl-5">
-                      • Xe chỉ tấp mép sân trạm đúng <strong>45–60 giây</strong>.<br />
-                      • Vui lòng đứng sẵn tại mép ngoài quầy / sảnh đón.
+                      {t('station.gasSafety1')} <strong>{t('station.dwell4560')}</strong>.<br />
+                      {t('station.gasSafety2')}
                     </p>
                   </div>
 
@@ -1714,7 +1716,7 @@ export default function StationRiderView({
                     className="w-full h-12 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
                   >
                     <Scale className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>🛡️ Thẻ Pháp Lý Hành Trình (Điều 3 BLDS 2015)</span>
+                    <span>{t('station.legalCardFull')}</span>
                   </button>
 
                   {/* 5.5 NÚT BÁO CHỦ XE BỎ CHUYẾN / CỨU HỘ VẬT LÝ TẠI TRẠM */}
@@ -1722,10 +1724,10 @@ export default function StationRiderView({
                     type="button"
                     onClick={() => setShowNoShowRescueModal(true)}
                     className="w-full h-12 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-xs font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                    title="Báo chủ xe không đến và kích hoạt phao cứu sinh đón xe buýt/xe khách tại trạm"
+                    title={t('station.reportNoShowTitle')}
                   >
                     <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                    <span>🚨 Báo Chủ Xe Không Đến (Cứu Hộ Tại Trạm)</span>
+                    <span>{t('station.reportNoShow')}</span>
                   </button>
 
                   {/* 5.6 MÔ PHỎNG TRÁO VÉ SANG XE HỖ TRỢ D2 (TEST N+1 SILENT FAILOVER) */}
@@ -1733,10 +1735,10 @@ export default function StationRiderView({
                     type="button"
                     onClick={handleTriggerShadowFailover}
                     className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                    title="Mô phỏng xe chính D1 đứt gãy lúc sáng sớm -> Hệ thống âm thầm tráo vé sang xe D2 lúc 06:25"
+                    title={t('station.simSwapTitle')}
                   >
                     <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
-                    <span>⚡ Mô phỏng Xe D1 đứt gãy ➔ Tráo êm sang xe D2 (06:25)</span>
+                    <span>{t('station.simSwapCar')}</span>
                   </button>
 
                   {/* 5.7 MÔ PHỎNG LÊN XE (EN-ROUTE & VIETQR) */}
@@ -1744,10 +1746,10 @@ export default function StationRiderView({
                     type="button"
                     onClick={handleToggleBoardedDemo}
                     className="w-full h-11 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                    title="Mô phỏng khách đã đọc mã PIN và lên xe -> Chuyển sang màn hình En-Route & VietQR"
+                    title={t('station.simBoardTitle')}
                   >
                     <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>⚡ Mô phỏng Lên xe (En-Route &amp; VietQR)</span>
+                    <span>{t('station.simBoard')}</span>
                   </button>
 
                   {/* 5.8 BẢO HỘ GIỜ GIẤC: CHỦ XE TRỄ > 5 PHÚT -> HỦY KHÔNG PHẠT & CỨU SINH XE KHÁCH */}
@@ -1755,14 +1757,14 @@ export default function StationRiderView({
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono font-bold uppercase text-amber-300 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Bảo hộ giờ giấc lăn bánh (0 bùng chuyến)</span>
+                        <span>{t('station.onTimeGuard')}</span>
                       </span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 font-bold">
                         Trễ: {driverLateDelayMinutes} phút
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">
-                      Nếu Chủ xe trễ hẹn quá 5 phút tại trạm đón, bạn có quyền <strong>Hủy Miễn Phạt (0đ)</strong> để đón xe khách QL13, điểm tín nhiệm bảo toàn 100%.
+                      {t('station.lateGuard1')} <strong>{t('station.cancelFree')}</strong> {t('station.lateGuard2')}
                     </p>
                     <div className="flex gap-2">
                       <button
@@ -1780,7 +1782,7 @@ export default function StationRiderView({
                           className="flex-1 h-9 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-[11px] font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 animate-pulse"
                         >
                           <Ban className="w-3.5 h-3.5 text-rose-400" />
-                          <span>HỦY KHÔNG PHẠT (CHỦ XE TRỄ &gt; 5P)</span>
+                          <span>{t('station.cancelNoPenalty')}</span>
                         </button>
                       ) : (
                         <button
@@ -1789,7 +1791,7 @@ export default function StationRiderView({
                           className="flex-1 h-9 px-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-[11px] font-mono font-bold text-indigo-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <Bus className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Lịch Xe Khách QL13 Cứu Sinh</span>
+                          <span>{t('station.busSchedule')}</span>
                         </button>
                       )}
                     </div>
@@ -1802,7 +1804,7 @@ export default function StationRiderView({
                       onClick={handleCancelPass}
                       className="h-14 rounded-2xl bg-white/[0.06] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/30 text-xs font-mono font-bold text-slate-300 hover:text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
                     >
-                      <span>Huỷ vé</span>
+                      <span>{t('station.cancelTicket')}</span>
                     </button>
                     <button
                       type="button"
@@ -1810,7 +1812,7 @@ export default function StationRiderView({
                       className="h-14 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-mono font-bold text-sky-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shadow-[0_0_20px_rgba(14,165,233,0.15)]"
                     >
                       <MessageSquare className="w-4 h-4 text-sky-400" />
-                      <span>Liên Lạc An Toàn</span>
+                      <span>{t('station.safeContact')}</span>
                     </button>
                   </div>
 
@@ -1822,7 +1824,7 @@ export default function StationRiderView({
                       className="w-full py-2.5 px-3 rounded-2xl bg-white/[0.03] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/30 text-[11px] font-mono font-bold text-slate-400 hover:text-rose-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <ShieldAlert className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-400" />
-                      <span>Báo Cáo Vi Phạm Văn Hóa (Đình chỉ Chủ xe 30 ngày)</span>
+                      <span>{t('station.reportCulture')}</span>
                     </button>
                   </div>
                 </div>
@@ -1889,7 +1891,7 @@ export default function StationRiderView({
                 }}
                 className="text-slate-400 hover:text-white text-xs font-semibold px-2 py-1 rounded-lg cursor-pointer"
               >
-                Đóng
+                {t('common.close')}
               </button>
             </div>
 
@@ -1911,11 +1913,11 @@ export default function StationRiderView({
               <div className="space-y-4">
                 <div>
                   <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
-                    Tên / Biệt danh gọi xe (Tùy chọn)
+                    {t('station.nickname')}
                   </label>
                   <input
                     type="text"
-                    placeholder="Ví dụ: Anh Minh, Chị Lan..."
+                    placeholder={t('station.namePlaceholder2')}
                     value={authNameInput}
                     onChange={(e) => setAuthNameInput(e.target.value)}
                     className="w-full h-11 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-xs outline-none focus:border-white/20"
@@ -1926,11 +1928,11 @@ export default function StationRiderView({
                   <div>
                     <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 font-mono mb-1.5">
                       <Smartphone className="w-3.5 h-3.5" />
-                      <span>Số điện thoại di động:</span>
+                      <span>{t('station.mobilePhone')}</span>
                     </label>
                     <input
                       type="tel"
-                      placeholder="Ví dụ: 0988 123 456"
+                      placeholder={t('station.phonePlaceholder')}
                       value={authPhoneInput}
                       onChange={(e) => setAuthPhoneInput(e.target.value)}
                       className="w-full h-12 px-4 rounded-2xl bg-white/[0.06] border border-emerald-500/30 text-white text-sm font-bold font-mono outline-none focus:border-emerald-400"
@@ -1953,18 +1955,18 @@ export default function StationRiderView({
                     onClick={handleDirectPhoneSubmit}
                     className="w-full h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <span>⚡ Đi gấp? Bỏ qua OTP, dùng số này vào ngay</span>
+                    <span>{t('station.skipOtp')}</span>
                   </button>
 
                   {/* TÙY CHỌN: XÁC THỰC QUA TELEGRAM */}
                   <form onSubmit={handleTelegramAuthSubmit} className="pt-2 border-t border-white/[0.06] space-y-2">
                     <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                      <span>Hoặc xác thực qua Telegram:</span>
+                      <span>{t('station.orTelegram')}</span>
                     </div>
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="@username hoặc SĐT Telegram"
+                        placeholder={t('station.telegramPlaceholder')}
                         value={authTelegramInput}
                         onChange={(e) => setAuthTelegramInput(e.target.value)}
                         className="flex-1 h-10 px-3 rounded-xl bg-white/[0.05] border border-sky-500/30 text-white text-xs outline-none focus:border-sky-400"
@@ -1986,16 +1988,16 @@ export default function StationRiderView({
                 <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 font-mono">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>WebOTP Đang Chờ Bắt Mã Tự Động</span>
+                    <span>{t('station.webOtpWaiting')}</span>
                   </div>
                   <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
-                    Nếu máy bạn hỗ trợ WebOTP, mã xác thực từ tin nhắn SMS sẽ được điền tự động. Bạn cũng có thể gõ trực tiếp 6 số:
+                    {t('station.webOtpDesc')}
                   </p>
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5 font-mono">
-                    Mã xác thực SMS (6 số):
+                    {t('station.smsCode')}
                   </label>
                   <input
                     type="text"
@@ -2026,7 +2028,7 @@ export default function StationRiderView({
                     className="text-slate-400 hover:text-emerald-400 flex items-center gap-1 underline cursor-pointer"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    <span>Gửi lại mã</span>
+                    <span>{t('station.resendCode')}</span>
                   </button>
                   <button
                     type="button"
@@ -2036,14 +2038,14 @@ export default function StationRiderView({
                     }}
                     className="text-slate-400 hover:text-white underline cursor-pointer"
                   >
-                    Đổi số điện thoại
+                    {t('station.changePhone')}
                   </button>
                 </div>
               </form>
             )}
 
             <p className="text-[10px] text-slate-500 text-center font-mono">
-              Bảo mật 100% · Không bao giờ spam · 0đ phí trung gian
+              {t('station.privacyNote')}
             </p>
           </div>
         </div>
@@ -2066,12 +2068,12 @@ export default function StationRiderView({
           size="lg"
           icon={AlertTriangle}
           iconTone="danger"
-          title="Xử Lý Sự Cố: Chủ Xe Bỏ Hẹn / Không Đến"
-          subtitle="Thi hành chế tài tức thì & Kích hoạt Phao Cứu Sinh Vật Lý tại Trạm"
+          title={t('station.noShowModalTitle')}
+          subtitle={t('station.noShowModalSub')}
           footer={
             <div className="flex items-center justify-between gap-3 w-full">
               <Button variant="outline" onClick={() => setShowNoShowRescueModal(false)}>
-                Đóng lại
+                {t('station.closeAgain')}
               </Button>
               <Button
                 variant="danger"
@@ -2083,7 +2085,7 @@ export default function StationRiderView({
                 }}
                 className="font-bold"
               >
-                <span>Xác nhận & Nhận Thẻ Ưu Tiên Vàng</span>
+                <span>{t('station.confirmGolden')}</span>
               </Button>
             </div>
           }
@@ -2093,14 +2095,14 @@ export default function StationRiderView({
             <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs space-y-1.5 text-rose-900 dark:text-rose-200">
               <strong className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>1. Thi Hành Chế Tài Tự Động Đối Với Chủ Xe:</span>
+                <span>{t('station.sanction1Title')}</span>
               </strong>
               <p>
-                Hệ thống xác nhận chủ xe <strong>{boardingPass?.carInfo?.plate || '93A-123.45'}</strong> ({boardingPass?.carInfo?.driverName || 'Chủ xe'}) đã trễ hẹn không lý do chính đáng.
+                {t('station.systemConfirms')} <strong>{boardingPass?.carInfo?.plate || '93A-123.45'}</strong> ({boardingPass?.carInfo?.driverName || 'Chủ xe'}) đã trễ hẹn không lý do chính đáng.
               </p>
               <div className="p-2 rounded-xl bg-black/10 dark:bg-black/30 font-mono text-[11px] text-rose-600 dark:text-rose-400">
-                • Trừ <strong>-35 điểm tín nhiệm</strong> của chủ xe.<br />
-                • Tạm đình chỉ quyền nhận người đi cùng trong <strong>7 ngày</strong>.
+                {t('station.deduct')} <strong>{t('station.minus35')}</strong> {t('station.ofDriver')}<br />
+                {t('station.suspendPickup')} <strong>{t('station.sevenDays')}</strong>.
               </div>
             </div>
 
@@ -2108,17 +2110,17 @@ export default function StationRiderView({
             <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-1.5 text-amber-900 dark:text-amber-200">
               <strong className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <Award className="w-4 h-4 shrink-0" />
-                <span>2. Quyền Lợi Đền Bù Dành Riêng Cho Bạn:</span>
+                <span>{t('station.sanction2Title')}</span>
               </strong>
               <p>
-                Để tạ lỗi vì sự bất tiện này, tài khoản của bạn được kích hoạt ngay:
+                {t('station.compensationDesc')}
               </p>
               <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-950 dark:text-amber-100 font-mono text-xs font-bold flex items-center justify-between">
-                <span>⭐ THẺ ƯU TIÊN VÀNG #1 (GOLDEN TICKET)</span>
-                <span className="text-emerald-500">+10 Điểm Karma</span>
+                <span>{t('station.goldenTicket')}</span>
+                <span className="text-emerald-500">{t('station.karmaPoints')}</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                * Lần đặt xe tiếp theo, thuật toán Gale-Shapley sẽ tự động khóa chỗ cho bạn đầu tiên với các chủ xe Uy Tín Hạng Vàng.
+                {t('station.goldenNote')}
               </p>
             </div>
 
@@ -2126,30 +2128,30 @@ export default function StationRiderView({
             <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs space-y-2">
               <strong className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
                 <Bus className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>3. Phao Cứu Sinh Vật Lý Tại Cây Xăng (Để Kịp Giờ Làm):</span>
+                <span>{t('station.sanction3Title')}</span>
               </strong>
               <p className="text-slate-600 dark:text-slate-300">
-                Bạn đang đứng tại <strong>{currentHub.name} (Mặt tiền QL13)</strong>. Hãy bước ra mép cổng cây xăng để vẫy các tuyến xe đang chạy liên tục:
+                {t('station.youAreAt')} <strong>{currentHub.name} (Mặt tiền QL13)</strong>{t('station.stepOutDesc')}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11.5px] pt-1">
                 <div className="p-2.5 rounded-xl bg-white dark:bg-black/30 border border-black/[0.06] dark:border-white/[0.06] space-y-1">
                   <span className="font-bold text-emerald-600 dark:text-emerald-400 block font-mono">
-                    🚌 Tuyến Buýt Số 15:
+                    {t('station.bus15')}
                   </span>
                   <p className="text-slate-500 dark:text-slate-400">
-                    Chơn Thành ➔ Thủ Dầu Một / Sài Gòn.<br />
-                    Tần suất: <strong>10 - 15 phút/chuyến</strong>. Giá vé: ~25.000đ.
+                    {t('station.bus15Route')}<br />
+                    {t('station.frequency')} <strong>{t('station.every1015')}</strong>{t('station.fare25k')}
                   </p>
                 </div>
 
                 <div className="p-2.5 rounded-xl bg-white dark:bg-black/30 border border-black/[0.06] dark:border-white/[0.06] space-y-1">
                   <span className="font-bold text-sky-600 dark:text-sky-400 block font-mono">
-                    🚐 Xe Khách Liên Tỉnh QL13:
+                    {t('station.coach')}
                   </span>
                   <p className="text-slate-500 dark:text-slate-400">
-                    Thành Công, Chín Tèo, Quốc Đạt...<br />
-                    Bấm kèn vẫy tay ngay cổng trạm là đón thẳng về Miền Đông.
+                    {t('station.coachBrands')}<br />
+                    {t('station.coachDesc')}
                   </p>
                 </div>
               </div>
@@ -2191,12 +2193,12 @@ export default function StationRiderView({
           size="md"
           icon={ShieldAlert}
           iconTone="danger"
-          title="Báo Cáo Vi Phạm Văn Hóa Chuyến Đi"
-          subtitle="Kích hoạt Cơ chế Trừng phạt Grim Trigger (Đình chỉ Chủ xe 30 ngày)"
+          title={t('station.reportModalTitle')}
+          subtitle={t('station.reportModalSub')}
           footer={
             <div className="flex items-center justify-between gap-3 w-full">
               <Button variant="outline" onClick={() => setShowCultureViolationModal(false)}>
-                Đóng lại
+                {t('station.closeAgain')}
               </Button>
               <Button
                 variant="danger"
@@ -2211,12 +2213,12 @@ export default function StationRiderView({
         >
           <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
             <p className="text-xs text-slate-400">
-              Chủ xe: <strong>{boardingPass?.carInfo?.driverName || 'Chủ xe'}</strong> ({boardingPass?.carInfo?.plate || '93A-123.45'})
+              {t('station.driverLabel')} <strong>{boardingPass?.carInfo?.driverName || 'Chủ xe'}</strong> ({boardingPass?.carInfo?.plate || '93A-123.45'})
             </p>
 
             <div className="space-y-2">
               <label className="text-xs font-bold font-mono uppercase text-slate-400 block">
-                Hành vi vi phạm cam kết văn hóa CarMate:
+                {t('station.violationLabel')}
               </label>
 
               {[
@@ -2263,18 +2265,18 @@ export default function StationRiderView({
 
             <div className="space-y-1.5">
               <label className="text-xs font-mono text-slate-400 block">
-                Ghi chú thêm (tùy chọn):
+                {t('station.extraNote')}
               </label>
               <textarea
                 value={cultureViolationNote}
                 onChange={(e) => setCultureViolationNote(e.target.value)}
-                placeholder="Ví dụ: Vừa mở cửa xe đã nồng nặc mùi thuốc lá..."
+                placeholder={t('station.reportPlaceholder')}
                 className="w-full h-18 p-3 rounded-xl bg-white/[0.04] border border-white/[0.1] text-xs text-white placeholder-slate-500 outline-none resize-none"
               />
             </div>
 
             <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.08] text-[11px] text-slate-400 leading-relaxed">
-              ⚖️ <strong>Cơ sở Toán học & Kinh tế:</strong> CarMate áp dụng chiến lược <em>Grim Trigger</em> (Robert Aumann - Nobel Kinh tế). Mọi hành vi phá vỡ cam kết văn hóa đều dẫn đến việc đình chỉ vĩnh viễn quyền lợi tương lai của Chủ xe trong 30 ngày.
+              ⚖️ <strong>{t('station.mathBasis')}</strong> {t('station.carmateApplies')} <em>Grim Trigger</em> {t('station.grimTriggerDesc')}
             </div>
           </div>
         </Modal>
@@ -2287,12 +2289,12 @@ export default function StationRiderView({
           size="lg"
           icon={Bus}
           iconTone="primary"
-          title="Phao Cứu Sinh: Xe Khách Tuyến Cố Định QL13"
-          subtitle="Không để bạn lỡ giờ làm việc • Đón xe an toàn ngay mép cổng cây xăng"
+          title={t('station.lifebuoyTitle')}
+          subtitle={t('station.lifebuoySub')}
           footer={
             <div className="flex items-center justify-end w-full">
               <Button variant="outline" onClick={() => setShowCoachLifebuoyModal(false)}>
-                Đóng lại
+                {t('station.closeAgain')}
               </Button>
             </div>
           }
@@ -2301,7 +2303,7 @@ export default function StationRiderView({
             <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300 space-y-1">
               <strong>⛽ Vị trí đón xe hiện tại: {currentHub.name} (Mặt tiền QL13)</strong>
               <p className="text-slate-300">
-                Các tuyến xe khách bên dưới chạy liên tục theo biểu đồ cố định. Bạn chỉ cần bước ra cổng cây xăng vẫy tay hoặc bấm gọi hotline trước 10 phút.
+                {t('station.coachScheduleDesc')}
               </p>
             </div>
 
@@ -2342,7 +2344,7 @@ export default function StationRiderView({
                       <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Gọi Hotline: {bus.hotline}</span>
                     </a>
-                    <span className="text-[10px] font-mono text-slate-500">Đón dọc QL13</span>
+                    <span className="text-[10px] font-mono text-slate-500">{t('station.pickupAlongQl13')}</span>
                   </div>
                 </div>
               ))}
@@ -2353,7 +2355,7 @@ export default function StationRiderView({
 
       {/* FOOTER BẢO CHỨNG */}
       <footer className="text-center text-[11px] text-slate-500 pt-4 border-t border-white/[0.06] max-w-lg mx-auto w-full">
-        CarMate Tuyến Hành Lang QL13 · Đón trả an toàn tại sân cây xăng Petrolimex
+        {t('station.corridorFooter')}
       </footer>
     </div>
   );

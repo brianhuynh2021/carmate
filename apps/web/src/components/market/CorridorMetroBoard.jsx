@@ -34,6 +34,7 @@ import {
   getDailyFuelPrice,
   getFixedSegmentTariff
 } from '@carmate/shared';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function CorridorMetroBoard({
   currentUser: _currentUser = null,
@@ -43,6 +44,7 @@ export default function CorridorMetroBoard({
   _onOpenInbox,
   _activeBookedCount = 0
 }) {
+  const { t } = useI18n();
   const currentFuelPrice = getDailyFuelPrice();
 
   /**
@@ -280,13 +282,13 @@ export default function CorridorMetroBoard({
 
     return {
       driverPayoutText: `+${formatK(minPayout)} — +${formatK(maxPayout)}`,
-      riderFareText: `${formatK(minFare)} — ${formatK(maxFare)} / ghế`,
+      riderFareText: `${formatK(minFare)} — ${formatK(maxFare)} ${t('corridor.perSeat')}`,
       minPayout,
       maxPayout,
       minFare,
       maxFare
     };
-  }, [direction, saigonOriginHubId, currentFuelPrice.ron95Price]);
+  }, [direction, saigonOriginHubId, currentFuelPrice.ron95Price, t]);
 
   // Biểu phí cố định QL13 tính toán động 100% từ getFixedSegmentTariff theo chiều tuyến
   const samplePricingCards = useMemo(() => {
@@ -359,7 +361,7 @@ export default function CorridorMetroBoard({
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold border border-amber-500/30">
             <Radio className="w-3 h-3 text-amber-400" />
-            <span>VÙNG GOM</span>
+            <span>{t('corridor.hubTag.gather')}</span>
           </span>
         );
       case 'ADMIN_CENTER':
@@ -380,28 +382,28 @@ export default function CorridorMetroBoard({
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold border border-amber-500/30">
             <Factory className="w-3 h-3 text-amber-400" />
-            <span>KCN</span>
+            <span>{t('corridor.hubTag.industrial')}</span>
           </span>
         );
       case 'URBAN_AREA':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-[10px] font-mono font-bold border border-cyan-500/30">
             <Building2 className="w-3 h-3 text-cyan-400" />
-            <span>ĐÔ THỊ</span>
+            <span>{t('corridor.hubTag.urban')}</span>
           </span>
         );
       case 'AIRPORT':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold border border-indigo-500/30">
             <Plane className="w-3 h-3 text-indigo-400" />
-            <span>SÂN BAY</span>
+            <span>{t('corridor.hubTag.airport')}</span>
           </span>
         );
       case 'GAS_STATION':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/30">
             <Fuel className="w-3 h-3 text-emerald-400" />
-            <span>CÂY XĂNG</span>
+            <span>{t('corridor.hubTag.gasStation')}</span>
           </span>
         );
       case 'JUNCTION':
@@ -409,7 +411,7 @@ export default function CorridorMetroBoard({
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-mono font-bold border border-sky-500/30">
             <MapPin className="w-3 h-3 text-sky-400" />
-            <span>NÚT GIAO</span>
+            <span>{t('corridor.hubTag.junction')}</span>
           </span>
         );
     }
@@ -429,19 +431,19 @@ export default function CorridorMetroBoard({
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>
               {direction === 'TO_SAIGON'
-                ? 'Hành lang QL13 · Bình Phước ➔ Sài Gòn'
-                : 'Hành lang QL13 · Sài Gòn ➔ Bình Phước'}
+                ? t('corridor.heroBadgeToSaigon')
+                : t('corridor.heroBadgeToProvince')}
             </span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white font-display">
-            Tuyến xe tiện chuyến QL13
+            {t('corridor.heroTitle')}
           </h1>
 
           <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed">
             {direction === 'TO_SAIGON'
-              ? 'Kết nối trực tiếp Chủ xe và Người đi cùng dọc Quốc lộ 13. Đón trả tại cây xăng Petrolimex và điểm trung tâm.'
-              : 'Đón xe chiều về thuận đường từ Tân Sơn Nhất, Hàng Xanh, Ngã 4 Bình Phước về Bàu Bàng, Chơn Thành, Tân Khai, Bình Long.'}
+              ? t('corridor.heroDescToSaigon')
+              : t('corridor.heroDescToProvince')}
           </p>
 
           {/*
@@ -462,7 +464,7 @@ export default function CorridorMetroBoard({
               }`}
             >
               <span>⬇️</span>
-              <span className="whitespace-nowrap">Về Sài Gòn</span>
+              <span className="whitespace-nowrap">{t('corridor.dirToSaigon')}</span>
             </button>
             <button
               type="button"
@@ -474,18 +476,18 @@ export default function CorridorMetroBoard({
               }`}
             >
               <span>⬆️</span>
-              <span className="whitespace-nowrap">Về Bình Phước</span>
+              <span className="whitespace-nowrap">{t('corridor.dirToProvince')}</span>
             </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-300 font-mono">
             <span className="flex items-center gap-1.5 bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.1]">
               <Zap className="w-3.5 h-3.5 text-emerald-400" />
-              Đi thẳng QL13
+              {t('corridor.chipDirect')}
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.1]">
               <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
-              Lên xe đọc mã 4 số
+              {t('corridor.chipPin')}
             </span>
             <span className="flex items-center gap-1.5 bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.1] text-slate-400">
               <Fuel className="w-3.5 h-3.5 text-emerald-400" />
@@ -507,21 +509,21 @@ export default function CorridorMetroBoard({
                 <Car className="w-5 h-5" />
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-semibold">
-                Dành cho Chủ xe
+                {t('corridor.forDriver')}
               </span>
             </div>
 
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                Chế độ Taplo nhận khách
+                {t('corridor.cockpitTitle')}
               </h2>
               <p className="text-xs sm:text-sm text-slate-400 mt-1 leading-relaxed">
-                Tự động cảnh báo giọng nói khi có người đi cùng đang chờ tại các trạm đón phía trước.
+                {t('corridor.cockpitDesc')}
               </p>
             </div>
 
             <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-between text-xs text-slate-300">
-              <span className="text-slate-400 font-mono">Bù xăng (2 ghế):</span>
+              <span className="text-slate-400 font-mono">{t('corridor.fuelSupport2Seats')}</span>
               <span className="text-emerald-400 font-bold font-mono text-sm">
                 {corridorTariffRange.driverPayoutText}
               </span>
@@ -538,7 +540,7 @@ export default function CorridorMetroBoard({
               className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
             >
               <Radio className="w-4 h-4 animate-pulse" />
-              <span>Bật Taplo nhận khách</span>
+              <span>{t('corridor.cockpitCta')}</span>
             </button>
           </div>
         </div>
@@ -551,21 +553,21 @@ export default function CorridorMetroBoard({
                 <Users className="w-5 h-5" />
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-xs font-semibold">
-                Dành cho Người đi cùng
+                {t('corridor.forPassenger')}
               </span>
             </div>
 
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                {direction === 'TO_SAIGON' ? 'Đón xe về Sài Gòn' : 'Đón xe về Bình Phước'}
+                {direction === 'TO_SAIGON' ? t('corridor.riderTitleToSaigon') : t('corridor.riderTitleToProvince')}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                Tự động định vị trạm đón gần bạn nhất dọc hành lang Quốc lộ 13.
+                {t('corridor.riderDesc')}
               </p>
             </div>
 
             <div className="p-3 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-              <span className="text-slate-500 dark:text-slate-400 font-mono">Phụ xăng tham khảo:</span>
+              <span className="text-slate-500 dark:text-slate-400 font-mono">{t('corridor.fuelShareRef')}</span>
               <span className="text-[#0071e3] font-bold font-mono text-sm">
                 {corridorTariffRange.riderFareText}
               </span>
@@ -582,7 +584,7 @@ export default function CorridorMetroBoard({
               className="w-full h-12 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
             >
               <MapPin className="w-4 h-4 text-emerald-300" />
-              <span>Chọn trạm đón xe</span>
+              <span>{t('corridor.riderCta')}</span>
             </button>
           </div>
         </div>
@@ -599,9 +601,9 @@ export default function CorridorMetroBoard({
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white">
-                {activeRole === 'driver' ? 'Lên lịch chuyến sáng mai' : 'Hẹn giờ đón xe sáng mai'}
+                {activeRole === 'driver' ? t('corridor.scheduleTitleDriver') : t('corridor.scheduleTitlePassenger')}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">Tự động ghép bạn đồng hành cùng tuyến QL13</p>
+              <p className="text-xs text-slate-400 mt-0.5">{t('corridor.scheduleDesc')}</p>
             </div>
           </div>
 
@@ -622,7 +624,7 @@ export default function CorridorMetroBoard({
           >
             {activeRole === 'driver' ? <Car className="w-4 h-4 shrink-0" /> : <Users className="w-4 h-4 shrink-0" />}
             <span className="whitespace-nowrap">
-              {activeRole === 'driver' ? 'Lên lịch xe sáng mai' : 'Hẹn giờ đón xe sáng mai'}
+              {activeRole === 'driver' ? t('corridor.scheduleCtaDriver') : t('corridor.scheduleCtaPassenger')}
             </span>
             <ArrowRight className="w-3.5 h-3.5 shrink-0" />
           </button>
@@ -636,12 +638,12 @@ export default function CorridorMetroBoard({
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              {direction === 'TO_SAIGON' ? 'Biểu phí tuyến về Sài Gòn' : 'Biểu phí tuyến về Bình Phước'}
+              {direction === 'TO_SAIGON' ? t('corridor.tariffTitleToSaigon') : t('corridor.tariffTitleToProvince')}
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Trọn gói xăng xe & vé BOT · 0đ phụ thu cao điểm</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('corridor.tariffSubtitle')}</p>
           </div>
           <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-medium border border-emerald-200 dark:border-emerald-800">
-            0đ phụ phí
+            {t('corridor.noSurcharge')}
           </span>
         </div>
 
@@ -666,7 +668,7 @@ export default function CorridorMetroBoard({
                 >
                   {formatVND(card.pricePerSeat)}
                 </span>
-                <span className="text-[11px] text-slate-400">/ ghế</span>
+                <span className="text-[11px] text-slate-400">{t('corridor.perSeat')}</span>
               </div>
               <span className="text-[11px] font-mono text-slate-400 block">
                 ~{card.distanceKm} km · {card.note}
@@ -703,7 +705,7 @@ export default function CorridorMetroBoard({
             <div className="space-y-2">
               <label className="text-xs font-bold font-mono uppercase text-slate-400 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                <span>1. Cửa ngõ bạn đón xe tại Sài Gòn:</span>
+                <span>{t('corridor.saigonGateway')}</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {saigonGateways.map((gw) => {
@@ -740,7 +742,7 @@ export default function CorridorMetroBoard({
                   <span>2. Chọn điểm trả tại Bình Phước (Cước cố định từ {selectedSaigonGateway.shortName}):</span>
                 </label>
                 <span className="text-[11px] font-mono text-emerald-400 font-bold hidden sm:inline">
-                  Đón thẳng QL13
+                  {t('corridor.directQl13')}
                 </span>
               </div>
 
@@ -789,7 +791,7 @@ export default function CorridorMetroBoard({
                         <button
                           type="button"
                           onClick={() => setSelectedQrHub(dest)}
-                          title="Xem mã QR trạm đón"
+                          title={t('corridor.viewStationQr')}
                           className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
                         >
                           <QrCode className="w-4 h-4 text-emerald-400" />
@@ -798,7 +800,7 @@ export default function CorridorMetroBoard({
                         <button
                           type="button"
                           onClick={() => onOpenIntentModal?.('passenger', saigonOriginHubId, dest.id)}
-                          title="Hẹn giờ xe trước cho ngày mai"
+                          title={t('corridor.bookAheadDriver')}
                           className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-[#2997ff] hover:text-blue-300 transition-all cursor-pointer shrink-0 active:scale-95"
                         >
                           <Clock className="w-4 h-4" />
@@ -853,7 +855,7 @@ export default function CorridorMetroBoard({
                       {renderCategoryBadge(hub.category)}
                       {hub.isTerminal && (
                         <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-mono font-semibold">
-                          Ga cuối TP.HCM
+                          {t('corridor.terminalHcm')}
                         </span>
                       )}
                     </div>
@@ -865,7 +867,7 @@ export default function CorridorMetroBoard({
                   {hub.isTerminal ? (
                     <span className="px-3 py-1.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 font-mono text-xs font-semibold flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Ga cuối Hàng Xanh / TSN</span>
+                      <span>{t('corridor.terminalHangXanh')}</span>
                     </span>
                   ) : (
                     <>
@@ -876,7 +878,7 @@ export default function CorridorMetroBoard({
                       <button
                         type="button"
                         onClick={() => setSelectedQrHub(hub)}
-                        title="Xem mã QR trạm đón"
+                        title={t('corridor.viewStationQr')}
                         className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
                       >
                         <QrCode className="w-4 h-4 text-emerald-400" />
@@ -885,7 +887,7 @@ export default function CorridorMetroBoard({
                       <button
                         type="button"
                         onClick={() => onOpenIntentModal?.('passenger', hub.id, 'hub_ql13_hang_xanh')}
-                        title="Hẹn giờ đón xe trước cho ngày mai"
+                        title={t('corridor.bookAheadPassenger')}
                         className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-[#2997ff] hover:text-blue-300 transition-all cursor-pointer shrink-0 active:scale-95"
                       >
                         <Clock className="w-4 h-4" />
@@ -896,7 +898,7 @@ export default function CorridorMetroBoard({
                         onClick={() => onOpenStationView?.(hub.id, 'hub_ql13_hang_xanh')}
                         className="h-9 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
                       >
-                        <span>Đón xe</span>
+                        <span>{t('corridor.pickUp')}</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </>
@@ -924,7 +926,7 @@ export default function CorridorMetroBoard({
 
             <div className="text-center space-y-1">
               <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
-                CARMATE • TEM STICKER TRẠM ẢO
+                {t('corridor.stickerLabel')}
               </span>
               <h3 className="text-base font-bold text-white leading-tight">
                 {selectedQrHub.name}
@@ -944,15 +946,15 @@ export default function CorridorMetroBoard({
                 />
               ) : (
                 <div className="w-52 h-52 flex items-center justify-center text-slate-400 font-mono text-xs">
-                  Đang tạo mã QR...
+                  {t('corridor.qrGenerating')}
                 </div>
               )}
               <div className="text-center pt-1 border-t border-slate-200 w-full">
                 <span className="text-[11px] font-black tracking-wider text-slate-900 uppercase block font-sans">
-                  QUÉT ĐÓN XE TIỆN CHUYẾN QL13
+                  {t('corridor.qrScanTitle')}
                 </span>
                 <span className="text-[10px] text-slate-600 font-mono">
-                  10s vào hàng đợi · 0đ tải ứng dụng
+                  {t('corridor.qrScanSub')}
                 </span>
               </div>
             </div>
@@ -968,7 +970,7 @@ export default function CorridorMetroBoard({
                 className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.3)]"
               >
                 <Smartphone className="w-4 h-4" />
-                <span>Trải nghiệm Kiosk Đón Xe Ngay ➔</span>
+                <span>{t('corridor.kioskCta')}</span>
               </button>
 
               <button
@@ -979,7 +981,7 @@ export default function CorridorMetroBoard({
                 className="w-full h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 text-xs font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>In tem dán cột xăng / quầy thu ngân</span>
+                <span>{t('corridor.printSticker')}</span>
               </button>
             </div>
           </div>
