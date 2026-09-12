@@ -173,7 +173,10 @@ router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitRev
 // --- Báo cáo vi phạm an toàn (chỉ hai bên trong chuyến mới được tố giác) ---
 router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, requireBookingParty, reportVehicleMismatchHandler);
 router.post('/bookings/:id/report-unreachable-phone', optionalAuth, requireBookingParty, reportUnreachablePhoneHandler);
-router.post('/bookings/:id/reset-ban', optionalAuth, resetBanHandler);
+// Gỡ khoá tài khoản là THAO TÁC CHẾ TÀI, chỉ Quản trị viên được làm.
+// Trước đây dùng optionalAuth: bất kỳ ai biết mã booking đều gọi ẩn danh để gỡ
+// ban cho CẢ HAI bên, vô hiệu hoá toàn bộ hệ thống kỷ luật (kể cả Grim Trigger).
+router.post('/bookings/:id/reset-ban', requireAdmin, resetBanHandler);
 router.post('/bookings/:id/dispute', optionalAuth, disputeBookingHandler);
 
 router.get('/escrows', optionalAuth, listBookings);
@@ -189,7 +192,7 @@ router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, complete
 router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitReview);
 router.post('/escrows/:id/report-vehicle-mismatch', optionalAuth, requireBookingParty, reportVehicleMismatchHandler);
 router.post('/escrows/:id/report-unreachable-phone', optionalAuth, requireBookingParty, reportUnreachablePhoneHandler);
-router.post('/escrows/:id/reset-ban', optionalAuth, resetBanHandler);
+router.post('/escrows/:id/reset-ban', requireAdmin, resetBanHandler);
 router.post('/escrows/:id/dispute', optionalAuth, disputeBookingHandler);
 
 // --- Kênh Hỗ Trợ & Kháng Nghị Trực Tiếp Platform CSKH CarMate ---

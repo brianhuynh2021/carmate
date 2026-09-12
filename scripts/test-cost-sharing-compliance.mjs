@@ -73,10 +73,16 @@ async function main() {
     await deleteTrip(t.id);
   }
 
-  it('Chủ xe chưa có chuyến nào: count = 0, isDriverDailyTripCapped = false', () => {
+  // getDailyDriverTripCount đếm theo createdAt của NGÀY HÔM NAY, nên mọi chuyến
+  // seed vừa nạp cũng lọt vào bộ đếm. Vì thế không thể giả định DB trống — đo
+  // theo MỨC NỀN rồi kiểm tra số tăng thêm, để bộ test chạy độc lập với dữ liệu
+  // có sẵn (trước đây assert count === 0 và hỏng ngay khi DB có chuyến khác).
+  const baselineCount = getDailyDriverTripCount(testPhone, testDate);
+
+  it('Chủ xe chưa có chuyến nào: count = mức nền, isDriverDailyTripCapped = false', () => {
     const count = getDailyDriverTripCount(testPhone, testDate);
     const capped = isDriverDailyTripCapped(testPhone, testDate);
-    assert.equal(count, 0);
+    assert.equal(count, baselineCount);
     assert.equal(capped, false);
   });
 
@@ -97,7 +103,7 @@ async function main() {
     assert.ok(trip1?.id);
     const count = getDailyDriverTripCount(testPhone, testDate);
     const capped = isDriverDailyTripCapped(testPhone, testDate);
-    assert.equal(count, 1);
+    assert.equal(count, baselineCount + 1);
     assert.equal(capped, false);
   });
 
@@ -118,7 +124,7 @@ async function main() {
     assert.ok(trip2?.id);
     const count = getDailyDriverTripCount(testPhone, testDate);
     const capped = isDriverDailyTripCapped(testPhone, testDate);
-    assert.equal(count, 2);
+    assert.equal(count, baselineCount + 2);
     assert.equal(capped, false); // Không khóa cứng kỹ thuật
   });
 
@@ -139,7 +145,7 @@ async function main() {
     assert.ok(trip3?.id);
     const count = getDailyDriverTripCount(testPhone, testDate);
     const capped = isDriverDailyTripCapped(testPhone, testDate);
-    assert.equal(count, 3);
+    assert.equal(count, baselineCount + 3);
     assert.equal(capped, false); // Chủ xe tự chủ, nền tảng không chặn
   });
 

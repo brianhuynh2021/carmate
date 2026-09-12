@@ -3,6 +3,7 @@ import { Trash2, AlertTriangle, ShieldCheck, Check, Send } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
+import { isAdminUser } from '../../utils/adminGate.js';
 
 const REASON_PRESETS = [
   'Đổi số điện thoại / Email khác',
@@ -21,8 +22,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
 
   const isAdmin =
     currentUser?.role === 'admin' ||
-    currentUser?.phone?.includes('0984883750') ||
-    currentUser?.phone?.includes('0984 883 750');
+    isAdminUser(currentUser);
 
   const handleSubmitRequest = async () => {
     if (isAdmin) {

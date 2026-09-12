@@ -257,6 +257,43 @@ export async function createTrip(req, res) {
       });
     }
 
+    // BẤT BIẾN GIÁ (MIT): mức bù xăng phải là số dương hợp lý.
+    // Trước đây không kiểm gì — giá -500.000đ vẫn trả 201 và ghi vào SQLite,
+    // làm hỏng mọi phép tính chia sẻ chi phí phía sau.
+    const MAX_PRICE_PER_SEAT = 5000000; // 5 triệu/ghế: trần chống lỗi gõ nhầm
+    const rawPrice = body.basePricePerSeat ?? body.pricePerSeat;
+    if (rawPrice !== undefined && rawPrice !== null && rawPrice !== '') {
+      const price = Number(rawPrice);
+      if (!Number.isFinite(price) || price < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Mức bù xăng không hợp lệ: phải là số không âm.'
+        });
+      }
+      if (price > MAX_PRICE_PER_SEAT) {
+        return res.status(400).json({
+          success: false,
+          error: `Mức bù xăng vượt ngưỡng cho phép (tối đa ${MAX_PRICE_PER_SEAT.toLocaleString('vi-VN')}đ/ghế). Vui lòng kiểm tra lại.`
+        });
+      }
+    }
+
+    // BẤT BIẾN SỨC CHỨA: ghế trống không được vượt quá sức chứa của xe.
+    const capacityNum = Number(body.capacity ?? 0);
+    const seatsNum = Number(body.availableSeats ?? body.seats ?? 0);
+    if (seatsNum < 0 || capacityNum < 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Số ghế và sức chứa phải là số không âm.'
+      });
+    }
+    if (capacityNum > 0 && seatsNum > capacityNum) {
+      return res.status(400).json({
+        success: false,
+        error: `Số ghế trống (${seatsNum}) không thể vượt quá sức chứa của xe (${capacityNum}).`
+      });
+    }
+
     // Kiểm tra tài khoản có bị hạn chế đăng bài hoặc bị vô hiệu hóa hay không (Quy tắc Ân hạn 3 ngày)
     const posterPhone = cleanPhoneNumber(body.phoneReal || '');
     const posterUser = (req.user?.id ? getUserById(req.user.id) : null) || (posterPhone ? getUserByPhone(posterPhone) : null);

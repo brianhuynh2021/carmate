@@ -168,6 +168,30 @@ export async function createBooking(req, res) {
           });
         }
 
+        // BẤT BIẾN SỨC CHỨA (MIT): số ghế đặt phải nằm trong giới hạn thật của xe.
+        // Trước đây không kiểm gì cả — đặt 99 ghế trên xe 2 ghế vẫn trả 201 và
+        // ghi thẳng vào sổ, khiến sàn rơi vào trạng thái mâu thuẫn.
+        // seats = 0 là HỢP LỆ với ghép hàng / chở xe máy: món hàng đi cùng chuyến
+        // nhưng không chiếm ghế người ngồi nào.
+        const requestedSeats = Number(body.seats ?? body.seatsNeeded ?? 1);
+        if (!Number.isFinite(requestedSeats) || requestedSeats < 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Số ghế phải là số không âm.'
+          });
+        }
+
+        const seatsOnOffer = Number(
+          targetTrip.availableSeats ?? targetTrip.seats ?? targetTrip.capacity ?? 0
+        );
+        if (seatsOnOffer > 0 && requestedSeats > seatsOnOffer) {
+          return res.status(400).json({
+            success: false,
+            error: `Chuyến này chỉ còn ${seatsOnOffer} ghế trống, không thể đặt ${requestedSeats} ghế.`
+          });
+        }
+        body.seats = requestedSeats;
+
         const isTargetPassenger = targetTrip.type === 'passenger_request';
         const tripPhoneFinal = targetTrip.phoneReal || targetTrip.phone;
 

@@ -29,6 +29,7 @@ import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
 import NotificationDropdown from './NotificationDropdown.jsx';
+import { isAdminUser } from '../../utils/adminGate.js';
 
 export function LanguageToggle({ className = '' } = {}) {
   const { lang, setLang } = useI18n();
@@ -247,9 +248,7 @@ export default function Header({
                       <p className="text-[11px] text-[#86868b] font-mono truncate">
                         {currentUser.phone || t('userMenu.verifiedIdentity')}
                       </p>
-                      {(currentUser.role === 'admin' ||
-                        currentUser.phone?.includes('0984883750') ||
-                        currentUser.phone?.includes('0984 883 750')) && (
+                      {isAdminUser(currentUser) && (
                         <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
                           <ShieldCheck className="w-3 h-3" /> {t('userMenu.adminBadge')}
                         </span>
@@ -334,9 +333,7 @@ export default function Header({
                     )}
                   </button>
 
-                  {(currentUser.role === 'admin' ||
-                    currentUser.phone?.includes('0984883750') ||
-                    currentUser.phone?.includes('0984 883 750')) && (
+                  {isAdminUser(currentUser) && (
                     <button
                       type="button"
                       onClick={() => {
@@ -436,9 +433,7 @@ export default function Header({
 
                   <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
 
-                  {currentUser.role === 'admin' ||
-                  currentUser.phone?.includes('0984883750') ||
-                  currentUser.phone?.includes('0984 883 750') ? (
+                  {isAdminUser(currentUser) ? (
                     <div className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                       <span className="inline-flex items-center gap-1.5 font-medium">
                         <Lock className="w-3 h-3 text-slate-400" />

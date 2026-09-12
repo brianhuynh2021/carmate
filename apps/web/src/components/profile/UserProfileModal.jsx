@@ -25,6 +25,7 @@ import api from '../../api/client.js';
 import { useTranslation } from '../../i18n/index.jsx';
 import { computeTrustScore, DEFAULT_TRUST_RULES } from '@carmate/shared';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
+import { isAdminUser } from '../../utils/adminGate.js';
 
 // Danh sách hãng xe phổ biến tại Việt Nam
 const POPULAR_BRANDS = [
@@ -763,8 +764,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
 
               {currentUser?.role !== 'admin' &&
-                !currentUser?.phone?.includes('0984883750') &&
-                !currentUser?.phone?.includes('0984 883 750') && (
+                !isAdminUser(currentUser) && (
                 <button
                   type="button"
                   onClick={() => {

@@ -18,7 +18,7 @@ import {
   getCorridorDistanceKm
 } from '../services/batchMatchingEngine.js';
 
-import { cleanPhoneNumber, isValidVietnamesePhone } from '@carmate/shared';
+import { cleanPhoneNumber, isValidVietnamesePhone, maskPhoneNumber } from '@carmate/shared';
 
 /**
  * POST /api/intents - Khai báo ý định di chuyển (Chủ xe hoặc Khách)
@@ -107,7 +107,7 @@ export async function createMovementIntentHandler(req, res) {
  */
 export function getMovementIntentsHandler(req, res) {
   try {
-    const { role, corridor, date, status, userId } = req.query || {};
+    const { role, corridor, date, status, userId, mine } = req.query || {};
     const filter = {};
     if (role) filter.role = role;
     if (corridor) filter.corridor = corridor;
@@ -116,9 +116,40 @@ export function getMovementIntentsHandler(req, res) {
     if (userId) filter.userId = userId;
 
     const intents = getIntents(filter);
+
+    const viewerPhone = cleanPhoneNumber(req.user?.phone || '');
+    const viewerId = req.user?.id || null;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+
+    const isOwner = (intent) =>
+      isAdmin ||
+      (viewerPhone && cleanPhoneNumber(intent.phone || '') === viewerPhone) ||
+      (viewerId && intent.userId === viewerId);
+
+    // `?mine=1`: chỉ trả ý định của chính người đang đăng nhập. Trước đây giao
+    // diện phải tải TOÀN BỘ ý định rồi tự lọc theo số điện thoại ở phía client —
+    // cách đó chỉ chạy được vì máy chủ lộ số thật của tất cả mọi người.
+    const scoped = mine ? intents.filter(isOwner) : intents;
+
+    // LỚP CHẮN PII (Nghị định 13/2023): sàn công khai chỉ được thấy bí danh và
+    // số đã che. Số thật, tên thật chỉ hiện với chính chủ hoặc Quản trị viên.
+    const data = scoped.map((intent) => {
+      if (isOwner(intent)) return { ...intent, isOwner: true };
+      const tail = String(intent.id || '').slice(-3).toUpperCase() || 'XXX';
+      const safe = { ...intent };
+      safe.phoneMasked = maskPhoneNumber(intent.phone || '');
+      safe.publicName = intent.role === 'driver' ? `Chủ xe CX-${tail}` : `Người đi cùng KX-${tail}`;
+      delete safe.phone;
+      delete safe.phoneReal;
+      delete safe.contactName;
+      delete safe.userId;
+      delete safe.matchedBookingId;
+      return safe;
+    });
+
     return res.status(200).json({
       success: true,
-      data: intents
+      data
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

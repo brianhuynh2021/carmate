@@ -15,7 +15,7 @@ import {
   HeartHandshake
 } from 'lucide-react';
 import api from '../../api/client.js';
-import { formatVND, getZaloChatLink } from '@carmate/shared';
+import { formatVND, getZaloChatLink, SITE_INFO } from '@carmate/shared';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
 
 const QUICK_PROMPTS = [
@@ -241,7 +241,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                                 )}
                                 <a
                                   href={getZaloChatLink(
-                                    trip.phoneReal || '0984883750',
+                                    trip.phoneReal || SITE_INFO.phoneRaw,
                                     `Chào bạn, mình thấy chuyến xe ${trip.from} đi ${trip.to} của bạn trên CarMate, mình muốn đăng ký ghép chỗ!`
                                   )}
                                   target="_blank"

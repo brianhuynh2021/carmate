@@ -97,35 +97,55 @@ export default function DriverScheduleCardView({
   const reloadSchedules = useCallback(async () => {
     setIsLoadingSchedules(true);
     try {
-      const res = await api.getMovementIntents({ role: 'driver' });
+      // Để máy chủ lọc theo danh tính (?mine=1) thay vì tải toàn bộ ý định rồi
+      // tự so số điện thoại ở client — cách cũ chỉ chạy được khi máy chủ lộ số
+      // thật của mọi người, chính là lỗ hổng PII vừa vá.
+      const res = await api.getMovementIntents({ role: 'driver', mine: 1 });
       const rows = Array.isArray(res?.data) ? res.data : [];
-      const mine = driverPhone
-        ? rows.filter((r) => String(r.phone || '').slice(-9) === driverPhone.slice(-9))
-        : rows;
-      setSchedules(mine.map(intentToSchedule));
+      setSchedules(rows.map(intentToSchedule));
     } catch (err) {
       console.warn('[DriverSchedule] Không tải được lịch trình từ máy chủ:', err);
       setSchedules([]);
     } finally {
       setIsLoadingSchedules(false);
     }
-  }, [driverPhone]);
+  }, []);
 
   useEffect(() => {
     reloadSchedules();
   }, [reloadSchedules]);
 
-  // HỆ THỐNG ĐIỂM TÍN NHIỆM (CARMATE TRUST ENGINE)
-  const [trustScore, setTrustScore] = useState(() => {
-    try {
-      const saved = localStorage.getItem('carmate_driver_trust_score');
-      if (saved) return Number(saved);
-    } catch {}
-    return 98;
-  });
+  // Nạp hồ sơ tin cậy THẬT từ máy chủ (/api/trust) — điểm tín nhiệm, số chuyến
+  // đã hoàn thành và tỉ lệ giữ hẹn đều tính từ dữ liệu thật, không bịa ở client.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await api.getTrustProfile();
+        if (!alive) return;
+        const d = res?.data || {};
+        if (typeof d.trustScore === 'number') setTrustScore(d.trustScore);
+        const stats = d.driverStats || {};
+        if (typeof stats.tripsCompleted === 'number') setCompletedTrips(stats.tripsCompleted);
+        else if (typeof d.totalCommunityTrips === 'number') setCompletedTrips(d.totalCommunityTrips);
+        if (typeof stats.commitmentRate === 'number') setCommitmentRate(stats.commitmentRate);
+      } catch (err) {
+        console.warn('[DriverSchedule] Không tải được hồ sơ tin cậy:', err);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
-  const [completedTrips] = useState(24);
-  const [commitmentRate] = useState(98);
+  // HỆ THỐNG ĐIỂM TÍN NHIỆM (CARMATE TRUST ENGINE)
+  // Điểm tín nhiệm là dữ liệu CHẾ TÀI, nguồn sự thật duy nhất nằm ở máy chủ.
+  // Trước đây đọc/ghi thẳng localStorage nên chủ xe chỉ cần sửa trình duyệt là
+  // thành "Uy Tín Hạng Vàng", và con số đó không liên quan gì tới điểm thật.
+  const [trustScore, setTrustScore] = useState(null);
+  const [completedTrips, setCompletedTrips] = useState(null);
+  const [commitmentRate, setCommitmentRate] = useState(null);
+
 
   // MODALS STATE
   const [showTrustModal, setShowTrustModal] = useState(false);
@@ -151,12 +171,10 @@ export default function DriverScheduleCardView({
     setSchedules(newScheds);
   };
 
+  // Chỉ cập nhật hiển thị lạc quan; máy chủ mới là nơi trừ điểm thật
+  // (xem applyCancellationPenalty trong sqliteStore).
   const updateTrustScoreState = (newScore) => {
-    const clamped = Math.max(0, Math.min(100, newScore));
-    setTrustScore(clamped);
-    try {
-      localStorage.setItem('carmate_driver_trust_score', String(clamped));
-    } catch {}
+    setTrustScore(Math.max(0, Math.min(100, newScore)));
   };
 
   // 1. THAO TÁC 3 GIÂY: DỜI GIỜ (+15P HOẶC +30P)
@@ -241,7 +259,7 @@ export default function DriverScheduleCardView({
 
     // Giả lập huỷ sát giờ (<15 phút) -> Trừ 20 điểm
     const penaltyPoints = 20;
-    const newScore = trustScore - penaltyPoints;
+    const newScore = (trustScore ?? 98) - penaltyPoints;
     updateTrustScoreState(newScore);
 
     // Cập nhật trạng thái chuyến
@@ -359,11 +377,11 @@ export default function DriverScheduleCardView({
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-slate-400 font-mono block">Điểm tín nhiệm:</span>
                 <span className="text-sm font-black font-mono text-emerald-400">
-                  {trustScore}/100
+                  {trustScore ?? '—'}/100
                 </span>
               </div>
               <span className="text-[11px] text-amber-300 font-medium block">
-                {trustScore >= 90 ? '🟢 Uy Tín Hạng Vàng' : trustScore >= 70 ? '🟡 Mức Bình Thường' : '🔴 Cần Chú Ý'}
+                {trustScore == null ? 'Đang tải hồ sơ…' : trustScore >= 90 ? '🟢 Uy Tín Hạng Vàng' : trustScore >= 70 ? '🟡 Mức Bình Thường' : '🔴 Cần Chú Ý'}
               </span>
             </div>
           </div>
@@ -842,7 +860,7 @@ export default function DriverScheduleCardView({
               <div className="flex items-center justify-between p-2 rounded-xl bg-black/10 dark:bg-black/40 font-mono text-xs">
                 <span>Điểm tín nhiệm của bạn:</span>
                 <span className="font-black text-rose-500">
-                  {trustScore} ➔ {Math.max(0, trustScore - 20)} điểm (-20đ)
+                  {trustScore ?? '—'} ➔ {Math.max(0, (trustScore ?? 98) - 20)} điểm (-20đ)
                 </span>
               </div>
             </div>
