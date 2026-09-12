@@ -268,8 +268,12 @@ export default function CockpitMode({
         driverPhone,
         note,
         context: {
-          stationId: currentStation?.id || 'hub-tan-khai',
-          corridor: currentCorridor,
+          // `currentStation`/`currentCorridor` chưa bao giờ tồn tại trong phạm vi này
+          // (ESLint no-undef) — mọi lần báo sự cố đều ném ReferenceError trước khi
+          // kịp gửi đi. Dùng đúng nguồn đang có: trạm của lời mời đón đang hoạt động
+          // và hành lang được truyền vào qua props.
+          stationId: activeOffer?.stationId || activeOffer?.stationName || 'hub-tan-khai',
+          corridor: initialCorridor || 'Tuyến QL13',
           plate: vehicle?.plate
         }
       };

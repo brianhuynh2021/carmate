@@ -64,14 +64,25 @@ import {
 let passedTests = 0;
 let failedTests = 0;
 
+// Danh sách bài test thất bại — in đầy đủ ở phần tổng kết thay vì thoát ngay.
+const failures = [];
+
+/**
+ * Bài test thất bại KHÔNG được thoát tiến trình ngay tại chỗ: làm vậy thì phần
+ * tổng kết (và exit code phản ánh đúng số bài lỗi) không bao giờ chạy tới, khiến
+ * `npm test` trả về 0 và CI xanh giả dù engine đang lỗi. Ghi nhận lỗi, chạy tiếp
+ * các bài còn lại, rồi thoát 1 ở cuối nếu có bất kỳ bài nào hỏng.
+ */
 function assert(condition, message) {
   if (!condition) {
     failedTests++;
+    failures.push(message);
     console.error(`❌ THẤT BẠI: ${message}`);
-    process.exit(1);
+    return false;
   }
   passedTests++;
   console.log(`✅ ${message}`);
+  return true;
 }
 
 async function runLevel3Suite() {
@@ -655,6 +666,9 @@ async function runLevel3Suite() {
   clearAllBookings();
 
   if (failedTests > 0) {
+    console.error('\n❌ DANH SÁCH BÀI TEST THẤT BẠI:');
+    failures.forEach((m, i) => console.error(`   ${i + 1}. ${m}`));
+    console.error('');
     process.exit(1);
   } else {
     console.log('🎉 TẤT CẢ KIỂM THỬ LEVEL 3 ĐÃ ĐẠT 100%! HỆ THỐNG SẴN SÀNG TRIỂN KHAI VẬN HÀNH.\n');

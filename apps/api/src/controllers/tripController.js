@@ -509,6 +509,9 @@ export async function deleteTripHandler(req, res) {
  */
 export async function republishTripHandler(req, res) {
   try {
+    const { id } = req.params;
+    const updates = req.body || {};
+
     const existingTrip = getTripById(id);
     if (!existingTrip) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến xe gốc để tái đăng' });
