@@ -254,11 +254,11 @@ export default function CorridorSearchBoard({
 
       {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
       <section className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08] shadow-sm overflow-hidden">
-        {/* Điểm đi */}
-        <div className="p-4 sm:p-5 flex items-center gap-3">
+        {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
+        <div className="p-4 sm:p-5 pr-16 flex items-center gap-3">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0" />
           <div className="flex-1 min-w-0">
-            <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
+            <label className="block text-[11px] font-medium uppercase tracking-wide text-slate-400 mb-0.5">
               {t('search.from')}
             </label>
             <div>
@@ -288,14 +288,14 @@ export default function CorridorSearchBoard({
             onClick={swap}
             aria-label={t('search.swap')}
             title={t('search.swap')}
-            className="group absolute right-0 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 ring-4 ring-white dark:ring-slate-900 shadow-sm flex items-center justify-center text-slate-500 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-md focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-150 cursor-pointer"
+            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 ring-4 ring-white dark:ring-slate-900 shadow-sm flex items-center justify-center text-slate-500 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-md focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-150 cursor-pointer"
           >
             <ArrowUpDown className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" />
           </button>
         </div>
 
         {/* Điểm đến */}
-        <div className="p-4 sm:p-5 flex items-center gap-3">
+        <div className="p-4 sm:p-5 pr-16 flex items-center gap-3">
           <MapPin className="w-5 h-5 text-[#0071e3] shrink-0" />
           <div className="flex-1 min-w-0">
             <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
@@ -322,7 +322,7 @@ export default function CorridorSearchBoard({
             chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm". */}
         <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4 sm:mx-5" />
         <div className="p-4 sm:p-5">
-          <label className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-2.5">
+          <label className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-slate-400 mb-2.5">
             <Clock className="w-4 h-4 text-amber-500 shrink-0" />
             {t('search.departureLabel')}
           </label>
@@ -341,13 +341,23 @@ export default function CorridorSearchBoard({
                     if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
                   }}
                   aria-pressed={active}
-                  className={`h-12 px-3 rounded-2xl border text-xs font-bold flex items-center justify-center text-center transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                  className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-[0.98] ${
                     active
                       ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:border-[#0071e3]/50 hover:shadow-xs'
                   }`}
                 >
-                  <span className="truncate">{chip.display}</span>
+                  {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
+                      (Android phổ thông) chuỗi "Chiều nay (16h30-18h)" bị cắt cụt
+                      đúng phần giờ — mất chính thông tin quan trọng nhất. */}
+                  <span className="text-xs font-bold truncate max-w-full">{chip.label}</span>
+                  <span
+                    className={`text-[10px] font-mono truncate max-w-full ${
+                      active ? 'text-white/80' : 'text-slate-400'
+                    }`}
+                  >
+                    {chip.hint}
+                  </span>
                 </button>
               );
             })}
@@ -358,7 +368,7 @@ export default function CorridorSearchBoard({
               type="button"
               onClick={() => setShowDatePanel((v) => !v)}
               aria-expanded={showDatePanel}
-              className={`h-12 px-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+              className={`h-[52px] px-2 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-[0.98] ${
                 showDatePanel
                   ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white'
                   : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/15 text-slate-600 dark:text-slate-300 hover:border-[#0071e3]/50 hover:text-[#0071e3]'
@@ -463,8 +473,12 @@ export default function CorridorSearchBoard({
 
           {/* Giá hiện lặng lẽ dưới nút — kết quả, không phải thông báo */}
           {tariff && (
-            <p className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400 font-mono break-words">
-              {formatVND(tariff.pricePerSeat)} · {tariff.distanceKm}km · {t('search.allInclusive')}
+            <p className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400 break-words">
+              <span className="font-mono font-semibold">{formatVND(tariff.pricePerSeat)}</span>
+              {' · '}
+              <span className="font-mono">{tariff.distanceKm}km</span>
+              {' · '}
+              {t('search.allInclusive')}
             </p>
           )}
         </div>
