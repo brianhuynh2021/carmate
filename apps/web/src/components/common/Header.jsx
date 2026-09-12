@@ -168,8 +168,8 @@ export default function Header({
                 aria-current={active ? 'page' : undefined}
                 className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none flex items-center gap-1.5 ${
                   active
-                    ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                    : 'text-[#515154] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-md hover:scale-[1.02]'
+                    : 'text-[#515154] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:scale-[1.02]'
                 }`}
               >
                 <tab.icon className="w-3.5 h-3.5" strokeWidth={active ? 2.4 : 2} />
