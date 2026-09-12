@@ -105,7 +105,7 @@ export async function initDB() {
       db.exec('ALTER TABLE users ADD COLUMN email TEXT');
     }
     db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
-  } catch (migErr) {
+  } catch {
     // Bỏ qua nếu đã tồn tại hoặc đang chạy trong transaction
   }
 
@@ -146,7 +146,7 @@ export async function initDB() {
       if (!bookingCols.includes('cancellationReason')) {
         db.exec('ALTER TABLE bookings ADD COLUMN cancellationReason TEXT');
       }
-    } catch (migErr) {
+    } catch {
       // Bỏ qua nếu đã tồn tại
     }
 
@@ -1739,7 +1739,7 @@ export function getSupportMessages({ bookingId, userId, phone, limit = 50 } = {}
 /**
  * Xử lý khiếu nại (Dispute) và gỡ khóa tài khoản (Unban) tự động hoặc theo phê duyệt
  */
-export async function resolveDisputeAndUnban({ bookingId, userId, phone, reason = '', note = '' } = {}) {
+export async function resolveDisputeAndUnban({ bookingId, userId, phone } = {}) {
   const database = getRawDB();
   // 1. Mở khóa booking nếu có
   if (bookingId) {

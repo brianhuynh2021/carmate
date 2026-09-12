@@ -40,9 +40,6 @@ import {
   cleanPhoneNumber,
   findNearestVirtualHub,
   calculateDistanceKm,
-  calculateLastMileOption,
-  POPULAR_LAST_MILE_DESTINATIONS,
-  getHubLiquidityStatus,
   FIXED_CORRIDOR_COACH_SCHEDULES,
   UNHAPPY_CASE_CODES,
   getDefaultCorridor,
@@ -134,7 +131,6 @@ export default function StationRiderView({
               distanceKm: dKm,
               distanceMeters: distM
             });
-            setGeofenceDistanceM(distM);
 
             if (ql13PickupHubs.some((h) => h.id === nearest.id)) {
               setPickupHubId(nearest.id);
@@ -181,7 +177,6 @@ export default function StationRiderView({
   const [showOtherDestinations, setShowOtherDestinations] = useState(false);
   const [showStationPicker, setShowStationPicker] = useState(false);
   const [showNoShowRescueModal, setShowNoShowRescueModal] = useState(false);
-  const [hasGoldenTicket, setHasGoldenTicket] = useState(false);
   const [failoverInfo, setFailoverInfo] = useState(null);
   const [seatsNeeded, setSeatsNeeded] = useState(1);
   const [paidStatus, setPaidStatus] = useState(false);
@@ -273,7 +268,6 @@ export default function StationRiderView({
 
   // Tọa độ định vị GPS của thiết bị & Cảnh báo Geofence Khóa kép (Anti-Quishing Layer 2)
   const [clientCoords, setClientCoords] = useState(null);
-  const [geofenceDistanceM, setGeofenceDistanceM] = useState(null);
   const [nearestHubInfo, setNearestHubInfo] = useState(null);
   const [showStationRequestModal, setShowStationRequestModal] = useState(false);
 
@@ -289,7 +283,6 @@ export default function StationRiderView({
 
   // Dữ liệu Boarding Pass (R2)
   const [boardingPass, setBoardingPass] = useState(null);
-  const [copiedPin, setCopiedPin] = useState(false);
   const [showLegalShield, setShowLegalShield] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
@@ -301,16 +294,6 @@ export default function StationRiderView({
   const [showCoachLifebuoyModal, setShowCoachLifebuoyModal] = useState(false);
   const [driverLateDelayMinutes, setDriverLateDelayMinutes] = useState(0);
   const [isGraceCancelLoading, setIsGraceCancelLoading] = useState(false);
-
-  // Trạng thái Giả lập Chặng cuối Nội đô (Last-Mile Transit Simulator - Zero External API)
-  const [selectedLastMileDestId, setSelectedLastMileDestId] = useState('cho_ba_chieu');
-  const [customLastMileText, setCustomLastMileText] = useState('');
-  const [showLastMileCalc, setShowLastMileCalc] = useState(false);
-
-  const lastMileOption = useMemo(() => {
-    const input = customLastMileText.trim() || selectedLastMileDestId;
-    return calculateLastMileOption(input, pickupHubId);
-  }, [customLastMileText, selectedLastMileDestId, pickupHubId]);
 
   // Danh sách các điểm đến khả dĩ trên hành lang QL13 (loại trừ trạm đang đứng)
   const destinationOptions = useMemo(() => {
@@ -564,12 +547,6 @@ export default function StationRiderView({
               distanceKm: dKm,
               distanceMeters: distM
             });
-            setGeofenceDistanceM(distM);
-          } else if (currentHub.lat != null && currentHub.lng != null) {
-            const distKm = calculateDistanceKm(lat, lng, currentHub.lat, currentHub.lng);
-            if (distKm != null) {
-              setGeofenceDistanceM(Math.round(distKm * 1000));
-            }
           }
         },
         () => {},
@@ -892,15 +869,6 @@ export default function StationRiderView({
     } catch {}
     setShowAuthModal(false);
     executeCheckIn(clean, finalName);
-  };
-
-  const handleCopyPin = () => {
-    if (boardingPass?.pin) {
-      navigator.clipboard?.writeText(boardingPass.pin);
-      setCopiedPin(true);
-      setTimeout(() => setCopiedPin(false), 2000);
-      onShowToast?.('Đã sao chép mã PIN 4 số!');
-    }
   };
 
   const handleCancelPass = () => {
@@ -2079,7 +2047,6 @@ export default function StationRiderView({
               <Button
                 variant="danger"
                 onClick={() => {
-                  setHasGoldenTicket(true);
                   handleCancelPass();
                   setShowNoShowRescueModal(false);
                   onShowToast?.('🎉 Đã cấp Thẻ Ưu Tiên Vàng #1! Bạn đã được giải phóng vé để bắt xe khách/buýt.');
