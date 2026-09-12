@@ -64,6 +64,19 @@ import {
   listStationRequestsHandler,
   updateStationRequestStatusHandler
 } from '../controllers/stationRequestController.js';
+import {
+  getVapidKeyHandler,
+  subscribePushHandler,
+  unsubscribePushHandler,
+  listNotificationsHandler,
+  markReadHandler,
+  riderOnTheWayHandler,
+  schedulerStatusHandler,
+  schedulerRunTickHandler,
+  timeSlotMatrixHandler,
+  driverReadyHandler,
+  rescueStatusHandler
+} from '../controllers/notificationController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
   adminAuth,
@@ -162,6 +175,9 @@ router.get('/bookings', optionalAuth, listBookings);
 router.post('/bookings', optionalAuth, createBooking);
 router.get('/bookings/:id/public-summary', optionalAuth, getBookingPublicSummary);
 router.post('/bookings/:id/driver-confirm', optionalAuth, driverConfirmBooking);
+// Chốt T-40/T-30: chủ xe bấm "Tôi đang đi", và khách tra cứu Chế độ Cứu hộ
+router.post('/bookings/:id/driver-ready', optionalAuth, driverReadyHandler);
+router.get('/bookings/:id/rescue-status', optionalAuth, rescueStatusHandler);
 router.post('/bookings/:id/messages', optionalAuth, addBookingMessageHandler);
 router.post('/bookings/:id/pre-confirm', optionalAuth, preConfirmBookingHandler);
 router.post('/bookings/:id/final-confirm', optionalAuth, finalConfirmBookingHandler);
@@ -205,6 +221,7 @@ router.get('/station/:hubId/status', getStationQueueHandler);
 router.get('/station/rider/radar-risk', riderGetRadarRiskHandler);
 router.post('/station/rider/report-culture-violation', riderReportCultureViolationHandler);
 router.post('/station/rider/cancel-grace', riderCancelGraceHandler);
+router.post('/station/rider/on-the-way', riderOnTheWayHandler);
 router.get('/station/rider/:intentId', getRiderPassHandler);
 router.post('/cockpit/telemetry', cockpitTelemetryHandler);
 router.post('/cockpit/accept-offer', cockpitAcceptOfferHandler);
@@ -222,9 +239,21 @@ router.post('/station-requests', optionalAuth, createStationRequestHandler);
 router.get('/station-requests', optionalAuth, listStationRequestsHandler);
 router.patch('/admin/station-requests/:id', requireAdmin, updateStationRequestStatusHandler);
 
+// --- Ma Trận Khe Thời Gian (Time-Slotted Corridor) ---
+router.get('/corridor/time-slots', timeSlotMatrixHandler);
+
+// --- Thông Báo Đẩy & Hộp Thư In-App (Kênh đánh thức khách ngoài giờ mở app) ---
+router.get('/notifications/vapid-key', getVapidKeyHandler);
+router.post('/notifications/subscribe', optionalAuth, subscribePushHandler);
+router.post('/notifications/unsubscribe', optionalAuth, unsubscribePushHandler);
+router.get('/notifications', optionalAuth, listNotificationsHandler);
+router.post('/notifications/read', optionalAuth, markReadHandler);
+
 // --- Admin Management Portal Engine ---
 router.post('/admin/auth', adminAuth);
 router.get('/admin/metrics', requireAdmin, getMetrics);
+router.get('/admin/scheduler-status', requireAdmin, schedulerStatusHandler);
+router.post('/admin/scheduler-run', requireAdmin, schedulerRunTickHandler);
 router.get('/admin/trips', requireAdmin, listAdminTrips);
 router.patch('/admin/trips/:id/toggle-hide', requireAdmin, toggleHideTripHandler);
 router.delete('/admin/trips/:id', requireAdmin, deleteTripAdminHandler);

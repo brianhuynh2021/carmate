@@ -42,7 +42,7 @@ export function LanguageToggle({ className = '' } = {}) {
       onClick={() => setLang(next)}
       title={label}
       aria-label={label}
-      className={`h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 ${className}`}
+      className={`relative tap-area-44 h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 ${className}`}
     >
       <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
       <span className="font-mono text-xs font-bold uppercase">{lang === 'vi' ? 'EN' : 'VI'}</span>
@@ -189,7 +189,7 @@ export default function Header({
             onClick={onOpenAi}
             title={isMac ? 'Trợ lý CarMate (Phím tắt: ⌘K)' : 'Trợ lý CarMate (Phím tắt: Ctrl+K)'}
             aria-label={t('header2.s004')}
-            className="inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
+            className="relative tap-area-44 inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline font-medium">{t('nav.assistant') || t('nav.aiAssistant') || 'Trợ lý'}</span>
@@ -205,7 +205,7 @@ export default function Header({
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="true"
-                className="h-8.5 sm:h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
+                className="relative tap-area-44 h-8.5 sm:h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               >
                 <span className="relative flex items-center justify-center shrink-0">
                   {currentUser.avatar ? (
@@ -453,7 +453,7 @@ export default function Header({
             <button
               type="button"
               onClick={onOpenAuth}
-              className="h-8.5 sm:h-9 px-2.5 sm:px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all shrink-0"
+              className="relative tap-area-44 h-8.5 sm:h-9 px-2.5 sm:px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all shrink-0"
             >
               <User className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
               <span className="hidden sm:inline">{t('nav.signInOrRegister')}</span>
@@ -470,7 +470,7 @@ export default function Header({
               aria-haspopup="true"
               title={t('header2.s005')}
               aria-label={t('header2.s006')}
-              className={`relative inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold border cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0 ${
+              className={`relative tap-area-44 inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold border cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0 ${
                 isNotificationCenterOpen
                   ? 'bg-[#0071e3]/10 dark:bg-[#0071e3]/20 border-[#0071e3]/30 text-[#0071e3]'
                   : 'bg-white dark:bg-slate-800 hover:bg-[#f5f5f7] dark:hover:bg-slate-700 text-[#1d1d1f] dark:text-white border-black/[0.08] dark:border-white/[0.08]'

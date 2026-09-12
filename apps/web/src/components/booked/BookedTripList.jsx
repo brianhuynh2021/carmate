@@ -29,6 +29,7 @@ import Badge from '../ui/Badge.jsx';
 import EmptyState, { SectionHeader } from '../ui/EmptyState.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
+import RescueModeBanner from './RescueModeBanner.jsx';
 
 
 
@@ -516,11 +517,21 @@ export default function BookedTripList({
               callerId: currentUser?.phone || currentUser?.id
             });
 
+            // Chuyến đã xong hoặc đã huỷ thì không còn gì để cứu hộ nữa
+            const needsRescueWatch = !isCompleted && !isCancelled;
+
             return (
               <article
                 key={record.escrowId || record.id}
                 className="surface overflow-hidden rounded-2xl sm:rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.08)] hover:border-[#0071e3]/40 dark:hover:border-sky-400/40 transition-all duration-200"
               >
+                {/* CHẾ ĐỘ CỨU HỘ: tự hiện khi máy chủ bật cờ ở mốc T-20, đặt trên
+                    cùng thẻ chuyến để khách nhìn thấy ngay mà không phải bấm gì. */}
+                {needsRescueWatch && (
+                  <div className="p-3 pb-0">
+                    <RescueModeBanner bookingId={record.escrowId || record.id} />
+                  </div>
+                )}
                 {/* ── 1. KHỐI THU GỌN TINH TẾ (COMPACT SUMMARY ROW) ── */}
                 <div
                   role="button"

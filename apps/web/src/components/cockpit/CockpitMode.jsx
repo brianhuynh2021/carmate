@@ -1961,10 +1961,14 @@ export default function CockpitMode({
                   <div key={lb.id} className="p-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] space-y-1">
                     <span className="font-bold text-white block">{lb.name}</span>
                     <span className="text-slate-400 block text-[11px] font-mono">Tần suất: {lb.frequency}</span>
-                    <div className="flex items-center gap-1.5 pt-1 text-emerald-400 font-mono font-bold text-[11px]">
-                      <PhoneCall className="w-3.5 h-3.5" />
-                      <span>{lb.contact}</span>
-                    </div>
+                    {lb.hotline ? (
+                      <div className="flex items-center gap-1.5 pt-1 text-emerald-400 font-mono font-bold text-[11px]">
+                        <PhoneCall className="w-3.5 h-3.5" />
+                        <span>{lb.hotline}</span>
+                      </div>
+                    ) : (
+                      <p className="pt-1 text-[11px] text-slate-400 leading-relaxed">{lb.guidance}</p>
+                    )}
                   </div>
                 ))}
               </div>

@@ -4,7 +4,9 @@
  * Chuẩn bị môi trường dữ liệu phong phú, sống động và thực tế 100%:
  * - Đầy đủ các chuyến của tài khoản chính (0984883750) ở mọi trạng thái: đang nhận khách, đã đủ người, đã qua giờ (để test tái đăng), khứ hồi.
  * - Đầy đủ các đơn ghép xe (Bookings): đang hẹn Zalo, đã đặt cọc, đã hoàn thành, có đánh giá 5 sao, trễ hẹn, huỷ.
- * - Đầy đủ các hành lang liên tỉnh trọng điểm: Tuyến QL13, Tuyến QL14, Tuyến Cao tốc Vũng Tàu, Tuyến Phan Thiết, Tuyến Miền Tây.
+ * - Chỉ gieo dữ liệu thuộc các hành lang CarMate thực sự vận hành: Tuyến QL13 và QL14.
+ *   Không gieo chuyến thuộc tuyến chưa phục vụ (Vũng Tàu, Phan Thiết...) vì chúng lọt vào
+ *   kết quả tìm kiếm và làm sai lệch bức tranh nguồn cung thật của hành lang.
  * - Đồng bộ 100% giữa SQLite (apps/api/data/carmate.sqlite) và JSON (apps/api/data/carmate_db.json).
  *
  * Cách chạy:
@@ -383,69 +385,6 @@ const TRIPS = [
     createdAt: Date.now() - 3600000 * 5
   },
   {
-    id: 'DRV-103',
-    maskedCode: 'CX-103',
-    type: 'driver_offer',
-    status: 'active',
-    phoneReal: '0900000017',
-    userId: 'USR-0900000017',
-    publicName: 'Chủ xe CX-103',
-    from: 'Phan Thiết (Mũi Né / Trung tâm TP)',
-    to: 'Sài Gòn (Quận 1 / Quận 2 - Cao tốc Dầu Giây)',
-    routeCategory: 'Tuyến Phan Thiết',
-    direction: 'province_to_sg',
-    hometown: 'Bình Thuận',
-    date: 'Hôm nay',
-    timeSlot: '08:00-09:00',
-    timeSlotLabel: '08:00 – 09:00 Sáng',
-    carType: 'Toyota Fortuner (Xe 7 chỗ gầm cao)',
-    capacity: 6,
-    availableSeats: 3,
-    price: 220000,
-    basePricePerSeat: 220000,
-    depositPerSeat: 0,
-    carCategory: 'family_car',
-    isVip: true,
-    rating: 5.0,
-    completedCount: 65,
-    perks: ['Xe gầm cao êm ái', 'Bao vé cầu đường cao tốc', 'Không khói thuốc'],
-    hasCarPhotos: false,
-    notes: 'Chạy thẳng cao tốc Phan Thiết - Dầu Giây chỉ mất 2 tiếng rưỡi.',
-    createdAt: Date.now() - 3600000 * 3
-  },
-  {
-    id: 'DRV-104',
-    maskedCode: 'CX-104',
-    type: 'driver_offer',
-    status: 'active',
-    phoneReal: '0900000012',
-    userId: 'USR-0900000012',
-    publicName: 'Chủ xe CX-104',
-    from: 'Bãi Trước Vũng Tàu (TP. Vũng Tàu)',
-    to: 'Sài Gòn (Quận 7 / Phú Mỹ Hưng - Cao tốc Long Thành)',
-    routeCategory: 'Tuyến Vũng Tàu',
-    direction: 'province_to_sg',
-    hometown: 'Bà Rịa - Vũng Tàu',
-    date: 'Ngày mai',
-    timeSlot: '14:00-15:00',
-    timeSlotLabel: '14:00 – 15:00',
-    carType: 'Kia Carnival (Xe 7 chỗ VIP)',
-    capacity: 6,
-    availableSeats: 4,
-    price: 150000,
-    basePricePerSeat: 150000,
-    depositPerSeat: 0,
-    carCategory: 'family_car',
-    isVip: true,
-    rating: 4.97,
-    completedCount: 210,
-    perks: ['Xe VIP thương gia', 'Không khói thuốc', 'Trọn gói vé cầu đường'],
-    hasCarPhotos: true,
-    carPhotos: CAR_PHOTOS_XPANDER,
-    notes: 'Xe Carnival rộng rãi bậc nhất, phù hợp gia đình có người lớn tuổi hoặc trẻ em.',
-    createdAt: Date.now() - 3600000 * 1
-  },
-  {
     id: 'DRV-105',
     maskedCode: 'CX-105',
     type: 'driver_offer',
@@ -525,29 +464,6 @@ const TRIPS = [
     notes: 'Tan sở về quê cuối tuần, có 1 ba lô gọn nhẹ.',
     createdAt: Date.now() - 3600000 * 2
   },
-  {
-    id: 'REQ-203',
-    maskedCode: 'KX-203',
-    type: 'passenger_request',
-    status: 'open',
-    phoneReal: '0900000014',
-    userId: 'USR-0900000014',
-    publicName: 'Khách KX-203',
-    from: 'Quận 7 / Phú Mỹ Hưng (Sài Gòn)',
-    to: 'Bãi Sau - Vũng Tàu',
-    routeCategory: 'Tuyến Vũng Tàu',
-    direction: 'sg_to_province',
-    date: 'Ngày mai',
-    timeSlot: '08:00-09:30',
-    timeSlotLabel: '08:00 – 09:30 Sáng',
-    seatsNeeded: 3,
-    seats: 3,
-    price: 450000,
-    expectedPrice: 450000,
-    depositPerSeat: 0,
-    notes: 'Đi nghỉ mát gia đình 3 người, tìm xe 7 chỗ rộng rãi đón tại chung cư.',
-    createdAt: Date.now() - 3600000 * 4
-  }
 ];
 
 // 3. DANH SÁCH ĐƠN GHÉP XE (BOOKINGS / ESCROWS)
