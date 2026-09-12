@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowUpDown, Circle, Navigation, Search, Clock, Car, Users, Loader2, ChevronDown } from 'lucide-react';
+import { ArrowUpDown, MapPin, Search, Clock, Car, Users, Loader2, ChevronDown } from 'lucide-react';
 import {
   getActiveCorridors,
   getDefaultCorridor,
@@ -199,12 +199,7 @@ export default function CorridorSearchBoard({
       <section className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08] shadow-sm overflow-hidden">
         {/* Điểm đi */}
         <div className="p-4 sm:p-5 flex items-center gap-3">
-          {/* Nơi đi dùng vòng tròn rỗng, nơi đến dùng mũi tên điều hướng — quy ước
-              quen thuộc của ứng dụng bản đồ. Trước đây cả hai cùng là MapPin chỉ khác
-              màu, nên liếc qua rất khó phân biệt ô nào là ô nào. */}
-          <span className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
-            <Circle className="w-3.5 h-3.5 text-emerald-500" strokeWidth={3} />
-          </span>
+          <MapPin className="w-5 h-5 text-emerald-500 shrink-0" />
           <div className="flex-1 min-w-0">
             <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
               {t('search.from')}
@@ -244,9 +239,7 @@ export default function CorridorSearchBoard({
 
         {/* Điểm đến */}
         <div className="p-4 sm:p-5 flex items-center gap-3">
-          <span className="w-9 h-9 rounded-full bg-[#0071e3]/10 flex items-center justify-center shrink-0">
-            <Navigation className="w-4 h-4 text-[#0071e3] -rotate-45" strokeWidth={2.4} />
-          </span>
+          <MapPin className="w-5 h-5 text-[#0071e3] shrink-0" />
           <div className="flex-1 min-w-0">
             <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
               {t('search.to')}
