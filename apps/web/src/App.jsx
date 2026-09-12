@@ -753,6 +753,11 @@ export default function App() {
     return () => {
       isMounted = false;
     };
+    // CHỦ Ý chạy một lần lúc mount: đây là bước khôi phục phiên đăng nhập.
+    // Thêm deps sẽ khiến app thẩm định lại token mỗi khi danh sách chuyến đổi.
+    // Số chuyến của tôi không bị cũ: effect ở trên (deps đủ) tính lại ngay khi
+    // driverOffers/passengerRequests tải xong.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [movementIntentModalOpen, setMovementIntentModalOpen] = useState(false);

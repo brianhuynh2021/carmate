@@ -269,6 +269,9 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     };
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
+    // Deps đã liệt kê đủ mọi trường mà handleSubmit đọc, nên phím tắt luôn gửi
+    // dữ liệu mới nhất. ESLint chỉ đòi thêm vì theo dõi danh tính hàm.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromLocation, toLocation, pickupSpot, dropoffSpot, price, seats, vehicleCapacity, date, timeSlot, waypointNote, notes, saving]);
 
   const quickDates = ['Hôm nay', 'Ngày mai', 'Thứ 7', 'Chủ nhật'];

@@ -108,6 +108,9 @@ export default function AuthModal({
     return () => {
       if (container) container.innerHTML = '';
     };
+    // Widget Telegram chỉ gắn callback một lần vào script được chèn vào DOM;
+    // thêm handleTelegramAuth vào deps sẽ chèn lại widget mỗi lần render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authMethod, telegramBotUsername, isLocalhost, showTelegramForm]);
 
   // Luồng đăng nhập nhanh Telegram (Hỗ trợ cả Số điện thoại hoặc @username)
@@ -245,6 +248,9 @@ export default function AuthModal({
     return () => {
       if (retryTimer) clearInterval(retryTimer);
     };
+    // Tương tự: Google Identity Services giữ callback đã đăng ký, không nên
+    // khởi tạo lại nút đăng nhập mỗi lần render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, authMethod, showGoogleForm]);
 
   // Luồng đăng nhập nhanh Google (Dùng cho kiểm thử offline / dev test)

@@ -430,6 +430,9 @@ export default function CockpitMode({
       } catch {}
     }, 2500);
     return () => clearInterval(interval);
+    // triggerApproachRadar dựng lại mỗi render; thêm vào deps sẽ huỷ/tạo lại
+    // vòng lặp 2.5s liên tục. Các deps hiện tại đã đủ cho dữ liệu radar đọc.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cockpitState, isReceivingGuests, activeOffer, tripId, currentUser, vehicle, seatsAvailable, initialCorridor]);
 
   // CHỦ XE BẤM [ĐỒNG Ý ĐÓN] (D2 ACCEPT)

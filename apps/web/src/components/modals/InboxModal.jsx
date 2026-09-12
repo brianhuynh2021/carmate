@@ -114,6 +114,9 @@ export default function InboxModal({
     return () => {
       if (timer) clearInterval(timer);
     };
+    // Chỉ chạy lại khi TRẠNG THÁI cuộc gọi đổi. Thêm cả object inAppCallState
+    // vào deps sẽ huỷ/tạo lại setInterval mỗi giây vì bộ đếm tự cập nhật nó.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inAppCallState?.status]);
 
   // Kênh Hỗ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
@@ -282,6 +285,9 @@ export default function InboxModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // Deps đã liệt kê đủ 3 giá trị mà handleToggleUnread thực sự đọc, nên
+    // listener luôn tươi. ESLint chỉ đòi thêm vì nó theo dõi danh tính hàm.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBooking, unreadBookingIds, readBookingTimestamps]);
 
   // Cuộn xuống tin nhắn mới nhất
@@ -464,6 +470,9 @@ export default function InboxModal({
       '🎒 Em chỉ mang 1 balo nhỏ gọn',
       '🤝 Dạ ok bạn, chốt giúp em nhé'
     ];
+    // Danh sách gợi ý chỉ cần đổi theo trạng thái/tin nhắn/tab; các trường
+    // hàng hoá được đọc một lần tại thời điểm dựng gợi ý, không cần theo dõi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBooking?.status, activeBooking?.messages, activeTab]);
 
   const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
@@ -554,6 +563,9 @@ export default function InboxModal({
       return { isUnlocked: false, attempts: 0, remainingAttempts: REQUIRED_UNANSWERED_CALLS };
     }
     return getEmergencyCallStatus({ bookingId: bookingKey, callerId: callerKey });
+    // emergencyCallVersion KHÔNG thừa: getEmergencyCallStatus đọc trạng thái
+    // bên ngoài React, đây là cờ phá cache để tính lại sau mỗi lần gọi nhỡ.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingKey, callerKey, emergencyCallVersion]);
 
   const isEmergencyPhoneUnlockedForMe = Boolean(isConfirmed && emergencyCallStatus?.isUnlocked && partnerPhone);
@@ -623,6 +635,8 @@ export default function InboxModal({
     if (inAppCallState?.isTimeout && inAppCallState.status === 'ringing') {
       handleEndInAppCall();
     }
+    // Chỉ bám vào hai cờ chuyển trạng thái để tránh gọi lặp handleEndInAppCall.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inAppCallState?.isTimeout, inAppCallState?.status]);
 
   // Tự động kích hoạt cuộc gọi in-app nếu được yêu cầu từ ngoài
@@ -630,6 +644,9 @@ export default function InboxModal({
     if (autoCall && activeBooking && !inAppCallState) {
       handleStartInAppCall();
     }
+    // Bám theo ID chuyến, không bám cả object: thêm activeBooking/inAppCallState
+    // sẽ tự gọi lại ngay sau khi cuộc gọi vừa bắt đầu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCall, activeBooking?.escrowId, activeBooking?.id]);
 
   const activePartnerOnline = activeBooking
@@ -699,6 +716,8 @@ export default function InboxModal({
     if (isSupportChannelActive) {
       loadSupportMessages();
     }
+    // Chỉ nạp khi kênh CSKH được bật; loadSupportMessages dựng lại mỗi render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSupportChannelActive]);
 
   // Gửi tin nhắn đến Platform CSKH & Tự động xử lý khiếu nại (Ambient Resolution)
