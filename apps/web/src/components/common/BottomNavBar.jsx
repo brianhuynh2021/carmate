@@ -10,11 +10,11 @@ export default function BottomNavBar({
 }) {
   const { t } = useI18n();
   const items = [
-    { id: 'market', label: 'Tiện chuyến', icon: Compass },
-    { id: 'station', label: 'Điểm đón', icon: Fuel },
-    { id: 'cockpit', label: 'Nhận khách', icon: Car, fab: true },
-    { id: 'booked', label: 'Lịch hẹn', icon: Clock, badge: bookedCount },
-    { id: 'inbox', label: 'Hộp thoại', icon: MessageSquare }
+    { id: 'market', label: t('nav.tabCorridor'), icon: Compass },
+    { id: 'station', label: t('nav.tabStation'), icon: Fuel },
+    { id: 'cockpit', label: t('nav.tabPickup'), icon: Car, fab: true },
+    { id: 'booked', label: t('nav.tabRides'), icon: Clock, badge: bookedCount },
+    { id: 'inbox', label: t('nav.tabInbox'), icon: MessageSquare }
   ];
 
   const handleTabClick = (itemId) => {

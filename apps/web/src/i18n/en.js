@@ -51,6 +51,14 @@ export default {
   },
 
   nav: {
+    tabCorridor: 'Rides',
+    tabStation: 'Stations',
+    tabPickup: 'Pick up',
+    tabRides: 'Bookings',
+    tabInbox: 'Inbox',
+    corridorTab: 'QL13 Corridor',
+    stationTab: 'Pickup Stations',
+    cockpitTab: 'Pick up along the way',
     market: 'Explore',
     match: 'Smart Match',
     post: 'Post Trip',

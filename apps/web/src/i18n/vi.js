@@ -51,6 +51,14 @@ export default {
   },
 
   nav: {
+    tabCorridor: 'Tiện chuyến',
+    tabStation: 'Điểm đón',
+    tabPickup: 'Nhận khách',
+    tabRides: 'Lịch hẹn',
+    tabInbox: 'Hộp thoại',
+    corridorTab: 'Tuyến Tiện Chuyến',
+    stationTab: 'Điểm Đón Xe',
+    cockpitTab: 'Nhận khách dọc đường',
     market: 'Khám phá',
     match: 'Ghép chuyến',
     post: 'Đăng chuyến',

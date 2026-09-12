@@ -168,10 +168,10 @@ export default function CorridorSearchBoard({
   const hubLabel = (h) => h.shortName || h.name;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 animate-fade-in pb-10">
+    <div className="w-full max-w-2xl mx-auto min-w-0 space-y-4 animate-fade-in pb-10">
       {/* ── CHỌN TUYẾN (chỉ hiện khi có nhiều hơn 1 tuyến) ── */}
       {corridors.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
           {corridors.map((c) => (
             <button
               key={c.id}
@@ -288,7 +288,7 @@ export default function CorridorSearchBoard({
 
           {/* Giá hiện lặng lẽ dưới nút — kết quả, không phải thông báo */}
           {tariff && (
-            <p className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400 font-mono">
+            <p className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400 font-mono break-words">
               {formatVND(tariff.pricePerSeat)} · {tariff.distanceKm}km · {t('search.allInclusive')}
             </p>
           )}
