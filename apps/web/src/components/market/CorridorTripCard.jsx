@@ -106,8 +106,16 @@ export default function CorridorTripCard({
           </span>
         </div>
 
-        {/* Badge trạng thái chỗ ngồi góc phải */}
+        {/* Badge trạng thái chỗ ngồi góc phải kèm logo CarMate.vn */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Huy hiệu nhận diện chính thức CarMate.vn */}
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/90 dark:bg-white/10 border border-slate-200/80 dark:border-white/15 text-[10.5px] font-bold text-slate-800 dark:text-slate-100 shrink-0 select-none shadow-2xs">
+            <img src="/icons/icon-192.png" alt="CarMate" className="w-3.5 h-3.5 rounded-full object-contain shrink-0" />
+            <span className="font-display tracking-tight leading-none">
+              Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent font-black">Mate</span><span className="text-[#0071e3] font-mono text-[10px]">.vn</span>
+            </span>
+          </div>
+
           {isSoldOut ? (
             <span className="px-2.5 py-1 rounded-full text-[11px] font-bold font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-white/10">
               Đã hết chỗ
@@ -173,8 +181,8 @@ export default function CorridorTripCard({
       <div className="pt-3 border-t border-slate-100 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Bên trái: Thumbnail xe 64x64 + Thông tin xe */}
         <div className="flex items-center gap-3 min-w-0">
-          {/* Thumbnail xe 64x64px bo góc tròn mềm mại */}
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shrink-0 border border-black/[0.08] dark:border-white/15 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-200">
+          {/* Thumbnail xe 64x64px bo góc tròn mềm mại kèm logo carmate */}
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shrink-0 border border-black/[0.08] dark:border-white/15 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-200 relative">
             {trip.carPhotoUrl ? (
               <img
                 src={trip.carPhotoUrl}
@@ -184,9 +192,9 @@ export default function CorridorTripCard({
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 p-1 text-center">
-                <Car className="w-7 h-7 text-emerald-600/80 dark:text-emerald-400" />
-                <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                  Xe gia đình
+                <img src="/icons/icon-192.png" alt="CarMate" className="w-6 h-6 rounded-lg object-contain opacity-90 mb-0.5 shadow-2xs" />
+                <span className="text-[8.5px] font-bold text-slate-600 dark:text-slate-300">
+                  carmate.vn
                 </span>
               </div>
             )}
@@ -216,7 +224,7 @@ export default function CorridorTripCard({
               <span className="text-[11px] text-slate-400 font-normal">/ghế</span>
             </div>
             <span className="text-[10px] text-slate-400 block -mt-0.5">
-              0đ cọc · Phụ xăng trực tiếp
+              0đ cọc · Phụ xăng trực tiếp · <strong className="text-[#0071e3] font-semibold">carmate.vn</strong>
             </span>
           </div>
 

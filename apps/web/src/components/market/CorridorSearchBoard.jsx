@@ -375,6 +375,23 @@ export default function CorridorSearchBoard({
 
   return (
     <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-10">
+      {/* ── BANNER THƯƠNG HIỆU CARMATE.VN ── */}
+      <div className="flex items-center justify-between px-1.5 pt-1 text-xs select-none">
+        <div className="flex items-center gap-2">
+          <img src="/icons/icon-192.png" alt="CarMate" className="w-5 h-5 rounded-lg object-contain shadow-2xs" />
+          <span className="font-display font-black tracking-tight text-sm text-[#1d1d1f] dark:text-white">
+            Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span><span className="text-[#0071e3] font-mono text-xs ml-0.5 font-bold">.vn</span>
+          </span>
+          <span className="text-[10px] text-slate-400 border-l border-slate-300 dark:border-white/20 pl-2 hidden sm:inline">
+            Hành lang xe tiện chuyến trực tiếp
+          </span>
+        </div>
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-500/20">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>0% Phí sàn · 0đ Cọc</span>
+        </span>
+      </div>
+
       {/* ── CHỌN TUYẾN (chỉ hiện khi có nhiều hơn 1 tuyến) ── */}
       {corridors.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -732,11 +749,14 @@ export default function CorridorSearchBoard({
       {/* ── BẢNG SO SÁNH 3 TẦNG VẬN TẢI (DẠNG LINE LIẾC NGANG) ── */}
       {matrix && (
         <section ref={resultsRef} className="space-y-3 pt-1 animate-fade-in">
-          {/* Header tóm tắt với 2 đòn bẩy: Thời gian & Tiền bạc */}
+          {/* Header tóm tắt với Logo CarMate.vn & 2 đòn bẩy: Thời gian & Tiền bạc */}
           <div className="flex flex-wrap items-center justify-between gap-1.5 px-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Phương án di chuyển phù hợp
-            </p>
+            <div className="flex items-center gap-1.5">
+              <img src="/icons/icon-192.png" alt="CarMate" className="w-4 h-4 rounded-md object-contain shrink-0" />
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Chuyến xe xác thực · <span className="text-[#0071e3] font-bold lowercase">carmate.vn</span>
+              </p>
+            </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-[10px] font-bold font-mono text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-400/40 dark:border-amber-500/30 flex items-center gap-1 shadow-2xs">
                 <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> Nhanh hơn 35p

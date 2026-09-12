@@ -58,7 +58,7 @@ export default function InstantBookingModal({
 
   if (!isOpen || !trip) return null;
 
-  const maxAvailable = Math.min(Number(trip?.seatsAvailable || 1), 3);
+  const _maxAvailable = Math.min(Number(trip?.seatsAvailable || 1), 3);
 
   const pricePerSeat = Number(trip.pricePerSeat || segmentPrice || 170000);
   const totalFuelShare = pricePerSeat * seats;
@@ -154,8 +154,11 @@ export default function InstantBookingModal({
   };
 
   const fullPlateNumber = confirmedBooking?.fullPlate || trip.fullPlate || '93A - 568.89';
-  const driverPhoneNumber = confirmedBooking?.driverPhone || trip.phone || '0984123456';
+  const driverPhoneNumber = confirmedBooking?.driverPhoneDirect || confirmedBooking?.driverPhone || trip.phone || '0984123456';
   const cleanCallPhone = String(driverPhoneNumber).replace(/\D/g, '');
+  const displayDriverPhone = cleanCallPhone.length === 10
+    ? `${cleanCallPhone.slice(0, 4)}.${cleanCallPhone.slice(4, 7)}.${cleanCallPhone.slice(7)}`
+    : driverPhoneNumber;
 
   if (typeof document === 'undefined') return null;
 
@@ -168,22 +171,29 @@ export default function InstantBookingModal({
         className="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-white/15 space-y-4 max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Modal */}
+        {/* Header Modal kèm Logo & carmate.vn */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </span>
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/icons/icon-192.png"
+              alt="CarMate.vn"
+              className="w-8 h-8 rounded-xl object-contain shadow-xs shrink-0"
+            />
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                {step === 1 && 'Cổng xác thực số điện thoại'}
-                {step === 2 && 'Xem lại thông tin & Chốt chuyến'}
-                {step === 3 && '✅ Đã đặt chỗ thành công!'}
-              </h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  {step === 1 && 'Cổng xác thực số điện thoại'}
+                  {step === 2 && 'Xem lại thông tin & Chốt chuyến'}
+                  {step === 3 && '✅ Đã đặt chỗ thành công!'}
+                </h3>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-500/15 text-[#0071e3] border border-blue-200/60 dark:border-blue-500/20 leading-none">
+                  carmate.vn
+                </span>
+              </div>
               <p className="text-[11px] text-slate-400 font-medium">
                 {step === 1 && 'Nhập SĐT để nhận mã giữ chỗ (0đ cọc)'}
                 {step === 2 && 'Kiểm tra lộ trình & số ghế trước khi xác nhận'}
-                {step === 3 && `Mã giữ chỗ: #${confirmedBooking?.escrowId || 'CX-8821'}`}
+                {step === 3 && `Mã giữ chỗ: #${confirmedBooking?.escrowId || 'CX-3073'}`}
               </p>
             </div>
           </div>
@@ -200,10 +210,13 @@ export default function InstantBookingModal({
         {step === 1 && (
           <div className="space-y-4 animate-fade-in">
             <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 text-xs text-blue-900 dark:text-blue-200 space-y-1">
-              <p className="font-bold flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-[#0071e3]" />
-                <span>Định danh nhanh trong 10 giây</span>
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-[#0071e3]" />
+                  <span>Định danh an toàn qua carmate.vn</span>
+                </p>
+                <span className="text-[10px] font-mono text-[#0071e3] font-bold">10 giây</span>
+              </div>
               <p className="text-[11.5px] leading-relaxed text-blue-800/80 dark:text-blue-300/80">
                 0đ cọc · Không cần mật khẩu · Số điện thoại dùng để Chủ xe gọi đón bạn tại trạm.
               </p>
@@ -287,8 +300,19 @@ export default function InstantBookingModal({
         {/* ── BƯỚC 2: XEM LẠI THÔNG TIN & CHỐT CUỐC (REVIEW MODAL) ─────────── */}
         {step === 2 && (
           <div className="space-y-4 animate-fade-in">
-            {/* Thẻ tóm tắt lộ trình Read-only */}
+            {/* Thẻ tóm tắt lộ trình Read-only kèm Logo CarMate.vn */}
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3">
+              {/* Header phiếu CarMate.vn */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/10 text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
+                  <img src="/icons/icon-192.png" alt="CarMate" className="w-4 h-4 rounded-md object-contain shrink-0" />
+                  <span>Phiếu Chốt Chuyến · <strong className="text-[#0071e3]">carmate.vn</strong></span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10.5px] font-bold border border-emerald-200/60">
+                  0đ cọc
+                </span>
+              </div>
+
               {/* Lộ trình */}
               <div className="space-y-1.5 text-xs">
                 <div className="flex items-start gap-2">
@@ -317,43 +341,35 @@ export default function InstantBookingModal({
               </div>
 
               {/* Thời gian & Xe */}
-              <div className="pt-2.5 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Giờ khởi hành:</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-white">
-                    {trip.departureLabel || '04:30'}
-                  </span>
+              <div className="pt-2 border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1 text-slate-500">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{trip.departureLabel || '04:30'} {trip.departureDate || ''}</span>
                 </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Dòng xe:</span>
-                  <span className="font-semibold text-slate-900 dark:text-white truncate block">
-                    {trip.vehicleModel || 'Toyota Vios 2022'}
-                  </span>
+                <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 font-medium">
+                  <Car className="w-3.5 h-3.5" />
+                  <span>{trip.vehicleModel || 'Toyota Vios 2022'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Chọn số ghế */}
+            {/* Chọn số ghế (1 hoặc 2 ghế) */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                Số lượng ghế muốn giữ:
+                Số lượng ghế cần giữ:
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3].map((num) => {
-                  const isAvailable = num <= maxAvailable;
+              <div className="grid grid-cols-2 gap-2">
+                {[1, 2].map((num) => {
                   const isSelected = seats === num;
                   return (
                     <button
                       key={num}
                       type="button"
-                      disabled={!isAvailable}
                       onClick={() => setSeats(num)}
-                      className={`h-11 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1 border ${
+                      className={`h-11 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         isSelected
-                          ? 'bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-500/20 scale-[1.02]'
-                          : isAvailable
-                          ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-white/15 hover:border-emerald-500/50'
-                          : 'bg-slate-100 dark:bg-slate-900 text-slate-400 border-transparent opacity-50 cursor-not-allowed'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/30'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-white/15 hover:border-emerald-500'
                       }`}
                     >
                       <Users className="w-3.5 h-3.5" />
@@ -414,6 +430,17 @@ export default function InstantBookingModal({
         {/* ── BƯỚC 3: MỞ KHOÁ THÔNG TIN 2 CHIỀU (MATCH & REVEAL) ───────────── */}
         {step === 3 && (
           <div className="space-y-4 animate-fade-in text-center">
+            {/* Logo & carmate.vn Brand Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100/90 dark:bg-white/10 border border-slate-200/80 dark:border-white/15 shadow-2xs select-none">
+              <img src="/icons/icon-192.png" alt="CarMate" className="w-4 h-4 rounded-full object-contain shrink-0" />
+              <span className="font-display font-black tracking-tight text-xs text-[#1d1d1f] dark:text-white">
+                Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span><span className="text-[#0071e3] font-mono text-[11px]">.vn</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium border-l border-slate-300 dark:border-white/20 pl-2">
+                Phiếu Giữ Chỗ Điện Tử
+              </span>
+            </div>
+
             {/* Biểu tượng tick xanh thành công */}
             <div className="w-14 h-14 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center animate-bounce">
               <CheckCircle2 className="w-8 h-8" />
@@ -430,6 +457,19 @@ export default function InstantBookingModal({
 
             {/* THẺ MỞ KHOÁ BIỂN SỐ & CHỦ XE */}
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 space-y-2.5 text-left">
+              {/* Header phiếu CarMate.vn */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/10">
+                <div className="flex items-center gap-1.5">
+                  <img src="/icons/icon-192.png" alt="CarMate" className="w-4 h-4 rounded-md object-contain shrink-0" />
+                  <span className="font-display font-bold text-xs text-slate-800 dark:text-slate-100">
+                    Xác nhận bởi <strong className="text-[#0071e3]">carmate.vn</strong>
+                  </span>
+                </div>
+                <span className="font-mono text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-500/20">
+                  #{confirmedBooking?.escrowId || 'CX-3073'}
+                </span>
+              </div>
+
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-400">Dòng xe:</span>
                 <span className="text-xs font-bold text-slate-900 dark:text-white">
@@ -448,7 +488,7 @@ export default function InstantBookingModal({
               <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
                 <span className="text-xs text-slate-400">Chủ xe đón bạn:</span>
                 <span className="text-xs font-bold text-slate-900 dark:text-white">
-                  {confirmedBooking?.driverName || trip.driverName || 'Anh Tuấn (Chủ xe)'}
+                  {confirmedBooking?.driverName || trip.driverName || 'Chủ xe'}
                 </span>
               </div>
 
@@ -472,7 +512,7 @@ export default function InstantBookingModal({
                 className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-sm uppercase tracking-wide shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer no-underline"
               >
                 <PhoneCall className="w-5 h-5 animate-pulse" />
-                <span>Gọi trực tiếp chủ xe: {driverPhoneNumber}</span>
+                <span>Gọi trực tiếp chủ xe: {displayDriverPhone}</span>
               </a>
 
               {/* Nút phụ: Mở nhanh Zalo */}
@@ -487,14 +527,22 @@ export default function InstantBookingModal({
               </a>
             </div>
 
-            {/* Nút Đóng */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full py-2 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              Hoàn tất & Đóng cửa sổ
-            </button>
+            {/* Nút Đóng & Chân trang CarMate.vn */}
+            <div className="pt-2 space-y-1.5">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                Hoàn tất & Đóng cửa sổ
+              </button>
+              <div className="flex items-center justify-center gap-1.5 text-[10.5px] text-slate-400 font-medium">
+                <img src="/icons/icon-192.png" alt="CarMate" className="w-3.5 h-3.5 rounded-full object-contain" />
+                <span>Hệ sinh thái đi chung xe văn minh</span>
+                <span>•</span>
+                <span className="font-bold text-[#0071e3]">carmate.vn</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
