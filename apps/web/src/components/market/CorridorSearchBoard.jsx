@@ -273,14 +273,24 @@ export default function CorridorSearchBoard({
             type="button"
             onClick={handleSearchNow}
             disabled={isSearching || !fromHubId || !toHubId}
-            className="w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] hover:shadow-lg hover:shadow-[#0071e3]/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.99] transition-all duration-150 cursor-pointer"
+            className="relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] hover:shadow-lg hover:shadow-[#0071e3]/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.99] transition-all duration-150 cursor-pointer"
           >
-            {isSearching ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Search className="w-4 h-4" />
+            {/* Vệt sáng quét ngang thu hút mắt về hành động chính của cả trang.
+                Dùng lại keyframes shimmer-sweep sẵn có trong index.css thay vì
+                viết animation mới. Tắt khi đang tìm hoặc nút bị vô hiệu hoá —
+                nhấp nháy lúc không bấm được chỉ gây bực bội. */}
+            {!isSearching && fromHubId && toHubId && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer-sweep motion-reduce:hidden"
+              />
             )}
-            <span>{isSearching ? t('search.searching') : t('search.findNow')}</span>
+            {isSearching ? (
+              <Loader2 className="w-4 h-4 animate-spin relative" />
+            ) : (
+              <Search className="w-4 h-4 relative" />
+            )}
+            <span className="relative">{isSearching ? t('search.searching') : t('search.findNow')}</span>
           </button>
 
           {/* Giá hiện lặng lẽ dưới nút — kết quả, không phải thông báo */}
