@@ -2296,6 +2296,181 @@ export async function expireSlidingTTLOrdersDb(currentTimestamp = Date.now()) {
 
 
 /**
+ * KHỚP LỆNH NGUYÊN TỬ (ATOMIC MATCH COMMIT — MIT INVARIANT)
+ *
+ * Một lần khớp lệnh gồm 3 thao tác ghi: cập nhật lệnh ASK, cập nhật lệnh BID và
+ * tạo booking. Nếu ghi rời rạc, sự cố giữa chừng sẽ để lại ghế đã bị trừ mà KHÔNG
+ * có booking — sàn rơi vào trạng thái mâu thuẫn (khách mất ghế nhưng không có vé).
+ *
+ * Hàm này gói cả 3 trong MỘT transaction SQLite: hoặc cả 3 cùng được ghi, hoặc
+ * không gì được ghi. better-sqlite3 tự ROLLBACK khi callback ném lỗi.
+ */
+export function commitExchangeMatchDb({ askOrder, bidOrder, booking, isNewOrderAsk = false }) {
+  const database = getRawDB();
+
+  const run = database.transaction(() => {
+    // Lệnh mới (chưa có trong DB) phải INSERT; lệnh đã nằm trên sàn thì UPDATE
+    // để không xoá mất các trường không được truyền vào.
+    if (isNewOrderAsk) {
+      upsertExchangeOrderRow(database, askOrder);
+      updateExchangeOrderRow(database, bidOrder.id, bidOrder);
+    } else {
+      upsertExchangeOrderRow(database, bidOrder);
+      updateExchangeOrderRow(database, askOrder.id, askOrder);
+    }
+
+    const escrowId = booking.escrowId || `ESC-${Date.now()}`;
+    const existing = database.prepare('SELECT payload FROM bookings WHERE escrowId = ?').get(escrowId);
+    let accessToken = booking.accessToken;
+    if (!accessToken && existing) {
+      try {
+        accessToken = JSON.parse(existing.payload)?.accessToken;
+      } catch {
+        accessToken = null;
+      }
+    }
+    if (!accessToken) accessToken = crypto.randomBytes(16).toString('hex');
+
+    const fullBooking = {
+      ...booking,
+      escrowId,
+      accessToken,
+      status: booking.status || 'zalo_active',
+      commitmentType: booking.commitmentType || 'zalo_direct',
+      createdAt: booking.createdAt || Date.now()
+    };
+
+    database
+      .prepare(
+        `INSERT OR REPLACE INTO bookings (escrowId, tripId, passengerPhone, status, createdAt, payload)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        escrowId,
+        fullBooking.tripId || '',
+        cleanPhoneNumber(fullBooking.passengerPhone || ''),
+        fullBooking.status,
+        fullBooking.createdAt,
+        JSON.stringify(fullBooking)
+      );
+
+    return fullBooking;
+  });
+
+  return run();
+}
+
+/**
+ * Ghi đè trọn vẹn một dòng lệnh (dùng cho lệnh MỚI vào sàn).
+ */
+function upsertExchangeOrderRow(database, order) {
+  const full = {
+    ...order,
+    seats: Number(order.seats) || 1,
+    remainingSeats: Number(order.remainingSeats ?? order.seats) || 0,
+    status: order.status || 'OPEN',
+    createdAt: order.createdAt || Date.now()
+  };
+
+  database
+    .prepare(
+      `INSERT OR REPLACE INTO seat_exchange_orders (
+        id, userId, orderType, stationId, stationName, corridor, direction, date,
+        targetTime, targetTimeMinutes, deltaMinutes, timeStartMins, timeEndMins,
+        seats, remainingSeats, status, orderTier, ttlTimestamp, ttlTimeString,
+        phone, contactName, plate, vehicleModel, trustScore,
+        matchedWithOrderId, matchedBookingId, pinCode, rendezvousTime, rendezvousMinutes,
+        createdAt, matchedAt, expiredAt, payload
+      ) VALUES (
+        @id, @userId, @orderType, @stationId, @stationName, @corridor, @direction, @date,
+        @targetTime, @targetTimeMinutes, @deltaMinutes, @timeStartMins, @timeEndMins,
+        @seats, @remainingSeats, @status, @orderTier, @ttlTimestamp, @ttlTimeString,
+        @phone, @contactName, @plate, @vehicleModel, @trustScore,
+        @matchedWithOrderId, @matchedBookingId, @pinCode, @rendezvousTime, @rendezvousMinutes,
+        @createdAt, @matchedAt, @expiredAt, @payload
+      )`
+    )
+    .run({
+      id: full.id,
+      userId: full.userId || '',
+      orderType: full.orderType || 'BID',
+      stationId: full.stationId || '',
+      stationName: full.stationName || '',
+      corridor: full.corridor || 'Tuyến QL13',
+      direction: full.direction || '',
+      date: full.date || '',
+      targetTime: full.targetTime || '',
+      targetTimeMinutes: full.targetTimeMinutes || 0,
+      deltaMinutes: full.deltaMinutes || 10,
+      timeStartMins: full.timeStartMins || 0,
+      timeEndMins: full.timeEndMins || 0,
+      seats: full.seats,
+      remainingSeats: full.remainingSeats,
+      status: full.status,
+      orderTier: full.orderTier || 'SAFE_ADVANCE',
+      ttlTimestamp: full.ttlTimestamp || null,
+      ttlTimeString: full.ttlTimeString || '',
+      phone: cleanPhoneNumber(full.phone || ''),
+      contactName: full.contactName || '',
+      plate: full.plate || '',
+      vehicleModel: full.vehicleModel || '',
+      trustScore: Number(full.trustScore || 98),
+      matchedWithOrderId: full.matchedWithOrderId || null,
+      matchedBookingId: full.matchedBookingId || null,
+      pinCode: full.pinCode || null,
+      rendezvousTime: full.rendezvousTime || null,
+      rendezvousMinutes: full.rendezvousMinutes || null,
+      createdAt: full.createdAt,
+      matchedAt: full.matchedAt || null,
+      expiredAt: full.expiredAt || null,
+      payload: JSON.stringify(full)
+    });
+
+  return full;
+}
+
+/**
+ * Cập nhật một lệnh ĐANG NẰM trên sàn — hợp nhất với payload cũ để không
+ * xoá mất các trường không được truyền vào (khác hẳn INSERT OR REPLACE).
+ */
+function updateExchangeOrderRow(database, id, updates = {}) {
+  const row = database.prepare('SELECT payload FROM seat_exchange_orders WHERE id = ?').get(id);
+  if (!row) return null;
+
+  let current = {};
+  try {
+    current = JSON.parse(row.payload);
+  } catch {
+    current = {};
+  }
+
+  const updated = { ...current, ...updates, id, updatedAt: Date.now() };
+
+  database
+    .prepare(
+      `UPDATE seat_exchange_orders
+       SET status = ?, remainingSeats = ?, matchedWithOrderId = ?, matchedBookingId = ?,
+           pinCode = ?, rendezvousTime = ?, rendezvousMinutes = ?, matchedAt = ?, expiredAt = ?, payload = ?
+       WHERE id = ?`
+    )
+    .run(
+      updated.status || 'OPEN',
+      Number(updated.remainingSeats ?? updated.seats ?? 1),
+      updated.matchedWithOrderId || null,
+      updated.matchedBookingId || null,
+      updated.pinCode || null,
+      updated.rendezvousTime || null,
+      updated.rendezvousMinutes || null,
+      updated.matchedAt || null,
+      updated.expiredAt || null,
+      JSON.stringify(updated),
+      id
+    );
+
+  return updated;
+}
+
+/**
  * Áp dụng kỷ luật hủy chuyến theo hàm suy giảm thời gian (Time-Decay Penalty Engine)
  * - deltaMinutes > 120: An toàn 0đ, không phạt.
  * - 30 <= deltaMinutes <= 120: Cảnh cáo, trừ 15 điểm tín nhiệm.

@@ -145,10 +145,15 @@ router.post('/intents/match', optionalAuth, runBatchMatchHandler);
 router.get('/intents/epochs', optionalAuth, getMatchingEpochsHandler);
 
 // --- Sàn Giao Dịch Ghế Trống (Seat Exchange - LOB, CDA 24/7 Spot Market & Dynamic Sliding TTL) ---
-router.post('/seat-exchange/order', optionalAuth, placeOrderHandler);
+// Đặt lệnh: chống spam bằng postTripLimiter; optionalAuth cho phép khách vãng lai
+// đặt lệnh, nhưng khi ĐÃ đăng nhập thì SĐT trong token luôn thắng SĐT gửi từ body.
+router.post('/seat-exchange/order', postTripLimiter, optionalAuth, placeOrderHandler);
+// Sổ lệnh công khai: mọi lệnh trả ra đều đi qua lớp chắn PII (Nghị định 13/2023).
 router.get('/seat-exchange/order-book', optionalAuth, getOrderBookHandler);
-router.get('/seat-exchange/my-orders', optionalAuth, getMyOrdersHandler);
-router.post('/seat-exchange/expire-ttl', optionalAuth, expireSlidingTTLHandler);
+// Lịch sử lệnh cá nhân: BẮT BUỘC đăng nhập (chống dò quét bằng số điện thoại).
+router.get('/seat-exchange/my-orders', requireAuth, getMyOrdersHandler);
+// Quét TTL là tác vụ vận hành nội bộ: chỉ Quản trị viên (chống DoS xoá sạch sổ lệnh).
+router.post('/seat-exchange/expire-ttl', requireAdmin, expireSlidingTTLHandler);
 
 // --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
 router.get('/bookings', optionalAuth, listBookings);

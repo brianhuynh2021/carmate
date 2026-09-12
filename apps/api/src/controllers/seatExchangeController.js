@@ -314,14 +314,19 @@ export function getOrderBookHandler(req, res) {
  */
 export function getMyOrdersHandler(req, res) {
   try {
+    // CHỐNG DÒ QUÉT (ANTI-ENUMERATION): danh tính CHỈ được lấy từ JWT.
+    // Trước đây handler nhận `?phone=` từ query — bất kỳ ai biết số điện thoại
+    // của người khác đều đọc được toàn bộ lịch sử lệnh của họ mà không cần đăng nhập.
     const userId = req.user?.id;
-    const phone = req.user?.phone || req.query?.phone;
+    const clean = cleanPhoneNumber(req.user?.phone || '');
 
-    if (!userId && !phone) {
-      return res.status(400).json({ success: false, error: 'Thiếu thông tin nhận diện người dùng' });
+    if (!userId && !clean) {
+      return res.status(401).json({
+        success: false,
+        error: 'Vui lòng đăng nhập để xem lịch sử lệnh của bạn'
+      });
     }
 
-    const clean = phone ? cleanPhoneNumber(phone) : null;
     const allOrders = getExchangeOrdersDb({});
     const myOrders = allOrders.filter((o) => {
       if (userId && o.userId === userId) return true;
@@ -345,7 +350,10 @@ export function getMyOrdersHandler(req, res) {
  */
 export async function expireSlidingTTLHandler(req, res) {
   try {
-    const now = req.body?.timestamp ? Number(req.body.timestamp) : Date.now();
+    // CHỐNG DoS NGHIỆP VỤ: mốc thời gian quét TTL LUÔN là đồng hồ máy chủ.
+    // Trước đây handler nhận `timestamp` từ body — một POST ẩn danh với
+    // timestamp ở tương lai xa sẽ EXPIRE sạch toàn bộ sổ lệnh của cả sàn.
+    const now = Date.now();
     const expiredOrders = await expireSlidingTTLOrdersDb(now);
 
     const notifications = expiredOrders.map((order) =>
