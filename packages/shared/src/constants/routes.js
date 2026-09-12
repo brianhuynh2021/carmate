@@ -450,6 +450,19 @@ export const VIRTUAL_HUBS = [
     isTerminal: true
   },
   {
+    id: 'hub_ql13_cho_ray',
+    name: 'Cụm BV Chợ Rẫy / BV Đại học Y Dược (Quận 5 - TP.HCM)',
+    shortName: 'Cụm Chợ Rẫy / ĐHYD',
+    corridor: 'Tuyến QL13',
+    lat: 10.7578,
+    lng: 106.6596,
+    landmark: 'Cổng cấp cứu BV Chợ Rẫy / BV Đại học Y Dược (Hồng Bàng - Nguyễn Chí Thanh)',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'HOSPITAL',
+    isTerminal: true
+  },
+  {
     id: 'hub_ql13_binh_trieu',
     name: 'Cầu Bình Triệu / Bến xe Miền Đông cũ (Bình Thạnh)',
     shortName: 'Cầu Bình Triệu / BX Miền Đông',
@@ -928,6 +941,13 @@ export const CORRIDOR_FIXED_SEGMENTS = {
 
   // Tân Khai ➔ Hàng Xanh: 150.000đ (Chủ xe nhận 270k/2 ghế)
   'hub_ql13_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 95, label: 'Tân Khai ➔ Hàng Xanh' },
+  'hub_ql13_tan_khai:::hub_ql13_cho_ray': { pricePerSeat: 170000, distanceKm: 105, label: 'Tân Khai ➔ Cụm Chợ Rẫy' },
+  'hub_ql13_tthc_tan_khai:::hub_ql13_cho_ray': { pricePerSeat: 170000, distanceKm: 105, label: 'TTHC Tân Khai ➔ Cụm Chợ Rẫy' },
+  'hub_ql13_binh_long:::hub_ql13_cho_ray': { pricePerSeat: 200000, distanceKm: 125, label: 'Bình Long ➔ Cụm Chợ Rẫy' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_cho_ray': { pricePerSeat: 140000, distanceKm: 85, label: 'Chơn Thành ➔ Cụm Chợ Rẫy' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_cho_ray': { pricePerSeat: 230000, distanceKm: 145, label: 'Lộc Ninh ➔ Cụm Chợ Rẫy' },
+  'hub_ql13_budop:::hub_ql13_cho_ray': { pricePerSeat: 250000, distanceKm: 165, label: 'Bù Đốp ➔ Cụm Chợ Rẫy' },
+  'hub_ql13_bau_bang:::hub_ql13_cho_ray': { pricePerSeat: 110000, distanceKm: 65, label: 'Bàu Bàng ➔ Cụm Chợ Rẫy' },
   'hub_ql13_tan_khai:::hub_ql13_binh_trieu': { pricePerSeat: 150000, distanceKm: 90, label: 'Tân Khai ➔ Bình Triệu' },
   'hub_ql13_tan_khai:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 60000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
   'hub_ql13_tan_khai:::hub_n2_chon_thanh': { pricePerSeat: 60000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },

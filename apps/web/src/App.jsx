@@ -998,6 +998,8 @@ export default function App() {
               onOpenIntentModal={(targetRole, hubId) => {
                 handleOpenMovementIntent(targetRole, hubId);
               }}
+              onAuthSuccess={handleAuthSuccess}
+              onShowToast={showToast}
             />
           </div>
         )}

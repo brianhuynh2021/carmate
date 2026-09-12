@@ -31,6 +31,7 @@ export const CORRIDORS = [
         label: 'Sài Gòn',
         fullLabel: 'TP. Hồ Chí Minh',
         hubIds: [
+          'hub_ql13_cho_ray',
           'hub_ql13_hang_xanh',
           'hub_ql13_san_bay_tsn',
           'hub_ql13_binh_trieu',

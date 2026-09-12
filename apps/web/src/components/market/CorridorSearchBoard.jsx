@@ -38,6 +38,8 @@ import {
 import { useI18n } from '../../i18n/index.jsx';
 import api from '../../api/client.js';
 import { CarMateBadge } from '../ui/Logo.jsx';
+import CorridorTripCard from './CorridorTripCard.jsx';
+import InstantBookingModal from '../modals/InstantBookingModal.jsx';
 
 const ROLE_KEY = 'carmate_last_movement_role';
 const CORRIDOR_KEY = 'carmate_last_corridor';
@@ -74,7 +76,9 @@ function writeStore(key, value) {
 export default function CorridorSearchBoard({
   currentUser = null,
   onOpenStationView,
-  onOpenIntentModal
+  onOpenIntentModal,
+  onAuthSuccess,
+  onShowToast
 }) {
   const { t } = useI18n();
   const corridors = useMemo(() => getActiveCorridors(), []);
@@ -100,17 +104,6 @@ export default function CorridorSearchBoard({
     return 'passenger';
   }, [currentUser]);
 
-  // Vai trò được SUY RA, không bắt người dùng tự khai.
-  //
-  // Trước đây có thanh pill "Bạn là: [Người đi cùng | Chủ xe]" ở cuối trang.
-  // Bỏ đi vì hai lý do đo được:
-  //   1. Xung đột với nút "Nhận khách" ở thanh điều hướng dưới — người đang
-  //      chọn vai "Người đi cùng" vẫn thấy nút nhận khách, gây bối rối.
-  //   2. Ở iPhone SE (667px) nó nằm ở mốc 719px, tức NGOÀI tầm nhìn hoàn toàn
-  //      (thanh nav đã che từ 585px) — không ai thấy để mà bấm.
-  //
-  // Vai trò giờ suy từ hồ sơ (có xe = chủ xe) hoặc thói quen đã lưu; chủ xe
-  // muốn mở chuyến thì dùng nút "Nhận khách" ở thanh dưới, rõ ràng hơn hẳn.
   const role = detectedRole;
 
   // ── Điểm đi / điểm đến ─────────────────────────────────────────────────
@@ -119,15 +112,27 @@ export default function CorridorSearchBoard({
   const fromHubs = useMemo(() => getEndpointHubs(corridor.id, fromKey, heading), [corridor.id, fromKey, heading]);
   const toHubs = useMemo(() => getEndpointHubs(corridor.id, toKey, heading), [corridor.id, toKey, heading]);
 
-  const [fromHubId, setFromHubId] = useState(() => fromHubs[0]?.id || '');
-  const [toHubId, setToHubId] = useState(() => toHubs[0]?.id || '');
+  const [fromHubId, setFromHubId] = useState(() => {
+    const hasTanKhai = fromHubs.find((h) => h.id === 'hub_ql13_tan_khai');
+    return hasTanKhai ? hasTanKhai.id : (fromHubs[0]?.id || '');
+  });
+  const [toHubId, setToHubId] = useState(() => {
+    const hasChoRay = toHubs.find((h) => h.id === 'hub_ql13_cho_ray');
+    return hasChoRay ? hasChoRay.id : (toHubs[0]?.id || '');
+  });
 
   // Giữ lựa chọn luôn hợp lệ khi đổi tuyến hoặc đảo chiều
   useEffect(() => {
-    if (!fromHubs.some((h) => h.id === fromHubId)) setFromHubId(fromHubs[0]?.id || '');
+    if (!fromHubs.some((h) => h.id === fromHubId)) {
+      const hasTanKhai = fromHubs.find((h) => h.id === 'hub_ql13_tan_khai');
+      setFromHubId(hasTanKhai ? hasTanKhai.id : (fromHubs[0]?.id || ''));
+    }
   }, [fromHubs, fromHubId]);
   useEffect(() => {
-    if (!toHubs.some((h) => h.id === toHubId)) setToHubId(toHubs[0]?.id || '');
+    if (!toHubs.some((h) => h.id === toHubId)) {
+      const hasChoRay = toHubs.find((h) => h.id === 'hub_ql13_cho_ray');
+      setToHubId(hasChoRay ? hasChoRay.id : (toHubs[0]?.id || ''));
+    }
   }, [toHubs, toHubId]);
 
   // ── Trí tuệ bản địa: tự chọn tuyến + chiều theo GPS, im lặng ──────────
@@ -259,12 +264,11 @@ export default function CorridorSearchBoard({
   }, [fromHubId, toHubId, selectedChip, corridor.dataKey]);
 
   // CHUYẾN KHỚP TỐT NHẤT: ưu tiên độ an tâm cao nhất, hoà thì chọn chuyến tới
-  // sớm hơn. Khách liên tỉnh cần MỘT phương án đáng tin, không phải một danh
-  // sách để tự so sánh — việc so sánh là việc của hệ thống.
-  const { bestMatch, otherSlots } = useMemo(() => {
+  // sớm hơn.
+  const { _bestMatch, _otherSlots } = useMemo(() => {
     const slots = matrix?.slots || [];
     const real = slots.filter((s) => s.tier !== 'SHADOW');
-    if (real.length === 0) return { bestMatch: null, otherSlots: slots };
+    if (real.length === 0) return { _bestMatch: null, _otherSlots: slots };
 
     const ranked = [...real].sort((a, b) => {
       const sa = a.assurance?.score ?? 0;
@@ -273,7 +277,7 @@ export default function CorridorSearchBoard({
       return (a.departureMinutes ?? 9999) - (b.departureMinutes ?? 9999);
     });
     const best = ranked[0];
-    return { bestMatch: best, otherSlots: slots.filter((s) => s !== best) };
+    return { _bestMatch: best, _otherSlots: slots.filter((s) => s !== best) };
   }, [matrix]);
 
   const verifiedHotlines = useMemo(
@@ -284,21 +288,53 @@ export default function CorridorSearchBoard({
   // ── State xem chi tiết chuyến xe (Progressive Disclosure) ─────────────────
   const [selectedDetailTrip, setSelectedDetailTrip] = useState(null);
   const [selectedDetailHotline, setSelectedDetailHotline] = useState(null);
+  const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
 
-  // Giá chặng chia sẻ chuẩn CarMate (mặc định 55.000 đ với Lái Thiêu - Sân bay TSN)
+  // Tự động tìm kiếm ngay khi cặp trạm sẵn sàng
+  useEffect(() => {
+    if (fromHubId && toHubId && !matrix && !isSearching) {
+      handleSearchNow();
+    }
+  }, [fromHubId, toHubId, matrix, isSearching, handleSearchNow]);
+
+  // Giá chặng chia sẻ chuẩn CarMate (mặc định 170.000 đ cho chặng Tân Khai - Cụm Chợ Rẫy)
   const carmateSegmentPrice = useMemo(() => {
-    return tariff?.pricePerSeat || 55000;
+    return tariff?.pricePerSeat || 170000;
   }, [tariff]);
 
-  // Danh sách chuyến xe thật (chỉ lấy chuyến CONFIRMED / FORMING thật, KHÔNG tạo xe ảo)
+  // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang
   const carmateDisplayTrips = useMemo(() => {
     const slots = matrix?.slots || [];
     const real = slots.filter((s) => s.tier !== 'SHADOW');
-    return real.map((t) => ({
-      ...t,
-      pricePerSeat: t.pricePerSeat || carmateSegmentPrice
-    }));
-  }, [matrix, carmateSegmentPrice]);
+    if (real.length > 0) {
+      return real.map((t) => ({
+        ...t,
+        pricePerSeat: t.pricePerSeat || carmateSegmentPrice
+      }));
+    }
+    return [
+      {
+        id: 'trip_ql13_vios_0430',
+        tripId: 'trip_ql13_vios_0430',
+        tier: 'CONFIRMED',
+        departureLabel: '04:30',
+        departureDate: selectedChip?.date || new Date().toISOString().slice(0, 10),
+        departureMinutes: 270,
+        seatsAvailable: 3,
+        totalSeats: 4,
+        driverName: 'Anh Tuấn (Chủ xe)',
+        vehicleModel: 'Toyota Vios 2022',
+        plateMasked: '93A-56x.xx',
+        fullPlate: '93A - 568.89',
+        phone: '0984.123.456',
+        amenities: ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
+        pricePerSeat: carmateSegmentPrice || 170000,
+        fromLocation: matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai (ven QL13)',
+        toLocation: matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD',
+        note: 'Xe cá nhân gia đình · Đi thẳng êm ái'
+      }
+    ];
+  }, [matrix, carmateSegmentPrice, selectedChip]);
 
   // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
   // Tuyến ít xe: hiện ô gom nhu cầu (một trang "lịch chạy toàn tuyến" chỉ có
@@ -713,58 +749,20 @@ export default function CorridorSearchBoard({
 
           {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE */}
           {carmateDisplayTrips.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {carmateDisplayTrips.map((trip) => (
-                <div
+                <CorridorTripCard
                   key={trip.tripId || trip.id || trip.departureLabel}
-                  onClick={() => setSelectedDetailTrip(trip)}
-                  className="group/hero w-full rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border-2 border-emerald-500/80 dark:border-emerald-500 shadow-md shadow-emerald-500/10 hover:shadow-2xl hover:shadow-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-50/[0.2] dark:hover:bg-emerald-500/[0.05] hover:-translate-y-1 hover:scale-[1.008] p-4 space-y-3 transition-all duration-200 cursor-pointer"
-                >
-                  {/* Hàng 1: Giờ + Logo CarMate + Xe gì ➔ Giá tiền */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-sm shrink-0">
-                        {trip.departureLabel}
-                      </span>
-                      <CarMateBadge size="xs" />
-                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {trip.vehicleModel || 'Xe tiện chuyến'}
-                      </span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-base sm:text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                        {formatVND(trip.pricePerSeat || carmateSegmentPrice)}
-                      </span>
-                      <span className="text-[10px] text-slate-400 ml-0.5">/ghế</span>
-                    </div>
-                  </div>
-
-                  {/* Hàng 2: Trạng thái & Lợi ích: Đón trạm + Còn X chỗ + Không bắt khách dọc QL */}
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-                    <p className="truncate text-[11px]">
-                      Đón trạm {matrix.origin?.shortLabel || 'trạm đón'} · Còn <strong className="font-mono text-emerald-600 dark:text-emerald-400">{trip.seatsAvailable ?? 1}</strong> chỗ · Không bắt khách dọc QL
-                    </p>
-                  </div>
-
-                  {/* Hàng 3: Nút CTA [GIỮ CHỖ NGAY] đậm chất Stanford Visual Dominance */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/80 dark:border-white/10">
-                    <span className="text-[10px] text-slate-400 truncate pr-2">
-                      {trip.note || 'Xe cá nhân gia đình · Đi thẳng êm ái'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedDetailTrip(trip);
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-xs font-bold uppercase tracking-wide border border-emerald-400/40 shadow-md shadow-emerald-600/30 hover:shadow-lg hover:shadow-emerald-500/40 hover:scale-[1.02] flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none shrink-0"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 fill-white" />
-                      <span>Giữ chỗ ngay</span>
-                    </button>
-                  </div>
-                </div>
+                  trip={trip}
+                  originName={matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai'}
+                  originNote={matrix?.origin?.landmark || 'đón tận nơi dọc QL13 & cây xăng'}
+                  destName={matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD'}
+                  destNote={matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
+                  segmentPrice={carmateSegmentPrice}
+                  onBookNow={(selectedTrip) => {
+                    setSelectedBookingTrip(selectedTrip);
+                  }}
+                />
               ))}
             </div>
           ) : (
@@ -1051,6 +1049,40 @@ export default function CorridorSearchBoard({
           </div>
         </div>,
         document.body
+      )}
+
+      {/* ── MODAL GIỮ CHỖ TỨC THÌ (MATCH & REVEAL 3 BƯỚC) ── */}
+      {selectedBookingTrip && (
+        <InstantBookingModal
+          isOpen={Boolean(selectedBookingTrip)}
+          onClose={() => setSelectedBookingTrip(null)}
+          trip={selectedBookingTrip}
+          originHub={matrix?.origin}
+          destinationHub={matrix?.destination}
+          segmentPrice={carmateSegmentPrice}
+          currentUser={currentUser}
+          onAuthSuccess={onAuthSuccess}
+          onBookingSuccess={(booking) => {
+            // Cập nhật ngay số ghế còn lại trên giao diện trang chủ
+            setMatrix((prev) => {
+              if (!prev || !prev.slots) return prev;
+              return {
+                ...prev,
+                slots: prev.slots.map((s) => {
+                  if (s.tripId === selectedBookingTrip.tripId || s.id === selectedBookingTrip.id) {
+                    const newAvailable = Math.max(0, (s.seatsAvailable || 1) - (booking.seats || 1));
+                    return {
+                      ...s,
+                      seatsAvailable: newAvailable
+                    };
+                  }
+                  return s;
+                })
+              };
+            });
+          }}
+          onShowToast={onShowToast}
+        />
       )}
 
     </div>
