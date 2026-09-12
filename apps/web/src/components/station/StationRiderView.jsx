@@ -944,36 +944,37 @@ export default function StationRiderView({
           )}
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono font-black uppercase tracking-wider text-emerald-400">
+              <span className="type-label font-semibold uppercase tracking-wider text-emerald-400">
                 {viewStep === 'CHECKIN' ? 'CARMATE • TRẠM VẬN TẢI ẢO' : 'VÉ ĐÓN XE ĐIỆN TỬ'}
               </span>
             </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <h1 className="text-base sm:text-lg font-black text-white flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{currentHub.shortName || currentHub.name}</span>
-              </h1>
-              {viewStep === 'CHECKIN' && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowStationPicker(!showStationPicker)}
-                    className="text-[11px] font-mono text-sky-400 hover:text-sky-300 underline cursor-pointer"
-                  >
-                    {showStationPicker ? t('station.collapse') : t('station.changeHub')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowStationRequestModal(true)}
-                    className="text-[10px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-500/20 transition-all"
-                    title={t('station.suggestHubTitle')}
-                  >
-                    <Lightbulb className="w-3 h-3 text-amber-400" />
-                    <span>{t('station.suggestHub')}</span>
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Tên trạm đứng riêng một hàng; hai nút phụ xuống hàng dưới.
+                Nhét chung một hàng ngang thì ở 390px nút "Đổi trạm" bị vỡ làm
+                hai dòng chen vào giữa tiêu đề, trông như lỗi dựng trang. */}
+            <h1 className="text-base sm:text-lg font-black text-white flex items-center gap-1.5 mt-0.5 min-w-0">
+              <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="truncate">{currentHub.shortName || currentHub.name}</span>
+            </h1>
+            {viewStep === 'CHECKIN' && (
+              <div className="flex items-center gap-2 mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowStationPicker(!showStationPicker)}
+                  className="tap-44 type-caption text-sky-400 hover:text-sky-300 underline cursor-pointer whitespace-nowrap"
+                >
+                  {showStationPicker ? t('station.collapse') : t('station.changeHub')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowStationRequestModal(true)}
+                  className="tap-44 type-caption text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2.5 rounded-lg border border-amber-500/20 transition-all whitespace-nowrap"
+                  title={t('station.suggestHubTitle')}
+                >
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>{t('station.suggestHub')}</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -987,7 +988,7 @@ export default function StationRiderView({
             <span className="text-base font-black font-mono text-emerald-400 block">
               {formatVND(boardingPass?.fuelSurcharge || estimatedFare)}
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">{t('station.allInclusive')}</span>
+            <span className="text-[10px] text-slate-400">{t('station.allInclusive')}</span>
           </div>
         )}
       </header>
@@ -995,7 +996,7 @@ export default function StationRiderView({
       {/* DROPDOWN CHỌN TRẠM ĐÓN DỌC TUYẾN QL13 (TIỆN LỢI THỬ NGHIỆM TRÊN WEB & MOBILE) */}
       {showStationPicker && viewStep === 'CHECKIN' && (
         <div className="mb-4 p-3.5 rounded-2xl bg-white/[0.06] border border-white/[0.12] max-w-lg mx-auto w-full animate-fade-in space-y-2 shadow-xl">
-          <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-300">
+          <div className="flex items-center justify-between type-caption font-bold text-slate-300">
             <span>{t('station.chooseHub')}</span>
             <button
               type="button"
@@ -1021,7 +1022,7 @@ export default function StationRiderView({
             ))}
           </select>
           <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-xs">
-            <span className="text-[11px] text-slate-400 font-mono">{t('station.noHubYet')}</span>
+            <span className="text-[11px] text-slate-400">{t('station.noHubYet')}</span>
             <button
               type="button"
               onClick={() => {
@@ -1073,7 +1074,7 @@ export default function StationRiderView({
                 </p>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-white/[0.08]">
-                  <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
                     <span>🚶 ~{Math.max(1, Math.round(nearestHubInfo.distanceKm * 12))}p đi bộ</span>
                     <span>•</span>
                     <span>🛵 ~{Math.max(1, Math.round(nearestHubInfo.distanceKm * 2.5))}p xe ôm</span>
@@ -1110,13 +1111,13 @@ export default function StationRiderView({
             {/* 1. BẠN MUỐN ĐẾN ĐÂU? (DÀN PHẲNG 3 NÚT BẤM KÍCH THƯỚC LỚN >= 56PX) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-black uppercase font-mono tracking-wider text-slate-200">
+                <label className="type-heading text-slate-200">
                   {t('station.step1Where')}
                 </label>
                 <button
                   type="button"
                   onClick={() => toggleDirection()}
-                  className="text-[11px] font-mono text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded-xl border border-sky-500/20 transition-all"
+                  className="tap-44 text-[11px] font-mono text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded-xl border border-sky-500/20 transition-all"
                 >
                   <RefreshCw className="w-3 h-3 text-sky-400" />
                   <span>{direction === 'TO_SAIGON' ? 'Đi Sài Gòn ⇄' : 'Về Bình Phước ⇄'}</span>
@@ -1151,7 +1152,7 @@ export default function StationRiderView({
                           <div className="text-sm sm:text-base font-black text-white leading-tight">
                             {dest.title}
                           </div>
-                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                          <div className="text-[11px] text-slate-400 mt-0.5">
                             {dest.subtitle}
                           </div>
                         </div>
@@ -1164,7 +1165,7 @@ export default function StationRiderView({
                         >
                           {formatVND(dest.price)}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-mono block">{t('station.perPerson')}</span>
+                        <span className="text-[10px] text-slate-400 block">{t('station.perPerson')}</span>
                       </div>
                     </button>
                   );
@@ -1176,7 +1177,7 @@ export default function StationRiderView({
                 <button
                   type="button"
                   onClick={() => setShowOtherDestinations(!showOtherDestinations)}
-                  className="text-xs text-slate-400 hover:text-emerald-300 flex items-center gap-1 font-mono underline cursor-pointer"
+                  className="tap-44 text-xs text-slate-400 hover:text-emerald-300 flex items-center gap-1 underline cursor-pointer"
                 >
                   <span>{showOtherDestinations ? '▲ Thu gọn điểm trả khác' : '▼ Hoặc chọn điểm trả khác dọc đường...'}</span>
                 </button>
@@ -1200,7 +1201,7 @@ export default function StationRiderView({
 
             {/* 2. SỐ LƯỢNG GHẾ */}
             <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase font-mono tracking-wider text-slate-200 block">
+              <label className="type-heading text-slate-200 block">
                 {t('station.step2Seats')}
               </label>
               <div className="flex items-center justify-between p-2 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
@@ -1212,11 +1213,13 @@ export default function StationRiderView({
                   -
                 </button>
                 <div className="text-center">
-                  <span className="text-2xl font-black font-mono text-white tracking-wide">
-                    ( {seatsNeeded} người )
+                  {/* Mono chỉ dành cho CON SỐ (để canh cột khi tăng/giảm);
+                      chữ tiếng Việt dùng font thường cho dễ đọc. */}
+                  <span className="text-2xl font-black text-white tracking-wide">
+                    <span className="font-mono tabular">{seatsNeeded}</span> người
                   </span>
-                  <span className="text-[11px] text-emerald-400 font-mono block mt-0.5">
-                    Phụ xăng: {formatVND(estimatedFare)}
+                  <span className="text-[11px] text-emerald-400 block mt-0.5">
+                    Phụ xăng: <span className="font-mono font-semibold">{formatVND(estimatedFare)}</span>
                   </span>
                 </div>
                 <button
@@ -1232,7 +1235,7 @@ export default function StationRiderView({
             {/* 3. SỐ ĐIỆN THOẠI ĐỂ CHỦ XE NHẬN DIỆN */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-black uppercase font-mono tracking-wider text-slate-200 block">
+                <label className="type-heading text-slate-200 block">
                   {t('station.step3Phone')}
                 </label>
                 {phone && (
@@ -1260,7 +1263,7 @@ export default function StationRiderView({
                       setOtpStep(false);
                       setShowAuthModal(true);
                     }}
-                    className="absolute right-2.5 top-2.5 h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold font-mono flex items-center gap-1 transition-all"
+                    className="absolute right-2.5 top-1.5 h-11 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold font-mono flex items-center gap-1 transition-all"
                   >
                     <span>SMS OTP</span>
                   </button>
@@ -1269,7 +1272,7 @@ export default function StationRiderView({
 
               {/* Tùy chọn tên hiển thị ngắn gọn (không bắt buộc) */}
               <div className="pt-0.5">
-                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1">
+                <div className="flex items-center justify-between type-label text-slate-400 mb-1">
                   <span>{t('station.displayName')}</span>
                   <span className="text-slate-500">{t('station.optional')}</span>
                 </div>
@@ -1282,7 +1285,7 @@ export default function StationRiderView({
                 />
               </div>
 
-              <p className="text-[11px] text-slate-400 font-mono">
+              <p className="text-[11px] text-slate-400">
                 {t('station.noPasswordNote')}
               </p>
             </div>
@@ -1297,7 +1300,7 @@ export default function StationRiderView({
                 <span>[▶]</span>
                 <span>{isSubmitting ? 'ĐANG KẾT NỐI XE...' : 'VÀO HÀNG ĐỢI ĐÓN XE'}</span>
               </button>
-              <p className="text-center text-[11px] font-mono text-slate-400">
+              <p className="text-center text-[11px] text-slate-400">
                 {t('station.fixedPriceNote')}
               </p>
             </div>
@@ -1370,7 +1373,7 @@ export default function StationRiderView({
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                         <span>🟢 ĐANG TRÊN HÀNH TRÌNH VỀ {boardingPass.destinationName || 'HÀNG XANH'}</span>
                       </span>
-                      <span className="text-[11px] font-mono text-slate-400">
+                      <span className="text-[11px] text-slate-400">
                         QL13 Express
                       </span>
                     </div>
@@ -2317,7 +2320,7 @@ export default function StationRiderView({
                         <span>Gọi Hotline: {bus.hotline}</span>
                       </a>
                     ) : (
-                      <span className="text-[11px] text-slate-400 font-mono">
+                      <span className="text-[11px] text-slate-400">
                         Vẫy xe trực tiếp tại điểm đón
                       </span>
                     )}
