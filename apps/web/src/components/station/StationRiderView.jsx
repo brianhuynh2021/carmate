@@ -919,7 +919,7 @@ export default function StationRiderView({
       });
       setShowCultureViolationModal(false);
       setCultureViolationNote('');
-      onShowToast?.(res.message || 'Đã kích hoạt Cơ chế Grim Trigger: Đình chỉ Chủ xe 30 ngày.');
+      onShowToast?.(res.message || 'Đã tiếp nhận báo cáo: Hệ thống tạm đình chỉ nhận cuốc của Chủ xe 30 ngày.');
     } catch (err) {
       console.error('Culture violation report error:', err);
       onShowToast?.(err.message || 'Lỗi khi gửi báo cáo');
@@ -1551,15 +1551,17 @@ export default function StationRiderView({
                     </button>
                   </div>
 
-                  {/* 6. NÚT MÔ PHỎNG: ĐẢO VỀ MÀN HÌNH CHỜ ĐÓN */}
-                  <button
-                    type="button"
-                    onClick={handleToggleBoardedDemo}
-                    className="w-full h-11 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-xs font-mono text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{t('station.simBackToWaiting')}</span>
-                  </button>
+                  {/* 6. NÚT MÔ PHỎNG: ĐẢO VỀ MÀN HÌNH CHỜ ĐÓN (CHỈ HIỆN Ở DEV) */}
+                  {import.meta.env.DEV && (
+                    <button
+                      type="button"
+                      onClick={handleToggleBoardedDemo}
+                      className="w-full h-11 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-xs font-mono text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{t('station.simBackToWaiting')}</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 /* ========================================================================= */
@@ -1703,27 +1705,30 @@ export default function StationRiderView({
                     <span>{t('station.reportNoShow')}</span>
                   </button>
 
-                  {/* 5.6 MÔ PHỎNG TRÁO VÉ SANG XE HỖ TRỢ D2 (TEST N+1 SILENT FAILOVER) */}
-                  <button
-                    type="button"
-                    onClick={handleTriggerShadowFailover}
-                    className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                    title={t('station.simSwapTitle')}
-                  >
-                    <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
-                    <span>{t('station.simSwapCar')}</span>
-                  </button>
+                  {/* 5.6 & 5.7 CÔNG CỤ MÔ PHỎNG KIỂM THỬ (CHỈ HIỆN Ở DEV) */}
+                  {import.meta.env.DEV && (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={handleTriggerShadowFailover}
+                        className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                        title={t('station.simSwapTitle')}
+                      >
+                        <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
+                        <span>{t('station.simSwapCar')}</span>
+                      </button>
 
-                  {/* 5.7 MÔ PHỎNG LÊN XE (EN-ROUTE & VIETQR) */}
-                  <button
-                    type="button"
-                    onClick={handleToggleBoardedDemo}
-                    className="w-full h-11 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                    title={t('station.simBoardTitle')}
-                  >
-                    <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>{t('station.simBoard')}</span>
-                  </button>
+                      <button
+                        type="button"
+                        onClick={handleToggleBoardedDemo}
+                        className="w-full h-11 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                        title={t('station.simBoardTitle')}
+                      >
+                        <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>{t('station.simBoard')}</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* 5.8 BẢO HỘ GIỜ GIẤC: CHỦ XE TRỄ > 5 PHÚT -> HỦY KHÔNG PHẠT & CỨU SINH XE KHÁCH */}
                   <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2.5">
@@ -2178,7 +2183,7 @@ export default function StationRiderView({
                 disabled={cultureSubmitting}
                 className="font-bold"
               >
-                {cultureSubmitting ? 'Đang kích hoạt...' : 'Xác Nhận Thi Hành Grim Trigger'}
+                {cultureSubmitting ? 'Đang gửi...' : 'Xác Nhận Báo Cáo Vi Phạm'}
               </Button>
             </div>
           }
@@ -2210,7 +2215,7 @@ export default function StationRiderView({
                   id: 'PRICE_GOUGING',
                   icon: DollarSign,
                   title: 'Vòi vĩnh tăng giá / Đòi thêm tiền',
-                  desc: 'Yêu cầu phụ thu bất hợp lý ngoài định mức chi phí chia sẻ Shapley.'
+                  desc: 'Yêu cầu phụ thu bất hợp lý ngoài mức đóng góp chi phí đã thoả thuận trước.'
                 }
               ].map((opt) => {
                 const IconComponent = opt.icon;
@@ -2248,7 +2253,7 @@ export default function StationRiderView({
             </div>
 
             <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.08] text-[11px] text-slate-400 leading-relaxed">
-              ⚖️ <strong>{t('station.mathBasis')}</strong> {t('station.carmateApplies')} <em>Grim Trigger</em> {t('station.grimTriggerDesc')}
+              ⚖️ <strong>{t('station.mathBasis')}</strong> {t('station.grimTriggerDesc')}
             </div>
           </div>
         </Modal>

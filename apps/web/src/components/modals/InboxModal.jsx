@@ -2176,8 +2176,8 @@ export default function InboxModal({
               </button>
             </div>
 
-            {/* Nút mô phỏng nhấc máy khi đang đổ chuông (hỗ trợ kiểm thử/demo) */}
-            {inAppCallState.status === 'ringing' && (
+            {/* Nút mô phỏng nhấc máy khi đang đổ chuông (chỉ hiện ở dev) */}
+            {inAppCallState.status === 'ringing' && import.meta.env.DEV && (
               <div className="pt-0.5">
                 <button
                   type="button"

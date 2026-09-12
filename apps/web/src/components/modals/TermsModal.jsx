@@ -40,7 +40,7 @@ export default function TermsModal({ onClose, zIndex = 'z-[9999]' }) {
               <strong>2. Không biến tướng taxi dịch vụ (Chủ xe tự chủ & Tự chịu trách nhiệm):</strong> CarMate là nền tảng kết nối nhu cầu chia sẻ chi phí dân sự, không can thiệp hay giới hạn số chuyến của cá nhân. Chủ xe tự cam kết hành trình cá nhân tiện đường và tự chịu trách nhiệm về tần suất di chuyển theo quy định của Luật Giao thông đường bộ.
             </li>
             <li>
-              <strong>3. Không định giá vượt định mức chi phí thực tế:</strong> Mức đóng góp được tính toán tự động dựa trên cự ly Geodesic Haversine × 1.28 và trạm thu phí BOT thực tế. Tổng mức san sẻ từ người đi cùng bảo đảm không vượt quá chi phí nhiên liệu và hao mòn xe (<em>P ≤ Xăng + BOT</em>), tuân thủ nguyên tắc dân sự phi lợi nhuận theo Điều 3 Bộ Luật Dân sự 2015.
+              <strong>3. Không định giá vượt định mức chi phí thực tế:</strong> Mức đóng góp được tính toán tự động dựa trên khoảng cách di chuyển thực tế và chi phí trạm thu phí BOT cầu đường. Tổng mức san sẻ từ người đi cùng bảo đảm không vượt quá chi phí nhiên liệu và hao mòn xe, tuân thủ nguyên tắc dân sự phi lợi nhuận theo Điều 3 Bộ Luật Dân sự 2015.
             </li>
           </ul>
         </div>
@@ -55,7 +55,7 @@ export default function TermsModal({ onClose, zIndex = 'z-[9999]' }) {
             <li>
               <strong>1. Có đăng ký đúng mã ngành Công Nghệ Thông Tin:</strong>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 pl-1 mt-0.5">
-                • Mã 6201: Hoạt động lập trình máy tính (thuật toán khớp chuyến Haversine).<br />
+                • Mã 6201: Hoạt động lập trình máy tính (nền tảng kết nối và điều phối chuyến đi xe gia đình).<br />
                 • Mã 6311: Xử lý dữ liệu, cho thuê và các hoạt động liên quan.<br />
                 • Mã 6312: Cổng thông tin điện tử (nền tảng kết nối nhu cầu xã hội).
               </div>

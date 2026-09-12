@@ -527,8 +527,8 @@ export default function StationContactModal({
               )}
             </div>
 
-            {/* Nút mô phỏng đối tác bắt máy (hỗ trợ kiểm thử/demo nhanh) */}
-            {callState === 'ringing' && (
+            {/* Nút mô phỏng đối tác bắt máy (chỉ hiện ở dev) */}
+            {callState === 'ringing' && import.meta.env.DEV && (
               <div className="pt-1">
                 <button
                   type="button"

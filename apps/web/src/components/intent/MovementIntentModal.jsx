@@ -295,7 +295,7 @@ export default function MovementIntentModal({
               : '⚡ Đã lưu ý định chuyến xe! Hệ thống đang tự động gom khách cùng tuyến vào khung giờ hẹn.')
           : (isRecurring
               ? `⚡ Đã lưu lịch đi lại hàng tuần (${recurringDays.join(', ')})! Hệ thống tự động ghép xe tiện đường mỗi tuần.`
-              : '⚡ Đã lưu ý định đi chung! Thuật toán Gale-Shapley đang tự động ghép xe tiện đường cho bạn.')
+              : '⚡ Đã lưu nhu cầu đi chung! Hệ thống CarMate đang tự động kết nối xe tiện đường cho bạn.')
       );
 
       onSuccess?.(res?.data || payload);
