@@ -2119,7 +2119,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         <button
                           type="button"
                           onClick={() => handleRuleDelete(rule.id)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                          className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
                           title="Xóa tiêu chí tùy biến này"
                         >
                           <Trash2 className="w-4 h-4" />

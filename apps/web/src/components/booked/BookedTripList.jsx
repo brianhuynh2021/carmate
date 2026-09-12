@@ -998,7 +998,7 @@ export default function BookedTripList({
                       key={p}
                       type="button"
                       onClick={() => setCurrentPage(p)}
-                      className={`w-7 h-7 rounded-lg text-xs font-semibold tabular transition-all cursor-pointer ${
+                      className={`w-9 h-9 rounded-lg text-xs font-semibold tabular transition-all cursor-pointer ${
                         currentPage === p
                           ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-2xs'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 text-[#86868b]'

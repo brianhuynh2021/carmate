@@ -129,7 +129,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full border border-black/[0.08] hover:bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f] flex items-center justify-center transition-all cursor-pointer active:scale-90"
+            className="w-11 h-11 rounded-full border border-black/[0.08] hover:bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f] flex items-center justify-center transition-all cursor-pointer active:scale-90"
             title="Đóng cửa sổ"
           >
             <X className="w-4 h-4" />
@@ -233,7 +233,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                                       onSelectTrip(trip);
                                       onClose?.();
                                     }}
-                                    className="h-7 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold inline-flex items-center text-[11px] transition-all cursor-pointer"
+                                    className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold inline-flex items-center text-[11px] transition-all cursor-pointer"
                                     title="Xem chi tiết hành trình chuyến này"
                                   >
                                     Xem chi tiết

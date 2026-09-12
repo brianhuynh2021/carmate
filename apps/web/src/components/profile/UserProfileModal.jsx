@@ -1016,7 +1016,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                                   type="button"
                                   onClick={() => fileInputRefs.current[index]?.click()}
                                   title="Thay ảnh này"
-                                  className="w-8 h-8 rounded-full bg-white/90 text-slate-800 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-md"
+                                  className="w-11 h-11 rounded-full bg-white/90 text-slate-800 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-md"
                                 >
                                   <Upload className="w-3.5 h-3.5" />
                                 </button>
@@ -1024,7 +1024,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                                   type="button"
                                   onClick={() => handleRemovePhoto(index)}
                                   title="Xóa ảnh"
-                                  className="w-8 h-8 rounded-full bg-rose-500/90 text-white flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-md"
+                                  className="w-11 h-11 rounded-full bg-rose-500/90 text-white flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-md"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1039,7 +1039,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                               onClick={() => fileInputRefs.current[index]?.click()}
                               className="w-full h-full flex flex-col items-center justify-center cursor-pointer p-2"
                             >
-                              <div className="w-8 h-8 rounded-full bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center text-[#86868b] group-hover:text-[#0071e3] group-hover:scale-110 transition-all mb-1">
+                              <div className="w-11 h-11 rounded-full bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center text-[#86868b] group-hover:text-[#0071e3] group-hover:scale-110 transition-all mb-1">
                                 <Camera className="w-4 h-4" />
                               </div>
                               <span className="text-[11px] font-semibold text-[#1d1d1f] dark:text-slate-200">

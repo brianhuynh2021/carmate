@@ -748,7 +748,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                         <button
                           type="button"
                           onClick={() => setEditingMaskIndex(idx)}
-                          className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center cursor-pointer shadow-xs"
+                          className="w-9 h-9 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center cursor-pointer shadow-xs"
                           title="Chỉnh vị trí che biển"
                         >
                           <Crosshair className="w-3.5 h-3.5" />
@@ -756,7 +756,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                         <button
                           type="button"
                           onClick={() => handleRemovePhoto(idx)}
-                          className="w-7 h-7 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer shadow-xs"
+                          className="w-9 h-9 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer shadow-xs"
                           title="Xóa hình này"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

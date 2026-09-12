@@ -629,7 +629,7 @@ export default function DriverScheduleCardView({
                         <button
                           type="button"
                           onClick={() => handleChangeSeats(trip.id, -1)}
-                          className="w-6 h-6 rounded-lg bg-white/[0.10] hover:bg-white/[0.20] text-xs font-bold font-mono flex items-center justify-center cursor-pointer active:scale-90"
+                          className="w-9 h-9 rounded-lg bg-white/[0.10] hover:bg-white/[0.20] active:bg-white/[0.28] text-xs font-bold font-mono flex items-center justify-center cursor-pointer active:scale-90"
                           title="Bớt 1 ghế"
                         >
                           -
@@ -640,7 +640,7 @@ export default function DriverScheduleCardView({
                         <button
                           type="button"
                           onClick={() => handleChangeSeats(trip.id, 1)}
-                          className="w-6 h-6 rounded-lg bg-white/[0.10] hover:bg-white/[0.20] text-xs font-bold font-mono flex items-center justify-center cursor-pointer active:scale-90"
+                          className="w-9 h-9 rounded-lg bg-white/[0.10] hover:bg-white/[0.20] active:bg-white/[0.28] text-xs font-bold font-mono flex items-center justify-center cursor-pointer active:scale-90"
                           title="Thêm 1 ghế"
                         >
                           +

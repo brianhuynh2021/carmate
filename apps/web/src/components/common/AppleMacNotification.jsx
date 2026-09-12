@@ -150,7 +150,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
               handleClose();
             }}
             aria-label="Đóng thông báo"
-            className="w-5 h-5 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
+            className="w-9 h-9 -m-2 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>

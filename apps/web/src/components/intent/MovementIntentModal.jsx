@@ -353,7 +353,7 @@ export default function MovementIntentModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.15] text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
+            className="w-11 h-11 rounded-full bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.15] text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
             aria-label={t('common.close')}
           >
             <X className="w-4 h-4" />
@@ -622,7 +622,7 @@ export default function MovementIntentModal({
                     key={num}
                     type="button"
                     onClick={() => setSeats(num)}
-                    className={`w-6 h-6 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                    className={`w-9 h-9 rounded-lg text-xs font-bold cursor-pointer transition-all ${
                       seats === num
                         ? 'bg-emerald-500 text-slate-950 shadow-2xs'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.06]'

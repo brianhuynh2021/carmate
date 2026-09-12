@@ -114,6 +114,47 @@
     }
   }
 
+  /* ── PHẢN HỒI TƯƠNG TÁC NỀN (BASELINE INTERACTION FEEDBACK) ──
+     Toàn dự án có ~300 <button> viết tay, phần lớn chỉ đổi đúng MỘT thuộc tính
+     khi hover (thường là màu viền) nên gần như không thấy phản hồi gì. Sửa tay
+     từng nút vừa dễ sót vừa dễ hỏng, nên đặt một tầng nền ở đây: mọi nút đều có
+     phản hồi tối thiểu, còn nút nào khai báo hover riêng thì lớp utility của
+     Tailwind vẫn thắng (độ ưu tiên cao hơn) và giữ nguyên thiết kế riêng.
+
+     Chỉ áp dụng cho thiết bị có con trỏ thật — tránh trạng thái hover "dính"
+     trên màn hình cảm ứng sau khi chạm. */
+  @media (hover: hover) and (pointer: fine) {
+    button:not(:disabled):not([aria-disabled='true']):hover,
+    [role='button']:not([aria-disabled='true']):hover {
+      filter: brightness(0.97);
+    }
+  }
+
+  /* Nút bị vô hiệu hoá không được mời bấm */
+  button:disabled,
+  button[aria-disabled='true'],
+  [role='button'][aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  /* Phản hồi chạm trên mobile: thay cho hover mà cảm ứng không có */
+  button:not(:disabled):active,
+  [role='button']:active {
+    transform: scale(0.985);
+  }
+
+  /* Tôn trọng người dùng tắt hiệu ứng chuyển động */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   :focus-visible {
     outline: 2px solid #0071e3;
     outline-offset: 2px;

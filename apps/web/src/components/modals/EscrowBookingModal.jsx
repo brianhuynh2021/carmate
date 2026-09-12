@@ -813,7 +813,7 @@ export default function EscrowBookingModal({
                       key={n}
                       type="button"
                       onClick={() => setSeats(n)}
-                      className={`w-8 h-8 rounded-md text-sm font-bold tabular cursor-pointer transition-all ${
+                      className={`w-9 h-9 rounded-md text-sm font-bold tabular cursor-pointer transition-all ${
                         seats === n
                           ? 'bg-white text-primary-700 shadow-xs font-black'
                           : 'text-slate-600 hover:text-slate-900'

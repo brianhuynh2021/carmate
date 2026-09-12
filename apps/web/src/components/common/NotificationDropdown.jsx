@@ -357,7 +357,7 @@ export default function NotificationDropdown({
             type="button"
             onClick={onClose}
             aria-label="Đóng thông báo"
-            className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -485,7 +485,7 @@ export default function NotificationDropdown({
                       setActiveMenuId(activeMenuId === item.id ? null : item.id);
                     }}
                     title="Tùy chọn khác"
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
