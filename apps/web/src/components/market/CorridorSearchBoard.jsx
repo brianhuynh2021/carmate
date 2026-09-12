@@ -312,29 +312,9 @@ export default function CorridorSearchBoard({
         pricePerSeat: t.pricePerSeat || carmateSegmentPrice
       }));
     }
-    return [
-      {
-        id: 'trip_ql13_vios_0430',
-        tripId: 'trip_ql13_vios_0430',
-        tier: 'CONFIRMED',
-        departureLabel: '04:30',
-        departureDate: selectedChip?.date || new Date().toISOString().slice(0, 10),
-        departureMinutes: 270,
-        seatsAvailable: 3,
-        totalSeats: 4,
-        driverName: 'Anh Tuấn (Chủ xe)',
-        vehicleModel: 'Toyota Vios 2022',
-        plateMasked: '93A-56x.xx',
-        fullPlate: '93A - 568.89',
-        phone: '0984.123.456',
-        amenities: ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
-        pricePerSeat: carmateSegmentPrice || 170000,
-        fromLocation: matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai (ven QL13)',
-        toLocation: matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD',
-        note: 'Xe cá nhân gia đình · Đi thẳng êm ái'
-      }
-    ];
-  }, [matrix, carmateSegmentPrice, selectedChip]);
+    // Tuyệt đối KHÔNG hiển thị xe ảo khi chưa có chuyến thật
+    return [];
+  }, [matrix, carmateSegmentPrice]);
 
   // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
   // Tuyến ít xe: hiện ô gom nhu cầu (một trang "lịch chạy toàn tuyến" chỉ có
