@@ -1053,7 +1053,7 @@ export default function App() {
             fallback={
               <div className="min-h-[50vh] flex flex-col items-center justify-center gap-2 text-slate-400 text-xs font-medium">
                 <span className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                <span>Đang tải cổng quản trị bảo mật...</span>
+                <span>{t('appRoot.s001')}</span>
               </div>
             }
           >

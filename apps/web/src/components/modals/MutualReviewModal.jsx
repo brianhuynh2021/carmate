@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Star, ShieldAlert, CheckCircle2, ThumbsUp, AlertTriangle, UserCheck, Car, Users } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 const DRIVER_POSITIVE_TAGS = [
   'Đúng giờ điểm hẹn',
@@ -35,6 +36,7 @@ const PASSENGER_WARNING_TAGS = [
 ];
 
 export default function MutualReviewModal({ booking, onClose, onSubmitReview }) {
+  const { t } = useI18n();
   // Hook phải gọi trước mọi early return (Rules of Hooks)
 
   // Tự động nhận diện vai trò mặc định (hoặc cho phép hoán đổi)
@@ -92,12 +94,12 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
       size="md"
       icon={Star}
       iconTone="brand"
-      title="Đánh Giá Chuyến Đi 2 Chiều"
-      subtitle="Cộng đồng bình đẳng · Cùng xây dựng văn hoá đi chung xe an minh"
+      title={t('review2.s007')}
+      subtitle={t('review2.s008')}
       footer={
         <div className="flex items-center justify-end gap-2.5 w-full">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
-            Để sau
+            {t('review2.s001')}
           </Button>
           <Button
             size="md"
@@ -124,7 +126,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
             }`}
           >
             <Car className="w-4 h-4" />
-            <span>Tôi là Chủ xe (Nhận xét Khách)</span>
+            <span>{t('review2.s002')}</span>
           </button>
           <button
             type="button"
@@ -136,7 +138,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Tôi là Người đi cùng (Nhận xét Chủ xe)</span>
+            <span>{t('review2.s003')}</span>
           </button>
         </div>
 
@@ -197,7 +199,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Thẻ tiêu chí tích cực */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Điểm cộng chuyến đi:</p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('review2.s004')}</p>
           <div className="flex flex-wrap gap-1.5">
             {positiveTags.map((tag) => {
               const active = selectedTags.includes(tag);
@@ -221,7 +223,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Thẻ tiêu chí cảnh báo / góp ý */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">Góp ý hoặc cảnh báo (nếu có):</p>
+          <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">{t('review2.s005')}</p>
           <div className="flex flex-wrap gap-1.5">
             {warningTags.map((tag) => {
               const active = selectedTags.includes(tag);
@@ -246,7 +248,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
         {/* Nhận xét cụ thể */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-            Lời nhắn nhủ thêm (Không bắt buộc):
+            {t('review2.s006')}
           </label>
           <textarea
             rows={2}

@@ -18,6 +18,7 @@ export default function AuthModal({
   subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · An toàn & bảo mật',
   contextNotice
 }) {
+  const { t } = useI18n();
   const { lang, setLang } = useI18n();
   const [authMethod, setAuthMethod] = useState('google'); // 'google' | 'telegram'
   const [phone, setPhone] = useState(initialPhone);
@@ -338,7 +339,7 @@ export default function AuthModal({
                       className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-black/[0.14] dark:border-slate-600 hover:border-black/[0.3] hover:bg-black/[0.02] text-[#1d1d1f] dark:text-white text-sm font-semibold flex items-center justify-center gap-3 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer"
                     >
                       <GoogleIcon className="w-5 h-5 shrink-0" />
-                      <span>Tiếp tục với Google</span>
+                      <span>{t('auth2.s001')}</span>
                     </button>
                   )}
                 </div>
@@ -351,7 +352,7 @@ export default function AuthModal({
                       onClick={() => setShowGoogleForm(true)}
                       className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#0071e3] dark:hover:text-[#2997ff] font-medium transition-colors cursor-pointer"
                     >
-                      Dùng form đăng nhập nhanh (Dev Test)
+                      {t('auth2.s002')}
                     </button>
                   </div>
                 )}
@@ -360,7 +361,7 @@ export default function AuthModal({
               <form onSubmit={handleGoogleSubmit} className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Địa chỉ Email Google (Gmail) *
+                    {t('auth2.s003')}
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -378,7 +379,7 @@ export default function AuthModal({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tên hiển thị của bạn (Tùy chọn)
+                    {t('auth2.s004')}
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -386,7 +387,7 @@ export default function AuthModal({
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="VD: Tuấn Nguyễn, Chị Linh..."
+                      placeholder={t('auth2.s020')}
                       className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3]"
                     />
                   </div>
@@ -394,7 +395,7 @@ export default function AuthModal({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Số điện thoại liên hệ (Tùy chọn)
+                    {t('auth2.s005')}
                   </label>
                   <div className="relative">
                     <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -414,7 +415,7 @@ export default function AuthModal({
                     onClick={() => setShowGoogleForm(false)}
                     className="py-3 px-4 rounded-2xl text-xs font-bold text-[#86868b] hover:bg-black/[0.04] cursor-pointer"
                   >
-                    Quay lại
+                    {t('auth2.s006')}
                   </button>
 
                   <button
@@ -440,7 +441,7 @@ export default function AuthModal({
                 <form onSubmit={handleTelegramDevSubmit} className="space-y-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Số điện thoại hoặc Telegram @username *
+                      {t('auth2.s007')}
                     </label>
                     <div className="relative">
                       <AtSign className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -450,7 +451,7 @@ export default function AuthModal({
                         autoFocus
                         value={telegramUsername}
                         onChange={(e) => setTelegramUsername(e.target.value)}
-                        placeholder="VD: 0984 883 750 hoặc @minh_carmate"
+                        placeholder={t('auth2.s021')}
                         className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#229ED9] focus:ring-1 focus:ring-[#229ED9]"
                       />
                     </div>
@@ -469,13 +470,13 @@ export default function AuthModal({
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed text-left space-y-1">
                   <p className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-sky-500" />
-                    <span>Môi trường thử nghiệm Localhost:</span>
+                    <span>{t('auth2.s008')}</span>
                   </p>
                   <p>
-                    Telegram Widget yêu cầu tên miền chính thức và từ chối <code>localhost</code>.
+                    {t('auth2.s009')} <code>localhost</code>.
                   </p>
                   <p>
-                    Khi deploy lên production (VD: <code>carmate.fly.dev</code>), bạn chỉ cần mở <strong>@BotFather</strong> gõ <code>/setdomain</code> để kích hoạt nút Widget tự động!
+                    {t('auth2.s010')} <code>carmate.fly.dev</code>{t('auth2.s011')} <strong>@BotFather</strong> {t('auth2.s012')} <code>/setdomain</code> {t('auth2.s013')}
                   </p>
                 </div>
               </div>
@@ -495,7 +496,7 @@ export default function AuthModal({
                       onClick={() => setShowTelegramForm(true)}
                       className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#229ED9] font-medium transition-colors cursor-pointer"
                     >
-                      Dùng form đăng nhập nhanh @username (Dev Test)
+                      {t('auth2.s014')}
                     </button>
                   </div>
                 )}
@@ -504,7 +505,7 @@ export default function AuthModal({
               <form onSubmit={handleTelegramDevSubmit} className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Số điện thoại hoặc Telegram @username *
+                    {t('auth2.s007')}
                   </label>
                   <div className="relative">
                     <AtSign className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -514,7 +515,7 @@ export default function AuthModal({
                       autoFocus
                       value={telegramUsername}
                       onChange={(e) => setTelegramUsername(e.target.value)}
-                      placeholder="VD: 0984 883 750 hoặc @minh_carmate"
+                      placeholder={t('auth2.s021')}
                       className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#229ED9] focus:ring-1 focus:ring-[#229ED9]"
                     />
                   </div>
@@ -522,7 +523,7 @@ export default function AuthModal({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tên hiển thị của bạn (Tùy chọn)
+                    {t('auth2.s004')}
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -530,7 +531,7 @@ export default function AuthModal({
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="VD: Tuấn Nguyễn, Chị Linh..."
+                      placeholder={t('auth2.s020')}
                       className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#229ED9] focus:ring-1 focus:ring-[#229ED9]"
                     />
                   </div>
@@ -542,7 +543,7 @@ export default function AuthModal({
                     onClick={() => setShowTelegramForm(false)}
                     className="py-3 px-4 rounded-2xl text-xs font-bold text-[#86868b] hover:bg-black/[0.04] cursor-pointer"
                   >
-                    Quay lại
+                    {t('auth2.s006')}
                   </button>
 
                   <button
@@ -564,7 +565,7 @@ export default function AuthModal({
           {/* Micro Trust Badge sang trọng */}
           <div className="flex items-center justify-center gap-1.5 py-1 px-3.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] text-[11px] font-medium text-[#86868b] dark:text-slate-400 w-fit mx-auto border border-black/[0.04] dark:border-white/[0.06]">
             <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
-            <span>Bảo mật danh tính · Kết nối an toàn</span>
+            <span>{t('auth2.s015')}</span>
           </div>
 
           {/* Điều khoản & Pháp lý */}
@@ -575,7 +576,7 @@ export default function AuthModal({
               onClick={() => setActiveLegalModal('terms')}
               className="text-[#0071e3] dark:text-blue-400 font-semibold underline underline-offset-2 hover:opacity-85 cursor-pointer inline"
             >
-              Điều khoản dịch vụ
+              {t('auth2.s016')}
             </button>{' '}
             &{' '}
             <button
@@ -583,7 +584,7 @@ export default function AuthModal({
               onClick={() => setActiveLegalModal('policy')}
               className="text-[#0071e3] dark:text-blue-400 font-semibold underline underline-offset-2 hover:opacity-85 cursor-pointer inline"
             >
-              Chính sách bảo mật
+              {t('auth2.s017')}
             </button>{' '}
             của CarMate.
           </p>
@@ -591,7 +592,7 @@ export default function AuthModal({
           {/* Chuyển ngôn ngữ nhanh cho khách quốc tế */}
           <div className="flex items-center justify-center gap-1.5 text-xs pt-1 text-[#86868b]">
             <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
-            <span className="text-[11px] font-medium">Ngôn ngữ / Language:</span>
+            <span className="text-[11px] font-medium">{t('auth2.s018')}</span>
             <button
               type="button"
               onClick={() => setLang('vi')}
@@ -599,7 +600,7 @@ export default function AuthModal({
                 lang === 'vi' ? 'text-[#0071e3] bg-[#0071e3]/10' : 'text-[#86868b] hover:text-[#1d1d1f]'
               }`}
             >
-              Tiếng Việt
+              {t('auth2.s019')}
             </button>
             <span className="text-[#86868b] text-[10px]">·</span>
             <button

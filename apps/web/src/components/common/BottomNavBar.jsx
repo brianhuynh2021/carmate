@@ -1,5 +1,6 @@
 import React from 'react';
 import { Compass, Fuel, Car, Clock, MessageSquare } from 'lucide-react';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function BottomNavBar({
   activeTab,
@@ -7,6 +8,7 @@ export default function BottomNavBar({
   onOpenInbox,
   bookedCount = 0
 }) {
+  const { t } = useI18n();
   const items = [
     { id: 'market', label: 'Tiện chuyến', icon: Compass },
     { id: 'station', label: 'Điểm đón', icon: Fuel },
@@ -38,7 +40,7 @@ export default function BottomNavBar({
                 key={item.id}
                 type="button"
                 onClick={() => handleTabClick(item.id)}
-                aria-label="Bắt đầu nhận khách dọc đường"
+                aria-label={t('bottomNav.s001')}
                 className="flex flex-col items-center justify-center -mt-6 cursor-pointer active:scale-95 transition-transform touch-manipulation"
               >
                 <span

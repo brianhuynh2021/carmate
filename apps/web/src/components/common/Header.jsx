@@ -188,7 +188,7 @@ export default function Header({
             type="button"
             onClick={onOpenAi}
             title={isMac ? 'Trợ lý CarMate (Phím tắt: ⌘K)' : 'Trợ lý CarMate (Phím tắt: Ctrl+K)'}
-            aria-label="Mở Trợ lý CarMate"
+            aria-label={t('header2.s004')}
             className="inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
@@ -288,7 +288,7 @@ export default function Header({
                   >
                     <div className="inline-flex items-center gap-2">
                       <Inbox className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
-                      <span>Hộp thư & Chat chuyến</span>
+                      <span>{t('header2.s001')}</span>
                     </div>
                     {inboxCount > 0 && (
                       <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white">
@@ -307,10 +307,10 @@ export default function Header({
                   >
                     <div className="inline-flex items-center gap-2">
                       <Sparkles className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                      <span>Hẹn lịch chuyến xe mai</span>
+                      <span>{t('header2.s002')}</span>
                     </div>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
-                      0 gõ form
+                      {t('header2.s003')}
                     </span>
                   </button>
 
@@ -468,8 +468,8 @@ export default function Header({
               onClick={() => setIsNotificationCenterOpen((prev) => !prev)}
               aria-expanded={isNotificationCenterOpen}
               aria-haspopup="true"
-              title="Trung tâm thông báo (Apple macOS)"
-              aria-label="Mở Trung tâm thông báo"
+              title={t('header2.s005')}
+              aria-label={t('header2.s006')}
               className={`relative inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold border cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0 ${
                 isNotificationCenterOpen
                   ? 'bg-[#0071e3]/10 dark:bg-[#0071e3]/20 border-[#0071e3]/30 text-[#0071e3]'

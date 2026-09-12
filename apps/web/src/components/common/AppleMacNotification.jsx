@@ -11,6 +11,7 @@ import {
   Car
 } from 'lucide-react';
 import { playMessageChime } from '../../utils/audioFeedback.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 /**
  * Event emitter đơn giản cho Apple macOS In-App Notification
@@ -43,6 +44,7 @@ export function triggerMacNotification({
 }
 
 export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
+  const { t } = useI18n();
   const [notification, setNotification] = useState(null);
   const [isClosing, setIsClosing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -114,7 +116,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
 
   return createPortal(
     <aside
-      aria-label="Thông báo hệ thống macOS"
+      aria-label={t('macNotif.s003')}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`fixed top-4 right-4 z-[999999] w-[calc(100vw-32px)] sm:w-[360px] select-none pointer-events-auto transition-all duration-300 ease-out ${
@@ -139,7 +141,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
               CARMATE
             </span>
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-              · vừa xong
+              {t('macNotif.s001')}
             </span>
           </div>
 
@@ -149,7 +151,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
               e.stopPropagation();
               handleClose();
             }}
-            aria-label="Đóng thông báo"
+            aria-label={t('macNotif.s004')}
             className="w-9 h-9 -m-2 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5" />
@@ -176,7 +178,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
             }}
             className="px-2.5 py-1 rounded-full text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
           >
-            Để sau
+            {t('macNotif.s002')}
           </button>
           <button
             type="button"

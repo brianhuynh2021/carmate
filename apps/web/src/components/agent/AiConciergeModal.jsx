@@ -17,6 +17,7 @@ import {
 import api from '../../api/client.js';
 import { formatVND, getZaloChatLink, SITE_INFO } from '@carmate/shared';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 const QUICK_PROMPTS = [
   'Tìm xe từ Hàng Xanh về Đồng Xoài chiều nay',
@@ -26,6 +27,7 @@ const QUICK_PROMPTS = [
 ];
 
 export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
+  const { t } = useI18n();
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
@@ -115,13 +117,13 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-[#1d1d1f]">Trợ Lý Chuyến Đi CarMate</h3>
+                <h3 className="text-sm font-bold text-[#1d1d1f]">{t('aiConcierge.s001')}</h3>
                 <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-50 text-[#107c41] border border-emerald-200/80">
-                  Trực tuyến 24/7
+                  {t('aiConcierge.s002')}
                 </span>
               </div>
               <p className="text-[11.5px] text-[#86868b]">
-                Hỏi đáp lộ trình, tìm xe tiện chuyến & tính mức phụ xăng chia sẻ tức thì
+                {t('aiConcierge.s003')}
               </p>
             </div>
           </div>
@@ -130,7 +132,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
             type="button"
             onClick={onClose}
             className="w-11 h-11 rounded-full border border-black/[0.08] hover:bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f] flex items-center justify-center transition-all cursor-pointer active:scale-90"
-            title="Đóng cửa sổ"
+            title={t('aiConcierge.s011')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -168,7 +170,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                   {m.suggestedTrips && m.suggestedTrips.length > 0 && (
                     <div className="space-y-2 pt-1 w-full">
                       <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                        Chuyến xe phù hợp tìm thấy:
+                        {t('aiConcierge.s004')}
                       </p>
                       <div className="grid grid-cols-1 gap-2.5">
                         {m.suggestedTrips.map((trip) => (
@@ -205,7 +207,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                               )}
                               {trip.isCorridorFallback && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10.5px] font-medium">
-                                  <span>Đón dọc hành lang QL13</span>
+                                  <span>{t('aiConcierge.s005')}</span>
                                 </span>
                               )}
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10.5px]">
@@ -234,9 +236,9 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                                       onClose?.();
                                     }}
                                     className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold inline-flex items-center text-[11px] transition-all cursor-pointer"
-                                    title="Xem chi tiết hành trình chuyến này"
+                                    title={t('aiConcierge.s012')}
                                   >
-                                    Xem chi tiết
+                                    {t('aiConcierge.s006')}
                                   </button>
                                 )}
                                 <a
@@ -249,7 +251,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                                   className="h-7 px-3 rounded-lg bg-[#0068ff] text-white hover:bg-[#0055d4] font-bold inline-flex items-center gap-1 text-[11px] transition-all cursor-pointer shadow-2xs"
                                 >
                                   <ZaloIcon className="w-3.5 h-3.5 mr-0.5" />
-                                  <span>Nhắn Zalo</span>
+                                  <span>{t('aiConcierge.s007')}</span>
                                 </a>
                               </div>
                             </div>
@@ -277,7 +279,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
               </div>
               <div className="p-3 rounded-2xl rounded-tl-xs bg-[#f5f5f7] border border-black/[0.06] text-xs font-medium text-[#515154] flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#0071e3] animate-pulse"></span>
-                <span>Đang rà soát chuyến xe & kiểm tra lộ trình...</span>
+                <span>{t('aiConcierge.s008')}</span>
               </div>
             </div>
           )}
@@ -288,7 +290,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
         {/* Quick Prompts */}
         <div className="px-4 py-2 border-t border-black/[0.06] bg-[#f5f5f7] shrink-0">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-[10.5px] font-semibold text-[#86868b] shrink-0">Gợi ý:</span>
+            <span className="text-[10.5px] font-semibold text-[#86868b] shrink-0">{t('aiConcierge.s009')}</span>
             {QUICK_PROMPTS.map((p, idx) => (
               <button
                 key={idx}
@@ -317,7 +319,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Nhập câu hỏi (VD: Tìm xe đi Hải Phòng sáng mai, hỏi giá xăng QL13...)"
+              placeholder={t('aiConcierge.s013')}
               disabled={isLoading}
               className="flex-1 h-11 px-4 rounded-xl border border-black/[0.08] bg-[#f5f5f7] hover:bg-[#ebebee] focus:bg-white text-xs sm:text-sm text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
             />
@@ -326,7 +328,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
               disabled={isLoading || !inputMessage.trim()}
               className="h-11 px-5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-40 text-white font-bold text-xs inline-flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-[0.98]"
             >
-              <span>Gửi</span>
+              <span>{t('aiConcierge.s010')}</span>
               <Send className="w-3.5 h-3.5" />
             </button>
           </form>

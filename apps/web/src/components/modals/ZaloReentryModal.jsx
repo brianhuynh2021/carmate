@@ -5,6 +5,7 @@ import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { ZaloIcon } from '../ui/SocialIcons.jsx';
 import api from '../../api/client.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 /**
  * ZaloReentryModal — Apple-grade Re-entry Action Card
@@ -12,6 +13,7 @@ import api from '../../api/client.js';
  * Giải quyết triệt để vấn đề "Gãy luồng trạng thái (State Decoupling)"
  */
 export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule, onCancelBooking, onShowToast }) {
+  const { t } = useI18n();
   const [cancelling, setCancelling] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -76,7 +78,7 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
       icon={ZaloIcon}
       iconTone="brand"
       title={`${driverName} đã trả lời Zalo của bạn chưa?`}
-      subtitle="Cập nhật nhanh để CarMate hỗ trợ giữ chỗ và sắp xếp chuyến tốt nhất"
+      subtitle={t('zaloReentry.s009')}
     >
       <div className="space-y-4">
         {/* Tóm tắt chuyến đi ngắn gọn */}
@@ -97,11 +99,11 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
 
           <div className="flex items-center justify-between text-slate-500 pt-1 border-t border-slate-200/60 text-[11px]">
             <span>
-              Số ghế: <strong className="text-slate-800">{booking.seats || 1}</strong>
+              {t('zaloReentry.s001')} <strong className="text-slate-800">{booking.seats || 1}</strong>
             </span>
             {booking.totalDeal > 0 && (
               <span>
-                Chi phí: <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong>
+                {t('zaloReentry.s002')} <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong>
               </span>
             )}
           </div>
@@ -120,8 +122,8 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
               <CheckCircle2 className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold leading-snug">✓ Đã hẹn đón thành công</p>
-              <p className="text-xs text-emerald-100 leading-tight">Chủ xe đã đồng ý, lưu vào Chuyến của tôi</p>
+              <p className="text-sm font-bold leading-snug">{t('zaloReentry.s003')}</p>
+              <p className="text-xs text-emerald-100 leading-tight">{t('zaloReentry.s004')}</p>
             </div>
           </button>
 
@@ -136,8 +138,8 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
               <Clock className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-900 leading-snug">⏳ Vẫn đang đợi phản hồi</p>
-              <p className="text-xs text-slate-500 leading-tight">CarMate tiếp tục giữ chỗ cho bạn trong 15 phút</p>
+              <p className="text-sm font-bold text-slate-900 leading-snug">{t('zaloReentry.s005')}</p>
+              <p className="text-xs text-slate-500 leading-tight">{t('zaloReentry.s006')}</p>
             </div>
           </button>
 
@@ -153,7 +155,7 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
                 <PhoneCall className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 leading-snug">📞 Chủ xe chưa rep? Gọi trực tiếp</p>
+                <p className="text-sm font-bold text-slate-900 leading-snug">{t('zaloReentry.s007')}</p>
                 <p className="text-xs text-slate-500 leading-tight">Bấm để gọi SĐT {driverPhone} ngay</p>
               </div>
             </button>
@@ -174,7 +176,7 @@ export default function ZaloReentryModal({ booking, onClose, onConfirmedSchedule
         {/* Cam kết minh bạch */}
         <div className="flex items-center gap-2 text-[11px] text-slate-400 justify-center pt-1">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span>CarMate kết nối trực tiếp · Không giam tiền · 0% phí sàn</span>
+          <span>{t('zaloReentry.s008')}</span>
         </div>
       </div>
     </Modal>

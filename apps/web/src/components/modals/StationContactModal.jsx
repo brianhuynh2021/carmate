@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { detectPiiLeak } from '@carmate/shared';
 import { playMessageChime, playSuccessChime } from '../../utils/audioFeedback.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 // Danh sách các mẫu tin nhắn nhanh 1-chạm tại trạm (Curbside Quick Chips - Stanford Ergonomics)
 const CURBSIDE_QUICK_CHIPS = [
@@ -41,6 +42,7 @@ export default function StationContactModal({
   onShowToast = null,
   zIndex = 'z-[9999]'
 }) {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'call'
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState(() => [
@@ -247,7 +249,7 @@ export default function StationContactModal({
             type="button"
             onClick={onClose}
             className="w-11 h-11 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
-            title="Đóng liên lạc"
+            title={t('stationContact.s016')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -266,7 +268,7 @@ export default function StationContactModal({
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>Tin Nhắn 1-Chạm</span>
+              <span>{t('stationContact.s001')}</span>
             </button>
 
             <button
@@ -279,7 +281,7 @@ export default function StationContactModal({
               }`}
             >
               <Phone className="w-3.5 h-3.5" />
-              <span>Gọi Thoại In-App (0đ)</span>
+              <span>{t('stationContact.s002')}</span>
               {callState === 'connected' && (
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
               )}
@@ -294,9 +296,9 @@ export default function StationContactModal({
             <div className="px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between text-[11px] text-emerald-300">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Bảo mật SĐT 100% · Ngăn chặn giao dịch ngoài sàn</span>
+                <span>{t('stationContact.s003')}</span>
               </span>
-              <span className="font-mono text-[10px] text-emerald-400/80">Điều 3 BLDS</span>
+              <span className="font-mono text-[10px] text-emerald-400/80">{t('stationContact.s004')}</span>
             </div>
 
             {/* Dòng lịch sử tin nhắn */}
@@ -345,9 +347,9 @@ export default function StationContactModal({
               <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 px-0.5">
                 <span className="flex items-center gap-1 text-sky-400 font-semibold">
                   <Sparkles className="w-3 h-3" />
-                  <span>Mẫu tin nhắn nhanh 1-chạm:</span>
+                  <span>{t('stationContact.s005')}</span>
                 </span>
-                <span className="text-[10px]">Tấp trạm 45-60s</span>
+                <span className="text-[10px]">{t('stationContact.s006')}</span>
               </div>
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                 {CURBSIDE_QUICK_CHIPS.map((chip, idx) => (
@@ -382,14 +384,14 @@ export default function StationContactModal({
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Nhập tin nhắn cho chủ xe (không để lộ SĐT)..."
+                placeholder={t('stationContact.s017')}
                 className="flex-1 h-11 px-3.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 outline-none transition-all font-sans"
               />
               <button
                 type="submit"
                 disabled={!inputText.trim() || piiCheck.hasLeak}
                 className="w-11 h-11 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-30 disabled:hover:bg-sky-500 text-slate-950 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-md active:scale-95"
-                title="Gửi tin nhắn"
+                title={t('stationContact.s018')}
               >
                 <Send className="w-4 h-4 font-bold" />
               </button>
@@ -403,7 +405,7 @@ export default function StationContactModal({
             {/* Huy hiệu an toàn */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Cuộc gọi nội bộ CarMate · 0đ cước thoại · Bảo mật 100%</span>
+              <span>{t('stationContact.s007')}</span>
             </div>
 
             {/* Avatar & Hiệu ứng sóng âm đổ chuông */}
@@ -429,13 +431,13 @@ export default function StationContactModal({
                 {carDisplayModel} ({carDisplayPlate})
               </p>
               <p className="text-[11px] text-slate-500">
-                Điểm đón: <strong className="text-slate-300">{stationName}</strong>
+                {t('stationContact.s008')} <strong className="text-slate-300">{stationName}</strong>
               </p>
 
               <div className="pt-2">
                 {callState === 'idle' && (
                   <p className="text-xs text-slate-400">
-                    Bấm nút bên dưới để kết nối thoại an toàn với chủ xe.
+                    {t('stationContact.s009')}
                   </p>
                 )}
 
@@ -446,7 +448,7 @@ export default function StationContactModal({
                       <span>Đang đổ chuông qua App ({ringSeconds}s)...</span>
                     </p>
                     <p className="text-[10.5px] text-slate-500">
-                      Tự động hủy nếu chủ xe đang bận lái xe trên quốc lộ
+                      {t('stationContact.s010')}
                     </p>
                   </div>
                 )}
@@ -454,7 +456,7 @@ export default function StationContactModal({
                 {callState === 'connected' && (
                   <div className="space-y-1">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 inline-block">
-                      ĐANG ĐÀM THOẠI
+                      {t('stationContact.s011')}
                     </span>
                     <p className="text-xl font-mono font-black text-emerald-400 tracking-wider">
                       {Math.floor(callSeconds / 60).toString().padStart(2, '0')}:
@@ -465,7 +467,7 @@ export default function StationContactModal({
 
                 {callState === 'ended' && (
                   <p className="text-xs text-slate-400">
-                    Cuộc gọi thoại an toàn đã kết thúc.
+                    {t('stationContact.s012')}
                   </p>
                 )}
               </div>
@@ -480,7 +482,7 @@ export default function StationContactModal({
                   className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-98 text-slate-950 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
                 >
                   <Phone className="w-4 h-4" />
-                  <span>Bắt đầu gọi thoại trong App</span>
+                  <span>{t('stationContact.s013')}</span>
                 </button>
               ) : (
                 <>
@@ -517,7 +519,7 @@ export default function StationContactModal({
                     type="button"
                     onClick={handleEndCall}
                     className="w-14 h-14 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
-                    title="Gác máy / Kết thúc"
+                    title={t('stationContact.s019')}
                   >
                     <PhoneOff className="w-6 h-6" />
                   </button>
@@ -533,7 +535,7 @@ export default function StationContactModal({
                   onClick={handleSimulateAnswer}
                   className="text-[11px] text-sky-400 hover:text-sky-300 underline cursor-pointer transition-colors"
                 >
-                  ⚡ [Kiểm thử: Giả lập Chủ xe bắt máy]
+                  {t('stationContact.s014')}
                 </button>
               </div>
             )}
@@ -542,7 +544,7 @@ export default function StationContactModal({
 
         {/* ── FOOTER MODAL ── */}
         <footer className="p-3 bg-black/40 border-t border-white/[0.06] text-center text-[10.5px] font-mono text-slate-500">
-          CarMate Platform · Mã hóa đầu cuối · Bảo vệ quyền lợi hai bên theo Điều 3 BLDS 2015
+          {t('stationContact.s015')}
         </footer>
       </div>
     </div>

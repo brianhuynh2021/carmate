@@ -38,6 +38,7 @@ export default function RouteDetailModal({
   onShare,
   onViewCarPhotos
 }) {
+  const { t } = useI18n();
   const { lang } = useI18n();
   const corridor = trip ? getRouteCorridor(trip.routeCategory) : null;
   const isDriver = trip?.type === 'driver_offer';
@@ -135,7 +136,7 @@ export default function RouteDetailModal({
               <span className="text-xl font-bold text-[#1d1d1f] dark:text-white tracking-tight leading-none font-mono">
                 {formatVND(price)}
               </span>
-              <span className="text-xs text-[#86868b] dark:text-slate-400">/người</span>
+              <span className="text-xs text-[#86868b] dark:text-slate-400">{t('routeDetail.s001')}</span>
             </div>
 
             {/* Nút chia sẻ trên Mobile */}
@@ -146,11 +147,11 @@ export default function RouteDetailModal({
                   onClose();
                   onShare(trip);
                 }}
-                title="Chia sẻ thông tin chuyến đi"
+                title={t('routeDetail.s010')}
                 className="sm:hidden h-9 px-3 rounded-xl font-semibold text-xs text-[#0071e3] dark:text-blue-400 bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/25 shadow-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98]"
               >
                 <Share2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Chia sẻ</span>
+                <span>{t('routeDetail.s002')}</span>
               </button>
             )}
           </div>
@@ -164,11 +165,11 @@ export default function RouteDetailModal({
                   onClose();
                   onShare(trip);
                 }}
-                title="Chia sẻ thông tin chuyến đi"
+                title={t('routeDetail.s010')}
                 className="hidden sm:inline-flex h-10 px-3.5 rounded-xl font-semibold text-xs text-[#0071e3] dark:text-blue-400 bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/25 shadow-xs items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] shrink-0"
               >
                 <Share2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Chia sẻ</span>
+                <span>{t('routeDetail.s002')}</span>
               </button>
             )}
 
@@ -183,7 +184,7 @@ export default function RouteDetailModal({
                 className="h-10 px-4.5 rounded-xl font-semibold text-xs text-amber-900 bg-amber-100 hover:bg-amber-200 active:bg-amber-300 border border-amber-300 shadow-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] w-full sm:w-auto shrink-0"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-amber-800" />
-                <span>Quản lý / Chỉnh sửa chuyến</span>
+                <span>{t('routeDetail.s003')}</span>
               </button>
             ) : (
               <button
@@ -220,7 +221,7 @@ export default function RouteDetailModal({
                 <span className="font-bold text-xs sm:text-sm text-[#1d1d1f] dark:text-white truncate">
                   {toPublicAlias(trip)}
                 </span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" title="Đã xác minh" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" title={t('routeDetail.s011')} />
                 <span className="text-[11px] text-[#86868b] font-mono">#{trip.maskedCode || trip.id?.slice(-4)}</span>
               </div>
               <div className="flex items-center gap-2 text-[11px] text-[#86868b] dark:text-slate-400 truncate mt-0.5">
@@ -251,7 +252,7 @@ export default function RouteDetailModal({
           <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] flex flex-col items-center text-center justify-center min-w-0">
             <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               <Calendar className="w-3 h-3 text-[#0071e3]" />
-              <span>Khởi hành</span>
+              <span>{t('routeDetail.s004')}</span>
             </div>
             <span className="text-[12px] sm:text-[13px] font-bold text-slate-900 dark:text-white mt-1 truncate max-w-full font-mono">
               {timeLabel}
@@ -265,7 +266,7 @@ export default function RouteDetailModal({
           <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] flex flex-col items-center text-center justify-center min-w-0">
             <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               <Users className="w-3 h-3 text-emerald-500" />
-              <span>Nhu cầu</span>
+              <span>{t('routeDetail.s005')}</span>
             </div>
             <span className={`text-[12px] sm:text-[13px] font-bold mt-1 truncate max-w-full ${isTripFull ? 'text-slate-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               {seatsLabel}
@@ -300,7 +301,7 @@ export default function RouteDetailModal({
             </div>
             <div className="min-w-0 flex-1 pb-1">
               <p className="text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                Điểm đón
+                {t('routeDetail.s006')}
               </p>
               <p className="text-[14.5px] sm:text-[15px] font-bold text-slate-900 dark:text-white mt-0.5">
                 {pickupTitle}
@@ -320,7 +321,7 @@ export default function RouteDetailModal({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10.5px] font-semibold text-rose-500 uppercase tracking-wider">
-                Điểm trả
+                {t('routeDetail.s007')}
               </p>
               <p className="text-[14.5px] sm:text-[15px] font-bold text-slate-900 dark:text-white mt-0.5">
                 {dropoffTitle}
@@ -374,7 +375,7 @@ export default function RouteDetailModal({
                   onClick={() => onViewCarPhotos(trip)}
                   className="text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer"
                 >
-                  Xem toàn màn hình →
+                  {t('routeDetail.s008')}
                 </button>
               )}
             </div>
@@ -406,7 +407,7 @@ export default function RouteDetailModal({
         {trip.acceptsParcel && (
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/[0.06]">
             <Package className="w-3.5 h-3.5 text-[#0071e3]" />
-            <span>Có nhận gửi đồ, bưu kiện tiện chuyến dọc tuyến</span>
+            <span>{t('routeDetail.s009')}</span>
           </div>
         )}
 

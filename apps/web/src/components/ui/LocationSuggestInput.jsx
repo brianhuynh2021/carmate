@@ -13,6 +13,7 @@ import {
   Navigation
 } from 'lucide-react';
 import { searchLocations, fetchLocationSuggestions } from '../../utils/vietnamLocations.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 function CategoryIcon({ type, className = 'w-3.5 h-3.5' }) {
   switch (type) {
@@ -45,6 +46,7 @@ export default function LocationSuggestInput({
   variant = 'default', // 'default' | 'omnibar'
   required = false
 }) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -204,8 +206,8 @@ export default function LocationSuggestInput({
               setSuggestions([]);
             }}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
-            title="Xoá để chọn địa điểm khác"
-            aria-label="Xoá địa điểm"
+            title={t('locSuggest.s004')}
+            aria-label={t('locSuggest.s005')}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -227,12 +229,12 @@ export default function LocationSuggestInput({
           <div className="px-3.5 py-1.5 bg-[#f5f5f7] dark:bg-white/[0.04] border-b border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
             <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
               <Search className="w-3 h-3 text-[#0071e3]" />
-              <span>Gợi ý địa điểm</span>
+              <span>{t('locSuggest.s001')}</span>
             </span>
             {loading && (
               <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-[#0071e3]">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Đang tìm...</span>
+                <span>{t('locSuggest.s002')}</span>
               </span>
             )}
           </div>
@@ -259,7 +261,7 @@ export default function LocationSuggestInput({
                   </div>
                 </div>
                 <span className="text-[10px] font-mono text-[#0071e3] font-bold px-1.5 py-0.5 rounded bg-[#0071e3]/10">
-                  Chọn ↵
+                  {t('locSuggest.s003')}
                 </span>
               </button>
             </li>

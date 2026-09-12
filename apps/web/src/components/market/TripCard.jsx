@@ -36,6 +36,7 @@ export { parseLocation, getCorridorDisplay };
  * RouteTimeline — Trục lộ trình trực quan dùng trong Modal hoặc xem nhanh
  */
 export function RouteTimeline({ from, to, compact = false }) {
+  const { t } = useI18n();
   const fromIsMap = isGoogleMapsUrl(from);
   const toIsMap = isGoogleMapsUrl(to);
   const fromParsed = parseLocation(from);
@@ -59,7 +60,7 @@ export function RouteTimeline({ from, to, compact = false }) {
             {fromIsMap ? (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                <span>Vị trí ghim trên Google Maps</span>
+                <span>{t('tripCard.s001')}</span>
               </span>
             ) : (
               fromParsed.main
@@ -86,7 +87,7 @@ export function RouteTimeline({ from, to, compact = false }) {
             {toIsMap ? (
               <span className="inline-flex items-center gap-1">
                 <Navigation className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                <span>Vị trí ghim trên Google Maps</span>
+                <span>{t('tripCard.s001')}</span>
               </span>
             ) : (
               toParsed.main
@@ -176,7 +177,7 @@ export default function TripCard({
   onShare,
   onSelect = null
 }) {
-  const { lang } = useI18n();
+  const { t, lang } = useI18n();
   const [coverFailed, setCoverFailed] = useState(false);
 
   const price = item?.basePricePerSeat || item?.expectedPrice || item?.suggestedContribution || item?.price || 180000;
@@ -313,7 +314,7 @@ export default function TripCard({
             <span className="text-[21px] font-extrabold tracking-tight text-slate-900 dark:text-white tabular font-mono leading-none">
               {formattedPrice}
             </span>
-            <span className="text-[12px] text-slate-400 dark:text-slate-500 font-medium">/người</span>
+            <span className="text-[12px] text-slate-400 dark:text-slate-500 font-medium">{t('tripCard.s002')}</span>
           </div>
           {priceGuardrail?.comparisonBadge && (
             <span
@@ -341,15 +342,15 @@ export default function TripCard({
         ) : item.isCargoOnly ? (
           <span
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/60 shrink-0 whitespace-nowrap shadow-2xs"
-            title="Người cần gửi hàng hoá, bưu phẩm hoặc đồ chuyển trọ tiện chuyến (Không đi người)"
+            title={t('tripCard.s016')}
           >
             <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span>Gửi đồ tiện chuyến</span>
+            <span>{t('tripCard.s003')}</span>
           </span>
         ) : isDriver && (item.vehicleType === 'truck_light' || item.isCargoVehicle) ? (
           <span
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 whitespace-nowrap shadow-2xs"
-            title="Xe tải tiện chuyến: Thùng chở hàng 1T–3.5T + 1 ghế phụ trong cabin"
+            title={t('tripCard.s017')}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             <span>Thùng tải tiện chuyến + {seatsLeft > 0 ? '1 ghế phụ' : 'Hết ghế phụ'}</span>
@@ -368,12 +369,12 @@ export default function TripCard({
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             {isDriver ? (
               <span>
-                Nhận ghép <span className="tabular">{seatsLeft}</span> ghế
+                {t('tripCard.s004')} <span className="tabular">{seatsLeft}</span> ghế
                 {seatsTotal ? <span className="sr-only">/{seatsTotal}</span> : null}
               </span>
             ) : (
               <span>
-                Cần ghép <span className="tabular">{seatsLeft}</span> ghế
+                {t('tripCard.s005')} <span className="tabular">{seatsLeft}</span> {t('tripCard.s006')}
               </span>
             )}
           </span>
@@ -384,7 +385,7 @@ export default function TripCard({
       <div className="px-5 pb-2 pt-0.5 space-y-1">
         <div className="flex items-center gap-2 min-w-0 text-[12px] text-slate-600 dark:text-slate-300">
           <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-          <span className="text-slate-400 dark:text-slate-500 font-medium shrink-0">Đón:</span>
+          <span className="text-slate-400 dark:text-slate-500 font-medium shrink-0">{t('tripCard.s007')}</span>
           <span className="truncate font-medium">
             {fromSpot || item.pickupSpot || fromParsed.main}
           </span>
@@ -392,7 +393,7 @@ export default function TripCard({
 
         <div className="flex items-center gap-2 min-w-0 text-[12px] text-slate-600 dark:text-slate-300">
           <Navigation className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-          <span className="text-slate-400 dark:text-slate-500 font-medium shrink-0">Trả:</span>
+          <span className="text-slate-400 dark:text-slate-500 font-medium shrink-0">{t('tripCard.s008')}</span>
           <span className="truncate font-medium">
             {toSpot || item.dropoffSpot || toParsed.main}
           </span>
@@ -411,7 +412,7 @@ export default function TripCard({
               onViewTrustProfile?.(item);
             }}
             className="flex items-center gap-2 min-w-0 text-left cursor-pointer group/driver"
-            title="Xem hồ sơ uy tín"
+            title={t('tripCard.s018')}
           >
             <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10">
               <User className="w-3.5 h-3.5" />
@@ -422,7 +423,7 @@ export default function TripCard({
                 <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200 truncate group-hover/driver:text-[#0071e3] transition-colors">
                   {driverDisplayName}
                 </span>
-                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" title="Đã xác minh" />
+                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" title={t('tripCard.s019')} />
               </div>
 
               <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
@@ -433,7 +434,7 @@ export default function TripCard({
                 {completedTrips > 0 ? (
                   <span className="opacity-70">· {completedTrips} chuyến</span>
                 ) : (
-                  <span className="opacity-70">· Chuyến đầu</span>
+                  <span className="opacity-70">{t('tripCard.s009')}</span>
                 )}
               </div>
             </div>
@@ -492,26 +493,26 @@ export default function TripCard({
           {item.vehicleType === 'truck_light' || item.isCargoVehicle ? (
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-900 dark:text-emerald-200 bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300/90 dark:border-emerald-700/80 shadow-2xs"
-              title="Xe tải nhẹ tiện chuyến (1T–3.5T) sẵn sàng nhận chở xe máy, nông sản vài tạ đến 1 tấn, đồ dọn nhà hoặc bao trọn thùng"
+              title={t('tripCard.s020')}
             >
               <Truck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
-              <span>🚛 Thùng xe tải 1T–3.5T</span>
+              <span>{t('tripCard.s010')}</span>
             </span>
           ) : item.vehicleType === 'pickup' || item.hasCargoBed ? (
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-900 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-950/70 border border-amber-300/90 dark:border-amber-700/80 shadow-2xs"
-              title="Xe bán tải có thùng chở hàng lớn (~800kg) sẵn sàng nhận đồ cồng kềnh, chuyển trọ sinh viên, nông sản"
+              title={t('tripCard.s021')}
             >
               <Truck className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
-              <span>🛻 Thùng bán tải ~800kg</span>
+              <span>{t('tripCard.s011')}</span>
             </span>
           ) : item.acceptsParcel ? (
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-sky-900 dark:text-sky-200 bg-sky-100/90 dark:bg-sky-950/70 border border-sky-300/90 dark:border-sky-700/80 shadow-2xs"
-              title="Chủ xe có cốp rộng nhận gửi bưu phẩm, đồ quê, thùng xốp tiện đường xe chạy"
+              title={t('tripCard.s022')}
             >
               <Package className="w-3.5 h-3.5 text-[#0071e3] dark:text-sky-400 shrink-0" />
-              <span>📦 Nhận gửi đồ / Cốp rộng</span>
+              <span>{t('tripCard.s012')}</span>
             </span>
           ) : (
             <span />
@@ -526,8 +527,8 @@ export default function TripCard({
                   onShare(item);
                 }}
                 className="h-9 w-9 rounded-full inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#0071e3] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
-                title="Tạo ảnh lịch trình & chia sẻ nhanh"
-                aria-label="Chia sẻ thông tin chuyến đi"
+                title={t('tripCard.s023')}
+                aria-label={t('tripCard.s024')}
               >
                 <Share2 className="w-3.5 h-3.5" />
               </button>
@@ -542,11 +543,11 @@ export default function TripCard({
                   else if (onBook) onBook(item);
                 }}
                 className="h-9 px-3.5 rounded-full text-[12px] font-semibold tracking-tight inline-flex items-center justify-center whitespace-nowrap transition-all duration-150 cursor-pointer active:scale-[0.96] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-100 shrink-0"
-                title="Chuyến đi do bạn đăng. Bấm để xem và quản lý"
+                title={t('tripCard.s025')}
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
-                <span className="lg:hidden">Quản lý</span>
-                <span className="hidden lg:inline">Quản lý chuyến của bạn</span>
+                <span className="lg:hidden">{t('tripCard.s013')}</span>
+                <span className="hidden lg:inline">{t('tripCard.s014')}</span>
               </button>
             ) : isTripFull ? (
               <button
@@ -558,9 +559,9 @@ export default function TripCard({
                   else if (onBook) onBook(item);
                 }}
                 className="h-9 px-3.5 rounded-full text-[12px] font-semibold tracking-tight inline-flex items-center justify-center whitespace-nowrap bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-[0.96] transition-all cursor-pointer shrink-0"
-                title="Chuyến đã đủ người. Bấm để xem thông tin chi tiết"
+                title={t('tripCard.s026')}
               >
-                <span>Xem chi tiết</span>
+                <span>{t('tripCard.s015')}</span>
               </button>
             ) : (
               <button

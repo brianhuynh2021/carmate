@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cleanPhoneNumber } from '@carmate/shared';
 import { triggerMacNotification } from './AppleMacNotification.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 /**
  * Định dạng thời gian tương đối kiểu YouTube tiếng Việt:
@@ -57,6 +58,7 @@ export default function NotificationDropdown({
   onMarkAsUnread,
   onOpenInbox
 }) {
+  const { t } = useI18n();
   const [filterTab, setFilterTab] = useState('all'); // 'all' | 'unread'
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [dismissedIds, setDismissedIds] = useState(() => {
@@ -324,14 +326,14 @@ export default function NotificationDropdown({
 
   return (
     <div
-      aria-label="Trung tâm thông báo phong cách YouTube"
+      aria-label={t('notifDrop.s008')}
       className="absolute right-0 top-[calc(100%+8px)] w-[calc(100vw-24px)] sm:w-[440px] max-h-[85vh] flex flex-col rounded-3xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_20px_60px_rgba(0,0,0,0.22)] z-50 animate-in fade-in zoom-in-95 duration-150 text-left select-none overflow-hidden"
     >
       {/* ── 1. YouTube Notification Header ── */}
       <div className="flex items-center justify-between px-4 pt-3.5 pb-2 border-b border-black/[0.05] dark:border-white/[0.06]">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-            Thông báo
+            {t('notifDrop.s001')}
           </h3>
           {unreadCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#0071e3] text-white">
@@ -345,18 +347,18 @@ export default function NotificationDropdown({
             <button
               type="button"
               onClick={onMarkAllRead}
-              title="Đánh dấu tất cả là đã đọc"
+              title={t('notifDrop.s009')}
               className="px-2.5 py-1 rounded-full text-xs font-semibold text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
             >
               <CheckCheck className="w-3.5 h-3.5" />
-              <span>Đọc hết</span>
+              <span>{t('notifDrop.s002')}</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={onClose}
-            aria-label="Đóng thông báo"
+            aria-label={t('notifDrop.s010')}
             className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -375,7 +377,7 @@ export default function NotificationDropdown({
               : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-600 dark:text-slate-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.12]'
           }`}
         >
-          Tất cả
+          {t('notifDrop.s003')}
         </button>
 
         <button
@@ -387,7 +389,7 @@ export default function NotificationDropdown({
               : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-600 dark:text-slate-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.12]'
           }`}
         >
-          <span>Chưa đọc</span>
+          <span>{t('notifDrop.s004')}</span>
           {unreadCount > 0 && (
             <span className="w-2 h-2 rounded-full bg-[#0071e3] inline-block ml-0.5" />
           )}
@@ -471,7 +473,7 @@ export default function NotificationDropdown({
                 {/* Chấm xanh chưa đọc chuẩn YouTube */}
                 {item.isUnread && (
                   <span
-                    title="Chưa đọc"
+                    title={t('notifDrop.s004')}
                     className="w-2.5 h-2.5 rounded-full bg-[#0071e3] ring-2 ring-[#0071e3]/30 shrink-0 animate-pulse"
                   />
                 )}
@@ -484,7 +486,7 @@ export default function NotificationDropdown({
                       e.stopPropagation();
                       setActiveMenuId(activeMenuId === item.id ? null : item.id);
                     }}
-                    title="Tùy chọn khác"
+                    title={t('notifDrop.s011')}
                     className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
@@ -513,7 +515,7 @@ export default function NotificationDropdown({
                         className="w-full px-2.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                       >
                         <EyeOff className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Ẩn thông báo này</span>
+                        <span>{t('notifDrop.s005')}</span>
                       </button>
                     </div>
                   )}
@@ -551,11 +553,11 @@ export default function NotificationDropdown({
               actionLabel: 'Xem ngay'
             });
           }}
-          title="Bấm để kích hoạt thông báo macOS mẫu bay ra ở góc phải màn hình"
+          title={t('notifDrop.s012')}
           className="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1.5 cursor-pointer"
         >
           <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
-          <span>Thử thông báo macOS</span>
+          <span>{t('notifDrop.s006')}</span>
         </button>
 
         <button
@@ -567,7 +569,7 @@ export default function NotificationDropdown({
           className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
         >
           <Inbox className="w-3.5 h-3.5" />
-          <span>Mở Hộp thư</span>
+          <span>{t('notifDrop.s007')}</span>
           <ArrowRight className="w-3 h-3 opacity-80" />
         </button>
       </div>

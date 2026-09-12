@@ -3,6 +3,7 @@ import { ShieldCheck, RotateCcw, Check, Eye, EyeOff, X, Sparkles } from 'lucide-
 import { normalizePhotoUrl } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import { renderMaskedImageFromSource } from '../../utils/plateMasker.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function PlateMaskModal({
   isOpen,
@@ -10,6 +11,7 @@ export default function PlateMaskModal({
   onSave,
   onClose
 }) {
+  const { t } = useI18n();
   const rawOriginalUrl = typeof photo === 'string' ? photo : (photo?.originalUrl || photo?.url);
   const originalUrl = normalizePhotoUrl(rawOriginalUrl) || rawOriginalUrl || '';
   const rawCurrentUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.originalUrl);
@@ -106,8 +108,8 @@ export default function PlateMaskModal({
     <Modal
       onClose={onClose}
       size="md"
-      title="Bảo mật biển số xe thật"
-      subtitle="Hệ thống tự động che biển số. Chạm vào ảnh nếu muốn đổi vị trí che."
+      title={t('plateMask.s010')}
+      subtitle={t('plateMask.s011')}
       footer={
         <div className="flex items-center justify-between gap-3 w-full">
           <button
@@ -116,7 +118,7 @@ export default function PlateMaskModal({
             className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Về giữa</span>
+            <span>{t('plateMask.s001')}</span>
           </button>
 
           <div className="flex items-center gap-2">
@@ -125,7 +127,7 @@ export default function PlateMaskModal({
               onClick={onClose}
               className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
-              Hủy
+              {t('plateMask.s002')}
             </button>
             <button
               type="button"
@@ -134,7 +136,7 @@ export default function PlateMaskModal({
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0071e3] to-[#0055d4] hover:from-[#0077ed] hover:to-[#004bbd] text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
             >
               <Check className="w-4 h-4" />
-              <span>Xác nhận che biển</span>
+              <span>{t('plateMask.s003')}</span>
             </button>
           </div>
         </div>
@@ -145,7 +147,7 @@ export default function PlateMaskModal({
         <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-medium text-blue-900 dark:text-blue-200">
             <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span>Chạm ngón tay vào vị trí biển số để dán thanh che bảo mật</span>
+            <span>{t('plateMask.s004')}</span>
           </div>
           <button
             type="button"
@@ -159,12 +161,12 @@ export default function PlateMaskModal({
             {isMasked ? (
               <>
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Đang che</span>
+                <span>{t('plateMask.s005')}</span>
               </>
             ) : (
               <>
                 <EyeOff className="w-3.5 h-3.5" />
-                <span>Bỏ che</span>
+                <span>{t('plateMask.s006')}</span>
               </>
             )}
           </button>
@@ -176,7 +178,7 @@ export default function PlateMaskModal({
             <img
               ref={imgRef}
               src={previewUrl}
-              alt="Preview xe che biển"
+              alt={t('plateMask.s012')}
               onClick={handleImageClick}
               onTouchStart={handleImageClick}
               className="w-full max-h-[380px] object-contain mx-auto cursor-crosshair active:scale-[0.99] transition-transform"
@@ -184,7 +186,7 @@ export default function PlateMaskModal({
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-slate-400 gap-2">
               <span className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs">Đang tải và xử lý ảnh xe...</span>
+              <span className="text-xs">{t('plateMask.s007')}</span>
             </div>
           )}
 
@@ -192,7 +194,7 @@ export default function PlateMaskModal({
           {isRendering && previewUrl && (
             <div className="absolute top-2 right-2 px-2 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-medium text-white flex items-center gap-1.5 pointer-events-none">
               <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Đang dán thanh che...</span>
+              <span>{t('plateMask.s008')}</span>
             </div>
           )}
 
@@ -206,7 +208,7 @@ export default function PlateMaskModal({
         </div>
 
         <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center">
-          💡 Ảnh xe hiển thị công khai trên CarMate sẽ giữ nguyên thanh che bảo mật này, bảo vệ 100% sự riêng tư của bạn.
+          {t('plateMask.s009')}
         </p>
       </div>
     </Modal>

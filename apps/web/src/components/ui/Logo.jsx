@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../i18n/index.jsx';
 
 export function LogoMark({ className = 'w-9 h-9' }) {
   return (
@@ -12,6 +13,7 @@ export function LogoMark({ className = 'w-9 h-9' }) {
 }
 
 export default function Logo({ size = 'md', tagline, onClick }) {
+  const { t } = useI18n();
   const mark = size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-11 h-11' : 'w-9 h-9';
   const text = size === 'sm' ? 'text-xl' : size === 'lg' ? 'text-2xl' : 'text-xl';
   return (
@@ -19,7 +21,7 @@ export default function Logo({ size = 'md', tagline, onClick }) {
       type="button"
       onClick={onClick}
       className="inline-flex items-center gap-2.5 select-none cursor-pointer group text-left shrink-0 active:scale-[0.98] transition-transform"
-      aria-label="CarMate - Về trang chủ"
+      aria-label={t('logo.s001')}
     >
       <LogoMark className={`${mark} transition-transform duration-200 group-hover:scale-105 shrink-0 shadow-xs`} />
       <div className="flex items-center gap-2">
