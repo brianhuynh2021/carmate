@@ -205,11 +205,11 @@ export default function CorridorSearchBoard({
             <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
               {t('search.from')}
             </label>
-            <div className="relative">
+            <div>
               <select
                 value={fromHubId}
                 onChange={(e) => setFromHubId(e.target.value)}
-                className="w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer pr-6 truncate"
+                className="w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
               >
                 {fromHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900">
@@ -217,7 +217,6 @@ export default function CorridorSearchBoard({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -241,11 +240,11 @@ export default function CorridorSearchBoard({
             <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
               {t('search.to')}
             </label>
-            <div className="relative">
+            <div>
               <select
                 value={toHubId}
                 onChange={(e) => setToHubId(e.target.value)}
-                className="w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer pr-6 truncate"
+                className="w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
               >
                 {toHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900">
@@ -253,7 +252,6 @@ export default function CorridorSearchBoard({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
         </div>

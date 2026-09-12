@@ -44,7 +44,9 @@ import {
   POPULAR_LAST_MILE_DESTINATIONS,
   getHubLiquidityStatus,
   FIXED_CORRIDOR_COACH_SCHEDULES,
-  UNHAPPY_CASE_CODES
+  UNHAPPY_CASE_CODES,
+  getDefaultCorridor,
+  getEndpointHubs
 } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
 import StationRequestModal from '../modals/StationRequestModal.jsx';
@@ -63,14 +65,13 @@ export default function StationRiderView({
   onShowToast
 }) {
   const { t } = useI18n();
-  // Các điểm mút Sài Gòn (Thủ Đức / Bình Thạnh / Tân Bình)
-  const SAIGON_HUB_IDS = useMemo(() => [
-    'hub_ql13_hang_xanh',
-    'hub_ql13_san_bay_tsn',
-    'hub_ql13_binh_trieu',
-    'hub_ql13_van_phuc_city',
-    'hub_ql13_nga4_binh_phuoc'
-  ], []);
+  // Điểm mút đầu A của hành lang — lấy từ CORRIDORS registry thay vì chép tay.
+  // Danh sách này từng bị chép ở hai nơi (đây và MovementIntentModal) và đã lệch
+  // nhau: bản chép tay sót trạm TP. Đồng Xoài nên người dùng không chọn được.
+  const SAIGON_HUB_IDS = useMemo(
+    () => getEndpointHubs(getDefaultCorridor().id, 'a').map((h) => h.id),
+    []
+  );
 
   // Hướng di chuyển: 'TO_SAIGON' (Bình Phước ➔ TP.HCM) | 'TO_BINH_PHUOC' (TP.HCM ➔ Bình Phước)
   const [direction, setDirection] = useState(() => {

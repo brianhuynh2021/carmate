@@ -29,40 +29,18 @@ import {
 } from '@carmate/shared';
 import api from '../../api/client.js';
 import { useI18n } from '../../i18n/index.jsx';
+import { getDefaultCorridor, getEndpointHubs } from '@carmate/shared';
 
-// Danh sách Trạm Sài Gòn (TP.HCM & Cửa ngõ)
-export const SAIGON_HUB_IDS = [
-  'hub_ql13_hang_xanh',
-  'hub_ql13_san_bay_tsn',
-  'hub_ql13_binh_trieu',
-  'hub_ql13_van_phuc_city',
-  'hub_ql13_nga4_binh_phuoc'
-];
+const DEFAULT_CORRIDOR = getDefaultCorridor();
 
-// Danh sách Trạm Bình Phước (Bù Đốp, Lộc Ninh, Bình Long, Hớn Quản, Chơn Thành, Bàu Bàng)
-export const BINH_PHUOC_HUB_IDS = [
-  'hub_ql13_budop',
-  'hub_ql13_tan_tien',
-  'hub_ql13_hoa_lu',
-  'hub_ql13_loc_hiep',
-  'hub_ql13_loc_tan',
-  'hub_ql13_cho_loc_ninh',
-  'hub_ql13_thanh_luong',
-  'hub_ql13_binh_long',
-  'hub_ql13_tthc_binh_long',
-  'hub_ql13_tan_khai',
-  'hub_ql13_tthc_tan_khai',
-  'hub_ql13_minh_hung',
-  'hub_ql13_vincom_chon_thanh',
-  'hub_ql13_nga4_chon_thanh',
-  'hub_ql13_tthc_chon_thanh',
-  'hub_ql13_becamex_chon_thanh',
-  'hub_ql13_bau_bang',
-  'hub_ql13_tthc_bau_bang',
-  'hub_ql13_nga4_so_sao',
-  'hub_ql13_vsip1',
-  'hub_ql13_cong_chao_lai_thieu'
-];
+/**
+ * Hai đầu hành lang nay lấy từ CORRIDORS registry (packages/shared) thay vì
+ * liệt kê tay trong component. Trước đây cùng một danh sách hub bị chép ở hai
+ * nơi (modal này và StationRiderView), thêm trạm mới là phải nhớ sửa cả hai.
+ * Giữ nguyên tên export cũ để không phá vỡ nơi đang import.
+ */
+export const SAIGON_HUB_IDS = getEndpointHubs(DEFAULT_CORRIDOR.id, 'a').map((h) => h.id);
+export const BINH_PHUOC_HUB_IDS = getEndpointHubs(DEFAULT_CORRIDOR.id, 'b').map((h) => h.id);
 
 export default function MovementIntentModal({
   isOpen,
