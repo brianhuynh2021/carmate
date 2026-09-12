@@ -77,7 +77,9 @@ export default function DriverScheduleCardView({
   vehicle,
   onSwitchToRadar,
   onShowToast,
-  onChangeVehicle
+  // TODO: CockpitMode đã truyền callback sửa hồ sơ xe nhưng màn này chưa dựng
+  // nút bấm tương ứng, nên chủ xe không sửa được xe từ thẻ lịch trình.
+  onChangeVehicle: _onChangeVehicle
 }) {
   const { t } = useI18n();
   // NGUỒN SỰ THẬT DUY NHẤT LÀ MÁY CHỦ.
@@ -117,8 +119,7 @@ export default function DriverScheduleCardView({
     reloadSchedules();
   }, [reloadSchedules]);
 
-  // Nạp hồ sơ tin cậy THẬT từ máy chủ (/api/trust) — điểm tín nhiệm, số chuyến
-  // đã hoàn thành và tỉ lệ giữ hẹn đều tính từ dữ liệu thật, không bịa ở client.
+  // Nạp điểm tín nhiệm THẬT từ máy chủ (/api/trust), không bịa ở client.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -127,10 +128,6 @@ export default function DriverScheduleCardView({
         if (!alive) return;
         const d = res?.data || {};
         if (typeof d.trustScore === 'number') setTrustScore(d.trustScore);
-        const stats = d.driverStats || {};
-        if (typeof stats.tripsCompleted === 'number') setCompletedTrips(stats.tripsCompleted);
-        else if (typeof d.totalCommunityTrips === 'number') setCompletedTrips(d.totalCommunityTrips);
-        if (typeof stats.commitmentRate === 'number') setCommitmentRate(stats.commitmentRate);
       } catch (err) {
         console.warn('[DriverSchedule] Không tải được hồ sơ tin cậy:', err);
       }
@@ -145,15 +142,12 @@ export default function DriverScheduleCardView({
   // Trước đây đọc/ghi thẳng localStorage nên chủ xe chỉ cần sửa trình duyệt là
   // thành "Uy Tín Hạng Vàng", và con số đó không liên quan gì tới điểm thật.
   const [trustScore, setTrustScore] = useState(null);
-  const [completedTrips, setCompletedTrips] = useState(null);
-  const [commitmentRate, setCommitmentRate] = useState(null);
 
 
   // MODALS STATE
   const [showTrustModal, setShowTrustModal] = useState(false);
   const [showAddTripModal, setShowAddTripModal] = useState(false);
   const [cancelingTrip, setCancelingTrip] = useState(null); // Trip object being canceled
-  const [editingTripTime, setEditingTripTime] = useState(null); // Trip object editing time
 
   // NEW TRIP INTENT FORM STATE
   const [newFrom, setNewFrom] = useState('Tân Khai (Bình Phước)');

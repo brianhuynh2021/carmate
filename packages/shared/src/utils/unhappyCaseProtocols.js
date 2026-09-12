@@ -79,7 +79,7 @@ export const EMERGENCY_TRANSIT_LIFEBUOYS = Object.freeze([
  * @param {object} context - Dữ liệu ngữ cảnh
  * @returns {object} Kết quả xử lý chế tài
  */
-export function evaluateIncidentSanctions(incidentType, context = {}) {
+export function evaluateIncidentSanctions(incidentType, _context = {}) {
   switch (incidentType) {
     case UNHAPPY_CASE_CODES.GHOST_PASSENGER:
       return {

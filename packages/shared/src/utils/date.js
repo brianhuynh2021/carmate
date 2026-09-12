@@ -75,7 +75,6 @@ export const formatTripDateDisplay = (dateStr, baseDate = new Date()) => {
   }
 
   const str = String(dateStr).trim();
-  const isRecurring = str.includes('Lặp lại hàng tuần') || str.includes('hàng tuần');
   const cleanStr = str
     .replace(/\(Lặp lại hàng tuần\)/gi, '')
     .replace(/hàng tuần/gi, '')

@@ -94,7 +94,7 @@ export default function CockpitMode({
   const [isEditingVehicle, setIsEditingVehicle] = useState(false);
 
   // Cảm biến gia tốc phần cứng chống giả lập GPS (Anti-Spoofing Hardware Sensor)
-  const [hasHardwareMotion, setHasHardwareMotion] = useState(false);
+  const [, setHasHardwareMotion] = useState(false);
   useEffect(() => {
     if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
       const handleMotion = (event) => {
@@ -640,7 +640,7 @@ export default function CockpitMode({
           speakText('Hồ sơ xe đã được kích hoạt! Sẵn sàng đón khách.');
           onShowToast?.('🎉 Hồ sơ xe đã được phê duyệt! Chúc chuyến đi thượng lộ bình an.');
         }
-      } catch (err) {
+      } catch {
         // bỏ qua lỗi polling mạng tạm thời
       }
     };

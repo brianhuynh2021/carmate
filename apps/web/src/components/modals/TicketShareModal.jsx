@@ -48,7 +48,7 @@ export default function TicketShareModal({
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [smartMatches, setSmartMatches] = useState([]);
-  const [loadingMatches, setLoadingMatches] = useState(false);
+  const [, setLoadingMatches] = useState(false);
 
   useEffect(() => {
     if (!trip?.id) return;

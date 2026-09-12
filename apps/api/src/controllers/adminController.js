@@ -91,7 +91,7 @@ export function requireAdmin(req, res, next) {
       req.admin = decoded;
       return next();
     }
-  } catch (err) {
+  } catch {
     // Token không hợp lệ hoặc hết hạn
   }
 
@@ -686,7 +686,7 @@ export function listDeletionRequestsHandler(req, res) {
 export async function processDeletionRequestHandler(req, res) {
   try {
     const { id } = req.params;
-    const { action, note } = req.body || {};
+    const { action } = req.body || {};
 
     if (!action || (action !== 'approved' && action !== 'rejected')) {
       return res.status(400).json({

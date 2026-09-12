@@ -5,7 +5,6 @@ import {
   getTripById,
   addBooking,
   updateBookingStatus,
-  removeBooking,
   updateTrip,
   getUserById,
   getUserByPhone,
@@ -21,7 +20,7 @@ import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
 import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import crypto from 'crypto';
 import { generateToken } from '../utils/token.js';
-import { sendBusinessAlert, sendTelegramMessage, sendDirectBookingTelegramAlert } from '../utils/telegramAlert.js';
+import { sendBusinessAlert, sendDirectBookingTelegramAlert } from '../utils/telegramAlert.js';
 import { sendEmailNotification } from '../utils/emailAlert.js';
 
 /**

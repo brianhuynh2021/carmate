@@ -38,7 +38,7 @@ export default function StationContactModal({
   onClose,
   boardingPass = {},
   currentHub = {},
-  currentUser = null,
+  currentUser: _currentUser = null,
   onShowToast = null,
   zIndex = 'z-[9999]'
 }) {

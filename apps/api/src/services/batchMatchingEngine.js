@@ -16,8 +16,7 @@ import {
   ROUTE_BENCHMARKS,
   calculateDistanceKm,
   calculateDynamicTariffByDistance,
-  calculateSystemFailureProbability,
-  formParallelFleetPacket
+  calculateSystemFailureProbability
 } from '@carmate/shared';
 
 import {

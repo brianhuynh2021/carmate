@@ -183,7 +183,7 @@ export function calculateOptimalStoppingTime({
  * Đánh giá trạng thái nhịp tim (Dead Man's Switch Heartbeat Monitor)
  */
 export function evaluateHeartbeatEscort({
-  scheduledDeparture = '06:15',
+  scheduledDeparture: _scheduledDeparture = '06:15',
   deadline = '08:15',
   currentHourMinute = '05:35',
   lastDriverHeartbeatHourMinute = null,
@@ -197,7 +197,6 @@ export function evaluateHeartbeatEscort({
   });
 
   const currentMins = parseTimeToMinutes(currentHourMinute);
-  const scheduledMins = parseTimeToMinutes(scheduledDeparture);
   const lastHbMins = lastDriverHeartbeatHourMinute ? parseTimeToMinutes(lastDriverHeartbeatHourMinute) : null;
 
   // Kiểm tra xe có phát nhịp tim sáng sớm không (trong vòng 60 phút qua)

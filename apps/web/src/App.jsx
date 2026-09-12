@@ -296,7 +296,6 @@ export default function App() {
     setSelectedTripForPhotos,
     showPolicyModal,
     setShowPolicyModal,
-    showBenchmarkModal,
     setShowBenchmarkModal,
     cancelRecord,
     setCancelRecord,
@@ -471,15 +470,11 @@ export default function App() {
   // Hook quản lý Dữ liệu chuyến đi & Escrow Bookings
   const {
     driverOffers,
-    setDriverOffers,
     passengerRequests,
-    setPassengerRequests,
     bookedEscrows,
-    setBookedEscrows,
     refreshBookings,
     toastMessage,
     showToast,
-    handleRePublishTrip,
     handlePostTrip,
     handleEditTrip,
     handleToggleTripStatus,
@@ -865,20 +860,6 @@ export default function App() {
     showToast('Đã đăng xuất tài khoản.');
   };
 
-  const handleAccountDeleted = () => {
-    if (currentUser) {
-      const uId = currentUser.id;
-      const uPhone = currentUser.phone ? String(currentUser.phone).replace(/\D/g, '') : '';
-      setDriverOffers((prev) =>
-        prev.filter((t) => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone))
-      );
-      setPassengerRequests((prev) =>
-        prev.filter((t) => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone))
-      );
-    }
-    handleLogout();
-  };
-
   const handleViewTripInMarket = (trip) => {
     if (!trip) return;
     setActiveTab('market');
@@ -1236,7 +1217,6 @@ export default function App() {
         <DeleteAccountModal
           currentUser={currentUser}
           onClose={() => setShowDeleteAccountModal(false)}
-          onDeleted={handleAccountDeleted}
           onShowToast={showToast}
         />
       )}

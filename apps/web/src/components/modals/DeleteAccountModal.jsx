@@ -13,7 +13,7 @@ const REASON_PRESETS = [
   'Lý do cá nhân khác'
 ];
 
-export default function DeleteAccountModal({ currentUser, onClose, onDeleted, onShowToast }) {
+export default function DeleteAccountModal({ currentUser, onClose, onShowToast }) {
   const { t } = useI18n();
   const [selectedReason, setSelectedReason] = useState(REASON_PRESETS[0]);
   const [note, setNote] = useState('');

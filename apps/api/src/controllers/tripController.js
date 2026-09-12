@@ -10,9 +10,7 @@ import {
   getUserById,
   getUserByPhone,
   saveUser,
-  isUserDeactivated,
-  isDriverDailyTripCapped,
-  DRIVER_DAILY_CAP_NOTICE
+  isUserDeactivated
 } from '../db/sqliteStore.js';
 import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import { sendBusinessAlert, sendSmartMatchTelegramAlert } from '../utils/telegramAlert.js';

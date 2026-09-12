@@ -202,11 +202,6 @@ export default function MovementIntentModal({
     }
   };
 
-  const handleSwapDirection = () => {
-    const nextDir = direction === 'TO_SAIGON' ? 'TO_BINH_PHUOC' : 'TO_SAIGON';
-    handleSetDirection(nextDir);
-  };
-
   const pickupHubs = direction === 'TO_SAIGON' ? binhPhuocHubs : saigonHubs;
   const dropoffHubs = direction === 'TO_SAIGON' ? saigonHubs : binhPhuocHubs;
 

@@ -7,8 +7,6 @@
 import {
   createIntent,
   getIntents,
-  getIntentById,
-  updateIntent,
   getMatchingEpochs
 } from '../db/sqliteStore.js';
 

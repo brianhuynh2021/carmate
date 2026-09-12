@@ -1,10 +1,7 @@
 import {
   saveSupportMessage,
   getSupportMessages,
-  resolveDisputeAndUnban,
-  getUserById,
-  getUserByPhone,
-  getBookingById
+  resolveDisputeAndUnban
 } from '../db/sqliteStore.js';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 

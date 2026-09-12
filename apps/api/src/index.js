@@ -263,7 +263,7 @@ async function startServer() {
 }
 
 // 7. Vành đai an toàn chống sập (Process Crash Boundary)
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('[CarMate Safety] Bắt được Unhandled Promise Rejection (Đã cách ly, không sập server):', reason);
   sendSystemErrorAlert({ error: reason, source: 'Node UnhandledRejection' }).catch(() => {});
 });

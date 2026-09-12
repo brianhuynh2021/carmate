@@ -35,12 +35,10 @@ import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 import Modal from '../ui/Modal.jsx';
 import { formatVND, DEFAULT_TRUST_RULES } from '@carmate/shared';
-import { useI18n } from '../../i18n/index.jsx';
 
 const ADMIN_TOKEN_KEY = 'carmate_admin_token';
 
 export default function AdminDashboardView({ onExitAdmin }) {
-  const { t } = useI18n();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return Boolean(sessionStorage.getItem(ADMIN_TOKEN_KEY));
   });
@@ -346,18 +344,6 @@ export default function AdminDashboardView({ onExitAdmin }) {
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
       showNotice('Lỗi xoá: ' + err.message, 'error');
-    }
-  };
-
-  const handleToggleVerify = async (user, field) => {
-    const nextVal = !user[field];
-    try {
-      await api.updateUserStatus(user.id, { [field]: nextVal });
-      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, [field]: nextVal } : u)));
-      showNotice(`Đã cập nhật xác minh ${field === 'isCccdVerified' ? 'CCCD' : 'GPLX'} thành công`);
-      api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
-    } catch (err) {
-      showNotice('Lỗi cập nhật: ' + err.message, 'error');
     }
   };
 

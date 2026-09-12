@@ -8,7 +8,6 @@ import {
   isIntervalSchedulingFeasible,
   getStationStationKm
 } from '@carmate/shared';
-import { isDriverDailyTripCapped, DRIVER_DAILY_CAP_NOTICE } from '../db/sqliteStore.js';
 
 // BỘ NHỚ LƯU TRỮ TRẠNG THÁI TRẠM ẢO & COCKPIT TẠI RAM (IN-MEMORY DISTRIBUTED ENGINE)
 const stationQueues = new Map(); // stationId -> Array<RiderIntent>
