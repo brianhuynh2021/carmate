@@ -290,27 +290,15 @@ export default function CorridorSearchBoard({
     return tariff?.pricePerSeat || 55000;
   }, [tariff]);
 
-  // Phân loại danh sách chuyến đi theo 3 Khung:
+  // Danh sách chuyến xe thật (chỉ lấy chuyến CONFIRMED / FORMING thật, KHÔNG tạo xe ảo)
   const carmateDisplayTrips = useMemo(() => {
     const slots = matrix?.slots || [];
     const real = slots.filter((s) => s.tier !== 'SHADOW');
-
-    // Chuyến xe CarMate chuẩn hóa (xe cá nhân & đối tác khoác áo CarMate, đón đúng trạm ảo)
-    const defaultCarmateTrip = {
-      tripId: 'carmate-best-match',
-      departureLabel: selectedChip?.hint?.split('-')[0]?.trim() || '18:30',
-      vehicleModel: 'Mitsubishi Xpander (7 chỗ)',
-      seatsAvailable: 3,
-      driverName: 'Chủ xe CX-D10',
-      plateMasked: '93A - 389.xx',
-      pricePerSeat: carmateSegmentPrice,
-      note: 'Xe cá nhân gia đình sạch sẽ · Đón đúng trạm ảo · Đi thẳng êm ái'
-    };
-
-    return real.length > 0
-      ? real.map((t) => ({ ...t, pricePerSeat: carmateSegmentPrice }))
-      : [defaultCarmateTrip];
-  }, [matrix, carmateSegmentPrice, selectedChip]);
+    return real.map((t) => ({
+      ...t,
+      pricePerSeat: t.pricePerSeat || carmateSegmentPrice
+    }));
+  }, [matrix, carmateSegmentPrice]);
 
   // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
   // Tuyến ít xe: hiện ô gom nhu cầu (một trang "lịch chạy toàn tuyến" chỉ có
@@ -723,61 +711,84 @@ export default function CorridorSearchBoard({
             </div>
           </div>
 
-          {/* NHÓM 1: HERO PRODUCT CARMATE (XE GHÉP GIA ĐÌNH - VISUAL DOMINANCE) */}
-          <div className="space-y-2">
-            {carmateDisplayTrips.map((trip) => (
-              <div
-                key={trip.tripId || trip.id || trip.departureLabel}
-                onClick={() => setSelectedDetailTrip(trip)}
-                className="group/hero w-full rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border-2 border-emerald-500/80 dark:border-emerald-500 shadow-md shadow-emerald-500/10 hover:shadow-2xl hover:shadow-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-50/[0.2] dark:hover:bg-emerald-500/[0.05] hover:-translate-y-1 hover:scale-[1.008] p-4 space-y-3 transition-all duration-200 cursor-pointer"
-              >
-                {/* Hàng 1: Giờ + Logo CarMate + Xe gì ➔ Giá tiền */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-sm shrink-0">
-                      {trip.departureLabel}
-                    </span>
-                    <CarMateBadge size="xs" />
-                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      {trip.vehicleModel || 'Mitsubishi Xpander (7 chỗ)'}
-                    </span>
+          {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE */}
+          {carmateDisplayTrips.length > 0 ? (
+            <div className="space-y-2">
+              {carmateDisplayTrips.map((trip) => (
+                <div
+                  key={trip.tripId || trip.id || trip.departureLabel}
+                  onClick={() => setSelectedDetailTrip(trip)}
+                  className="group/hero w-full rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border-2 border-emerald-500/80 dark:border-emerald-500 shadow-md shadow-emerald-500/10 hover:shadow-2xl hover:shadow-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-50/[0.2] dark:hover:bg-emerald-500/[0.05] hover:-translate-y-1 hover:scale-[1.008] p-4 space-y-3 transition-all duration-200 cursor-pointer"
+                >
+                  {/* Hàng 1: Giờ + Logo CarMate + Xe gì ➔ Giá tiền */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-sm shrink-0">
+                        {trip.departureLabel}
+                      </span>
+                      <CarMateBadge size="xs" />
+                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {trip.vehicleModel || 'Xe tiện chuyến'}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-base sm:text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                        {formatVND(trip.pricePerSeat || carmateSegmentPrice)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 ml-0.5">/ghế</span>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-base sm:text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                      {formatVND(carmateSegmentPrice)}
+
+                  {/* Hàng 2: Trạng thái & Lợi ích: Đón trạm + Còn X chỗ + Không bắt khách dọc QL */}
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                    <p className="truncate text-[11px]">
+                      Đón trạm {matrix.origin?.shortLabel || 'trạm đón'} · Còn <strong className="font-mono text-emerald-600 dark:text-emerald-400">{trip.seatsAvailable ?? 1}</strong> chỗ · Không bắt khách dọc QL
+                    </p>
+                  </div>
+
+                  {/* Hàng 3: Nút CTA [GIỮ CHỖ NGAY] đậm chất Stanford Visual Dominance */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/80 dark:border-white/10">
+                    <span className="text-[10px] text-slate-400 truncate pr-2">
+                      {trip.note || 'Xe cá nhân gia đình · Đi thẳng êm ái'}
                     </span>
-                    <span className="text-[10px] text-slate-400 ml-0.5">/ghế</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDetailTrip(trip);
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-xs font-bold uppercase tracking-wide border border-emerald-400/40 shadow-md shadow-emerald-600/30 hover:shadow-lg hover:shadow-emerald-500/40 hover:scale-[1.02] flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none shrink-0"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 fill-white" />
+                      <span>Giữ chỗ ngay</span>
+                    </button>
                   </div>
                 </div>
-
-                {/* Hàng 2: Trạng thái & Lợi ích: Đón trạm + Còn X chỗ + Không bắt khách dọc QL */}
-                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-                  <p className="truncate text-[11px]">
-                    Đón trạm {matrix.origin?.shortLabel || 'Lái Thiêu'} · Còn <strong className="font-mono text-emerald-600 dark:text-emerald-400">{trip.seatsAvailable || 3}</strong> chỗ · Không bắt khách dọc QL
-                  </p>
-                </div>
-
-                {/* Hàng 3: Nút CTA [GIỮ CHỖ NGAY] đậm chất Stanford Visual Dominance */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/80 dark:border-white/10">
-                  <span className="text-[10px] text-slate-400">
-                    Xe cá nhân gia đình · Đi thẳng êm ái
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedDetailTrip(trip);
-                    }}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-xs font-bold uppercase tracking-wide border border-emerald-400/40 shadow-md shadow-emerald-600/30 hover:shadow-lg hover:shadow-emerald-500/40 hover:scale-[1.02] flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 fill-white" />
-                    <span>Giữ chỗ ngay</span>
-                  </button>
-                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 text-center space-y-3 shadow-xs">
+              <div className="w-10 h-10 mx-auto rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#0071e3] flex items-center justify-center">
+                <Clock className="w-5 h-5" />
               </div>
-            ))}
-          </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Khung giờ này chưa có chuyến xe ghép trực tiếp
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Bạn có thể gửi yêu cầu đặt chỗ để các chủ xe tiện chuyến liên hệ đón, hoặc tham khảo các tuyến xe khách liên tỉnh bên dưới.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenIntentModal?.(role, fromHubId)}
+                className="px-4 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95"
+              >
+                <span>Đăng nhu cầu đón tại trạm</span>
+              </button>
+            </div>
+          )}
 
           {/* NHÓM 2: TUYẾN XE KHÁCH LIÊN TỈNH QL13 (THAM KHẢO & MỎ NEO GIÁ) */}
           <div className="space-y-1.5">
@@ -875,35 +886,37 @@ export default function CorridorSearchBoard({
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Chủ xe:</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailTrip.driverName || 'Chủ xe CX-D10'} (4.9 ⭐ · Uy tín)
+                  {selectedDetailTrip.driverName || 'Chủ xe'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Dòng xe:</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailTrip.vehicleModel || 'Mitsubishi Xpander (7 chỗ)'}
+                  {selectedDetailTrip.vehicleModel || 'Xe tiện chuyến'}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Biển kiểm soát:</span>
-                <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10">
-                  {selectedDetailTrip.plateMasked || '93A-389.xx'}
-                </span>
-              </div>
+              {selectedDetailTrip.plateMasked && (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Biển kiểm soát:</span>
+                  <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10">
+                    {selectedDetailTrip.plateMasked}
+                  </span>
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Số ghế trống:</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  Còn {selectedDetailTrip.seatsAvailable || 3} ghế trống
+                  Còn {selectedDetailTrip.seatsAvailable ?? 1} ghế trống
                 </span>
               </div>
 
               <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
                 <span className="text-slate-500 shrink-0">Điểm đón:</span>
                 <span className="font-medium text-slate-900 dark:text-white text-right">
-                  {matrix.origin?.landmark || 'Cổng chào Lái Thiêu (Cây xăng Petrolimex QL13)'}
+                  {matrix?.origin?.landmark || matrix?.origin?.name || 'Trạm đón quy chuẩn'}
                 </span>
               </div>
 
