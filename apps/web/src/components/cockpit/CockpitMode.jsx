@@ -1156,26 +1156,28 @@ export default function CockpitMode({
               </div>
             </div>
 
-            {/* HỘP KÍCH HOẠT MÔ PHỎNG TIẾP CẬN TRẠM THỰC CHIẾN */}
-            <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-              <div className="text-left space-y-0.5">
-                <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 font-mono uppercase">
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{t('cockpitUi.s037')}</span>
-                </span>
-                <p className="text-[11.5px] text-slate-300">
-                  {t('cockpitUi.s038')}
-                </p>
+            {/* HỘP KÍCH HOẠT MÔ PHỎNG TIẾP CẬN TRẠM THỰC CHIẾN (CHỈ HIỆN Ở DEV) */}
+            {import.meta.env.DEV && (
+              <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+                <div className="text-left space-y-0.5">
+                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 font-mono uppercase">
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{t('cockpitUi.s037')}</span>
+                  </span>
+                  <p className="text-[11.5px] text-slate-300">
+                    {t('cockpitUi.s038')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => triggerApproachRadar()}
+                  className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer shrink-0 transition-all"
+                >
+                  <Zap className="w-4 h-4 fill-slate-950" />
+                  <span>{t('cockpitUi.s039')}</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => triggerApproachRadar()}
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer shrink-0 transition-all"
-              >
-                <Zap className="w-4 h-4 fill-slate-950" />
-                <span>{t('cockpitUi.s039')}</span>
-              </button>
-            </div>
+            )}
           </div>
         )}
 
@@ -1787,34 +1789,36 @@ export default function CockpitMode({
               </div>
             )}
 
-            {/* CÔNG CỤ CHUYỂN ĐỔI MÔ PHỎNG TEST */}
-            <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between text-xs">
-              <span className="text-slate-400 font-mono text-[11px]">{t('cockpitUi.s095')}</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setAbsentSimGpsStatus('FAR')}
-                  className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
-                    absentSimGpsStatus === 'FAR'
-                      ? 'bg-rose-500 text-white font-bold'
-                      : 'bg-white/[0.05] text-slate-400'
-                  }`}
-                >
-                  {t('cockpitUi.s096')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAbsentSimGpsStatus('NEAR')}
-                  className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
-                    absentSimGpsStatus === 'NEAR'
-                      ? 'bg-cyan-500 text-slate-950 font-bold'
-                      : 'bg-white/[0.05] text-slate-400'
-                  }`}
-                >
-                  {t('cockpitUi.s097')}
-                </button>
+            {/* CÔNG CỤ CHUYỂN ĐỔI MÔ PHỎNG TEST (CHỈ HIỆN Ở DEV) */}
+            {import.meta.env.DEV && (
+              <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-mono text-[11px]">{t('cockpitUi.s095')}</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAbsentSimGpsStatus('FAR')}
+                    className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
+                      absentSimGpsStatus === 'FAR'
+                        ? 'bg-rose-500 text-white font-bold'
+                        : 'bg-white/[0.05] text-slate-400'
+                    }`}
+                  >
+                    {t('cockpitUi.s096')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAbsentSimGpsStatus('NEAR')}
+                    className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
+                      absentSimGpsStatus === 'NEAR'
+                        ? 'bg-cyan-500 text-slate-950 font-bold'
+                        : 'bg-white/[0.05] text-slate-400'
+                    }`}
+                  >
+                    {t('cockpitUi.s097')}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </Modal>
       )}
