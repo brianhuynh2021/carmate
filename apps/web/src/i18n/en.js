@@ -682,7 +682,22 @@ export default {
     resultCount: '{count} matching rides',
     youAre: 'You are a',
     rolePassenger: 'Co-rider',
-    roleDriver: 'Car owner'
+    roleDriver: 'Car owner',
+    timeLabel: 'Preferred time',
+    anyTime: 'Any time',
+    matrixTitle: 'Available time slots',
+    matrixWindow: 'Including nearby slots ±{n} min',
+    tierConfirmed: '100% confirmed',
+    tierForming: 'Car en route',
+    tierShadow: 'Backup slot',
+    seatsLeft: '{n} seats left',
+    actionConfirm: 'Confirm now',
+    actionReserve: 'Reserve priority',
+    actionIntent: 'Register this slot',
+    etaAbout: 'pickup ~{time}',
+    etaSigma: '± {n} min',
+    distanceAway: '{n}km away',
+    waitingAtHub: '{n} waiting at hub'
   },
   cockpit: {
     navLabel: 'Pick up',

@@ -662,6 +662,61 @@ export const api = {
     });
     const qs = query.toString();
     return request(`/station/rider/radar-risk${qs ? `?${qs}` : ''}`);
+  },
+
+  // ── Ma Trận Khe Thời Gian ────────────────────────────────────────────
+  async getTimeSlotMatrix({ from, to, timeSlot = null, seats = 1, corridor = null } = {}) {
+    const query = new URLSearchParams({ from, to, seats: String(seats) });
+    if (timeSlot && timeSlot !== 'all') query.append('timeSlot', timeSlot);
+    if (corridor) query.append('corridor', corridor);
+    return request(`/corridor/time-slots?${query.toString()}`);
+  },
+
+  // ── Bắt Tay T-30 ─────────────────────────────────────────────────────
+  async confirmOnTheWay(intentId, coords = {}) {
+    return request('/station/rider/on-the-way', {
+      method: 'POST',
+      body: JSON.stringify({ intentId, ...coords })
+    });
+  },
+
+  // ── Thông Báo Đẩy & Hộp Thư ──────────────────────────────────────────
+  async getVapidKey() {
+    return request('/notifications/vapid-key');
+  },
+
+  async subscribePush(subscription, phone) {
+    return request('/notifications/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ subscription, phone })
+    });
+  },
+
+  async unsubscribePush(endpoint) {
+    return request('/notifications/unsubscribe', {
+      method: 'POST',
+      body: JSON.stringify({ endpoint })
+    });
+  },
+
+  async getNotifications(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') query.append(key, val);
+    });
+    const qs = query.toString();
+    return request(`/notifications${qs ? `?${qs}` : ''}`);
+  },
+
+  async markNotificationsRead(payload = {}) {
+    return request('/notifications/read', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getSchedulerStatus() {
+    return request('/admin/scheduler-status');
   }
 };
 

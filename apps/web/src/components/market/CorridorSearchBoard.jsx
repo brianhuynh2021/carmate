@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowUpDown, MapPin, Search, Clock, Car, Users, Loader2, ChevronDown } from 'lucide-react';
+import { ArrowUpDown, MapPin, Search, Clock, Car, Users, Loader2, ChevronDown, Zap, Navigation } from 'lucide-react';
 import {
   getActiveCorridors,
   getDefaultCorridor,
@@ -8,7 +8,8 @@ import {
   detectCorridorByCoords,
   getHubEndpoint,
   getFixedSegmentTariff,
-  formatVND
+  formatVND,
+  TIME_SLOTS
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import api from '../../api/client.js';
@@ -141,27 +142,34 @@ export default function CorridorSearchBoard({
     }
   }, [fromHubId, toHubId, corridor.dataKey]);
 
-  // ── Tìm chuyến ─────────────────────────────────────────────────────────
+  // ── Giờ muốn đi ────────────────────────────────────────────────────────
+  const [timeSlot, setTimeSlot] = useState('all');
+
+  // ── Tìm chuyến: MA TRẬN KHE THỜI GIAN ─────────────────────────────────
+  // Khách liên tỉnh cần thấy NGAY cả khung lân cận ±30 phút, không chỉ đúng
+  // giờ mình gõ. Màn hình trống là mất khách, nên backend luôn bù khe dự phòng.
   const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState(null);
+  const [matrix, setMatrix] = useState(null);
 
   const handleSearchNow = useCallback(async () => {
     if (!fromHubId || !toHubId) return;
     setIsSearching(true);
-    setResults(null);
+    setMatrix(null);
     try {
-      const res = await api.getTrips({
-        corridor: corridor.dataKey,
-        limit: 20,
-        type: role === 'driver' ? 'passenger' : 'driver'
+      const res = await api.getTimeSlotMatrix({
+        from: fromHubId,
+        to: toHubId,
+        timeSlot,
+        seats: 1,
+        corridor: corridor.dataKey
       });
-      setResults(Array.isArray(res?.data) ? res.data : []);
+      setMatrix(res?.success ? res : null);
     } catch {
-      setResults([]);
+      setMatrix(null);
     } finally {
       setIsSearching(false);
     }
-  }, [fromHubId, toHubId, corridor.dataKey, role]);
+  }, [fromHubId, toHubId, timeSlot, corridor.dataKey]);
 
   const swap = () => setHeading((h) => flipHeading(h));
 
@@ -260,6 +268,31 @@ export default function CorridorSearchBoard({
           </div>
         </div>
 
+        {/* Giờ muốn đi — không bắt buộc, nhưng chọn thì ma trận bám sát hơn */}
+        <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4 sm:mx-5" />
+        <div className="p-4 sm:p-5 flex items-center gap-3">
+          <Clock className="w-5 h-5 text-amber-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
+              {t('search.timeLabel')}
+            </label>
+            <select
+              value={timeSlot}
+              onChange={(e) => setTimeSlot(e.target.value)}
+              className="w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
+            >
+              <option value="all" className="bg-white dark:bg-slate-900">
+                {t('search.anyTime')}
+              </option>
+              {TIME_SLOTS.filter((s) => s.id !== 'all' && !s.isAlias).map((s) => (
+                <option key={s.id} value={s.id} className="bg-white dark:bg-slate-900">
+                  {s.short}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Nút chính */}
         <div className="px-4 sm:px-5 pb-4 sm:pb-5">
           <button
@@ -315,52 +348,33 @@ export default function CorridorSearchBoard({
         <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-[#0071e3]" />
       </button>
 
-      {/* ── KẾT QUẢ ── */}
-      {results !== null && (
+      {/* ── MA TRẬN KHE THỜI GIAN ── */}
+      {matrix && (
         <section className="space-y-2.5">
-          {results.length === 0 ? (
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] text-center space-y-2.5">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t('search.emptyTitle')}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('search.emptyDesc')}</p>
-              <button
-                type="button"
-                onClick={() => onOpenIntentModal?.(role, fromHubId)}
-                className="mt-1 h-11 px-5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] hover:shadow-md text-white text-xs font-bold cursor-pointer active:scale-[0.98] transition-all duration-150"
-              >
-                {t('search.emptyCta')}
-              </button>
-            </div>
-          ) : (
-            <>
-              <p className="text-xs font-mono text-slate-400 px-1">
-                {t('search.resultCount', { count: results.length })}
-              </p>
-              {results.map((trip) => (
-                <button
-                  key={trip.id}
-                  type="button"
-                  onClick={() => onOpenStationView?.(fromHubId, toHubId)}
-                  className="w-full p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08] flex items-center justify-between gap-3 hover:border-[#0071e3]/50 hover:bg-[#0071e3]/[0.03] dark:hover:bg-white/[0.04] hover:shadow-sm active:scale-[0.99] transition-all duration-150 cursor-pointer text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                      {trip.from} ➔ {trip.to}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
-                      {trip.time || trip.timeSlot} · {trip.seats} {t('common.seats')}
-                    </p>
-                  </div>
-                  {trip.pricePerSeat ? (
-                    <span className="text-sm font-bold font-mono text-[#0071e3] shrink-0">
-                      {formatVND(trip.pricePerSeat)}
-                    </span>
-                  ) : null}
-                </button>
-              ))}
-            </>
+          <div className="flex items-baseline justify-between gap-2 px-1">
+            <p className="text-xs font-bold text-slate-900 dark:text-white">{t('search.matrixTitle')}</p>
+            <p className="text-[10px] font-mono text-slate-400">
+              {t('search.matrixWindow', { n: matrix.windowMinutes })}
+            </p>
+          </div>
+
+          {matrix.station?.waitingCount > 0 && (
+            <p className="px-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+              {t('search.waitingAtHub', { n: matrix.station.waitingCount })}
+            </p>
           )}
+
+          {matrix.slots.map((slot, idx) => (
+            <SlotCard
+              key={`${slot.tier}-${slot.tripId || slot.departureLabel}-${idx}`}
+              slot={slot}
+              t={t}
+              onAct={() => {
+                if (slot.tier === 'SHADOW') onOpenIntentModal?.(role, fromHubId);
+                else onOpenStationView?.(fromHubId, toHubId);
+              }}
+            />
+          ))}
         </section>
       )}
 
@@ -395,6 +409,95 @@ export default function CorridorSearchBoard({
         </div>
       </div>
 
+    </div>
+  );
+}
+
+/**
+ * Một khe giờ trong ma trận. Ba tầng dùng chung một khung nhưng khác hẳn về
+ * trọng lượng thị giác: khe chắc chắn phải nổi bật nhất, khe dự phòng mờ nhất —
+ * mắt khách phải rơi vào thứ đáng tin nhất trước tiên.
+ */
+function SlotCard({ slot, t, onAct }) {
+  const tone =
+    slot.tier === 'CONFIRMED'
+      ? {
+          ring: 'border-emerald-300 dark:border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-500/[0.07]',
+          chip: 'bg-emerald-500 text-white',
+          label: t('search.tierConfirmed'),
+          Icon: Zap,
+          btn: 'bg-emerald-600 hover:bg-emerald-500 text-white'
+        }
+      : slot.tier === 'FORMING'
+        ? {
+            ring: 'border-[#0071e3]/40 bg-[#0071e3]/[0.05]',
+            chip: 'bg-[#0071e3] text-white',
+            label: t('search.tierForming'),
+            Icon: Navigation,
+            btn: 'bg-[#0071e3] hover:bg-[#0077ed] text-white'
+          }
+        : {
+            ring: 'border-slate-200 dark:border-white/[0.08] bg-slate-50/60 dark:bg-white/[0.02]',
+            chip: 'bg-slate-300 dark:bg-white/15 text-slate-700 dark:text-slate-200',
+            label: t('search.tierShadow'),
+            Icon: Clock,
+            btn: 'bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-800 dark:text-white'
+          };
+
+  const { Icon } = tone;
+
+  return (
+    <div className={`p-4 rounded-2xl border ${tone.ring} transition-all duration-150`}>
+      <div className="flex items-start justify-between gap-3 min-w-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-lg font-bold font-mono text-slate-900 dark:text-white">
+              {slot.departureLabel}
+            </span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${tone.chip}`}>
+              {tone.label}
+            </span>
+            {slot.etaSigmaMinutes ? (
+              <span className="text-[10px] font-mono text-slate-400">
+                {t('search.etaSigma', { n: slot.etaSigmaMinutes })}
+              </span>
+            ) : null}
+          </div>
+
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 truncate">
+            {slot.driverName ? `${slot.driverName}` : ''}
+            {slot.vehicleModel ? ` · ${slot.vehicleModel}` : ''}
+            {slot.seatsAvailable != null ? ` · ${t('search.seatsLeft', { n: slot.seatsAvailable })}` : ''}
+          </p>
+
+          <p className="mt-0.5 text-[11px] text-slate-400 flex items-center gap-1 min-w-0">
+            <Icon className="w-3 h-3 shrink-0" />
+            <span className="truncate">
+              {slot.distanceKm != null
+                ? t('search.distanceAway', { n: slot.distanceKm })
+                : slot.note}
+            </span>
+          </p>
+        </div>
+
+        {slot.pricePerSeat ? (
+          <span className="text-sm font-bold font-mono text-slate-900 dark:text-white shrink-0">
+            {formatVND(slot.pricePerSeat)}
+          </span>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        onClick={onAct}
+        className={`mt-3 w-full h-11 rounded-xl text-xs font-bold cursor-pointer active:scale-[0.99] transition-all duration-150 ${tone.btn}`}
+      >
+        {slot.tier === 'CONFIRMED'
+          ? t('search.actionConfirm')
+          : slot.tier === 'FORMING'
+            ? t('search.actionReserve')
+            : t('search.actionIntent')}
+      </button>
     </div>
   );
 }

@@ -679,7 +679,22 @@ export default {
     resultCount: '{count} chuyến phù hợp',
     youAre: 'Bạn là',
     rolePassenger: 'Người đi cùng',
-    roleDriver: 'Chủ xe'
+    roleDriver: 'Chủ xe',
+    timeLabel: 'Giờ muốn đi',
+    anyTime: 'Giờ nào cũng được',
+    matrixTitle: 'Các khung giờ khả dụng',
+    matrixWindow: 'Đã chiếu cả khung lân cận ±{n} phút',
+    tierConfirmed: 'Chắc chắn 100%',
+    tierForming: 'Xe đang trên đường',
+    tierShadow: 'Chuyến dự phòng',
+    seatsLeft: 'còn {n} chỗ',
+    actionConfirm: 'Xác nhận đi ngay',
+    actionReserve: 'Đặt chỗ ưu tiên',
+    actionIntent: 'Đăng ký khung giờ này',
+    etaAbout: 'dự kiến đón {time}',
+    etaSigma: '± {n} phút',
+    distanceAway: 'đang cách {n}km',
+    waitingAtHub: '{n} người đang đợi tại trạm'
   },
   cockpit: {
     navLabel: 'Nhận khách',
