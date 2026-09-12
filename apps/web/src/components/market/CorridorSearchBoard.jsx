@@ -520,14 +520,19 @@ export default function CorridorSearchBoard({
         </div>
       </section>
 
-      {/* ── LỐI RẼ: ĐẶT CHO LÚC KHÁC (khớp lệnh) ── */}
+      {/* ── ĐĂNG NHU CẦU TÌM XE ──
+          Nút này mở MovementIntentModal — một FORM đăng ký (chọn ngày/giờ/ghế
+          rồi gửi đi), KHÔNG phải danh sách chuyến. Trước đây tiêu đề ghi "Xem
+          toàn bộ lịch trình tuyến" nên khách bấm vào mong thấy danh sách xe,
+          lại gặp form phải điền — hứa một đằng làm một nẻo.
+          Câu chữ nay khớp đúng thứ sẽ hiện ra. */}
       <button
         type="button"
         onClick={() => onOpenIntentModal?.(role, fromHubId)}
         className="group w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] flex items-center justify-between gap-3 hover:bg-white dark:hover:bg-white/[0.07] hover:border-[#0071e3]/50 hover:shadow-sm active:scale-[0.99] transition-all duration-150 cursor-pointer text-left"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+          <MapPin className="w-4 h-4 text-[#0071e3] shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
               {t('search.scheduleTitle')}
