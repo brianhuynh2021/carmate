@@ -464,6 +464,65 @@ const TRIPS = [
     notes: 'Tan sở về quê cuối tuần, có 1 ba lô gọn nhẹ.',
     createdAt: Date.now() - 3600000 * 2
   },
+
+  // ───────────────────────────────────────────────────────────────────────
+  // CỤM CHUYẾN TRẢI ĐỀU TRONG NGÀY (QL13)
+  //
+  // Trước đây 6 chuyến seed đều dồn vào sáng sớm (05-08h) và chiều tối
+  // (16-19h), nên bấm tìm vào giữa trưa hay đầu giờ chiều là trả về rỗng —
+  // cửa sổ tìm ±30 phút không với tới chuyến nào. Người thử nghiệm tưởng hệ
+  // thống hỏng, trong khi thực ra nó chạy đúng.
+  //
+  // Cụm này rải chuyến mỗi 60-90 phút suốt 04h-22h để mọi khung giờ đều có
+  // kết quả, và đủ dày (>= 5 chuyến/chặng) để thấy luôn màn "Lịch chạy toàn
+  // tuyến". Địa danh đặt khớp từ điển gazetteer của timeSlotMatrix nên chúng
+  // lọt đúng chặng khi tra cứu.
+  ...[
+    ['04:30', 'Chợ Lộc Ninh (Ngã 3 Lộc Tấn)', 'Sài Gòn (Sân bay Tân Sơn Nhất)', 'Toyota Vios', 3, 170000],
+    ['06:30', 'Chơn Thành (Ngã 4 QL13)', 'Sài Gòn (Ngã tư Hàng Xanh)', 'Honda City', 2, 140000],
+    ['08:00', 'Bàu Bàng (KCN Mỹ Phước)', 'Sài Gòn (Sân bay Tân Sơn Nhất)', 'Toyota Veloz Cross (Xe 7 chỗ)', 4, 150000],
+    ['09:30', 'Bình Long (Vòng xoay An Lộc)', 'Sài Gòn (Ngã tư Hàng Xanh)', 'Mazda 3', 2, 175000],
+    ['11:00', 'Tân Khai (Cây xăng Petrolimex)', 'Sài Gòn (Bến xe Miền Đông)', 'Toyota Innova (Xe 7 chỗ)', 4, 160000],
+    ['12:30', 'Chơn Thành (Ngã 4 QL13)', 'Sài Gòn (Sân bay Tân Sơn Nhất)', 'Hyundai Accent', 3, 145000],
+    ['14:00', 'Bàu Bàng (KCN Mỹ Phước)', 'Sài Gòn (Ngã tư Hàng Xanh)', 'Kia K3', 2, 150000],
+    ['15:30', 'Lái Thiêu (Cổng chào Bình Dương)', 'Sài Gòn (Sân bay Tân Sơn Nhất)', 'Toyota Vios', 3, 90000],
+    ['17:00', 'Sở Sao (Thủ Dầu Một)', 'Sài Gòn (Ngã tư Hàng Xanh)', 'Honda CR-V (Xe 7 chỗ)', 4, 110000],
+    ['18:30', 'Tân Khai (Cây xăng Petrolimex)', 'Sài Gòn (Sân bay Tân Sơn Nhất)', 'Mitsubishi Xpander (Xe 7 chỗ)', 3, 165000],
+    ['20:00', 'Chơn Thành (Ngã 4 QL13)', 'Sài Gòn (Ngã tư Hàng Xanh)', 'Toyota Vios', 2, 140000],
+    ['21:30', 'Bàu Bàng (KCN Mỹ Phước)', 'Sài Gòn (Bến xe Miền Đông)', 'Hyundai Accent', 3, 145000]
+  ].map(([time, from, to, carType, seats, price], i) => ({
+    id: `DRV-DAY-${String(i + 1).padStart(2, '0')}`,
+    maskedCode: `CX-D${i + 1}`,
+    type: 'driver_offer',
+    status: 'active',
+    phoneReal: `09011000${String(i + 1).padStart(2, '0')}`,
+    userId: `USR-09011000${String(i + 1).padStart(2, '0')}`,
+    publicName: `Chủ xe CX-D${i + 1}`,
+    from,
+    to,
+    routeCategory: 'Tuyến QL13',
+    direction: 'province_to_sg',
+    hometown: 'Bình Phước',
+    date: 'Hôm nay',
+    timeSlot: time,
+    timeSlotLabel: time,
+    carType,
+    capacity: carType.includes('7 chỗ') ? 6 : 4,
+    availableSeats: seats,
+    price,
+    basePricePerSeat: price,
+    depositPerSeat: 0,
+    carCategory: 'family_car',
+    isVip: false,
+    // Lịch sử thật khác nhau để chỉ số an tâm phân tầng rõ, không đồng loạt
+    rating: 4.7 + (i % 4) * 0.1,
+    completedCount: 8 + i * 7,
+    perks: ['Không khói thuốc', 'Trọn gói xăng & cầu đường'],
+    hasCarPhotos: false,
+    plateMask: `${61 + (i % 8)}A - ***.${String(10 + i)}`,
+    notes: 'Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.',
+    createdAt: Date.now() - 3600000 * (i + 1)
+  }))
 ];
 
 // 3. DANH SÁCH ĐƠN GHÉP XE (BOOKINGS / ESCROWS)

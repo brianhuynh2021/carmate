@@ -77,7 +77,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Xe gia đình 7 chỗ êm ái, giờ giấc thoải mái, đón tận nơi tiện đường QL13.",
-      "createdAt": 1789178538911
+      "createdAt": 1789187948203
     },
     {
       "id": "DRV-0984-MORNING",
@@ -147,7 +147,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Mình chở gia đình đi khám bệnh sáng sớm, còn trống 3 ghế rộng rãi.",
-      "createdAt": 1789185738911
+      "createdAt": 1789195148203
     },
     {
       "id": "DRV-0984-RETURN",
@@ -216,7 +216,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến về chiều tối sau khi xong việc tại Sài Gòn. Ghế sau ngả lưng thoải mái.",
-      "createdAt": 1789189338911
+      "createdAt": 1789198748203
     },
     {
       "id": "DRV-0984-FULL",
@@ -273,7 +273,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến xe đã kín chỗ.",
-      "createdAt": 1789164138911
+      "createdAt": 1789173548203
     },
     {
       "id": "DRV-0984-PAST",
@@ -342,7 +342,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến đi đã hoàn thành an toàn tốt đẹp.",
-      "createdAt": 1789084938911
+      "createdAt": 1789094348203
     },
     {
       "id": "DRV-101",
@@ -410,7 +410,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - ***.86",
       "notes": "Xe gia đình sạch sẽ, đón dọc QL13 tiện đường, không hút thuốc.",
-      "createdAt": 1789185738911
+      "createdAt": 1789195148203
     },
     {
       "id": "DRV-102",
@@ -479,7 +479,7 @@
       ],
       "plateMask": "93A - ***.52",
       "notes": "Đi công việc cơ quan, còn 2 ghế ngồi êm ái, xe không chở đồ tanh.",
-      "createdAt": 1789174938911
+      "createdAt": 1789184348203
     },
     {
       "id": "DRV-105",
@@ -533,7 +533,427 @@
         }
       ],
       "notes": "Đi làm việc Sài Gòn mỗi tuần, xe nhỏ gọn sạch sẽ.",
-      "createdAt": 1789171338911
+      "createdAt": 1789180748203
+    },
+    {
+      "id": "DRV-DAY-01",
+      "maskedCode": "CX-D1",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100001",
+      "userId": "USR-0901100001",
+      "publicName": "Chủ xe CX-D1",
+      "from": "Chợ Lộc Ninh (Ngã 3 Lộc Tấn)",
+      "to": "Sài Gòn (Sân bay Tân Sơn Nhất)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "04:30",
+      "timeSlotLabel": "04:30",
+      "carType": "Toyota Vios",
+      "capacity": 4,
+      "availableSeats": 3,
+      "price": 170000,
+      "basePricePerSeat": 170000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.7,
+      "completedCount": 8,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "61A - ***.10",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789198748203
+    },
+    {
+      "id": "DRV-DAY-02",
+      "maskedCode": "CX-D2",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100002",
+      "userId": "USR-0901100002",
+      "publicName": "Chủ xe CX-D2",
+      "from": "Chơn Thành (Ngã 4 QL13)",
+      "to": "Sài Gòn (Ngã tư Hàng Xanh)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "06:30",
+      "timeSlotLabel": "06:30",
+      "carType": "Honda City",
+      "capacity": 4,
+      "availableSeats": 2,
+      "price": 140000,
+      "basePricePerSeat": 140000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.8,
+      "completedCount": 15,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "62A - ***.11",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789195148203
+    },
+    {
+      "id": "DRV-DAY-03",
+      "maskedCode": "CX-D3",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100003",
+      "userId": "USR-0901100003",
+      "publicName": "Chủ xe CX-D3",
+      "from": "Bàu Bàng (KCN Mỹ Phước)",
+      "to": "Sài Gòn (Sân bay Tân Sơn Nhất)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "08:00",
+      "timeSlotLabel": "08:00",
+      "carType": "Toyota Veloz Cross (Xe 7 chỗ)",
+      "capacity": 6,
+      "availableSeats": 4,
+      "price": 150000,
+      "basePricePerSeat": 150000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.9,
+      "completedCount": 22,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "63A - ***.12",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789191548203
+    },
+    {
+      "id": "DRV-DAY-04",
+      "maskedCode": "CX-D4",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100004",
+      "userId": "USR-0901100004",
+      "publicName": "Chủ xe CX-D4",
+      "from": "Bình Long (Vòng xoay An Lộc)",
+      "to": "Sài Gòn (Ngã tư Hàng Xanh)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "09:30",
+      "timeSlotLabel": "09:30",
+      "carType": "Mazda 3",
+      "capacity": 4,
+      "availableSeats": 2,
+      "price": 175000,
+      "basePricePerSeat": 175000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 5,
+      "completedCount": 29,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "64A - ***.13",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789187948203
+    },
+    {
+      "id": "DRV-DAY-05",
+      "maskedCode": "CX-D5",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100005",
+      "userId": "USR-0901100005",
+      "publicName": "Chủ xe CX-D5",
+      "from": "Tân Khai (Cây xăng Petrolimex)",
+      "to": "Sài Gòn (Bến xe Miền Đông)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "11:00",
+      "timeSlotLabel": "11:00",
+      "carType": "Toyota Innova (Xe 7 chỗ)",
+      "capacity": 6,
+      "availableSeats": 4,
+      "price": 160000,
+      "basePricePerSeat": 160000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.7,
+      "completedCount": 36,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "65A - ***.14",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789184348203
+    },
+    {
+      "id": "DRV-DAY-06",
+      "maskedCode": "CX-D6",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100006",
+      "userId": "USR-0901100006",
+      "publicName": "Chủ xe CX-D6",
+      "from": "Chơn Thành (Ngã 4 QL13)",
+      "to": "Sài Gòn (Sân bay Tân Sơn Nhất)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "12:30",
+      "timeSlotLabel": "12:30",
+      "carType": "Hyundai Accent",
+      "capacity": 4,
+      "availableSeats": 3,
+      "price": 145000,
+      "basePricePerSeat": 145000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.8,
+      "completedCount": 43,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "66A - ***.15",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789180748203
+    },
+    {
+      "id": "DRV-DAY-07",
+      "maskedCode": "CX-D7",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100007",
+      "userId": "USR-0901100007",
+      "publicName": "Chủ xe CX-D7",
+      "from": "Bàu Bàng (KCN Mỹ Phước)",
+      "to": "Sài Gòn (Ngã tư Hàng Xanh)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "14:00",
+      "timeSlotLabel": "14:00",
+      "carType": "Kia K3",
+      "capacity": 4,
+      "availableSeats": 2,
+      "price": 150000,
+      "basePricePerSeat": 150000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.9,
+      "completedCount": 50,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "67A - ***.16",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789177148203
+    },
+    {
+      "id": "DRV-DAY-08",
+      "maskedCode": "CX-D8",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100008",
+      "userId": "USR-0901100008",
+      "publicName": "Chủ xe CX-D8",
+      "from": "Lái Thiêu (Cổng chào Bình Dương)",
+      "to": "Sài Gòn (Sân bay Tân Sơn Nhất)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "15:30",
+      "timeSlotLabel": "15:30",
+      "carType": "Toyota Vios",
+      "capacity": 4,
+      "availableSeats": 3,
+      "price": 90000,
+      "basePricePerSeat": 90000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 5,
+      "completedCount": 57,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "68A - ***.17",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789173548203
+    },
+    {
+      "id": "DRV-DAY-09",
+      "maskedCode": "CX-D9",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100009",
+      "userId": "USR-0901100009",
+      "publicName": "Chủ xe CX-D9",
+      "from": "Sở Sao (Thủ Dầu Một)",
+      "to": "Sài Gòn (Ngã tư Hàng Xanh)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "17:00",
+      "timeSlotLabel": "17:00",
+      "carType": "Honda CR-V (Xe 7 chỗ)",
+      "capacity": 6,
+      "availableSeats": 4,
+      "price": 110000,
+      "basePricePerSeat": 110000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.7,
+      "completedCount": 64,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "61A - ***.18",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789169948203
+    },
+    {
+      "id": "DRV-DAY-10",
+      "maskedCode": "CX-D10",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100010",
+      "userId": "USR-0901100010",
+      "publicName": "Chủ xe CX-D10",
+      "from": "Tân Khai (Cây xăng Petrolimex)",
+      "to": "Sài Gòn (Sân bay Tân Sơn Nhất)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "18:30",
+      "timeSlotLabel": "18:30",
+      "carType": "Mitsubishi Xpander (Xe 7 chỗ)",
+      "capacity": 6,
+      "availableSeats": 3,
+      "price": 165000,
+      "basePricePerSeat": 165000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.8,
+      "completedCount": 71,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "62A - ***.19",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789166348203
+    },
+    {
+      "id": "DRV-DAY-11",
+      "maskedCode": "CX-D11",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100011",
+      "userId": "USR-0901100011",
+      "publicName": "Chủ xe CX-D11",
+      "from": "Chơn Thành (Ngã 4 QL13)",
+      "to": "Sài Gòn (Ngã tư Hàng Xanh)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "20:00",
+      "timeSlotLabel": "20:00",
+      "carType": "Toyota Vios",
+      "capacity": 4,
+      "availableSeats": 2,
+      "price": 140000,
+      "basePricePerSeat": 140000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 4.9,
+      "completedCount": 78,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "63A - ***.20",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789162748203
+    },
+    {
+      "id": "DRV-DAY-12",
+      "maskedCode": "CX-D12",
+      "type": "driver_offer",
+      "status": "active",
+      "phoneReal": "0901100012",
+      "userId": "USR-0901100012",
+      "publicName": "Chủ xe CX-D12",
+      "from": "Bàu Bàng (KCN Mỹ Phước)",
+      "to": "Sài Gòn (Bến xe Miền Đông)",
+      "routeCategory": "Tuyến QL13",
+      "direction": "province_to_sg",
+      "hometown": "Bình Phước",
+      "date": "Hôm nay",
+      "timeSlot": "21:30",
+      "timeSlotLabel": "21:30",
+      "carType": "Hyundai Accent",
+      "capacity": 4,
+      "availableSeats": 3,
+      "price": 145000,
+      "basePricePerSeat": 145000,
+      "depositPerSeat": 0,
+      "carCategory": "family_car",
+      "isVip": false,
+      "rating": 5,
+      "completedCount": 85,
+      "perks": [
+        "Không khói thuốc",
+        "Trọn gói xăng & cầu đường"
+      ],
+      "hasCarPhotos": false,
+      "plateMask": "64A - ***.21",
+      "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
+      "createdAt": 1789159148203
     }
   ],
   "passengerRequests": [
@@ -558,7 +978,7 @@
       "expectedPrice": 360000,
       "depositPerSeat": 0,
       "notes": "Hai mẹ con đi khám bệnh Chợ Rẫy, xin ngồi ghế trước hoặc hàng 2 chống say xe.",
-      "createdAt": 1789182138911
+      "createdAt": 1789191548203
     },
     {
       "id": "REQ-202",
@@ -581,7 +1001,7 @@
       "expectedPrice": 180000,
       "depositPerSeat": 0,
       "notes": "Tan sở về quê cuối tuần, có 1 ba lô gọn nhẹ.",
-      "createdAt": 1789185738911
+      "createdAt": 1789195148203
     }
   ],
   "bookings": [
@@ -644,7 +1064,7 @@
       "from": "Chợ Chơn Thành (Bình Phước)",
       "to": "Sân bay Tân Sơn Nhất",
       "timeSlot": "08:00-10:00",
-      "completedAt": "2026-09-11T04:02:18.912Z",
+      "completedAt": "2026-09-11T06:39:08.203Z",
       "feedback": {
         "rating": 5,
         "review": "Chủ xe lái xe rất êm ái, xe gia đình sạch sẽ, không mùi thuốc lá, tới sân bay kịp giờ check-in!"
@@ -666,7 +1086,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-09-01T08:00:00.000Z",
-      "updatedAt": "2026-09-12T06:02:18.911Z",
+      "updatedAt": "2026-09-12T08:39:08.202Z",
       "email": "huynh.nguyen@carmate.vn"
     },
     {
@@ -682,7 +1102,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-08-15T08:00:00.000Z",
-      "updatedAt": "2026-09-12T06:02:18.911Z"
+      "updatedAt": "2026-09-12T08:39:08.203Z"
     },
     {
       "id": "USR-0900000013",
@@ -697,7 +1117,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-08-20T08:00:00.000Z",
-      "updatedAt": "2026-09-12T06:02:18.911Z"
+      "updatedAt": "2026-09-12T08:39:08.203Z"
     },
     {
       "id": "USR-0900000018",
@@ -712,7 +1132,7 @@
       "isGplxVerified": 0,
       "isBanned": 0,
       "createdAt": "2026-09-02T08:00:00.000Z",
-      "updatedAt": "2026-09-12T06:02:18.911Z"
+      "updatedAt": "2026-09-12T08:39:08.203Z"
     }
   ]
 }

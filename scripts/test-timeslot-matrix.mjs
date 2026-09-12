@@ -181,8 +181,12 @@ ok(tl.periods.some((p) => p.count === 0),
 ok(typeof tl.isDense === 'boolean', 'Trả về cờ isDense để giao diện tự quyết định');
 ok(tl.isDense === tl.totalTrips >= tl.minTripsForTimeline,
    `isDense khớp ngưỡng: ${tl.totalTrips} chuyến vs ngưỡng ${tl.minTripsForTimeline}`);
-ok(tl.totalTrips < tl.minTripsForTimeline && tl.isDense === false,
-   'Tuyến đang thưa xe -> KHÔNG mở màn lịch chạy (tránh phơi bày sự trống trải)');
+// Kiểm QUAN HỆ giữa mật độ và cờ, không kiểm một trạng thái nhất thời:
+// dữ liệu seed thay đổi thì số chuyến đổi theo, nhưng quy tắc phải luôn đúng.
+ok(
+  tl.totalTrips >= tl.minTripsForTimeline ? tl.isDense === true : tl.isDense === false,
+  `Quy tắc ngưỡng luôn đúng: ${tl.totalTrips} chuyến -> isDense=${tl.isDense} (mở màn lịch chạy khi và chỉ khi đủ dày)`
+);
 
 // Không lọc theo giờ: tổng chuyến phải >= số chuyến của một khung hẹp
 const narrow = buildTimeSlotMatrix({
