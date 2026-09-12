@@ -14,7 +14,7 @@ import PwaInstallPrompt from './components/common/PwaInstallPrompt.jsx';
 import AppleMacNotification from './components/common/AppleMacNotification.jsx';
 
 // Market & Level 3 Autonomous Views
-import CorridorMetroBoard from './components/market/CorridorMetroBoard.jsx';
+import CorridorSearchBoard from './components/market/CorridorSearchBoard.jsx';
 import MovementIntentModal from './components/intent/MovementIntentModal.jsx';
 import BookedTripList from './components/booked/BookedTripList.jsx';
 import CockpitMode from './components/cockpit/CockpitMode.jsx';
@@ -1019,7 +1019,7 @@ export default function App() {
         {/* ── Tuyến Xe Tiện Chuyến Quốc Lộ 13 (Zero Posting Paradigm) ── */}
         {activeTab === 'market' && (
           <div className={`${container} py-5 sm:py-8`}>
-            <CorridorMetroBoard
+            <CorridorSearchBoard
               currentUser={currentUser}
               onOpenCockpit={() => setActiveTab('cockpit')}
               onOpenStationView={(hub, destHub) => {
@@ -1030,8 +1030,6 @@ export default function App() {
               onOpenIntentModal={(targetRole, hubId) => {
                 handleOpenMovementIntent(targetRole, hubId);
               }}
-              onOpenInbox={() => handleOpenInbox()}
-              activeBookedCount={activeBookedCount}
             />
           </div>
         )}
