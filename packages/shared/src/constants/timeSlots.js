@@ -299,11 +299,13 @@ export const mapTimeToSlot = (timeStr) => {
  * "Chiều nay" thì vô nghĩa. Khung đã trôi qua sẽ tự biến mất.
  */
 export const DEPARTURE_WINDOWS = Object.freeze([
+  // `label` là cách người Việt nói hằng ngày, ghép thẳng với "nay"/"mai" thành
+  // "Sáng mai", "Chiều nay" — đọc là hiểu, không cần dịch trong đầu.
   { id: 'early_morning', fromHour: 4, toHour: 8, label: 'Sáng sớm', labelEn: 'Early morning', hint: '04:00 – 08:00' },
-  { id: 'morning', fromHour: 8, toHour: 11, label: 'Buổi sáng', labelEn: 'Morning', hint: '08:00 – 11:00' },
-  { id: 'noon', fromHour: 11, toHour: 14, label: 'Buổi trưa', labelEn: 'Midday', hint: '11:00 – 14:00' },
-  { id: 'afternoon', fromHour: 14, toHour: 18, label: 'Buổi chiều', labelEn: 'Afternoon', hint: '14:00 – 18:00' },
-  { id: 'evening', fromHour: 18, toHour: 22, label: 'Buổi tối', labelEn: 'Evening', hint: '18:00 – 22:00' },
+  { id: 'morning', fromHour: 8, toHour: 11, label: 'Sáng', labelEn: 'Morning', hint: '08:00 – 11:00' },
+  { id: 'noon', fromHour: 11, toHour: 14, label: 'Trưa', labelEn: 'Midday', hint: '11:00 – 14:00' },
+  { id: 'afternoon', fromHour: 14, toHour: 18, label: 'Chiều', labelEn: 'Afternoon', hint: '14:00 – 18:00' },
+  { id: 'evening', fromHour: 18, toHour: 22, label: 'Tối', labelEn: 'Evening', hint: '18:00 – 22:00' },
   { id: 'late_night', fromHour: 22, toHour: 28, label: 'Khuya', labelEn: 'Late night', hint: '22:00 – 04:00' }
 ]);
 
@@ -316,11 +318,12 @@ export const DEPARTURE_WINDOWS = Object.freeze([
  *
  * @param {object} [opts]
  * @param {Date|number} [opts.now] - Mốc hiện tại
- * @param {number} [opts.limit] - Số chip tối đa (mặc định 4)
+ * @param {number} [opts.limit] - Số chip tối đa (mặc định 3, nhường ô thứ 4 cho
+ *   nút "Chọn ngày khác" — lưới 2x2 chỉ có 4 ô, chip thứ 4 sẽ đẩy nút xuống hàng lẻ)
  * @param {number} [opts.minLeadMinutes] - Phải còn ít nhất bao nhiêu phút
  * @returns {Array<{id, label, hint, dayOffset, dayLabel, timeSlot, fromHour, toHour}>}
  */
-export function buildDepartureChips({ now = new Date(), limit = 4, minLeadMinutes = 45 } = {}) {
+export function buildDepartureChips({ now = new Date(), limit = 3, minLeadMinutes = 45 } = {}) {
   const ref = now instanceof Date ? now : new Date(now);
   const nowMinutes = ref.getHours() * 60 + ref.getMinutes();
   const chips = [];
@@ -336,13 +339,26 @@ export function buildDepartureChips({ now = new Date(), limit = 4, minLeadMinute
 
       const dayLabel = dayOffset === 0 ? 'Hôm nay' : 'Ngày mai';
       const startHour = String(w.fromHour % 24).padStart(2, '0');
+      // Nhãn gộp ngày + khung giờ thành MỘT câu đọc thẳng: "Chiều nay (14h-17h)".
+      // Tách rời thành hai dòng bắt mắt phải ghép lại, thêm một nhịp suy nghĩ vô ích.
+      // "Khuya" vắt qua nửa đêm (22h-4h) nên "Khuya nay" gây hiểu nhầm là còn
+      // trong ngày hôm nay. Người Việt nói "đêm nay" / "đêm mai" cho khung này.
+      const isOvernight = w.toHour > 24;
+      const dayWord = isOvernight
+        ? dayOffset === 0 ? 'đêm nay' : 'đêm mai'
+        : dayOffset === 0 ? 'nay' : 'mai';
+      const shortHint = `${w.fromHour % 24}h-${w.toHour % 24}h`;
 
       chips.push({
         id: `${w.id}_d${dayOffset}`,
         windowId: w.id,
-        label: dayOffset === 0 ? w.label : `${w.label} mai`,
+        label: isOvernight ? dayWord.charAt(0).toUpperCase() + dayWord.slice(1) : `${w.label} ${dayWord}`,
         labelEn: dayOffset === 0 ? w.labelEn : `${w.labelEn} tomorrow`,
-        hint: w.hint,
+        hint: shortHint,
+        // Chuỗi hoàn chỉnh để giao diện in thẳng, không phải tự ghép
+        display: isOvernight
+          ? `${dayWord.charAt(0).toUpperCase() + dayWord.slice(1)} (${shortHint})`
+          : `${w.label} ${dayWord} (${shortHint})`,
         dayOffset,
         dayLabel,
         fromHour: w.fromHour,
@@ -360,5 +376,52 @@ export function buildDepartureChips({ now = new Date(), limit = 4, minLeadMinute
 export function getChipDate(chip, now = new Date()) {
   const d = now instanceof Date ? new Date(now) : new Date(now);
   d.setDate(d.getDate() + (chip?.dayOffset || 0));
-  return d.toISOString().slice(0, 10);
+  return toLocalIsoDate(d);
+}
+
+/** Định dạng YYYY-MM-DD theo lịch ĐỊA PHƯƠNG, không qua UTC. */
+export function toLocalIsoDate(d) {
+  const dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt.getTime())) return null;
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Dựng chip từ một ngày và khung giờ do khách tự chọn trong bảng lịch.
+ * Trả về cùng hình dạng với chip tự sinh, nên giao diện dùng chung một lối vẽ.
+ */
+export function buildCustomChip({ date, windowId = 'morning' }) {
+  const w = DEPARTURE_WINDOWS.find((x) => x.id === windowId) || DEPARTURE_WINDOWS[1];
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(d);
+  target.setHours(0, 0, 0, 0);
+  const dayOffset = Math.round((target - today) / 86400000);
+
+  const dayLabel =
+    dayOffset === 0 ? 'Hôm nay' : dayOffset === 1 ? 'Ngày mai' : `${d.getDate()}/${d.getMonth() + 1}`;
+  const shortHint = `${w.fromHour % 24}h-${w.toHour % 24}h`;
+
+  return {
+    id: `custom_${target.getTime()}_${w.id}`,
+    windowId: w.id,
+    isCustom: true,
+    label: `${dayLabel}`,
+    hint: shortHint,
+    display: `${dayLabel} (${shortHint})`,
+    dayOffset,
+    dayLabel,
+    fromHour: w.fromHour,
+    toHour: w.toHour,
+    // KHÔNG dùng toISOString(): nó quy về UTC, mà nửa đêm giờ Việt Nam (UTC+7)
+    // rơi vào 17h hôm TRƯỚC theo UTC — khách chọn 25/12 lại đi tìm chuyến 24/12.
+    date: toLocalIsoDate(target),
+    timeSlot: `${String(w.fromHour % 24).padStart(2, '0')}:00`
+  };
 }

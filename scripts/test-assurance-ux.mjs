@@ -15,6 +15,8 @@ import {
   describeHub,
   getHubAmenities,
   buildDepartureChips,
+  buildCustomChip,
+  toLocalIsoDate,
   hasVerifiedHotline,
   FIXED_CORRIDOR_COACH_SCHEDULES,
   EMERGENCY_TRANSIT_LIFEBUOYS,
@@ -90,12 +92,27 @@ const at23 = new Date(); at23.setHours(23, 0, 0, 0);
 const chips6 = buildDepartureChips({ now: at6 });
 const chips23 = buildDepartureChips({ now: at23 });
 
-ok(chips6.length === 4 && chips23.length === 4, 'Luôn trả về đủ 4 chip, giờ nào cũng có lựa chọn');
+ok(chips6.length === 3 && chips23.length === 3,
+   'Trả về 3 chip, nhường ô thứ 4 trong lưới 2x2 cho nút "Chọn ngày khác"');
+ok(chips6.every((c) => /\(\d+h-\d+h\)$/.test(c.display)),
+   'Mỗi chip in thẳng được một câu "Chiều nay (14h-18h)", giao diện không phải tự ghép');
+const overnight = buildDepartureChips({ now: at23 })[0];
+ok(overnight.display.startsWith('Đêm'),
+   'Khung vắt qua nửa đêm gọi là "Đêm nay", không phải "Khuya nay" gây hiểu nhầm còn trong ngày');
 ok(chips6.every((c) => c.dayOffset === 0), '6h sáng: cả 4 chip đều trong hôm nay');
-ok(chips23.filter((c) => c.dayOffset === 1).length >= 3,
-   '23h đêm: tự chuyển phần lớn sang ngày mai, không chìa ra khung đã trôi qua');
+ok(chips23.filter((c) => c.dayOffset === 1).length >= 2,
+   '23h đêm: phần lớn chip đã chuyển sang ngày mai');
+ok(!chips23.some((c) => c.dayOffset === 0 && c.windowId !== 'late_night'),
+   '23h đêm: KHÔNG còn chìa ra khung nào của hôm nay ngoài khung đêm đang diễn ra');
 ok(chips6.every((c) => /^\d{2}:00$/.test(c.timeSlot)), 'Mỗi chip mang khung giờ hợp lệ để tra cứu');
-ok(chips6.every((c) => c.label && c.hint && c.dayLabel), 'Chip đủ nhãn, gợi ý giờ và nhãn ngày');
+ok(chips6.every((c) => c.label && c.hint && c.dayLabel && c.display), 'Chip đủ nhãn, gợi ý giờ và nhãn ngày');
+
+// Chip tự chọn ngày phải cùng hình dạng với chip tự sinh để giao diện vẽ chung một lối
+const custom = buildCustomChip({ date: '2026-12-25', windowId: 'early_morning' });
+ok(custom && custom.isCustom === true, 'Dựng được chip từ ngày khách tự chọn');
+ok(custom.timeSlot === '04:00' && custom.date === '2026-12-25', 'Chip tự chọn mang đúng ngày và khung giờ');
+ok(['id','label','hint','display','timeSlot','windowId'].every((k) => k in custom),
+   'Chip tự chọn có đủ các trường như chip tự sinh');
 
 const at15 = new Date(); at15.setHours(15, 0, 0, 0);
 const chips15 = buildDepartureChips({ now: at15 });
@@ -122,5 +139,14 @@ ok(invented.every((num) => !allText.includes(num)),
 const emergency = EMERGENCY_TRANSIT_LIFEBUOYS.find((l) => l.hotline);
 ok(!emergency || emergency.hotline === '113',
    'Số duy nhất còn lại là 113 — số công khai toàn quốc, luôn đúng');
+
+// Chống tái phát: toISOString() quy về UTC làm lệch ngày ở múi giờ UTC+7
+console.log('\n── 5. NGÀY THEO LỊCH ĐỊA PHƯƠNG ──');
+for (const day of ['2026-12-25', '2026-01-01', '2026-06-15']) {
+  const c = buildCustomChip({ date: day, windowId: 'early_morning' });
+  ok(c.date === day, `Chọn ${day} trả về đúng ${day} — không lệch một ngày vì quy đổi UTC`);
+}
+ok(toLocalIsoDate(new Date(2026, 11, 25, 0, 30)) === '2026-12-25',
+   'Nửa đêm giờ Việt Nam vẫn là ngày hôm đó, không lùi về hôm trước');
 
 console.log(`\n🎉 TẤT CẢ ${passed} KIỂM THỬ ĐỀU ĐẠT\n`);

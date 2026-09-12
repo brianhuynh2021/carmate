@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowUpDown, MapPin, Search, Clock, Car, Users, Loader2, ChevronDown, Zap, Navigation } from 'lucide-react';
+import { ArrowUpDown, MapPin, Search, Clock, Car, Users, Loader2, ChevronDown, Zap, Navigation, Calendar } from 'lucide-react';
 import {
   getActiveCorridors,
   getDefaultCorridor,
@@ -9,13 +9,17 @@ import {
   getHubEndpoint,
   getFixedSegmentTariff,
   formatVND,
-  buildDepartureChips
+  buildDepartureChips,
+  buildCustomChip,
+  toLocalIsoDate,
+  DEPARTURE_WINDOWS
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import api from '../../api/client.js';
 
 const ROLE_KEY = 'carmate_last_movement_role';
 const CORRIDOR_KEY = 'carmate_last_corridor';
+const WINDOW_KEY = 'carmate_last_departure_window';
 
 /** Đọc localStorage an toàn (chế độ riêng tư / bị chặn đều không được ném lỗi). */
 function readStore(key, fallback = null) {
@@ -145,12 +149,46 @@ export default function CorridorSearchBoard({
   // ── Thời gian khởi hành: DỮ LIỆU CẤP 1 ────────────────────────────────
   // Ngang hàng Nơi đi / Nơi đến, không phải một dòng phụ. Mặc định chọn sẵn
   // khung gần nhất còn kịp đặt, để khách không phải nghĩ mà vẫn ra kết quả đúng.
-  const departureChips = useMemo(() => buildDepartureChips({ limit: 4 }), []);
-  const [chipId, setChipId] = useState(() => departureChips[0]?.id || null);
-  const selectedChip = useMemo(
-    () => departureChips.find((c) => c.id === chipId) || departureChips[0] || null,
-    [departureChips, chipId]
+  // 3 chip tự sinh + ô thứ 4 luôn là "Chọn ngày khác" (lưới 2x2 vừa đúng 4 ô)
+  const departureChips = useMemo(() => buildDepartureChips({ limit: 3 }), []);
+
+  // TRÍ TUỆ BẢN ĐỊA (<1ms, không gọi máy chủ): người đi tuyến này gần như luôn
+  // lặp lại một khung giờ — ai quen chuyến 4h sáng thì lần sau vẫn 4h sáng. Nhớ
+  // khung họ chọn lần trước và tự bật sẵn, để họ không phải chọn lại mỗi lần.
+  const [chipId, setChipId] = useState(() => {
+    const remembered = readStore(WINDOW_KEY);
+    const hit = remembered && departureChips.find((c) => c.windowId === remembered);
+    return (hit || departureChips[0])?.id || null;
+  });
+  const [customChip, setCustomChip] = useState(null);
+  const [showDatePanel, setShowDatePanel] = useState(false);
+
+  const allChips = useMemo(
+    () => (customChip ? [...departureChips, customChip] : departureChips),
+    [departureChips, customChip]
   );
+  const selectedChip = useMemo(
+    () => allChips.find((c) => c.id === chipId) || allChips[0] || null,
+    [allChips, chipId]
+  );
+
+  // Ngày tối thiểu = hôm nay; không cho chọn ngày đã qua
+  // toISOString() quy về UTC nên buổi tối giờ Việt Nam sẽ trả về NGÀY HÔM QUA,
+  // khiến ô chọn ngày cho phép đặt lùi về quá khứ. Phải lấy theo lịch địa phương.
+  const todayIso = useMemo(() => toLocalIsoDate(new Date()), []);
+  const [pickDate, setPickDate] = useState(todayIso);
+  const [pickWindow, setPickWindow] = useState(
+    () => readStore(WINDOW_KEY) || 'morning'
+  );
+
+  const applyCustomDate = useCallback(() => {
+    const chip = buildCustomChip({ date: pickDate, windowId: pickWindow });
+    if (!chip) return;
+    setCustomChip(chip);
+    setChipId(chip.id);
+    setShowDatePanel(false);
+    writeStore(WINDOW_KEY, chip.windowId);
+  }, [pickDate, pickWindow]);
 
   // ── Tìm chuyến: MA TRẬN KHE THỜI GIAN ─────────────────────────────────
   // Khách liên tỉnh cần thấy NGAY cả khung lân cận ±30 phút, không chỉ đúng
@@ -286,36 +324,115 @@ export default function CorridorSearchBoard({
           </label>
 
           <div className="grid grid-cols-2 gap-2">
-            {departureChips.map((chip) => {
+            {allChips.map((chip) => {
               const active = chip.id === selectedChip?.id;
               return (
                 <button
                   key={chip.id}
                   type="button"
-                  onClick={() => setChipId(chip.id)}
+                  onClick={() => {
+                    setChipId(chip.id);
+                    setShowDatePanel(false);
+                    // Học im lặng, không hỏi, không thông báo
+                    if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
+                  }}
                   aria-pressed={active}
-                  className={`h-auto min-h-[56px] px-3 py-2.5 rounded-2xl border text-left transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                  className={`h-12 px-3 rounded-2xl border text-xs font-bold flex items-center justify-center text-center transition-all duration-150 cursor-pointer active:scale-[0.98] ${
                     active
                       ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:border-[#0071e3]/50'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:border-[#0071e3]/50 hover:shadow-xs'
                   }`}
                 >
-                  <span className="block text-xs font-bold truncate">{chip.label}</span>
-                  <span
-                    className={`block text-[10px] font-mono truncate ${
-                      active ? 'text-white/75' : 'text-slate-400'
-                    }`}
-                  >
-                    {chip.dayLabel} · {chip.hint}
-                  </span>
+                  <span className="truncate">{chip.display}</span>
                 </button>
               );
             })}
+
+            {/* Ô thứ 4 luôn là lối mở lịch. Bảng chọn hiện NGAY TẠI CHỖ bên dưới,
+                tuyệt đối không dùng popup hệ thống — tinh thần Cursor: zero blocking. */}
+            <button
+              type="button"
+              onClick={() => setShowDatePanel((v) => !v)}
+              aria-expanded={showDatePanel}
+              className={`h-12 px-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                showDatePanel
+                  ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white'
+                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/15 text-slate-600 dark:text-slate-300 hover:border-[#0071e3]/50 hover:text-[#0071e3]'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{t('search.pickAnotherDay')}</span>
+            </button>
           </div>
+
+          {/* BẢNG CHỌN NGÀY TẠI CHỖ — mở xuống mượt, không chặn luồng */}
+          {showDatePanel && (
+            <div className="mt-2 p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 space-y-2.5 animate-fade-in">
+              <div>
+                <label
+                  htmlFor="carmate-pick-date"
+                  className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-1"
+                >
+                  {t('search.pickDate')}
+                </label>
+                <input
+                  id="carmate-pick-date"
+                  type="date"
+                  value={pickDate}
+                  min={todayIso}
+                  onChange={(e) => setPickDate(e.target.value)}
+                  className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] transition-colors cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <span className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-1">
+                  {t('search.pickWindow')}
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {DEPARTURE_WINDOWS.map((w) => (
+                    <button
+                      key={w.id}
+                      type="button"
+                      onClick={() => setPickWindow(w.id)}
+                      aria-pressed={w.id === pickWindow}
+                      className={`h-12 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                        w.id === pickWindow
+                          ? 'bg-[#0071e3] border-[#0071e3] text-white'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-[#0071e3]/50'
+                      }`}
+                    >
+                      <span>{w.label}</span>
+                      {/* Kèm giờ ngay dưới nhãn: "Sáng" một mình là mơ hồ, mà
+                          các chip phía trên đều có giờ nên thiếu ở đây thành lệch. */}
+                      <span
+                        className={`text-[9px] font-mono ${
+                          w.id === pickWindow ? 'text-white/75' : 'text-slate-400'
+                        }`}
+                      >
+                        {w.fromHour % 24}h-{w.toHour % 24}h
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={applyCustomDate}
+                className="w-full h-11 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold cursor-pointer active:scale-[0.99] transition-all duration-150"
+              >
+                {t('search.applyDate')}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Nút chính */}
-        <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+        {/* ── THANH HÀNH ĐỘNG: tách hẳn khỏi vùng nhập bằng một đường kẻ, đúng
+            như khung tìm kiếm của xe liên tỉnh. Ba câu hỏi ở trên, một hành
+            động ở dưới — mắt đi thẳng một mạch, không phải tìm nút ở đâu. ── */}
+        <div className="h-px bg-slate-100 dark:bg-white/[0.06]" />
+        <div className="p-4 sm:p-5">
           <button
             type="button"
             onClick={handleSearchNow}
