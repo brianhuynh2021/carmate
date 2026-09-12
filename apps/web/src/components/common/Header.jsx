@@ -355,7 +355,7 @@ export default function Header({
                   >
                     <div className="inline-flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-[#0071e3]" />
-                      <span>{t('userMenu.myTrips') || 'Lịch hẹn & Vé xe'}</span>
+                      <span>{t('userMenu.myTrips') || 'Lịch hẹn & Chuyến đi'}</span>
                     </div>
                     {bookedCount > 0 && (
                       <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#0071e3] text-white">

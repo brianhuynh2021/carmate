@@ -1012,7 +1012,7 @@ export default function CorridorSearchBoard({
               </div>
 
               <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500">Giá vé tham khảo:</span>
+                <span className="text-slate-500">Giá tham khảo:</span>
                 <span className="text-base font-bold font-mono text-slate-900 dark:text-white">
                   {selectedDetailHotline.priceRef}
                 </span>

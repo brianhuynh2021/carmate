@@ -42,6 +42,7 @@ import {
   calculateDistanceKm,
   FIXED_CORRIDOR_COACH_SCHEDULES,
   hasVerifiedHotline,
+  getVerifiedHotlines,
   UNHAPPY_CASE_CODES,
   getDefaultCorridor,
   getEndpointHubs
@@ -183,7 +184,7 @@ export default function StationRiderView({
   const [paidStatus, setPaidStatus] = useState(false);
   const [showRiderReviewModal, setShowRiderReviewModal] = useState(false);
 
-  // KÍCH HOẠT TRÁO VÉ MƯỢT MÀ SANG XE BÓNG MA (SILENT FAILOVER D2)
+  // KÍCH HOẠT ĐIỀU PHỐI DỰ PHÒNG SANG XE HỖ TRỢ (FAILOVER D2)
   const handleTriggerShadowFailover = () => {
     const shadowCar = {
       plate: '61A - 892.41',
@@ -330,6 +331,11 @@ export default function StationRiderView({
   }, [currentHub.id, destinationHubId]);
 
   const estimatedFare = tariff.pricePerSeat * seatsNeeded;
+
+  // Hotline xe khách liên tỉnh QL13 dự phòng khẩn cấp
+  const stationBackupHotlines = useMemo(() => {
+    return getVerifiedHotlines('Tuyến QL13', 3);
+  }, []);
 
   // 3 Điểm đến chính dàn phẳng kích thước lớn >= 56px (Stanford Ergonomics)
   const primaryDestinations = useMemo(() => {
@@ -606,12 +612,12 @@ export default function StationRiderView({
               })
             );
           } catch {}
-          onShowToast?.('Đã vào hàng đợi! Xe tiện tuyến đang tiếp cận trạm.');
+          onShowToast?.('Đã vào hàng đợi! Hệ thống đang kết nối chủ xe tiện chuyến qua trạm.');
         } else {
           throw new Error('Fallback demo mode');
         }
       } catch {
-        // Fallback mô phỏng ngoại tuyến
+        // Fallback lưu trữ ngoại tuyến khi mất mạng
         const fallbackPass = {
           intentId: `ST-RIDER-${Date.now().toString().slice(-6)}`,
           hubName: currentHub.name,
@@ -619,16 +625,12 @@ export default function StationRiderView({
             destinationOptions.find((d) => d.id === destinationHubId)?.name ||
             (direction === 'TO_BINH_PHUOC' ? 'TX. Bình Long (Vòng xoay An Lộc)' : 'Ngã tư Hàng Xanh'),
           seatsNeeded,
-          pin: '8842',
+          pin: String(Math.floor(1000 + Math.random() * 9000)),
           fuelSurcharge: estimatedFare,
           driverPayout: tariff.driverPayoutPerSeat * seatsNeeded,
-          status: 'ARRIVING',
+          status: 'WAITING',
           noSurge: true,
-          carInfo: {
-            plate: '93A - 123.45',
-            vehicleModel: 'Mitsubishi Xpander (Trắng)',
-            driverName: 'Chủ xe CX-102 (Đạt 4.9★)'
-          }
+          carInfo: null
         };
         setBoardingPass(fallbackPass);
         setViewStep('BOARDING_PASS');
@@ -643,7 +645,7 @@ export default function StationRiderView({
             })
           );
         } catch {}
-        onShowToast?.('Đã vào hàng đợi! Xe tiện chuyến đang tiếp cận trạm.');
+        onShowToast?.('Đã vào hàng đợi trạm! Đang chờ chủ xe tiện chuyến nhận đơn.');
       } finally {
         setIsSubmitting(false);
       }
@@ -899,7 +901,7 @@ export default function StationRiderView({
       onShowToast?.('Đã hủy chuyến miễn phạt (0đ). Điểm tín nhiệm bảo toàn 100%.');
     } catch (err) {
       console.error('Grace cancel error:', err);
-      onShowToast?.(err.message || 'Lỗi khi thực hiện hủy vé miễn phạt');
+      onShowToast?.(err.message || 'Lỗi khi thực hiện hủy giữ chỗ miễn phạt');
     } finally {
       setIsGraceCancelLoading(false);
     }
@@ -945,7 +947,7 @@ export default function StationRiderView({
           <div>
             <div className="flex items-center gap-2">
               <span className="type-label font-semibold uppercase tracking-wider text-emerald-400">
-                {viewStep === 'CHECKIN' ? 'CARMATE • TRẠM VẬN TẢI ẢO' : 'VÉ ĐÓN XE ĐIỆN TỬ'}
+                {viewStep === 'CHECKIN' ? 'CARMATE • TRẠM VẬN TẢI ẢO' : 'THẺ THÔNG TIN ĐÓN XE'}
               </span>
             </div>
             {/* Tên trạm đứng riêng một hàng; hai nút phụ xuống hàng dưới.
@@ -1308,15 +1310,17 @@ export default function StationRiderView({
         )}
 
         {/* ========================================================================= */}
-        {/* MÀN HÌNH 2: VÉ ĐÓN XE ĐIỆN TỬ (LIVE BOARDING PASS THEO DÕI THỜI GIAN THỰC) */}
+        {/* MÀN HÌNH 2: THẺ THÔNG TIN ĐÓN XE (LIVE BOARDING PASS THEO DÕI THỜI GIAN THỰC) */}
         {/* ========================================================================= */}
         {viewStep === 'BOARDING_PASS' && boardingPass && (() => {
-          const isArriving = boardingPass.status === 'ARRIVING';
-          const isBoarded = boardingPass.status === 'BOARDED' || boardingPass.status === 'COMPLETED';
+          const hasAssignedCar = Boolean(boardingPass.carInfo && (boardingPass.carInfo.plate || boardingPass.carInfo.driverName));
+          const isWaiting = boardingPass.status === 'WAITING' || !hasAssignedCar;
+          const isArriving = boardingPass.status === 'ARRIVING' && hasAssignedCar;
+          const isBoarded = (boardingPass.status === 'BOARDED' || boardingPass.status === 'COMPLETED');
 
           return (
             <div className="space-y-4 animate-fade-in">
-              {/* HEADER TÓM TẮT VÉ ĐÓN XE ĐIỆN TỬ */}
+              {/* HEADER TÓM TẮT THẺ THÔNG TIN ĐÓN XE */}
               <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between text-xs font-mono">
                 <span className="text-slate-300 font-bold">
                   {currentHub.shortName || currentHub.name} ──&gt; {boardingPass.destinationName || 'Hàng Xanh'}
@@ -1326,23 +1330,42 @@ export default function StationRiderView({
                 </span>
               </div>
 
-              {/* CHỨNG NHẬN CHẮC CHẮN 100% - ZERO-ANXIETY TRUST SHIELD */}
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs font-mono space-y-1.5">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wide">
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>{t('station.ticketConfirmed')}</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-300 pt-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Tuyến thẳng QL13 về {boardingPass.destinationName || 'Hàng Xanh'}</span>
+              {/* CHỨNG NHẬN TRẠNG THÁI (ZERO-ANXIETY TRUST SHIELD) */}
+              {isWaiting ? (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs font-mono space-y-1.5 text-left">
+                  <div className="flex items-center gap-2 text-amber-400 font-bold uppercase tracking-wide">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                    <span>ĐANG TRONG HÀNG ĐỢI TẠI TRẠM · ĐANG TÌM CHỦ XE</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>{t('station.seatProtected')}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-300 pt-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>Tuyến thẳng QL13 về {boardingPass.destinationName || 'Hàng Xanh'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>Mã PIN đã sẵn sàng · 0đ phí giữ chỗ</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs font-mono space-y-1.5 text-left">
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wide">
+                    <ShieldCheck className="w-4 h-4 shrink-0" />
+                    <span>{t('station.ticketConfirmed')}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-300 pt-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>Tuyến thẳng QL13 về {boardingPass.destinationName || 'Hàng Xanh'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>{t('station.seatProtected')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* THÔNG BÁO ĐIỀU PHỐI MƯỢT MÀ KHI XE D1 GẶP SỰ CỐ (SILENT FAILOVER D2) */}
               {failoverInfo && (
@@ -1380,10 +1403,10 @@ export default function StationRiderView({
 
                     <div className="space-y-1">
                       <h3 className="text-lg font-black text-white font-mono">
-                        {boardingPass.carInfo?.vehicleModel || 'Mitsubishi Xpander (Trắng)'}
+                        {boardingPass.carInfo?.vehicleModel || 'Xe ô tô gia đình'}
                       </h3>
                       <p className="text-sm font-mono text-emerald-300 font-bold">
-                        Biển số: {boardingPass.carInfo?.plate || '93A - 541.86'} · Chủ xe: {boardingPass.carInfo?.driverName || 'Anh Tuấn'}
+                        Biển số: {boardingPass.carInfo?.plate || 'Đang cập nhật'} · Chủ xe: {boardingPass.carInfo?.driverName || 'Chủ xe cá nhân'}
                       </p>
                     </div>
 
@@ -1584,93 +1607,154 @@ export default function StationRiderView({
                       ))}
                     </div>
                     <p className="text-xs text-amber-300 font-medium pt-0.5">
-                      {t('station.readPinToDriver')}
+                      {hasAssignedCar
+                        ? t('station.readPinToDriver')
+                        : 'Mã PIN định danh của bạn tại trạm. Đọc mã này cho chủ xe khi xe tiếp cận sảnh đón.'}
                     </p>
                   </div>
 
-                  {/* 2. TRẠNG THÁI XE TIẾP CẬN (RADAR, COUNTDOWN & DISTANCE) */}
-                  <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                        {t('station.approachStatus')}
-                      </span>
-                      {isArriving ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                          <span>{t('station.carComing')}</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 text-xs font-mono font-bold">
-                          <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-                          <span>{t('station.scanningRadar')}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {isArriving ? (
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-baseline justify-between">
-                          <div className="flex items-center gap-2 text-sm sm:text-base font-black text-white font-mono">
-                            <span>{t('station.etaPickup')}</span>
-                            <span className="text-emerald-400 text-lg sm:text-xl font-mono">
-                              {formatEtaMinutesSeconds(etaSeconds)} phút
-                            </span>
-                          </div>
-                          <span className="text-xs font-mono text-slate-300 font-bold">
-                            Cách ~{dynamicDistanceKm} km
+                  {hasAssignedCar ? (
+                    <>
+                      {/* 2. TRẠNG THÁI XE TIẾP CẬN (RADAR, COUNTDOWN & DISTANCE) */}
+                      <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-3 text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                            {t('station.approachStatus')}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                            <span>{t('station.carComing')}</span>
                           </span>
                         </div>
 
-                        {/* Thanh tiến trình khoảng cách trực quan */}
-                        <div className="w-full h-3 bg-white/[0.08] rounded-full overflow-hidden p-0.5 relative">
-                          <div
-                            className="h-full bg-gradient-to-r from-emerald-500 to-sky-400 rounded-full transition-all duration-1000 ease-out"
-                            style={{ width: `${dynamicProgressPercent}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                          <span>Radar QL13 (3.5 km)</span>
-                          <span className="text-emerald-400 font-bold">{t('station.hubZero')}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-1">
-                        <p className="text-xs text-slate-300 font-sans">
-                          {t('station.radarDesc')}
-                        </p>
-                        <div className="text-[11px] font-mono text-sky-400 font-bold">
-                          Vị trí của bạn: #{boardingPass.position || 1} tại Trạm • Xe qua trạm mỗi 3–5 phút
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                        <div className="space-y-2 pt-1">
+                          <div className="flex items-baseline justify-between">
+                            <div className="flex items-center gap-2 text-sm sm:text-base font-black text-white font-mono">
+                              <span>{t('station.etaPickup')}</span>
+                              <span className="text-emerald-400 text-lg sm:text-xl font-mono">
+                                {formatEtaMinutesSeconds(etaSeconds)} phút
+                              </span>
+                            </div>
+                            <span className="text-xs font-mono text-slate-300 font-bold">
+                              Cách ~{dynamicDistanceKm} km
+                            </span>
+                          </div>
 
-                  {/* 3. THÔNG TIN PHƯƠNG TIỆN */}
-                  <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-2.5 text-left">
-                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 block">
-                      {t('station.vehicleInfo')}
-                    </span>
-                    <div className="space-y-2 text-xs font-mono">
-                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                        <span className="text-slate-400">{t('station.vehicleType')}</span>
-                        <span className="text-sm font-bold text-white">
-                          {boardingPass.carInfo?.vehicleModel || 'Mitsubishi Xpander (Trắng)'}
-                        </span>
+                          {/* Thanh tiến trình khoảng cách trực quan */}
+                          <div className="w-full h-3 bg-white/[0.08] rounded-full overflow-hidden p-0.5 relative">
+                            <div
+                              className="h-full bg-gradient-to-r from-emerald-500 to-sky-400 rounded-full transition-all duration-1000 ease-out"
+                              style={{ width: `${dynamicProgressPercent}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                            <span>Radar QL13 (3.5 km)</span>
+                            <span className="text-emerald-400 font-bold">{t('station.hubZero')}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                        <span className="text-slate-400">{t('station.plate')}</span>
-                        <span className="text-base font-black text-emerald-400">
-                          {boardingPass.carInfo?.plate || '93A - 123.45'}
+
+                      {/* 3. THÔNG TIN PHƯƠNG TIỆN THẬT */}
+                      <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-2.5 text-left">
+                        <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 block">
+                          {t('station.vehicleInfo')}
                         </span>
+                        <div className="space-y-2 text-xs font-mono">
+                          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                            <span className="text-slate-400">{t('station.vehicleType')}</span>
+                            <span className="text-sm font-bold text-white">
+                              {boardingPass.carInfo?.vehicleModel || 'Xe cá nhân gia đình'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                            <span className="text-slate-400">{t('station.plate')}</span>
+                            <span className="text-base font-black text-emerald-400">
+                              {boardingPass.carInfo?.plate}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                            <span className="text-slate-400">{t('station.owner')}</span>
+                            <span className="text-sm font-bold text-slate-200">
+                              {boardingPass.carInfo?.driverName || 'Chủ xe cá nhân'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                        <span className="text-slate-400">{t('station.owner')}</span>
-                        <span className="text-sm font-bold text-slate-200">
-                          {boardingPass.carInfo?.driverName || 'Anh Tuấn (Chủ xe)'}
-                        </span>
+                    </>
+                  ) : (
+                    <>
+                      {/* TRẠNG THÁI HÀNG ĐỢI TẠI TRẠM (HONEST WAITING STATE) */}
+                      <div className="bg-white/[0.04] border border-amber-500/25 rounded-3xl p-4 sm:p-5 space-y-3 text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold uppercase tracking-wider">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                            <span>ĐANG ĐỢI CHỦ XE TIỆN CHUYẾN</span>
+                          </span>
+                          <span className="text-xs font-mono px-2.5 py-1 rounded-xl bg-white/[0.06] border border-white/[0.08] text-amber-300 font-bold">
+                            Vị trí #{boardingPass.position || 1}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                          Hệ thống đang phát tín hiệu tới các chủ xe ô tô tiện chuyến chạy qua trạm <strong>{currentHub.shortName || currentHub.name}</strong>. Khi có chủ xe nhận rước, thông tin xe và biển số sẽ hiển thị tại đây.
+                        </p>
+
+                        <div className="p-3 rounded-2xl bg-black/25 border border-white/[0.06] text-xs font-mono space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Trạng thái kết nối:</span>
+                            <span className="text-amber-400 font-bold flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 animate-spin" />
+                              <span>Đang chờ chủ xe nhận đón</span>
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Biển số & Chủ xe:</span>
+                            <span className="text-slate-400 italic">Chỉ hiển thị xe thật khi đã khớp</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+
+                      {/* PHƯƠNG ÁN DỰ PHÒNG: TUYẾN XE KHÁCH & LIMOUSINE QL13 (REQUIREMENT #3) */}
+                      <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 space-y-3 text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                            <Bus className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span>Cần đi gấp? Xe khách & Limousine QL13</span>
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                            Dự phòng
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-slate-300 leading-relaxed font-sans">
+                          Nếu bạn cần di chuyển ngay hoặc chưa có chủ xe nhận chuyến, bạn có thể gọi trực tiếp các nhà xe đã kiểm chứng trên tuyến QL13 để kịp lịch trình:
+                        </p>
+                        <div className="space-y-2 pt-1">
+                          {stationBackupHotlines.map((h) => (
+                            <div
+                              key={h.id}
+                              className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-amber-400/40 flex items-center justify-between gap-2 transition-all"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-white truncate">
+                                  {h.shortName || h.operator}
+                                </p>
+                                <p className="text-[10px] font-mono text-slate-400 truncate">
+                                  {h.frequency?.split('(')[0]?.trim() || '60 phút/chuyến'} · {h.priceRef || '150k - 250k'}
+                                </p>
+                              </div>
+                              <a
+                                href={`tel:${h.hotline?.replace(/\s+/g, '')}`}
+                                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold font-mono flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                <span>{h.hotline}</span>
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* 4. ⚠️ QUY TẮC AN TOÀN TRẠM XĂNG / SẢNH ĐÓN */}
                   <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1 text-left">
@@ -1694,88 +1778,116 @@ export default function StationRiderView({
                     <span>{t('station.legalCardFull')}</span>
                   </button>
 
-                  {/* 5.5 NÚT BÁO CHỦ XE BỎ CHUYẾN / CỨU HỘ VẬT LÝ TẠI TRẠM */}
-                  <button
-                    type="button"
-                    onClick={() => setShowNoShowRescueModal(true)}
-                    className="w-full h-12 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-xs font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                    title={t('station.reportNoShowTitle')}
-                  >
-                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                    <span>{t('station.reportNoShow')}</span>
-                  </button>
+                  {/* CÁC NÚT DÀNH CHO KHI ĐÃ CÓ XE NHẬN */}
+                  {hasAssignedCar && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowNoShowRescueModal(true)}
+                        className="w-full h-12 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-xs font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                        title={t('station.reportNoShowTitle')}
+                      >
+                        <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                        <span>{t('station.reportNoShow')}</span>
+                      </button>
 
-                  {/* 5.6 & 5.7 CÔNG CỤ MÔ PHỎNG KIỂM THỬ (CHỈ HIỆN Ở DEV) */}
+                      {/* BẢO HỘ GIỜ GIẤC: CHỦ XE TRỄ > 5 PHÚT */}
+                      <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2.5 text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-mono font-bold uppercase text-amber-300 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-amber-400" />
+                            <span>{t('station.onTimeGuard')}</span>
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 font-bold">
+                            Trễ: {driverLateDelayMinutes} phút
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed">
+                          {t('station.lateGuard1')} <strong>{t('station.cancelFree')}</strong> {t('station.lateGuard2')}
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setDriverLateDelayMinutes((m) => (m >= 5 ? 0 : 6))}
+                            className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-mono text-slate-300 transition-all cursor-pointer"
+                          >
+                            {driverLateDelayMinutes >= 5 ? '↺ Đặt lại trễ' : '⏱️ Giả lập trễ > 5p'}
+                          </button>
+                          {driverLateDelayMinutes >= 5 ? (
+                            <button
+                              type="button"
+                              onClick={handleGraceCancel}
+                              disabled={isGraceCancelLoading}
+                              className="flex-1 h-9 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-[11px] font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 animate-pulse"
+                            >
+                              <Ban className="w-3.5 h-3.5 text-rose-400" />
+                              <span>{t('station.cancelNoPenalty')}</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setShowCoachLifebuoyModal(true)}
+                              className="flex-1 h-9 px-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-[11px] font-mono font-bold text-indigo-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <Bus className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>{t('station.busSchedule')}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* CÔNG CỤ MÔ PHỎNG KIỂM THỬ (CHỈ HIỆN Ở DEV) */}
                   {import.meta.env.DEV && (
                     <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={handleTriggerShadowFailover}
-                        className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                        title={t('station.simSwapTitle')}
-                      >
-                        <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
-                        <span>{t('station.simSwapCar')}</span>
-                      </button>
+                      {!hasAssignedCar ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBoardingPass((prev) => ({
+                              ...prev,
+                              status: 'ARRIVING',
+                              carInfo: {
+                                plate: '93A - 892.14',
+                                vehicleModel: 'Toyota Veloz (Bạc)',
+                                driverName: 'Chủ xe Minh Tuấn (4.9★)'
+                              }
+                            }));
+                            onShowToast?.('Mô phỏng: Chủ xe Minh Tuấn đã nhận đón!');
+                          }}
+                          className="w-full h-11 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                        >
+                          <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>Mô phỏng: Chủ xe nhận đơn (Match D1)</span>
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleTriggerShadowFailover}
+                            className="w-full h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-mono font-bold text-indigo-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                            title={t('station.simSwapTitle')}
+                          >
+                            <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0" />
+                            <span>{t('station.simSwapCar')}</span>
+                          </button>
 
-                      <button
-                        type="button"
-                        onClick={handleToggleBoardedDemo}
-                        className="w-full h-11 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
-                        title={t('station.simBoardTitle')}
-                      >
-                        <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>{t('station.simBoard')}</span>
-                      </button>
+                          <button
+                            type="button"
+                            onClick={handleToggleBoardedDemo}
+                            className="w-full h-11 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                            title={t('station.simBoardTitle')}
+                          >
+                            <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>{t('station.simBoard')}</span>
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
 
-                  {/* 5.8 BẢO HỘ GIỜ GIẤC: CHỦ XE TRỄ > 5 PHÚT -> HỦY KHÔNG PHẠT & CỨU SINH XE KHÁCH */}
-                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-mono font-bold uppercase text-amber-300 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-amber-400" />
-                        <span>{t('station.onTimeGuard')}</span>
-                      </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 font-bold">
-                        Trễ: {driverLateDelayMinutes} phút
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      {t('station.lateGuard1')} <strong>{t('station.cancelFree')}</strong> {t('station.lateGuard2')}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDriverLateDelayMinutes((m) => (m >= 5 ? 0 : 6))}
-                        className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-mono text-slate-300 transition-all cursor-pointer"
-                      >
-                        {driverLateDelayMinutes >= 5 ? '↺ Đặt lại trễ' : '⏱️ Giả lập trễ > 5p'}
-                      </button>
-                      {driverLateDelayMinutes >= 5 ? (
-                        <button
-                          type="button"
-                          onClick={handleGraceCancel}
-                          disabled={isGraceCancelLoading}
-                          className="flex-1 h-9 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-[11px] font-mono font-bold text-rose-300 uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 animate-pulse"
-                        >
-                          <Ban className="w-3.5 h-3.5 text-rose-400" />
-                          <span>{t('station.cancelNoPenalty')}</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setShowCoachLifebuoyModal(true)}
-                          className="flex-1 h-9 px-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-[11px] font-mono font-bold text-indigo-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                        >
-                          <Bus className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>{t('station.busSchedule')}</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ VÉ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
+                  {/* 6. HAI NÚT HÀNH ĐỘNG DƯỚI CÙNG: [ HUỶ GIỮ CHỖ ] & [ LIÊN LẠC AN TOÀN IN-APP ] */}
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <button
                       type="button"
@@ -1820,7 +1932,7 @@ export default function StationRiderView({
           trip={{
             id: boardingPass?.intentId || 'BP-STATION',
             author: boardingPass?.carInfo?.driverName || 'Chủ xe cá nhân',
-            licensePlate: boardingPass?.carInfo?.plate || '93A-123.45',
+            licensePlate: boardingPass?.carInfo?.plate || 'Đang cập nhật',
             carModel: boardingPass?.carInfo?.vehicleModel || 'Xe cá nhân gia đình',
             from: currentHub?.name || 'Trạm đón QL13',
             to: boardingPass?.destinationName || 'Hàng Xanh',
@@ -2058,7 +2170,7 @@ export default function StationRiderView({
                 onClick={() => {
                   handleCancelPass();
                   setShowNoShowRescueModal(false);
-                  onShowToast?.('🎉 Đã cấp Thẻ Ưu Tiên Vàng #1! Bạn đã được giải phóng vé để bắt xe khách/buýt.');
+                  onShowToast?.('🎉 Đã cấp Thẻ Ưu Tiên Vàng #1! Bạn đã được giải phóng giữ chỗ để bắt xe khách/buýt.');
                 }}
                 className="font-bold"
               >
@@ -2075,7 +2187,7 @@ export default function StationRiderView({
                 <span>{t('station.sanction1Title')}</span>
               </strong>
               <p>
-                {t('station.systemConfirms')} <strong>{boardingPass?.carInfo?.plate || '93A-123.45'}</strong> ({boardingPass?.carInfo?.driverName || 'Chủ xe'}) đã trễ hẹn không lý do chính đáng.
+                {t('station.systemConfirms')} <strong>{boardingPass?.carInfo?.plate || 'Chủ xe'}</strong> ({boardingPass?.carInfo?.driverName || 'Chủ xe'}) đã trễ hẹn không lý do chính đáng.
               </p>
               <div className="p-2 rounded-xl bg-black/10 dark:bg-black/30 font-mono text-[11px] text-rose-600 dark:text-rose-400">
                 {t('station.deduct')} <strong>{t('station.minus35')}</strong> {t('station.ofDriver')}<br />
@@ -2142,9 +2254,9 @@ export default function StationRiderView({
         <MutualReviewModal
           booking={{
             partyRole: 'Khách đi cùng',
-            contactName: boardingPass?.carInfo?.driverName || 'Anh Tuấn (Chủ xe)',
-            licensePlate: boardingPass?.carInfo?.plate || '93A-541.86',
-            vehicleModel: boardingPass?.carInfo?.vehicleModel || 'Mitsubishi Xpander',
+            contactName: boardingPass?.carInfo?.driverName || 'Chủ xe cá nhân',
+            licensePlate: boardingPass?.carInfo?.plate || 'Đang cập nhật',
+            vehicleModel: boardingPass?.carInfo?.vehicleModel || 'Xe ô tô gia đình',
             fuelSurcharge: boardingPass?.fuelSurcharge || estimatedFare || 50000,
             seats: 1
           }}
@@ -2190,7 +2302,7 @@ export default function StationRiderView({
         >
           <div className="space-y-4 text-sm text-[#1d1d1f] dark:text-slate-200">
             <p className="text-xs text-slate-400">
-              {t('station.driverLabel')} <strong>{boardingPass?.carInfo?.driverName || 'Chủ xe'}</strong> ({boardingPass?.carInfo?.plate || '93A-123.45'})
+              {t('station.driverLabel')} <strong>{boardingPass?.carInfo?.driverName || 'Chủ xe'}</strong> ({boardingPass?.carInfo?.plate || 'Đang cập nhật'})
             </p>
 
             <div className="space-y-2">
