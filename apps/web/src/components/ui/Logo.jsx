@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../i18n/index.jsx';
 
 export function LogoMark({ className = 'w-9 h-9' }) {
   return (
@@ -12,6 +13,7 @@ export function LogoMark({ className = 'w-9 h-9' }) {
 }
 
 export default function Logo({ size = 'md', tagline, onClick }) {
+  const { t } = useI18n();
   const mark = size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-11 h-11' : 'w-9 h-9';
   const text = size === 'sm' ? 'text-xl' : size === 'lg' ? 'text-2xl' : 'text-xl';
   return (
@@ -19,7 +21,7 @@ export default function Logo({ size = 'md', tagline, onClick }) {
       type="button"
       onClick={onClick}
       className="inline-flex items-center gap-2.5 select-none cursor-pointer group text-left shrink-0 active:scale-[0.98] transition-transform"
-      aria-label="CarMate - Về trang chủ"
+      aria-label={t('logo.s001')}
     >
       <LogoMark className={`${mark} transition-transform duration-200 group-hover:scale-105 shrink-0 shadow-xs`} />
       <div className="flex items-center gap-2">
@@ -35,3 +37,19 @@ export default function Logo({ size = 'md', tagline, onClick }) {
     </button>
   );
 }
+
+export function CarMateBadge({ size = 'sm', className = '' }) {
+  const mark = size === 'xs' ? 'w-3.5 h-3.5' : size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+  const text = size === 'xs' ? 'text-[11px]' : size === 'sm' ? 'text-xs' : 'text-sm';
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/90 dark:bg-white/10 border border-slate-200/80 dark:border-white/15 shadow-2xs select-none shrink-0 ${className}`}
+    >
+      <LogoMark className={`${mark} rounded-full object-contain shrink-0`} />
+      <span className={`font-display font-black tracking-tight ${text} text-[#1d1d1f] dark:text-white leading-none`}>
+        Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
+      </span>
+    </span>
+  );
+}
+

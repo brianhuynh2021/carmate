@@ -23,15 +23,31 @@ import {
   MapPin,
   Headphones,
   LifeBuoy,
-  HelpCircle
+  HelpCircle,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
-import { formatVND, toPublicAlias, detectPiiLeak, cleanPhoneNumber, getUserOnlineStatus, formatCleanDateLabel } from '@carmate/shared';
+import {
+  formatVND,
+  toPublicAlias,
+  detectPiiLeak,
+  cleanPhoneNumber,
+  getUserOnlineStatus,
+  formatCleanDateLabel,
+  MIN_CALL_DURATION_FOR_EMERGENCY,
+  REQUIRED_UNANSWERED_CALLS,
+  recordCallAttempt,
+  getEmergencyCallStatus
+} from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
 import api from '../../api/client.js';
 import { playMessageChime, playSuccessChime } from '../../utils/audioFeedback.js';
 import DisputeNoticeModal from './DisputeNoticeModal.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function InboxModal({
   isOpen,
@@ -40,7 +56,7 @@ export default function InboxModal({
   currentUser = null,
   onRefreshBookings,
   initialBookingId = null,
-  onReportUnreachablePhone = null,
+  autoCall = false,
   onShowToast,
   onMarkAsRead = null,
   onMarkAsUnread = null,
@@ -48,6 +64,7 @@ export default function InboxModal({
   unreadBookingIds = [],
   onNavigateTab = null
 }) {
+  const { t } = useI18n();
   const [selectedId, setSelectedId] = useState(initialBookingId);
   const [mobileShowChat, setMobileShowChat] = useState(Boolean(initialBookingId));
   const [activeTab, setActiveTab] = useState('incoming'); // 'incoming' (Đến) | 'outgoing' (Đi)
@@ -57,12 +74,52 @@ export default function InboxModal({
   const [piiWarning, setPiiWarning] = useState('');
   const [violationInfo, setViolationInfo] = useState(null);
   const [isBannedState, setIsBannedState] = useState(false);
-  const [copiedPhone, setCopiedPhone] = useState(false);
   const [timeLeftStr, setTimeLeftStr] = useState('');
   const [remainingSecs, setRemainingSecs] = useState(900);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, booking }
 
-  // Kênh Hỗ Trợ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
+  // Trạng thái Gọi thoại trực tiếp trong App (0đ cước · Bảo mật 100% SĐT)
+  const [inAppCallState, setInAppCallState] = useState(null); // null | { status: 'ringing' | 'connected', seconds: 0, ringSeconds: 0, isMuted: false, isSpeaker: false, isTimeout?: boolean }
+  const [emergencyCallVersion, setEmergencyCallVersion] = useState(0);
+  const [copiedPhone, setCopiedPhone] = useState(false);
+
+  const handleCopyPhone = (phone) => {
+    if (!phone) return;
+    navigator.clipboard?.writeText?.(phone);
+    setCopiedPhone(true);
+    onShowToast?.('✓ Đã sao chép số điện thoại', 'success');
+    setTimeout(() => setCopiedPhone(false), 2000);
+  };
+
+  useEffect(() => {
+    let timer = null;
+    if (inAppCallState) {
+      timer = setInterval(() => {
+        setInAppCallState((prev) => {
+          if (!prev) return null;
+          if (prev.status === 'ringing') {
+            const nextRing = (prev.ringSeconds || 0) + 1;
+            if (nextRing >= 35) {
+              return { ...prev, ringSeconds: nextRing, seconds: nextRing, isTimeout: true };
+            }
+            return { ...prev, ringSeconds: nextRing, seconds: nextRing };
+          }
+          if (prev.status === 'connected') {
+            return { ...prev, seconds: (prev.seconds || 0) + 1 };
+          }
+          return prev;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+    // Chỉ chạy lại khi TRẠNG THÁI cuộc gọi đổi. Thêm cả object inAppCallState
+    // vào deps sẽ huỷ/tạo lại setInterval mỗi giây vì bộ đếm tự cập nhật nó.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inAppCallState?.status]);
+
+  // Kênh Hỗ Trực Tiếp Platform CSKH CarMate & Kháng Nghị (Dispute)
   const [isSupportChannelActive, setIsSupportChannelActive] = useState(false);
   const [supportMessages, setSupportMessages] = useState([]);
   const [supportInput, setSupportInput] = useState('');
@@ -228,6 +285,9 @@ export default function InboxModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // Deps đã liệt kê đủ 3 giá trị mà handleToggleUnread thực sự đọc, nên
+    // listener luôn tươi. ESLint chỉ đòi thêm vì nó theo dõi danh tính hàm.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBooking, unreadBookingIds, readBookingTimestamps]);
 
   // Cuộn xuống tin nhắn mới nhất
@@ -410,6 +470,9 @@ export default function InboxModal({
       '🎒 Em chỉ mang 1 balo nhỏ gọn',
       '🤝 Dạ ok bạn, chốt giúp em nhé'
     ];
+    // Danh sách gợi ý chỉ cần đổi theo trạng thái/tin nhắn/tab; các trường
+    // hàng hoá được đọc một lần tại thời điểm dựng gợi ý, không cần theo dõi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBooking?.status, activeBooking?.messages, activeTab]);
 
   const isConfirmed = activeBooking?.status === 'confirmed' || activeBooking?.bothConfirmed === true;
@@ -482,18 +545,110 @@ export default function InboxModal({
 
   const partnerPhone = useMemo(() => {
     if (!activeBooking) return '';
-    if (!isConfirmed) return '';
     if (activeTab === 'incoming') {
-      // Bài của mình -> đối tác là người gửi đến
       return isTargetPassengerTrip
         ? (activeBooking.driverPhone || '')
         : (activeBooking.passengerPhone || activeBooking.userPhone || activeBooking.phone || '');
     }
-    // Mình gửi đi -> đối tác là chủ bài đăng
     return isTargetPassengerTrip
       ? (activeBooking.passengerPhone || activeBooking.contactPhone || '')
       : (activeBooking.driverPhone || activeBooking.contactPhone || activeBooking.phoneReal || '');
-  }, [activeBooking, activeTab, isConfirmed, isTargetPassengerTrip]);
+  }, [activeBooking, activeTab, isTargetPassengerTrip]);
+
+  const bookingKey = activeBooking ? (activeBooking.escrowId || activeBooking.id) : null;
+  const callerKey = currentUser?.phone || currentUser?.id || 'guest_caller';
+
+  const emergencyCallStatus = useMemo(() => {
+    if (!bookingKey || !callerKey) {
+      return { isUnlocked: false, attempts: 0, remainingAttempts: REQUIRED_UNANSWERED_CALLS };
+    }
+    return getEmergencyCallStatus({ bookingId: bookingKey, callerId: callerKey });
+    // emergencyCallVersion KHÔNG thừa: getEmergencyCallStatus đọc trạng thái
+    // bên ngoài React, đây là cờ phá cache để tính lại sau mỗi lần gọi nhỡ.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingKey, callerKey, emergencyCallVersion]);
+
+  const isEmergencyPhoneUnlockedForMe = Boolean(isConfirmed && emergencyCallStatus?.isUnlocked && partnerPhone);
+
+  const handleStartInAppCall = () => {
+    setInAppCallState({
+      status: 'ringing',
+      seconds: 0,
+      ringSeconds: 0,
+      isMuted: false,
+      isSpeaker: false
+    });
+    playMessageChime();
+  };
+
+  const handleSimulatePartnerAnswer = () => {
+    if (inAppCallState?.status === 'ringing') {
+      setInAppCallState((prev) => (prev ? { ...prev, status: 'connected', seconds: 0 } : null));
+      playSuccessChime();
+    }
+  };
+
+  const handleEndInAppCall = () => {
+    if (!inAppCallState) return;
+
+    const ringSec = inAppCallState.ringSeconds || 0;
+    const wasRinging = inAppCallState.status === 'ringing';
+
+    setInAppCallState(null);
+
+    if (wasRinging) {
+      const bKey = bookingKey;
+      const cKey = callerKey;
+
+      if (ringSec < MIN_CALL_DURATION_FOR_EMERGENCY) {
+        onShowToast?.(
+          `⚠️ Bạn chỉ mới đổ chuông ${ringSec}s (< ${MIN_CALL_DURATION_FOR_EMERGENCY}s). Cần đổ chuông tối thiểu ${MIN_CALL_DURATION_FOR_EMERGENCY}s để đối tác kịp nhấc máy.`,
+          'warning'
+        );
+      } else {
+        const res = recordCallAttempt({
+          bookingId: bKey,
+          callerId: cKey,
+          durationSeconds: ringSec,
+          answered: false
+        });
+        setEmergencyCallVersion((v) => v + 1);
+
+        if (res.isUnlocked) {
+          playSuccessChime();
+          onShowToast?.(
+            `🚨 Đã mở khoá Số điện thoại khẩn cấp của ${partnerAlias || 'đối tác'} cho riêng bạn (sau 2 lần gọi ≥25s không phản hồi).`,
+            'success'
+          );
+        } else {
+          onShowToast?.(
+            `📞 Đã ghi nhận cuộc gọi nhỡ (đổ chuông ${ringSec}s - Lần ${res.attempts}/${REQUIRED_UNANSWERED_CALLS}). Hãy gọi lại lần 2 (≥25s) nếu đối tác vẫn không nhấc máy.`,
+            'info'
+          );
+        }
+      }
+    }
+  };
+
+  // Tự động kết thúc cuộc gọi khi đổ chuông quá 35s không nghe máy
+  useEffect(() => {
+    if (inAppCallState?.isTimeout && inAppCallState.status === 'ringing') {
+      handleEndInAppCall();
+    }
+    // Chỉ bám vào hai cờ chuyển trạng thái để tránh gọi lặp handleEndInAppCall.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inAppCallState?.isTimeout, inAppCallState?.status]);
+
+  // Tự động kích hoạt cuộc gọi in-app nếu được yêu cầu từ ngoài
+  useEffect(() => {
+    if (autoCall && activeBooking && !inAppCallState) {
+      handleStartInAppCall();
+    }
+    // Bám theo ID chuyến, không bám cả object: thêm activeBooking/inAppCallState
+    // sẽ tự gọi lại ngay sau khi cuộc gọi vừa bắt đầu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCall, activeBooking?.escrowId, activeBooking?.id]);
+
   const activePartnerOnline = activeBooking
     ? getUserOnlineStatus(activeBooking, currentUser?.phone || currentUser?.id)
     : { isOnline: false };
@@ -561,6 +716,8 @@ export default function InboxModal({
     if (isSupportChannelActive) {
       loadSupportMessages();
     }
+    // Chỉ nạp khi kênh CSKH được bật; loadSupportMessages dựng lại mỗi render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSupportChannelActive]);
 
   // Gửi tin nhắn đến Platform CSKH & Tự động xử lý khiếu nại (Ambient Resolution)
@@ -713,14 +870,7 @@ export default function InboxModal({
     }
   };
 
-  // Sao chép số điện thoại
-  const handleCopyPhone = (phone) => {
-    if (!phone) return;
-    navigator.clipboard.writeText(phone);
-    setCopiedPhone(true);
-    setTimeout(() => setCopiedPhone(false), 2000);
-    onShowToast?.('✓ Đã sao chép số điện thoại vào bộ nhớ tạm');
-  };
+
 
   return (
     <Modal
@@ -728,8 +878,8 @@ export default function InboxModal({
       size="5xl"
       icon={Inbox}
       iconTone="brand"
-      title="Hộp Thư Yêu Cầu & Trao Đổi"
-      subtitle="Bảo mật PII 100% · Trao đổi ẩn danh · Khóa mềm 2 pha trước khi chốt"
+      title={t('inbox.s059')}
+      subtitle={t('inbox.s060')}
     >
       <div className="flex flex-col md:flex-row h-[600px] max-h-[78vh] -mx-6 -my-4 overflow-hidden border-t border-black/[0.06] dark:border-white/[0.06]">
         {/* CỘT TRÁI: DANH SÁCH CUỘC HỘI THOẠI */}
@@ -752,7 +902,7 @@ export default function InboxModal({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                <span>Yêu cầu Đến</span>
+                <span>{t('inbox.s001')}</span>
                 {incomingUnreadCount > 0 ? (
                   <span
                     className="text-[10.5px] font-mono px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 bg-[#0071e3] text-white shadow-2xs"
@@ -781,7 +931,7 @@ export default function InboxModal({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                <span>Yêu cầu Đi</span>
+                <span>{t('inbox.s002')}</span>
                 {outgoingUnreadCount > 0 ? (
                   <span
                     className="text-[10.5px] font-mono px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1 bg-[#0071e3] text-white shadow-2xs"
@@ -802,11 +952,11 @@ export default function InboxModal({
           {/* Gợi ý Ambient Cursor: Chuột phải / Phím U để đổi trạng thái & Đọc hết */}
           <div className="px-3.5 py-1.5 bg-black/[0.02] dark:bg-white/[0.02] text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.05]">
             <span className="flex items-center gap-1.5 truncate">
-              <span>Chuột phải hoặc</span>
+              <span>{t('inbox.s003')}</span>
               <kbd className="px-1.5 py-0.2 rounded-md bg-white dark:bg-slate-700 font-mono text-[9.5px] border border-black/10 dark:border-white/10 shadow-2xs font-bold text-slate-700 dark:text-slate-200">
                 U
               </kbd>
-              <span>đổi trạng thái</span>
+              <span>{t('inbox.s004')}</span>
             </span>
             {currentList.some((b) => isBookingUnread(b)) && (
               <button
@@ -819,9 +969,9 @@ export default function InboxModal({
                   onShowToast?.('✓ Đã đánh dấu tất cả hội thoại là đã đọc', 'success');
                 }}
                 className="text-[10px] text-primary-600 dark:text-primary-400 hover:underline shrink-0 font-medium cursor-pointer"
-                title="Đánh dấu tất cả hội thoại trong danh sách là đã đọc"
+                title={t('inbox.s061')}
               >
-                Đọc hết
+                {t('inbox.s005')}
               </button>
             )}
           </div>
@@ -849,14 +999,14 @@ export default function InboxModal({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
                       <span>CSKH CarMate</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Trực tuyến" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title={t('inbox.s062')} />
                     </span>
                     <span className="text-[9.5px] font-bold text-primary-600 dark:text-primary-400 bg-primary-100/80 dark:bg-primary-900/50 px-1.5 py-0.2 rounded-full font-mono">
                       24/7
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                    Hỗ trợ khẩn cấp, gỡ khóa nhầm
+                    {t('inbox.s006')}
                   </p>
                 </div>
               </div>
@@ -865,8 +1015,8 @@ export default function InboxModal({
             {currentList.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-400">
                 <MessageSquare className="w-8 h-8 stroke-1 text-slate-300 dark:text-slate-600 mb-2" />
-                <p className="text-xs font-medium">Chưa có yêu cầu nào</p>
-                <p className="text-[11px] text-slate-400 mt-1">Các tin nhắn ghép chuyến sẽ hiển thị tại đây</p>
+                <p className="text-xs font-medium">{t('inbox.s007')}</p>
+                <p className="text-[11px] text-slate-400 mt-1">{t('inbox.s008')}</p>
               </div>
             ) : (
               currentList.map((item) => {
@@ -928,7 +1078,7 @@ export default function InboxModal({
                         {isUnread && (
                           <span
                             className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-[#0071e3] ring-2 ring-white dark:ring-slate-900 shadow-xs animate-pulse pointer-events-none"
-                            title="Chưa đọc (Đọc sau)"
+                            title={t('inbox.s063')}
                           />
                         )}
                       </div>
@@ -974,15 +1124,15 @@ export default function InboxModal({
                             {/* Status badge */}
                             {status === 'confirmed' ? (
                               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 shrink-0">
-                                Đã chốt
+                                {t('inbox.s009')}
                               </span>
                             ) : status === 'pre_confirmed' ? (
                               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-300/40 shrink-0 animate-pulse">
-                                Giữ 15p
+                                {t('inbox.s010')}
                               </span>
                             ) : (
                               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/40 shrink-0">
-                                Đang hỏi
+                                {t('inbox.s011')}
                               </span>
                             )}
                           </div>
@@ -1019,12 +1169,12 @@ export default function InboxModal({
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                        Ban Quản Trị & CSKH CarMate
+                        {t('inbox.s012')}
                       </h3>
-                      <ShieldCheck className="w-4 h-4 text-[#0071e3] shrink-0" title="Kênh chính thức từ nền tảng" />
+                      <ShieldCheck className="w-4 h-4 text-[#0071e3] shrink-0" title={t('inbox.s064')} />
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      Kênh giải quyết khiếu nại & hỗ trợ mở khóa nhầm 24/7
+                      {t('inbox.s013')}
                     </p>
                   </div>
                 </div>
@@ -1035,7 +1185,7 @@ export default function InboxModal({
                     onClick={handleResetBan}
                     className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer shrink-0"
                   >
-                    Mở khóa ngay
+                    {t('inbox.s014')}
                   </button>
                 )}
               </div>
@@ -1044,12 +1194,12 @@ export default function InboxModal({
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/20">
                 <div className="flex justify-center my-1">
                   <span className="px-3 py-1 rounded-full text-[10.5px] font-semibold bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200/50">
-                    🎧 Cuộc trò chuyện được theo dõi và hỗ trợ trực tiếp bởi Ban Quản Trị CarMate
+                    {t('inbox.s015')}
                   </span>
                 </div>
 
                 {loadingSupport ? (
-                  <div className="text-center py-8 text-xs text-slate-400">Đang tải lịch sử hỗ trợ...</div>
+                  <div className="text-center py-8 text-xs text-slate-400">{t('inbox.s016')}</div>
                 ) : (
                   supportMessages.map((msg, idx) => {
                     const isPlatform = msg.senderRole === 'platform' || msg.senderRole === 'admin';
@@ -1107,7 +1257,7 @@ export default function InboxModal({
                   type="text"
                   value={supportInput}
                   onChange={(e) => setSupportInput(e.target.value)}
-                  placeholder="Nhắn tin với CSKH CarMate (nhập 'mở khóa' nếu bị khóa lộn)..."
+                  placeholder={t('inbox.s065')}
                   className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 transition-all outline-hidden"
                 />
                 <button
@@ -1121,7 +1271,7 @@ export default function InboxModal({
             </div>
           ) : !activeBooking ? (
             <div className="flex-1 flex items-center justify-center p-8 text-center text-slate-400">
-              <p className="text-xs">Chọn một cuộc trao đổi để xem chi tiết</p>
+              <p className="text-xs">{t('inbox.s017')}</p>
             </div>
           ) : (
             <>
@@ -1133,7 +1283,7 @@ export default function InboxModal({
                     type="button"
                     onClick={() => setMobileShowChat(false)}
                     className="md:hidden p-1.5 -ml-1 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors shrink-0 cursor-pointer"
-                    title="Quay lại danh sách yêu cầu"
+                    title={t('inbox.s066')}
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
@@ -1163,12 +1313,22 @@ export default function InboxModal({
                 </div>
 
                 <div className="shrink-0 flex items-center gap-2">
+                  {/* Nút Gọi thoại trực tiếp trong App (0đ cước · Bảo mật SĐT) */}
+                  <button
+                    type="button"
+                    onClick={handleStartInAppCall}
+                    className="h-8 px-2.5 rounded-xl font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                    title={t('inbox.s067')}
+                  >
+                    <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-current" />
+                    <span className="hidden sm:inline">{t('inbox.s018')}</span>
+                  </button>
 
                   {isConfirmed ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1.5 rounded-full border border-emerald-300/50">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Đã chốt chính thức</span>
-                      <span className="sm:hidden">Đã chốt</span>
+                      <span className="hidden sm:inline">{t('inbox.s019')}</span>
+                      <span className="sm:hidden">{t('inbox.s009')}</span>
                     </span>
                   ) : isPreConfirmed && remainingSecs > 0 ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1.5 rounded-full border border-blue-300/50 animate-pulse">
@@ -1178,13 +1338,13 @@ export default function InboxModal({
                   ) : activeBooking.status === 'expired' || (isPreConfirmed && remainingSecs <= 0) ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-850 px-2.5 py-1.5 rounded-full border border-slate-300/50">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>Hết hạn 15p</span>
+                      <span>{t('inbox.s020')}</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1.5 rounded-full border border-amber-300/50">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Thương lượng ẩn danh</span>
-                      <span className="sm:hidden">Ẩn danh</span>
+                      <span className="hidden sm:inline">{t('inbox.s021')}</span>
+                      <span className="sm:hidden">{t('inbox.s022')}</span>
                     </span>
                   )}
                 </div>
@@ -1193,49 +1353,43 @@ export default function InboxModal({
               {/* THANH ĐIỀU PHỐI 2-PHASE COMMIT (SMART ACTION BAR) */}
               <div className="p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/60 dark:to-slate-800/40 border-b border-black/[0.06] dark:border-white/[0.06]">
                 {isConfirmed ? (
-                  // ĐÃ CHỐT CHÍNH THỨC: MỞ KHÓA SĐT THẬT & TÊN THẬT
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                        <Check className="w-4 h-4" strokeWidth={3} />
+                  isEmergencyPhoneUnlockedForMe && partnerPhone ? (
+                    // ĐÃ MỞ KHOÁ SĐT KHẨN CẤP CHO NGƯỜI GỌI (SAU 2 LẦN GỌI APP >= 25S)
+                    <div className="p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 text-left space-y-2.5 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-xs shrink-0">
+                            !
+                          </span>
+                          <div>
+                            <p className="text-xs font-bold text-amber-950 dark:text-amber-200">
+                              {t('inbox.s023')}
+                            </p>
+                            <p className="text-[11px] text-amber-800 dark:text-amber-400">
+                              Đã xác thực: Bạn đã gọi qua App 2 lần (≥ 25s) nhưng {partnerAlias} không bắt máy
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-bold shrink-0">
+                          {t('inbox.s024')}
+                        </span>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                          Chuyến đi đã chốt thành công 2 chiều!
-                        </p>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                          SĐT {partnerAlias}: <strong className="text-slate-900 dark:text-white tabular font-mono">{partnerPhone || 'Đã mở khóa'}</strong>
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                      {partnerPhone && (
-                        <>
+                      <div className="flex items-center justify-between bg-white dark:bg-slate-900/90 p-2.5 rounded-xl border border-amber-500/20">
+                        <div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">SĐT trực tiếp {partnerAlias}:</p>
+                          <p className="text-base font-mono font-bold text-slate-900 dark:text-white tracking-tight">
+                            {partnerPhone}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <a
                             href={`tel:${partnerPhone}`}
-                            className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                            className="py-1.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                           >
-                            <Phone className="w-3.5 h-3.5" />
-                            <span>Gọi điện</span>
+                            <Phone className="w-3.5 h-3.5 fill-current" />
+                            <span>{t('inbox.s025')}</span>
                           </a>
-                          <a
-                            href={`sms:${partnerPhone}`}
-                            className="py-1.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Nhắn SMS</span>
-                          </a>
-                          {cleanPhoneNumber(partnerPhone) && (
-                            <a
-                              href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="py-1.5 px-3 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
-                            >
-                              <span>Mở Zalo</span>
-                            </a>
-                          )}
                           <button
                             type="button"
                             onClick={() => handleCopyPhone(partnerPhone)}
@@ -1244,10 +1398,42 @@ export default function InboxModal({
                             {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                             <span>{copiedPhone ? 'Đã chép' : 'Sao chép'}</span>
                           </button>
-                        </>
-                      )}
+                        </div>
+                      </div>
+                      <p className="text-[10.5px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                        💡 <strong>{t('inbox.s026')}</strong> {t('inbox.s027')}
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    // ĐÃ CHỐT CHÍNH THỨC: BẢO MẬT 100% SĐT - LIÊN HỆ TRỰC TIẾP TRÊN PLATFORM
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-4 h-4" strokeWidth={3} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                            {t('inbox.s028')}
+                          </p>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                            {t('inbox.s029')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={handleStartInAppCall}
+                          className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                          title={t('inbox.s067')}
+                        >
+                          <Phone className="w-3.5 h-3.5 fill-current" />
+                          <span>Gọi cho {partnerAlias} (0đ)</span>
+                        </button>
+                      </div>
+                    </div>
+                  )
                 ) : isPreConfirmed && remainingSecs > 0 ? (
                   // ĐANG Ở BƯỚC PRE-CONFIRM: SOFT-LOCK 15 PHÚT (DYNAMIC ISLAND LIQUID COUNTDOWN)
                   <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-slate-50 dark:from-slate-900/60 dark:to-blue-950/40 border border-blue-200/70 dark:border-blue-800/50 shadow-xs flex-wrap">
@@ -1294,7 +1480,7 @@ export default function InboxModal({
                         className="py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-xl shadow-emerald-600/30 ring-4 ring-emerald-500/40 animate-pulse flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>✅ Xác nhận chốt chuyến ngay</span>
+                        <span>{t('inbox.s030')}</span>
                       </button>
                     )}
                   </div>
@@ -1317,7 +1503,7 @@ export default function InboxModal({
                             type="button"
                             disabled
                             className="py-2 px-3.5 rounded-xl font-semibold text-xs bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed flex items-center gap-1.5"
-                            title="Cần có tin nhắn phản hồi trao đổi 2 chiều trước khi kích hoạt chốt chuyến"
+                            title={t('inbox.s068')}
                           >
                             <Clock className="w-3.5 h-3.5" />
                             <span>Chờ {partnerAlias} phản hồi</span>
@@ -1335,7 +1521,7 @@ export default function InboxModal({
                               </span>
                             </p>
                             <p className="text-[11px] text-slate-500">
-                              Sau khi trao đổi xong, bấm "Đề xuất chốt chuyến & Tạm giữ chỗ 15p".
+                              {t('inbox.s031')}
                             </p>
                           </div>
 
@@ -1373,7 +1559,7 @@ export default function InboxModal({
                           }}
                           className="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-[11px] shrink-0 cursor-pointer shadow-xs transition-all"
                         >
-                          Tìm xe khác ➔
+                          {t('inbox.s032')}
                         </button>
                       </div>
                     )}
@@ -1400,13 +1586,13 @@ export default function InboxModal({
                 {/* Tin nhắn thông báo hệ thống ban đầu */}
                 <div className="flex justify-center my-1">
                   <span className="px-3 py-1 rounded-full text-[10.5px] font-semibold bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300/40">
-                    🛡️ Chế độ bảo mật CarMate: SĐT tự động ẩn cho đến khi 2 bên cùng chốt chuyến
+                    {t('inbox.s033')}
                   </span>
                 </div>
 
                 {(!activeBooking.messages || activeBooking.messages.length === 0) ? (
                   <div className="text-center py-8 text-slate-400 text-xs">
-                    Chưa có tin nhắn nào. Hãy nhắn tin để thỏa thuận điểm đón!
+                    {t('inbox.s034')}
                   </div>
                 ) : (
                   activeBooking.messages.map((msg, idx) => {
@@ -1485,7 +1671,7 @@ export default function InboxModal({
                                       className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs"
                                     >
                                       <HelpCircle className="w-3.5 h-3.5" />
-                                      <span>Khiếu nại / Kháng nghị</span>
+                                      <span>{t('inbox.s035')}</span>
                                     </button>
 
                                     <button
@@ -1497,7 +1683,7 @@ export default function InboxModal({
                                       className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 transition-all active:scale-95"
                                     >
                                       <Headphones className="w-3.5 h-3.5 text-primary-500" />
-                                      <span>Chat với CSKH 24/7</span>
+                                      <span>{t('inbox.s036')}</span>
                                     </button>
                                   </div>
                                 )}
@@ -1521,7 +1707,7 @@ export default function InboxModal({
                       return (
                         <div key={msg.id || idx} className="flex justify-center my-2">
                           <div className="max-w-[85%] p-2.5 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50 text-indigo-900 dark:text-indigo-200 text-xs leading-relaxed text-center">
-                            <span className="font-bold mr-1">ℹ️ Thông báo:</span>
+                            <span className="font-bold mr-1">{t('inbox.s037')}</span>
                             {msg.text}
                           </div>
                         </div>
@@ -1549,76 +1735,73 @@ export default function InboxModal({
                     );
                   })
                 )}
-                {isConfirmed && partnerPhone && (
-                  <div className="my-3 p-3.5 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-xs text-center space-y-2.5">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
-                        ✓
-                      </span>
-                      <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
-                        Chuyến đi đã chốt thành công!
-                      </p>
-                    </div>
-                    <div className="py-0.5">
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Số điện thoại liên hệ {partnerAlias}:</p>
-                      <p className="text-lg font-mono font-bold text-slate-900 dark:text-white tabular tracking-tight">
-                        {partnerPhone}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                      <a
-                        href={`tel:${partnerPhone}`}
-                        className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-                      >
-                        <Phone className="w-3.5 h-3.5" />
-                        <span>Gọi điện</span>
-                      </a>
-                      <a
-                        href={`sms:${partnerPhone}`}
-                        className="py-2 px-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>Nhắn SMS</span>
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyPhone(partnerPhone)}
-                        className="py-2 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
-                      >
-                        {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedPhone ? 'Đã chép' : 'Sao chép số'}</span>
-                      </button>
-                      {cleanPhoneNumber(partnerPhone) && (
+                {isConfirmed && (
+                  isEmergencyPhoneUnlockedForMe && partnerPhone ? (
+                    <div className="my-3 p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 shadow-xs text-center space-y-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                          !
+                        </span>
+                        <p className="text-sm font-bold text-amber-950 dark:text-amber-200">
+                          {t('inbox.s038')}
+                        </p>
+                      </div>
+                      <div className="py-1">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Số điện thoại trực tiếp của {partnerAlias}:</p>
+                        <p className="text-xl font-mono font-bold text-slate-900 dark:text-white tabular tracking-tight">
+                          {partnerPhone}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
                         <a
-                          href={`https://zalo.me/${cleanPhoneNumber(partnerPhone)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="py-2 px-3.5 rounded-xl bg-[#0068ff] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                          href={`tel:${partnerPhone}`}
+                          className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
                         >
-                          <span>Mở Zalo</span>
+                          <Phone className="w-3.5 h-3.5 fill-current" />
+                          <span>{t('inbox.s039')}</span>
                         </a>
-                      )}
-                    </div>
-                    {/* Stanford Empathy Tip & Hướng dẫn liên lạc văn minh */}
-                    <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-100/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-emerald-900 dark:text-emerald-200 text-left leading-relaxed">
-                      💡 <strong>Mẹo liên hệ:</strong> Đối tác có thể đang lái xe hoặc bận việc. Nếu chưa gọi được ngay, bạn hãy gửi tin nhắn Zalo/SMS để đối tác liên hệ lại nhé!
-                    </div>
-
-                    {onReportUnreachablePhone && (
-                      <div className="pt-1.5 text-center">
                         <button
                           type="button"
-                          onClick={() => {
-                            onReportUnreachablePhone(activeBooking);
-                            onClose();
-                          }}
-                          className="text-[11.5px] text-slate-500 hover:text-[#0071e3] dark:text-slate-400 dark:hover:text-[#2997ff] font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
+                          onClick={() => handleCopyPhone(partnerPhone)}
+                          className="py-2.5 px-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer active:scale-95"
                         >
-                          <span>Chưa thấy đối tác phản hồi hoặc cần hỗ trợ?</span>
+                          {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedPhone ? 'Đã chép' : 'Sao chép số'}</span>
                         </button>
                       </div>
-                    )}
-                  </div>
+                      <div className="mt-2 p-2.5 rounded-xl bg-amber-100/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-[11.5px] text-amber-900 dark:text-amber-200 text-left leading-relaxed">
+                        💡 <strong>{t('inbox.s040')}</strong> {t('inbox.s041')}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="my-3 p-4 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-xs text-center space-y-2.5">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                          ✓
+                        </span>
+                        <p className="text-sm font-bold text-emerald-950 dark:text-emerald-200">
+                          {t('inbox.s028')}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+                        {t('inbox.s042')}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleStartInAppCall}
+                          className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+                        >
+                          <Phone className="w-3.5 h-3.5 fill-current" />
+                          <span>Gọi thoại cho {partnerAlias} qua App (0đ)</span>
+                        </button>
+                      </div>
+                      {/* Stanford Empathy Tip & Hướng dẫn dứt khoát */}
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-100/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-emerald-900 dark:text-emerald-200 text-left leading-relaxed">
+                        💡 <strong>{t('inbox.s043')}</strong> {t('inbox.s044')} <strong>{t('inbox.s045')}</strong> {t('inbox.s046')}
+                      </div>
+                    </div>
+                  )
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -1652,7 +1835,7 @@ export default function InboxModal({
                       </p>
                       {violationInfo.strike === 2 && (
                         <span className="px-1.5 py-0.5 rounded-full bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-200 text-[10px] font-mono font-bold">
-                          -15 Điểm Tín Nhiệm
+                          {t('inbox.s047')}
                         </span>
                       )}
                     </div>
@@ -1665,7 +1848,7 @@ export default function InboxModal({
                         onClick={handleResetBan}
                         className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold shrink-0 cursor-pointer shadow-2xs transition-all active:scale-95"
                       >
-                        Mở khóa
+                        {t('inbox.s048')}
                       </button>
                     )}
                     <button
@@ -1681,7 +1864,7 @@ export default function InboxModal({
                 <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/70 border-t border-amber-200/80 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-bold">Nhắc nhở an toàn từ CarMate:</p>
+                    <p className="font-bold">{t('inbox.s049')}</p>
                     <p className="text-[11px] leading-relaxed mt-0.5">{piiWarning}</p>
                   </div>
                   <button
@@ -1698,7 +1881,7 @@ export default function InboxModal({
               {activeBooking.status !== 'completed' && quickResponseChips.length > 0 && (
                 <div className="px-3 pt-2 pb-1 bg-slate-50/90 dark:bg-[#181920] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                   <span className="text-[10.5px] font-bold text-slate-400 shrink-0 mr-0.5 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-primary-500" /> Gợi ý:
+                    <Sparkles className="w-3 h-3 text-primary-500" /> {t('inbox.s050')}
                   </span>
                   {quickResponseChips.map((chip, idx) => (
                     <button
@@ -1720,10 +1903,10 @@ export default function InboxModal({
                     <Ban className="w-4 h-4 text-rose-600 shrink-0" />
                     <div>
                       <p className="font-bold text-rose-900 dark:text-rose-200">
-                        Tài khoản tạm khóa đăng bài (Thời hạn ân hạn khiếu nại: 3 ngày)
+                        {t('inbox.s051')}
                       </p>
                       <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
-                        Nếu bị khóa nhầm, hãy bấm Chat với CSKH hoặc Kháng nghị để mở lại ngay lập tức.
+                        {t('inbox.s052')}
                       </p>
                     </div>
                   </div>
@@ -1737,7 +1920,7 @@ export default function InboxModal({
                       className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
                     >
                       <Headphones className="w-3.5 h-3.5" />
-                      <span>Chat với CSKH</span>
+                      <span>{t('inbox.s053')}</span>
                     </button>
                     <button
                       type="button"
@@ -1747,7 +1930,7 @@ export default function InboxModal({
                       }}
                       className="px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-white dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 font-bold text-xs shadow-2xs cursor-pointer transition-all active:scale-95"
                     >
-                      Kháng nghị
+                      {t('inbox.s054')}
                     </button>
                   </div>
                 </div>
@@ -1840,7 +2023,7 @@ export default function InboxModal({
               role="menuitem"
             >
               <Copy className="w-3.5 h-3.5 text-slate-400" />
-              <span>Sao chép mã chuyến</span>
+              <span>{t('inbox.s055')}</span>
             </button>
 
             {/* Sao chép lộ trình */}
@@ -1856,7 +2039,7 @@ export default function InboxModal({
               role="menuitem"
             >
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              <span>Sao chép lộ trình</span>
+              <span>{t('inbox.s056')}</span>
             </button>
           </div>
         </div>
@@ -1896,6 +2079,123 @@ export default function InboxModal({
         }}
         onShowToast={onShowToast}
       />
+
+      {/* ── 5. POPUP GỌI THOẠI TRỰC TIẾP TRONG APP (0Đ CƯỚC · BẢO MẬT 100% SĐT) ── */}
+      {inAppCallState && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden text-center text-white p-6 space-y-6">
+            {/* Huy hiệu bảo mật */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{t('inbox.s057')}</span>
+            </div>
+
+            {/* Avatar & Hiệu ứng sóng âm đổ chuông */}
+            <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
+              {inAppCallState.status === 'ringing' && (
+                <>
+                  <span className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
+                  <span className="absolute -inset-2 rounded-full bg-emerald-500/10 animate-pulse" />
+                </>
+              )}
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-emerald-500/20">
+                {(partnerAlias || 'CarMate').slice(0, 2).toUpperCase()}
+              </div>
+            </div>
+
+            {/* Thông tin đối tác & Lộ trình */}
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold tracking-tight text-white">{partnerAlias || 'Đối tác'}</h3>
+              <p className="text-xs text-slate-400">
+                {activeBooking?.from} ➔ {activeBooking?.to}
+              </p>
+              <div className="pt-2">
+                {inAppCallState.status === 'ringing' ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-emerald-400 animate-pulse flex items-center justify-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 animate-bounce" />
+                      <span>Đang đổ chuông qua App... ({inAppCallState.ringSeconds || 0}s)</span>
+                    </p>
+                    {(inAppCallState.ringSeconds || 0) >= MIN_CALL_DURATION_FOR_EMERGENCY ? (
+                      <div className="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11.5px] font-medium animate-in fade-in">
+                        ⏱️ Đã đổ chuông {inAppCallState.ringSeconds}s (Đạt chuẩn ≥{MIN_CALL_DURATION_FOR_EMERGENCY}s). Bạn có thể gác máy để ghi nhận lần {(emergencyCallStatus?.attempts || 0) + 1}/{REQUIRED_UNANSWERED_CALLS}.
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400">
+                        Cần đổ chuông tối thiểu {MIN_CALL_DURATION_FOR_EMERGENCY}s nếu đối tác không nhấc máy
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm font-mono font-bold text-emerald-400 tabular tracking-wider">
+                    {Math.floor(inAppCallState.seconds / 60).toString().padStart(2, '0')}:
+                    {(inAppCallState.seconds % 60).toString().padStart(2, '0')}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Phím điều khiển cuộc gọi */}
+            <div className="flex items-center justify-center gap-4 pt-2">
+              {/* Tắt / Bật mic */}
+              <button
+                type="button"
+                onClick={() => setInAppCallState((prev) => (prev ? { ...prev, isMuted: !prev.isMuted } : null))}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+                  inAppCallState.isMuted
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                }`}
+                title={inAppCallState.isMuted ? 'Bật Mic' : 'Tắt Mic'}
+              >
+                {inAppCallState.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+
+              {/* Tắt / Bật loa ngoài */}
+              <button
+                type="button"
+                onClick={() => setInAppCallState((prev) => (prev ? { ...prev, isSpeaker: !prev.isSpeaker } : null))}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+                  inAppCallState.isSpeaker
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                }`}
+                title={inAppCallState.isSpeaker ? 'Tắt loa ngoài' : 'Bật loa ngoài'}
+              >
+                {inAppCallState.isSpeaker ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              </button>
+
+              {/* Kết thúc cuộc gọi */}
+              <button
+                type="button"
+                onClick={handleEndInAppCall}
+                className="w-14 h-14 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
+                title={t('inbox.s069')}
+              >
+                <PhoneOff className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Nút mô phỏng nhấc máy khi đang đổ chuông (hỗ trợ kiểm thử/demo) */}
+            {inAppCallState.status === 'ringing' && (
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={handleSimulatePartnerAnswer}
+                  className="text-[11px] text-emerald-400/80 hover:text-emerald-300 underline cursor-pointer py-1 transition-colors"
+                >
+                  {t('inbox.s058')}
+                </button>
+              </div>
+            )}
+
+            {/* Lưu ý thực tế */}
+            <p className="text-[11px] text-slate-400 leading-relaxed pt-2 border-t border-white/10">
+              💡 Gọi 2 cuộc qua App (mỗi cuộc ≥ {MIN_CALL_DURATION_FOR_EMERGENCY}s) nếu đối tác không bắt máy, hệ thống sẽ mở khoá SĐT khẩn cấp để kịp giờ đón.
+            </p>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

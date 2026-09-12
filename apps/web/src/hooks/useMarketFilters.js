@@ -187,10 +187,25 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
       if (selectedTimeSlot !== 'all' && item.timeSlot !== selectedTimeSlot) return false;
       if (selectedDirection !== 'all' && item.direction !== selectedDirection) return false;
       if (selectedCarCategory !== 'all' && item.type === 'driver_offer') {
+        const isPickup =
+          item.vehicleType === 'pickup' ||
+          Boolean(item.hasCargoBed) ||
+          /bán\s*tải|pickup|ranger|hilux|triton|d-?max|navara|bt-?50/i.test(item.carType || '');
+        const isTruck =
+          item.vehicleType === 'truck_light' ||
+          Boolean(item.isCargoVehicle) ||
+          /xe\s*tải|tải\s*nhẹ|chành\s*xe|k200|k250|porter|h150|qkr/i.test(item.carType || '');
+        const is7Seater =
+          Number(item.capacity) === 7 ||
+          /7\s*chỗ|xpander|veloz|innova|fortuner|carnival|santafe|everest|outlander|sorento/i.test(item.carType || '');
         const isConvenient =
           item.carCategory === 'convenient_trip' || item.notes?.toLowerCase().includes('tiện chuyến');
+
+        if (selectedCarCategory === 'pickup' && !isPickup) return false;
+        if (selectedCarCategory === 'truck_light' && !isTruck) return false;
+        if (selectedCarCategory === 'suv_7' && (!is7Seater || isTruck || isPickup)) return false;
+        if (selectedCarCategory === 'family_car' && (isPickup || isTruck || is7Seater || isConvenient)) return false;
         if (selectedCarCategory === 'convenient_trip' && !isConvenient) return false;
-        if (selectedCarCategory === 'family_car' && isConvenient) return false;
       }
 
       // Tự động loại bỏ các chuyến đã quá giờ (>30 phút sau khi khung giờ kết thúc) khỏi sàn công khai

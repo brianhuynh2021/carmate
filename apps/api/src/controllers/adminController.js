@@ -23,7 +23,8 @@ import {
   deleteUserAccount,
   clearAiTrajectories,
   clearAnalyticsEvents,
-  clearSupportMessages
+  clearSupportMessages,
+  clearAllBookings
 } from '../db/sqliteStore.js';
 
 const JWT_SECRET = getJwtSecret();
@@ -90,7 +91,7 @@ export function requireAdmin(req, res, next) {
       req.admin = decoded;
       return next();
     }
-  } catch (err) {
+  } catch {
     // Token không hợp lệ hoặc hết hạn
   }
 
@@ -685,7 +686,7 @@ export function listDeletionRequestsHandler(req, res) {
 export async function processDeletionRequestHandler(req, res) {
   try {
     const { id } = req.params;
-    const { action, note } = req.body || {};
+    const { action } = req.body || {};
 
     if (!action || (action !== 'approved' && action !== 'rejected')) {
       return res.status(400).json({
@@ -738,13 +739,14 @@ export function clearAdminAiTrajectories(req, res) {
 }
 
 /**
- * DELETE /api/admin/test-data - Dọn sạch toàn bộ dữ liệu kiểm thử (Analytics, AI Trajectories, Support Messages)
+ * DELETE /api/admin/test-data - Dọn sạch toàn bộ dữ liệu kiểm thử (Analytics, AI Trajectories, Support Messages, Bookings)
  */
 export function clearAdminTestData(req, res) {
   try {
     const trajCount = clearAiTrajectories();
     const analyticsCount = clearAnalyticsEvents();
     const supportCount = clearSupportMessages();
+    const bookingsCount = clearAllBookings();
 
     return res.status(200).json({
       success: true,
@@ -752,7 +754,26 @@ export function clearAdminTestData(req, res) {
       data: {
         aiTrajectoriesCleared: trajCount,
         analyticsCleared: analyticsCount,
-        supportMessagesCleared: supportCount
+        supportMessagesCleared: supportCount,
+        bookingsCleared: bookingsCount
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/admin/bookings - Dọn sạch toàn bộ lịch hẹn chuyến xe
+ */
+export function clearAdminBookings(req, res) {
+  try {
+    const bookingsCount = clearAllBookings();
+    return res.status(200).json({
+      success: true,
+      message: 'Đã dọn sạch toàn bộ lịch hẹn thành công',
+      data: {
+        bookingsCleared: bookingsCount
       }
     });
   } catch (err) {

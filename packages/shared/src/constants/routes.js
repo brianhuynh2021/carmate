@@ -1,4 +1,5 @@
 import { parseLocation } from '../utils/geo.js';
+import { calculateDynamicTariffByDistance } from '../utils/dynamicTariff.js';
 
 export const DEFAULT_FALLBACK_ROUTES = [
   { from: 'Lộc Ninh', to: 'Sài Gòn', count: 0 },
@@ -290,16 +291,20 @@ export const ROUTE_BENCHMARKS = {
 // BẢNG HÀNH LANG ĐIỂM ĐÓN / TRẢ DỌC ĐƯỜNG (CORRIDOR WAYPOINTS) THEO TRỤC QUỐC LỘ & CAO TỐC
 export const CORRIDOR_WAYPOINTS = {
   'Tuyến QL13': [
-    'Bến xe Miền Đông / Cầu Bình Triệu',
-    'Ngã 4 Bình Phước (Thủ Đức)',
+    'Bù Đốp (TT. Thanh Bình)',
+    'Tân Tiến / Lộc Hiệp',
+    'Ngã 3 Lộc Tấn / Cửa khẩu Hoa Lư',
+    'Chợ Lộc Ninh / Cây xăng 17',
+    'TX. Bình Long / Thanh Lương',
+    'Tân Khai / Huyện Hớn Quản',
+    'Ngã 4 Chơn Thành (Giao N2 & QL14)',
+    'KCN Bàu Bàng / Bến Cát',
+    'Ngã 4 Sở Sao / Đại Nam (Thủ Dầu Một)',
+    'Aeon Mall Canary / KCN VSIP 1',
     'Lái Thiêu / Cổng chào Bình Dương',
-    'Aeon Mall Canary Thuận An',
-    'TP. Thủ Dầu Một / Đại Lộ Bình Dương',
-    'Ngã 4 Sở Sao / Mỹ Phước',
-    'Bến Cát / Bàu Bàng',
-    'Ngã 4 Chơn Thành (Bình Phước)',
-    'TP. Đồng Xoài / Phước Long',
-    'Lộc Ninh / Bù Đốp'
+    'Ngã 4 Bình Phước (Thủ Đức)',
+    'Cầu Bình Triệu / BX Miền Đông cũ',
+    'Ngã tư Hàng Xanh (Bình Thạnh)'
   ],
   'Tuyến QL51': [
     'Hàng Xanh / Mai Chí Thọ (TP. Thủ Đức)',
@@ -410,3 +415,615 @@ export function getCorridorWaypoints(routeCategoryOrKeyword) {
 
   return [];
 }
+
+/**
+ * MẠNG LƯỚI TRẠM ĐÓN ẢO CHUẨN HÓA (VIRTUAL HUBS - DARP-MP)
+ * Định vị các nút giao vàng dọc tuyến hành lang chính để xe lướt qua không phải vòng hẻm.
+ * Thời gian dừng đỗ chuẩn hóa 5 phút (300s) curbside window.
+ */
+export const VIRTUAL_HUBS = [
+  // ── HÀNH LANG TUYẾN QL13 (TP.HCM ⇄ BÌNH DƯƠNG ⇄ BÌNH PHƯỚC: BÙ ĐỐP - LỘC NINH) ──
+  {
+    id: 'hub_ql13_san_bay_tsn',
+    name: 'Sân bay Quốc tế Tân Sơn Nhất (Ga Quốc Nội / Ga Quốc Tế)',
+    shortName: 'Sân bay Tân Sơn Nhất',
+    corridor: 'Tuyến QL13',
+    lat: 10.8185,
+    lng: 106.6660,
+    landmark: 'Cột 12 Ga Quốc Nội / Ga Quốc Tế - Kết nối thẳng Phạm Văn Đồng',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'AIRPORT',
+    isTerminal: true
+  },
+  {
+    id: 'hub_ql13_hang_xanh',
+    name: 'Ngã tư Hàng Xanh (Bình Thạnh - TP.HCM)',
+    shortName: 'Ngã 4 Hàng Xanh',
+    corridor: 'Tuyến QL13',
+    lat: 10.8012,
+    lng: 106.7114,
+    landmark: 'Cây xăng Comeco Hàng Xanh / Điện Biên Phủ',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'GAS_STATION',
+    isTerminal: true
+  },
+  {
+    id: 'hub_ql13_binh_trieu',
+    name: 'Cầu Bình Triệu / Bến xe Miền Đông cũ (Bình Thạnh)',
+    shortName: 'Cầu Bình Triệu / BX Miền Đông',
+    corridor: 'Tuyến QL13',
+    lat: 10.8175,
+    lng: 106.7118,
+    landmark: 'Cầu Bình Triệu 1 - Đinh Bộ Lĩnh / QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'GAS_STATION'
+  },
+  {
+    id: 'hub_ql13_van_phuc_city',
+    name: 'Khu đô thị Vạn Phúc City / Cân Nhơn Hòa (Thủ Đức)',
+    shortName: 'Vạn Phúc City (Thủ Đức)',
+    corridor: 'Tuyến QL13',
+    lat: 10.8410,
+    lng: 106.7125,
+    landmark: 'Cổng chính Vạn Phúc City - QL13 Hiệp Bình Phước',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'URBAN_AREA'
+  },
+  {
+    id: 'hub_ql13_nga4_binh_phuoc',
+    name: 'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)',
+    shortName: 'Ngã 4 Bình Phước',
+    corridor: 'Tuyến QL13',
+    lat: 10.8525,
+    lng: 106.7214,
+    landmark: 'Cây xăng Petrolimex QL13 giao QL1A',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'JUNCTION',
+    isTerminal: true
+  },
+  {
+    id: 'hub_ql13_cong_chao_lai_thieu',
+    name: 'Cổng chào Bình Dương / Lái Thiêu (Thuận An)',
+    shortName: 'Cổng chào Lái Thiêu',
+    corridor: 'Tuyến QL13',
+    lat: 10.9015,
+    lng: 106.6985,
+    landmark: 'Cổng chào Bình Dương - QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false
+  },
+  {
+    id: 'hub_ql13_vsip1',
+    name: 'Cổng KCN VSIP 1 / AEON Mall Bình Dương',
+    shortName: 'KCN VSIP 1 / AEON Mall',
+    corridor: 'Tuyến QL13',
+    lat: 10.9328,
+    lng: 106.6972,
+    landmark: 'Cổng chính KCN VSIP 1 - Đại lộ Bình Dương',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_nga4_so_sao',
+    name: 'Ngã 4 Sở Sao / Trạm dừng Đại Nam (Thủ Dầu Một)',
+    shortName: 'Ngã 4 Sở Sao',
+    corridor: 'Tuyến QL13',
+    lat: 11.0423,
+    lng: 106.6341,
+    landmark: 'Ngã 4 Sở Sao - Cây xăng Đại Nam',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_bau_bang',
+    name: 'Trạm dừng KCN Bàu Bàng / Mỹ Phước',
+    shortName: 'KCN Bàu Bàng',
+    corridor: 'Tuyến QL13',
+    lat: 11.2382,
+    lng: 106.6125,
+    landmark: 'Cổng KCN Bàu Bàng - QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false,
+    category: 'INDUSTRIAL'
+  },
+  {
+    id: 'hub_ql13_tthc_bau_bang',
+    name: 'Trung tâm Hành chính Huyện Bàu Bàng',
+    shortName: 'TTHC Huyện Bàu Bàng',
+    corridor: 'Tuyến QL13',
+    lat: 11.2410,
+    lng: 106.6110,
+    landmark: 'Mặt tiền Đại lộ QL13 (TT. Lai Uyên, Bàu Bàng) - Làn gom rộng rãi',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'ADMIN_CENTER'
+  },
+  {
+    id: 'hub_ql13_becamex_chon_thanh',
+    name: 'Cổng KCN & Đô thị Becamex Bình Phước',
+    shortName: 'KCN Becamex Chơn Thành',
+    corridor: 'Tuyến QL13',
+    lat: 11.4550,
+    lng: 106.6720,
+    landmark: 'Cổng chính Becamex Bình Phước - Mặt tiền QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'INDUSTRIAL'
+  },
+  {
+    id: 'hub_ql13_nga4_chon_thanh',
+    name: 'Ngã 4 Chơn Thành (Giao Tuyến N2 & QL14)',
+    shortName: 'Ngã 4 Chơn Thành',
+    corridor: 'Tuyến QL13',
+    lat: 11.4791,
+    lng: 106.6694,
+    landmark: 'Bùng binh Chơn Thành - Trạm xăng Tín Nghĩa',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'JUNCTION'
+  },
+  {
+    id: 'hub_ql13_vincom_chon_thanh',
+    name: 'Vincom Plaza Chơn Thành',
+    shortName: 'Vincom Chơn Thành',
+    corridor: 'Tuyến QL13',
+    lat: 11.4810,
+    lng: 106.6690,
+    landmark: 'Số 01 QL13 (Trung tâm TX. Chơn Thành) - Sảnh đón ô tô',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'MALL'
+  },
+  {
+    id: 'hub_ql13_tthc_chon_thanh',
+    name: 'Trung tâm Hành chính TX. Chơn Thành / Quảng trường',
+    shortName: 'TTHC TX. Chơn Thành',
+    corridor: 'Tuyến QL13',
+    lat: 11.4820,
+    lng: 106.6680,
+    landmark: 'Mặt tiền QL13 (P. Hưng Long, Chơn Thành)',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'ADMIN_CENTER'
+  },
+  {
+    id: 'hub_ql13_minh_hung',
+    name: 'KCN Minh Hưng - Hàn Quốc (Chơn Thành)',
+    shortName: 'KCN Minh Hưng',
+    corridor: 'Tuyến QL13',
+    lat: 11.5120,
+    lng: 106.6520,
+    landmark: 'Cổng KCN Minh Hưng Hàn Quốc - QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false,
+    category: 'INDUSTRIAL'
+  },
+  {
+    id: 'hub_ql13_tan_khai',
+    name: 'Cây xăng Petrolimex Tân Khai / Chợ Tân Khai (Hớn Quản)',
+    shortName: 'Petrolimex Tân Khai',
+    corridor: 'Tuyến QL13',
+    lat: 11.5620,
+    lng: 106.6340,
+    landmark: 'Cây xăng Petrolimex Tân Khai QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'GAS_STATION'
+  },
+  {
+    id: 'hub_ql13_tthc_tan_khai',
+    name: 'Trung tâm Hành chính Huyện Hớn Quản (TT. Tân Khai)',
+    shortName: 'TTHC Huyện Hớn Quản',
+    corridor: 'Tuyến QL13',
+    lat: 11.5645,
+    lng: 106.6325,
+    landmark: 'Mặt tiền QL13 (Ấp 1, TT. Tân Khai) - Trụ sở Huyện ủy & UBND',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'ADMIN_CENTER'
+  },
+  {
+    id: 'hub_ql13_tthc_binh_long',
+    name: 'Trung tâm Hành chính TX. Bình Long / Bến xe Bình Long',
+    shortName: 'TTHC TX. Bình Long',
+    corridor: 'Tuyến QL13',
+    lat: 11.6450,
+    lng: 106.6040,
+    landmark: 'Ngã 3 Nguyễn Huệ - QL13 (P. An Lộc)',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'ADMIN_CENTER'
+  },
+  {
+    id: 'hub_ql13_binh_long',
+    name: 'Cổng chào TX. Bình Long / Vòng xoay An Lộc',
+    shortName: 'TX. Bình Long (An Lộc)',
+    corridor: 'Tuyến QL13',
+    lat: 11.6482,
+    lng: 106.6025,
+    landmark: 'Cổng chào Thị xã Bình Long QL13 - Vòng xoay An Lộc',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true,
+    category: 'JUNCTION'
+  },
+  {
+    id: 'hub_ql13_thanh_luong',
+    name: 'Ngã 3 Thanh Lương (Ranh Bình Long - Lộc Ninh)',
+    shortName: 'Ngã 3 Thanh Lương',
+    corridor: 'Tuyến QL13',
+    lat: 11.7250,
+    lng: 106.5980,
+    landmark: 'Ngã 3 Thanh Lương QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false
+  },
+  {
+    id: 'hub_ql13_cho_loc_ninh',
+    name: 'Chợ Lộc Ninh / Cây xăng 17 (Bình Phước)',
+    shortName: 'Chợ Lộc Ninh (Cây xăng 17)',
+    corridor: 'Tuyến QL13',
+    lat: 11.8421,
+    lng: 106.5972,
+    landmark: 'Khu phố Ninh Thịnh / Cây xăng 17 QL13',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_hoa_lu',
+    name: 'Cửa khẩu Quốc tế Hoa Lư (Lộc Ninh)',
+    shortName: 'Cửa khẩu Hoa Lư',
+    corridor: 'Tuyến QL13',
+    lat: 11.9568,
+    lng: 106.5312,
+    landmark: 'Trạm kiểm soát liên hợp Cửa khẩu Hoa Lư',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_loc_tan',
+    name: 'Ngã 3 Lộc Tấn (Giao ĐT759B & QL13)',
+    shortName: 'Ngã 3 Lộc Tấn',
+    corridor: 'Tuyến QL13',
+    lat: 11.8845,
+    lng: 106.5912,
+    landmark: 'Ngã 3 Lộc Tấn - Điểm rẽ vào Lộc Hiệp & Bù Đốp',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_loc_hiep',
+    name: 'Chợ Lộc Hiệp / Ngã 3 Lộc Hiệp (Lộc Ninh)',
+    shortName: 'Chợ Lộc Hiệp',
+    corridor: 'Tuyến QL13',
+    lat: 11.9012,
+    lng: 106.6623,
+    landmark: 'Chợ Lộc Hiệp - ĐT759B kết nối Bù Đốp',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_tan_tien',
+    name: 'Chợ Tân Tiến / Cầu Tân Tiến (Bù Đốp)',
+    shortName: 'Chợ Tân Tiến (Bù Đốp)',
+    corridor: 'Tuyến QL13',
+    lat: 11.9351,
+    lng: 106.7321,
+    landmark: 'Chợ Tân Tiến - ĐT759B',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql13_budop',
+    name: 'Chợ Bù Đốp / Bến xe Bù Đốp (TT. Thanh Bình)',
+    shortName: 'Chợ Bù Đốp (TT. Thanh Bình)',
+    corridor: 'Tuyến QL13',
+    lat: 11.9832,
+    lng: 106.8124,
+    landmark: 'Cây xăng Petrolimex Thanh Bình / Chợ Bù Đốp (Đầu tuyến)',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_ql14_dong_xoai',
+    name: 'Ngã 3 Đồng Xoài / Tượng đài Chiến Thắng (Nhánh QL14)',
+    shortName: 'TP. Đồng Xoài (Nhánh QL14)',
+    corridor: 'Tuyến QL13',
+    lat: 11.5328,
+    lng: 106.8834,
+    landmark: 'Bùng binh Ngã 3 Hùng Vương - ĐT741 / QL14',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+
+  // ── HÀNH LANG TUYẾN N2 (ĐÔNG NAM BỘ ⇄ MIỀN TÂY / KIÊN GIANG) ──
+  {
+    id: 'hub_n2_chon_thanh',
+    name: 'Ngã 4 Chơn Thành (Điểm kết nối QL13 - Tuyến N2)',
+    shortName: 'Ngã 4 Chơn Thành (N2)',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 11.4791,
+    lng: 106.6694,
+    landmark: 'Bùng binh Chơn Thành - Điểm đầu N2',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_thay_cai',
+    name: 'Cầu Thầy Cai / Bến Cát (Ranh Bình Dương - Củ Chi)',
+    shortName: 'Cầu Thầy Cai',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 11.0251,
+    lng: 106.4912,
+    landmark: 'Trạm dừng chân Cầu Thầy Cai',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: false
+  },
+  {
+    id: 'hub_n2_hau_nghia',
+    name: 'Thị trấn Hậu Nghĩa / Đức Hòa (Long An)',
+    shortName: 'Hậu Nghĩa (Đức Hòa)',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.8924,
+    lng: 106.4215,
+    landmark: 'Vòng xoay Hậu Nghĩa - ĐT825 giao Tuyến N2',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_thanh_hoa',
+    name: 'Thị trấn Thạnh Hóa / Cầu Tuyên Nhơn (Long An)',
+    shortName: 'Thạnh Hóa (Long An)',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.6512,
+    lng: 106.1824,
+    landmark: 'Trạm xăng Cầu Tuyên Nhơn - Tuyến N2',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_thap_muoi',
+    name: 'Thị trấn Mỹ An / Tháp Mười (Đồng Tháp)',
+    shortName: 'Tháp Mười (Đồng Tháp)',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.5185,
+    lng: 105.8521,
+    landmark: 'Bến xe Mỹ An - Nút giao N2',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_cau_cao_lanh',
+    name: 'Nút giao Cầu Cao Lãnh (Đồng Tháp)',
+    shortName: 'Cầu Cao Lãnh',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.4214,
+    lng: 105.6542,
+    landmark: 'Trạm dừng chân Cao Lãnh / Quốc lộ 30',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_vam_cong',
+    name: 'Cầu Vàm Cống / Thốt Nốt (Cần Thơ)',
+    shortName: 'Cầu Vàm Cống',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.3125,
+    lng: 105.5124,
+    landmark: 'Trạm dừng chân Cầu Vàm Cống',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_lo_te',
+    name: 'Ngã 3 Lộ Tẻ / Cao tốc Lộ Tẻ - Rạch Sỏi',
+    shortName: 'Ngã 3 Lộ Tẻ',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 10.1852,
+    lng: 105.3214,
+    landmark: 'Nút giao Lộ Tẻ - Đầu cao tốc Rạch Sỏi',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  },
+  {
+    id: 'hub_n2_rach_gia',
+    name: 'Bến xe Rạch Sỏi / TP. Rạch Giá (Kiên Giang)',
+    shortName: 'TP. Rạch Giá',
+    corridor: 'Tuyến N2 - Kiên Giang',
+    lat: 9.9612,
+    lng: 105.1245,
+    landmark: 'Bến xe Rạch Sỏi - Đường Mai Thị Hồng Hạnh',
+    curbsideWindowSeconds: 300,
+    isMajorJunction: true
+  }
+];
+
+/**
+ * CẤU HÌNH ĐIỂM ĐÓN CỐ ĐỊNH TRỤC LỘ (100% VIRTUAL HUBS - NO DOORSTEP DETOUR)
+ * CarMate vận hành 100% điểm đón/trả chuẩn hoá tại các cây xăng Petrolimex dọc quốc lộ.
+ * Triệt tiêu hoàn toàn việc đón tận nhà ("Tour de Hẻm") và chia chác phụ phí đền bù.
+ */
+export const DOORSTEP_CONFIG = {
+  ENABLED: false, // 100% đón trả tại trạm cây xăng Petrolimex, không đón tận nhà
+  DEFAULT_SURCHARGE: 0, // Phụ phí = 0đ (không phụ thu đón nhà)
+  MAX_NEIGHBORHOOD_RADIUS_KM: 0,
+  MAX_CURBSIDE_WAIT_SECONDS: 0,
+  COMPENSATION_DISCOUNT_RATIO: 0, // Không chia tiền đền bù giữa các khách
+  LABEL: '100% đón tại trạm cây xăng',
+  NOTE: 'Đón trả chuẩn hoá tại cây xăng Petrolimex trục lộ · Không rẽ ngõ ngách'
+};
+
+/**
+ * Lấy danh sách Trạm đón ảo theo tuyến hành lang
+ */
+export function getVirtualHubsByCorridor(corridorKey) {
+  if (!corridorKey) return VIRTUAL_HUBS;
+  const clean = corridorKey.trim().toLowerCase();
+  return VIRTUAL_HUBS.filter(
+    (hub) => hub.corridor.toLowerCase().includes(clean) || clean.includes(hub.corridor.toLowerCase())
+  );
+}
+
+/**
+ * Tìm Trạm đón ảo gần nhất với toạ độ GPS cho trước
+ */
+export function findNearestVirtualHub(lat, lng, corridorKey = null) {
+  if (lat == null || lng == null) return null;
+  const hubs = corridorKey ? getVirtualHubsByCorridor(corridorKey) : VIRTUAL_HUBS;
+  if (hubs.length === 0) return null;
+
+  let bestHub = null;
+  let minDistance = Infinity;
+
+  for (const hub of hubs) {
+    const dLat = ((hub.lat - lat) * Math.PI) / 180;
+    const dLng = ((hub.lng - lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat * Math.PI) / 180) * Math.cos((hub.lat * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    if (dist < minDistance) {
+      minDistance = dist;
+      bestHub = { ...hub, distanceKm: Math.round(dist * 10) / 10 };
+    }
+  }
+
+  return bestHub;
+}
+
+/**
+ * Lấy thông tin Trạm đón ảo theo mã ID trạm (hỗ trợ cả slug linh hoạt)
+ */
+export function getVirtualHubById(hubId) {
+  if (!hubId) return null;
+  const clean = String(hubId).trim().toLowerCase().replace(/-/g, '_');
+  return (
+    VIRTUAL_HUBS.find(
+      (hub) =>
+        hub.id.toLowerCase() === clean ||
+        hub.id.toLowerCase().replace(/-/g, '_') === clean ||
+        hub.id.toLowerCase().includes(clean)
+    ) || null
+  );
+}
+
+/**
+ * BẢNG ĐỊNH GIÁ PHÂN ĐOẠN CỐ ĐỊNH HÀNH LANG QL13 (METRO TARIFF ON QL13)
+ * MIT Invariants: Cước phí phân đoạn cố định như vé metro, bảo đảm minh bạch 100%.
+ * Tuyệt đối KHÔNG surge pricing (no_surge: true) vào giờ cao điểm, ban đêm hay mưa bão.
+ */
+export const CORRIDOR_FIXED_SEGMENTS = {
+  // Bình Long ➔ Hàng Xanh: 180.000đ (Chủ xe nhận 324k/2 ghế)
+  'hub_ql13_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 180000, distanceKm: 115, label: 'Bình Long ➔ Hàng Xanh' },
+  'hub_ql13_binh_long:::hub_ql13_binh_trieu': { pricePerSeat: 180000, distanceKm: 110, label: 'Bình Long ➔ Bình Triệu' },
+  'hub_ql13_binh_long:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 75000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
+  'hub_ql13_binh_long:::hub_n2_chon_thanh': { pricePerSeat: 75000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
+  'hub_ql13_binh_long:::hub_ql13_tan_khai': { pricePerSeat: 50000, distanceKm: 25, label: 'Bình Long ➔ Tân Khai' },
+  'hub_ql13_tthc_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 180000, distanceKm: 115, label: 'TTHC Bình Long ➔ Hàng Xanh' },
+
+  // Tân Khai ➔ Hàng Xanh: 150.000đ (Chủ xe nhận 270k/2 ghế)
+  'hub_ql13_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 95, label: 'Tân Khai ➔ Hàng Xanh' },
+  'hub_ql13_tan_khai:::hub_ql13_binh_trieu': { pricePerSeat: 150000, distanceKm: 90, label: 'Tân Khai ➔ Bình Triệu' },
+  'hub_ql13_tan_khai:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 60000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
+  'hub_ql13_tan_khai:::hub_n2_chon_thanh': { pricePerSeat: 60000, distanceKm: 20, label: 'Tân Khai ➔ Chơn Thành' },
+  'hub_ql13_tan_khai:::hub_ql13_binh_long': { pricePerSeat: 50000, distanceKm: 25, label: 'Tân Khai ➔ Bình Long' },
+  'hub_ql13_tthc_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 95, label: 'TTHC Tân Khai ➔ Hàng Xanh' },
+
+  // Chơn Thành ➔ Hàng Xanh: 120.000đ (Chủ xe nhận 216k/2 ghế)
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_trieu': { pricePerSeat: 120000, distanceKm: 70, label: 'Chơn Thành ➔ Bình Triệu' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 75000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_tan_khai': { pricePerSeat: 60000, distanceKm: 20, label: 'Chơn Thành ➔ Tân Khai' },
+  'hub_n2_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
+  'hub_n2_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 75000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
+  'hub_ql13_vincom_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Vincom Chơn Thành ➔ Hàng Xanh' },
+  'hub_ql13_tthc_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'TTHC Chơn Thành ➔ Hàng Xanh' },
+  'hub_ql13_becamex_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 115000, distanceKm: 70, label: 'Becamex Chơn Thành ➔ Hàng Xanh' },
+
+  // Bàu Bàng: 90.000đ
+  'hub_ql13_bau_bang:::hub_ql13_hang_xanh': { pricePerSeat: 90000, distanceKm: 55, label: 'Bàu Bàng ➔ Hàng Xanh' },
+  'hub_ql13_tthc_bau_bang:::hub_ql13_hang_xanh': { pricePerSeat: 90000, distanceKm: 55, label: 'TTHC Bàu Bàng ➔ Hàng Xanh' },
+
+  // Sở Sao / Thủ Dầu Một: 70.000đ
+  'hub_ql13_nga4_so_sao:::hub_ql13_hang_xanh': { pricePerSeat: 70000, distanceKm: 35, label: 'Sở Sao ➔ Hàng Xanh' },
+
+  // VSIP 1 / Thuận An: 60.000đ
+  'hub_ql13_vsip1:::hub_ql13_hang_xanh': { pricePerSeat: 60000, distanceKm: 20, label: 'VSIP 1 ➔ Hàng Xanh' },
+
+  // Vạn Phúc City: 35.000đ
+  'hub_ql13_van_phuc_city:::hub_ql13_hang_xanh': { pricePerSeat: 35000, distanceKm: 10, label: 'Vạn Phúc City ➔ Hàng Xanh' },
+
+  // CÁC CHẶNG VỀ SÂN BAY TÂN SƠN NHẤT (QUA ĐẠI LỘ PHẠM VĂN ĐỒNG)
+  'hub_ql13_binh_long:::hub_ql13_san_bay_tsn': { pricePerSeat: 190000, distanceKm: 120, label: 'Bình Long ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_tthc_binh_long:::hub_ql13_san_bay_tsn': { pricePerSeat: 190000, distanceKm: 120, label: 'TTHC Bình Long ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_tan_khai:::hub_ql13_san_bay_tsn': { pricePerSeat: 160000, distanceKm: 98, label: 'Tân Khai ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_tthc_tan_khai:::hub_ql13_san_bay_tsn': { pricePerSeat: 160000, distanceKm: 98, label: 'TTHC Tân Khai ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_san_bay_tsn': { pricePerSeat: 130000, distanceKm: 80, label: 'Chơn Thành ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_vincom_chon_thanh:::hub_ql13_san_bay_tsn': { pricePerSeat: 130000, distanceKm: 80, label: 'Vincom Chơn Thành ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_tthc_chon_thanh:::hub_ql13_san_bay_tsn': { pricePerSeat: 130000, distanceKm: 80, label: 'TTHC Chơn Thành ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_bau_bang:::hub_ql13_san_bay_tsn': { pricePerSeat: 100000, distanceKm: 58, label: 'Bàu Bàng ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_nga4_so_sao:::hub_ql13_san_bay_tsn': { pricePerSeat: 75000, distanceKm: 38, label: 'Sở Sao ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_vsip1:::hub_ql13_san_bay_tsn': { pricePerSeat: 60000, distanceKm: 22, label: 'VSIP 1 ➔ Sân bay Tân Sơn Nhất' },
+
+  // CÁC CHẶNG VỀ NGÃ 4 BÌNH PHƯỚC (CỬA NGÕ THỦ ĐỨC - QL1A)
+  'hub_ql13_binh_long:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 160000, distanceKm: 100, label: 'Bình Long ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_tan_khai:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 130000, distanceKm: 80, label: 'Tân Khai ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_nga4_chon_thanh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 100000, distanceKm: 60, label: 'Chơn Thành ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_bau_bang:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 75000, distanceKm: 42, label: 'Bàu Bàng ➔ Ngã 4 Bình Phước' },
+
+  // Lộc Ninh / Bù Đốp (Đầu tuyến QL13)
+  'hub_ql13_cho_loc_ninh:::hub_ql13_hang_xanh': { pricePerSeat: 210000, distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_san_bay_tsn': { pricePerSeat: 220000, distanceKm: 140, label: 'Lộc Ninh ➔ Sân bay Tân Sơn Nhất' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 190000, distanceKm: 120, label: 'Lộc Ninh ➔ Ngã 4 Bình Phước' },
+  'hub_ql13_cho_loc_ninh:::hub_ql13_binh_long': { pricePerSeat: 40000, distanceKm: 18, label: 'Lộc Ninh ➔ Bình Long' },
+  'hub_ql13_budop:::hub_ql13_hang_xanh': { pricePerSeat: 230000, distanceKm: 155, label: 'Bù Đốp ➔ Hàng Xanh' }
+};
+
+export const DRIVER_STATION_PAYOUT_RATIO = 1.0; // Chủ xe nhận 100% phụ xăng chia sẻ trực tiếp P2P (0đ phí sàn)
+
+/**
+ * Tra cứu bảng cước phân đoạn cố định Metro Tariff dọc hành lang
+ * Tự động tính toán theo DynamicMarketTariffEngine (Cân bằng Nash + Chỉ số xăng dầu + BOT)
+ */
+export function getFixedSegmentTariff(originHubId, destHubId, options = {}) {
+  const h1 = getVirtualHubById(originHubId);
+  const h2 = getVirtualHubById(destHubId);
+
+  const cleanOrigin = String(originHubId || '').trim().toLowerCase();
+  const cleanDest = String(destHubId || '').trim().toLowerCase();
+
+  const keyForward = `${cleanOrigin}:::${cleanDest}`;
+  const keyReverse = `${cleanDest}:::${cleanOrigin}`;
+
+  const match = CORRIDOR_FIXED_SEGMENTS[keyForward] || CORRIDOR_FIXED_SEGMENTS[keyReverse];
+
+  let distanceKm = match?.distanceKm;
+  let label = match?.label;
+
+  if (!distanceKm && h1 && h2) {
+    const dLat = ((h2.lat - h1.lat) * Math.PI) / 180;
+    const dLng = ((h2.lng - h1.lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((h1.lat * Math.PI) / 180) * Math.cos((h2.lat * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    distanceKm = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1.28);
+  }
+
+  if (!distanceKm) distanceKm = 95;
+  if (!label) {
+    label = `${h1?.shortName || h1?.name || originHubId || 'Điểm đón'} ➔ ${h2?.shortName || h2?.name || destHubId || 'Điểm đến'}`;
+  }
+
+  // Tự động định giá theo DynamicMarketTariffEngine
+  return calculateDynamicTariffByDistance(distanceKm, {
+    label,
+    corridor: h1?.corridor || h2?.corridor || 'Tuyến QL13',
+    ...options
+  });
+}
+

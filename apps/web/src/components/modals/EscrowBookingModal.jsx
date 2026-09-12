@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users,
   ShieldCheck,
@@ -18,38 +18,32 @@ import {
   SlidersHorizontal,
   Package,
   Box,
-  Truck
+  Truck,
+  Phone,
+  PhoneCall,
+  Lock,
+  Scale
 } from 'lucide-react';
 import {
   formatVND,
   calculatePricing,
   getTimeSlotLabel,
-  getCorridorWaypoints,
   toPublicAlias,
   normalizePhoneNumber,
+  cleanPhoneNumber,
+  isValidVietnamesePhone,
   getPriceGuardrail,
   CARGO_TYPES,
-  getRecommendedCargoPrice
+  getRecommendedCargoPrice,
+  formatCleanDateLabel
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
-import { RouteTimeline } from '../market/TripCard.jsx';
-import { searchLocations, getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
-import api from '../../api/client.js';
-
-// Điểm đón mốc nổi tiếng dọc trục QL13 & liên tỉnh (Hotspot Chips 1 chạm kiểu Grab)
-const POPULAR_HOTSPOTS = [
-  'Ngã 4 Bình Phước',
-  'Trạm thu phí Lái Thiêu',
-  'Cổng KCN VSIP 1',
-  'Cầu Bình Triệu',
-  'Ngã 4 Hàng Xanh',
-  'Bến xe Miền Đông',
-  'Cây xăng Petrolimex 17',
-  'Chợ Tân Khai',
-  'Cổng chào Bình Long'
-];
+import LegalShieldModal from './LegalShieldModal.jsx';
+import { RouteTimeline, getCarDisplay } from '../market/TripCard.jsx';
+import { triggerMacNotification } from '../common/AppleMacNotification.jsx';
+import api, { setStoredAuthToken } from '../../api/client.js';
 
 export default function EscrowBookingModal({
   item,
@@ -57,72 +51,25 @@ export default function EscrowBookingModal({
   currentUser,
   onClose,
   onConfirmBooking,
+  onAuthSuccess,
   onViewTrustProfile,
   onViewBookedTab,
-  onAutoPostDemand,
+  _onAutoPostDemand,
   onShowToast,
   onOpenInbox
 }) {
+  const { t } = useI18n();
   const { lang } = useI18n();
   const [seats, setSeats] = useState(1);
-  const [pickupPoint, setPickupPoint] = useState('');
+  const [pickupPoint] = useState('');
   const [passengerNote, setPassengerNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [postedDemand, setPostedDemand] = useState(false);
-  const [isPostingDemand, setIsPostingDemand] = useState(false);
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestName, setGuestName] = useState('');
 
   const [bookingCode] = useState(() => `CX-${Math.floor(1000 + Math.random() * 9000)}`);
-
-  // Autocomplete Dropdown State
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    if (pickupPoint.trim().length >= 2) {
-      const results = searchLocations(pickupPoint, 5);
-      setSuggestions(results);
-    } else {
-      setSuggestions([]);
-    }
-  }, [pickupPoint]);
-
-  // Đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Gợi ý điểm đón dọc trục theo chuyến đi cụ thể (Corridor Waypoints + Hotspots)
-  const routeHotspots = useMemo(() => {
-    if (!item) return POPULAR_HOTSPOTS;
-    const fromNote = item.waypointNote ? item.waypointNote.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean) : [];
-    const corridorFrom = getCorridorWaypoints(item.from || '') || [];
-    const corridorTo = getCorridorWaypoints(item.to || '') || [];
-    const suggested = getSuggestedWaypoints(item.from || '', item.to || '') || [];
-    const combined = Array.from(new Set([...fromNote, ...corridorFrom, ...corridorTo, ...suggested, ...POPULAR_HOTSPOTS]));
-    return combined.slice(0, 10);
-  }, [item?.from, item?.to, item?.waypointNote]);
-
-  // Cửa sổ phản hồi động (Dynamic SLA) dựa trên thời gian tới lúc khởi hành
-  const dynamicSlaText = useMemo(() => {
-    if (!item) return 'khoảng 30 – 45 phút';
-    const dateStr = String(item.date || '');
-    const isTomorrow = dateStr && !dateStr.toLowerCase().includes('hôm nay');
-    if (isTomorrow) {
-      return 'khoảng 2 – 3 tiếng (hoặc trước 21:00 tối nay)';
-    }
-    if (item.timeSlot && /gấp|ngay/i.test(item.timeSlot)) {
-      return 'khoảng 15 – 20 phút';
-    }
-    return 'khoảng 30 – 45 phút';
-  }, [item?.date, item?.timeSlot]);
+  const [showLegalShield, setShowLegalShield] = useState(false);
 
   // BẤT BIẾN MIT: Kiểm tra quyền sở hữu bài đăng để ngăn chặn 100% việc tự ghép chuyến cho chính mình
   const isTripOwner = useMemo(() => {
@@ -163,6 +110,7 @@ export default function EscrowBookingModal({
 
   const [bookingMode, setBookingMode] = useState(() => (item?.isCargoOnly || item?.vehicleType === 'truck_light' ? 'cargo' : 'passenger'));
   const [selectedCargoPreset, setSelectedCargoPreset] = useState('produce_box');
+  const cargoPreset = CARGO_TYPES[selectedCargoPreset];
   const [cargoDescription, setCargoDescription] = useState('');
 
   // Giá phụ xăng gửi hàng theo cự ly
@@ -209,15 +157,29 @@ export default function EscrowBookingModal({
 
   const handleSendInquiry = async () => {
     if (isTripOwner) {
-      onShowToast?.('Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.');
+      onShowToast?.('Đây là bài đăng của chính bạn. Bạn không thể tự chốt chuyến với chính mình.');
       onClose();
       return;
     }
     if (submitting) return;
+
+    let effectivePhone = currentUser?.phone;
+    let effectiveName = currentUser?.name;
+
+    // UNIFIED AUTH: Kiểm tra SĐT nếu khách chưa đăng nhập tài khoản từ trước
+    if (!currentUser) {
+      const cleaned = cleanPhoneNumber(guestPhone);
+      if (!isValidVietnamesePhone(cleaned)) {
+        onShowToast?.('Vui lòng nhập số điện thoại hợp lệ (10 số, ví dụ: 0912 345 678) để nhận vé & đón xe.');
+        return;
+      }
+      effectivePhone = cleaned;
+      effectiveName = guestName.trim() || 'Người đi cùng';
+    }
+
     setSubmitting(true);
 
     const isCargoBooking = bookingMode === 'cargo';
-    const cargoPreset = CARGO_TYPES[selectedCargoPreset];
 
     const bookingData = isCargoBooking
       ? {
@@ -242,9 +204,10 @@ export default function EscrowBookingModal({
           proposedPricePerSeat: effectiveCargoTotal,
           originalPricePerSeat: recommendedCargoPrice,
           timeSlot,
-          passengerPhone: currentUser?.phone || undefined,
+          passengerPhone: effectivePhone || undefined,
+          passengerName: effectiveName || 'Người đi cùng',
           driverPhone: item.phoneReal,
-          contactPhone: currentUser?.phone || item.phoneReal,
+          contactPhone: effectivePhone || item.phoneReal,
           status: 'inquiring',
           commitmentType: 'inquiry_chat',
           partyRole: 'Người gửi đồ ➔ Chủ xe',
@@ -267,9 +230,10 @@ export default function EscrowBookingModal({
           proposedPricePerSeat: effectiveUnitPrice !== baseSeatPrice ? effectiveUnitPrice : undefined,
           originalPricePerSeat: baseSeatPrice,
           timeSlot,
-          passengerPhone: currentUser?.phone || undefined,
+          passengerPhone: effectivePhone || undefined,
+          passengerName: effectiveName || 'Người đi cùng',
           driverPhone: item.phoneReal,
-          contactPhone: currentUser?.phone || item.phoneReal,
+          contactPhone: effectivePhone || item.phoneReal,
           status: 'inquiring',
           commitmentType: 'inquiry_chat',
           partyRole: isDriverItem ? 'Người đi cùng Chủ Xe' : 'Chủ xe đón Người đi cùng',
@@ -280,20 +244,36 @@ export default function EscrowBookingModal({
     try {
       const res = await api.createBooking(bookingData);
       if (res?.error || res?.success === false) {
-        throw new Error(res?.error || 'Không thể tạo yêu cầu ghép chuyến');
+        throw new Error(res?.error || 'Không thể chốt chuyến đi');
+      }
+
+      // Lưu phiên đăng nhập tự động cho khách (Unified Auth)
+      if (res?.token && res?.user) {
+        try {
+          setStoredAuthToken(res.token);
+          onAuthSuccess?.(res.user);
+        } catch (authErr) {
+          console.warn('[EscrowBookingModal] Lưu phiên đăng nhập khách cảnh báo:', authErr);
+        }
       }
 
       const createdBooking = res?.data || bookingData;
       onConfirmBooking?.(createdBooking, { keepModalOpen: true });
-      if (onOpenInbox) {
-        onShowToast?.('🚗 Đã tạo kết nối! Đang mở phòng chat thương lượng ẩn danh...');
-        onClose();
-        onOpenInbox(bookingCode);
-      } else {
-        setIsSubmitted(true);
-      }
+      onShowToast?.('✓ Đã giữ chỗ trước thành công! 0đ cọc', 'success');
+      triggerMacNotification({
+        title: '🚗 Đã giữ chỗ trước thành công (0đ cọc)!',
+        message: `Mã vé #${bookingCode}: Vui lòng trao đổi điểm đón qua Chat hoặc Gọi thoại.`,
+        type: 'confirmed',
+        bookingId: bookingCode,
+        partnerName: toPublicAlias(item),
+        actionLabel: 'Xem vé ngay',
+        duration: 6000
+      });
+
+      // Hiển thị ngay thẻ vé điện tử để khách theo dõi mã vé #CX-xxxx
+      setIsSubmitted(true);
     } catch (apiErr) {
-      const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể gửi yêu cầu ghép chuyến';
+      const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể chốt chuyến đi';
       onShowToast?.(errMsg);
       return;
     } finally {
@@ -301,239 +281,245 @@ export default function EscrowBookingModal({
     }
   };
 
-  const handleAutoPostDemand = async () => {
-    if (isPostingDemand || postedDemand) return;
-    setIsPostingDemand(true);
-    try {
-      const isDriver = !isDriverItem;
-      const newPostPayload = isDriver
-        ? {
-            id: `TRIP-DRV-${Date.now()}`,
-            type: 'driver_offer',
-            from: item.from,
-            to: item.to,
-            waypointNote: item.waypointNote || '',
-            date: item.date || 'Hôm nay',
-            timeSlot: item.timeSlot || '07:00-09:00',
-            availableSeats: 3,
-            basePricePerSeat: pricing.total / seats || 150000,
-            carType: 'Xe ô tô gia đình',
-            note: 'Chủ xe tiện chuyến đón khách cùng lộ trình',
-            publicName: currentUser?.name || 'Chủ xe',
-            phoneReal: currentUser?.phone || '',
-            createdAt: 'Vừa xong'
-          }
-        : {
-            id: `TRIP-REQ-${Date.now()}`,
-            type: 'passenger_request',
-            from: item.from,
-            to: item.to,
-            pickupPoint: pickupPoint.trim() || undefined,
-            date: item.date || 'Hôm nay',
-            timeSlot: item.timeSlot || '07:00-09:00',
-            seatsNeeded: seats,
-            expectedPrice: Math.round(pricing.total / seats),
-            note: passengerNote ? `Ghi chú: ${passengerNote}` : `Cần tìm xe tiện chuyến ${item.from} về ${item.to}`,
-            publicName: currentUser?.name || 'Người đi cùng',
-            phoneReal: currentUser?.phone || '',
-            createdAt: 'Vừa xong'
-          };
-
-      await onAutoPostDemand?.(newPostPayload);
-      setPostedDemand(true);
-      onShowToast?.(
-        isDriver
-          ? '🎉 Đã đưa chuyến xe trống lên Sàn! Các hành khách khác sẽ liên hệ bạn.'
-          : '🎉 Đã đưa nhu cầu tìm xe lên Sàn! Các chủ xe khác cùng tuyến sẽ thấy để đón bạn.'
-      );
-    } catch (err) {
-      console.warn('[AutoPost] Lỗi tự động đăng:', err);
-    } finally {
-      setIsPostingDemand(false);
-    }
-  };
-
   // -------------------------------------------------------------
-  // TRẠNG THÁI 2: ĐÃ GỬI LỜI NHẮN (THẺ TIẾP NHẬN YÊU CẦU & DYNAMIC SLA)
+  // TRẠNG THÁI 2: ĐÃ XÁC NHẬN KẾT NỐI (THẺ VÉ ĐIỆN TỬ & CHAT TRỰC TIẾP)
   // -------------------------------------------------------------
   if (isSubmitted) {
+    const partnerAlias = toPublicAlias(item);
+    const partnerRoleTitle = isDriverItem ? 'Chủ xe' : 'Khách đi cùng';
+    const carDisplay = getCarDisplay(item.carType, item.capacity, item.vehicleType);
+    const colorStr = item.carColor || item.color || '';
+    const plateDisplay = item.plateMask || item.licensePlate || '93A-385XX';
+    const rawDate = item.targetItem?.date || item.date || item.tripDate || item.createdAt;
+
+    // Khung giờ & thời điểm
+    const isToday = !rawDate || /hôm\s*nay/i.test(String(rawDate));
+    const isTomorrow = /ngày\s*mai|mai/i.test(String(rawDate));
+    const dateText = isToday ? 'hôm nay' : isTomorrow ? 'sáng mai' : formatCleanDateLabel(rawDate);
+    const timeDisplay = `${item.timeSlotLabel || item.timeSlot || '05:00 – 06:00'} ${dateText}`;
+
+    // Chi tiết xe
+    const vehicleDetails = isDriverItem
+      ? `${carDisplay}${colorStr ? ` ${colorStr.toLowerCase()}` : ''} (${partnerAlias}) - Biển số ${plateDisplay}`
+      : `Chuyến đón khách (${partnerAlias}) · ${seats} người đi cùng`;
+
+    // Hành lý
+    const luggageDisplay = passengerNote
+      ? passengerNote
+      : bookingMode === 'cargo'
+      ? `Gói gửi đồ: ${cargoPreset?.name || 'Hàng tiện chuyến'}`
+      : '1 Ba lô gọn nhẹ';
+
+    // Lộ trình
+    const routeFrom = pickupPoint || item.from;
+    const routeTo = item.to;
+
     return (
       <Modal
         onClose={onClose}
         size="md"
         icon={CheckCircle2}
         iconTone="success"
-        title={isDriverItem ? 'Đã gửi lời nhắn ghép chuyến!' : 'Đã gửi đề xuất đón khách!'}
-        subtitle={`Đã chuyển tới ${toPublicAlias(item)} · Thông báo tức thì qua App & Telegram`}
+        title={t('escrow2.s041')}
+        subtitle={`Mã vé điện tử #${bookingCode} · Giữ chỗ chắc chắn 0đ cọc`}
         footer={
           <div className="w-full space-y-2">
             <button
               type="button"
               onClick={() => {
                 onClose();
-                onOpenInbox?.(bookingCode);
+                onViewBookedTab?.('booked');
               }}
-              className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-600 via-indigo-600 to-primary-600 hover:from-blue-700 hover:to-primary-700 active:scale-[0.99] text-white shadow-md shadow-blue-500/25 cursor-pointer transition-all flex items-center justify-center gap-2"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Mở Khung Chat & Giữ Chỗ 15 Phút</span>
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full py-2.5 px-4 rounded-2xl font-semibold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 px-4 rounded-2xl font-semibold text-xs text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>Để sau & Tiếp tục tìm chuyến</span>
+              <span>{t('escrow2.s001')}</span>
             </button>
-            <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
-              💡 Bạn có thể trao đổi trực tiếp với {toPublicAlias(item)} trong khung chat để nhận diện đồng thuận điểm đón và giữ chỗ 15 phút.
-            </p>
           </div>
         }
       >
         <div className="space-y-4">
-          {/* Apple Live Activity Stepper — Tiến trình sống động */}
-          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/60 border border-black/[0.04] dark:border-white/[0.05]">
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="flex flex-col items-center gap-1">
-                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                  ✓
-                </span>
-                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Đã gửi tin</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold animate-pulse shadow-xs">
-                  ⚡
-                </span>
-                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Đã rung chuông</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-xs font-bold">
-                  ⏳
-                </span>
-                <span className="text-[11px] font-medium text-slate-500">Chờ phản hồi</span>
-              </div>
-            </div>
-          </div>
+          {/* 📋 1. THẺ CHI TIẾT CHUYẾN ĐI (Như một vé điện tử) */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-white via-slate-50/90 to-slate-100/90 dark:from-slate-850 dark:via-slate-900 dark:to-slate-950 border border-black/[0.08] dark:border-white/[0.1] shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+            {/* Header của vé */}
+            <div className="p-4 sm:p-5 border-b border-dashed border-black/10 dark:border-white/10 relative">
+              {/* Rãnh khuyết vé điện tử (Ticket notches) phong cách Apple Wallet */}
+              <span className="absolute -bottom-3 -left-3 w-6 h-6 rounded-full bg-[#f2f2f7] dark:bg-[#1c1c1e] border-r border-black/[0.08] dark:border-white/[0.1]" />
+              <span className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-[#f2f2f7] dark:bg-[#1c1c1e] border-l border-black/[0.08] dark:border-white/[0.1]" />
 
-          {/* Card tóm tắt yêu cầu vừa gửi */}
-          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs text-emerald-800 dark:text-emerald-300 font-bold uppercase tracking-wider">
-                  Yêu cầu kết nối #{bookingCode}
-                </p>
-                <p className="font-bold text-slate-900 dark:text-white text-base mt-0.5">
-                  {toPublicAlias(item)}
-                </p>
-              </div>
-              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 text-xs font-bold tabular">
-                {timeSlot}
-              </span>
-            </div>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center font-bold text-xs">
+                    📋
+                  </span>
+                  <div>
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider">
+                      {t('escrow2.s002')}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                      Vé điện tử CarMate #{bookingCode}
+                    </p>
+                  </div>
+                </div>
 
-            <RouteTimeline from={item.from} to={item.to} compact />
-
-            <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/40 grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-slate-500 dark:text-slate-400">Điểm đón đề xuất:</span>
-                <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                  {pickupPoint || 'Thỏa thuận tiện đường'}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-500 dark:text-slate-400">Chi phí dự kiến ({seats} người):</span>
-                <p className="font-bold text-emerald-700 dark:text-emerald-400 tabular">
-                  {formatVND(pricing.total)}
-                </p>
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 inline-flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{t('escrow2.s003')}</span>
+                </span>
               </div>
             </div>
 
-            {passengerNote && (
-              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-emerald-200/60 text-xs text-slate-700 dark:text-slate-300">
-                <span className="font-semibold text-slate-900 dark:text-white">Lời nhắn gửi kèm: </span>
-                {passengerNote}
-              </div>
-            )}
-          </div>
-
-          {/* Trigger Siêu Tốc 1-Chạm (Two-Sided Matching Liquidity) */}
-          <div className="p-4 rounded-3xl bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-white dark:from-blue-950/40 dark:via-indigo-950/20 dark:to-slate-900 border border-blue-200/80 dark:border-blue-800/60 shadow-xs space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
-                <Zap className="w-5 h-5 fill-current text-amber-300" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    {isDriverItem ? 'Tăng 95% cơ hội có xe: Đăng tìm xe' : 'Tăng lấp đầy xe: Đăng chuyến trống'}
-                  </h4>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300/40">
-                    Khuyên dùng
+            {/* Nội dung chi tiết các dòng thông tin (Bullet items) */}
+            <div className="p-4 sm:p-5 space-y-3.5 text-xs sm:text-[13px] leading-relaxed">
+              {/* • Lộ trình */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{t('escrow2.s004')} </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {routeFrom} ➔ {routeTo}
                   </span>
                 </div>
-                <p className="text-[11.5px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                  {isDriverItem
-                    ? `Tại sao chỉ đợi 1 xe? Đưa luôn nhu cầu đi ${item.from} ➔ ${item.to} lên Sàn để các chủ xe khác cùng tuyến cũng thấy và chủ động liên hệ đón bạn!`
-                    : `Bạn còn ghế trống? Đưa chuyến ${item.from} ➔ ${item.to} lên Sàn để các người tìm xe khác tiện đường đặt chỗ ngay!`}
-                </p>
+              </div>
+
+              {/* • Khung giờ */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{t('escrow2.s005')} </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {timeDisplay}
+                  </span>
+                </div>
+              </div>
+
+              {/* • Xe */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Xe: </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {vehicleDetails}
+                  </span>
+                </div>
+              </div>
+
+              {/* • Chi phí */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{t('escrow2.s006')} </span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 font-display text-sm sm:text-base tabular">
+                    {formatVND(pricing.total)}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-400 font-semibold ml-1">
+                    {t('escrow2.s007')}
+                  </span>
+                </div>
+              </div>
+
+              {/* • Hành lý */}
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
+                  •
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{t('escrow2.s008')} </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {luggageDisplay}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {postedDemand ? (
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Đã đưa lên Bảng tin CarMate! Các đối tác khác cùng tuyến đang thấy bài của bạn.</span>
-              </div>
-            ) : (
+            {/* 🛡️ NÚT THẺ PHÁP LÝ HÀNH TRÌNH DÂN SỰ (1-CHẠM TRÌNH CSGT) */}
+            <div className="px-4 sm:px-5 pb-4 pt-1">
               <button
                 type="button"
-                disabled={isPostingDemand}
-                onClick={handleAutoPostDemand}
-                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#0071e3] to-[#0055d4] hover:from-[#0077ed] hover:to-[#004bbd] active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75"
+                onClick={() => setShowLegalShield(true)}
+                className="w-full py-2.5 px-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
               >
-                {isPostingDemand ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang đưa bài lên Sàn...</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 fill-current text-amber-300" />
-                    <span>
-                      {isDriverItem
-                        ? 'Đăng nhu cầu tìm xe lên Bảng tin'
-                        : 'Đăng chuyến xe trống lên Bảng tin'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+                <Scale className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>{t('escrow2.s009')}</span>
               </button>
-            )}
+            </div>
           </div>
 
-          {/* Hộp thoại SLA phản hồi động & Closed-loop Alert */}
-          <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 text-amber-900 dark:text-amber-200 space-y-1.5">
-            <div className="flex items-center justify-between gap-2 font-bold text-xs flex-wrap">
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
-                <span>Thời gian phản hồi dự kiến: {dynamicSlaText}</span>
+          {/* 💬 2. LIÊN HỆ TRỰC TIẾP TRONG APP (0Đ CƯỚC · BẢO MẬT SĐT) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-1.5 px-1">
+              <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <span>{t('escrow2.s010')}</span>
               </span>
-              <span className="text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/60 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <Bell className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                Báo qua Telegram/App
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                {t('escrow2.s011')}
               </span>
             </div>
-            <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
-              Khi chủ xe bấm Xác nhận hoặc có tin nhắn mới, CarMate sẽ báo ngay về Telegram/App của bạn. Bạn yên tâm tắt ứng dụng để làm việc khác mà không lo lỡ chuyến!
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Nút 1: Nhắn tin trong App */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenInbox?.(bookingCode);
+                }}
+                className="w-full min-h-[50px] py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white shadow-md shadow-blue-500/20 cursor-pointer transition-all flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4 fill-current shrink-0" />
+                <span>Nhắn tin với {partnerRoleTitle}</span>
+              </button>
+
+              {/* Nút 2: Gọi thoại qua App */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenInbox?.(bookingCode, { autoCall: true });
+                }}
+                className="w-full min-h-[50px] py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white shadow-md shadow-emerald-600/20 cursor-pointer transition-all flex items-center justify-center gap-2"
+              >
+                <PhoneCall className="w-4 h-4 shrink-0" />
+                <span>Gọi cho {partnerRoleTitle} (0đ)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 🔒 BẢO MẬT & NGUYÊN TẮC DỨT KHOÁT */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 space-y-1.5 text-xs text-amber-950 dark:text-amber-200">
+            <div className="flex items-start gap-2">
+              <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="font-bold">
+                {t('escrow2.s012')}
+              </p>
+            </div>
+            <p className="text-[11.5px] text-slate-600 dark:text-slate-400 pl-6 leading-relaxed">
+              {t('escrow2.s013')} <strong>{t('escrow2.s014')}</strong> {t('escrow2.s015')}
             </p>
           </div>
 
-          <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span>Chỉ khi 2 bên cùng bấm Xác nhận, chuyến đi mới chính thức chốt ghế.</span>
-          </p>
+          {showLegalShield && (
+            <LegalShieldModal
+              isOpen={showLegalShield}
+              onClose={() => setShowLegalShield(false)}
+              trip={item}
+              ticket={{
+                code: bookingCode,
+                passengerName: guestName || currentUser?.name || 'Người đi cùng',
+                fuelSurcharge: pricing.total,
+                pickupPoint: pickupPoint || item.from
+              }}
+              userRole="rider"
+            />
+          )}
         </div>
       </Modal>
     );
@@ -554,7 +540,7 @@ export default function EscrowBookingModal({
         className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-base py-3.5 cursor-pointer transition-all duration-150 active:scale-[0.99]"
       >
         <SlidersHorizontal className="w-4 h-4 mr-2" />
-        <span>Quản lý bài đăng của bạn</span>
+        <span>{t('escrow2.s016')}</span>
       </Button>
     </div>
   ) : (
@@ -570,17 +556,17 @@ export default function EscrowBookingModal({
           {submitting ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Đang gửi yêu cầu...</span>
+              <span>{t('escrow2.s017')}</span>
             </>
           ) : (
             <>
               <Zap className="w-5 h-5 text-amber-300 animate-pulse fill-amber-300" />
               <span>
                 {bookingMode === 'cargo'
-                  ? 'Gửi yêu cầu chuyển đồ ngay'
+                  ? '⚡ Chốt Chuyển Đồ & Vào Chat (0đ cọc)'
                   : isDriverItem
-                  ? 'Gửi yêu cầu ghép ngay'
-                  : 'Gửi đề xuất đón ngay'}
+                  ? '⚡ Giữ Chỗ Trước (0đ cọc) ➔'
+                  : '⚡ Chốt Đón & Vào Chat Ngay (0đ cọc)'}
               </span>
             </>
           )}
@@ -588,7 +574,7 @@ export default function EscrowBookingModal({
       </Button>
       <p className="text-center text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5 pt-0.5">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-        <span>0đ cọc</span>
+        <span>{t('escrow2.s018')}</span>
       </p>
     </div>
   );
@@ -599,8 +585,8 @@ export default function EscrowBookingModal({
       size="md"
       icon={MessageSquare}
       iconTone="primary"
-      title={isTripOwner ? 'Bài đăng chuyến đi của bạn' : (isDriverItem ? 'Hỏi ghép chuyến cùng Chủ xe' : 'Đề xuất đón Người tìm xe')}
-      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : '0% phí sàn · Trao đổi điểm đón & hành lý trước khi chốt'}
+      title={isTripOwner ? 'Quản lý chuyến đi của bạn' : (isDriverItem ? 'Giữ Chỗ Trước Cùng Chủ Xe (0đ cọc)' : 'Chốt Đón Người Đi Cùng')}
+      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : 'Giữ chỗ chắc chắn 0đ cọc · Nhận mã vé điện tử · Lên xe mới gửi tiền xăng'}
       footer={footer}
     >
       <div className="space-y-4">
@@ -608,7 +594,7 @@ export default function EscrowBookingModal({
         {isTripOwner && (
           <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Đây là bài đăng của chính bạn. Bạn không thể gửi yêu cầu ghép cho chính mình.</span>
+            <span>{t('escrow2.s019')}</span>
           </div>
         )}
 
@@ -625,7 +611,7 @@ export default function EscrowBookingModal({
                     onClick={() => onViewTrustProfile(item)}
                     className="text-xs text-primary-600 font-semibold hover:underline cursor-pointer"
                   >
-                    · Xem hồ sơ tín nhiệm
+                    {t('escrow2.s020')}
                   </button>
                 )}
               </div>
@@ -636,6 +622,54 @@ export default function EscrowBookingModal({
           </div>
           <RouteTimeline from={item.from} to={item.to} compact />
         </div>
+
+        {/* Nhập SĐT để giữ chỗ (Zero Registration / Unified Auth cho khách vãng lai) */}
+        {!currentUser && !isTripOwner && (
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-200/80 dark:border-blue-900/40 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-[#0071e3]" />
+                {t('escrow2.s021')}
+              </span>
+              <span className="text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                {t('escrow2.s022')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  {t('escrow2.s023')} <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="0912 345 678"
+                  className="w-full text-xs font-mono font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  {t('escrow2.s024')}
+                </label>
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder={t('escrow2.s042')}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
+                />
+              </div>
+            </div>
+
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-normal flex items-start gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{t('escrow2.s025')}</span>
+            </p>
+          </div>
+        )}
 
         {/* Lựa chọn Ghép Ghế vs Gửi Đồ (Nếu xe nhận chở đồ hoặc xe bán tải) */}
         {acceptsCargo && isDriverItem && !item.isCargoOnly && !isTripOwner && (
@@ -650,7 +684,7 @@ export default function EscrowBookingModal({
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>Đặt ghế đi cùng</span>
+              <span>{t('escrow2.s026')}</span>
             </button>
             <button
               type="button"
@@ -662,7 +696,7 @@ export default function EscrowBookingModal({
               }`}
             >
               <Package className="w-3.5 h-3.5" />
-              <span>📦 Gửi đồ tiện chuyến</span>
+              <span>{t('escrow2.s027')}</span>
             </button>
           </div>
         )}
@@ -673,7 +707,7 @@ export default function EscrowBookingModal({
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 inline-flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5 text-amber-600" />
-                Chọn loại đồ cần gửi:
+                {t('escrow2.s028')}
               </span>
               <span className="text-[11px] font-mono font-bold text-amber-700 dark:text-amber-300">
                 {formatVND(effectiveCargoTotal)}/kiện
@@ -717,7 +751,7 @@ export default function EscrowBookingModal({
             <div className="pt-1 space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                  Chi tiết đồ gửi (nông sản, bao bì, kích thước):
+                  {t('escrow2.s029')}
                 </label>
                 {cargoDescription && (
                   <button
@@ -725,7 +759,7 @@ export default function EscrowBookingModal({
                     onClick={() => setCargoDescription('')}
                     className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    Xóa
+                    {t('escrow2.s030')}
                   </button>
                 )}
               </div>
@@ -760,7 +794,7 @@ export default function EscrowBookingModal({
                 type="text"
                 value={cargoDescription}
                 onChange={(e) => setCargoDescription(e.target.value)}
-                placeholder="VD: 1 thùng xốp mít sấy 15kg dán kín, gửi về ngã tư Bình Phước..."
+                placeholder={t('escrow2.s043')}
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
@@ -770,7 +804,7 @@ export default function EscrowBookingModal({
             <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200">
               <span className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2">
                 <Users className="w-4 h-4 text-primary-600" />
-                Số người cùng đi:
+                {t('escrow2.s031')}
               </span>
               <div className="inline-flex items-center gap-1.5 p-1 rounded-lg bg-slate-100">
                 {[1, 2, 3, 4]
@@ -780,7 +814,7 @@ export default function EscrowBookingModal({
                       key={n}
                       type="button"
                       onClick={() => setSeats(n)}
-                      className={`w-8 h-8 rounded-md text-sm font-bold tabular cursor-pointer transition-all ${
+                      className={`w-9 h-9 rounded-md text-sm font-bold tabular cursor-pointer transition-all ${
                         seats === n
                           ? 'bg-white text-primary-700 shadow-xs font-black'
                           : 'text-slate-600 hover:text-slate-900'
@@ -794,86 +828,14 @@ export default function EscrowBookingModal({
           )
         )}
 
-        {/* Điểm đón mong muốn cụ thể với Hotspots & Dropdown Autocomplete */}
-        <div ref={dropdownRef} className="relative p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-              Điểm hẹn đón mong muốn:
-            </label>
-            {pickupPoint && (
-              <button
-                type="button"
-                onClick={() => setPickupPoint('')}
-                className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                Xóa
-              </button>
-            )}
-          </div>
-
-          <div className="relative">
-            <input
-              type="text"
-              value={pickupPoint}
-              onChange={(e) => {
-                setPickupPoint(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              placeholder="VD: Cổng KCN VSIP 1, Cây xăng Petrolimex..."
-              className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            />
-
-            {/* Dropdown gợi ý */}
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden py-1 max-h-48 overflow-y-auto anim-fade-in">
-                {suggestions.map((s, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setPickupPoint(s.name);
-                      setShowSuggestions(false);
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
-                  >
-                    <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                      <MapPin className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-slate-800 truncate">{s.name}</p>
-                      <p className="text-[11px] text-slate-400 truncate">{s.detail}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Gợi ý điểm đón nhanh 1 chạm theo lộ trình (Hotspot Chips) */}
-          <div className="space-y-1 pt-1">
-            <p className="text-[11px] text-slate-500 font-medium">Gợi ý điểm đón thuận tiện dọc tuyến:</p>
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              {routeHotspots.map((spot) => (
-                <button
-                  key={spot}
-                  type="button"
-                  onClick={() => {
-                    setPickupPoint(pickupPoint === spot ? '' : spot);
-                    setShowSuggestions(false);
-                  }}
-                  className={`shrink-0 text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
-                    pickupPoint === spot
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold shadow-2xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100/60'
-                  }`}
-                >
-                  {pickupPoint === spot && <Check className="w-3 h-3 inline mr-1 text-emerald-600 stroke-[3]" />}
-                  {spot}
-                </button>
-              ))}
-            </div>
+        {/* Điểm đón tiện đường: Thống nhất trực tiếp qua Chat */}
+        <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-800/40 flex items-start gap-2.5">
+          <MessageSquare className="w-4 h-4 text-[#0071e3] shrink-0 mt-0.5" />
+          <div className="text-xs text-blue-950 dark:text-blue-200 leading-relaxed">
+            <p className="font-bold">{t('escrow2.s032')}</p>
+            <p className="text-blue-700 dark:text-blue-300 text-[11px] mt-0.5 font-normal">
+              {t('escrow2.s033')}
+            </p>
           </div>
         </div>
 
@@ -890,7 +852,7 @@ export default function EscrowBookingModal({
                 onClick={() => setPassengerNote('')}
                 className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                Xóa
+                {t('escrow2.s030')}
               </button>
             )}
           </div>
@@ -940,7 +902,7 @@ export default function EscrowBookingModal({
             rows={2}
             value={passengerNote}
             onChange={(e) => setPassengerNote(e.target.value)}
-            placeholder="VD: Em có 1 vali nhỏ size 20, đứng chờ trước cây xăng Petrolimex..."
+            placeholder={t('escrow2.s044')}
             className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
           />
         </div>
@@ -950,7 +912,7 @@ export default function EscrowBookingModal({
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
-                <span>Mức phụ xăng:</span>
+                <span>{t('escrow2.s034')}</span>
                 <span className="text-[11.5px] font-mono font-bold text-emerald-700 dark:text-emerald-400">
                   {formatVND(effectiveUnitPrice)}/ghế
                 </span>
@@ -967,7 +929,7 @@ export default function EscrowBookingModal({
             {showNegotiate ? (
               <div className="space-y-2 pt-1">
                 <p className="text-[11px] text-slate-500">
-                  Chọn mức chia sẻ phù hợp (giới hạn tối đa 20% so với giá đề xuất):
+                  {t('escrow2.s035')}
                 </p>
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                   {[
@@ -1001,7 +963,7 @@ export default function EscrowBookingModal({
                   })}
                 </div>
                 <p className="text-[10.5px] text-slate-400 leading-tight">
-                  * Mức đề xuất hợp lý giúp Chủ xe dễ dàng đồng thuận đón bạn hơn.
+                  {t('escrow2.s036')}
                 </p>
               </div>
             ) : (
@@ -1026,18 +988,18 @@ export default function EscrowBookingModal({
                   Phụ phí gửi đồ ({CARGO_TYPES[selectedCargoPreset]?.shortLabel || 'Hàng tiện chuyến'})
                 </span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-300/60">
-                  0% phí sàn
+                  {t('escrow2.s037')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Giao nhận dọc trục đường thuận tiện · Thanh toán khi giao nhận hàng
+                {t('escrow2.s038')}
               </p>
             </div>
             <div className="text-right">
               <p className="font-display font-black text-xl text-amber-700 dark:text-amber-400 tabular leading-none">
                 {formatVND(effectiveCargoTotal)}
               </p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">{t('escrow2.s039')}</p>
             </div>
           </div>
         ) : (
@@ -1046,14 +1008,14 @@ export default function EscrowBookingModal({
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-slate-900">Chi phí chia sẻ ({seats} người)</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                  0% phí sàn
+                  {t('escrow2.s037')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 {effectiveUnitPrice !== baseSeatPrice ? (
                   <span>Đề xuất: {formatVND(effectiveUnitPrice)}/ghế (Giá gốc {formatVND(baseSeatPrice)})</span>
                 ) : (
-                  <span>Trọn gói xăng & cầu đường · Thanh toán khi lên xe</span>
+                  <span>{t('escrow2.s040')}</span>
                 )}
               </p>
             </div>
@@ -1061,7 +1023,7 @@ export default function EscrowBookingModal({
               <p className="font-display font-black text-xl text-primary-700 tabular leading-none">
                 {formatVND(effectiveTotal)}
               </p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">{t('escrow2.s039')}</p>
             </div>
           </div>
         )}

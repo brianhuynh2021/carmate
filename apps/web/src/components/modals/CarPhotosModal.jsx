@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, ShieldCheck, Camera, Check, Car, Package } from 'lucide-react';
 import { maskLicensePlate, normalizePhotoUrl } from '@carmate/shared';
 import Button from '../ui/Button.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function CarPhotosModal({ trip, isOpen, onClose }) {
+  const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [failedImages, setFailedImages] = useState({});
@@ -83,8 +85,8 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
-            title="Đóng (Esc)"
+            className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title={t('carPhotos.s010')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -111,7 +113,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                     {currentPhoto.label || `Góc ${activeIndex + 1}`}
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    (Ảnh tạm thời chưa sẵn sàng)
+                    {t('carPhotos.s001')}
                   </p>
                 </div>
               )}
@@ -120,7 +122,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
               <div className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center gap-2 shadow-lg">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span className="text-[11.5px] font-mono font-bold tracking-wide">Biển số: {plateMask}</span>
-                <span className="text-[10px] text-emerald-300 font-normal hidden xs:inline">(Bảo mật quyền riêng tư)</span>
+                <span className="text-[10px] text-emerald-300 font-normal hidden xs:inline">{t('carPhotos.s002')}</span>
               </div>
 
               {/* Angle Tag Badge */}
@@ -138,7 +140,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                     type="button"
                     onClick={handlePrev}
                     className="absolute left-3 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm border border-white/20 opacity-90 transition-all cursor-pointer hover:scale-105"
-                    title="Ảnh trước"
+                    title={t('carPhotos.s011')}
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
@@ -146,7 +148,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                     type="button"
                     onClick={handleNext}
                     className="absolute right-3 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm border border-white/20 opacity-90 transition-all cursor-pointer hover:scale-105"
-                    title="Ảnh tiếp"
+                    title={t('carPhotos.s012')}
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
@@ -207,7 +209,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
             <div className="space-y-1 max-w-md">
               <h4 className="text-base font-bold text-white">{cleanCarName}</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Chủ xe chưa tải thêm hình ảnh chụp thực tế. Xe được cam kết đúng dòng xe, kiểm định an toàn và điều hòa hoạt động tốt.
+                {t('carPhotos.s003')}
               </p>
             </div>
           </div>
@@ -216,17 +218,17 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
         {/* ── 3. SPECS BAR: CÁC THÔNG SỐ XE MINH BẠCH ── */}
         <div className="grid grid-cols-3 gap-2 px-5 py-3 border-t border-white/5 bg-white/[0.01]">
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">
-            <span className="text-[10.5px] text-slate-400 font-medium">Dòng xe</span>
+            <span className="text-[10.5px] text-slate-400 font-medium">{t('carPhotos.s004')}</span>
             <span className="text-xs font-bold text-white truncate max-w-full mt-0.5">{cleanCarName}</span>
           </div>
 
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">
-            <span className="text-[10.5px] text-slate-400 font-medium">Sức chứa</span>
+            <span className="text-[10.5px] text-slate-400 font-medium">{t('carPhotos.s005')}</span>
             <span className="text-xs font-bold text-white mt-0.5">{effectiveCapacity} chỗ</span>
           </div>
 
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">
-            <span className="text-[10.5px] text-slate-400 font-medium">Biển kiểm soát</span>
+            <span className="text-[10.5px] text-slate-400 font-medium">{t('carPhotos.s006')}</span>
             <span className="text-xs font-mono font-bold text-emerald-400 mt-0.5">{plateMask}</span>
           </div>
         </div>
@@ -235,7 +237,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
         {trip.acceptsParcel && (
           <div className="px-5 py-2 border-t border-white/5 flex items-center gap-2 text-xs text-amber-300/90 bg-amber-500/5">
             <Package className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-            <span>Xe có cốp rộng, nhận gửi hàng hoá & bưu phẩm kèm theo</span>
+            <span>{t('carPhotos.s007')}</span>
           </div>
         )}
 
@@ -243,10 +245,10 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
         <div className="px-5 py-3.5 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 bg-white/[0.02]">
           <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
             <Check className="w-3.5 h-3.5 shrink-0" />
-            <span>Đã đối chiếu thông tin đăng ký phương tiện</span>
+            <span>{t('carPhotos.s008')}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose} className="text-slate-300 hover:text-white cursor-pointer">
-            Đóng
+            {t('carPhotos.s009')}
           </Button>
         </div>
       </div>

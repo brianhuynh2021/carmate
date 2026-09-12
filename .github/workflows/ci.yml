@@ -173,6 +173,18 @@ jobs:
             exit 1
           fi
 
+          echo "Kiểm tra Sàn Giao Dịch Ghế Trống /api/seat-exchange/order-book..."
+          # Sổ lệnh công khai phải đi qua sanitizeOrderForPublic: chỉ được lộ
+          # phoneMasked (090***7666) và bí danh, TUYỆT ĐỐI không lộ số thật,
+          # tên thật hay mã PIN đón khách.
+          ORDER_BOOK=$(curl -s "https://carmate.fly.dev/api/seat-exchange/order-book")
+          for FIELD in '"phone"' '"phoneReal"' '"pinCode"' '"contactName"'; do
+            if printf '%s' "$ORDER_BOOK" | grep -q "$FIELD"; then
+              echo "::error::PII LEAK — /api/seat-exchange/order-book trả về $FIELD trên production!"
+              exit 1
+            fi
+          done
+
           echo "Kiểm tra AI concierge /api/agent/chat..."
           if curl -s -X POST https://carmate.fly.dev/api/agent/chat \
                -H 'Content-Type: application/json' \

@@ -1,10 +1,7 @@
 import {
   saveSupportMessage,
   getSupportMessages,
-  resolveDisputeAndUnban,
-  getUserById,
-  getUserByPhone,
-  getBookingById
+  resolveDisputeAndUnban
 } from '../db/sqliteStore.js';
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
@@ -124,7 +121,7 @@ export async function sendSupportMessageHandler(req, res) {
         req
       }).catch(() => {});
     } else {
-      // Phản hồi hỗ trợ khách hàng thông thường
+      // Phản hồi hỗ trợ thành viên / người đi cùng thông thường
       platformReply = saveSupportMessage({
         bookingId: bookingId || null,
         userId: effectiveUserId || null,

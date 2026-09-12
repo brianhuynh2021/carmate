@@ -15,7 +15,6 @@ import {
   Lock,
   Shield,
   ShieldAlert,
-  PhoneOff,
   User,
   ChevronDown,
   Search,
@@ -23,20 +22,22 @@ import {
   ChevronRight,
   X
 } from 'lucide-react';
-import { formatVND, getZaloChatUrl, getWhatsAppChatUrl, getTelegramChatUrl, cleanPhoneNumber, toPublicAlias, maskPhoneNumber, getUserOnlineStatus, formatCleanDateLabel, parseLocation } from '@carmate/shared';
+import { formatVND, toPublicAlias, getUserOnlineStatus, formatCleanDateLabel, parseLocation, isEmergencyPhoneUnlocked } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 import EmptyState, { SectionHeader } from '../ui/EmptyState.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
-import { ZaloIcon, WhatsAppIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
+import RescueModeBanner from './RescueModeBanner.jsx';
 
 
 
-function TripProgressStepper({ status, delayedMinutes }) {
+function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
+  const { t } = useI18n();
   const isCompleted = status === 'completed';
-  const isCancelled = status === 'cancelled';
+  const isReassigned = status === 'reassigned' || Boolean(hasSilentFailover);
+  const isCancelled = status === 'cancelled' && !isReassigned;
   const isDelayed = status === 'delayed';
 
   const steps = [
@@ -48,9 +49,9 @@ function TripProgressStepper({ status, delayedMinutes }) {
     },
     {
       id: 2,
-      label: isDelayed ? `Trễ +${delayedMinutes || 15}p` : 'Trao đổi',
-      desc: isCancelled ? 'Đã dừng kết nối' : 'Điểm đón & hành lý',
-      state: isCompleted ? 'completed' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active'
+      label: isDelayed ? `Trễ +${delayedMinutes || 15}p` : isReassigned ? 'Xe hỗ trợ' : 'Trao đổi',
+      desc: isReassigned ? 'Đang điều phối tiếp quản' : isCancelled ? 'Đã dừng kết nối' : 'Điểm đón & hành lý',
+      state: isCompleted ? 'completed' : isReassigned ? 'active' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active'
     },
     {
       id: 3,
@@ -72,20 +73,22 @@ function TripProgressStepper({ status, delayedMinutes }) {
         <div className="flex items-center gap-2">
           <span className="text-[12px] font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
-            <span>Tiến trình kết nối an toàn</span>
+            <span>{t('booked2.s001')}</span>
           </span>
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-slate-800 text-[#86868b] border border-black/[0.04]">
-            Quy trình 4 bước
+            {t('booked2.s002')}
           </span>
         </div>
         <span className="text-[11px] font-semibold text-[#86868b] tabular">
           {isCompleted
             ? '4/4 hoàn tất'
-            : isCancelled
-              ? 'Đã dừng'
-              : isDelayed
-                ? 'Bước 2/4 (Báo trễ)'
-                : 'Bước 2/4 đang kết nối'}
+            : isReassigned
+              ? 'Bước 2/4 (Xe hỗ trợ)'
+              : isCancelled
+                ? 'Đã dừng'
+                : isDelayed
+                  ? 'Bước 2/4 (Báo trễ)'
+                  : 'Bước 2/4 đang kết nối'}
         </span>
       </div>
 
@@ -146,13 +149,13 @@ export default function BookedTripList({
   onComplete,
   onFindTrip,
   onReview,
-  onReportMismatch,
-  onReportUnreachablePhone,
   onOpenChat
 }) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
   const [copiedId, setCopiedId] = useState(null);
+  const [copiedPhoneId, setCopiedPhoneId] = useState(null);
+
 
   // Trạng thái Cursor Ambient: Quản lý danh sách thu gọn & mở rộng (Accordion)
   const [expandedIds, setExpandedIds] = useState(() => new Set());
@@ -161,13 +164,23 @@ export default function BookedTripList({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
+  const validBookings = useMemo(() => {
+    return (bookedEscrows || []).filter((b) => {
+      if (!b) return false;
+      const target = b.targetItem || b.targetTrip || {};
+      const from = b.from || b.fromLocation || target.from || target.fromLocation;
+      const to = b.to || b.toLocation || target.to || target.toLocation;
+      return Boolean(from && to);
+    });
+  }, [bookedEscrows]);
+
   const activeBookings = useMemo(
-    () => bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled'),
-    [bookedEscrows]
+    () => validBookings.filter((b) => b.status !== 'completed' && b.status !== 'cancelled'),
+    [validBookings]
   );
   const historyBookings = useMemo(
-    () => bookedEscrows.filter((b) => b.status === 'completed' || b.status === 'cancelled'),
-    [bookedEscrows]
+    () => validBookings.filter((b) => b.status === 'completed' || b.status === 'cancelled'),
+    [validBookings]
   );
 
   const baseList = activeTab === 'active' ? activeBookings : historyBookings;
@@ -229,7 +242,8 @@ export default function BookedTripList({
     const dateFormatted = formatCleanDateLabel(
       record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
     );
-    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: ${record.escrowId}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${record.timeSlot} (${dateFormatted})\n• Đối tác: ${record.contactName} (SĐT: ${record.contactPhone})\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats} ghế · Trọn gói xăng & cầu đường, gửi khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
+    const phoneDisplay = 'Bảo mật (Trao đổi trực tiếp qua app CarMate)';
+    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: ${record.escrowId}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${record.timeSlot} (${dateFormatted})\n• Đối tác: ${record.contactName} (${phoneDisplay})\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats} ghế · Trọn gói xăng & cầu đường, gửi khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -256,7 +270,8 @@ export default function BookedTripList({
     const dateFormatted = formatCleanDateLabel(
       record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
     );
-    const text = `Thong tin chuyen di CarMate ${record.escrowId}: ${record.from} ve ${record.to}, ngay ${dateFormatted}, gio ${record.timeSlot}, doi tac ${record.contactName} (${record.contactPhone}), gia ${formatVND(totalAmount)}. Xem tai carmate.vn`;
+    const phoneDisplay = 'Bảo mật qua CarMate';
+    const text = `Thong tin chuyen di CarMate ${record.escrowId}: ${record.from} ve ${record.to}, ngay ${dateFormatted}, gio ${record.timeSlot}, doi tac ${record.contactName} (${phoneDisplay}), gia ${formatVND(totalAmount)}. Xem tai carmate.vn`;
     window.open(`sms:?body=${encodeURIComponent(text)}`, '_self');
   };
 
@@ -269,7 +284,7 @@ export default function BookedTripList({
         description="Lịch hẹn đi chung xe · Cam kết đồng hành 0đ phí sàn · Trực tiếp kết nối bạn đồng hành"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5 font-medium">
-            0đ Phí sàn · Tự do kết nối
+            {t('booked2.s003')}
           </Badge>
         }
       />
@@ -290,7 +305,7 @@ export default function BookedTripList({
           }`}
         >
           <Clock className={`w-4 h-4 ${activeTab === 'active' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
-          <span>Chuyến đang diễn ra</span>
+          <span>{t('booked2.s004')}</span>
           <span
             className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
               activeTab === 'active'
@@ -316,7 +331,7 @@ export default function BookedTripList({
           }`}
         >
           <History className={`w-4 h-4 ${activeTab === 'history' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
-          <span>Lịch sử chuyến đi</span>
+          <span>{t('booked2.s005')}</span>
           <span
             className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
               activeTab === 'history'
@@ -343,7 +358,7 @@ export default function BookedTripList({
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="Tìm mã chuyến CX, tên đối tác, lộ trình..."
+                placeholder={t('booked2.s051')}
                 className="w-full h-10 pl-9.5 pr-8 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.08] text-xs sm:text-sm text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:outline-hidden focus:ring-2 focus:ring-[#0071e3]/30 transition-all"
               />
               {searchTerm && (
@@ -429,7 +444,7 @@ export default function BookedTripList({
                   onClick={handleExpandAll}
                   className="hover:text-[#0071e3] transition-colors cursor-pointer"
                 >
-                  Mở rộng tất cả
+                  {t('booked2.s006')}
                 </button>
                 <span>·</span>
                 <button
@@ -437,7 +452,7 @@ export default function BookedTripList({
                   onClick={handleCollapseAll}
                   className="hover:text-[#0071e3] transition-colors cursor-pointer"
                 >
-                  Thu gọn tất cả
+                  {t('booked2.s007')}
                 </button>
               </div>
             )}
@@ -456,13 +471,13 @@ export default function BookedTripList({
                 ? 'Tìm chuyến xe cùng tuyến để kết nối bạn đồng hành ngay.'
                 : 'Các chuyến đi bạn đã hoàn thành hoặc huỷ sẽ lưu lại tại đây.'
             }
-            action={<Button onClick={onFindTrip}>Tìm chuyến tiện đường ngay</Button>}
+            action={<Button onClick={onFindTrip}>{t('booked2.s008')}</Button>}
           />
         </div>
       ) : filteredList.length === 0 ? (
         <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.08] space-y-2">
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-            Không tìm thấy chuyến nào phù hợp với bộ lọc
+            {t('booked2.s009')}
           </p>
           <button
             type="button"
@@ -472,25 +487,19 @@ export default function BookedTripList({
             }}
             className="text-xs text-[#0071e3] hover:underline font-semibold cursor-pointer"
           >
-            Xoá bộ lọc và xem tất cả
+            {t('booked2.s010')}
           </button>
         </div>
       ) : (
         <div className="space-y-3">
           {paginatedList.map((record) => {
-            const phone = record.contactPhone;
-            const zaloUrl = getZaloChatUrl(
-              phone,
-              `Xin chào ${record.contactName}, tôi vừa ghép chuyến CarMate [${record.escrowId}] tuyến ${record.from} đi ${record.to}. Mình trao đổi chốt điểm đón nhé!`
-            );
-            const waUrl = getWhatsAppChatUrl(
-              phone,
-              `Xin chào, tôi vừa ghép chuyến CarMate [${record.escrowId}] tuyến ${record.from} đi ${record.to}`
-            );
-            const teleUrl = getTelegramChatUrl(phone);
             const totalCost = record.fullTripAmount || record.totalDeal || 0;
+            const hasSilentFailover =
+              record.status === 'reassigned' ||
+              Boolean(record.salvageInfo?.supportDispatched) ||
+              Boolean(record.supportDispatched);
             const isCompleted = record.status === 'completed';
-            const isCancelled = record.status === 'cancelled';
+            const isCancelled = record.status === 'cancelled' && !hasSilentFailover;
             const isDelayed = record.status === 'delayed';
             const isConfirmed = record.status === 'confirmed' || record.bothConfirmed === true;
             const partnerOnline = getUserOnlineStatus(record.targetItem || record, currentUser?.phone || currentUser?.id);
@@ -502,11 +511,27 @@ export default function BookedTripList({
             const fromParsed = parseLocation(record.from);
             const toParsed = parseLocation(record.to);
 
+            const partnerPhone = record.contactPhone || record.driverPhone || record.passengerPhone || record.phoneReal || '';
+            const isEmergencyUnlocked = isEmergencyPhoneUnlocked({
+              bookingId: record.escrowId || record.id,
+              callerId: currentUser?.phone || currentUser?.id
+            });
+
+            // Chuyến đã xong hoặc đã huỷ thì không còn gì để cứu hộ nữa
+            const needsRescueWatch = !isCompleted && !isCancelled;
+
             return (
               <article
-                key={record.escrowId}
+                key={record.escrowId || record.id}
                 className="surface overflow-hidden rounded-2xl sm:rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.08)] hover:border-[#0071e3]/40 dark:hover:border-sky-400/40 transition-all duration-200"
               >
+                {/* CHẾ ĐỘ CỨU HỘ: tự hiện khi máy chủ bật cờ ở mốc T-20, đặt trên
+                    cùng thẻ chuyến để khách nhìn thấy ngay mà không phải bấm gì. */}
+                {needsRescueWatch && (
+                  <div className="p-3 pb-0">
+                    <RescueModeBanner bookingId={record.escrowId || record.id} />
+                  </div>
+                )}
                 {/* ── 1. KHỐI THU GỌN TINH TẾ (COMPACT SUMMARY ROW) ── */}
                 <div
                   role="button"
@@ -542,11 +567,15 @@ export default function BookedTripList({
                     <div className="flex items-center gap-2 shrink-0">
                       {isCompleted ? (
                         <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          Đã hoàn tất an toàn
+                          {t('booked2.s011')}
+                        </Badge>
+                      ) : hasSilentFailover ? (
+                        <Badge tone="primary" icon={Sparkles} className="h-6.5 px-2.5 text-[11px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                          {t('booked2.s012')}
                         </Badge>
                       ) : isCancelled ? (
                         <Badge tone="danger" icon={XCircle} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          Đã huỷ chuyến
+                          {t('booked2.s013')}
                         </Badge>
                       ) : isDelayed ? (
                         <Badge tone="warning" icon={Timer} className="h-6.5 px-2.5 text-[11px] font-semibold">
@@ -554,12 +583,12 @@ export default function BookedTripList({
                         </Badge>
                       ) : isConfirmed ? (
                         <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          Đã chốt chuyến
+                          {t('booked2.s014')}
                         </Badge>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60">
                           <MessageSquare className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span>Đang trao đổi</span>
+                          <span>{t('booked2.s015')}</span>
                         </span>
                       )}
                     </div>
@@ -609,7 +638,7 @@ export default function BookedTripList({
                       <span>{record.seats} ghế</span>
                       <span className="hidden sm:inline">·</span>
                       <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-medium">
-                        0đ phí sàn
+                        {t('booked2.s016')}
                       </span>
                     </div>
 
@@ -624,7 +653,7 @@ export default function BookedTripList({
                           className="px-3 py-1.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Mở chat</span>
+                          <span>{t('booked2.s017')}</span>
                         </button>
                       )}
 
@@ -654,25 +683,25 @@ export default function BookedTripList({
                 {/* ── 2. KHỐI CHI TIẾT MỞ RỘNG (EXPANDED ACCORDION) ── */}
                 {isExpanded && (
                   <div className="border-t border-black/[0.06] dark:border-white/[0.06] bg-[#fafafa] dark:bg-slate-900/60 p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
-                    {/* Cảnh báo đã báo cáo sai lệch loại xe nếu có */}
-                    {record.vehicleMismatchReport && (
-                      <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-semibold min-w-0">
-                          <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-                          <span className="truncate">
-                            Đã báo cáo: {record.vehicleMismatchReport.mismatchTitle || 'Sai lệch loại xe'}
-                          </span>
+                    {/* THÔNG BÁO ĐIỀU PHỐI XE HỖ TRỢ (SILENT FALLBACK N+1) */}
+                    {hasSilentFailover && (
+                      <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 space-y-2 text-xs">
+                        <div className="flex items-center gap-2 text-sky-700 dark:text-sky-300 font-bold uppercase tracking-wider">
+                          <Sparkles className="w-4 h-4 text-sky-500 shrink-0" />
+                          <span>{t('booked2.s018')}</span>
                         </div>
-                        <span className="shrink-0 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-200/80 dark:bg-rose-900/80 text-rose-900 dark:text-rose-100">
-                          {record.vehicleMismatchReport.status === 'resolved_converted'
-                            ? '✓ Đã chuyển Biển vàng'
-                            : 'Đang xử lý'}
-                        </span>
+                        <p className="text-slate-700 dark:text-slate-200 leading-relaxed font-sans">
+                          {t('booked2.s019')} <strong>{record.salvageInfo?.supportVehicleModel || 'Toyota Vios (Đen)'}</strong> (<strong>{record.salvageInfo?.supportPlate || '61A - 892.41'}</strong>), do <strong>{record.salvageInfo?.supportDriverName || 'Anh Hải (Chủ xe)'}</strong> {t('booked2.s020')} <strong>{record.salvageInfo?.supportPickupTime || '06:25'}</strong>.
+                        </p>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>{t('booked2.s021')}</span>
+                        </div>
                       </div>
                     )}
 
                     {/* Quy trình kết nối an toàn 4 bước */}
-                    <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} />
+                    <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} hasSilentFailover={hasSilentFailover} />
 
                     {/* Lộ Trình & Thời Gian Chi Tiết */}
                     <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.06] dark:border-white/[0.08]">
@@ -697,7 +726,7 @@ export default function BookedTripList({
                               </div>
                               <span
                                 className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
-                                title="Đã xác thực CCCD & GPLX"
+                                title={t('booked2.s052')}
                               >
                                 ✓
                               </span>
@@ -708,126 +737,137 @@ export default function BookedTripList({
                                 <PresenceDot isOnline={partnerOnline.isOnline} showLabel detail={partnerOnline.detail} />
                                 <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 inline-flex items-center gap-1">
                                   <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                                  <span>5.0 Tín nhiệm</span>
+                                  <span>{t('booked2.s022')}</span>
                                 </span>
                               </div>
-                              <p className="text-xs text-[#86868b] mt-0.5">Xác thực danh tính thật · 0 rủi ro</p>
+                              <p className="text-xs text-[#86868b] mt-0.5">{t('booked2.s023')}</p>
                             </div>
                           </div>
 
-                          {/* Trạng thái liên hệ & Số điện thoại (Chỉ mở khi đã chốt) */}
+                          {/* Trạng thái liên hệ: 100% trực tiếp qua App */}
                           <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-black/[0.03] dark:border-white/[0.04]">
                             <p className="text-[11px] font-medium text-[#86868b]">
-                              {record.status === 'confirmed' || record.bothConfirmed
-                                ? 'Số điện thoại đối tác'
-                                : 'Bảo mật thông tin'}
+                              {t('booked2.s024')}
                             </p>
-                            <p className="font-display text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular tracking-tight">
-                              {record.status === 'confirmed' || record.bothConfirmed
-                                ? phone
-                                : maskPhoneNumber(phone || '090***xxxx')}
-                            </p>
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-300/40">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>{t('booked2.s025')}</span>
+                            </span>
                           </div>
                         </div>
 
-                        {/* Khối Hành Động Tự Do & An Toàn */}
-                        <div className="space-y-2.5">
-                          {record.status === 'confirmed' || record.bothConfirmed ? (
-                            <div className="space-y-2.5">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <a
-                                  href={`tel:${cleanPhoneNumber(phone)}`}
-                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs bg-emerald-50 hover:bg-emerald-100/90 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 border border-emerald-200/80 dark:border-emerald-800/60 transition-all inline-flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-                                >
-                                  <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                  <span>Gọi điện ({phone})</span>
-                                </a>
-                                <button
-                                  type="button"
-                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
-                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs bg-[#0071e3] hover:bg-[#0077ed] text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-                                >
-                                  <MessageSquare className="w-4 h-4" />
-                                  <span>Mở Khung Chat Chuyến Đi</span>
-                                </button>
-                              </div>
-
-                              {/* Tùy chọn nền tảng tự do khác */}
-                              <div className="flex items-center justify-between gap-2 pt-1 text-xs text-[#86868b] flex-wrap">
-                                <span className="text-[11.5px] opacity-75">Tự do liên hệ kênh khác:</span>
-                                <div className="flex items-center gap-1.5 text-[11.5px]">
-                                  <a
-                                    href={zaloUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-medium inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    <ZaloIcon className="w-3.5 h-3.5" />
-                                    <span>Zalo</span>
-                                  </a>
-                                  <span className="text-slate-300 dark:text-slate-700">·</span>
-                                  <a
-                                    href={teleUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-medium inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    <TelegramIcon className="w-3.5 h-3.5" />
-                                    <span>Telegram</span>
-                                  </a>
-                                  <span className="text-slate-300 dark:text-slate-700">·</span>
-                                  <a
-                                    href={waUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-medium inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    <span>WhatsApp</span>
-                                  </a>
+                        {/* Khối Hành Động Tự Do & An Toàn (100% In-App Chat & In-App Call) */}
+                        <div className="space-y-3">
+                          {isConfirmed ? (
+                            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
+                              {isEmergencyUnlocked && partnerPhone ? (
+                                <div className="p-3 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 text-xs space-y-2 animate-in fade-in duration-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200 text-xs">
+                                      <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">!</span>
+                                      <span>{t('booked2.s026')}</span>
+                                    </div>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-semibold">
+                                      {t('booked2.s027')}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between bg-white dark:bg-slate-900/80 p-2.5 rounded-lg border border-amber-500/20">
+                                    <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{partnerPhone}</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <a
+                                        href={`tel:${partnerPhone}`}
+                                        className="py-1 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Phone className="w-3 h-3 fill-current" />
+                                        <span>{t('booked2.s028')}</span>
+                                      </a>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard?.writeText?.(partnerPhone);
+                                          setCopiedPhoneId(record.id);
+                                          setTimeout(() => setCopiedPhoneId(null), 2000);
+                                        }}
+                                        className="py-1 px-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer"
+                                      >
+                                        {copiedPhoneId === record.id ? 'Đã chép' : 'Chép'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
+                                    {t('booked2.s029')}
+                                  </p>
                                 </div>
-                              </div>
+                              ) : null}
 
-                              <div className="mt-1.5 px-3 py-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.04] text-[11px] text-[#86868b] dark:text-slate-400 leading-relaxed flex items-center gap-2">
-                                <span className="shrink-0">💡</span>
-                                <span>
-                                  Đối tác có thể đang lái xe hoặc bận việc. Nếu chưa gọi được ngay, bạn hãy gửi tin nhắn
-                                  Zalo/SMS nhé.
+                              <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
+                                <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                  <span>{t('booked2.s030')}</span>
+                                </span>
+                                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                                  {t('booked2.s031')}
                                 </span>
                               </div>
 
-                              {onReportUnreachablePhone && (
-                                <div className="flex justify-end pt-0.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => onReportUnreachablePhone(record)}
-                                    className="text-[11px] text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
-                                    title="Báo cáo nếu số điện thoại đối tác không liên lạc được hoặc là số ảo"
-                                  >
-                                    <PhoneOff className="w-3.5 h-3.5" />
-                                    <span>Báo số ảo / Không nghe máy</span>
-                                  </button>
-                                </div>
-                              )}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#0071e3] hover:bg-[#0077ed] text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
+                                >
+                                  <MessageSquare className="w-4 h-4 fill-current shrink-0" />
+                                  <span>{t('booked2.s032')}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id, { autoCall: true })}
+                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
+                                >
+                                  <Phone className="w-4 h-4 fill-current shrink-0" />
+                                  <span>{t('booked2.s033')}</span>
+                                </button>
+                              </div>
+
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                                {t('booked2.s034')} <strong>{t('booked2.s035')}</strong> {t('booked2.s036')}
+                              </p>
                             </div>
                           ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-2.5">
                               <div className="p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/80 text-blue-950 dark:text-blue-200 text-xs flex items-center gap-2">
                                 <MessageSquare className="w-4 h-4 text-blue-600 shrink-0" />
                                 <span className="leading-relaxed">
                                   {record.status === 'pre_confirmed'
                                     ? '⚡ Chuyến xe đang được đề xuất chốt. Vui lòng mở khung chat để xác nhận!'
-                                    : '💬 Hai bên đang trao đổi tìm hiểu điểm đón & hành lý. SĐT sẽ tự động hiển thị sau khi 2 bên cùng chốt.'}
+                                    : '💬 Hai bên chủ động nhắn tin hoặc gọi qua App để hẹn điểm đón cụ thể (Bảo mật 100% SĐT).'}
                                 </span>
                               </div>
 
-                              <button
-                                type="button"
-                                onClick={() => onOpenChat?.(record.escrowId || record.id)}
-                                className="w-full h-12 px-4 rounded-2xl font-bold text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
-                              >
-                                <MessageSquare className="w-4 h-4 shrink-0" />
-                                <span>Mở Khung Chat & Chốt Chuyến (Bảo mật 100%)</span>
-                              </button>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                                  className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
+                                >
+                                  <MessageSquare className="w-4 h-4 shrink-0 fill-current" />
+                                  <span>{t('booked2.s037')}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenChat?.(record.escrowId || record.id, { autoCall: true })}
+                                  className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
+                                >
+                                  <Phone className="w-4 h-4 shrink-0 fill-current" />
+                                  <span>{t('booked2.s033')}</span>
+                                </button>
+                              </div>
+
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed">
+                                {t('booked2.s038')} <strong>{t('booked2.s039')}</strong> {t('booked2.s040')}
+                              </p>
                             </div>
                           )}
                         </div>
@@ -837,19 +877,19 @@ export default function BookedTripList({
                     {/* Bảng Chi Phí Xăng Xe Chuẩn Apple Wallet */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
-                        <p className="text-xs text-[#86868b] font-medium">Phí nền tảng CarMate</p>
+                        <p className="text-xs text-[#86868b] font-medium">{t('booked2.s041')}</p>
                         <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular mt-1">
-                          0 ₫ · Miễn phí kết nối
+                          {t('booked2.s042')}
                         </p>
-                        <p className="text-[11px] text-[#86868b] mt-0.5">Không thu phí sàn trung gian</p>
+                        <p className="text-[11px] text-[#86868b] mt-0.5">{t('booked2.s043')}</p>
                       </div>
 
                       <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
-                        <p className="text-xs text-[#86868b] font-medium">Chia sẻ chi phí xăng xe</p>
+                        <p className="text-xs text-[#86868b] font-medium">{t('booked2.s044')}</p>
                         <p className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular mt-1">
                           {formatVND(totalCost)}
                         </p>
-                        <p className="text-[11px] text-[#86868b] mt-0.5">Gửi trực tiếp Chủ xe khi lên xe</p>
+                        <p className="text-[11px] text-[#86868b] mt-0.5">{t('booked2.s045')}</p>
                       </div>
                     </div>
 
@@ -865,12 +905,12 @@ export default function BookedTripList({
                           {copiedId === record.escrowId ? (
                             <>
                               <Check className="w-4 h-4 text-emerald-600" />
-                              <span className="text-emerald-600 dark:text-emerald-400">Đã chép thông tin</span>
+                              <span className="text-emerald-600 dark:text-emerald-400">{t('booked2.s046')}</span>
                             </>
                           ) : (
                             <>
                               <Share2 className="w-4 h-4 text-slate-500" />
-                              <span>Gửi tin người thân</span>
+                              <span>{t('booked2.s047')}</span>
                             </>
                           )}
                         </button>
@@ -879,7 +919,7 @@ export default function BookedTripList({
                           type="button"
                           onClick={() => handleSendSMS(record)}
                           className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 py-1.5 px-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                          title="Soạn tin nhắn SMS gửi người thân"
+                          title={t('booked2.s053')}
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>SMS</span>
@@ -896,7 +936,7 @@ export default function BookedTripList({
                             onClick={() => onDelay(record)}
                             className="flex-1 sm:flex-initial justify-center text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40"
                           >
-                            Báo trễ
+                            {t('booked2.s048')}
                           </Button>
                           <Button
                             variant="ghost"
@@ -907,37 +947,13 @@ export default function BookedTripList({
                           >
                             {isConfirmed ? 'Huỷ chuyến' : 'Dừng trao đổi'}
                           </Button>
-                          {onReportMismatch && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={ShieldAlert}
-                              onClick={() => onReportMismatch(record)}
-                              className="flex-1 sm:flex-initial justify-center text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-medium"
-                              title="Báo cáo vi phạm an toàn, nhồi nhét hoặc sang xe giữa đường"
-                            >
-                              Báo sự cố
-                            </Button>
-                          )}
-                          {onReportUnreachablePhone && (record.status === 'confirmed' || record.bothConfirmed) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={PhoneOff}
-                              onClick={() => onReportUnreachablePhone(record)}
-                              className="w-full sm:w-auto justify-center text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-medium"
-                              title="Báo cáo đối tác dùng số điện thoại ảo hoặc không liên lạc được"
-                            >
-                              Báo số ảo / Không nghe máy
-                            </Button>
-                          )}
                           <button
                             type="button"
                             onClick={() => onComplete(record.escrowId, record)}
                             className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl sm:rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black text-xs font-semibold shadow-2xs transition-all cursor-pointer min-h-[38px] sm:min-h-0"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
-                            <span>Hoàn tất chuyến</span>
+                            <span>{t('booked2.s049')}</span>
                           </button>
                         </div>
                       )}
@@ -950,17 +966,6 @@ export default function BookedTripList({
                                 ? '✓ Chuyến đi đã hoàn tất an toàn'
                                 : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
                             </span>
-                            {onReportMismatch && !record.vehicleMismatchReport && (
-                              <button
-                                type="button"
-                                onClick={() => onReportMismatch(record)}
-                                className="text-[11.5px] text-slate-400 hover:text-rose-600 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer ml-1"
-                                title="Báo cáo nếu xe đón không đúng cam kết"
-                              >
-                                <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
-                                <span>Báo sai xe</span>
-                              </button>
-                            )}
                           </div>
                           {isCompleted && onReview && (
                             <button
@@ -995,7 +1000,7 @@ export default function BookedTripList({
                   className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer inline-flex items-center gap-1 font-medium"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
-                  <span>Trước</span>
+                  <span>{t('booked2.s050')}</span>
                 </button>
 
                 {/* Các nút số trang */}
@@ -1005,7 +1010,7 @@ export default function BookedTripList({
                       key={p}
                       type="button"
                       onClick={() => setCurrentPage(p)}
-                      className={`w-7 h-7 rounded-lg text-xs font-semibold tabular transition-all cursor-pointer ${
+                      className={`w-9 h-9 rounded-lg text-xs font-semibold tabular transition-all cursor-pointer ${
                         currentPage === p
                           ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-2xs'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 text-[#86868b]'

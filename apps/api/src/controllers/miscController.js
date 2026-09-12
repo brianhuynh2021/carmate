@@ -1,4 +1,4 @@
-import { ROUTE_BENCHMARKS, cleanPhoneNumber, computeTrustScore, DEFAULT_TRUST_RULES, toPublicAlias } from '@carmate/shared';
+import { ROUTE_BENCHMARKS, cleanPhoneNumber, computeTrustScore, toPublicAlias } from '@carmate/shared';
 import { getDB, getUserById, getUserByPhone, getAllUsers, getTripsByPhone, getTripById, getTrustRules } from '../db/sqliteStore.js';
 
 /**

@@ -3,6 +3,8 @@ import { Trash2, AlertTriangle, ShieldCheck, Check, Send } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
+import { isAdminUser } from '../../utils/adminGate.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 const REASON_PRESETS = [
   'Đổi số điện thoại / Email khác',
@@ -11,7 +13,8 @@ const REASON_PRESETS = [
   'Lý do cá nhân khác'
 ];
 
-export default function DeleteAccountModal({ currentUser, onClose, onDeleted, onShowToast }) {
+export default function DeleteAccountModal({ currentUser, onClose, onShowToast }) {
+  const { t } = useI18n();
   const [selectedReason, setSelectedReason] = useState(REASON_PRESETS[0]);
   const [note, setNote] = useState('');
   const [confirmed, setConfirmed] = useState(false);
@@ -21,12 +24,11 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
 
   const isAdmin =
     currentUser?.role === 'admin' ||
-    currentUser?.phone?.includes('0984883750') ||
-    currentUser?.phone?.includes('0984 883 750');
+    isAdminUser(currentUser);
 
   const handleSubmitRequest = async () => {
     if (isAdmin) {
-      onShowToast?.('Tài khoản Quản trị viên được bảo vệ bởi luật bất biến MIT, không thể tự xoá hoặc yêu cầu xoá.');
+      onShowToast?.('Tài khoản Quản trị viên được bảo vệ an toàn đặc biệt, không thể tự xoá.');
       return;
     }
     if (!confirmed || isDeleting) return;
@@ -51,8 +53,8 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
       size="md"
       icon={Trash2}
       iconTone="danger"
-      title="Yêu cầu xóa tài khoản"
-      subtitle="Yêu cầu sẽ được gửi tới Quản trị viên CarMate để đối soát chuyến xe và xử lý."
+      title={t('delAccount.s006')}
+      subtitle={t('delAccount.s007')}
       footer={
         <div className="grid grid-cols-2 gap-3 w-full">
           <Button variant="outline" onClick={onClose} disabled={isDeleting}>
@@ -74,10 +76,10 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
           <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-1 text-left">
             <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-300">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>Bảo vệ bất biến MIT: Tài khoản Quản trị viên</span>
+              <span>{t('delAccount.s001')}</span>
             </div>
             <p className="leading-relaxed">
-              Tài khoản này có quyền Quản trị viên tối cao của CarMate. Theo luật bất biến hệ thống MIT, tài khoản Admin
+              Tài khoản này có quyền Quản trị viên tối cao của CarMate. Theo quy chuẩn bảo mật an toàn, tài khoản Admin
               không thể tự xoá vĩnh viễn để tránh làm hệ thống mất chủ quyền vận hành.
             </p>
           </div>
@@ -85,7 +87,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
 
         {/* Hộp thông tin tài khoản hiện tại */}
         <div className="p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/60 border border-black/[0.06] text-xs space-y-1">
-          <p className="text-slate-500 font-medium">Tài khoản chuẩn bị gửi yêu cầu xóa:</p>
+          <p className="text-slate-500 font-medium">{t('delAccount.s002')}</p>
           <p className="font-extrabold text-slate-900 dark:text-white text-sm">
             {currentUser.name}{' '}
             {currentUser.phone ? `(${currentUser.phone})` : currentUser.email ? `(${currentUser.email})` : ''}
@@ -96,7 +98,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
             <ShieldCheck className="w-4 h-4 text-[#0071e3] shrink-0" />
-            <span>Chuẩn mực đối soát an toàn CarMate:</span>
+            <span>{t('delAccount.s003')}</span>
           </div>
           <p>
             Để đảm bảo không có chuyến xe nào đang dang dở, các khoản chia sẻ chi phí hoặc tranh chấp chưa giải quyết,
@@ -107,7 +109,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
         {/* Chọn lý do muốn đóng tài khoản */}
         <div className="space-y-2">
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-            Lý do đóng tài khoản:
+            {t('delAccount.s004')}
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {REASON_PRESETS.map((r) => (
@@ -129,7 +131,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            placeholder="Ghi chú thêm hoặc đóng góp ý kiến (tùy chọn)..."
+            placeholder={t('delAccount.s008')}
             className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.1] text-xs text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] resize-none"
           />
         </div>
@@ -143,7 +145,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onDeleted, on
             className="mt-0.5 rounded text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer"
           />
           <span className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed select-none">
-            Tôi xác nhận muốn gửi yêu cầu hủy và xóa tài khoản CarMate này tới Quản trị viên.
+            {t('delAccount.s005')}
           </span>
         </label>
       </div>

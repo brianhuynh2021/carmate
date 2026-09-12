@@ -25,6 +25,7 @@ import api from '../../api/client.js';
 import { useTranslation } from '../../i18n/index.jsx';
 import { computeTrustScore, DEFAULT_TRUST_RULES } from '@carmate/shared';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
+import { isAdminUser } from '../../utils/adminGate.js';
 
 // Danh sách hãng xe phổ biến tại Việt Nam
 const POPULAR_BRANDS = [
@@ -113,6 +114,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'garage' | 'trust'
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [formError, setFormError] = useState('');
 
   // 1. State Thông tin cá nhân
@@ -343,7 +345,10 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     try {
       await onSave?.(payload);
       onShowToast?.('Đã lưu hồ sơ cá nhân và garage xe thành công!');
-      onClose?.();
+      setIsSaved(true);
+      setTimeout(() => {
+        setIsSaved(false);
+      }, 3000);
     } catch (err) {
       setFormError(err.message || 'Không thể lưu hồ sơ, vui lòng thử lại');
     } finally {
@@ -354,7 +359,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
   return (
     <Modal
       onClose={onClose}
-      title="Hồ sơ & Garage của tôi"
+      title={t('profile2.s060')}
       subtitle={currentUser?.phone ? `Tài khoản: ${currentUser.phone}` : 'Quản lý thông tin & phương tiện'}
       icon={User}
       iconTone="primary"
@@ -366,23 +371,32 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             onClick={onClose}
             className="h-10 px-4 rounded-xl text-xs font-semibold text-[#515154] dark:text-slate-300 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
           >
-            Đóng
+            {t('profile2.s001')}
           </button>
           <button
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="h-10 px-6 rounded-xl text-xs font-semibold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[0_2px_8px_rgba(0,113,227,0.3)] transition-all cursor-pointer inline-flex items-center gap-2 active:scale-[0.98] disabled:opacity-50"
+            className={`h-10 px-6 rounded-xl text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-2 active:scale-[0.98] disabled:opacity-50 ${
+              isSaved
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
+                : 'bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[0_2px_8px_rgba(0,113,227,0.3)]'
+            }`}
           >
             {isSaving ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Đang lưu...</span>
+                <span>{t('profile2.s002')}</span>
+              </>
+            ) : isSaved ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                <span>Đã lưu thành công!</span>
               </>
             ) : (
               <>
                 <Check className="w-3.5 h-3.5" />
-                <span>Lưu thay đổi</span>
+                <span>{t('profile2.s003')}</span>
               </>
             )}
           </button>
@@ -398,49 +412,59 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           </div>
         )}
 
-        {/* Apple Segmented Capsule Tab Control */}
-        <div className="p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800/80 border border-black/[0.05] dark:border-white/[0.06] flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('profile')}
-            className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
-              activeTab === 'profile'
-                ? 'bg-white text-[#1d1d1f] shadow-xs'
-                : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Thông tin cá nhân</span>
-          </button>
+        {/* Thông báo đã lưu thành công tại chỗ */}
+        {isSaved && (
+          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-xs font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-2 transition-all">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>Đã lưu thay đổi hồ sơ thành công! Bạn có thể tiếp tục chỉnh sửa các mục khác hoặc bấm Đóng khi hoàn tất.</span>
+          </div>
+        )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('garage')}
-            className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all relative ${
-              activeTab === 'garage'
-                ? 'bg-white text-[#1d1d1f] shadow-xs'
-                : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
-            }`}
-          >
-            <Car className="w-3.5 h-3.5" />
-            <span>Garage xe của tôi</span>
-            {hasCar && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5" title="Đã có cấu hình xe" />
-            )}
-          </button>
+        {/* Apple Segmented Capsule Tab Control - Ghim cố định khi cuộn */}
+        <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md pb-2 -mt-1 pt-0.5">
+          <div className="p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800/80 border border-black/[0.05] dark:border-white/[0.06] flex items-center gap-1 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
+                activeTab === 'profile'
+                  ? 'bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-xs'
+                  : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>{t('profile2.s004')}</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('trust')}
-            className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
-              activeTab === 'trust'
-                ? 'bg-white text-[#1d1d1f] shadow-xs'
-                : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Tín nhiệm & Giấy tờ</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('garage')}
+              className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all relative ${
+                activeTab === 'garage'
+                  ? 'bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-xs'
+                  : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
+              }`}
+            >
+              <Car className="w-3.5 h-3.5" />
+              <span>{t('profile2.s005')}</span>
+              {hasCar && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5" title={t('profile2.s061')} />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('trust')}
+              className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
+                activeTab === 'trust'
+                  ? 'bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-xs'
+                  : 'text-[#515154] dark:text-slate-300 hover:text-[#1d1d1f]'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>{t('profile2.s006')}</span>
+            </button>
+          </div>
         </div>
 
         {/* TAB 1: THÔNG TIN CÁ NHÂN */}
@@ -451,7 +475,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               <div
                 className="relative group/avatar cursor-pointer shrink-0"
                 onClick={() => avatarInputRef.current?.click()}
-                title="Chạm để đổi ảnh đại diện cá nhân"
+                title={t('profile2.s062')}
               >
                 {avatar ? (
                   <img
@@ -499,7 +523,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     {name || 'Chưa đặt tên hiển thị'}
                   </h4>
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
-                    Đã xác thực
+                    {t('profile2.s007')}
                   </span>
                 </div>
                 <p className="text-xs text-[#86868b] font-mono mt-0.5">
@@ -526,7 +550,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                       }}
                       className="text-[11.5px] text-rose-500 hover:text-rose-600 font-medium cursor-pointer"
                     >
-                      Xóa ảnh
+                      {t('profile2.s008')}
                     </button>
                   )}
                 </div>
@@ -536,20 +560,32 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             {/* Trường 1: Tên hiển thị */}
             <div>
               <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                Họ và tên hiển thị <span className="text-rose-500">*</span>
+                {t('profile2.s009')} <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ví dụ: Nguyễn Văn Hùng"
+                  placeholder={t('profile2.s063')}
                   className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.12] text-xs text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all outline-none"
                 />
               </div>
               <p className="text-[11px] text-[#86868b] mt-1">
-                Tên hiển thị giúp Người đi cùng hoặc Chủ xe nhận diện trên danh sách và xác nhận lịch hẹn.
+                {t('profile2.s010')}
               </p>
+              {name && (name.startsWith('Thành viên USR-') || name.startsWith('USR-')) && (
+                <div className="mt-1.5 flex items-center justify-between gap-2 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 text-[11px] text-amber-800 dark:text-amber-300">
+                  <span>{t('profile2.s011')}</span>
+                  <button
+                    type="button"
+                    onClick={() => setName('')}
+                    className="text-amber-900 dark:text-amber-200 font-bold underline shrink-0 cursor-pointer hover:opacity-80"
+                  >
+                    {t('profile2.s012')}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Trường 1b: Giới tính (Apple Segmented Control) */}
@@ -559,7 +595,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   {t('profile.gender') || 'Giới tính'}
                 </label>
                 <span className="text-[10.5px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-full">
-                  +3đ Tín nhiệm
+                  {t('profile2.s013')}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -595,27 +631,27 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             {/* Trường 1b: Số điện thoại liên hệ */}
             <div>
               <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                Số điện thoại liên hệ <span className="text-[11px] font-normal text-[#86868b]">(Gọi đón xe & Zalo)</span>
+                {t('profile2.s014')} <span className="text-[11px] font-normal text-[#86868b]">{t('profile2.s015')}</span>
               </label>
               <div className="relative">
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Ví dụ: 0984 883 750"
+                  placeholder={t('profile2.s064')}
                   className="w-full h-10 pl-9 pr-3.5 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.12] text-xs text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all outline-none font-mono"
                 />
                 <Phone className="w-4 h-4 text-[#86868b] absolute left-3 top-3 pointer-events-none" />
               </div>
               <p className="text-[11px] text-[#86868b] mt-1">
-                Dùng để Chủ xe và Người đi cùng gọi điện hoặc gửi tin nhắn Zalo chốt điểm hẹn đón.
+                {t('profile2.s016')}
               </p>
             </div>
 
             {/* Trường 2: Email nhận thông báo lịch hẹn */}
             <div>
               <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                Địa chỉ Email <span className="text-[11px] font-normal text-[#86868b]">(Nhận thông báo lịch hẹn)</span>
+                {t('profile2.s017')} <span className="text-[11px] font-normal text-[#86868b]">{t('profile2.s018')}</span>
               </label>
               <div className="relative">
                 <input
@@ -633,14 +669,14 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                  Khu vực thường ở
+                  {t('profile2.s019')}
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={homeAddress}
                     onChange={(e) => setHomeAddress(e.target.value)}
-                    placeholder="VD: Quận 1, TP.HCM"
+                    placeholder={t('profile2.s065')}
                     className="w-full h-10 pl-8 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.12] text-xs text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:border-[#0071e3] outline-none"
                   />
                   <MapPin className="w-3.5 h-3.5 text-[#86868b] absolute left-2.5 top-3.5 pointer-events-none" />
@@ -649,14 +685,14 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
 
               <div>
                 <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                  Khu vực làm việc / Điểm đến
+                  {t('profile2.s020')}
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={workAddress}
                     onChange={(e) => setWorkAddress(e.target.value)}
-                    placeholder="VD: TP. Vũng Tàu"
+                    placeholder={t('profile2.s066')}
                     className="w-full h-10 pl-8 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.12] text-xs text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:border-[#0071e3] outline-none"
                   />
                   <MapPin className="w-3.5 h-3.5 text-[#86868b] absolute left-2.5 top-3.5 pointer-events-none" />
@@ -667,13 +703,13 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             {/* Trường 4: Giới thiệu / Lưu ý */}
             <div>
               <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                Giới thiệu ngắn / Phong cách đi xe
+                {t('profile2.s021')}
               </label>
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={2}
-                placeholder="VD: Đi lại hàng tuần thứ 2 và thứ 6, tính tình vui vẻ, xe gia đình giữ gìn sạch sẽ..."
+                placeholder={t('profile2.s067')}
                 className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-black/[0.1] dark:border-white/[0.12] text-xs text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:border-[#0071e3] outline-none resize-none"
               />
             </div>
@@ -683,9 +719,9 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[#1d1d1f] dark:text-slate-200 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3]" />
-                  <span>Tài khoản định danh liên kết</span>
+                  <span>{t('profile2.s022')}</span>
                 </span>
-                <span className="text-[11px] text-[#86868b]">Tự động hợp nhất 1 tài khoản</span>
+                <span className="text-[11px] text-[#86868b]">{t('profile2.s023')}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -733,7 +769,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
 
               <p className="text-[10.5px] text-[#86868b] leading-relaxed">
-                CarMate tự động đối soát Số điện thoại và Email để hợp nhất tài khoản Google & Telegram làm 1, không tạo 2 tài khoản trùng lặp.
+                {t('profile2.s024')}
               </p>
             </div>
 
@@ -741,16 +777,15 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
               <div className="space-y-0.5">
                 <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Quyền riêng tư & Quản lý tài khoản
+                  {t('profile2.s025')}
                 </p>
                 <p className="text-[10.5px] text-[#86868b]">
-                  Dữ liệu cá nhân được bảo vệ theo Nghị định 13/2023/NĐ-CP
+                  {t('profile2.s026')}
                 </p>
               </div>
 
               {currentUser?.role !== 'admin' &&
-                !currentUser?.phone?.includes('0984883750') &&
-                !currentUser?.phone?.includes('0984 883 750') && (
+                !isAdminUser(currentUser) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -760,7 +795,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-rose-500 hover:bg-rose-50/50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer inline-flex items-center gap-1.5"
                 >
                   <Trash2 className="w-3 h-3" />
-                  <span>Yêu cầu xóa tài khoản...</span>
+                  <span>{t('profile2.s027')}</span>
                 </button>
               )}
             </div>
@@ -777,9 +812,9 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   <Car className="w-4 h-4" />
                 </span>
                 <div>
-                  <p className="text-xs font-bold text-[#1d1d1f] dark:text-white">Tôi là Chủ xe có phương tiện</p>
+                  <p className="text-xs font-bold text-[#1d1d1f] dark:text-white">{t('profile2.s028')}</p>
                   <p className="text-[11px] text-[#86868b]">
-                    Lưu xe vào Garage để tự động điền 100% khi Đăng chuyến chia sẻ
+                    {t('profile2.s029')}
                   </p>
                 </div>
               </div>
@@ -800,7 +835,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                      Hãng xe (Brand)
+                      {t('profile2.s030')}
                     </label>
                     <select
                       value={brand}
@@ -821,7 +856,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
 
                   <div>
                     <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                      Dòng xe / Đời xe (Model)
+                      {t('profile2.s031')}
                     </label>
                     <input
                       type="text"
@@ -837,8 +872,8 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5 flex items-center justify-between">
-                      <span>Biển số xe Việt Nam</span>
-                      <span className="text-[10px] text-[#86868b] font-normal font-mono">Định dạng 51K-892.41</span>
+                      <span>{t('profile2.s032')}</span>
+                      <span className="text-[10px] text-[#86868b] font-normal font-mono">{t('profile2.s033')}</span>
                     </label>
                     <div className="relative">
                       <input
@@ -854,7 +889,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
 
                   <div>
                     <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                      Màu sơn ngoại thất
+                      {t('profile2.s034')}
                     </label>
                     <select
                       value={color}
@@ -873,7 +908,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 {/* Phân loại xe & Bất biến MIT Invariant số ghế */}
                 <div>
                   <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                    Phân loại & Số ghế xe <span className="text-rose-500 font-bold">*</span>
+                    {t('profile2.s035')} <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -889,11 +924,11 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold">Xe 5 chỗ (Sedan/SUV)</span>
+                        <span className="text-xs font-bold">{t('profile2.s036')}</span>
                         {capacity === 5 && <CheckCircle2 className="w-4 h-4 text-[#0071e3]" />}
                       </div>
                       <p className="text-[11px] text-[#86868b]">
-                        Chủ xe + Tối đa <strong className="text-emerald-600 font-mono">4 khách</strong>
+                        {t('profile2.s037')} <strong className="text-emerald-600 font-mono">{t('profile2.s038')}</strong>
                       </p>
                     </button>
 
@@ -910,11 +945,11 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold">Xe 7 chỗ (MPV/SUV)</span>
+                        <span className="text-xs font-bold">{t('profile2.s039')}</span>
                         {capacity === 7 && <CheckCircle2 className="w-4 h-4 text-[#0071e3]" />}
                       </div>
                       <p className="text-[11px] text-[#86868b]">
-                        Chủ xe + Tối đa <strong className="text-emerald-600 font-mono">6 khách</strong>
+                        {t('profile2.s037')} <strong className="text-emerald-600 font-mono">{t('profile2.s040')}</strong>
                       </p>
                     </button>
                   </div>
@@ -923,7 +958,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 {/* Tiện nghi trên xe */}
                 <div>
                   <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 mb-1.5">
-                    Tiện nghi & Quy định trên xe
+                    {t('profile2.s041')}
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {VEHICLE_PERKS.map((perk) => {
@@ -952,19 +987,19 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     <div>
                       <h4 className="text-xs font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
                         <Camera className="w-3.5 h-3.5 text-[#0071e3]" />
-                        <span>Bộ ảnh xe thật chính chủ</span>
+                        <span>{t('profile2.s042')}</span>
                         <span className="text-[10px] font-mono font-bold text-[#0071e3]">
                           ({validPhotosCount}/5 ảnh)
                         </span>
                       </h4>
                       <p className="text-[11px] text-[#86868b]">
-                        Tối thiểu 3 góc ảnh thực tế để đạt huy hiệu <strong>"Xe thật chính chủ"</strong>
+                        {t('profile2.s043')} <strong>{t('profile2.s044')}</strong>
                       </p>
                     </div>
 
                     {isVerifiedCar ? (
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 inline-flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Đạt chuẩn xe thật (+10đ Karma)
+                        <CheckCircle2 className="w-3 h-3" /> {t('profile2.s045')}
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40">
@@ -1001,16 +1036,16 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                                 <button
                                   type="button"
                                   onClick={() => fileInputRefs.current[index]?.click()}
-                                  title="Thay ảnh này"
-                                  className="w-8 h-8 rounded-full bg-white/90 text-slate-800 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-md"
+                                  title={t('profile2.s068')}
+                                  className="w-11 h-11 rounded-full bg-white/90 text-slate-800 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-md"
                                 >
                                   <Upload className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleRemovePhoto(index)}
-                                  title="Xóa ảnh"
-                                  className="w-8 h-8 rounded-full bg-rose-500/90 text-white flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-md"
+                                  title={t('profile2.s008')}
+                                  className="w-11 h-11 rounded-full bg-rose-500/90 text-white flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-md"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1025,7 +1060,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                               onClick={() => fileInputRefs.current[index]?.click()}
                               className="w-full h-full flex flex-col items-center justify-center cursor-pointer p-2"
                             >
-                              <div className="w-8 h-8 rounded-full bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center text-[#86868b] group-hover:text-[#0071e3] group-hover:scale-110 transition-all mb-1">
+                              <div className="w-11 h-11 rounded-full bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center text-[#86868b] group-hover:text-[#0071e3] group-hover:scale-110 transition-all mb-1">
                                 <Camera className="w-4 h-4" />
                               </div>
                               <span className="text-[11px] font-semibold text-[#1d1d1f] dark:text-slate-200">
@@ -1043,9 +1078,9 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             ) : (
               <div className="p-8 text-center rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-dashed border-black/[0.08] dark:border-white/[0.08]">
                 <Car className="w-8 h-8 text-[#86868b] mx-auto mb-2 opacity-50" />
-                <p className="text-xs font-semibold text-[#1d1d1f] dark:text-white">Bạn đang ở vai trò Người đi cùng (Khách ghép chuyến)</p>
+                <p className="text-xs font-semibold text-[#1d1d1f] dark:text-white">{t('profile2.s046')}</p>
                 <p className="text-[11px] text-[#86868b] mt-1 max-w-sm mx-auto">
-                  Nếu bạn sở hữu ô tô và muốn đăng chuyến chia sẻ chi phí xăng dầu, hãy bật công tắc bên trên để cấu hình xe.
+                  {t('profile2.s047')}
                 </p>
               </div>
             )}
@@ -1061,7 +1096,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                      Chỉ số Tín nhiệm Cộng đồng
+                      {t('profile2.s048')}
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -1081,7 +1116,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     <h3 className="text-3xl font-black font-mono text-emerald-700 dark:text-emerald-400">
                       {trustCalc.score}
                     </h3>
-                    <span className="text-sm font-semibold text-emerald-600/70 font-mono">/ 100 điểm</span>
+                    <span className="text-sm font-semibold text-emerald-600/70 font-mono">{t('profile2.s049')}</span>
                     {trustCalc.isCapApplied && (
                       <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full">
                         🔒 Đạt {trustCalc.rawScore}đ (Bị khóa trần {trustCalc.capLimit}đ)
@@ -1107,11 +1142,11 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   />
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                  <span>50đ (Cơ bản)</span>
-                  <span>65đ (Trần ko avatar)</span>
-                  <span>80đ (Tín nhiệm)</span>
-                  <span>90đ (Tinh hoa)</span>
-                  <span>100đ (Tuyệt đối)</span>
+                  <span>{t('profile2.s050')}</span>
+                  <span>{t('profile2.s051')}</span>
+                  <span>{t('profile2.s052')}</span>
+                  <span>{t('profile2.s053')}</span>
+                  <span>{t('profile2.s054')}</span>
                 </div>
               </div>
             </div>
@@ -1136,7 +1171,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs cursor-pointer transition-all mt-1"
                   >
                     <Camera className="w-3.5 h-3.5" />
-                    Cập nhật ảnh đại diện ngay (+5đ & Mở trần 100đ)
+                    {t('profile2.s055')}
                   </button>
                 </div>
               </div>
@@ -1204,7 +1239,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                           }}
                           className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0 cursor-pointer text-center"
                         >
-                          Tải ảnh ngay
+                          {t('profile2.s056')}
                         </button>
                       )}
 
@@ -1214,7 +1249,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                           onClick={() => setActiveTab('garage')}
                           className="px-3 py-1.5 rounded-lg bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold shrink-0 cursor-pointer text-center"
                         >
-                          Vào Garage xe
+                          {t('profile2.s057')}
                         </button>
                       )}
                     </div>
@@ -1243,7 +1278,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             {/* Tôn chỉ văn hóa CarMate */}
             <div className="p-3.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.06] text-[11px] text-[#515154] dark:text-slate-400 space-y-1 leading-relaxed">
               <p>
-                💡 <strong>Tôn chỉ CarMate:</strong> Điểm tín nhiệm được xây dựng dựa trên sự minh bạch thông tin, văn hóa đúng giờ và các chuyến đi an toàn thực tế. Điểm số tuyệt đối 100/100 là phần thưởng danh dự cho những thành viên kỳ cựu mẫu mực của cộng đồng.
+                💡 <strong>{t('profile2.s058')}</strong> {t('profile2.s059')}
               </p>
             </div>
           </div>

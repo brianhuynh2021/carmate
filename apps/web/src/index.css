@@ -114,6 +114,47 @@
     }
   }
 
+  /* ── PHẢN HỒI TƯƠNG TÁC NỀN (BASELINE INTERACTION FEEDBACK) ──
+     Toàn dự án có ~300 <button> viết tay, phần lớn chỉ đổi đúng MỘT thuộc tính
+     khi hover (thường là màu viền) nên gần như không thấy phản hồi gì. Sửa tay
+     từng nút vừa dễ sót vừa dễ hỏng, nên đặt một tầng nền ở đây: mọi nút đều có
+     phản hồi tối thiểu, còn nút nào khai báo hover riêng thì lớp utility của
+     Tailwind vẫn thắng (độ ưu tiên cao hơn) và giữ nguyên thiết kế riêng.
+
+     Chỉ áp dụng cho thiết bị có con trỏ thật — tránh trạng thái hover "dính"
+     trên màn hình cảm ứng sau khi chạm. */
+  @media (hover: hover) and (pointer: fine) {
+    button:not(:disabled):not([aria-disabled='true']):hover,
+    [role='button']:not([aria-disabled='true']):hover {
+      filter: brightness(0.97);
+    }
+  }
+
+  /* Nút bị vô hiệu hoá không được mời bấm */
+  button:disabled,
+  button[aria-disabled='true'],
+  [role='button'][aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  /* Phản hồi chạm trên mobile: thay cho hover mà cảm ứng không có */
+  button:not(:disabled):active,
+  [role='button']:active {
+    transform: scale(0.985);
+  }
+
+  /* Tôn trọng người dùng tắt hiệu ứng chuyển động */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   :focus-visible {
     outline: 2px solid #0071e3;
     outline-offset: 2px;
@@ -146,34 +187,128 @@
     scrollbar-width: none;
   }
 
+  /* ────────────────────────────────────────────────────────────
+     THANG CHỮ APPLE (Apple Type Scale)
+     Đo thực tế trên trang chủ thấy 17 biến thể cỡ/độ đậm khác nhau cho MỘT
+     màn hình — mỗi chỗ tự quyết một kiểu nên mắt không bắt được nhịp phân
+     tầng. Apple dùng thang danh nghĩa (Title / Body / Caption / Footnote),
+     thường 5-6 bậc, và mọi nơi gọi tên bậc chứ không gõ cỡ tuỳ ý.
+
+     Dùng: class="type-title" thay cho "text-lg font-black" v.v.
+     ──────────────────────────────────────────────────────────── */
+  .type-title {
+    font-size: 1.0625rem; /* 17px — cỡ Title iOS */
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.3;
+  }
+  .type-heading {
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 600;
+    letter-spacing: -0.016em;
+    line-height: 1.35;
+  }
+  .type-body {
+    font-size: 0.875rem; /* 14px */
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.45;
+  }
+  .type-caption {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.4;
+  }
+  .type-footnote {
+    font-size: 0.75rem; /* 12px */
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  /* Nhãn trường: Apple dùng chữ thường, KHÔNG in hoa toàn bộ. All-caps chỉ
+     dành cho tiêu đề nhóm trong Settings, không dùng cho nhãn ô nhập. */
+  .type-label {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.3;
+  }
+
+  /* Vùng chạm tối thiểu 44px theo HIG, kể cả khi nội dung thấp hơn.
+     Dùng cho <select> và các nút nhỏ mà không phải phình chữ lên. */
+  .tap-44 {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* VÙNG CHẠM VÔ HÌNH (Extended Hit Area)
+     Nút biểu tượng trên thanh tiêu đề chỉ cao 34px — dưới ngưỡng 44pt của HIG.
+     Phóng to nút lên 44px sẽ làm thanh tiêu đề nặng nề, nên thay vào đó nới
+     vùng chạm ra ngoài bằng pseudo-element: mắt vẫn thấy nút 34px, nhưng ngón
+     tay chạm được cả vùng 44px. Đây đúng cách Apple xử lý các nút nhỏ trong
+     thanh điều hướng iOS.
+     Lưu ý: nút cha phải có position:relative (class `relative`). */
+  .tap-area-44::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    /* Không vẽ gì, chỉ bắt sự kiện chạm */
+  }
+
   /* Apple Precision Craft Surface (Card & Container) */
   .surface {
     background-color: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.07);
-    border-radius: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.11);
+    border-radius: 1.25rem;
     box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.03),
+      0 2px 8px rgba(0, 0, 0, 0.04),
       0 12px 28px rgba(0, 0, 0, 0.04);
   }
+  :where(.dark, .dark *) .surface {
+    background-color: #1c1c1e;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      0 12px 28px rgba(0, 0, 0, 0.4);
+  }
+
   .surface-hover {
     transition:
-      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 200ms ease;
+      transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 150ms ease,
+      background-color 150ms ease;
   }
   .surface-hover:hover {
     box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.06),
-      0 16px 36px rgba(0, 0, 0, 0.05);
+      0 6px 20px rgba(0, 113, 227, 0.12),
+      0 16px 36px rgba(0, 0, 0, 0.06);
     transform: translateY(-2px);
-    border-color: rgba(0, 0, 0, 0.14);
+    border-color: #0071e3;
+  }
+  :where(.dark, .dark *) .surface-hover:hover {
+    box-shadow:
+      0 6px 20px rgba(0, 113, 227, 0.25),
+      0 16px 36px rgba(0, 0, 0, 0.5);
+    border-color: #3898ec;
   }
 
   .surface-capsule {
     background-color: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.07);
+    border: 1px solid rgba(0, 0, 0, 0.11);
     border-radius: 9999px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+  :where(.dark, .dark *) .surface-capsule {
+    background-color: #1c1c1e;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
   /* Apple Overline Label */

@@ -197,7 +197,7 @@ export const generateSocialShareText = (trip) => {
 💺 ${seatsText}
 💰 Chi phí chia sẻ: ${priceText}${perksText}${parcelText}
 ━━━━━━━━━━━━━━━━━━
-👉 Bấm link xem chi tiết chuyến & kết nối Zalo đón:
+👉 Bấm link để giữ chỗ trước (0đ cọc • Khởi hành đúng giờ):
 🔗 https://carmate.vn/t/${trip.id}
 (0% phí trung gian • Xe gia đình văn minh • Lên xe gửi tiền xăng)`;
 };

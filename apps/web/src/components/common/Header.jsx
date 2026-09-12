@@ -21,14 +21,15 @@ import {
   CheckCheck,
   Zap,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Fuel
 } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
 import Button, { IconButton } from '../ui/Button.jsx';
-import { triggerMacNotification } from './AppleMacNotification.jsx';
 import NotificationDropdown from './NotificationDropdown.jsx';
+import { isAdminUser } from '../../utils/adminGate.js';
 
 export function LanguageToggle({ className = '' } = {}) {
   const { lang, setLang } = useI18n();
@@ -41,7 +42,7 @@ export function LanguageToggle({ className = '' } = {}) {
       onClick={() => setLang(next)}
       title={label}
       aria-label={label}
-      className={`h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 ${className}`}
+      className={`relative tap-area-44 h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 ${className}`}
     >
       <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
       <span className="font-mono text-xs font-bold uppercase">{lang === 'vi' ? 'EN' : 'VI'}</span>
@@ -49,13 +50,19 @@ export function LanguageToggle({ className = '' } = {}) {
   );
 }
 
+/**
+ * Giai đoạn 1 tập trung vào tìm chuyến; nút trợ lý AI tạm ẩn khỏi thanh tiêu đề.
+ * Đổi về true để bật lại — không cần sửa gì thêm.
+ */
+const SHOW_AI_ASSISTANT_BUTTON = false;
+
 export default function Header({
   activeTab,
   setActiveTab,
   onRequestPostTrip,
   setShowPolicyModal,
   bookedCount = 0,
-  myTripsCount = 0,
+  _myTripsCount = 0,
   inboxCount = 0,
   onOpenInbox,
   currentUser = null,
@@ -72,14 +79,13 @@ export default function Header({
   onMarkAsUnread,
   readBookingTimestamps = {},
   unreadBookingIds = [],
-  socialMatches = []
+  socialMatches = [],
 }) {
   const { t, lang, setLang } = useI18n();
   const tabs = [
-    { id: 'market', label: t('nav.market'), icon: Compass },
-    { id: 'match', label: t('nav.match'), icon: Sparkles },
-    { id: 'my-trips', label: t('nav.myTrips'), icon: FileText, badge: myTripsCount },
-    { id: 'booked', label: t('nav.booked'), icon: Clock, badge: bookedCount }
+    { id: 'market', label: t('nav.corridorTab'), icon: Compass },
+    { id: 'station', label: t('nav.stationTab'), icon: Fuel },
+    { id: 'booked', label: t('nav.booked') || 'Lịch hẹn', icon: Clock, badge: bookedCount }
   ];
 
   const isMac =
@@ -89,10 +95,8 @@ export default function Header({
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isPostMenuOpen, setIsPostMenuOpen] = useState(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const userMenuRef = useRef(null);
-  const postMenuRef = useRef(null);
   const notificationCenterRef = useRef(null);
 
   useEffect(() => {
@@ -109,9 +113,6 @@ export default function Header({
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setIsUserMenuOpen(false);
       }
-      if (postMenuRef.current && !postMenuRef.current.contains(e.target)) {
-        setIsPostMenuOpen(false);
-      }
       if (notificationCenterRef.current && !notificationCenterRef.current.contains(e.target)) {
         setIsNotificationCenterOpen(false);
       }
@@ -119,7 +120,6 @@ export default function Header({
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setIsUserMenuOpen(false);
-        setIsPostMenuOpen(false);
         setIsNotificationCenterOpen(false);
       }
     };
@@ -130,8 +130,6 @@ export default function Header({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
-
-  const recentBookings = (bookedEscrows || []).slice(0, 6);
 
   return (
     <header
@@ -190,13 +188,38 @@ export default function Header({
           })}
         </nav>
 
+        {/* ĐĂNG CHUYẾN — tách khỏi nhóm tab tra cứu và tạo điểm nhấn riêng.
+            Đây là nút sinh ra NGUỒN CUNG cho nền tảng: chủ xe lướt vào phải
+            thấy ngay lối đi của mình, không để nó chìm lẫn giữa các tab xem
+            thông tin. Dùng xanh mint đồng bộ với nút nổi trên thanh dưới. */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('cockpit')}
+          aria-current={activeTab === 'cockpit' ? 'page' : undefined}
+          className={`hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-xs font-bold border transition-all duration-200 cursor-pointer select-none shrink-0 ${
+            activeTab === 'cockpit'
+              ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/25'
+              : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/25 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+          }`}
+        >
+          <Car className="w-3.5 h-3.5 shrink-0" strokeWidth={2.2} />
+          <span>{t('nav.tabPickup')}</span>
+        </button>
+
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* NÚT TRỢ LÝ AI — TẠM ẨN Ở GIAI ĐOẠN 1.
+              Bài toán cốt lõi lúc này là niềm tin và thanh khoản trên trục QL13.
+              Một nút trợ lý nằm ngay cạnh hành động chính chỉ làm phân tán sự
+              chú ý khỏi việc quan trọng nhất: TÌM CHUYẾN XE.
+              Phím tắt ⌘K vẫn hoạt động cho người dùng nội bộ; bật lại nút chỉ
+              cần đổi cờ này về true khi nghiệp vụ trợ lý đủ sâu. */}
+          {SHOW_AI_ASSISTANT_BUTTON && (
           <button
             type="button"
             onClick={onOpenAi}
             title={isMac ? 'Trợ lý CarMate (Phím tắt: ⌘K)' : 'Trợ lý CarMate (Phím tắt: Ctrl+K)'}
-            aria-label="Mở Trợ lý CarMate"
-            className="inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
+            aria-label={t('header2.s004')}
+            className="relative tap-area-44 inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline font-medium">{t('nav.assistant') || t('nav.aiAssistant') || 'Trợ lý'}</span>
@@ -204,90 +227,7 @@ export default function Header({
               {isMac ? '⌘K' : 'Ctrl K'}
             </kbd>
           </button>
-
-          <div className="hidden sm:block relative" ref={postMenuRef}>
-            <button
-              type="button"
-              onClick={() => setIsPostMenuOpen((prev) => !prev)}
-              aria-expanded={isPostMenuOpen}
-              aria-haspopup="true"
-              className="h-9 pl-3.5 pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0062c4] text-white shadow-[0_2px_8px_rgba(0,113,227,0.28)] hover:shadow-[0_4px_16px_rgba(0,113,227,0.38)] active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 group"
-            >
-              <PlusCircle className="w-3.5 h-3.5 text-white/90 group-hover:rotate-90 transition-transform duration-200" strokeWidth={2.4} />
-              <span>{t('nav.post')}</span>
-              <ChevronDown
-                className={`w-3 h-3 text-white/80 transition-transform duration-200 ${isPostMenuOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {isPostMenuOpen && (
-              <div className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.16)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
-                <div className="px-2.5 py-1 mb-1">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#86868b]">{t('postMenu.title')}</p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPostMenuOpen(false);
-                    if (onRequestPostTrip) {
-                      onRequestPostTrip('driver');
-                    } else {
-                      setActiveTab('post');
-                    }
-                  }}
-                  className="w-full p-2.5 rounded-xl flex items-start gap-3 hover:bg-[#0071e3]/8 dark:hover:bg-[#0071e3]/15 transition-all text-left group cursor-pointer border border-transparent hover:border-[#0071e3]/20"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Car className="w-4 h-4 text-[#0071e3]" strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-[#0071e3] transition-colors">
-                        {t('postMenu.driverTitle')}
-                      </span>
-                      <span className="text-[10px] font-semibold text-[#0071e3] bg-[#0071e3]/10 px-1.5 py-0.5 rounded-full">
-                        {t('postMenu.driverBadge')}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                      {t('postMenu.driverDesc')}
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPostMenuOpen(false);
-                    if (onRequestPostTrip) {
-                      onRequestPostTrip('passenger');
-                    } else {
-                      setActiveTab('post');
-                    }
-                  }}
-                  className="w-full p-2.5 rounded-xl flex items-start gap-3 hover:bg-emerald-500/8 dark:hover:bg-emerald-500/15 transition-all text-left group cursor-pointer border border-transparent hover:border-emerald-500/20 mt-1"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Users className="w-4 h-4 text-emerald-600" strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#1d1d1f] dark:text-white group-hover:text-emerald-600 transition-colors">
-                        {t('postMenu.passengerTitle')}
-                      </span>
-                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
-                        {t('postMenu.passengerBadge')}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#515154] dark:text-slate-400 mt-0.5 leading-snug">
-                      {t('postMenu.passengerDesc')}
-                    </p>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
+          )}
 
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>
@@ -296,7 +236,7 @@ export default function Header({
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="true"
-                className="h-8.5 sm:h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
+                className="relative tap-area-44 h-8.5 sm:h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               >
                 <span className="relative flex items-center justify-center shrink-0">
                   {currentUser.avatar ? (
@@ -339,9 +279,7 @@ export default function Header({
                       <p className="text-[11px] text-[#86868b] font-mono truncate">
                         {currentUser.phone || t('userMenu.verifiedIdentity')}
                       </p>
-                      {(currentUser.role === 'admin' ||
-                        currentUser.phone?.includes('0984883750') ||
-                        currentUser.phone?.includes('0984 883 750')) && (
+                      {isAdminUser(currentUser) && (
                         <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
                           <ShieldCheck className="w-3 h-3" /> {t('userMenu.adminBadge')}
                         </span>
@@ -381,7 +319,7 @@ export default function Header({
                   >
                     <div className="inline-flex items-center gap-2">
                       <Inbox className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
-                      <span>Hộp thư & Chat chuyến</span>
+                      <span>{t('header2.s001')}</span>
                     </div>
                     {inboxCount > 0 && (
                       <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white">
@@ -393,18 +331,40 @@ export default function Header({
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveTab('my-trips');
+                      onRequestPostTrip?.('driver');
                       setIsUserMenuOpen(false);
                     }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer group"
                   >
-                    <Car className="w-3.5 h-3.5 text-[#0071e3]" />
-                    <span>{t('userMenu.myTrips')}</span>
+                    <div className="inline-flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                      <span>{t('header2.s002')}</span>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
+                      {t('header2.s003')}
+                    </span>
                   </button>
 
-                  {(currentUser.role === 'admin' ||
-                    currentUser.phone?.includes('0984883750') ||
-                    currentUser.phone?.includes('0984 883 750')) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('booked');
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-[#0071e3]" />
+                      <span>{t('userMenu.myTrips') || 'Lịch hẹn & Vé xe'}</span>
+                    </div>
+                    {bookedCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#0071e3] text-white">
+                        {bookedCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {isAdminUser(currentUser) && (
                     <button
                       type="button"
                       onClick={() => {
@@ -488,11 +448,23 @@ export default function Header({
                     <span>{t('userMenu.logout')}</span>
                   </button>
 
+                  {currentUser.role !== 'admin' && onOpenDeleteAccount && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onOpenDeleteAccount();
+                      }}
+                      className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                      <span>{t('userMenu.deleteAccount') || 'Yêu cầu xoá tài khoản'}</span>
+                    </button>
+                  )}
+
                   <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
 
-                  {currentUser.role === 'admin' ||
-                  currentUser.phone?.includes('0984883750') ||
-                  currentUser.phone?.includes('0984 883 750') ? (
+                  {isAdminUser(currentUser) ? (
                     <div className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                       <span className="inline-flex items-center gap-1.5 font-medium">
                         <Lock className="w-3 h-3 text-slate-400" />
@@ -512,7 +484,7 @@ export default function Header({
             <button
               type="button"
               onClick={onOpenAuth}
-              className="h-8.5 sm:h-9 px-2.5 sm:px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all shrink-0"
+              className="relative tap-area-44 h-8.5 sm:h-9 px-2.5 sm:px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all shrink-0"
             >
               <User className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
               <span className="hidden sm:inline">{t('nav.signInOrRegister')}</span>
@@ -527,9 +499,9 @@ export default function Header({
               onClick={() => setIsNotificationCenterOpen((prev) => !prev)}
               aria-expanded={isNotificationCenterOpen}
               aria-haspopup="true"
-              title="Trung tâm thông báo (Apple macOS)"
-              aria-label="Mở Trung tâm thông báo"
-              className={`relative inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold border cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0 ${
+              title={t('header2.s005')}
+              aria-label={t('header2.s006')}
+              className={`relative tap-area-44 inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold border cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0 ${
                 isNotificationCenterOpen
                   ? 'bg-[#0071e3]/10 dark:bg-[#0071e3]/20 border-[#0071e3]/30 text-[#0071e3]'
                   : 'bg-white dark:bg-slate-800 hover:bg-[#f5f5f7] dark:hover:bg-slate-700 text-[#1d1d1f] dark:text-white border-black/[0.08] dark:border-white/[0.08]'

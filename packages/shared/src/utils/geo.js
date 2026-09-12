@@ -34,26 +34,34 @@ export const ROUTE_CORRIDORS = {
     center: [11.35, 106.65],
     zoom: 9,
     startLandmark: {
-      name: 'Cây xăng Petrolimex 17 (QL13, Lộc Ninh)',
-      address: 'QL13, Xã Lộc Hưng, Huyện Lộc Ninh, Tỉnh Bình Phước',
-      lat: 11.8385,
-      lng: 106.5925
+      name: 'Chợ Bù Đốp / Bến xe Bù Đốp (TT. Thanh Bình)',
+      address: 'Đường ĐT759B, TT. Thanh Bình, Huyện Bù Đốp, Tỉnh Bình Phước',
+      lat: 11.9832,
+      lng: 106.8124
     },
     endLandmark: {
-      name: 'Ngã tư Hàng Xanh / Bến xe Miền Đông mới',
+      name: 'Ngã tư Hàng Xanh / Bến xe Miền Đông',
       address: 'Điện Biên Phủ / Xô Viết Nghệ Tĩnh, Q. Bình Thạnh, TP.HCM',
       lat: 10.8012,
       lng: 106.7114
     },
     popularPickups: [
-      'Cây xăng Petrolimex 17 (QL13, Lộc Ninh)',
-      'Chợ Lộc Ninh (Khu phố Ninh Thịnh)',
-      'Ngã 3 Lộc Tấn (Giao ĐT759 & QL13)',
+      'Chợ Bù Đốp (TT. Thanh Bình)',
+      'Chợ Tân Tiến / Cầu Tân Tiến (Bù Đốp)',
+      'Chợ Lộc Hiệp (Lộc Ninh)',
+      'Ngã 3 Lộc Tấn (Giao ĐT759B & QL13)',
+      'Chợ Lộc Ninh (Khu phố Ninh Thịnh / Cây xăng 17)',
+      'Ngã 3 Thanh Lương',
       'Cổng chào TX. Bình Long (Bình Phước)',
+      'Chợ Tân Khai / Hớn Quản',
       'Ngã 4 Chơn Thành (Giao QL13 & QL14)',
       'KCN Chơn Thành / KCN Minh Hưng',
-      'Đại Nam / Bến Cát (Bình Dương)',
-      'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)'
+      'KCN Bàu Bàng / Bến Cát',
+      'Đại Nam / Ngã 4 Sở Sao (Bình Dương)',
+      'KCN VSIP 1 / AEON Mall Canary',
+      'Cổng chào Lái Thiêu',
+      'Ngã 4 Bình Phước (Thủ Đức - TP.HCM)',
+      'Cầu Bình Triệu / Bến xe Miền Đông cũ'
     ],
     popularDropoffs: [
       'Ngã tư Hàng Xanh (Bình Thạnh, TP.HCM)',
@@ -65,30 +73,65 @@ export const ROUTE_CORRIDORS = {
     ],
     waypoints: [
       {
-        name: 'Cây xăng 17 QL13 (Lộc Ninh)',
-        sub: 'Điểm xuất phát đầu tuyến',
-        lat: 11.8385,
-        lng: 106.5925,
+        name: 'Chợ Bù Đốp (TT. Thanh Bình)',
+        sub: 'Điểm đầu tuyến ĐT759B kết nối QL13',
+        lat: 11.9832,
+        lng: 106.8124,
         isStart: true,
         type: 'pickup'
       },
       {
-        name: 'Chợ Lộc Ninh',
-        sub: 'Khu phố Ninh Thịnh',
+        name: 'Chợ Tân Tiến / Cầu Tân Tiến',
+        sub: 'Bù Đốp',
+        lat: 11.9351,
+        lng: 106.7321,
+        type: 'pickup'
+      },
+      {
+        name: 'Chợ Lộc Hiệp',
+        sub: 'Lộc Ninh, ĐT759B',
+        lat: 11.9012,
+        lng: 106.6623,
+        type: 'pickup'
+      },
+      {
+        name: 'Ngã 3 Lộc Tấn (Giao QL13)',
+        sub: 'Nút giao ĐT759B & Quốc lộ 13',
+        lat: 11.8845,
+        lng: 106.5912,
+        type: 'pickup'
+      },
+      {
+        name: 'Chợ Lộc Ninh / Cây xăng 17',
+        sub: 'Khu phố Ninh Thịnh, QL13',
         lat: 11.8421,
         lng: 106.5972,
         type: 'pickup'
       },
       {
+        name: 'Ngã 3 Thanh Lương',
+        sub: 'Ranh Lộc Ninh - Bình Long',
+        lat: 11.7250,
+        lng: 106.5980,
+        type: 'waypoint'
+      },
+      {
         name: 'Cổng chào TX. Bình Long',
-        sub: 'Đón dọc QL13',
+        sub: 'Vòng xoay An Lộc, QL13',
         lat: 11.6482,
         lng: 106.6025,
         type: 'waypoint'
       },
       {
+        name: 'Chợ Tân Khai / Hớn Quản',
+        sub: 'Trung tâm Huyện Hớn Quản, QL13',
+        lat: 11.5620,
+        lng: 106.6340,
+        type: 'waypoint'
+      },
+      {
         name: 'Ngã 4 Chơn Thành',
-        sub: 'Nút giao QL13 & QL14',
+        sub: 'Nút giao QL13, Tuyến N2 & QL14',
         lat: 11.4791,
         lng: 106.6694,
         type: 'waypoint'
@@ -109,7 +152,7 @@ export const ROUTE_CORRIDORS = {
       },
       {
         name: 'Cổng chào Bình Dương / Lái Thiêu',
-        sub: 'Đầu cầu Vĩnh Bình',
+        sub: 'Đầu cầu Vĩnh Bình, Thuận An',
         lat: 10.9165,
         lng: 106.6982,
         type: 'waypoint'

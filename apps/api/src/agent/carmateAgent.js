@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenAI, Type } from '@google/genai';
-import { getTrips, getAllUsers, getTripById } from '../db/sqliteStore.js';
+import { getTrips, getAllUsers } from '../db/sqliteStore.js';
 import { ROUTE_BENCHMARKS, formatVND, cleanPhoneNumber } from '@carmate/shared';
 
 // Khai báo 5 Công Cụ (Function Calling Declarations)
@@ -226,7 +226,6 @@ export function executeCheckMemberTrust(args = {}) {
 
 export function executeCalculateEstimatedFare(args = {}) {
   const km = Number(args.distanceKm) || 100;
-  const seats = Number(args.seatsCount) || 1;
   // Xăng trung bình 8L/100km (~22.000đ/L) = ~176.000đ + vé cầu đường (~70.000đ)
   const totalCost = km * 1800 + 70000;
   const fairPerSeat = Math.round(totalCost / 3 / 10000) * 10000;
@@ -257,7 +256,7 @@ export function executeDraftZaloMessage(args = {}) {
  * Stanford Inner Loop: Verify -> Reflect -> Replan
  * Áp dụng giải quyết các tình huống thực tế giao thông & xe gia đình Việt Nam
  */
-export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, rawTrips = [], benchmark = null }) {
+export function runStanfordInnerLoop({ to = '', seatsRequested = 1, rawTrips = [], benchmark = null }) {
   const innerLoopLog = [];
 
   // 1. [VERIFY] Xác minh số ghế thực tế và ngữ cảnh gia đình
@@ -319,7 +318,7 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
 
   if (benchmark) {
     innerLoopLog.push(
-      `[REFLECT] Phản tư giá cước: Đối chiếu mức phụ xăng với định mức chuẩn (${formatVND(benchmark.suggestedRate)}/ghế).`
+      `[REFLECT] Phản tư chi phí: Đối chiếu mức phụ xăng với định mức chuẩn (${formatVND(benchmark.suggestedRate)}/ghế).`
     );
   }
 
@@ -397,7 +396,7 @@ export function runStanfordInnerLoop({ from = '', to = '', seatsRequested = 1, r
 }
 
 // ── BỘ SUY LUẬN HEURISTIC CỤC BỘ (ZERO-DOWNTIME STANFORD INNER LOOP) ──
-function runLocalHeuristicAgent(userPrompt, history = []) {
+function runLocalHeuristicAgent(userPrompt) {
   const prompt = userPrompt.toLowerCase();
   const reasoningSteps = [];
 
@@ -528,7 +527,6 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
 
   // Kích hoạt Stanford Inner Loop
   const { innerLoopLog, finalTrips } = runStanfordInnerLoop({
-    from,
     to,
     seatsRequested,
     rawTrips: searchRes.results,
@@ -575,12 +573,12 @@ function runLocalHeuristicAgent(userPrompt, history = []) {
 }
 
 // ── VÒNG LẶP STANFORD INNER LOOP ĐIỀU PHỐI QUA GEMINI API ──
-export async function runCarMateAgent({ message, history = [], userContext = {} }) {
+export async function runCarMateAgent({ message, history: _history = [] }) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   // Nếu không có API Key, fallback sang bộ suy luận cục bộ cực nhạy
   if (!apiKey || apiKey.includes('your_gemini') || apiKey.trim() === '') {
-    return runLocalHeuristicAgent(message, history);
+    return runLocalHeuristicAgent(message);
   }
 
   try {
@@ -588,13 +586,13 @@ export async function runCarMateAgent({ message, history = [], userContext = {} 
 
     const systemInstruction = `Bạn là Trợ Lý Điều Phối Ghép Xe Thông Minh của CarMate.vn (CarMate AI Concierge).
 Nhiệm vụ của bạn:
-1. Hiểu ngôn ngữ tự nhiên của khách hàng (tiếng Việt), phân tích nhu cầu đi lại, địa điểm, thời gian, số ghế, hành lý và loại xe.
+1. Hiểu ngôn ngữ tự nhiên của Người đi cùng (tiếng Việt), phân tích nhu cầu đi lại, địa điểm, thời gian, số ghế, hành lý và loại xe.
 2. LUÔN LUÔN gọi các công cụ (tools) được cung cấp:
    - 'searchTrips': để tra cứu chuyến xe thực tế trong cơ sở dữ liệu.
    - 'getRouteBenchmarks': để tra cứu mức giá tham chiếu công bằng.
    - 'checkMemberTrust': để kiểm tra điểm tín nhiệm của Chủ xe.
    - 'calculateEstimatedFare': tính tiền xăng & vé cầu đường san sẻ.
-   - 'draftZaloMessage': tạo tin nhắn mẫu chốt cuốc Zalo.
+   - 'draftZaloMessage': tạo tin nhắn mẫu kết nối ghép xe Zalo.
 3. Luôn trả lời lịch sự, thân thiện, súc tích, mang phong thái văn minh, hỗ trợ kết nối trực tiếp không thu phí sàn.`;
 
     const targetModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
@@ -621,11 +619,11 @@ Nhiệm vụ của bạn:
           reasoningSteps.push(`[VERIFY] Xác minh số ghế & đối chiếu xe gia đình: Có ${res.count} chuyến khả dụng.`);
           reasoningSteps.push(`[REFLECT] Đánh giá chất lượng và độ tiện lợi của các chuyến xe vừa tìm thấy.`);
         } else if (call.name === 'getRouteBenchmarks') {
-          const res = executeGetRouteBenchmarks(call.args);
+          executeGetRouteBenchmarks(call.args);
           reasoningSteps.push(`[ACT] Tra cứu: Rà soát bảng định mức chi phí xăng xe & vé cầu đường.`);
           reasoningSteps.push(`[REFLECT] Phản tư tính công bằng: Mức giá san sẻ theo định mức đã được xác định.`);
         } else if (call.name === 'checkMemberTrust') {
-          const res = executeCheckMemberTrust(call.args);
+          executeCheckMemberTrust(call.args);
           reasoningSteps.push(`[ACT] Thẩm tra: Kiểm tra hồ sơ an toàn và giấy tờ xác thực.`);
           reasoningSteps.push(`[VERIFY] Kết quả: Hồ sơ thành viên đạt tiêu chuẩn tín nhiệm.`);
         } else if (call.name === 'calculateEstimatedFare') {
@@ -633,7 +631,7 @@ Nhiệm vụ của bạn:
           reasoningSteps.push(`[ACT] Tính toán: Ước tính chi phí nhiên liệu và cầu đường.`);
           reasoningSteps.push(`[REFLECT] Đề xuất mức đóng góp công bằng: ${res.formattedSuggestion}.`);
         } else if (call.name === 'draftZaloMessage') {
-          const res = executeDraftZaloMessage(call.args);
+          executeDraftZaloMessage(call.args);
           reasoningSteps.push('[ACT] Soạn thảo: Lên nội dung hẹn giờ đón lịch sự qua Zalo.');
         }
       }
@@ -649,6 +647,6 @@ Nhiệm vụ của bạn:
     };
   } catch (err) {
     console.warn('[CarMate Agent] Lỗi gọi Gemini API, tự động kích hoạt Heuristic Fallback:', err.message);
-    return runLocalHeuristicAgent(message, history);
+    return runLocalHeuristicAgent(message);
   }
 }

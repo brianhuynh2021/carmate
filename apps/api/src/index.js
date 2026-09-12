@@ -9,6 +9,8 @@ import { initDB, closeDB } from './db/sqliteStore.js';
 import apiRouter from './routes/api.js';
 import { securityHeadersMiddleware, sanitizeInput, globalApiLimiter } from './middlewares/security.js';
 import { sendSystemErrorAlert } from './utils/telegramAlert.js';
+import { startScheduler, stopScheduler } from './services/scheduler.js';
+import { initNotificationTables } from './services/notificationService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -219,6 +221,15 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await initDB();
+
+    // Bảng thông báo & đăng ký đẩy phải sẵn sàng TRƯỚC khi scheduler chạy nhịp
+    // đầu tiên, nếu không nhịp t30 sẽ ném lỗi "no such table" ngay giây thứ 60.
+    initNotificationTables();
+
+    // NHỊP TIM: đây là thứ biến thuật toán điều vận thành hệ thống thực sự chạy.
+    // Tắt được qua DISABLE_SCHEDULER=true cho môi trường kiểm thử và CI.
+    startScheduler({ enabled: process.env.DISABLE_SCHEDULER !== 'true' });
+
     server.listen(PORT, () => {
       console.log(`\n\x1b[1m\x1b[36m╔══════════════════════════════════════════════════════════╗\x1b[0m`);
       console.log(`\x1b[1m\x1b[36m║             🚗 CarMate.vn Unified Server                 ║\x1b[0m`);
@@ -234,6 +245,7 @@ async function startServer() {
       if (shuttingDown) return;
       shuttingDown = true;
       console.log('\n[CarMate] Đang tắt máy chủ an toàn...');
+      stopScheduler();
 
       // Cưỡng bức thoát nếu còn kết nối treo, tránh container bị kill cứng
       // giữa chừng và bỏ lại WAL chưa gộp.
@@ -263,7 +275,7 @@ async function startServer() {
 }
 
 // 7. Vành đai an toàn chống sập (Process Crash Boundary)
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('[CarMate Safety] Bắt được Unhandled Promise Rejection (Đã cách ly, không sập server):', reason);
   sendSystemErrorAlert({ error: reason, source: 'Node UnhandledRejection' }).catch(() => {});
 });

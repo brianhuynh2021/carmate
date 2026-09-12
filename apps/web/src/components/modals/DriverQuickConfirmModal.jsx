@@ -4,6 +4,7 @@ import { formatVND } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 /**
  * DriverQuickConfirmModal — Magic Link 1-Chạm cho Chủ xe
@@ -11,6 +12,7 @@ import api from '../../api/client.js';
  * Không cần đăng nhập, bảo vệ thông tin PII, xác nhận 1 chạm tức thì.
  */
 export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowToast }) {
+  const { t } = useI18n();
   // bookingCode có thể là object { code, token } (Magic Link mới) hoặc string (tương thích cũ)
   const codeId = typeof bookingCode === 'object' && bookingCode ? bookingCode.code : bookingCode;
   const accessToken = typeof bookingCode === 'object' && bookingCode ? bookingCode.token || '' : '';
@@ -86,13 +88,13 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
       size="md"
       icon={Car}
       iconTone="brand"
-      title="Xác nhận đón hành khách"
+      title={t('driverConfirm.s017')}
       subtitle={`Mã giữ chỗ: ${codeId}`}
     >
       {loading ? (
         <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">
           <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
-          <p className="text-xs font-medium">Đang tải thông tin chuyến đi...</p>
+          <p className="text-xs font-medium">{t('driverConfirm.s001')}</p>
         </div>
       ) : error ? (
         <div className="py-8 space-y-4 text-center">
@@ -100,11 +102,11 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <h4 className="font-bold text-slate-900 text-base">Không thể tải thông tin</h4>
+            <h4 className="font-bold text-slate-900 text-base">{t('driverConfirm.s002')}</h4>
             <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">{error}</p>
           </div>
           <Button variant="secondary" onClick={onClose} className="mt-2">
-            Đóng cửa sổ
+            {t('driverConfirm.s003')}
           </Button>
         </div>
       ) : confirmedSuccess ? (
@@ -114,9 +116,9 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
           </div>
 
           <div>
-            <h4 className="font-bold text-slate-900 text-lg">Đã xác nhận đón khách!</h4>
+            <h4 className="font-bold text-slate-900 text-lg">{t('driverConfirm.s004')}</h4>
             <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto leading-relaxed">
-              Bạn đã đồng ý đón <strong>{passengerName}</strong>. Hệ thống đã ghi nhận lịch hẹn trên CarMate.
+              {t('driverConfirm.s005')} <strong>{passengerName}</strong>{t('driverConfirm.s006')}
             </p>
           </div>
 
@@ -130,15 +132,15 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             </div>
             {booking.pickupPoint && (
               <p className="text-slate-600">
-                Điểm đón: <strong className="text-slate-800">{booking.pickupPoint}</strong>
+                {t('driverConfirm.s007')} <strong className="text-slate-800">{booking.pickupPoint}</strong>
               </p>
             )}
             <div className="flex justify-between pt-1 border-t border-slate-200/80 text-slate-500 text-[11px]">
               <span>
-                Khung giờ: <strong>{booking.timeSlot}</strong>
+                {t('driverConfirm.s008')} <strong>{booking.timeSlot}</strong>
               </span>
               <span>
-                Thu trực tiếp: <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong>
+                {t('driverConfirm.s009')} <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong>
               </span>
             </div>
           </div>
@@ -150,7 +152,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
               onClick={onClose}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
             >
-              Xong · Về trang chủ
+              {t('driverConfirm.s010')}
             </Button>
           </div>
         </div>
@@ -165,7 +167,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-900">{passengerName}</p>
-                  <p className="text-[10px] text-slate-500">Đặt qua Zalo · Cam kết không bùng</p>
+                  <p className="text-[10px] text-slate-500">{t('driverConfirm.s011')}</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-200/60 text-xs font-bold tabular">
@@ -182,14 +184,14 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
 
             {booking.pickupPoint && (
               <div className="p-2 rounded-xl bg-amber-50/80 border border-amber-200/60 text-xs text-amber-900">
-                <span className="font-bold">Điểm đón khách mong muốn: </span>
+                <span className="font-bold">{t('driverConfirm.s012')} </span>
                 <span>{booking.pickupPoint}</span>
               </div>
             )}
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
               <span className="text-slate-600">
-                Đăng ký: <strong className="text-slate-900">{booking.seats || 1} ghế</strong>
+                {t('driverConfirm.s013')} <strong className="text-slate-900">{booking.seats || 1} ghế</strong>
               </span>
               <span className="text-slate-600">
                 Phụ xăng chia sẻ:{' '}
@@ -204,13 +206,13 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              Ghi chú nhanh cho hành khách (tùy chọn):
+              {t('driverConfirm.s014')}
             </label>
             <input
               type="text"
               value={driverNote}
               onChange={(e) => setDriverNote(e.target.value)}
-              placeholder="VD: Đón đúng giờ ở cây xăng nhé, xe màu trắng..."
+              placeholder={t('driverConfirm.s018')}
               className="w-full h-10 px-3 rounded-xl text-xs bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
             />
           </div>
@@ -229,13 +231,13 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             </Button>
 
             <Button fullWidth variant="secondary" onClick={onClose} className="text-xs py-2 text-slate-600">
-              Để trả lời sau trên Zalo
+              {t('driverConfirm.s015')}
             </Button>
           </div>
 
           <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Xác nhận miễn phí 100% · Nhận tiền mặt hoặc chuyển khoản khi đón khách</span>
+            <span>{t('driverConfirm.s016')}</span>
           </div>
         </div>
       )}

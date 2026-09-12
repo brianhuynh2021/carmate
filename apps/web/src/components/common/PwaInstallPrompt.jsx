@@ -110,7 +110,7 @@ export default function PwaInstallPrompt() {
           type="button"
           onClick={handleDismiss}
           aria-label={t('pwa.dismiss')}
-          className="w-8 h-8 -mr-1 -mt-1 rounded-full inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 cursor-pointer"
+          className="w-11 h-11 -mr-1 -mt-1 rounded-full inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>

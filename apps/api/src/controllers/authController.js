@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { cleanPhoneNumber, isValidVietnamesePhone } from '@carmate/shared';
+import { cleanPhoneNumber, isValidVietnamesePhone, normalizePhoneNumber } from '@carmate/shared';
 import {
   getUserByPhone,
   getUserById,
@@ -33,11 +33,11 @@ export function requestOtp(req, res) {
       return res.status(400).json({ success: false, error: 'Vui lòng nhập số điện thoại' });
     }
 
-    const cleaned = cleanPhoneNumber(phone);
+    const cleaned = normalizePhoneNumber(phone) || cleanPhoneNumber(phone);
     if (!cleaned || !isValidVietnamesePhone(cleaned)) {
       return res.status(400).json({
         success: false,
-        error: 'Số điện thoại không đúng định dạng nhà mạng Việt Nam (Viettel, Vina, Mobi, Vietnamobile...)'
+        error: 'Số điện thoại không đúng định dạng nhà mạng Việt Nam (Nhập có số 0 hoặc không có số 0 đều được, VD: 0984... hoặc 984...)'
       });
     }
 
@@ -107,7 +107,7 @@ export async function verifyOtp(req, res) {
       return res.status(400).json({ success: false, error: 'Vui lòng nhập đầy đủ số điện thoại và mã OTP' });
     }
 
-    const cleaned = cleanPhoneNumber(phone);
+    const cleaned = normalizePhoneNumber(phone) || cleanPhoneNumber(phone);
     const record = otpMap.get(cleaned);
 
     const isDev = process.env.NODE_ENV !== 'production';
@@ -444,6 +444,150 @@ export async function googleLogin(req, res) {
     return res.status(200).json({
       success: true,
       message: isNewUser ? 'Đăng ký tài khoản Google thành công' : 'Đăng nhập Google thành công',
+      user,
+      token: jwtToken,
+      tripIds,
+      isNewUser
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/auth/firebase-login
+ * Đăng nhập / Đăng ký qua Firebase Phone Authentication
+ * BẮT BUỘC có idToken được Firebase ký duyệt.
+ */
+export async function firebaseLogin(req, res) {
+  try {
+    const { idToken, phone: reqPhone, name: reqName } = req.body || {};
+    const token = (idToken || '').trim();
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Yêu cầu idToken xác thực từ Firebase Phone Auth.'
+      });
+    }
+
+    const isDevOrTest = process.env.NODE_ENV !== 'production';
+    let verifiedPhone = '';
+    let verifiedUid = '';
+    let verifiedName = '';
+
+    // Xử lý mock token trong môi trường Test / Dev cục bộ
+    if (isDevOrTest && token.startsWith('TEST_FIREBASE_TOKEN_')) {
+      const parts = token.replace('TEST_FIREBASE_TOKEN_', '').split(':');
+      verifiedPhone = parts[0] || reqPhone || '';
+      verifiedUid = parts[1] || `fb_mock_${Date.now()}`;
+      verifiedName = reqName || '';
+    } else {
+      // Xác thực token với Google Identity Toolkit lookup API
+      const firebaseApiKey =
+        process.env.FIREBASE_API_KEY ||
+        process.env.VITE_FIREBASE_API_KEY ||
+        'AIzaSyBDDCdttfpC9JfTgEAmviAhWw5Az6kIAvI';
+      try {
+        const lookupRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(firebaseApiKey)}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: token })
+          }
+        );
+        const lookupData = await lookupRes.json().catch(() => ({}));
+
+        if (!lookupRes.ok || !lookupData.users || lookupData.users.length === 0) {
+          return res.status(401).json({
+            success: false,
+            error: 'Token Firebase không hợp lệ hoặc đã hết hạn từ máy chủ Google Identity.'
+          });
+        }
+
+        const fbUser = lookupData.users[0];
+        verifiedUid = fbUser.localId;
+        verifiedPhone = fbUser.phoneNumber || reqPhone || '';
+        verifiedName = fbUser.displayName || reqName || '';
+      } catch (networkErr) {
+        return res.status(502).json({
+          success: false,
+          error: 'Không thể kết nối đến máy chủ xác thực Firebase: ' + networkErr.message
+        });
+      }
+    }
+
+    if (!verifiedPhone && !reqPhone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Không thể trích xuất số điện thoại từ Token Firebase.'
+      });
+    }
+
+    const rawPhone = verifiedPhone || reqPhone;
+    const cleaned = normalizePhoneNumber(rawPhone) || cleanPhoneNumber(rawPhone);
+
+    const userId = `USR-FB-${verifiedUid || cleaned}`;
+    let user = (cleaned ? getUserByPhone(cleaned) : null) || getUserById(userId);
+
+    if (user && isUserDeactivated(user)) {
+      return res.status(403).json({
+        success: false,
+        error: '⛔ Tài khoản của bạn đã bị vô hiệu hóa vĩnh viễn sau thời gian ân hạn 3 ngày. Không thể đăng nhập vào hệ thống.'
+      });
+    }
+
+    let isNewUser = false;
+    if (!user) {
+      isNewUser = true;
+      user = {
+        id: userId,
+        phone: cleaned,
+        firebaseUid: verifiedUid,
+        name: verifiedName || reqName?.trim() || `Thành viên ${cleaned.slice(-4)}`,
+        avatar: '',
+        role: 'passenger',
+        provider: 'firebase_phone',
+        trustScore: 100,
+        isCccdVerified: false,
+        isGplxVerified: false,
+        safeTripsCount: 0
+      };
+      await saveUser(user);
+    } else {
+      let changed = false;
+      if (reqName && reqName.trim() && (!user.name || user.name.startsWith('Thành viên'))) {
+        user.name = reqName.trim();
+        changed = true;
+      }
+      if (verifiedUid && (!user.firebaseUid || user.firebaseUid !== verifiedUid)) {
+        user.firebaseUid = verifiedUid;
+        changed = true;
+      }
+      if (cleaned && !user.phone) {
+        user.phone = cleaned;
+        changed = true;
+      }
+      if (changed) {
+        await saveUser(user);
+      }
+    }
+
+    const myTrips = getTripsForUser(user || cleaned);
+    const tripIds = myTrips.map((t) => t.id);
+
+    // Cấp mã JWT Token bảo mật 7 ngày
+    const jwtToken = generateToken({
+      userId: user.id,
+      phone: user.phone || cleaned,
+      role: user.role || 'passenger',
+      name: user.name
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: isNewUser ? 'Kích hoạt tài khoản mới thành công' : 'Đăng nhập thành công',
       user,
       token: jwtToken,
       tripIds,

@@ -3,7 +3,7 @@ import { MessageCircle } from 'lucide-react';
 import { SITE_INFO } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import { LogoMark } from '../ui/Logo.jsx';
-import { ZaloIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
+import { TelegramIcon } from '../ui/SocialIcons.jsx';
 import { LanguageToggle } from './Header.jsx';
 
 function FacebookIcon({ className = 'w-3.5 h-3.5' }) {
@@ -57,23 +57,13 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
             </p>
           </div>
 
-          {/* Nút hỗ trợ trực tiếp 1-chạm (Zalo & Telegram) */}
-          <div className="grid grid-cols-2 gap-2.5 pt-1">
-            <a
-              href={SITE_INFO.zaloOA}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-10 px-3 rounded-2xl bg-[#0068ff]/10 hover:bg-[#0068ff]/15 active:scale-[0.98] border border-[#0068ff]/20 text-[#0068ff] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
-            >
-              <ZaloIcon className="w-4 h-4" />
-              <span>{lang === 'en' ? 'Zalo Support' : 'Hỗ trợ Zalo'}</span>
-            </a>
-
+          {/* Nút hỗ trợ trực tiếp 1-chạm (Telegram) */}
+          <div className="pt-1">
             <a
               href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+              className="w-full h-11 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <TelegramIcon className="w-4 h-4" />
               <span>{lang === 'en' ? 'Telegram Support' : 'Hỗ trợ Telegram'}</span>
@@ -86,7 +76,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               <button
                 type="button"
                 onClick={onOpenTerms}
-                className="hover:text-[#0071e3] transition-colors cursor-pointer"
+                className="relative tap-area-44 hover:text-[#0071e3] transition-colors cursor-pointer"
               >
                 {lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản'}
               </button>
@@ -94,7 +84,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               <button
                 type="button"
                 onClick={onOpenPolicy}
-                className="hover:text-[#0071e3] transition-colors cursor-pointer"
+                className="relative tap-area-44 hover:text-[#0071e3] transition-colors cursor-pointer"
               >
                 {lang === 'en' ? 'Safety Policy' : 'Chính sách an toàn'}
               </button>
@@ -132,16 +122,6 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
 
           {/* Contact Capsule */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Zalo Direct */}
-            <a
-              href={SITE_INFO.zaloOA}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#0068ff]/50 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
-            >
-              <ZaloIcon className="w-3.5 h-3.5 text-[#0068ff]" />
-              <span>{lang === 'en' ? 'Zalo Support' : 'Hỗ Trợ Zalo'}</span>
-            </a>
 
             {/* Telegram Support */}
             <a

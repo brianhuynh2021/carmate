@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight } from 'lucide-react';
+import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight, ArrowLeft, Clock } from 'lucide-react';
 import { TIME_SLOTS, normalizePhoneNumber, cleanPhoneNumber } from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
 import { useI18n } from './i18n/index.jsx';
@@ -13,22 +13,18 @@ import Toast from './components/common/Toast.jsx';
 import PwaInstallPrompt from './components/common/PwaInstallPrompt.jsx';
 import AppleMacNotification from './components/common/AppleMacNotification.jsx';
 
-// Market
-import Hero from './components/market/Hero.jsx';
-import RouteBenchmarkBar from './components/market/RouteBenchmarkBar.jsx';
-import TripCard from './components/market/TripCard.jsx';
-import SocialMatchBar from './components/social/SocialMatchBar.jsx';
-
-// Views
-import PostTripForm from './components/post/PostTripForm.jsx';
-import PostTripAuthGuard from './components/post/PostTripAuthGuard.jsx';
-import MatchRadarView from './components/radar/MatchRadarView.jsx';
+// Market & Level 3 Autonomous Views
+import CorridorSearchBoard from './components/market/CorridorSearchBoard.jsx';
+import MovementIntentModal from './components/intent/MovementIntentModal.jsx';
 import BookedTripList from './components/booked/BookedTripList.jsx';
-import MyTripsView from './components/post/MyTripsView.jsx';
 const AdminDashboardView = React.lazy(() => import('./components/admin/AdminDashboardView.jsx'));
+const CockpitMode = React.lazy(() => import('./components/cockpit/CockpitMode.jsx'));
+const StationRiderView = React.lazy(() => import('./components/station/StationRiderView.jsx'));
+const InboxModal = React.lazy(() => import('./components/modals/InboxModal.jsx'));
+const UserProfileModal = React.lazy(() => import('./components/profile/UserProfileModal.jsx'));
+const EscrowBookingModal = React.lazy(() => import('./components/modals/EscrowBookingModal.jsx'));
 
 // Modals
-import EscrowBookingModal from './components/modals/EscrowBookingModal.jsx';
 import TrustProfileModal from './components/modals/TrustProfileModal.jsx';
 import PolicyModal from './components/modals/PolicyModal.jsx';
 import CancelModal from './components/modals/CancelModal.jsx';
@@ -44,10 +40,6 @@ import CarPhotosModal from './components/modals/CarPhotosModal.jsx';
 import ZaloReentryModal from './components/modals/ZaloReentryModal.jsx';
 import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal.jsx';
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
-import VehicleMismatchModal from './components/modals/VehicleMismatchModal.jsx';
-import UnreachablePhoneModal from './components/modals/UnreachablePhoneModal.jsx';
-import UserProfileModal from './components/profile/UserProfileModal.jsx';
-import InboxModal from './components/modals/InboxModal.jsx';
 
 // Custom Hooks
 import useZaloReentry from './hooks/useZaloReentry.js';
@@ -91,15 +83,17 @@ export default function App() {
 
   const canAccessAdmin = isOpsPortal || isLocalhost;
 
-  // Danh mục Tab hợp lệ trên toàn hệ sinh thái CarMate
-  const VALID_TABS = ['market', 'match', 'post', 'my-trips', 'booked', 'admin'];
+  // Danh mục Tab hợp lệ trên toàn hệ sinh thái CarMate (Level 3 Architecture)
+  const VALID_TABS = useMemo(() => ['market', 'intent', 'station', 'cockpit', 'booked', 'admin'], []);
 
   // Ánh xạ Clean URL Pathname chuẩn Apple & Vercel (Zero #)
   const getPathForTab = (tab) => {
     if (tab === 'market') return '/';
-    if (tab === 'match') return '/radar';
     if (tab === 'admin') return '/admin';
-    return `/${tab}`; // '/my-trips', '/post', '/booked'
+    if (tab === 'cockpit') return '/cockpit';
+    if (tab === 'station') return '/tram';
+    if (tab === 'intent') return '/intent';
+    return `/${tab}`; // '/booked'
   };
 
   const getTabFromUrl = useCallback(() => {
@@ -116,30 +110,34 @@ export default function App() {
       return 'admin';
     }
 
-    // 2. Nhận diện Clean URL Pathname (/my-trips, /booked, /post, /radar, /match, /market, /admin)
+    // 2. Nhận diện Clean URL Pathname (/booked, /radar, /match, /market, /admin, /cockpit, /tram, /intent, /post)
     const rawPath = window.location.pathname.replace(/^\/+/, '').split('/')[0].trim().toLowerCase();
     if (rawPath === 'admin' && !canAccessAdmin) {
       // Chặn truy cập /admin trên domain chính (MIT Zero Attack Surface)
-    } else if (rawPath === 'radar' || rawPath === 'match') {
-      return 'match';
-    } else if (rawPath === 'my-trips' || rawPath === 'my_trips' || rawPath === 'mytrips') {
-      return 'my-trips';
-    } else if (rawPath === 'booked') {
+    } else if (rawPath === 'cockpit') {
+      return 'cockpit';
+    } else if (rawPath === 'tram' || rawPath === 'station') {
+      return 'station';
+    } else if (rawPath === 'booked' || rawPath === 'my-trips' || rawPath === 'my_trips' || rawPath === 'mytrips') {
       return 'booked';
-    } else if (rawPath === 'post') {
-      return 'post';
-    } else if (rawPath === 'market') {
+    } else if (rawPath === 'intent' || rawPath === 'post') {
+      return 'intent';
+    } else if (rawPath === 'market' || rawPath === 'radar' || rawPath === 'match') {
       return 'market';
     }
 
-    // 3. Tương thích ngược với URL Hash cũ (#my-trips, #booked, #post, #match, #radar)
+    // 3. Tương thích ngược với URL Hash cũ
     const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
     if (rawHash === 'admin' && !canAccessAdmin) {
       // Chặn truy cập #admin trên domain chính
-    } else if (rawHash === 'radar' || rawHash === 'match') {
-      return 'match';
-    } else if (rawHash === 'my-trips' || rawHash === 'my_trips' || rawHash === 'mytrips') {
-      return 'my-trips';
+    } else if (rawHash === 'cockpit') {
+      return 'cockpit';
+    } else if (rawHash === 'tram' || rawHash === 'station') {
+      return 'station';
+    } else if (rawHash === 'booked' || rawHash === 'my-trips' || rawHash === 'my_trips' || rawHash === 'mytrips') {
+      return 'booked';
+    } else if (rawHash === 'intent' || rawHash === 'post') {
+      return 'intent';
     } else if (VALID_TABS.includes(rawHash)) {
       return rawHash;
     }
@@ -148,8 +146,8 @@ export default function App() {
     try {
       const params = new URLSearchParams(window.location.search);
       const queryTab = params.get('tab');
-      if (queryTab === 'radar' || queryTab === 'match') return 'match';
-      if (queryTab === 'my_trips' || queryTab === 'my-trips') return 'my-trips';
+      if (queryTab === 'my_trips' || queryTab === 'my-trips') return 'booked';
+      if (queryTab === 'post' || queryTab === 'intent') return 'intent';
       if (queryTab && VALID_TABS.includes(queryTab)) {
         return queryTab;
       }
@@ -164,7 +162,7 @@ export default function App() {
     } catch {}
 
     return 'market';
-  }, [canAccessAdmin, isOpsPortal, VALID_TABS]);
+  }, [canAccessAdmin, isLocalhost, isOpsPortal, VALID_TABS]);
 
   const [activeTab, _setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -178,10 +176,10 @@ export default function App() {
     if (typeof tabOrUpdater === 'function') {
       _setActiveTab((prev) => {
         const next = tabOrUpdater(prev);
-        return next === 'my_trips' || next === 'mytrips' ? 'my-trips' : next;
+        return next === 'my_trips' || next === 'mytrips' || next === 'my-trips' ? 'booked' : next;
       });
     } else {
-      const next = tabOrUpdater === 'my_trips' || tabOrUpdater === 'mytrips' ? 'my-trips' : tabOrUpdater;
+      const next = tabOrUpdater === 'my_trips' || tabOrUpdater === 'mytrips' || tabOrUpdater === 'my-trips' ? 'booked' : tabOrUpdater;
       _setActiveTab(next);
     }
   }, []);
@@ -273,6 +271,21 @@ export default function App() {
 
   const [myTripsCount, setMyTripsCount] = useState(0);
 
+  // State Trạm đón ảo được quét QR hoặc chọn từ bản đồ
+  const [stationHubId, setStationHubId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const parts = window.location.pathname.split('/');
+      if ((parts[1] === 'tram' || parts[1] === 'station') && parts[2]) {
+        return parts[2];
+      }
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('hub')) return params.get('hub');
+    }
+    return 'hub_ql13_tan_khai';
+  });
+
+  const [stationDestinationHubId, setStationDestinationHubId] = useState(null);
+
   // Hook quản lý Modals
   const {
     selectedItemForEscrow,
@@ -283,7 +296,6 @@ export default function App() {
     setSelectedTripForPhotos,
     showPolicyModal,
     setShowPolicyModal,
-    showBenchmarkModal,
     setShowBenchmarkModal,
     cancelRecord,
     setCancelRecord,
@@ -293,10 +305,6 @@ export default function App() {
     setTicketToShare,
     reviewRecord,
     setReviewRecord,
-    mismatchRecord,
-    setMismatchRecord,
-    unreachablePhoneRecord,
-    setUnreachablePhoneRecord,
     selectedTripForRoute,
     setSelectedTripForRoute,
     editingTrip,
@@ -462,15 +470,11 @@ export default function App() {
   // Hook quản lý Dữ liệu chuyến đi & Escrow Bookings
   const {
     driverOffers,
-    setDriverOffers,
     passengerRequests,
-    setPassengerRequests,
     bookedEscrows,
-    setBookedEscrows,
     refreshBookings,
     toastMessage,
     showToast,
-    handleRePublishTrip,
     handlePostTrip,
     handleEditTrip,
     handleToggleTripStatus,
@@ -480,9 +484,7 @@ export default function App() {
     handleConfirmedFromZaloReentry,
     handleSendDelay,
     handleCompleteTrip,
-    handleSubmitReview,
-    handleVehicleMismatchReport,
-    handleUnreachablePhoneReport
+    handleSubmitReview
   } = useTripsData({
     currentUser,
     updateMyTripsCount,
@@ -647,36 +649,21 @@ export default function App() {
 
   const [showInboxModal, setShowInboxModal] = useState(false);
   const [inboxInitialBookingId, setInboxInitialBookingId] = useState(null);
+  const [inboxAutoCall, setInboxAutoCall] = useState(false);
 
-  const handleOpenInbox = useCallback((bookingId = null) => {
+  const handleOpenInbox = useCallback((bookingId = null, options = {}) => {
     setInboxInitialBookingId(bookingId);
+    setInboxAutoCall(Boolean(options?.autoCall));
     setShowInboxModal(true);
   }, []);
 
   // Hook quản lý Bộ lọc thị trường & Phân nhóm thời gian
-  const {
-    searchKeyword,
-    setSearchKeyword,
-    searchFrom,
-    setSearchFrom,
-    searchTo,
-    setSearchTo,
-    selectedTimeSlot,
-    setSelectedTimeSlot,
-    marketViewMode,
-    setMarketViewMode,
-    selectedCarCategory,
-    setSelectedCarCategory,
-    temporalFilter,
-    setTemporalFilter,
-    visibleCount,
-    setVisibleCount,
-    resetFilters,
-    filteredItems,
-    temporalGroups,
-    displayedMarketItems,
-    paginatedMarketItems
-  } = useMarketFilters({ driverOffers, passengerRequests });
+  // Chỉ lấy những giá trị còn dùng: phần lớn bộ lọc sàn cũ đã bị gỡ cùng
+  // FilterBar/Hero, để lại 18 biến chết trong lần rà lint.
+  const { searchKeyword, setMarketViewMode, resetFilters } = useMarketFilters({
+    driverOffers,
+    passengerRequests
+  });
 
   // Đồng bộ số lượng chuyến của tôi khi danh sách chuyến đi thay đổi
   useEffect(() => {
@@ -685,6 +672,9 @@ export default function App() {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [currentUser, driverOffers, passengerRequests, updateMyTripsCount]);
+
+  // Quản lý Hành lang Tuyến Level 3 & Trạng thái xem sàn
+  const [activeCorridor] = useState('Tuyến QL13');
 
   // Quản lý Social Smart Match Suggestions (Ambient Intelligence)
   const [socialMatches, setSocialMatches] = useState([]);
@@ -763,28 +753,36 @@ export default function App() {
     return () => {
       isMounted = false;
     };
+    // CHỦ Ý chạy một lần lúc mount: đây là bước khôi phục phiên đăng nhập.
+    // Thêm deps sẽ khiến app thẩm định lại token mỗi khi danh sách chuyến đổi.
+    // Số chuyến của tôi không bị cũ: effect ở trên (deps đủ) tính lại ngay khi
+    // driverOffers/passengerRequests tải xong.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [postTripInitialRole, setPostTripInitialRole] = useState('driver');
+  const [movementIntentModalOpen, setMovementIntentModalOpen] = useState(false);
+  const [movementIntentRole, setMovementIntentRole] = useState('passenger');
+  const [movementIntentOriginHub, setMovementIntentOriginHub] = useState(null);
 
-  // Guarded Action: Hỗ trợ linh hoạt 1-chạm cho cả Người tìm xe & Chủ xe
-  const handleRequestPostTrip = (targetRole = 'driver') => {
-    const validRole = targetRole === 'passenger' ? 'passenger' : 'driver';
-    setPostTripInitialRole(validRole);
-    if (!currentUser) {
-      openAuthWithContext({
-        title: validRole === 'passenger' ? 'Đăng Nhập Để Tìm Xe Đi Ghép' : 'Đăng Nhập Để Đăng Chuyến Xe',
-        subtitle: 'Xác thực tài khoản chính chủ · 0 phí sàn · An toàn & minh bạch',
-        contextNotice:
-          validRole === 'passenger'
-            ? 'Đăng tin tìm xe để các Chủ xe chạy cùng tuyến liên hệ đón bạn tận nơi'
-            : 'Đăng chuyến xe nhà còn ghế để chia sẻ bớt chi phí xăng xe và cầu đường',
-        pendingTab: 'post'
-      });
-      return;
+  const handleOpenMovementIntent = useCallback((targetRole = 'passenger', hubId = null) => {
+    const validRole = targetRole === 'driver' ? 'driver' : 'passenger';
+    setMovementIntentRole(validRole);
+    setMovementIntentOriginHub(hubId || null);
+    setMovementIntentModalOpen(true);
+  }, []);
+
+  // Level 3 Autonomous Gateway: Thay thế form đăng bài cũ bằng Khai báo Ý định (Zero-Search)
+  const handleRequestPostTrip = useCallback((targetRole = 'driver') => {
+    handleOpenMovementIntent(targetRole);
+  }, [handleOpenMovementIntent]);
+
+  // Nếu người dùng truy cập /intent hoặc /post, tự động mở modal Khai báo Ý định
+  useEffect(() => {
+    if (activeTab === 'intent') {
+      handleOpenMovementIntent('passenger');
+      setActiveTab('market');
     }
-    setActiveTab('post');
-  };
+  }, [activeTab, handleOpenMovementIntent, setActiveTab]);
 
   // Quản lý chuyến của chính mình: Mở trực tiếp Modal Quản lý / Chỉnh sửa tại chỗ (Stanford Ergonomics - Zero tab jump)
   const handleManageMyTrip = useCallback(
@@ -802,16 +800,7 @@ export default function App() {
       return;
     }
     trackViewTrip(trip.id, `${trip.from} - ${trip.to}`);
-    if (!currentUser) {
-      setPendingBookingTrip(trip);
-      openAuthWithContext({
-        title: 'Xác Thực Để Ghép Chuyến',
-        subtitle: 'Bảo vệ số điện thoại · Kết nối an toàn với chủ xe',
-        contextNotice: `Ghép chuyến tuyến ${trip.from} ⇄ ${trip.to}`
-      });
-      showToast('Vui lòng xác thực số điện thoại để kết nối trực tiếp với chủ xe');
-      return;
-    }
+    // BẤT BIẾN STANFORD: Triệt tiêu rào cản đăng nhập. Khách đặt chỗ trước trực tiếp bằng SĐT (0đ cọc)
     setSelectedItemForEscrow(trip);
   };
 
@@ -876,20 +865,6 @@ export default function App() {
     showToast('Đã đăng xuất tài khoản.');
   };
 
-  const handleAccountDeleted = () => {
-    if (currentUser) {
-      const uId = currentUser.id;
-      const uPhone = currentUser.phone ? String(currentUser.phone).replace(/\D/g, '') : '';
-      setDriverOffers((prev) =>
-        prev.filter((t) => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone))
-      );
-      setPassengerRequests((prev) =>
-        prev.filter((t) => t.userId !== uId && (!uPhone || String(t.phoneReal).replace(/\D/g, '') !== uPhone))
-      );
-    }
-    handleLogout();
-  };
-
   const handleViewTripInMarket = (trip) => {
     if (!trip) return;
     setActiveTab('market');
@@ -940,8 +915,45 @@ export default function App() {
     setActiveTab('market');
   };
 
-  const activeBookedCount = bookedEscrows.filter((b) => b.status !== 'completed' && b.status !== 'cancelled').length;
+  const activeBookedCount = (bookedEscrows || []).filter((b) => {
+    const target = b?.targetItem || b?.targetTrip || {};
+    const from = b?.from || b?.fromLocation || target?.from || target?.fromLocation;
+    const to = b?.to || b?.toLocation || target?.to || target?.toLocation;
+    return Boolean(from && to) && b?.status !== 'completed' && b?.status !== 'cancelled';
+  }).length;
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
+
+  // CHẾ ĐỘ TAPLO Ô TÔ (COCKPIT HUD TOÀN MÀN HÌNH CHO CHỦ XE)
+  if (activeTab === 'cockpit') {
+    return (
+      <>
+        <CockpitMode
+          tripId={`TRIP-${currentUser?.id || currentUser?.phone || 'TAPLO'}`}
+          initialCorridor={activeCorridor || 'Tuyến QL13'}
+          currentUser={currentUser}
+          onBack={() => setActiveTab('market')}
+          onShowToast={showToast}
+        />
+        <Toast message={toastMessage} />
+      </>
+    );
+  }
+
+  // CHẾ ĐỘ QUÉT QR ĐIỂM ĐÓN CÂY XĂNG (RIDER STATION LIVE PASS CHO KHÁCH)
+  if (activeTab === 'station') {
+    return (
+      <>
+        <StationRiderView
+          hubId={stationHubId}
+          initialDestinationHubId={stationDestinationHubId}
+          currentUser={currentUser}
+          onBack={() => setActiveTab('market')}
+          onShowToast={showToast}
+        />
+        <Toast message={toastMessage} />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f5f7] dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 antialiased transition-colors selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
@@ -972,353 +984,20 @@ export default function App() {
       />
 
       <main className="flex-1 pb-24 md:pb-0">
-        {/* ── Tìm chuyến ── */}
+        {/* ── Tuyến Xe Tiện Chuyến Quốc Lộ 13 (Zero Posting Paradigm) ── */}
         {activeTab === 'market' && (
-          <>
-            <Hero
-              trips={driverOffers}
-              searchKeyword={searchKeyword}
-              setSearchKeyword={setSearchKeyword}
-              searchFrom={searchFrom}
-              setSearchFrom={setSearchFrom}
-              searchTo={searchTo}
-              setSearchTo={setSearchTo}
-              onPostClick={handleRequestPostTrip}
+          <div className={`${container} py-5 sm:py-8`}>
+            <CorridorSearchBoard
               currentUser={currentUser}
-              onShowToast={showToast}
-            />
-
-            <div className={`${container} py-3.5 sm:py-6 space-y-3.5 sm:space-y-5 relative z-10`}>
-              <RouteBenchmarkBar
-                searchKeyword={searchKeyword}
-                setSearchKeyword={setSearchKeyword}
-                forceOpen={showBenchmarkModal}
-                onCloseForced={() => setShowBenchmarkModal(false)}
-              />
-
-              {/* Gợi ý ghép xe tức thì thông minh CarMate Smart Match */}
-              <SocialMatchBar
-                suggestions={socialMatches}
-                onSelectTrip={setSelectedTripForRoute}
-                onConnectMatch={handleInitiateBook}
-              />
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5 pb-0.5">
-                <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 py-0.5">
-                  <Segmented
-                    size="sm"
-                    value={marketViewMode}
-                    onChange={setMarketViewMode}
-                    options={[
-                      {
-                        value: 'all',
-                        label: 'Tất cả',
-                        icon: LayoutGrid
-                      },
-                      { value: 'drivers', label: 'Chủ xe', icon: Car },
-                      { value: 'passengers', label: 'Người tìm xe', icon: Users }
-                    ]}
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <select
-                    value={selectedCarCategory}
-                    onChange={(e) => setSelectedCarCategory(e.target.value)}
-                    aria-label="Lọc loại xe"
-                    className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs hover:border-slate-400 dark:hover:border-slate-600 outline-none transition-colors"
-                  >
-                    <option value="all">Mọi loại xe</option>
-                    <option value="family_car">Xe gia đình (Biển trắng)</option>
-                    <option value="convenient_trip">Xe tiện chuyến (Biển vàng)</option>
-                  </select>
-
-                  <select
-                    value={selectedTimeSlot}
-                    onChange={(e) => setSelectedTimeSlot(e.target.value)}
-                    aria-label="Chọn khung giờ"
-                    className="h-8.5 pl-3.5 pr-8 rounded-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs hover:border-slate-400 dark:hover:border-slate-600 outline-none transition-colors"
-                  >
-                    <option value="all">Tất cả khung giờ</option>
-                    {TIME_SLOTS.map((slot) => (
-                      <option key={slot.id} value={slot.id}>
-                        {slot.short}
-                      </option>
-                    ))}
-                  </select>
-
-                  {(selectedTimeSlot !== 'all' ||
-                    marketViewMode !== 'all' ||
-                    selectedCarCategory !== 'all' ||
-                    searchKeyword ||
-                    searchFrom ||
-                    searchTo) && (
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={resetFilters}
-                      className="text-xs font-bold text-[#0071e3] hover:text-[#0077ed]"
-                    >
-                      {t('market.resetFilters')}
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {(searchFrom || searchTo || searchKeyword) && (
-                <div className="flex items-center gap-2 flex-wrap p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs text-xs">
-                  <span className="text-slate-600 dark:text-slate-400 font-bold">Đang lọc:</span>
-                  {searchFrom && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold border border-slate-200 dark:border-slate-700 shadow-2xs">
-                      <MapPin className="w-3 h-3 text-[#107c41]" />
-                      <span>{searchFrom}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSearchFrom('')}
-                        className="ml-1 p-0.5 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer rounded-full"
-                        title="Bỏ lọc điểm đi này"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-                  {searchTo && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold border border-slate-200 dark:border-slate-700 shadow-2xs">
-                      <Navigation className="w-3 h-3 text-[#ff3b30]" />
-                      <span>{searchTo}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSearchTo('')}
-                        className="ml-1 p-0.5 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer rounded-full"
-                        title="Bỏ lọc điểm đến này"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-                  {searchKeyword && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold border border-slate-200 dark:border-slate-700 shadow-2xs">
-                      <Search className="w-3 h-3 text-[#0071e3]" />
-                      <span>{searchKeyword}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSearchKeyword('')}
-                        className="ml-1 p-0.5 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer rounded-full"
-                        title="Bỏ lọc từ khóa này"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="ml-auto text-[#0071e3] hover:text-[#0077ed] font-bold cursor-pointer inline-flex items-center gap-1 group transition-colors"
-                  >
-                    <span>Xem tất cả {driverOffers.length + passengerRequests.length}+ chuyến toàn quốc</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                </div>
-              )}
-
-              <div id="market-results" className="space-y-4 scroll-mt-24">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 pb-1">
-                  <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 py-0.5">
-                    <div className="inline-flex items-center p-1 rounded-full bg-[#f2f2f5] dark:bg-slate-850 border border-black/[0.04] dark:border-white/[0.06] text-xs shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => setTemporalFilter('all')}
-                        className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                          temporalFilter === 'all'
-                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                      >
-                        Tất cả
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTemporalFilter('today')}
-                        className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                          temporalFilter === 'today'
-                            ? 'bg-white dark:bg-slate-900 text-[#0071e3] dark:text-[#2997ff] shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                      >
-                        Hôm nay
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTemporalFilter('tomorrow')}
-                        className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                          temporalFilter === 'tomorrow'
-                            ? 'bg-white dark:bg-slate-900 text-[#107c41] dark:text-emerald-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                      >
-                        Ngày mai
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTemporalFilter('upcoming')}
-                        className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
-                          temporalFilter === 'upcoming'
-                            ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                      >
-                        Sắp tới
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    <span className="relative flex h-2 w-2 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#107c41]"></span>
-                    </span>
-                    <span>
-                      {displayedMarketItems.length} chuyến trực tiếp
-                    </span>
-                  </div>
-                </div>
-
-                {displayedMarketItems.length === 0 ? (
-                  // Phân biệt hai trạng thái rỗng khác nhau: sàn chưa có chuyến nào
-                  // (mời đăng chuyến đầu tiên) và bộ lọc quá hẹp (mời nới bộ lọc).
-                  // Gợi ý "xoá bộ lọc" khi sàn vốn đã trống chỉ làm người dùng bối rối.
-                  driverOffers.length === 0 && passengerRequests.length === 0 ? (
-                    <EmptyState
-                      icon={Car}
-                      title="Sàn đang chờ chuyến đầu tiên"
-                      description="CarMate vừa mở tuyến. Hãy đăng chuyến của bạn để những người cùng đường ghép chung — 0 phí sàn."
-                      action={
-                        <Button variant="primary" onClick={() => setActiveTab('post')}>
-                          Đăng chuyến đầu tiên
-                        </Button>
-                      }
-                    />
-                  ) : (
-                    <EmptyState
-                      icon={SearchX}
-                      title={t('market.emptyTitle')}
-                      description={
-                        temporalFilter !== 'all'
-                          ? `Không có chuyến đi nào phù hợp trong mục "${temporalFilter === 'today' ? 'Hôm nay' : temporalFilter === 'tomorrow' ? 'Ngày mai' : 'Sắp tới'}".`
-                          : t('market.emptyDesc')
-                      }
-                      action={
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setTemporalFilter('all');
-                            resetFilters();
-                          }}
-                        >
-                          {t('market.resetFilters')}
-                        </Button>
-                      }
-                    />
-                  )
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-7">
-                      {paginatedMarketItems.map((item) => (
-                        <TripCard
-                          key={item.id}
-                          item={item}
-                          isOwner={checkIsMyTrip(item)}
-                          onBook={handleInitiateBook}
-                          onManage={handleManageMyTrip}
-                          onViewTrustProfile={setSelectedDriverForTrust}
-                          onViewRoute={setSelectedTripForRoute}
-                          onViewCarPhotos={setSelectedTripForPhotos}
-                          onShare={(trip) => setTicketToShare(trip)}
-                        />
-                      ))}
-                    </div>
-
-                    {displayedMarketItems.length > visibleCount && (
-                      <div className="pt-6 pb-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setVisibleCount((prev) => prev + 9)}
-                          className="px-6 py-3 rounded-full bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-800 font-semibold text-xs transition-all shadow-xs hover:shadow-sm active:scale-95 cursor-pointer inline-flex items-center gap-2"
-                        >
-                          <span>
-                            Xem thêm {Math.min(9, displayedMarketItems.length - visibleCount)} chuyến tiếp theo
-                          </span>
-                          <span className="text-slate-400 font-normal">
-                            ({displayedMarketItems.length - visibleCount} chuyến còn lại)
-                          </span>
-                          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-
-        {activeTab === 'match' && (
-          <div className={`${container} py-8`}>
-            <MatchRadarView
-              driverOffers={driverOffers}
-              passengerRequests={passengerRequests}
-              onBook={handleInitiateBook}
-              onViewTrustProfile={setSelectedDriverForTrust}
-              onViewRoute={setSelectedTripForRoute}
-              onShowToast={showToast}
-            />
-          </div>
-        )}
-
-        {activeTab === 'post' && (
-          <div className={`${container} py-8`}>
-            {!currentUser ? (
-              <PostTripAuthGuard
-                onOpenAuth={() =>
-                  openAuthWithContext({
-                    title: 'Đăng Nhập Để Tạo Chuyến Xe',
-                    subtitle: 'Xác thực tài khoản chính chủ để đăng bài & kết nối khách an toàn',
-                    contextNotice: 'Đăng nhập chính chủ để tạo chuyến xe và quản lý khách ghép',
-                    pendingTab: 'post'
-                  })
-                }
-                onBackToMarket={() => setActiveTab('market')}
-              />
-            ) : (
-              <PostTripForm
-                onSubmit={handlePostTrip}
-                currentUser={currentUser}
-                onOpenAuth={() => openAuthWithContext()}
-                initialRole={postTripInitialRole}
-                onShowToast={showToast}
-              />
-            )}
-          </div>
-        )}
-
-        {activeTab === 'my-trips' && (
-          <div className={`${container} pt-8 pb-28 sm:pb-8`}>
-            <MyTripsView
-              driverOffers={driverOffers}
-              passengerRequests={passengerRequests}
-              currentUser={currentUser}
-              onTripsCountChange={setMyTripsCount}
-              onOpenAuth={() => openAuthWithContext()}
-              onEditTrip={(trip) => setEditingTrip(trip)}
-              onToggleStatus={handleToggleTripStatus}
-              onDeleteTrip={handleDeleteTrip}
-              onPostNew={handleRequestPostTrip}
-              onRePublishTrip={handleRePublishTrip}
-              onViewInMarket={handleViewTripInMarket}
-              onViewTrip={(trip) => setTicketToShare(trip)}
-              onViewCarPhotos={setSelectedTripForPhotos}
-              bookedEscrows={bookedEscrows}
-              onViewBookings={() => setActiveTab('booked')}
+              onOpenCockpit={() => setActiveTab('cockpit')}
+              onOpenStationView={(hub, destHub) => {
+                setStationHubId(hub || 'hub_ql13_tan_khai');
+                setStationDestinationHubId(destHub || null);
+                setActiveTab('station');
+              }}
+              onOpenIntentModal={(targetRole, hubId) => {
+                handleOpenMovementIntent(targetRole, hubId);
+              }}
             />
           </div>
         )}
@@ -1332,10 +1011,8 @@ export default function App() {
               onDelay={setDelayRecord}
               onComplete={handleCompleteTrip}
               onReview={setReviewRecord}
-              onReportMismatch={setMismatchRecord}
-              onReportUnreachablePhone={setUnreachablePhoneRecord}
               onFindTrip={() => setActiveTab('market')}
-              onOpenChat={(id) => handleOpenInbox(id)}
+              onOpenChat={(id, opts) => handleOpenInbox(id, opts)}
             />
           </div>
         )}
@@ -1345,7 +1022,7 @@ export default function App() {
             fallback={
               <div className="min-h-[50vh] flex flex-col items-center justify-center gap-2 text-slate-400 text-xs font-medium">
                 <span className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                <span>Đang tải cổng quản trị bảo mật...</span>
+                <span>{t('appRoot.s001')}</span>
               </div>
             }
           >
@@ -1377,12 +1054,15 @@ export default function App() {
       {showInboxModal && (
         <InboxModal
           isOpen={showInboxModal}
-          onClose={() => setShowInboxModal(false)}
+          onClose={() => {
+            setShowInboxModal(false);
+            setInboxAutoCall(false);
+          }}
           bookings={bookedEscrows}
           currentUser={currentUser}
           initialBookingId={inboxInitialBookingId}
+          autoCall={inboxAutoCall}
           onRefreshBookings={refreshBookings}
-          onReportUnreachablePhone={setUnreachablePhoneRecord}
           onShowToast={showToast}
           onMarkAsRead={markBookingAsRead}
           onMarkAsUnread={markBookingAsUnread}
@@ -1398,14 +1078,15 @@ export default function App() {
           currentUser={currentUser}
           onClose={() => setSelectedItemForEscrow(null)}
           onConfirmBooking={handleConfirmBooking}
+          onAuthSuccess={handleAuthSuccess}
           onViewTrustProfile={setSelectedDriverForTrust}
-          onOpenInbox={(bookingId) => {
+          onOpenInbox={(bookingId, opts) => {
             setSelectedItemForEscrow(null);
-            handleOpenInbox(bookingId);
+            handleOpenInbox(bookingId, opts);
           }}
-          onViewBookedTab={(targetTab = 'booked') => {
+          onViewBookedTab={() => {
             setSelectedItemForEscrow(null);
-            setActiveTab(targetTab === 'my-trips' || targetTab === 'my_trips' ? 'my-trips' : 'booked');
+            setActiveTab('booked');
           }}
           onAutoPostDemand={handlePostTrip}
           onShowToast={showToast}
@@ -1458,20 +1139,6 @@ export default function App() {
           booking={reviewRecord}
           onClose={() => setReviewRecord(null)}
           onSubmitReview={handleSubmitReview}
-        />
-      )}
-      {mismatchRecord && (
-        <VehicleMismatchModal
-          record={mismatchRecord}
-          onClose={() => setMismatchRecord(null)}
-          onSubmitReport={handleVehicleMismatchReport}
-        />
-      )}
-      {unreachablePhoneRecord && (
-        <UnreachablePhoneModal
-          record={unreachablePhoneRecord}
-          onClose={() => setUnreachablePhoneRecord(null)}
-          onSubmitReport={handleUnreachablePhoneReport}
         />
       )}
       {selectedTripForRoute && (
@@ -1555,7 +1222,20 @@ export default function App() {
         <DeleteAccountModal
           currentUser={currentUser}
           onClose={() => setShowDeleteAccountModal(false)}
-          onDeleted={handleAccountDeleted}
+          onShowToast={showToast}
+        />
+      )}
+
+      {movementIntentModalOpen && (
+        <MovementIntentModal
+          isOpen={movementIntentModalOpen}
+          onClose={() => setMovementIntentModalOpen(false)}
+          initialRole={movementIntentRole}
+          initialOriginHubId={movementIntentOriginHub}
+          currentUser={currentUser}
+          onSuccess={() => {
+            setActiveTab('booked');
+          }}
           onShowToast={showToast}
         />
       )}
@@ -1563,9 +1243,8 @@ export default function App() {
       <BottomNavBar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onRequestPostTrip={handleRequestPostTrip}
+        onOpenInbox={handleOpenInbox}
         bookedCount={activeBookedCount}
-        myTripsCount={myTripsCount}
       />
       <PwaInstallPrompt />
       <AppleMacNotification onOpenInbox={handleOpenInbox} onSelectBooking={handleOpenInbox} />

@@ -105,7 +105,7 @@ export async function initDB() {
       db.exec('ALTER TABLE users ADD COLUMN email TEXT');
     }
     db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
-  } catch (migErr) {
+  } catch {
     // Bỏ qua nếu đã tồn tại hoặc đang chạy trong transaction
   }
 
@@ -119,86 +119,252 @@ export async function initDB() {
       createdAt INTEGER,
       payload TEXT
     );
-    CREATE INDEX IF NOT EXISTS idx_bookings_trip ON bookings(tripId);
-  `);
+      CREATE INDEX IF NOT EXISTS idx_bookings_trip ON bookings(tripId);
+    `);
 
-  // 4. Bảng Siêu dữ liệu & Cấu hình (key_values)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS key_values (
-      key TEXT PRIMARY KEY,
-      value TEXT
-    );
-  `);
+    // Migration bổ sung các cột Cấp độ 3 cho bookings nếu chưa có
+    try {
+      const bookingCols = db.pragma('table_info(bookings)').map((c) => c.name);
+      if (!bookingCols.includes('standbyOfferId')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN standbyOfferId TEXT');
+      }
+      if (!bookingCols.includes('doorstepPickup')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN doorstepPickup INTEGER DEFAULT 0');
+      }
+      if (!bookingCols.includes('doorstepAddress')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN doorstepAddress TEXT');
+      }
+      if (!bookingCols.includes('penaltyTier')) {
+        db.exec("ALTER TABLE bookings ADD COLUMN penaltyTier TEXT DEFAULT 'none'");
+      }
+      if (!bookingCols.includes('penaltyPoints')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN penaltyPoints INTEGER DEFAULT 0');
+      }
+      if (!bookingCols.includes('cancelledAt')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN cancelledAt INTEGER');
+      }
+      if (!bookingCols.includes('cancellationReason')) {
+        db.exec('ALTER TABLE bookings ADD COLUMN cancellationReason TEXT');
+      }
+    } catch {
+      // Bỏ qua nếu đã tồn tại
+    }
 
-  // 5. Bảng Lưu Trữ Quỹ Đạo AI (ai_trajectories - MIT & Stanford Observability)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS ai_trajectories (
-      id TEXT PRIMARY KEY,
-      userGoal TEXT,
-      requestedRoute TEXT,
-      reasoningSteps TEXT,
-      suggestionsCount INTEGER DEFAULT 0,
-      executionTimeMs INTEGER DEFAULT 0,
-      unmetDemand INTEGER DEFAULT 0,
-      createdAt INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_ai_traj_created ON ai_trajectories(createdAt);
-    CREATE INDEX IF NOT EXISTS idx_ai_traj_unmet ON ai_trajectories(unmetDemand);
-  `);
+    // 4. Bảng Siêu dữ liệu & Cấu hình (key_values)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS key_values (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      );
+    `);
 
-  // 6. Bảng Phân Tích Hành Vi & Funnel (analytics_events)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS analytics_events (
-      id TEXT PRIMARY KEY,
-      event_name TEXT NOT NULL,
-      properties TEXT,
-      user_id TEXT,
-      created_at INTEGER NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_analytics_event_name ON analytics_events(event_name);
-    CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
-  `);
+    // 5. Bảng Lưu Trữ Quỹ Đạo AI (ai_trajectories - MIT & Stanford Observability)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ai_trajectories (
+        id TEXT PRIMARY KEY,
+        userGoal TEXT,
+        requestedRoute TEXT,
+        reasoningSteps TEXT,
+        suggestionsCount INTEGER DEFAULT 0,
+        executionTimeMs INTEGER DEFAULT 0,
+        unmetDemand INTEGER DEFAULT 0,
+        createdAt INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_ai_traj_created ON ai_trajectories(createdAt);
+      CREATE INDEX IF NOT EXISTS idx_ai_traj_unmet ON ai_trajectories(unmetDemand);
+    `);
 
-  // 7. Bảng Trò Chuyện & Khiếu Nại Với Platform CSKH (support_messages)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS support_messages (
-      id TEXT PRIMARY KEY,
-      bookingId TEXT,
-      userId TEXT,
-      phone TEXT,
-      senderRole TEXT NOT NULL,
-      senderName TEXT,
-      message TEXT NOT NULL,
-      type TEXT DEFAULT 'support',
-      status TEXT DEFAULT 'open',
-      createdAt INTEGER NOT NULL,
-      metadata TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_support_booking ON support_messages(bookingId);
-    CREATE INDEX IF NOT EXISTS idx_support_user ON support_messages(userId);
-    CREATE INDEX IF NOT EXISTS idx_support_phone ON support_messages(phone);
-    CREATE INDEX IF NOT EXISTS idx_support_created ON support_messages(createdAt);
-  `);
+    // 6. Bảng Phân Tích Hành Vi & Funnel (analytics_events)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS analytics_events (
+        id TEXT PRIMARY KEY,
+        event_name TEXT NOT NULL,
+        properties TEXT,
+        user_id TEXT,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_analytics_event_name ON analytics_events(event_name);
+      CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
+    `);
 
-  // 8. Bảng Yêu Cầu Xóa Tài Khoản Gửi Tới Quản Trị Viên (account_deletion_requests)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS account_deletion_requests (
-      id TEXT PRIMARY KEY,
-      userId TEXT NOT NULL,
-      phone TEXT,
-      name TEXT,
-      email TEXT,
-      reason TEXT,
-      status TEXT DEFAULT 'pending',
-      createdAt INTEGER NOT NULL,
-      processedAt INTEGER,
-      processedBy TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_del_req_user ON account_deletion_requests(userId);
-    CREATE INDEX IF NOT EXISTS idx_del_req_phone ON account_deletion_requests(phone);
-    CREATE INDEX IF NOT EXISTS idx_del_req_status ON account_deletion_requests(status);
-    CREATE INDEX IF NOT EXISTS idx_del_req_created ON account_deletion_requests(createdAt);
-  `);
+    // 7. Bảng Trò Chuyện & Khiếu Nại Với Platform CSKH (support_messages)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS support_messages (
+        id TEXT PRIMARY KEY,
+        bookingId TEXT,
+        userId TEXT,
+        phone TEXT,
+        senderRole TEXT NOT NULL,
+        senderName TEXT,
+        message TEXT NOT NULL,
+        type TEXT DEFAULT 'support',
+        status TEXT DEFAULT 'open',
+        createdAt INTEGER NOT NULL,
+        metadata TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_support_booking ON support_messages(bookingId);
+      CREATE INDEX IF NOT EXISTS idx_support_user ON support_messages(userId);
+      CREATE INDEX IF NOT EXISTS idx_support_phone ON support_messages(phone);
+      CREATE INDEX IF NOT EXISTS idx_support_created ON support_messages(createdAt);
+    `);
+
+    // 8. Bảng Yêu Cầu Xóa Tài Khoản Gửi Tới Quản Trị Viên (account_deletion_requests)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS account_deletion_requests (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        phone TEXT,
+        name TEXT,
+        email TEXT,
+        reason TEXT,
+        status TEXT DEFAULT 'pending',
+        createdAt INTEGER NOT NULL,
+        processedAt INTEGER,
+        processedBy TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_del_req_user ON account_deletion_requests(userId);
+      CREATE INDEX IF NOT EXISTS idx_del_req_phone ON account_deletion_requests(phone);
+      CREATE INDEX IF NOT EXISTS idx_del_req_status ON account_deletion_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_del_req_created ON account_deletion_requests(createdAt);
+    `);
+
+    // 9. Bảng Khai Báo Ý Định Di Chuyển (intents - Zero-Search Autonomous Engine)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS intents (
+        id TEXT PRIMARY KEY,
+        userId TEXT,
+        role TEXT NOT NULL,
+        originHubId TEXT,
+        originName TEXT,
+        destinationHubId TEXT,
+        destinationName TEXT,
+        corridor TEXT,
+        date TEXT,
+        timeSlot TEXT,
+        seats INTEGER DEFAULT 1,
+        isDoorstep INTEGER DEFAULT 0,
+        doorstepAddress TEXT,
+        doorstepLat REAL,
+        doorstepLng REAL,
+        phone TEXT,
+        contactName TEXT,
+        status TEXT DEFAULT 'pending',
+        matchedTripId TEXT,
+        matchedBookingId TEXT,
+        createdAt INTEGER,
+        payload TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_intents_status ON intents(status);
+      CREATE INDEX IF NOT EXISTS idx_intents_corridor ON intents(corridor);
+      CREATE INDEX IF NOT EXISTS idx_intents_date ON intents(date);
+      CREATE INDEX IF NOT EXISTS idx_intents_role ON intents(role);
+    `);
+
+    // 10. Bảng Lưu Trữ Phiên Khớp Lệnh (matching_epochs)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS matching_epochs (
+        id TEXT PRIMARY KEY,
+        epochType TEXT NOT NULL,
+        corridor TEXT,
+        matchedCount INTEGER DEFAULT 0,
+        driverCount INTEGER DEFAULT 0,
+        passengerCount INTEGER DEFAULT 0,
+        createdAt INTEGER,
+        summary TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_epochs_created ON matching_epochs(createdAt);
+    `);
+
+    // 11. Bảng Gom Yêu Cầu Mở Trạm Ảo Mới (station_requests - Hard Whitelist & Zero Roadside Stops)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS station_requests (
+        id TEXT PRIMARY KEY,
+        stationName TEXT NOT NULL,
+        normalizedName TEXT NOT NULL,
+        note TEXT,
+        lat REAL,
+        lng REAL,
+        userPhone TEXT,
+        requestCount INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'pending',
+        createdAt INTEGER NOT NULL,
+        updatedAt INTEGER NOT NULL,
+        payload TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_stn_req_norm ON station_requests(normalizedName);
+      CREATE INDEX IF NOT EXISTS idx_stn_req_phone ON station_requests(userPhone);
+      CREATE INDEX IF NOT EXISTS idx_stn_req_status ON station_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_stn_req_count ON station_requests(requestCount);
+    `);
+
+    // 12. Bảng Sổ Lệnh Hai Chiều & Khớp Lệnh Liên Tục (seat_exchange_orders - LOB & CDA Spot Market)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS seat_exchange_orders (
+        id TEXT PRIMARY KEY,
+        userId TEXT,
+        orderType TEXT NOT NULL,
+        stationId TEXT,
+        stationName TEXT,
+        corridor TEXT DEFAULT 'Tuyến QL13',
+        direction TEXT,
+        date TEXT,
+        targetTime TEXT,
+        targetTimeMinutes INTEGER,
+        deltaMinutes INTEGER DEFAULT 10,
+        timeStartMins INTEGER,
+        timeEndMins INTEGER,
+        seats INTEGER DEFAULT 1,
+        remainingSeats INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'OPEN',
+        orderTier TEXT DEFAULT 'SAFE_ADVANCE',
+        ttlTimestamp INTEGER,
+        ttlTimeString TEXT,
+        phone TEXT,
+        contactName TEXT,
+        plate TEXT,
+        vehicleModel TEXT,
+        trustScore INTEGER DEFAULT 98,
+        matchedWithOrderId TEXT,
+        matchedBookingId TEXT,
+        pinCode TEXT,
+        rendezvousTime TEXT,
+        rendezvousMinutes INTEGER,
+        createdAt INTEGER,
+        matchedAt INTEGER,
+        expiredAt INTEGER,
+        payload TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_exchange_status ON seat_exchange_orders(status);
+      CREATE INDEX IF NOT EXISTS idx_exchange_station ON seat_exchange_orders(stationId);
+      CREATE INDEX IF NOT EXISTS idx_exchange_corridor ON seat_exchange_orders(corridor);
+      CREATE INDEX IF NOT EXISTS idx_exchange_ttl ON seat_exchange_orders(ttlTimestamp);
+      CREATE INDEX IF NOT EXISTS idx_exchange_type ON seat_exchange_orders(orderType);
+    `);
+
+    // 13. Bảng Quản Lý Sự Cố Tuyến & Chế Tài Unhappy Cases (trip_incidents)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS trip_incidents (
+        id TEXT PRIMARY KEY,
+        bookingId TEXT,
+        tripId TEXT,
+        incidentType TEXT NOT NULL,
+        reporterRole TEXT NOT NULL,
+        reporterPhone TEXT,
+        riderPhone TEXT,
+        driverPhone TEXT,
+        sanctionAction TEXT,
+        driverPenalty INTEGER DEFAULT 0,
+        riderPenalty INTEGER DEFAULT 0,
+        fareExempt INTEGER DEFAULT 0,
+        isBanned INTEGER DEFAULT 0,
+        note TEXT,
+        createdAt TEXT,
+        payload TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_incident_type ON trip_incidents(incidentType);
+      CREATE INDEX IF NOT EXISTS idx_incident_rider ON trip_incidents(riderPhone);
+      CREATE INDEX IF NOT EXISTS idx_incident_driver ON trip_incidents(driverPhone);
+    `);
 
   // 9. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
   //
@@ -855,12 +1021,25 @@ export async function removeBooking(id) {
   return info.changes > 0;
 }
 
+export function clearAllBookings() {
+  const database = getRawDB();
+  const info = database.prepare('DELETE FROM bookings').run();
+  return info.changes;
+}
+
+export function clearTestBookings() {
+  const database = getRawDB();
+  const info = database.prepare("DELETE FROM bookings WHERE escrowId LIKE 'TEST-%' OR tripId LIKE 'INT-%' OR tripId LIKE 'TRIP-TEST-%'").run();
+  return info.changes;
+}
+
 export function getUserByPhone(phone) {
   const database = getRawDB();
   const clean = cleanPhoneNumber(phone);
   if (!clean) return null;
+  const norm = normalizePhoneNumber(phone) || clean;
 
-  const row = database.prepare('SELECT payload FROM users WHERE phone = ?').get(clean);
+  const row = database.prepare('SELECT payload FROM users WHERE phone = ? OR phone = ?').get(clean, norm);
   if (!row) return null;
 
   try {
@@ -1461,6 +1640,48 @@ export function saveTrustRules(rules) {
 }
 
 /**
+ * =============================================================================
+ * DANH BẠ NHÀ XE TUYẾN CỐ ĐỊNH (TRANSIT FALLBACK DIRECTORY)
+ * =============================================================================
+ * Lưu trong key_values để Cổng Quản Trị sửa được mà không phải deploy lại.
+ *
+ * BẤT BIẾN: mỗi số phải có `verified: true` kèm `verifiedAt` thì giao diện mới
+ * hiện nút gọi. Số chưa kiểm chứng vẫn lưu được (để đội vận hành theo dõi) nhưng
+ * KHÔNG bao giờ lộ ra cho khách — khách bấm gọi đúng lúc gấp nhất mà gặp số sai
+ * thì mất niềm tin vĩnh viễn, tệ hơn hẳn việc không có số nào.
+ */
+export function getTransitDirectory() {
+  const database = getRawDB();
+  try {
+    const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('transit_directory');
+    if (row && row.value) {
+      const parsed = JSON.parse(row.value);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('[SQLite DB] Lỗi đọc transit_directory:', e.message);
+  }
+  return [];
+}
+
+/** Lưu danh bạ nhà xe (Admin cập nhật). */
+export function saveTransitDirectory(providers) {
+  if (!Array.isArray(providers)) {
+    throw new Error('Danh bạ phải là một danh sách mảng');
+  }
+  const database = getRawDB();
+  database
+    .prepare(
+      `
+    INSERT INTO key_values (key, value) VALUES ('transit_directory', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `
+    )
+    .run(JSON.stringify(providers));
+  return providers;
+}
+
+/**
  * Khôi phục cấu hình quy tắc tính điểm tín nhiệm về mặc định
  */
 export function resetTrustRules() {
@@ -1561,7 +1782,7 @@ export function getSupportMessages({ bookingId, userId, phone, limit = 50 } = {}
 /**
  * Xử lý khiếu nại (Dispute) và gỡ khóa tài khoản (Unban) tự động hoặc theo phê duyệt
  */
-export async function resolveDisputeAndUnban({ bookingId, userId, phone, reason = '', note = '' } = {}) {
+export async function resolveDisputeAndUnban({ bookingId, userId, phone } = {}) {
   const database = getRawDB();
   // 1. Mở khóa booking nếu có
   if (bookingId) {
@@ -1692,3 +1913,1017 @@ export async function processDeletionRequest(requestId, action, adminInfo = 'Adm
   }
 }
 
+/**
+ * =========================================================================
+ * KHỐI CHỨC NĂNG LEVEL 3: AUTONOMOUS ZERO-SEARCH MATCHING & GAME THEORY
+ * =========================================================================
+ */
+
+/**
+ * Tạo mới một Khai báo Ý định Di chuyển (Intent)
+ */
+export async function createIntent(intentData) {
+  const database = getRawDB();
+  const id = intentData.id || `INT-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const now = Date.now();
+
+  const full = {
+    ...intentData,
+    id,
+    seats: Number(intentData.seats) || 1,
+    isDoorstep: intentData.isDoorstep ? 1 : 0,
+    doorstepAddress: intentData.doorstepAddress || '',
+    doorstepLat: intentData.doorstepLat != null ? Number(intentData.doorstepLat) : null,
+    doorstepLng: intentData.doorstepLng != null ? Number(intentData.doorstepLng) : null,
+    status: intentData.status || 'pending',
+    createdAt: intentData.createdAt || now
+  };
+
+  database
+    .prepare(
+      `
+    INSERT OR REPLACE INTO intents (
+      id, userId, role, originHubId, originName, destinationHubId, destinationName,
+      corridor, date, timeSlot, seats, isDoorstep, doorstepAddress, doorstepLat, doorstepLng,
+      phone, contactName, status, matchedTripId, matchedBookingId, createdAt, payload
+    ) VALUES (
+      @id, @userId, @role, @originHubId, @originName, @destinationHubId, @destinationName,
+      @corridor, @date, @timeSlot, @seats, @isDoorstep, @doorstepAddress, @doorstepLat, @doorstepLng,
+      @phone, @contactName, @status, @matchedTripId, @matchedBookingId, @createdAt, @payload
+    )
+  `
+    )
+    .run({
+      id,
+      userId: full.userId || '',
+      role: full.role || 'passenger',
+      originHubId: full.originHubId || '',
+      originName: full.originName || '',
+      destinationHubId: full.destinationHubId || '',
+      destinationName: full.destinationName || '',
+      corridor: full.corridor || 'Tuyến QL13',
+      date: full.date || '',
+      timeSlot: full.timeSlot || '',
+      seats: full.seats,
+      isDoorstep: full.isDoorstep,
+      doorstepAddress: full.doorstepAddress,
+      doorstepLat: full.doorstepLat,
+      doorstepLng: full.doorstepLng,
+      phone: cleanPhoneNumber(full.phone || ''),
+      contactName: full.contactName || '',
+      status: full.status,
+      matchedTripId: full.matchedTripId || null,
+      matchedBookingId: full.matchedBookingId || null,
+      createdAt: full.createdAt,
+      payload: JSON.stringify(full)
+    });
+
+  return full;
+}
+
+/**
+ * Lấy danh sách các Intent theo bộ lọc (status, role, corridor, date)
+ */
+export function getIntents(filters = {}) {
+  const database = getRawDB();
+  const conditions = [];
+  const params = [];
+
+  if (filters.status) {
+    conditions.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.role) {
+    conditions.push('role = ?');
+    params.push(filters.role);
+  }
+  if (filters.corridor) {
+    conditions.push('corridor = ?');
+    params.push(filters.corridor);
+  }
+  if (filters.date) {
+    conditions.push('date = ?');
+    params.push(filters.date);
+  }
+  if (filters.userId) {
+    conditions.push('userId = ?');
+    params.push(filters.userId);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const query = `SELECT payload FROM intents ${whereClause} ORDER BY createdAt ASC`;
+  const rows = database.prepare(query).all(...params);
+
+  return rows
+    .map((r) => {
+      try {
+        return JSON.parse(r.payload);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Lấy chi tiết một Intent theo ID
+ */
+export function getIntentById(id) {
+  const database = getRawDB();
+  const row = database.prepare('SELECT payload FROM intents WHERE id = ?').get(id);
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cập nhật trạng thái và dữ liệu Intent
+ */
+export async function updateIntent(id, updates = {}) {
+  const database = getRawDB();
+  const row = database.prepare('SELECT payload FROM intents WHERE id = ?').get(id);
+  if (!row) return null;
+
+  try {
+    const full = JSON.parse(row.payload);
+    Object.assign(full, updates);
+
+    database
+      .prepare(
+        `
+      UPDATE intents 
+      SET status = ?, matchedTripId = ?, matchedBookingId = ?, payload = ?
+      WHERE id = ?
+    `
+      )
+      .run(
+        full.status || 'pending',
+        full.matchedTripId || null,
+        full.matchedBookingId || null,
+        JSON.stringify(full),
+        id
+      );
+
+    return full;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Xóa một Intent
+ */
+export async function deleteIntent(id) {
+  const database = getRawDB();
+  const info = database.prepare('DELETE FROM intents WHERE id = ?').run(id);
+  return info.changes > 0;
+}
+
+/**
+ * Lưu trữ nhật ký một Phiên Khớp Lệnh (Matching Epoch)
+ */
+export async function createMatchingEpoch(epochData) {
+  const database = getRawDB();
+  const id = epochData.id || `EP-${Date.now()}`;
+  const now = Date.now();
+
+  database
+    .prepare(
+      `
+    INSERT INTO matching_epochs (
+      id, epochType, corridor, matchedCount, driverCount, passengerCount, createdAt, summary
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?, ?, ?
+    )
+  `
+    )
+    .run(
+      id,
+      epochData.epochType || 'micro_batch',
+      epochData.corridor || 'Toàn sàn',
+      Number(epochData.matchedCount || 0),
+      Number(epochData.driverCount || 0),
+      Number(epochData.passengerCount || 0),
+      now,
+      typeof epochData.summary === 'string' ? epochData.summary : JSON.stringify(epochData.summary || {})
+    );
+
+  return { id, createdAt: now, ...epochData };
+}
+
+/**
+ * Lấy lịch sử các phiên khớp lệnh gần nhất
+ */
+export function getMatchingEpochs(limit = 20) {
+  const database = getRawDB();
+  return database.prepare('SELECT * FROM matching_epochs ORDER BY createdAt DESC LIMIT ?').all(limit);
+}
+
+/**
+ * =========================================================================
+ * KHỐI CHỨC NĂNG LEVEL 3.5: SÀN GIAO DỊCH GHẾ TRỐNG (SEAT EXCHANGE - LOB & CDA)
+ * =========================================================================
+ */
+
+/**
+ * Tạo mới một Lệnh trên Sàn Giao Dịch Ghế Trống (Ask hoặc Bid)
+ */
+export async function createExchangeOrderDb(orderData) {
+  const database = getRawDB();
+  const id = orderData.id || `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const now = Date.now();
+  const full = {
+    ...orderData,
+    id,
+    seats: Number(orderData.seats) || 1,
+    remainingSeats: Number(orderData.remainingSeats ?? orderData.seats) || 1,
+    status: orderData.status || 'OPEN',
+    createdAt: orderData.createdAt || now
+  };
+
+  database
+    .prepare(
+      `
+    INSERT OR REPLACE INTO seat_exchange_orders (
+      id, userId, orderType, stationId, stationName, corridor, direction, date,
+      targetTime, targetTimeMinutes, deltaMinutes, timeStartMins, timeEndMins,
+      seats, remainingSeats, status, orderTier, ttlTimestamp, ttlTimeString,
+      phone, contactName, plate, vehicleModel, trustScore,
+      matchedWithOrderId, matchedBookingId, pinCode, rendezvousTime, rendezvousMinutes,
+      createdAt, matchedAt, expiredAt, payload
+    ) VALUES (
+      @id, @userId, @orderType, @stationId, @stationName, @corridor, @direction, @date,
+      @targetTime, @targetTimeMinutes, @deltaMinutes, @timeStartMins, @timeEndMins,
+      @seats, @remainingSeats, @status, @orderTier, @ttlTimestamp, @ttlTimeString,
+      @phone, @contactName, @plate, @vehicleModel, @trustScore,
+      @matchedWithOrderId, @matchedBookingId, @pinCode, @rendezvousTime, @rendezvousMinutes,
+      @createdAt, @matchedAt, @expiredAt, @payload
+    )
+  `
+    )
+    .run({
+      id,
+      userId: full.userId || '',
+      orderType: full.orderType || 'BID',
+      stationId: full.stationId || '',
+      stationName: full.stationName || '',
+      corridor: full.corridor || 'Tuyến QL13',
+      direction: full.direction || '',
+      date: full.date || '',
+      targetTime: full.targetTime || '',
+      targetTimeMinutes: full.targetTimeMinutes || 0,
+      deltaMinutes: full.deltaMinutes || 10,
+      timeStartMins: full.timeStartMins || 0,
+      timeEndMins: full.timeEndMins || 0,
+      seats: full.seats,
+      remainingSeats: full.remainingSeats,
+      status: full.status,
+      orderTier: full.orderTier || 'SAFE_ADVANCE',
+      ttlTimestamp: full.ttlTimestamp || null,
+      ttlTimeString: full.ttlTimeString || '',
+      phone: cleanPhoneNumber(full.phone || ''),
+      contactName: full.contactName || '',
+      plate: full.plate || '',
+      vehicleModel: full.vehicleModel || '',
+      trustScore: Number(full.trustScore || 98),
+      matchedWithOrderId: full.matchedWithOrderId || null,
+      matchedBookingId: full.matchedBookingId || null,
+      pinCode: full.pinCode || null,
+      rendezvousTime: full.rendezvousTime || null,
+      rendezvousMinutes: full.rendezvousMinutes || null,
+      createdAt: full.createdAt,
+      matchedAt: full.matchedAt || null,
+      expiredAt: full.expiredAt || null,
+      payload: JSON.stringify(full)
+    });
+
+  return full;
+}
+
+/**
+ * Lấy danh sách lệnh trên sàn giao dịch theo bộ lọc
+ */
+export function getExchangeOrdersDb(filters = {}) {
+  const database = getRawDB();
+  const conditions = [];
+  const params = [];
+
+  if (filters.status) {
+    conditions.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.orderType) {
+    conditions.push('orderType = ?');
+    params.push(filters.orderType);
+  }
+  if (filters.corridor) {
+    conditions.push('corridor = ?');
+    params.push(filters.corridor);
+  }
+  if (filters.direction) {
+    conditions.push('direction = ?');
+    params.push(filters.direction);
+  }
+  if (filters.stationId) {
+    conditions.push('stationId = ?');
+    params.push(filters.stationId);
+  }
+  if (filters.date) {
+    conditions.push('date = ?');
+    params.push(filters.date);
+  }
+  if (filters.userId) {
+    conditions.push('userId = ?');
+    params.push(filters.userId);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const query = `SELECT payload FROM seat_exchange_orders ${whereClause} ORDER BY createdAt ASC`;
+  const rows = database.prepare(query).all(...params);
+
+  return rows
+    .map((r) => {
+      try {
+        return JSON.parse(r.payload);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Lấy chi tiết lệnh theo ID
+ */
+export function getExchangeOrderByIdDb(id) {
+  const database = getRawDB();
+  const row = database.prepare('SELECT payload FROM seat_exchange_orders WHERE id = ?').get(id);
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cập nhật trạng thái lệnh (FILLED, PARTIALLY_FILLED, EXPIRED, CANCELLED)
+ */
+export async function updateExchangeOrderDb(id, updates = {}) {
+  const current = getExchangeOrderByIdDb(id);
+  if (!current) return null;
+  const updated = { ...current, ...updates, updatedAt: Date.now() };
+
+  const database = getRawDB();
+  database
+    .prepare(
+      `
+    UPDATE seat_exchange_orders
+    SET status = ?, remainingSeats = ?, matchedWithOrderId = ?, matchedBookingId = ?,
+        pinCode = ?, rendezvousTime = ?, rendezvousMinutes = ?, matchedAt = ?, expiredAt = ?, payload = ?
+    WHERE id = ?
+  `
+    )
+    .run(
+      updated.status || 'OPEN',
+      Number(updated.remainingSeats ?? updated.seats ?? 1),
+      updated.matchedWithOrderId || null,
+      updated.matchedBookingId || null,
+      updated.pinCode || null,
+      updated.rendezvousTime || null,
+      updated.rendezvousMinutes || null,
+      updated.matchedAt || null,
+      updated.expiredAt || null,
+      JSON.stringify(updated),
+      id
+    );
+
+  return updated;
+}
+
+/**
+ * Quét các lệnh OPEN trên sàn đã vượt quá TTL trượt động và chuyển sang EXPIRED
+ */
+export async function expireSlidingTTLOrdersDb(currentTimestamp = Date.now()) {
+  const database = getRawDB();
+  const rows = database
+    .prepare(
+      `
+    SELECT payload FROM seat_exchange_orders
+    WHERE (status = 'OPEN' OR status = 'PARTIALLY_FILLED') AND ttlTimestamp IS NOT NULL AND ttlTimestamp <= ?
+  `
+    )
+    .all(currentTimestamp);
+
+  const expiredList = [];
+  for (const row of rows) {
+    try {
+      const order = JSON.parse(row.payload);
+      order.status = 'EXPIRED';
+      order.expiredAt = currentTimestamp;
+      await updateExchangeOrderDb(order.id, {
+        status: 'EXPIRED',
+        expiredAt: currentTimestamp
+      });
+      expiredList.push(order);
+    } catch {
+      // Bỏ qua lỗi parse nếu có
+    }
+  }
+
+  return expiredList;
+}
+
+
+/**
+ * KHỚP LỆNH NGUYÊN TỬ (ATOMIC MATCH COMMIT — MIT INVARIANT)
+ *
+ * Một lần khớp lệnh gồm 3 thao tác ghi: cập nhật lệnh ASK, cập nhật lệnh BID và
+ * tạo booking. Nếu ghi rời rạc, sự cố giữa chừng sẽ để lại ghế đã bị trừ mà KHÔNG
+ * có booking — sàn rơi vào trạng thái mâu thuẫn (khách mất ghế nhưng không có vé).
+ *
+ * Hàm này gói cả 3 trong MỘT transaction SQLite: hoặc cả 3 cùng được ghi, hoặc
+ * không gì được ghi. better-sqlite3 tự ROLLBACK khi callback ném lỗi.
+ */
+export function commitExchangeMatchDb({ askOrder, bidOrder, booking, isNewOrderAsk = false }) {
+  const database = getRawDB();
+
+  const run = database.transaction(() => {
+    // Lệnh mới (chưa có trong DB) phải INSERT; lệnh đã nằm trên sàn thì UPDATE
+    // để không xoá mất các trường không được truyền vào.
+    if (isNewOrderAsk) {
+      upsertExchangeOrderRow(database, askOrder);
+      updateExchangeOrderRow(database, bidOrder.id, bidOrder);
+    } else {
+      upsertExchangeOrderRow(database, bidOrder);
+      updateExchangeOrderRow(database, askOrder.id, askOrder);
+    }
+
+    const escrowId = booking.escrowId || `ESC-${Date.now()}`;
+    const existing = database.prepare('SELECT payload FROM bookings WHERE escrowId = ?').get(escrowId);
+    let accessToken = booking.accessToken;
+    if (!accessToken && existing) {
+      try {
+        accessToken = JSON.parse(existing.payload)?.accessToken;
+      } catch {
+        accessToken = null;
+      }
+    }
+    if (!accessToken) accessToken = crypto.randomBytes(16).toString('hex');
+
+    const fullBooking = {
+      ...booking,
+      escrowId,
+      accessToken,
+      status: booking.status || 'zalo_active',
+      commitmentType: booking.commitmentType || 'zalo_direct',
+      createdAt: booking.createdAt || Date.now()
+    };
+
+    database
+      .prepare(
+        `INSERT OR REPLACE INTO bookings (escrowId, tripId, passengerPhone, status, createdAt, payload)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        escrowId,
+        fullBooking.tripId || '',
+        cleanPhoneNumber(fullBooking.passengerPhone || ''),
+        fullBooking.status,
+        fullBooking.createdAt,
+        JSON.stringify(fullBooking)
+      );
+
+    return fullBooking;
+  });
+
+  return run();
+}
+
+/**
+ * Ghi đè trọn vẹn một dòng lệnh (dùng cho lệnh MỚI vào sàn).
+ */
+function upsertExchangeOrderRow(database, order) {
+  const full = {
+    ...order,
+    seats: Number(order.seats) || 1,
+    remainingSeats: Number(order.remainingSeats ?? order.seats) || 0,
+    status: order.status || 'OPEN',
+    createdAt: order.createdAt || Date.now()
+  };
+
+  database
+    .prepare(
+      `INSERT OR REPLACE INTO seat_exchange_orders (
+        id, userId, orderType, stationId, stationName, corridor, direction, date,
+        targetTime, targetTimeMinutes, deltaMinutes, timeStartMins, timeEndMins,
+        seats, remainingSeats, status, orderTier, ttlTimestamp, ttlTimeString,
+        phone, contactName, plate, vehicleModel, trustScore,
+        matchedWithOrderId, matchedBookingId, pinCode, rendezvousTime, rendezvousMinutes,
+        createdAt, matchedAt, expiredAt, payload
+      ) VALUES (
+        @id, @userId, @orderType, @stationId, @stationName, @corridor, @direction, @date,
+        @targetTime, @targetTimeMinutes, @deltaMinutes, @timeStartMins, @timeEndMins,
+        @seats, @remainingSeats, @status, @orderTier, @ttlTimestamp, @ttlTimeString,
+        @phone, @contactName, @plate, @vehicleModel, @trustScore,
+        @matchedWithOrderId, @matchedBookingId, @pinCode, @rendezvousTime, @rendezvousMinutes,
+        @createdAt, @matchedAt, @expiredAt, @payload
+      )`
+    )
+    .run({
+      id: full.id,
+      userId: full.userId || '',
+      orderType: full.orderType || 'BID',
+      stationId: full.stationId || '',
+      stationName: full.stationName || '',
+      corridor: full.corridor || 'Tuyến QL13',
+      direction: full.direction || '',
+      date: full.date || '',
+      targetTime: full.targetTime || '',
+      targetTimeMinutes: full.targetTimeMinutes || 0,
+      deltaMinutes: full.deltaMinutes || 10,
+      timeStartMins: full.timeStartMins || 0,
+      timeEndMins: full.timeEndMins || 0,
+      seats: full.seats,
+      remainingSeats: full.remainingSeats,
+      status: full.status,
+      orderTier: full.orderTier || 'SAFE_ADVANCE',
+      ttlTimestamp: full.ttlTimestamp || null,
+      ttlTimeString: full.ttlTimeString || '',
+      phone: cleanPhoneNumber(full.phone || ''),
+      contactName: full.contactName || '',
+      plate: full.plate || '',
+      vehicleModel: full.vehicleModel || '',
+      trustScore: Number(full.trustScore || 98),
+      matchedWithOrderId: full.matchedWithOrderId || null,
+      matchedBookingId: full.matchedBookingId || null,
+      pinCode: full.pinCode || null,
+      rendezvousTime: full.rendezvousTime || null,
+      rendezvousMinutes: full.rendezvousMinutes || null,
+      createdAt: full.createdAt,
+      matchedAt: full.matchedAt || null,
+      expiredAt: full.expiredAt || null,
+      payload: JSON.stringify(full)
+    });
+
+  return full;
+}
+
+/**
+ * Cập nhật một lệnh ĐANG NẰM trên sàn — hợp nhất với payload cũ để không
+ * xoá mất các trường không được truyền vào (khác hẳn INSERT OR REPLACE).
+ */
+function updateExchangeOrderRow(database, id, updates = {}) {
+  const row = database.prepare('SELECT payload FROM seat_exchange_orders WHERE id = ?').get(id);
+  if (!row) return null;
+
+  let current = {};
+  try {
+    current = JSON.parse(row.payload);
+  } catch {
+    current = {};
+  }
+
+  const updated = { ...current, ...updates, id, updatedAt: Date.now() };
+
+  database
+    .prepare(
+      `UPDATE seat_exchange_orders
+       SET status = ?, remainingSeats = ?, matchedWithOrderId = ?, matchedBookingId = ?,
+           pinCode = ?, rendezvousTime = ?, rendezvousMinutes = ?, matchedAt = ?, expiredAt = ?, payload = ?
+       WHERE id = ?`
+    )
+    .run(
+      updated.status || 'OPEN',
+      Number(updated.remainingSeats ?? updated.seats ?? 1),
+      updated.matchedWithOrderId || null,
+      updated.matchedBookingId || null,
+      updated.pinCode || null,
+      updated.rendezvousTime || null,
+      updated.rendezvousMinutes || null,
+      updated.matchedAt || null,
+      updated.expiredAt || null,
+      JSON.stringify(updated),
+      id
+    );
+
+  return updated;
+}
+
+/**
+ * Lấy hồ sơ người dùng để GHI CHẾ TÀI, tự tạo hồ sơ tối thiểu nếu chưa có.
+ *
+ * CarMate cho phép đăng chuyến mà không cần đăng ký trước (Unified Auth /
+ * Upsert Flow) — đó là chủ ý sản phẩm để giảm ma sát. Nhưng hệ quả là mọi
+ * đường trừ điểm đều bọc `if (user) {...}`, nên chủ xe chưa có tài khoản
+ * THOÁT TOÀN BỘ chế tài: huỷ sát giờ, bị tố giác nhồi nhét, bỏ bom khách —
+ * không gì bám được vào họ. Ai muốn né phạt chỉ cần đừng bấm đăng nhập.
+ *
+ * Hàm này khép lỗ hổng đó mà không thêm bước đăng ký nào: khi cần ghi chế tài
+ * cho một số điện thoại chưa có hồ sơ, tạo hồ sơ tối thiểu ngay tại chỗ. Lần
+ * sau người đó đăng nhập bằng số ấy sẽ nhận đúng lịch sử tín nhiệm của mình.
+ */
+export async function getOrCreateUserForPenalty(phone, seed = {}) {
+  const clean = cleanPhoneNumber(phone || '');
+  if (!clean) return null;
+
+  const existing = getUserByPhone(clean);
+  if (existing) return existing;
+
+  await saveUser({
+    id: `USR-${clean}`,
+    phone: clean,
+    name: seed.name || '',
+    role: seed.role || 'member',
+    trustScore: 98,
+    // Đánh dấu hồ sơ sinh tự động do chế tài, chưa từng đăng nhập.
+    isAutoCreated: 1,
+    createdAt: Date.now()
+  });
+
+  return getUserByPhone(clean);
+}
+
+/**
+ * Áp dụng kỷ luật hủy chuyến theo hàm suy giảm thời gian (Time-Decay Penalty Engine)
+ * - deltaMinutes > 120: An toàn 0đ, không phạt.
+ * - 30 <= deltaMinutes <= 120: Cảnh cáo, trừ 15 điểm tín nhiệm.
+ * - deltaMinutes < 30 hoặc sau khởi hành: Vi phạm nặng, trừ 40 điểm tín nhiệm, khoá 7 ngày.
+ */
+export async function applyCancellationPenalty(booking, cancellingUserPhone, deltaMinutes, cancellingRole = null) {
+  const cleanPhone = cleanPhoneNumber(cancellingUserPhone);
+  const isDriver =
+    cancellingRole === 'driver' ||
+    (cleanPhone && booking?.driverPhone && cleanPhoneNumber(booking.driverPhone) === cleanPhone);
+
+  let penaltyTier = 'safe_free';
+  let penaltyPoints = 0;
+  let freezeDays = 0;
+  let message = 'Huỷ chuyến an toàn trước > 2 tiếng. Không bị trừ điểm tín nhiệm.';
+
+  if (deltaMinutes < 45) {
+    // 1. GRIM TRIGGER (ĐÒN BẨY THẶNG DƯ TƯƠNG LAI):
+    // Tước quyền tiếp cận dòng tiền thặng dư 4-5 triệu/tháng trong 30 ngày nếu chủ xe huỷ sát giờ
+    penaltyTier = isDriver ? 'grim_trigger_freeze' : 'severe_freeze';
+    penaltyPoints = isDriver ? 35 : 30;
+    freezeDays = isDriver ? 30 : 7;
+    message = isDriver
+      ? 'KÍCH HOẠT GRIM TRIGGER: Chủ xe huỷ chuyến sát giờ (< 45 phút). Trừ 35 điểm tín nhiệm và tước quyền ưu tiên ghép cuốc trong 30 ngày (thiệt hại cơ hội ~4.4 triệu VNĐ). Hệ thống tự động chuyển làn cứu hộ khách.'
+      : 'Huỷ chuyến sát giờ (< 45 phút). Trừ 30 điểm tín nhiệm và tạm khoá quyền đặt chuyến 7 ngày. Hệ thống đã kích hoạt Radar cứu hộ.';
+  } else if (deltaMinutes <= 120) {
+    penaltyTier = 'warning';
+    penaltyPoints = isDriver ? 20 : 15;
+    freezeDays = isDriver ? 14 : 0;
+    message = isDriver
+      ? 'Cảnh cáo chủ xe huỷ chuyến cận giờ (45 phút - 2 tiếng). Trừ 20 điểm tín nhiệm và giãn cách ghép chuyến 14 ngày.'
+      : 'Cảnh cáo huỷ chuyến cận giờ (45 phút - 2 tiếng). Trừ 15 điểm tín nhiệm và giãn cách ưu tiên 24h.';
+  }
+
+  // Khấu trừ điểm tín nhiệm nếu có người dùng
+  if (cleanPhone && penaltyPoints > 0) {
+    // Tạo hồ sơ nếu chưa có, để chủ xe chưa đăng ký KHÔNG thoát chế tài.
+    const user = await getOrCreateUserForPenalty(cleanPhone, { role: isDriver ? 'driver' : 'passenger' });
+    if (user) {
+      const currentScore = Number(user.trustScore ?? 98);
+      const newScore = Math.max(10, currentScore - penaltyPoints);
+      const userUpdates = {
+        trustScore: newScore
+      };
+
+      if (freezeDays > 0) {
+        userUpdates.freezeUntil = Date.now() + freezeDays * 24 * 3600 * 1000;
+        userUpdates.freezeReason = message;
+        userUpdates.isSuspended = true;
+      }
+
+      await saveUser({
+        ...user,
+        ...userUpdates
+      });
+    }
+  }
+
+  return {
+    penaltyTier,
+    penaltyPoints,
+    freezeDays,
+    isDriver,
+    grimTriggerApplied: isDriver && freezeDays >= 30,
+    message,
+    deltaMinutes: Math.round(deltaMinutes)
+  };
+}
+
+/**
+ * Chuẩn hóa tên trạm để gom nhóm các yêu cầu trùng hoặc gần trùng
+ */
+function normalizeStationRequestName(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[đĐ]/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Thêm hoặc gộp yêu cầu mở trạm ảo mới (Station Request Pool)
+ * - Tự động gom nhóm dựa trên tên chuẩn hóa
+ * - Tăng số lượt đề xuất (requestCount) khi có nhiều người cùng đề xuất
+ * - Ngưỡng kích hoạt khảo sát: >= 50 lượt
+ */
+export async function addStationRequest({ stationName, note = '', lat = null, lng = null, userPhone = '' }) {
+  const database = getRawDB();
+  const rawName = String(stationName || '').trim();
+  if (!rawName) {
+    throw new Error('Tên trạm đề xuất không được để trống');
+  }
+
+  const cleanPhone = cleanPhoneNumber(userPhone || '');
+  const normName = normalizeStationRequestName(rawName);
+  const now = Date.now();
+
+  // Kiểm tra xem đã có trạm tương tự trong pool chưa
+  const existing = database
+    .prepare('SELECT * FROM station_requests WHERE normalizedName = ? OR stationName LIKE ? LIMIT 1')
+    .get(normName, rawName);
+
+  if (existing) {
+    let phones = [];
+    try {
+      const payload = existing.payload ? JSON.parse(existing.payload) : {};
+      phones = Array.isArray(payload.phones) ? payload.phones : [];
+    } catch {
+      phones = [];
+    }
+
+    if (cleanPhone && !phones.includes(cleanPhone)) {
+      phones.push(cleanPhone);
+    }
+
+    const newCount = (existing.requestCount || 1) + 1;
+    const newStatus = newCount >= 50 && existing.status === 'pending' ? 'threshold_met' : existing.status;
+
+    const payloadStr = JSON.stringify({
+      phones,
+      lastNote: note || existing.note || '',
+      history: [
+        { at: now, phone: cleanPhone, note: note || '' }
+      ]
+    });
+
+    database
+      .prepare(`
+        UPDATE station_requests
+        SET requestCount = ?,
+            status = ?,
+            updatedAt = ?,
+            note = CASE WHEN (note IS NULL OR note = '') AND ? != '' THEN ? ELSE note END,
+            lat = COALESCE(?, lat),
+            lng = COALESCE(?, lng),
+            payload = ?
+        WHERE id = ?
+      `)
+      .run(newCount, newStatus, now, note, note, lat != null ? Number(lat) : null, lng != null ? Number(lng) : null, payloadStr, existing.id);
+
+    return {
+      ...existing,
+      requestCount: newCount,
+      status: newStatus,
+      updatedAt: now,
+      isGrouped: true
+    };
+  }
+
+  // Tạo yêu cầu mới
+  const id = `STR-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
+  const payloadStr = JSON.stringify({
+    phones: cleanPhone ? [cleanPhone] : [],
+    history: [{ at: now, phone: cleanPhone, note: note || '' }]
+  });
+
+  database
+    .prepare(`
+      INSERT INTO station_requests (
+        id, stationName, normalizedName, note, lat, lng, userPhone,
+        requestCount, status, createdAt, updatedAt, payload
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'pending', ?, ?, ?)
+    `)
+    .run(
+      id,
+      rawName,
+      normName,
+      note || '',
+      lat != null ? Number(lat) : null,
+      lng != null ? Number(lng) : null,
+      cleanPhone,
+      now,
+      now,
+      payloadStr
+    );
+
+  return {
+    id,
+    stationName: rawName,
+    normalizedName: normName,
+    note,
+    lat: lat != null ? Number(lat) : null,
+    lng: lng != null ? Number(lng) : null,
+    userPhone: cleanPhone,
+    requestCount: 1,
+    status: 'pending',
+    createdAt: now,
+    updatedAt: now,
+    isGrouped: false
+  };
+}
+
+/**
+ * Lấy danh sách các đề xuất mở trạm mới
+ */
+export function getStationRequests(status = '') {
+  const database = getRawDB();
+  if (status) {
+    return database
+      .prepare('SELECT * FROM station_requests WHERE status = ? ORDER BY requestCount DESC, updatedAt DESC')
+      .all(status);
+  }
+  return database
+    .prepare('SELECT * FROM station_requests ORDER BY requestCount DESC, updatedAt DESC')
+    .all();
+}
+
+/**
+ * Cập nhật trạng thái đề xuất trạm (pending, surveying, approved, rejected)
+ */
+export async function updateStationRequestStatus(id, status, adminNote = '') {
+  const database = getRawDB();
+  const now = Date.now();
+  database
+    .prepare('UPDATE station_requests SET status = ?, updatedAt = ? WHERE id = ?')
+    .run(status, now, id);
+  return { id, status, updatedAt: now, adminNote };
+}
+
+/**
+ * Thông báo chuẩn về giới hạn 2 lượt di chuyển/ngày
+ */
+export const DRIVER_DAILY_CAP_NOTICE =
+  '⛔ Giới hạn 2 lượt di chuyển/ngày: Theo Nghị định 10/2020/NĐ-CP và Điều 3 Bộ Luật Dân sự 2015, CarMate là nền tảng chia sẻ chi phí hành trình cá nhân (sáng đi làm - chiều về nhà). Mỗi chủ xe chỉ được tạo tối đa 2 chuyến/ngày để bảo đảm bản chất dân sự phi thương mại. Xe chạy tần suất cao bị từ chối để tránh biến tướng thành xe vận tải chuyên nghiệp.';
+
+/**
+ * Đếm số chuyến chủ xe đã đăng hoặc thực hiện trong ngày (Anti-Commercial Capping)
+ * @param {string} phone - Số điện thoại chủ xe
+ * @param {string} targetDate - Ngày mục tiêu (mặc định hôm nay)
+ * @returns {number} Số chuyến trong ngày
+ */
+export function getDailyDriverTripCount(phone, targetDate = '') {
+  const database = getRawDB();
+  const clean = cleanPhoneNumber(phone || '');
+  if (!clean) return 0;
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endOfDay = startOfDay + 24 * 3600 * 1000 - 1;
+
+  const cleanDate = String(targetDate || '').trim();
+  const isToday = !cleanDate || cleanDate === 'Hôm nay';
+
+  const sql = isToday
+    ? `
+      SELECT COUNT(*) as count FROM trips
+      WHERE (phoneReal = ? OR phoneReal = ?)
+        AND type = 'driver_offer'
+        AND status != 'cancelled'
+        AND (
+          (createdAt >= ? AND createdAt <= ?)
+          OR date = 'Hôm nay'
+        )
+    `
+    : `
+      SELECT COUNT(*) as count FROM trips
+      WHERE (phoneReal = ? OR phoneReal = ?)
+        AND type = 'driver_offer'
+        AND status != 'cancelled'
+        AND (date = ? OR date = ?)
+    `;
+
+  const params = isToday
+    ? [clean, '0' + clean.replace(/^0/, ''), startOfDay, endOfDay]
+    : [clean, '0' + clean.replace(/^0/, ''), cleanDate, cleanDate];
+
+  const res = database.prepare(sql).get(...params);
+  return res?.count || 0;
+}
+
+/**
+ * Kiểm tra xem chủ xe có bị giới hạn chuyến hay không.
+ * Theo yêu cầu: CarMate không giới hạn số chuyến, chủ xe tự chịu trách nhiệm dân sự về tần suất di chuyển.
+ */
+export function isDriverDailyTripCapped(_phone, _targetDate = '') {
+  return false;
+}
+
+/**
+ * Ghi nhận sự cố chuyến đi (Unhappy Cases) vào cơ sở dữ liệu
+ */
+export async function reportTripIncidentDb(incident) {
+  const db = getRawDB();
+  const id = incident.id || `inc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const now = new Date().toISOString();
+
+  const record = {
+    id,
+    bookingId: incident.bookingId || null,
+    tripId: incident.tripId || null,
+    incidentType: incident.incidentType,
+    reporterRole: incident.reporterRole || 'Chủ xe',
+    reporterPhone: incident.reporterPhone ? cleanPhoneNumber(incident.reporterPhone) : null,
+    riderPhone: incident.riderPhone ? cleanPhoneNumber(incident.riderPhone) : null,
+    driverPhone: incident.driverPhone ? cleanPhoneNumber(incident.driverPhone) : null,
+    sanctionAction: incident.sanctionAction || null,
+    driverPenalty: Number(incident.driverPenalty || 0),
+    riderPenalty: Number(incident.riderPenalty || 0),
+    fareExempt: incident.fareExempt ? 1 : 0,
+    isBanned: incident.isBanned ? 1 : 0,
+    note: incident.note || null,
+    createdAt: incident.createdAt || now,
+    payload: JSON.stringify(incident)
+  };
+
+  db.prepare(`
+    INSERT INTO trip_incidents (
+      id, bookingId, tripId, incidentType, reporterRole, reporterPhone,
+      riderPhone, driverPhone, sanctionAction, driverPenalty, riderPenalty,
+      fareExempt, isBanned, note, createdAt, payload
+    ) VALUES (
+      @id, @bookingId, @tripId, @incidentType, @reporterRole, @reporterPhone,
+      @riderPhone, @driverPhone, @sanctionAction, @driverPenalty, @riderPenalty,
+      @fareExempt, @isBanned, @note, @createdAt, @payload
+    )
+  `).run(record);
+
+  return record;
+}
+
+/**
+ * Truy vấn danh sách sự cố chuyến đi
+ */
+export function getTripIncidents({ riderPhone, driverPhone, incidentType, limit = 50 } = {}) {
+  const db = getRawDB();
+  let sql = 'SELECT * FROM trip_incidents WHERE 1=1';
+  const params = [];
+
+  if (riderPhone) {
+    sql += ' AND riderPhone = ?';
+    params.push(cleanPhoneNumber(riderPhone));
+  }
+  if (driverPhone) {
+    sql += ' AND driverPhone = ?';
+    params.push(cleanPhoneNumber(driverPhone));
+  }
+  if (incidentType) {
+    sql += ' AND incidentType = ?';
+    params.push(incidentType);
+  }
+
+  sql += ' ORDER BY createdAt DESC LIMIT ?';
+  params.push(Number(limit));
+
+  const rows = db.prepare(sql).all(...params);
+  return rows.map(r => {
+    try {
+      return { ...JSON.parse(r.payload), ...r };
+    } catch {
+      return r;
+    }
+  });
+}
+
+/**
+ * Permaban vĩnh viễn người dùng (áp dụng cho hành vi quỵt tiền phụ xăng UNPAID_FARE_FRAUD)
+ */
+export async function permabanUser(phone, reason = 'UNPAID_FARE_FRAUD') {
+  if (!phone) return null;
+  const cleanPhone = cleanPhoneNumber(phone);
+  const user = getUserByPhone(cleanPhone);
+  const userId = user?.id || cleanPhone;
+
+  const updated = await updateUserStatus(userId, {
+    isBanned: true,
+    status: 'banned',
+    bannedAt: new Date().toISOString(),
+    banReason: reason,
+    trustScore: 0
+  });
+
+  return updated;
+}
+
+export { updateUserStatus as updateUser };

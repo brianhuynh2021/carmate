@@ -16,8 +16,10 @@ import {
 import { maskLicensePlate } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function TrustProfileModal({ item, isOwner = false, onClose, onBook }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('driver'); // 'driver' | 'passenger' | 'verify'
 
@@ -65,8 +67,8 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
       size="lg"
       icon={ShieldCheck}
       iconTone="success"
-      title="Hồ Sơ Thành Viên Cộng Đồng"
-      subtitle="Bình đẳng hai chiều · Một người vừa là Chủ xe vừa là Bạn đồng hành"
+      title={t('trustProfile.s025')}
+      subtitle={t('trustProfile.s026')}
       footer={
         <div className="flex items-center justify-between gap-3 w-full">
           <Button variant="outline" size="sm" icon={Share2} onClick={handleShare}>
@@ -74,12 +76,12 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           </Button>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>
-              Đóng
+              {t('trustProfile.s001')}
             </Button>
             {onBook && (
               isOwner ? (
                 <span className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200">
-                  Hồ sơ của bạn
+                  {t('trustProfile.s002')}
                 </span>
               ) : (
                 <Button
@@ -128,7 +130,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
             </div>
 
             <div className="text-right shrink-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-200">Điểm Tín Nhiệm (Karma)</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-200">{t('trustProfile.s003')}</p>
               <p className="font-display text-3xl font-extrabold tabular tracking-tight leading-none mt-1">
                 {karmaScore}
                 <span className="text-xs font-medium text-sky-200">/100</span>
@@ -138,22 +140,22 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
 
           <dl className="relative mt-5 pt-4 border-t border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <dt className="text-[11px] text-blue-200">Lịch sử Cầm lái</dt>
+              <dt className="text-[11px] text-blue-200">{t('trustProfile.s004')}</dt>
               <dd className="text-xs font-semibold mt-0.5 tabular">{driverTrips} chuyến an toàn</dd>
             </div>
             <div>
-              <dt className="text-[11px] text-blue-200">Lịch sử Đi cùng</dt>
+              <dt className="text-[11px] text-blue-200">{t('trustProfile.s005')}</dt>
               <dd className="text-xs font-semibold mt-0.5 tabular">{passengerTrips} chuyến đúng hẹn</dd>
             </div>
             <div>
-              <dt className="text-[11px] text-blue-200">Đánh giá chung</dt>
+              <dt className="text-[11px] text-blue-200">{t('trustProfile.s006')}</dt>
               <dd className="text-xs font-semibold mt-0.5 tabular inline-flex items-center gap-1">
                 <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
                 <span>{rating} / 5</span>
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] text-blue-200">Tình trạng cộng đồng</dt>
+              <dt className="text-[11px] text-blue-200">{t('trustProfile.s007')}</dt>
               <dd className="text-xs font-semibold mt-0.5 text-emerald-300">
                 {hasWarnings ? 'Có cảnh báo' : 'Văn minh 100%'}
               </dd>
@@ -166,7 +168,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-2.5 text-xs text-rose-900 dark:text-rose-200">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold">Cảnh báo ghi nhận từ các thành viên khác:</p>
+              <p className="font-bold">{t('trustProfile.s008')}</p>
               <ul className="list-disc list-inside mt-1 space-y-0.5 text-rose-800 dark:text-rose-300">
                 {safetyWarnings.map((w, idx) => (
                   <li key={idx}>{w.reason || w}</li>
@@ -177,7 +179,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
         ) : (
           <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/40 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300">
             <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>Thành viên gương mẫu: Chưa từng có phản ánh trễ hẹn, leo cây hoặc vi phạm văn hoá đi chung.</span>
+            <span>{t('trustProfile.s009')}</span>
           </div>
         )}
 
@@ -217,7 +219,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>Xác minh giấy tờ</span>
+            <span>{t('trustProfile.s010')}</span>
           </button>
         </div>
 
@@ -226,18 +228,18 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Phương tiện sở hữu</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('trustProfile.s011')}</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">{carModel}</p>
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Biển số đối soát</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('trustProfile.s012')}</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 tabular">{plate}</p>
               </div>
             </div>
 
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Được hành khách khen ngợi nhiều nhất:
+                {t('trustProfile.s013')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {['Lái xe an toàn', 'Xe sạch êm không mùi', 'Đúng giờ', 'Không khói thuốc', 'Thân thiện'].map((t) => (
@@ -253,7 +255,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-900 dark:text-white">Chị Mai (Hành khách Lộc Ninh)</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{t('trustProfile.s014')}</span>
                 <span className="text-amber-500 font-bold inline-flex items-center gap-0.5">
                   5.0 <Star className="w-3 h-3 fill-amber-400" />
                 </span>
@@ -271,19 +273,19 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Tỷ lệ đúng giờ đón</p>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">100% Đúng hẹn</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('trustProfile.s015')}</p>
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{t('trustProfile.s016')}</p>
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Đánh giá từ các chủ xe</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('trustProfile.s017')}</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 inline-flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> 5.0 / 5 (12 đánh giá)
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {t('trustProfile.s018')}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Được các chủ xe khác nhận xét:</p>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('trustProfile.s019')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {['Đúng giờ điểm hẹn', 'Lịch sự văn minh', 'Giữ vệ sinh xe', 'Gửi tiền xăng sòng phẳng'].map((t) => (
                   <span
@@ -298,13 +300,13 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-900 dark:text-white">Anh Hùng (Chủ xe Đồng Phú)</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{t('trustProfile.s020')}</span>
                 <span className="text-amber-500 font-bold inline-flex items-center gap-0.5">
                   5.0 <Star className="w-3 h-3 fill-amber-400" />
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 italic">
-                "Anh Tuấn đi nhờ xe tôi về Bến xe Miền Đông, đứng chờ đúng điểm hẹn, lên xe chào hỏi văn minh, gửi tiền
+                "Anh Tuấn đi cùng xe tôi về Bến xe Miền Đông, đứng chờ đúng điểm hẹn, lên xe chào hỏi văn minh, gửi tiền
                 xăng sòng phẳng."
               </p>
             </div>
@@ -333,20 +335,20 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
 
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800">
               <p className="text-xs font-semibold text-slate-900 dark:text-white mb-2">
-                Quy ước văn minh đi chung xe CarMate:
+                {t('trustProfile.s021')}
               </p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-lg bg-white dark:bg-[#151c2e] border border-slate-200/50 dark:border-white/[0.08]">
                   <CigaretteOff className="w-4 h-4 text-rose-500 mx-auto mb-1" />
-                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Không thuốc lá</p>
+                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{t('trustProfile.s022')}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-white dark:bg-[#151c2e] border border-slate-200/50 dark:border-white/[0.08]">
                   <Users className="w-4 h-4 text-primary-600 dark:text-primary-400 mx-auto mb-1" />
-                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Không nhồi nhét</p>
+                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{t('trustProfile.s023')}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-white dark:bg-[#151c2e] border border-slate-200/50 dark:border-white/[0.08]">
                   <Heart className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
-                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Giá trọn gói</p>
+                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{t('trustProfile.s024')}</p>
                 </div>
               </div>
             </div>

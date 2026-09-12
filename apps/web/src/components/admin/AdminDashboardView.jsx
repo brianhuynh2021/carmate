@@ -347,15 +347,29 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
-  const handleToggleVerify = async (user, field) => {
-    const nextVal = !user[field];
+  const handleApproveVehicle = async (user) => {
     try {
-      await api.updateUserStatus(user.id, { [field]: nextVal });
-      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, [field]: nextVal } : u)));
-      showNotice(`Đã cập nhật xác minh ${field === 'isCccdVerified' ? 'CCCD' : 'GPLX'} thành công`);
+      await api.cockpitApproveVehicle({
+        userId: user.id,
+        phone: user.phone,
+        plate: user.vehicle?.plate || user.licensePlate
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id
+            ? {
+                ...u,
+                vehicleStatus: 'VERIFIED',
+                isDriverVerified: true,
+                vehicle: { ...(u.vehicle || {}), status: 'VERIFIED' }
+              }
+            : u
+        )
+      );
+      showNotice(`Đã kích hoạt hồ sơ xe cho ${user.name} thành công!`);
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
-      showNotice('Lỗi cập nhật: ' + err.message, 'error');
+      showNotice('Lỗi kích hoạt xe: ' + err.message, 'error');
     }
   };
 
@@ -433,6 +447,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
       } else if (clearTarget === 'ai') {
         const res = await api.adminClearAiTrajectories();
         showNotice(res?.message || 'Đã dọn sạch dữ liệu nhật ký điều phối!');
+      } else if (clearTarget === 'bookings') {
+        const res = await api.adminClearBookings();
+        showNotice(res?.message || 'Đã dọn sạch toàn bộ lịch hẹn chuyến xe!');
       } else {
         const res = await api.adminClearTestData();
         showNotice(res?.message || 'Đã dọn sạch toàn bộ dữ liệu kiểm thử & log!');
@@ -1065,10 +1082,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <thead className="bg-slate-50/80 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 font-mono uppercase text-[10.5px]">
                 <tr>
                   <th className="py-3 px-4">Họ Tên & Quê Quán</th>
-                  <th className="py-3 px-4">Số Điện Thoại Zalo</th>
+                  <th className="py-3 px-4">Số Điện Thoại</th>
                   <th className="py-3 px-4">Phương Tiện / Biển Số</th>
-                  <th className="py-3 px-4">Xác Minh CCCD</th>
-                  <th className="py-3 px-4">Xác Minh GPLX</th>
+                  <th className="py-3 px-4">Trạng Thái Xe / Nhận Khách</th>
+                  <th className="py-3 px-4">Phê Duyệt Kích Hoạt</th>
                   <th className="py-3 px-4 text-right">Khoá / Mở Khoá</th>
                 </tr>
               </thead>
@@ -1094,53 +1111,51 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       </span>
                     </td>
                     <td className="py-3 px-4 font-mono">
-                      <a
-                        href={`https://zalo.me/${u.phone}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
-                      >
-                        <span>{u.phone}</span>
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{u.phone}</span>
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-800 dark:text-slate-200">
-                        {u.carModel || 'Mitsubishi Xpander (7 chỗ)'}
+                        {u.vehicle?.model || u.carModel || 'Chưa đăng ký xe'}
                       </div>
-                      <span className="text-[10.5px] font-mono text-slate-400">
-                        Biển: {u.licensePlate || '93A-289.xx'}
+                      <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                        Biển: {u.vehicle?.plate || u.licensePlate || '---'}
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleVerify(u, 'isCccdVerified')}
-                        title="Bấm để đổi trạng thái duyệt CCCD"
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
-                          u.isCccdVerified
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300/60'
-                            : 'bg-slate-100 text-slate-500 border-slate-300'
-                        }`}
-                      >
-                        {u.isCccdVerified ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : '○'}
-                        <span>{u.isCccdVerified ? 'Đã duyệt' : 'Chưa duyệt'}</span>
-                      </button>
+                      {u.vehicleStatus === 'PENDING' || u.vehicle?.status === 'PENDING' ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/60 inline-flex items-center gap-1 animate-pulse">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                          <span>⏳ Chờ kích hoạt</span>
+                        </span>
+                      ) : u.vehicleStatus === 'VERIFIED' || u.vehicle?.status === 'VERIFIED' || u.isDriverVerified ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/60 inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>✅ Đã kích hoạt</span>
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-[10.5px] font-medium bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                          Chưa gửi hồ sơ
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleVerify(u, 'isGplxVerified')}
-                        title="Bấm để đổi trạng thái duyệt GPLX"
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
-                          u.isGplxVerified
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300/60'
-                            : 'bg-slate-100 text-slate-500 border-slate-300'
-                        }`}
-                      >
-                        {u.isGplxVerified ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : '○'}
-                        <span>{u.isGplxVerified ? 'Đã duyệt' : 'Chưa duyệt'}</span>
-                      </button>
+                      {u.vehicleStatus === 'PENDING' || u.vehicle?.status === 'PENDING' || (!u.isDriverVerified && (u.vehicle || u.carModel)) ? (
+                        <button
+                          type="button"
+                          onClick={() => handleApproveVehicle(u)}
+                          title="Bấm để kích hoạt xe cho Chủ xe trong 1 giây"
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Duyệt 1-Chạm</span>
+                        </button>
+                      ) : u.vehicleStatus === 'VERIFIED' || u.vehicle?.status === 'VERIFIED' || u.isDriverVerified ? (
+                        <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                          Đang hoạt động
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-mono">---</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
@@ -2092,7 +2107,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         <button
                           type="button"
                           onClick={() => handleRuleDelete(rule.id)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                          className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
                           title="Xóa tiêu chí tùy biến này"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -2180,6 +2195,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
               ? 'Dọn sạch Phễu & Sự kiện phân tích'
               : clearTarget === 'ai'
               ? 'Dọn sạch Nhật ký điều phối'
+              : clearTarget === 'bookings'
+              ? 'Dọn sạch Lịch hẹn chuyến xe'
               : 'Dọn sạch toàn bộ dữ liệu kiểm thử'
           }
           subtitle="Tác vụ quản trị hệ thống"
@@ -2212,7 +2229,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 ? 'Hệ thống sẽ xoá toàn bộ sự kiện đã ghi nhận trong bảng analytics_events, đưa chỉ số Phễu và lượt tương tác về 0.'
                 : clearTarget === 'ai'
                 ? 'Hệ thống sẽ xoá toàn bộ lịch sử điều phối tự động, làm sạch bảng điều khiển.'
-                : 'Hệ thống sẽ xoá toàn bộ sự kiện phân tích (Analytics), nhật ký điều phối (Trajectories) và tin nhắn kiểm thử CSKH để đưa Dashboard về trạng thái sạch sẽ nhất.'}
+                : clearTarget === 'bookings'
+                ? 'Hệ thống sẽ xoá toàn bộ lịch hẹn chuyến xe kiểm thử, đưa giao diện Lịch hẹn về trạng thái ban đầu.'
+                : 'Hệ thống sẽ xoá toàn bộ sự kiện phân tích (Analytics), nhật ký điều phối (Trajectories), tin nhắn kiểm thử CSKH và toàn bộ lịch hẹn test để đưa Dashboard về trạng thái sạch sẽ nhất.'}
             </p>
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11.5px] text-amber-800 dark:text-amber-300 font-medium">
               ⚠️ Các chuyến xe thật và tài khoản thành viên sẽ được giữ nguyên an toàn 100%.

@@ -11,6 +11,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { recordCallAttempt, isEmergencyPhoneUnlocked, resetEmergencyCallStatus } from '../packages/shared/src/index.js';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:5173';
 const DB_PATH = path.resolve(process.cwd(), 'apps/api/data/carmate.sqlite');
@@ -524,6 +525,28 @@ async function runTests() {
         })
       });
       assert(unreachableRes.status === 200, 'Anti-Fake Phone 1: Gửi báo cáo số điện thoại ảo thành công (HTTP 200)');
+
+      // Kiểm thử Bất biến Mở khoá SĐT Khẩn Cấp Đón Xe (>= 2 lần gọi >= 25s)
+      const testBookingKey = 'ESCROW-E2E-CALL-01';
+      const testCaller = '0988112233';
+      const testCallee = '0977223344';
+      resetEmergencyCallStatus({ bookingId: testBookingKey, callerId: testCaller });
+      resetEmergencyCallStatus({ bookingId: testBookingKey, callerId: testCallee });
+
+      const attempt1 = recordCallAttempt({ bookingId: testBookingKey, callerId: testCaller, durationSeconds: 12, answered: false });
+      assert(attempt1.qualified === false && isEmergencyPhoneUnlocked({ bookingId: testBookingKey, callerId: testCaller }) === false, 'Emergency Call 1: Cuộc gọi nháy máy 12s (<25s) bị từ chối tính điểm');
+
+      const attempt2 = recordCallAttempt({ bookingId: testBookingKey, callerId: testCaller, durationSeconds: 26, answered: false });
+      assert(attempt2.qualified === true && attempt2.attempts === 1 && isEmergencyPhoneUnlocked({ bookingId: testBookingKey, callerId: testCaller }) === false, 'Emergency Call 2: Cuộc gọi 26s (>=25s) tính 1/2 lần, SĐT vẫn khóa an toàn');
+
+      const attempt3 = recordCallAttempt({ bookingId: testBookingKey, callerId: testCaller, durationSeconds: 29, answered: false });
+      assert(attempt3.qualified === true && attempt3.attempts === 2 && isEmergencyPhoneUnlocked({ bookingId: testBookingKey, callerId: testCaller }) === true, 'Emergency Call 3: Cuộc gọi lần 2 đạt 29s (>=25s) mở khóa SĐT thành công cho người gọi');
+
+      const calleeCheck = isEmergencyPhoneUnlocked({ bookingId: testBookingKey, callerId: testCallee });
+      assert(calleeCheck === false, 'Emergency Call 4: Bất đối xứng - Người nhận (không nghe máy) vẫn bị khóa 100% SĐT người gọi');
+
+      resetEmergencyCallStatus({ bookingId: testBookingKey, callerId: testCaller });
+      resetEmergencyCallStatus({ bookingId: testBookingKey, callerId: testCallee });
     } catch (err) {
       assert(false, '11. Unreachable Phone', err.message);
     }

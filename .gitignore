@@ -32,9 +32,12 @@ lerna-debug.log*
 apps/api/data/backups/
 apps/api/data/*.before-restore-*
 apps/api/data/backup.log
+apps/api/data/.dev_jwt_secret
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+*.sqlite.bak
+*.bak
 *.db
 
 # Editor & OS
@@ -53,3 +56,4 @@ test_Fly.py
 *secrets*.sh
 *secrets*.txt
 deploy-secrets*
+scratch/

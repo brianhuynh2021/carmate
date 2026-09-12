@@ -9,7 +9,7 @@ export default [
   js.configs.recommended,
   // Backend (Node)
   {
-    files: ['apps/api/**/*.js', 'packages/**/*.js', 'scripts/**/*.js'],
+    files: ['apps/api/**/*.js', 'packages/**/*.js', 'scripts/**/*.{js,mjs}'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',

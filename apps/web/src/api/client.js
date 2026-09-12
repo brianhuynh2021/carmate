@@ -229,20 +229,6 @@ export const api = {
     });
   },
 
-  async reportVehicleMismatch(id, data = {}) {
-    return request(`/bookings/${id}/report-vehicle-mismatch`, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  },
-
-  async reportUnreachablePhone(id, data = {}) {
-    return request(`/bookings/${id}/report-unreachable-phone`, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  },
-
   async resetBookingBan(id) {
     return request(`/bookings/${id}/reset-ban`, {
       method: 'POST'
@@ -294,6 +280,17 @@ export const api = {
     } catch {
       return { googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '' };
     }
+  },
+
+  async firebaseLogin(payload) {
+    const res = await request('/auth/firebase-login', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (res?.token) {
+      setStoredAuthToken(res.token);
+    }
+    return res;
   },
 
   async googleLogin(payload) {
@@ -456,6 +453,12 @@ export const api = {
     });
   },
 
+  async adminClearBookings() {
+    return request('/admin/bookings', {
+      method: 'DELETE'
+    });
+  },
+
   // Agentic AI Concierge & Dispatcher (Stanford Inner Loop)
   async agentChat(message, history = []) {
     return request('/agent/chat', {
@@ -502,6 +505,244 @@ export const api = {
     return request(`/admin/users/${userId}`, {
       method: 'DELETE'
     });
+  },
+
+  // --- Curbside Station Queue & Cockpit Mode Telemetry ---
+  async fetchJson(endpoint, options = {}) {
+    return request(endpoint, options);
+  },
+
+  async stationCheckIn(hubId, payload) {
+    return request(`/station/${hubId}/checkin`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getStationQueue(hubId) {
+    return request(`/station/${hubId}/status`);
+  },
+
+  async getRiderPass(intentId) {
+    return request(`/station/rider/${intentId}`);
+  },
+
+  async cockpitTelemetry(payload) {
+    return request('/cockpit/telemetry', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitAcceptOffer(payload) {
+    return request('/cockpit/accept-offer', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitRejectOffer(payload) {
+    return request('/cockpit/reject-offer', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitVerifyPin(payload) {
+    return request('/cockpit/verify-pin', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitRegisterVehicle(payload) {
+    return request('/cockpit/register-vehicle', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async cockpitVehicleStatus(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/cockpit/vehicle-status${query ? `?${query}` : ''}`);
+  },
+
+  async cockpitApproveVehicle(payload) {
+    return request('/cockpit/approve-vehicle', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async resetStationData() {
+    return request('/station/reset', {
+      method: 'DELETE'
+    });
+  },
+
+  // --- Station Requests Pool (Gom đề xuất mở trạm ảo mới) ---
+  async createStationRequest(payload) {
+    return request('/station-requests', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getStationRequests(status = '') {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return request(`/station-requests${qs}`);
+  },
+
+  async updateStationRequestStatus(id, status, adminNote = '') {
+    return request(`/admin/station-requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, adminNote })
+    });
+  },
+
+  // --- Movement Intents & Batch Matching (Level 3 Autonomous Engine) ---
+  async createMovementIntent(payload) {
+    return request('/intents', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getMovementIntents(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.append(key, val);
+      }
+    });
+    const qs = query.toString();
+    return request(`/intents${qs ? `?${qs}` : ''}`);
+  },
+
+  async runBatchMatch(payload = {}) {
+    return request('/intents/match', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getMatchingEpochs(limit = 20) {
+    return request(`/intents/epochs?limit=${limit}`);
+  },
+
+  // --- Cockpit Incidents & Unhappy Cases Protocols ---
+  async reportCockpitIncident(payload) {
+    return request('/cockpit/report-incident', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getCockpitIncidents(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.append(key, val);
+      }
+    });
+    const qs = query.toString();
+    return request(`/cockpit/incidents${qs ? `?${qs}` : ''}`);
+  },
+
+  // --- Rider Unhappy Cases, Grim Trigger & Radar Sweep ---
+  async reportRiderCultureViolation(payload) {
+    return request('/station/rider/report-culture-violation', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async riderCancelGrace(payload) {
+    return request('/station/rider/cancel-grace', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getRiderRadarRisk(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.append(key, val);
+      }
+    });
+    const qs = query.toString();
+    return request(`/station/rider/radar-risk${qs ? `?${qs}` : ''}`);
+  },
+
+  // ── Ma Trận Khe Thời Gian ────────────────────────────────────────────
+  async getTimeSlotMatrix({ from, to, timeSlot = null, seats = 1, corridor = null } = {}) {
+    const query = new URLSearchParams({ from, to, seats: String(seats) });
+    if (timeSlot && timeSlot !== 'all') query.append('timeSlot', timeSlot);
+    if (corridor) query.append('corridor', corridor);
+    return request(`/corridor/time-slots?${query.toString()}`);
+  },
+
+  async getCorridorTimeline({ from, to, seats = 1, corridor = null } = {}) {
+    const q = new URLSearchParams({ from, to, seats: String(seats) });
+    if (corridor) q.append('corridor', corridor);
+    return request(`/corridor/timeline?${q.toString()}`);
+  },
+
+  // ── Bắt Tay T-30 ─────────────────────────────────────────────────────
+  async confirmOnTheWay(intentId, coords = {}) {
+    return request('/station/rider/on-the-way', {
+      method: 'POST',
+      body: JSON.stringify({ intentId, ...coords })
+    });
+  },
+
+  // ── Thông Báo Đẩy & Hộp Thư ──────────────────────────────────────────
+  async getVapidKey() {
+    return request('/notifications/vapid-key');
+  },
+
+  async subscribePush(subscription, phone) {
+    return request('/notifications/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ subscription, phone })
+    });
+  },
+
+  async unsubscribePush(endpoint) {
+    return request('/notifications/unsubscribe', {
+      method: 'POST',
+      body: JSON.stringify({ endpoint })
+    });
+  },
+
+  async getNotifications(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') query.append(key, val);
+    });
+    const qs = query.toString();
+    return request(`/notifications${qs ? `?${qs}` : ''}`);
+  },
+
+  async markNotificationsRead(payload = {}) {
+    return request('/notifications/read', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // ── Chế Độ Cứu Hộ & Chốt Sẵn Sàng ────────────────────────────────────
+  async getRescueStatus(bookingId) {
+    return request(`/bookings/${bookingId}/rescue-status`);
+  },
+
+  async confirmDriverReady(bookingId) {
+    return request(`/bookings/${bookingId}/driver-ready`, { method: 'POST' });
+  },
+
+  async getSchedulerStatus() {
+    return request('/admin/scheduler-status');
   }
 };
 

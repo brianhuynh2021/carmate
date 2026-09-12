@@ -48,7 +48,7 @@ export default function TicketShareModal({
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [smartMatches, setSmartMatches] = useState([]);
-  const [loadingMatches, setLoadingMatches] = useState(false);
+  const [, setLoadingMatches] = useState(false);
 
   useEffect(() => {
     if (!trip?.id) return;
@@ -206,12 +206,12 @@ export default function TicketShareModal({
             {isGeneratingImage ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                <span>Đang tạo ảnh thẻ...</span>
+                <span>{t('ticketShare.s001')}</span>
               </>
             ) : (
               <>
                 <Download className="w-4 h-4 shrink-0" />
-                <span>Tải Thẻ Thông Tin (Bảo mật SĐT)</span>
+                <span>{t('ticketShare.s002')}</span>
               </>
             )}
           </button>
@@ -247,6 +247,33 @@ export default function TicketShareModal({
             </button>
           </div>
 
+          {/* Trojan Horse Growth Snippet: Rải nhóm Zalo siêu tốc */}
+          <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                {t('ticketShare.s003')}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const shortSnippet = `🚗 ${trip.carType || 'Xe ô tô'} ${trip.timeSlotLabel || trip.timeSlot || ''} ${trip.from} ➔ ${trip.to} còn ${trip.availableSeats || trip.seats || 2} ghế. Bấm giữ chỗ trực tiếp 0đ: https://carmate.vn/t/${trip.id}`;
+                  if (navigator.clipboard?.writeText) {
+                    navigator.clipboard.writeText(shortSnippet);
+                  }
+                  onShowToast?.('Đã sao chép tin nhắn Zalo 1-dòng cực ngắn!', 'success');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs cursor-pointer"
+              >
+                <Copy className="w-3 h-3" />
+                Copy tin Zalo
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono line-clamp-1">
+              {`🚗 ${trip.carType || 'Xe ô tô'} ${trip.from} ➔ ${trip.to} còn trống ghế. Bấm: carmate.vn/t/${trip.id}`}
+            </p>
+          </div>
+
           {/* Hàng tiện ích: Sao chép tóm tắt & Xem bài trên Bảng tin */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <button
@@ -268,7 +295,7 @@ export default function TicketShareModal({
                 className="text-xs text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                <span>Xem trên Bảng tin</span>
+                <span>{t('ticketShare.s004')}</span>
               </button>
             )}
           </div>
@@ -320,7 +347,7 @@ export default function TicketShareModal({
             <div className="flex items-center gap-3 min-w-0">
               {qrDataUrl ? (
                 <div className="w-13 h-13 rounded-xl bg-white p-1 shadow-md shrink-0 flex items-center justify-center">
-                  <img src={qrDataUrl} alt="Mã QR tra cứu chuyến đi" className="w-full h-full object-contain" />
+                  <img src={qrDataUrl} alt={t('ticketShare.s009')} className="w-full h-full object-contain" />
                 </div>
               ) : (
                 <div className="w-13 h-13 rounded-xl bg-white/10 p-2 shrink-0 flex items-center justify-center">
@@ -328,9 +355,9 @@ export default function TicketShareModal({
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-xs font-bold text-sky-400 leading-tight">Quét mã giữ chỗ 0đ</p>
+                <p className="text-xs font-bold text-sky-400 leading-tight">{t('ticketShare.s005')}</p>
                 <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                  Dùng Camera hoặc Zalo quét để xem lộ trình
+                  {t('ticketShare.s006')}
                 </p>
               </div>
             </div>
@@ -397,7 +424,7 @@ export default function TicketShareModal({
                       className="shrink-0 px-2.5 py-1.5 rounded-lg bg-[#0071e3] hover:bg-[#0077ed] text-white text-[11px] font-bold shadow-xs active:scale-95 transition-transform flex items-center gap-1 cursor-pointer"
                     >
                       <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
-                      <span>Ghép ngay</span>
+                      <span>{t('ticketShare.s007')}</span>
                     </button>
                   </div>
                 );
@@ -409,7 +436,7 @@ export default function TicketShareModal({
         {/* Khối gợi ý tinh tế & Xem trước có thể thu gọn (Collapsible) */}
         <div className="pt-0.5 text-center space-y-2">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            💬 Thẻ thông tin bảo mật lộ trình & mã QR tra cứu an toàn.
+            {t('ticketShare.s008')}
           </p>
           <button
             type="button"
