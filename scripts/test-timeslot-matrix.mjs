@@ -164,6 +164,8 @@ ok(allConfirmed.length > 0 && !allConfirmed.includes('DRV-104') && !allConfirmed
 // ── 7. LỊCH CHẠY TOÀN TUYẾN & NGƯỠNG MẬT ĐỘ ───────────────────────────
 console.log('\n── 7. LỊCH CHẠY TOÀN TUYẾN ──');
 
+resetAllStationData();
+
 const tl = buildCorridorTimeline({
   originHubId: 'hub_ql13_bau_bang',
   destinationHubId: 'hub_ql13_hang_xanh',

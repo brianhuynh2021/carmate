@@ -116,8 +116,8 @@ export default function CorridorSearchBoard({
   // ── Điểm đi / điểm đến ─────────────────────────────────────────────────
   const fromKey = heading === 'b_to_a' ? 'b' : 'a';
   const toKey = heading === 'b_to_a' ? 'a' : 'b';
-  const fromHubs = useMemo(() => getEndpointHubs(corridor.id, fromKey), [corridor.id, fromKey]);
-  const toHubs = useMemo(() => getEndpointHubs(corridor.id, toKey), [corridor.id, toKey]);
+  const fromHubs = useMemo(() => getEndpointHubs(corridor.id, fromKey, heading), [corridor.id, fromKey, heading]);
+  const toHubs = useMemo(() => getEndpointHubs(corridor.id, toKey, heading), [corridor.id, toKey, heading]);
 
   const [fromHubId, setFromHubId] = useState(() => fromHubs[0]?.id || '');
   const [toHubId, setToHubId] = useState(() => toHubs[0]?.id || '');
@@ -339,7 +339,13 @@ export default function CorridorSearchBoard({
 
   const isDense = timeline?.isDense === true;
 
-  const swap = () => setHeading((h) => flipHeading(h));
+  const swap = () => {
+    const prevFrom = fromHubId;
+    const prevTo = toHubId;
+    setFromHubId(prevTo);
+    setToHubId(prevFrom);
+    setHeading((h) => flipHeading(h));
+  };
 
   const hubLabel = (h) => h.shortName || h.name;
 
