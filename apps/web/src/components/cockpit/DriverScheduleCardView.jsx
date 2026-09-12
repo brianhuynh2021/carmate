@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar,
   Clock,
@@ -21,54 +21,56 @@ import {
   Share2,
   Car
 } from 'lucide-react';
-import { formatVND } from '@carmate/shared';
+import { formatVND, VIRTUAL_HUBS } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
+import api from '../../api/client.js';
 
-// MẪU LỊCH TRÌNH BAN ĐẦU CỦA CHỦ XE (STATE MẪU)
-const INITIAL_SCHEDULES = [
-  {
-    id: 'SCHED-01',
-    status: 'MATCHED', // 'MATCHED' | 'WAITING' | 'CANCELLED'
-    from: 'Tân Khai (Cây Xăng)',
-    to: 'TP.HCM (Ngã 4 Hàng Xanh)',
-    timeDisplay: '06:15',
-    dateDisplay: 'Sáng mai',
-    totalSeats: 2,
-    matchedCount: 2,
-    fareEstimated: 220000,
-    riders: [
-      {
-        id: 'R-01',
-        name: 'Nguyễn Văn An',
-        phoneMasked: '0983.xxx.123',
-        pin: '7429',
-        pickup: 'Cây xăng Tân Khai (QL13)',
-        bookedAt: '2026-09-10T19:30:00Z'
-      },
-      {
-        id: 'R-02',
-        name: 'Trần Thị Bích',
-        phoneMasked: '0912.xxx.456',
-        pin: '5812',
-        pickup: 'Ngã 4 Chơn Thành',
-        bookedAt: '2026-09-10T20:15:00Z'
-      }
-    ]
-  },
-  {
-    id: 'SCHED-02',
-    status: 'WAITING',
-    from: 'TP.HCM (Hàng Xanh)',
-    to: 'Bình Phước (Tân Khai)',
-    timeDisplay: '17:30',
-    dateDisplay: 'Chiều mai',
-    totalSeats: 2,
-    matchedCount: 0,
-    fareEstimated: 220000,
-    riders: []
-  }
-];
+/**
+ * BẢN ĐỒ TUYẾN ➔ TRẠM ẢO (HUB)
+ *
+ * Máy chủ định danh điểm đi/đến bằng hubId của mạng lưới Trạm đón ảo QL13.
+ * Form thêm lịch ở đây dùng tên tuyến rút gọn, nên cần quy chiếu về đúng hubId
+ * thì ý định mới lọt vào đúng bucket khớp lệnh của cỗ máy gom khách.
+ */
+const ROUTE_HUB_MAP = {
+  'Tân Khai (Bình Phước)': 'hub_ql13_tan_khai',
+  'Tân Khai (Cây Xăng)': 'hub_ql13_tan_khai',
+  'TP.HCM (Hàng Xanh)': 'hub_ql13_hang_xanh',
+  'TP.HCM (Ngã 4 Hàng Xanh)': 'hub_ql13_hang_xanh'
+};
+
+function resolveHubId(routeName) {
+  if (ROUTE_HUB_MAP[routeName]) return ROUTE_HUB_MAP[routeName];
+  const hit = VIRTUAL_HUBS.find(
+    (h) => h.name === routeName || h.shortName === routeName
+  );
+  return hit ? hit.id : '';
+}
+
+/**
+ * Quy chiếu một bản ghi Ý Định (Intent) từ máy chủ về đúng hình dạng thẻ lịch trình
+ * mà giao diện này đang hiển thị.
+ */
+function intentToSchedule(intent) {
+  const seats = Number(intent.seats) || 1;
+  const matchedCount = Array.isArray(intent.matchedRiders) ? intent.matchedRiders.length : 0;
+  return {
+    id: intent.id,
+    status: intent.status === 'matched' ? 'MATCHED' : intent.status === 'cancelled' ? 'CANCELLED' : 'WAITING',
+    from: intent.originName || '',
+    to: intent.destinationName || '',
+    timeDisplay: intent.timeSlot || '',
+    dateDisplay: intent.isRecurring
+      ? `${(intent.recurringDays || []).join(', ') || 'Hàng tuần'}`
+      : intent.date || 'Ngày mai',
+    totalSeats: seats,
+    matchedCount,
+    fareEstimated: Number(intent.estimatedPricing?.pricePerSeat || 0) * seats,
+    riders: intent.matchedRiders || [],
+    isRemote: true
+  };
+}
 
 export default function DriverScheduleCardView({
   vehicle,
@@ -76,13 +78,42 @@ export default function DriverScheduleCardView({
   onShowToast,
   onChangeVehicle
 }) {
-  const [schedules, setSchedules] = useState(() => {
+  // NGUỒN SỰ THẬT DUY NHẤT LÀ MÁY CHỦ.
+  // Trước đây danh sách này đọc/ghi thẳng vào localStorage nên lịch tạo tại đây
+  // KHÔNG BAO GIỜ tới được máy chủ — không lọt vào sổ khớp lệnh, không ai ghép
+  // được, dù giao diện vẫn báo "đang tự động gom khách".
+  const [schedules, setSchedules] = useState([]);
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
+  const [isSavingTrip, setIsSavingTrip] = useState(false);
+
+  const driverPhone = (() => {
     try {
-      const saved = localStorage.getItem('carmate_driver_schedules');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return INITIAL_SCHEDULES;
-  });
+      return localStorage.getItem('carmate_rider_phone') || localStorage.getItem('carmate_driver_phone') || '';
+    } catch {
+      return '';
+    }
+  })();
+
+  const reloadSchedules = useCallback(async () => {
+    setIsLoadingSchedules(true);
+    try {
+      const res = await api.getMovementIntents({ role: 'driver' });
+      const rows = Array.isArray(res?.data) ? res.data : [];
+      const mine = driverPhone
+        ? rows.filter((r) => String(r.phone || '').slice(-9) === driverPhone.slice(-9))
+        : rows;
+      setSchedules(mine.map(intentToSchedule));
+    } catch (err) {
+      console.warn('[DriverSchedule] Không tải được lịch trình từ máy chủ:', err);
+      setSchedules([]);
+    } finally {
+      setIsLoadingSchedules(false);
+    }
+  }, [driverPhone]);
+
+  useEffect(() => {
+    reloadSchedules();
+  }, [reloadSchedules]);
 
   // HỆ THỐNG ĐIỂM TÍN NHIỆM (CARMATE TRUST ENGINE)
   const [trustScore, setTrustScore] = useState(() => {
@@ -114,12 +145,10 @@ export default function DriverScheduleCardView({
   const [nightConfirmed, setNightConfirmed] = useState(true);
   const [morningAwakeConfirmed, setMorningAwakeConfirmed] = useState(false);
 
-  // Lưu lịch trình vào localStorage khi có thay đổi
+  // Cập nhật lạc quan trên giao diện. Máy chủ mới là nơi lưu thật, nên các thao
+  // tác thay đổi lịch đều gọi API rồi nạp lại danh sách từ máy chủ.
   const updateSchedulesState = (newScheds) => {
     setSchedules(newScheds);
-    try {
-      localStorage.setItem('carmate_driver_schedules', JSON.stringify(newScheds));
-    } catch {}
   };
 
   const updateTrustScoreState = (newScore) => {
@@ -231,25 +260,67 @@ export default function DriverScheduleCardView({
   };
 
   // 5. THÊM Ý ĐỊNH CHUYẾN MỚI
-  const handleCreateNewTrip = (e) => {
+  /**
+   * Tạo ý định chuyến mới — ĐẨY THẲNG LÊN MÁY CHỦ.
+   *
+   * Trước đây hàm này chỉ nhét một object vào localStorage rồi báo thành công,
+   * nên lịch tạo ra chỉ tồn tại trong trình duyệt của chính chủ xe: máy chủ không
+   * biết nó tồn tại, cỗ máy gom khách không thấy, và không bao giờ ghép được ai.
+   * Nay dùng đúng một đường đi với modal "Lên lịch xe" ngoài trang chủ:
+   * POST /api/intents rồi kích hoạt luôn phiên khớp lệnh.
+   */
+  const handleCreateNewTrip = async (e) => {
     e.preventDefault();
-    const newTrip = {
-      id: `SCHED-${Date.now().toString().slice(-4)}`,
-      status: 'WAITING',
-      from: newFrom,
-      to: newTo,
-      timeDisplay: newTime,
-      dateDisplay: isRecurringCommute ? 'T2 - T6 hàng tuần' : 'Ngày mai',
-      totalSeats: newSeats,
-      matchedCount: 0,
-      fareEstimated: newSeats * 110000,
-      riders: []
-    };
+    if (isSavingTrip) return;
 
-    const next = [...schedules, newTrip];
-    updateSchedulesState(next);
-    setShowAddTripModal(false);
-    onShowToast?.('🎉 Đã tạo ý định chuyến đi mới! Hệ thống đang tự động gom khách cùng tuyến.');
+    const clean = driverPhone.replace(/\D/g, '');
+    if (clean.length < 10) {
+      onShowToast?.('⚠️ Cần số điện thoại để người đi cùng liên hệ. Vui lòng đăng nhập hoặc đặt chuyến một lần để lưu số.');
+      return;
+    }
+
+    // Ngày đi: lịch cố định hàng tuần hoặc chuyến lẻ ngày mai
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+    setIsSavingTrip(true);
+    try {
+      await api.createMovementIntent({
+        role: 'driver',
+        originHubId: resolveHubId(newFrom),
+        originName: newFrom,
+        destinationHubId: resolveHubId(newTo),
+        destinationName: newTo,
+        corridor: 'Tuyến QL13',
+        date: dateStr,
+        timeSlot: newTime,
+        seats: newSeats,
+        isRecurring: isRecurringCommute,
+        recurringDays: isRecurringCommute ? ['T2', 'T3', 'T4', 'T5', 'T6'] : [],
+        phone: clean,
+        contactName: vehicle?.ownerName || 'Chủ xe'
+      });
+
+      // Kích hoạt ngay phiên gom khớp lệnh để khách cùng giờ được ghép tức thì
+      try {
+        await api.runBatchMatch({ epochType: 'micro_batch', corridor: 'Tuyến QL13', date: dateStr });
+      } catch (matchErr) {
+        console.warn('[DriverSchedule] Auto batch match:', matchErr);
+      }
+
+      await reloadSchedules();
+      setShowAddTripModal(false);
+      onShowToast?.(
+        isRecurringCommute
+          ? '⚡ Đã lưu lịch xe cố định T2-T6! Hệ thống đang tự động gom khách cùng tuyến.'
+          : '🎉 Đã lưu ý định chuyến đi! Hệ thống đang tự động gom khách cùng tuyến.'
+      );
+    } catch (err) {
+      onShowToast?.(`⚠️ Chưa lưu được lịch trình: ${err?.message || 'Vui lòng thử lại'}`);
+    } finally {
+      setIsSavingTrip(false);
+    }
   };
 
   return (
@@ -326,6 +397,21 @@ export default function DriverScheduleCardView({
 
       {/* ── DANH SÁCH CÁC THẺ LỊCH TRÌNH ── */}
       <div className="space-y-4">
+        {isLoadingSchedules && (
+          <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/[0.10] text-center text-sm text-slate-400 font-mono">
+            Đang tải lịch trình từ máy chủ…
+          </div>
+        )}
+
+        {!isLoadingSchedules && schedules.filter((t) => t.status !== 'CANCELLED').length === 0 && (
+          <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/[0.10] text-center space-y-2">
+            <p className="text-sm font-bold text-white">Bạn chưa có lịch trình nào</p>
+            <p className="text-xs text-slate-400">
+              Bấm “Thêm lịch mới” để hệ thống bắt đầu tự động gom người đi cùng tuyến QL13.
+            </p>
+          </div>
+        )}
+
         {schedules.map((trip) => {
           if (trip.status === 'CANCELLED') return null;
 
@@ -784,8 +870,8 @@ export default function DriverScheduleCardView({
               <Button variant="outline" onClick={() => setShowAddTripModal(false)}>
                 Huỷ bỏ
               </Button>
-              <Button onClick={handleCreateNewTrip}>
-                Lưu lịch trình ➔
+              <Button onClick={handleCreateNewTrip} disabled={isSavingTrip}>
+                {isSavingTrip ? 'Đang lưu…' : 'Lưu lịch trình ➔'}
               </Button>
             </div>
           }
