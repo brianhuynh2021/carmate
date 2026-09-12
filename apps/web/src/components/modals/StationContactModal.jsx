@@ -49,7 +49,9 @@ export default function StationContactModal({
     {
       id: 'sys-init',
       sender: 'system',
-      text: `Hệ thống: Chuyến đi tiện chuyến #${boardingPass?.pin || '8842'} đã kết nối. Xe ${boardingPass?.carInfo?.vehicleModel || 'ô tô'} (${boardingPass?.carInfo?.plate || '93A-123.45'}) đang di chuyển tới trạm.`,
+      text: boardingPass?.carInfo?.plate
+        ? `Hệ thống: Chuyến đi tiện chuyến #${boardingPass?.pin || ''} đã kết nối. Xe ${boardingPass?.carInfo?.vehicleModel || 'ô tô'} (${boardingPass?.carInfo?.plate}) đang di chuyển tới trạm.`
+        : `Hệ thống: Bạn đang trong hàng đợi trạm đón. Kênh liên lạc an toàn với chủ xe sẽ tự động kích hoạt ngay khi có chủ xe nhận đón.`,
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -121,8 +123,8 @@ export default function StationContactModal({
   if (!isOpen) return null;
 
   const driverDisplayName = boardingPass?.carInfo?.driverName || 'Chủ xe cá nhân';
-  const carDisplayModel = boardingPass?.carInfo?.vehicleModel || 'Mitsubishi Xpander (Trắng)';
-  const carDisplayPlate = boardingPass?.carInfo?.plate || '93A - 123.45';
+  const carDisplayModel = boardingPass?.carInfo?.vehicleModel || 'Xe ô tô gia đình';
+  const carDisplayPlate = boardingPass?.carInfo?.plate || 'Đang chờ kết nối';
   const stationName = currentHub?.name || boardingPass?.hubName || 'Trạm đón QL13';
 
   // Gửi tin nhắn tự do
@@ -527,8 +529,8 @@ export default function StationContactModal({
               )}
             </div>
 
-            {/* Nút mô phỏng đối tác bắt máy (hỗ trợ kiểm thử/demo nhanh) */}
-            {callState === 'ringing' && (
+            {/* Nút mô phỏng đối tác bắt máy (chỉ hiện ở dev) */}
+            {callState === 'ringing' && import.meta.env.DEV && (
               <div className="pt-1">
                 <button
                   type="button"

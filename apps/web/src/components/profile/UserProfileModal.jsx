@@ -1160,7 +1160,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     Điểm số thực tế của bạn là {trustCalc.rawScore}đ, nhưng bị giới hạn ở trần {trustCalc.capLimit}đ
                   </p>
                   <p className="text-[11.5px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
-                    Theo Bất biến Tín nhiệm CarMate, thành viên chưa cập nhật ảnh đại diện chính diện sẽ không thể vượt qua {trustCalc.capLimit} điểm nhằm đảm bảo an toàn tuyệt đối và loại bỏ tài khoản ẩn danh trên toàn sàn.
+                    Theo Tiêu chuẩn Tín nhiệm CarMate, thành viên chưa cập nhật ảnh đại diện chính diện sẽ không thể vượt qua {trustCalc.capLimit} điểm nhằm đảm bảo an toàn tuyệt đối và loại bỏ tài khoản ẩn danh trên toàn sàn.
                   </p>
                   <button
                     type="button"

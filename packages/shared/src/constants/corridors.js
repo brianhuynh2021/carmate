@@ -31,6 +31,7 @@ export const CORRIDORS = [
         label: 'Sài Gòn',
         fullLabel: 'TP. Hồ Chí Minh',
         hubIds: [
+          'hub_ql13_cho_ray',
           'hub_ql13_hang_xanh',
           'hub_ql13_san_bay_tsn',
           'hub_ql13_binh_trieu',
@@ -53,7 +54,7 @@ export const CORRIDORS = [
     shortName: 'N2',
     name: 'Hành lang N2 - Miền Tây',
     isDefault: false,
-    status: 'beta',
+    status: 'draft',
     endpoints: {
       a: {
         id: 'saigon',
@@ -71,9 +72,9 @@ export const CORRIDORS = [
   }
 ];
 
-/** Lấy toàn bộ hành lang đang phục vụ (ẩn tuyến chưa mở). */
+/** Lấy toàn bộ hành lang đang phục vụ (chỉ tuyến live đang chạy thực tế). */
 export function getActiveCorridors() {
-  return CORRIDORS.filter((c) => c.status !== 'draft');
+  return CORRIDORS.filter((c) => c.status === 'live');
 }
 
 export function getCorridorById(id) {
@@ -104,7 +105,7 @@ export function getCorridorHubs(corridorId) {
  * để chia — cách này áp dụng được cho mọi hành lang chạy theo trục Bắc-Nam mà
  * không cần liệt kê tay từng trạm).
  */
-export function getEndpointHubs(corridorId, endpointKey) {
+export function getEndpointHubs(corridorId, endpointKey, heading = null) {
   const c = getCorridorById(corridorId);
   if (!c) return [];
 
@@ -112,20 +113,36 @@ export function getEndpointHubs(corridorId, endpointKey) {
   const ep = c.endpoints[endpointKey];
   if (!ep) return [];
 
+  let result = [];
   if (Array.isArray(ep.hubIds)) {
-    return hubs.filter((h) => ep.hubIds.includes(h.id));
+    result = hubs.filter((h) => ep.hubIds.includes(h.id));
+  } else {
+    // Suy luận theo vĩ độ: đầu A = nửa gần thành phố (vĩ độ thấp hơn với QL13).
+    const other = endpointKey === 'a' ? 'b' : 'a';
+    const otherIds = c.endpoints[other]?.hubIds;
+    if (Array.isArray(otherIds)) {
+      result = hubs.filter((h) => !otherIds.includes(h.id));
+    } else {
+      const lats = hubs.map((h) => h.lat).sort((x, y) => x - y);
+      const median = lats[Math.floor(lats.length / 2)];
+      result = endpointKey === 'a' ? hubs.filter((h) => h.lat < median) : hubs.filter((h) => h.lat >= median);
+    }
   }
 
-  // Suy luận theo vĩ độ: đầu A = nửa gần thành phố (vĩ độ thấp hơn với QL13).
-  const other = endpointKey === 'a' ? 'b' : 'a';
-  const otherIds = c.endpoints[other]?.hubIds;
-  if (Array.isArray(otherIds)) {
-    return hubs.filter((h) => !otherIds.includes(h.id));
+  // Sắp xếp thứ tự trạm hợp lý theo hướng tuyến (Stanford Ergonomics & MIT Invariants):
+  // Tuyến QL13 chạy dọc trục Bắc-Nam (Đầu B = Bình Phước ở phía Bắc, Đầu A = Sài Gòn ở phía Nam).
+  // - Nếu là đầu B (Bình Phước):
+  //   + Khi heading === 'a_to_b' (Sài Gòn đi Bình Phước): xe chạy từ Nam ra Bắc, trả khách từ Lái Thiêu xuôi về Bù Đốp (lat tăng dần).
+  //   + Khi heading === 'b_to_a' hoặc mặc định (Bình Phước về Sài Gòn): xe đón khách từ đầu tuyến Bù Đốp xuôi về Lái Thiêu (lat giảm dần).
+  if (endpointKey === 'b') {
+    if (heading === 'a_to_b') {
+      result = [...result].sort((h1, h2) => (h1.lat || 0) - (h2.lat || 0));
+    } else {
+      result = [...result].sort((h1, h2) => (h2.lat || 0) - (h1.lat || 0));
+    }
   }
 
-  const lats = hubs.map((h) => h.lat).sort((x, y) => x - y);
-  const median = lats[Math.floor(lats.length / 2)];
-  return endpointKey === 'a' ? hubs.filter((h) => h.lat < median) : hubs.filter((h) => h.lat >= median);
+  return result;
 }
 
 /**

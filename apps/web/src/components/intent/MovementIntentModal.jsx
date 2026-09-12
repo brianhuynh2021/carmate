@@ -60,10 +60,6 @@ export default function MovementIntentModal({
     return VIRTUAL_HUBS.filter((h) => SAIGON_HUB_IDS.includes(h.id));
   }, []);
 
-  const binhPhuocHubs = useMemo(() => {
-    return VIRTUAL_HUBS.filter((h) => !SAIGON_HUB_IDS.includes(h.id));
-  }, []);
-
   // Hướng di chuyển: 'TO_SAIGON' (Bình Phước ➔ Sài Gòn) | 'TO_BINH_PHUOC' (Sài Gòn ➔ Bình Phước)
   const [direction, setDirection] = useState(() => {
     if (initialOriginHubId && SAIGON_HUB_IDS.includes(initialOriginHubId)) {
@@ -71,6 +67,11 @@ export default function MovementIntentModal({
     }
     return 'TO_SAIGON';
   });
+
+  const binhPhuocHubs = useMemo(() => {
+    const heading = direction === 'TO_SAIGON' ? 'b_to_a' : 'a_to_b';
+    return getEndpointHubs(DEFAULT_CORRIDOR.id, 'b', heading);
+  }, [direction]);
 
   const [originHubId, setOriginHubId] = useState(() => {
     if (initialOriginHubId) return initialOriginHubId;
@@ -295,7 +296,7 @@ export default function MovementIntentModal({
               : '⚡ Đã lưu ý định chuyến xe! Hệ thống đang tự động gom khách cùng tuyến vào khung giờ hẹn.')
           : (isRecurring
               ? `⚡ Đã lưu lịch đi lại hàng tuần (${recurringDays.join(', ')})! Hệ thống tự động ghép xe tiện đường mỗi tuần.`
-              : '⚡ Đã lưu ý định đi chung! Thuật toán Gale-Shapley đang tự động ghép xe tiện đường cho bạn.')
+              : '⚡ Đã lưu nhu cầu đi chung! Hệ thống CarMate đang tự động kết nối xe tiện đường cho bạn.')
       );
 
       onSuccess?.(res?.data || payload);

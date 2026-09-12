@@ -43,7 +43,8 @@ export const QL13_CORRIDOR_POLYLINE = [
   { id: 'hub_ql13_van_phuc_city', name: 'Khu đô thị Vạn Phúc City', lat: 10.8410, lng: 106.7125, s: 134.5 },
   { id: 'hub_ql13_binh_trieu', name: 'Cầu Bình Triệu / BX Miền Đông cũ', lat: 10.8175, lng: 106.7118, s: 137.5 },
   { id: 'hub_ql13_hang_xanh', name: 'Ngã tư Hàng Xanh (Bình Thạnh)', lat: 10.8012, lng: 106.7114, s: 139.5 },
-  { id: 'hub_ql13_san_bay_tsn', name: 'Sân bay Quốc tế Tân Sơn Nhất (Phạm Văn Đồng)', lat: 10.8185, lng: 106.6660, s: 142.5 }
+  { id: 'hub_ql13_san_bay_tsn', name: 'Sân bay Quốc tế Tân Sơn Nhất (Phạm Văn Đồng)', lat: 10.8185, lng: 106.6660, s: 142.5 },
+  { id: 'hub_ql13_cho_ray', name: 'Cụm BV Chợ Rẫy / ĐHYD (Quận 5)', lat: 10.7578, lng: 106.6596, s: 145.0 }
 ];
 
 // Bản đồ tra cứu mốc cọc s cho từng trạm

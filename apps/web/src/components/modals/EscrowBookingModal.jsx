@@ -170,7 +170,7 @@ export default function EscrowBookingModal({
     if (!currentUser) {
       const cleaned = cleanPhoneNumber(guestPhone);
       if (!isValidVietnamesePhone(cleaned)) {
-        onShowToast?.('Vui lòng nhập số điện thoại hợp lệ (10 số, ví dụ: 0912 345 678) để nhận vé & đón xe.');
+        onShowToast?.('Vui lòng nhập số điện thoại hợp lệ (10 số, ví dụ: 0912 345 678) để giữ chỗ & đón xe.');
         return;
       }
       effectivePhone = cleaned;
@@ -262,15 +262,15 @@ export default function EscrowBookingModal({
       onShowToast?.('✓ Đã giữ chỗ trước thành công! 0đ cọc', 'success');
       triggerMacNotification({
         title: '🚗 Đã giữ chỗ trước thành công (0đ cọc)!',
-        message: `Mã vé #${bookingCode}: Vui lòng trao đổi điểm đón qua Chat hoặc Gọi thoại.`,
+        message: `Mã giữ chỗ #${bookingCode}: Vui lòng trao đổi điểm đón qua Chat hoặc Gọi thoại.`,
         type: 'confirmed',
         bookingId: bookingCode,
         partnerName: toPublicAlias(item),
-        actionLabel: 'Xem vé ngay',
+        actionLabel: 'Xem thông tin ngay',
         duration: 6000
       });
 
-      // Hiển thị ngay thẻ vé điện tử để khách theo dõi mã vé #CX-xxxx
+      // Hiển thị ngay thẻ thông tin để khách theo dõi mã giữ chỗ #CX-xxxx
       setIsSubmitted(true);
     } catch (apiErr) {
       const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể chốt chuyến đi';
@@ -282,7 +282,7 @@ export default function EscrowBookingModal({
   };
 
   // -------------------------------------------------------------
-  // TRẠNG THÁI 2: ĐÃ XÁC NHẬN KẾT NỐI (THẺ VÉ ĐIỆN TỬ & CHAT TRỰC TIẾP)
+  // TRẠNG THÁI 2: ĐÃ XÁC NHẬN KẾT NỐI (THẺ THÔNG TIN ĐÓN XE & CHAT TRỰC TIẾP)
   // -------------------------------------------------------------
   if (isSubmitted) {
     const partnerAlias = toPublicAlias(item);
@@ -321,7 +321,7 @@ export default function EscrowBookingModal({
         icon={CheckCircle2}
         iconTone="success"
         title={t('escrow2.s041')}
-        subtitle={`Mã vé điện tử #${bookingCode} · Giữ chỗ chắc chắn 0đ cọc`}
+        subtitle={`Mã xác nhận #${bookingCode} · Giữ chỗ chắc chắn 0đ cọc`}
         footer={
           <div className="w-full space-y-2">
             <button
@@ -339,11 +339,11 @@ export default function EscrowBookingModal({
         }
       >
         <div className="space-y-4">
-          {/* 📋 1. THẺ CHI TIẾT CHUYẾN ĐI (Như một vé điện tử) */}
+          {/* 📋 1. THẺ CHI TIẾT CHUYẾN ĐI (Thẻ thông tin hành trình) */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-white via-slate-50/90 to-slate-100/90 dark:from-slate-850 dark:via-slate-900 dark:to-slate-950 border border-black/[0.08] dark:border-white/[0.1] shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-            {/* Header của vé */}
+            {/* Header của thẻ thông tin */}
             <div className="p-4 sm:p-5 border-b border-dashed border-black/10 dark:border-white/10 relative">
-              {/* Rãnh khuyết vé điện tử (Ticket notches) phong cách Apple Wallet */}
+              {/* Rãnh khuyết thẻ thông tin (Card notches) phong cách Apple Wallet */}
               <span className="absolute -bottom-3 -left-3 w-6 h-6 rounded-full bg-[#f2f2f7] dark:bg-[#1c1c1e] border-r border-black/[0.08] dark:border-white/[0.1]" />
               <span className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-[#f2f2f7] dark:bg-[#1c1c1e] border-l border-black/[0.08] dark:border-white/[0.1]" />
 
@@ -357,7 +357,7 @@ export default function EscrowBookingModal({
                       {t('escrow2.s002')}
                     </h4>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                      Vé điện tử CarMate #{bookingCode}
+                      Thẻ thông tin CarMate #{bookingCode}
                     </p>
                   </div>
                 </div>
@@ -586,7 +586,7 @@ export default function EscrowBookingModal({
       icon={MessageSquare}
       iconTone="primary"
       title={isTripOwner ? 'Quản lý chuyến đi của bạn' : (isDriverItem ? 'Giữ Chỗ Trước Cùng Chủ Xe (0đ cọc)' : 'Chốt Đón Người Đi Cùng')}
-      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : 'Giữ chỗ chắc chắn 0đ cọc · Nhận mã vé điện tử · Lên xe mới gửi tiền xăng'}
+      subtitle={isTripOwner ? 'Đây là chuyến đi do bạn tạo trên hệ thống' : 'Giữ chỗ chắc chắn 0đ cọc · Nhận mã xác nhận · Lên xe mới gửi tiền xăng'}
       footer={footer}
     >
       <div className="space-y-4">

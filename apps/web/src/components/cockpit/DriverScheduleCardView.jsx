@@ -527,33 +527,35 @@ export default function DriverScheduleCardView({
                         <Clock className="w-3.5 h-3.5 text-amber-400" />
                         <span>Gác cổng 3 mốc: {activeCheckpoint === 'NIGHT_LOCK' ? '21:00 Đêm (Khóa sổ)' : activeCheckpoint === 'MORNING_WAKE' ? '05:15 Sáng (Báo thức)' : '05:30 Sáng (Lằn ranh đỏ)'}</span>
                       </span>
-                      {/* Selector mô phỏng 3 mốc */}
-                      <div className="flex items-center gap-1 text-[10px] font-mono">
-                        <button
-                          type="button"
-                          onClick={() => setActiveCheckpoint('NIGHT_LOCK')}
-                          className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'NIGHT_LOCK' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                          title={t('driverSchedule.cp1Title')}
-                        >
-                          {t('driverSchedule.night21')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveCheckpoint('MORNING_WAKE')}
-                          className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'MORNING_WAKE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                          title={t('driverSchedule.cp2Title')}
-                        >
-                          {t('driverSchedule.morning0515')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveCheckpoint('RED_LINE')}
-                          className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'RED_LINE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                          title={t('driverSchedule.cp3Title')}
-                        >
-                          {t('driverSchedule.redline0530')}
-                        </button>
-                      </div>
+                      {/* Selector mô phỏng 3 mốc (chỉ hiện ở dev) */}
+                      {import.meta.env.DEV && (
+                        <div className="flex items-center gap-1 text-[10px] font-mono">
+                          <button
+                            type="button"
+                            onClick={() => setActiveCheckpoint('NIGHT_LOCK')}
+                            className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'NIGHT_LOCK' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
+                            title={t('driverSchedule.cp1Title')}
+                          >
+                            {t('driverSchedule.night21')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveCheckpoint('MORNING_WAKE')}
+                            className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'MORNING_WAKE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
+                            title={t('driverSchedule.cp2Title')}
+                          >
+                            {t('driverSchedule.morning0515')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveCheckpoint('RED_LINE')}
+                            className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'RED_LINE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
+                            title={t('driverSchedule.cp3Title')}
+                          >
+                            {t('driverSchedule.redline0530')}
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {activeCheckpoint === 'NIGHT_LOCK' && (

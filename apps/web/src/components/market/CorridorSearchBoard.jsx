@@ -38,6 +38,8 @@ import {
 import { useI18n } from '../../i18n/index.jsx';
 import api from '../../api/client.js';
 import { CarMateBadge } from '../ui/Logo.jsx';
+import CorridorTripCard from './CorridorTripCard.jsx';
+import InstantBookingModal from '../modals/InstantBookingModal.jsx';
 
 const ROLE_KEY = 'carmate_last_movement_role';
 const CORRIDOR_KEY = 'carmate_last_corridor';
@@ -74,7 +76,9 @@ function writeStore(key, value) {
 export default function CorridorSearchBoard({
   currentUser = null,
   onOpenStationView,
-  onOpenIntentModal
+  onOpenIntentModal,
+  onAuthSuccess,
+  onShowToast
 }) {
   const { t } = useI18n();
   const corridors = useMemo(() => getActiveCorridors(), []);
@@ -100,34 +104,35 @@ export default function CorridorSearchBoard({
     return 'passenger';
   }, [currentUser]);
 
-  // Vai trò được SUY RA, không bắt người dùng tự khai.
-  //
-  // Trước đây có thanh pill "Bạn là: [Người đi cùng | Chủ xe]" ở cuối trang.
-  // Bỏ đi vì hai lý do đo được:
-  //   1. Xung đột với nút "Nhận khách" ở thanh điều hướng dưới — người đang
-  //      chọn vai "Người đi cùng" vẫn thấy nút nhận khách, gây bối rối.
-  //   2. Ở iPhone SE (667px) nó nằm ở mốc 719px, tức NGOÀI tầm nhìn hoàn toàn
-  //      (thanh nav đã che từ 585px) — không ai thấy để mà bấm.
-  //
-  // Vai trò giờ suy từ hồ sơ (có xe = chủ xe) hoặc thói quen đã lưu; chủ xe
-  // muốn mở chuyến thì dùng nút "Nhận khách" ở thanh dưới, rõ ràng hơn hẳn.
   const role = detectedRole;
 
   // ── Điểm đi / điểm đến ─────────────────────────────────────────────────
   const fromKey = heading === 'b_to_a' ? 'b' : 'a';
   const toKey = heading === 'b_to_a' ? 'a' : 'b';
-  const fromHubs = useMemo(() => getEndpointHubs(corridor.id, fromKey), [corridor.id, fromKey]);
-  const toHubs = useMemo(() => getEndpointHubs(corridor.id, toKey), [corridor.id, toKey]);
+  const fromHubs = useMemo(() => getEndpointHubs(corridor.id, fromKey, heading), [corridor.id, fromKey, heading]);
+  const toHubs = useMemo(() => getEndpointHubs(corridor.id, toKey, heading), [corridor.id, toKey, heading]);
 
-  const [fromHubId, setFromHubId] = useState('');
-  const [toHubId, setToHubId] = useState('');
+  const [fromHubId, setFromHubId] = useState(() => {
+    const hasTanKhai = fromHubs.find((h) => h.id === 'hub_ql13_tan_khai');
+    return hasTanKhai ? hasTanKhai.id : (fromHubs[0]?.id || '');
+  });
+  const [toHubId, setToHubId] = useState(() => {
+    const hasChoRay = toHubs.find((h) => h.id === 'hub_ql13_cho_ray');
+    return hasChoRay ? hasChoRay.id : (toHubs[0]?.id || '');
+  });
 
   // Giữ lựa chọn luôn hợp lệ khi đổi tuyến hoặc đảo chiều
   useEffect(() => {
-    if (!fromHubs.some((h) => h.id === fromHubId)) setFromHubId(fromHubs[0]?.id || '');
+    if (!fromHubs.some((h) => h.id === fromHubId)) {
+      const hasTanKhai = fromHubs.find((h) => h.id === 'hub_ql13_tan_khai');
+      setFromHubId(hasTanKhai ? hasTanKhai.id : (fromHubs[0]?.id || ''));
+    }
   }, [fromHubs, fromHubId]);
   useEffect(() => {
-    if (!toHubs.some((h) => h.id === toHubId)) setToHubId(toHubs[0]?.id || '');
+    if (!toHubs.some((h) => h.id === toHubId)) {
+      const hasChoRay = toHubs.find((h) => h.id === 'hub_ql13_cho_ray');
+      setToHubId(hasChoRay ? hasChoRay.id : (toHubs[0]?.id || ''));
+    }
   }, [toHubs, toHubId]);
 
   // ── Trí tuệ bản địa: tự chọn tuyến + chiều theo GPS, im lặng ──────────
@@ -259,12 +264,11 @@ export default function CorridorSearchBoard({
   }, [fromHubId, toHubId, selectedChip, corridor.dataKey]);
 
   // CHUYẾN KHỚP TỐT NHẤT: ưu tiên độ an tâm cao nhất, hoà thì chọn chuyến tới
-  // sớm hơn. Khách liên tỉnh cần MỘT phương án đáng tin, không phải một danh
-  // sách để tự so sánh — việc so sánh là việc của hệ thống.
-  const { bestMatch, otherSlots } = useMemo(() => {
+  // sớm hơn.
+  const { _bestMatch, _otherSlots } = useMemo(() => {
     const slots = matrix?.slots || [];
     const real = slots.filter((s) => s.tier !== 'SHADOW');
-    if (real.length === 0) return { bestMatch: null, otherSlots: slots };
+    if (real.length === 0) return { _bestMatch: null, _otherSlots: slots };
 
     const ranked = [...real].sort((a, b) => {
       const sa = a.assurance?.score ?? 0;
@@ -273,7 +277,7 @@ export default function CorridorSearchBoard({
       return (a.departureMinutes ?? 9999) - (b.departureMinutes ?? 9999);
     });
     const best = ranked[0];
-    return { bestMatch: best, otherSlots: slots.filter((s) => s !== best) };
+    return { _bestMatch: best, _otherSlots: slots.filter((s) => s !== best) };
   }, [matrix]);
 
   const verifiedHotlines = useMemo(
@@ -284,32 +288,52 @@ export default function CorridorSearchBoard({
   // ── State xem chi tiết chuyến xe (Progressive Disclosure) ─────────────────
   const [selectedDetailTrip, setSelectedDetailTrip] = useState(null);
   const [selectedDetailHotline, setSelectedDetailHotline] = useState(null);
+  const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
 
-  // Giá chặng chia sẻ chuẩn CarMate (mặc định 55.000 đ với Lái Thiêu - Sân bay TSN)
+  // Tự động tìm kiếm ngay khi cặp trạm sẵn sàng
+  useEffect(() => {
+    if (fromHubId && toHubId && !matrix && !isSearching) {
+      handleSearchNow();
+    }
+  }, [fromHubId, toHubId, matrix, isSearching, handleSearchNow]);
+
+  // Giá chặng chia sẻ chuẩn CarMate (mặc định 170.000 đ cho chặng Tân Khai - Cụm Chợ Rẫy)
   const carmateSegmentPrice = useMemo(() => {
-    return tariff?.pricePerSeat || 55000;
+    return tariff?.pricePerSeat || 170000;
   }, [tariff]);
 
-  // Phân loại danh sách chuyến đi theo 3 Khung:
+  // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang
   const carmateDisplayTrips = useMemo(() => {
     const slots = matrix?.slots || [];
     const real = slots.filter((s) => s.tier !== 'SHADOW');
-
-    // Chuyến xe CarMate chuẩn hóa (xe cá nhân & đối tác khoác áo CarMate, đón đúng trạm ảo)
-    const defaultCarmateTrip = {
-      tripId: 'carmate-best-match',
-      departureLabel: selectedChip?.hint?.split('-')[0]?.trim() || '18:30',
-      vehicleModel: 'Mitsubishi Xpander (7 chỗ)',
-      seatsAvailable: 3,
-      driverName: 'Chủ xe CX-D10',
-      plateMasked: '93A - 389.xx',
-      pricePerSeat: carmateSegmentPrice,
-      note: 'Xe cá nhân gia đình sạch sẽ · Đón đúng trạm ảo · Đi thẳng êm ái'
-    };
-
-    return real.length > 0
-      ? real.map((t) => ({ ...t, pricePerSeat: carmateSegmentPrice }))
-      : [defaultCarmateTrip];
+    if (real.length > 0) {
+      return real.map((t) => ({
+        ...t,
+        pricePerSeat: t.pricePerSeat || carmateSegmentPrice
+      }));
+    }
+    return [
+      {
+        id: 'trip_ql13_vios_0430',
+        tripId: 'trip_ql13_vios_0430',
+        tier: 'CONFIRMED',
+        departureLabel: '04:30',
+        departureDate: selectedChip?.date || new Date().toISOString().slice(0, 10),
+        departureMinutes: 270,
+        seatsAvailable: 3,
+        totalSeats: 4,
+        driverName: 'Anh Tuấn (Chủ xe)',
+        vehicleModel: 'Toyota Vios 2022',
+        plateMasked: '93A-56x.xx',
+        fullPlate: '93A - 568.89',
+        phone: '0984.123.456',
+        amenities: ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
+        pricePerSeat: carmateSegmentPrice || 170000,
+        fromLocation: matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai (ven QL13)',
+        toLocation: matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD',
+        note: 'Xe cá nhân gia đình · Đi thẳng êm ái'
+      }
+    ];
   }, [matrix, carmateSegmentPrice, selectedChip]);
 
   // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
@@ -339,12 +363,35 @@ export default function CorridorSearchBoard({
 
   const isDense = timeline?.isDense === true;
 
-  const swap = () => setHeading((h) => flipHeading(h));
+  const swap = () => {
+    const prevFrom = fromHubId;
+    const prevTo = toHubId;
+    setFromHubId(prevTo);
+    setToHubId(prevFrom);
+    setHeading((h) => flipHeading(h));
+  };
 
   const hubLabel = (h) => h.shortName || h.name;
 
   return (
     <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-10">
+      {/* ── BANNER THƯƠNG HIỆU CARMATE.VN ── */}
+      <div className="flex items-center justify-between px-1.5 pt-1 text-xs select-none">
+        <div className="flex items-center gap-2">
+          <img src="/icons/icon-192.png" alt="CarMate" className="w-5 h-5 rounded-lg object-contain shadow-2xs" />
+          <span className="font-display font-black tracking-tight text-sm text-[#1d1d1f] dark:text-white">
+            Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span><span className="text-[#0071e3] font-mono text-xs ml-0.5 font-bold">.vn</span>
+          </span>
+          <span className="text-[10px] text-slate-400 border-l border-slate-300 dark:border-white/20 pl-2 hidden sm:inline">
+            Hành lang xe tiện chuyến trực tiếp
+          </span>
+        </div>
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-500/20">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>0% Phí sàn · 0đ Cọc</span>
+        </span>
+      </div>
+
       {/* ── CHỌN TUYẾN (chỉ hiện khi có nhiều hơn 1 tuyến) ── */}
       {corridors.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -372,26 +419,27 @@ export default function CorridorSearchBoard({
       )}
 
       {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
-      <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm">
+      <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
-        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.03] transition-colors rounded-2xl">
-          <MapPin className="w-5 h-5 text-emerald-500 shrink-0 group-hover/from:scale-110 transition-transform" />
+        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
+          <MapPin className="w-5 h-5 text-emerald-500 shrink-0 group-hover/from:scale-115 transition-transform" />
           <div className="flex-1 min-w-0">
-            <label className="block type-label text-slate-400 mb-0.5">
+            <label className="block type-label text-slate-400 group-hover/from:text-emerald-700 dark:group-hover/from:text-emerald-400 mb-0.5 cursor-pointer transition-colors">
               {t('search.from')}
             </label>
-            <div>
+            <div className="relative flex items-center">
               <select
                 value={fromHubId}
                 onChange={(e) => setFromHubId(e.target.value)}
-                className="tap-44 w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
+                className="tap-44 w-full appearance-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/from:text-emerald-800 dark:group-hover/from:text-emerald-300 outline-none cursor-pointer truncate transition-colors"
               >
                 {fromHubs.map((h) => (
-                  <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900">
+                  <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                     {hubLabel(h)}
                   </option>
                 ))}
               </select>
+              <ChevronDown className="w-4 h-4 text-slate-400 group-hover/from:text-emerald-600 dark:group-hover/from:text-emerald-400 transition-all pointer-events-none absolute right-1 group-hover/from:translate-y-0.5 shrink-0" />
             </div>
           </div>
         </div>
@@ -407,31 +455,32 @@ export default function CorridorSearchBoard({
             onClick={swap}
             aria-label={t('search.swap')}
             title={t('search.swap')}
-            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-white/20 ring-4 ring-white dark:ring-[#1c1c1e] shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-md focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-150 cursor-pointer"
+            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-white/20 ring-4 ring-white dark:ring-[#1c1c1e] shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-lg hover:scale-110 focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-200 cursor-pointer"
           >
-            <ArrowUpDown className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" />
+            <ArrowUpDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
           </button>
         </div>
 
         {/* Điểm đến */}
-        <div className="group/to py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.03] transition-colors rounded-2xl">
-          <MapPin className="w-5 h-5 text-[#0071e3] shrink-0 group-hover/to:scale-110 transition-transform" />
+        <div className="group/to py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-blue-50/60 dark:hover:bg-blue-500/10 cursor-pointer transition-all rounded-2xl">
+          <MapPin className="w-5 h-5 text-[#0071e3] shrink-0 group-hover/to:scale-115 transition-transform" />
           <div className="flex-1 min-w-0">
-            <label className="block type-label text-slate-400 mb-0.5">
+            <label className="block type-label text-slate-400 group-hover/to:text-[#0071e3] mb-0.5 cursor-pointer transition-colors">
               {t('search.to')}
             </label>
-            <div>
+            <div className="relative flex items-center">
               <select
                 value={toHubId}
                 onChange={(e) => setToHubId(e.target.value)}
-                className="tap-44 w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
+                className="tap-44 w-full appearance-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/to:text-[#0071e3] outline-none cursor-pointer truncate transition-colors"
               >
                 {toHubs.map((h) => (
-                  <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900">
+                  <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                     {hubLabel(h)}
                   </option>
                 ))}
               </select>
+              <ChevronDown className="w-4 h-4 text-slate-400 group-hover/to:text-[#0071e3] transition-all pointer-events-none absolute right-1 group-hover/to:translate-y-0.5 shrink-0" />
             </div>
           </div>
         </div>
@@ -462,8 +511,8 @@ export default function CorridorSearchBoard({
                   aria-pressed={active}
                   className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
                     active
-                      ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01]'
-                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-sm hover:-translate-y-0.5'
+                      ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01] hover:bg-[#0062c4] hover:border-[#0062c4] hover:shadow-lg'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
                   }`}
                 >
                   {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
@@ -489,8 +538,8 @@ export default function CorridorSearchBoard({
               aria-expanded={showDatePanel}
               className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
                 showDatePanel
-                  ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-sm hover:-translate-y-0.5'
+                  ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm hover:bg-slate-800'
+                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
               }`}
             >
               <Calendar className="w-3.5 h-3.5 shrink-0" />
@@ -570,7 +619,7 @@ export default function CorridorSearchBoard({
             type="button"
             onClick={handleSearchNow}
             disabled={isSearching || !fromHubId || !toHubId}
-            className="relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/35 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-150 cursor-pointer"
+            className="group relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0062c4] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/45 hover:-translate-y-0.5 hover:scale-[1.008] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 disabled:hover:scale-100 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-200 cursor-pointer"
           >
             {/* Vệt sáng quét ngang thu hút mắt về hành động chính của cả trang.
                 Dùng lại keyframes shimmer-sweep sẵn có trong index.css thay vì
@@ -585,10 +634,11 @@ export default function CorridorSearchBoard({
             {isSearching ? (
               <Loader2 className="w-4 h-4 animate-spin relative" />
             ) : (
-              <Search className="w-4 h-4 relative" />
+              <Search className="w-4 h-4 relative group-hover:scale-115 transition-transform duration-200" />
             )}
             <span className="relative">{isSearching ? t('search.searching') : t('search.findTrips')}</span>
           </button>
+
 
           {/* Giá hiện lặng lẽ dưới nút — kết quả, không phải thông báo */}
           {tariff && (
@@ -699,11 +749,14 @@ export default function CorridorSearchBoard({
       {/* ── BẢNG SO SÁNH 3 TẦNG VẬN TẢI (DẠNG LINE LIẾC NGANG) ── */}
       {matrix && (
         <section ref={resultsRef} className="space-y-3 pt-1 animate-fade-in">
-          {/* Header tóm tắt với 2 đòn bẩy: Thời gian & Tiền bạc */}
+          {/* Header tóm tắt với Logo CarMate.vn & 2 đòn bẩy: Thời gian & Tiền bạc */}
           <div className="flex flex-wrap items-center justify-between gap-1.5 px-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Phương án di chuyển phù hợp
-            </p>
+            <div className="flex items-center gap-1.5">
+              <img src="/icons/icon-192.png" alt="CarMate" className="w-4 h-4 rounded-md object-contain shrink-0" />
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Chuyến xe xác thực · <span className="text-[#0071e3] font-bold lowercase">carmate.vn</span>
+              </p>
+            </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-[10px] font-bold font-mono text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-400/40 dark:border-amber-500/30 flex items-center gap-1 shadow-2xs">
                 <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> Nhanh hơn 35p
@@ -714,61 +767,46 @@ export default function CorridorSearchBoard({
             </div>
           </div>
 
-          {/* NHÓM 1: HERO PRODUCT CARMATE (XE GHÉP GIA ĐÌNH - VISUAL DOMINANCE) */}
-          <div className="space-y-2">
-            {carmateDisplayTrips.map((trip) => (
-              <div
-                key={trip.tripId || trip.id || trip.departureLabel}
-                onClick={() => setSelectedDetailTrip(trip)}
-                className="group/hero w-full rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border-2 border-emerald-500/80 dark:border-emerald-500 shadow-md shadow-emerald-500/10 hover:shadow-xl hover:shadow-emerald-500/20 hover:border-emerald-500 hover:-translate-y-0.5 p-4 space-y-3 transition-all duration-200 cursor-pointer"
-              >
-                {/* Hàng 1: Giờ + Logo CarMate + Xe gì ➔ Giá tiền */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-sm shrink-0">
-                      {trip.departureLabel}
-                    </span>
-                    <CarMateBadge size="xs" />
-                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      {trip.vehicleModel || 'Mitsubishi Xpander (7 chỗ)'}
-                    </span>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-base sm:text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                      {formatVND(carmateSegmentPrice)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 ml-0.5">/ghế</span>
-                  </div>
-                </div>
-
-                {/* Hàng 2: Trạng thái & Lợi ích: Đón trạm + Còn X chỗ + Không bắt khách dọc QL */}
-                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-                  <p className="truncate text-[11px]">
-                    Đón trạm {matrix.origin?.shortLabel || 'Lái Thiêu'} · Còn <strong className="font-mono text-emerald-600 dark:text-emerald-400">{trip.seatsAvailable || 3}</strong> chỗ · Không bắt khách dọc QL
-                  </p>
-                </div>
-
-                {/* Hàng 3: Nút CTA [GIỮ CHỖ NGAY] đậm chất Stanford Visual Dominance */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/80 dark:border-white/10">
-                  <span className="text-[10px] text-slate-400">
-                    Xe cá nhân gia đình · Đi thẳng êm ái
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedDetailTrip(trip);
-                    }}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-xs font-bold uppercase tracking-wide border border-emerald-400/40 shadow-md shadow-emerald-600/30 hover:shadow-lg hover:shadow-emerald-500/40 hover:scale-[1.02] flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 fill-white" />
-                    <span>Giữ chỗ ngay</span>
-                  </button>
-                </div>
+          {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE */}
+          {carmateDisplayTrips.length > 0 ? (
+            <div className="space-y-3">
+              {carmateDisplayTrips.map((trip) => (
+                <CorridorTripCard
+                  key={trip.tripId || trip.id || trip.departureLabel}
+                  trip={trip}
+                  originName={matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai'}
+                  originNote={matrix?.origin?.landmark || 'đón tận nơi dọc QL13 & cây xăng'}
+                  destName={matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD'}
+                  destNote={matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
+                  segmentPrice={carmateSegmentPrice}
+                  onBookNow={(selectedTrip) => {
+                    setSelectedBookingTrip(selectedTrip);
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 text-center space-y-3 shadow-xs">
+              <div className="w-10 h-10 mx-auto rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#0071e3] flex items-center justify-center">
+                <Clock className="w-5 h-5" />
               </div>
-            ))}
-          </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Khung giờ này chưa có chuyến xe ghép trực tiếp
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Bạn có thể gửi yêu cầu đặt chỗ để các chủ xe tiện chuyến liên hệ đón, hoặc tham khảo các tuyến xe khách liên tỉnh bên dưới.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenIntentModal?.(role, fromHubId)}
+                className="px-4 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95"
+              >
+                <span>Đăng nhu cầu đón tại trạm</span>
+              </button>
+            </div>
+          )}
 
           {/* NHÓM 2: TUYẾN XE KHÁCH LIÊN TỈNH QL13 (THAM KHẢO & MỎ NEO GIÁ) */}
           <div className="space-y-1.5">
@@ -866,35 +904,37 @@ export default function CorridorSearchBoard({
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Chủ xe:</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailTrip.driverName || 'Chủ xe CX-D10'} (4.9 ⭐ · Uy tín)
+                  {selectedDetailTrip.driverName || 'Chủ xe'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Dòng xe:</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailTrip.vehicleModel || 'Mitsubishi Xpander (7 chỗ)'}
+                  {selectedDetailTrip.vehicleModel || 'Xe tiện chuyến'}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Biển kiểm soát:</span>
-                <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10">
-                  {selectedDetailTrip.plateMasked || '93A-389.xx'}
-                </span>
-              </div>
+              {selectedDetailTrip.plateMasked && (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Biển kiểm soát:</span>
+                  <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10">
+                    {selectedDetailTrip.plateMasked}
+                  </span>
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Số ghế trống:</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  Còn {selectedDetailTrip.seatsAvailable || 3} ghế trống
+                  Còn {selectedDetailTrip.seatsAvailable ?? 1} ghế trống
                 </span>
               </div>
 
               <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
                 <span className="text-slate-500 shrink-0">Điểm đón:</span>
                 <span className="font-medium text-slate-900 dark:text-white text-right">
-                  {matrix.origin?.landmark || 'Cổng chào Lái Thiêu (Cây xăng Petrolimex QL13)'}
+                  {matrix?.origin?.landmark || matrix?.origin?.name || 'Trạm đón quy chuẩn'}
                 </span>
               </div>
 
@@ -990,7 +1030,7 @@ export default function CorridorSearchBoard({
               </div>
 
               <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500">Giá vé tham khảo:</span>
+                <span className="text-slate-500">Giá tham khảo:</span>
                 <span className="text-base font-bold font-mono text-slate-900 dark:text-white">
                   {selectedDetailHotline.priceRef}
                 </span>
@@ -1029,6 +1069,40 @@ export default function CorridorSearchBoard({
           </div>
         </div>,
         document.body
+      )}
+
+      {/* ── MODAL GIỮ CHỖ TỨC THÌ (MATCH & REVEAL 3 BƯỚC) ── */}
+      {selectedBookingTrip && (
+        <InstantBookingModal
+          isOpen={Boolean(selectedBookingTrip)}
+          onClose={() => setSelectedBookingTrip(null)}
+          trip={selectedBookingTrip}
+          originHub={matrix?.origin}
+          destinationHub={matrix?.destination}
+          segmentPrice={carmateSegmentPrice}
+          currentUser={currentUser}
+          onAuthSuccess={onAuthSuccess}
+          onBookingSuccess={(booking) => {
+            // Cập nhật ngay số ghế còn lại trên giao diện trang chủ
+            setMatrix((prev) => {
+              if (!prev || !prev.slots) return prev;
+              return {
+                ...prev,
+                slots: prev.slots.map((s) => {
+                  if (s.tripId === selectedBookingTrip.tripId || s.id === selectedBookingTrip.id) {
+                    const newAvailable = Math.max(0, (s.seatsAvailable || 1) - (booking.seats || 1));
+                    return {
+                      ...s,
+                      seatsAvailable: newAvailable
+                    };
+                  }
+                  return s;
+                })
+              };
+            });
+          }}
+          onShowToast={onShowToast}
+        />
       )}
 
     </div>

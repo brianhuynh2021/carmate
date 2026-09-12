@@ -332,6 +332,57 @@ export async function sendDirectBookingTelegramAlert({ targetTelegramId, booking
 }
 
 /**
+ * Bắn tin nhắn tức thì về Telegram khi có khách đặt chỗ mới (Concierge MVP Flow):
+ * [ĐẶT CHỖ MỚI] Sáng T3 (04:30)
+ * • Khách: 0912.xxx.xxx
+ * • Số lượng: 1 ghế
+ * • Tuyến: [Ngã ba Tân Khai] ➔ [Cụm Chợ Rẫy]
+ * • Tình trạng xe: Còn 2 chỗ trống
+ */
+export async function sendNewBookingTelegramAlert({
+  timeLabel,
+  passengerPhone,
+  seats = 1,
+  from,
+  to,
+  remainingSeats = 0,
+  carModel,
+  fullPlate,
+  req = null
+}) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const isMockToken = token?.startsWith('mock_');
+  if (!isMockToken) {
+    if (
+      req?.isAutomatedTest ||
+      req?.headers?.['x-carmate-testing'] === 'true' ||
+      process.env.CARMATE_DISABLE_TELEGRAM === 'true' ||
+      process.env.NODE_ENV === 'test'
+    ) {
+      return false;
+    }
+  }
+
+  let text = `🚗 <b>[ĐẶT CHỖ MỚI] ${escapeHtml(timeLabel || 'Hành trình')}</b>\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `• <b>Khách:</b> <code>${escapeHtml(passengerPhone || '09xx...')}</code>\n`;
+  text += `• <b>Số lượng:</b> <b>${seats} ghế</b>\n`;
+  text += `• <b>Tuyến:</b> [${escapeHtml(from || 'Trạm đón')}] ➔ [${escapeHtml(to || 'Trạm trả')}]\n`;
+  if (carModel || fullPlate) {
+    text += `• <b>Phương tiện:</b> ${escapeHtml(carModel || 'Xe tiện chuyến')} (${escapeHtml(fullPlate || 'Biển số thật')})\n`;
+  }
+  text += `• <b>Tình trạng xe:</b> Còn <b>${remainingSeats} chỗ trống</b>\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `📞 <i>Bấm gọi trực tiếp cho khách sau 1–2 phút để chốt giờ đón & đồ mang theo!</i>`;
+
+  return sendTelegramMessage(text, {
+    parseMode: 'HTML',
+    disableNotification: false,
+    req
+  });
+}
+
+/**
  * Hàm hỗ trợ Unit Testing dọn dẹp cache
  */
 export function _resetDeduplicationCache() {

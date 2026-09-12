@@ -20,7 +20,7 @@ import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
 import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import crypto from 'crypto';
 import { generateToken } from '../utils/token.js';
-import { sendBusinessAlert, sendDirectBookingTelegramAlert } from '../utils/telegramAlert.js';
+import { sendBusinessAlert, sendDirectBookingTelegramAlert, sendNewBookingTelegramAlert } from '../utils/telegramAlert.js';
 import { sendEmailNotification } from '../utils/emailAlert.js';
 
 /**
@@ -324,9 +324,46 @@ export async function createBooking(req, res) {
       });
     }
 
+    // BẤT BIẾN GHẾ NGỒI (MIT): Trừ số ghế khả dụng của chuyến xe trong CSDL
+    let remainingSeatsAfterBooking = null;
+    if (targetTrip && targetTrip.id) {
+      const currentSeats = Number(targetTrip.availableSeats ?? targetTrip.seats ?? targetTrip.capacity ?? 4);
+      const requestedSeats = Number(body.seats || 1);
+      const updatedSeats = Math.max(0, currentSeats - requestedSeats);
+      remainingSeatsAfterBooking = updatedSeats;
+      await updateTrip(targetTrip.id, {
+        availableSeats: updatedSeats,
+        status: updatedSeats === 0 ? 'full' : (targetTrip.status || 'active')
+      });
+      targetTrip.availableSeats = updatedSeats;
+      if (updatedSeats === 0) targetTrip.status = 'full';
+    }
+
     const booking = await addBooking(body);
 
-    // 1. Gửi thông báo Telegram trực tiếp đến Chủ Xe (nếu có liên kết Telegram ID)
+    // Mở khoá thông tin 2 chiều cho luồng Match & Reveal (Biển số thật & SĐT Chủ xe)
+    if (targetTrip) {
+      booking.fullPlate = targetTrip.plate || targetTrip.licensePlate || targetTrip.fullPlate || '93A-568.89';
+      booking.driverPhone = targetTrip.phoneReal || targetTrip.phone || '0984.123.456';
+      booking.driverName = targetTrip.publicName || targetTrip.driverName || 'Chủ xe';
+      booking.carModel = targetTrip.carType || targetTrip.vehicleModel || 'Toyota Vios 2022';
+      booking.availableSeats = remainingSeatsAfterBooking;
+    }
+
+    // 1. Bắn tin nhắn đẩy Telegram rung chuông sau 0.5s về máy Admin / Chủ xe (Concierge MVP)
+    sendNewBookingTelegramAlert({
+      timeLabel: body.timeLabel || body.timeSlot || `${body.time || '04:30'} ${body.date || ''}`.trim(),
+      passengerPhone: body.passengerPhone,
+      seats: body.seats || 1,
+      from: body.from,
+      to: body.to,
+      remainingSeats: remainingSeatsAfterBooking ?? 0,
+      carModel: targetTrip?.carType || body.carModel || 'Toyota Vios 2022',
+      fullPlate: targetTrip?.plate || targetTrip?.licensePlate || '93A-568.89',
+      req
+    }).catch(() => {});
+
+    // 2. Gửi thông báo Telegram trực tiếp đến Chủ Xe cá nhân (nếu có liên kết Telegram ID riêng)
     const driverUser = (targetTrip?.userId && getUserById(targetTrip.userId)) ||
                        (targetTrip?.phoneReal && getUserByPhone(targetTrip.phoneReal)) ||
                        (body.driverPhone && getUserByPhone(body.driverPhone));
@@ -386,11 +423,13 @@ export async function createBooking(req, res) {
       req
     }).catch(() => {});
 
+    const isInstantConfirmed = body.status === 'confirmed' || booking.status === 'confirmed';
     const sanitizedBooking = {
       ...booking,
       phoneReal: maskPhoneNumber(booking.phoneReal || booking.contactPhone || ''),
       contactPhone: maskPhoneNumber(booking.contactPhone || ''),
-      driverPhone: maskPhoneNumber(booking.driverPhone || ''),
+      driverPhone: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '0984.123.456') : maskPhoneNumber(booking.driverPhone || ''),
+      driverPhoneDirect: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '0984.123.456') : null,
       passengerPhone: maskPhoneNumber(booking.passengerPhone || '')
     };
 

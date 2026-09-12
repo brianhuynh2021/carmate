@@ -898,15 +898,17 @@ export default function CockpitMode({
 
             {/* Các nút hành động */}
             <div className="space-y-2.5 pt-1">
-              <button
-                type="button"
-                onClick={handleSimulateFounderApprove}
-                className="w-full h-12 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-[0.99] border border-amber-500/40 text-amber-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg shadow-amber-500/10"
-                title={t('cockpitUi.s140')}
-              >
-                <Zap className="w-4 h-4 text-amber-400" />
-                <span>{t('cockpitUi.s023')}</span>
-              </button>
+              {import.meta.env.DEV && (
+                <button
+                  type="button"
+                  onClick={handleSimulateFounderApprove}
+                  className="w-full h-12 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-[0.99] border border-amber-500/40 text-amber-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg shadow-amber-500/10"
+                  title={t('cockpitUi.s140')}
+                >
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  <span>{t('cockpitUi.s023')}</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1154,26 +1156,28 @@ export default function CockpitMode({
               </div>
             </div>
 
-            {/* HỘP KÍCH HOẠT MÔ PHỎNG TIẾP CẬN TRẠM THỰC CHIẾN */}
-            <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-              <div className="text-left space-y-0.5">
-                <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 font-mono uppercase">
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{t('cockpitUi.s037')}</span>
-                </span>
-                <p className="text-[11.5px] text-slate-300">
-                  {t('cockpitUi.s038')}
-                </p>
+            {/* HỘP KÍCH HOẠT MÔ PHỎNG TIẾP CẬN TRẠM THỰC CHIẾN (CHỈ HIỆN Ở DEV) */}
+            {import.meta.env.DEV && (
+              <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+                <div className="text-left space-y-0.5">
+                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 font-mono uppercase">
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{t('cockpitUi.s037')}</span>
+                  </span>
+                  <p className="text-[11.5px] text-slate-300">
+                    {t('cockpitUi.s038')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => triggerApproachRadar()}
+                  className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer shrink-0 transition-all"
+                >
+                  <Zap className="w-4 h-4 fill-slate-950" />
+                  <span>{t('cockpitUi.s039')}</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => triggerApproachRadar()}
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer shrink-0 transition-all"
-              >
-                <Zap className="w-4 h-4 fill-slate-950" />
-                <span>{t('cockpitUi.s039')}</span>
-              </button>
-            </div>
+            )}
           </div>
         )}
 
@@ -1578,91 +1582,93 @@ export default function CockpitMode({
         )}
       </main>
 
-      {/* ── FOOTER: BỘ CÔNG CỤ MÔ PHỎNG THỰC TẾ (SIMULATION TOOLBAR) ── */}
-      <footer className="border-t border-white/[0.08] pt-3 mt-4">
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-slate-400">
-            <Radio className="w-4 h-4 text-emerald-400" />
-            <span className="font-mono">{t('cockpitUi.s073')}</span>
+      {/* ── FOOTER: BỘ CÔNG CỤ MÔ PHỎNG THỰC TẾ (CHỈ HIỆN Ở DEV) ── */}
+      {import.meta.env.DEV && (
+        <footer className="border-t border-white/[0.08] pt-3 mt-4">
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Radio className="w-4 h-4 text-emerald-400" />
+              <span className="font-mono">{t('cockpitUi.s073')}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => triggerApproachRadar()}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 text-amber-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>{t('cockpitUi.s074')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playAudioChime();
+                  speakText('Kiểm tra loa xe ô tô thành công');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.12] text-slate-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{t('cockpitUi.s075')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentRider({
+                    name: 'Bạn Hoàng (Khách đi cùng)',
+                    seatsNeeded: 2,
+                    destinationName: 'Hàng Xanh',
+                    fuelSurcharge: 220000,
+                    pin: '8842'
+                  });
+                  setCockpitState('CRUISING');
+                  playAudioChime();
+                  speakText('Đang thử nghiệm chế độ Cruising lăn bánh trên Quốc lộ 13.');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>{t('cockpitUi.s076')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentRider({
+                    name: 'Bạn Hoàng (Khách đi cùng)',
+                    seatsNeeded: 2,
+                    destinationName: 'Hàng Xanh',
+                    fuelSurcharge: 220000,
+                    pin: '8842'
+                  });
+                  setCockpitState('DROPOFF');
+                  playAudioChime();
+                  speakText('Đã tới Hàng Xanh, trả khách nhanh 10 giây.');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{t('cockpitUi.s077')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCockpitState('STANDBY');
+                  setActiveOffer(null);
+                  setSimDistanceKm(6.2);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.12] text-slate-400 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Standby</span>
+              </button>
+            </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => triggerApproachRadar()}
-              className="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 text-amber-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>{t('cockpitUi.s074')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playAudioChime();
-                speakText('Kiểm tra loa xe ô tô thành công');
-              }}
-              className="px-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.12] text-slate-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-            >
-              <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{t('cockpitUi.s075')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentRider({
-                  name: 'Bạn Hoàng (Khách đi cùng)',
-                  seatsNeeded: 2,
-                  destinationName: 'Hàng Xanh',
-                  fuelSurcharge: 220000,
-                  pin: '8842'
-                });
-                setCockpitState('CRUISING');
-                playAudioChime();
-                speakText('Đang thử nghiệm chế độ Cruising lăn bánh trên Quốc lộ 13.');
-              }}
-              className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-            >
-              <Car className="w-3.5 h-3.5" />
-              <span>{t('cockpitUi.s076')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentRider({
-                  name: 'Bạn Hoàng (Khách đi cùng)',
-                  seatsNeeded: 2,
-                  destinationName: 'Hàng Xanh',
-                  fuelSurcharge: 220000,
-                  pin: '8842'
-                });
-                setCockpitState('DROPOFF');
-                playAudioChime();
-                speakText('Đã tới Hàng Xanh, trả khách nhanh 10 giây.');
-              }}
-              className="px-3 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-300 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>{t('cockpitUi.s077')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setCockpitState('STANDBY');
-                setActiveOffer(null);
-                setSimDistanceKm(6.2);
-              }}
-              className="px-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.12] text-slate-400 font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Standby</span>
-            </button>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {/* 🛡️ MODAL THẺ PHÁP LÝ HÀNH TRÌNH DÂN SỰ (XUẤT TRÌNH CSGT) */}
       {showLegalShield && (
@@ -1783,34 +1789,36 @@ export default function CockpitMode({
               </div>
             )}
 
-            {/* CÔNG CỤ CHUYỂN ĐỔI MÔ PHỎNG TEST */}
-            <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between text-xs">
-              <span className="text-slate-400 font-mono text-[11px]">{t('cockpitUi.s095')}</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setAbsentSimGpsStatus('FAR')}
-                  className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
-                    absentSimGpsStatus === 'FAR'
-                      ? 'bg-rose-500 text-white font-bold'
-                      : 'bg-white/[0.05] text-slate-400'
-                  }`}
-                >
-                  {t('cockpitUi.s096')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAbsentSimGpsStatus('NEAR')}
-                  className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
-                    absentSimGpsStatus === 'NEAR'
-                      ? 'bg-cyan-500 text-slate-950 font-bold'
-                      : 'bg-white/[0.05] text-slate-400'
-                  }`}
-                >
-                  {t('cockpitUi.s097')}
-                </button>
+            {/* CÔNG CỤ CHUYỂN ĐỔI MÔ PHỎNG TEST (CHỈ HIỆN Ở DEV) */}
+            {import.meta.env.DEV && (
+              <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-mono text-[11px]">{t('cockpitUi.s095')}</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAbsentSimGpsStatus('FAR')}
+                    className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
+                      absentSimGpsStatus === 'FAR'
+                        ? 'bg-rose-500 text-white font-bold'
+                        : 'bg-white/[0.05] text-slate-400'
+                    }`}
+                  >
+                    {t('cockpitUi.s096')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAbsentSimGpsStatus('NEAR')}
+                    className={`px-2.5 py-1 rounded-lg font-mono text-[11px] cursor-pointer transition-all ${
+                      absentSimGpsStatus === 'NEAR'
+                        ? 'bg-cyan-500 text-slate-950 font-bold'
+                        : 'bg-white/[0.05] text-slate-400'
+                    }`}
+                  >
+                    {t('cockpitUi.s097')}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </Modal>
       )}

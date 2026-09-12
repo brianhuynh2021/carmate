@@ -386,9 +386,9 @@ export default function InboxModal({
       }
       return [
         '🛵 Em muốn gửi 1 chiếc xe máy (rút bớt xăng) về quê ạ',
-        '🌾 Em có mấy bao nông sản gửi từ Bình Phước về Miền Tây',
+        '🌾 Em có mấy bao nông sản gửi từ Bình Phước về TP.HCM ạ',
         '📦 Đồ của em đã bọc kín băng dính cẩn thận sẵn ạ',
-        '📍 Người nhận sẽ ra đón xe nhận đồ dọc trục Tuyến N2 / QL ạ',
+        '📍 Người nhận sẽ ra đón xe nhận đồ dọc trục Quốc lộ 13 ạ',
         '✅ Em bấm xác nhận gửi hàng ngay ạ'
       ];
     }
@@ -2176,8 +2176,8 @@ export default function InboxModal({
               </button>
             </div>
 
-            {/* Nút mô phỏng nhấc máy khi đang đổ chuông (hỗ trợ kiểm thử/demo) */}
-            {inAppCallState.status === 'ringing' && (
+            {/* Nút mô phỏng nhấc máy khi đang đổ chuông (chỉ hiện ở dev) */}
+            {inAppCallState.status === 'ringing' && import.meta.env.DEV && (
               <div className="pt-0.5">
                 <button
                   type="button"

@@ -39,13 +39,16 @@ db.prepare("DELETE FROM notifications WHERE phone IN ('0955000111','0955000222')
 /** Tạo một booking khởi hành sau `minutesFromNow` phút. */
 async function makeBooking(id, minutesFromNow, extra = {}) {
   const dep = new Date(Date.now() + minutesFromNow * 60000);
+  const yyyy = dep.getFullYear();
+  const month = String(dep.getMonth() + 1).padStart(2, '0');
+  const dd = String(dep.getDate()).padStart(2, '0');
   const hh = String(dep.getHours()).padStart(2, '0');
   const mm = String(dep.getMinutes()).padStart(2, '0');
   return addBooking({
     escrowId: id,
     tripId: null,
     status: 'zalo_active',
-    date: dep.toISOString().slice(0, 10),
+    date: `${yyyy}-${month}-${dd}`,
     timeSlot: `${hh}:${mm}`,
     driverPhone: '0955000111',
     passengerPhone: '0955000222',
