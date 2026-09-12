@@ -481,3 +481,125 @@ export function buildTimeSlotMatrix({
     isEmpty: false
   };
 }
+
+/**
+ * =============================================================================
+ * LỊCH CHẠY TOÀN TUYẾN (CORRIDOR TIMELINE)
+ * =============================================================================
+ * Trả về MỌI chuyến trong ngày trên một chặng, nhóm theo buổi — không lọc theo
+ * khung giờ khách chọn.
+ *
+ * Vì sao cần: khách chọn một khung hẹp mà không thấy xe sẽ không muốn bấm back
+ * ra đổi từng giờ để dò. Họ cần nhìn toàn cảnh một lần: hôm nay và ngày mai
+ * trên tuyến này có những chuyến nào.
+ *
+ * NGƯỠNG HIỂN THỊ: màn này chỉ có giá trị khi tuyến đã có đủ xe. Bày ra một
+ * trang "lịch chạy toàn tuyến" mà chỉ có 2-3 dòng thì phơi bày sự trống trải,
+ * phản tác dụng hơn hẳn một ô gom nhu cầu. Nên hàm trả về cờ `isDense` để giao
+ * diện tự quyết định, thay vì hard-code ở tầng UI.
+ */
+export const TIMELINE_CONFIG = Object.freeze({
+  // Dưới ngưỡng này thì chưa đáng mở màn lịch chạy — hiện form gom nhu cầu
+  MIN_TRIPS_FOR_TIMELINE: 5,
+  // Nhóm hiển thị theo buổi, khớp với DEPARTURE_WINDOWS của chip khởi hành
+  PERIODS: [
+    { id: 'early_morning', label: 'Sáng sớm', fromHour: 4, toHour: 8 },
+    { id: 'morning', label: 'Buổi sáng', fromHour: 8, toHour: 11 },
+    { id: 'noon', label: 'Buổi trưa', fromHour: 11, toHour: 14 },
+    { id: 'afternoon', label: 'Buổi chiều', fromHour: 14, toHour: 18 },
+    { id: 'evening', label: 'Buổi tối', fromHour: 18, toHour: 22 },
+    { id: 'late_night', label: 'Đêm khuya', fromHour: 22, toHour: 28 }
+  ]
+});
+
+/**
+ * Dựng lịch chạy toàn tuyến cho một chặng.
+ *
+ * @param {object} params - Giống buildTimeSlotMatrix nhưng KHÔNG có timeSlot
+ * @returns {object} { success, periods, totalTrips, isDense, origin, destination }
+ */
+export function buildCorridorTimeline({
+  originHubId,
+  destinationHubId,
+  seatsNeeded = 1,
+  corridor = 'Tuyến QL13',
+  nowMs = Date.now()
+} = {}) {
+  const originHub = getVirtualHubById(originHubId);
+  const destHub = getVirtualHubById(destinationHubId);
+  if (!originHub || !destHub) {
+    return { success: false, error: 'Trạm đón hoặc trạm trả không hợp lệ' };
+  }
+
+  const cleanSeats = Math.max(1, Math.min(4, Number(seatsNeeded) || 1));
+  const originS = getStationStationKm(originHub.id);
+  const destS = getStationStationKm(destHub.id);
+
+  const backupCount = getActiveCockpitSessions().filter(
+    (s) => !s.isBanned && Number(s.seatsAvailable || 0) >= cleanSeats
+  ).length;
+
+  // desiredMinutes = null nghĩa là KHÔNG lọc theo giờ: lấy hết trong ngày
+  const confirmed = collectConfirmedTrips({
+    corridor,
+    desiredMinutes: null,
+    windowMinutes: 0,
+    seatsNeeded: cleanSeats,
+    originS,
+    destS,
+    backupCount
+  });
+
+  const forming = collectFormingTrips({
+    originHubId: originHub.id,
+    seatsNeeded: cleanSeats,
+    nowMs,
+    backupCount: Math.max(0, backupCount - 1)
+  });
+
+  const all = [...confirmed, ...forming].sort(
+    (a, b) => (a.departureMinutes ?? 9999) - (b.departureMinutes ?? 9999)
+  );
+
+  // Nhóm theo buổi; buổi nào không có chuyến vẫn giữ lại để khách thấy rõ
+  // khoảng trống và biết nên đăng nhu cầu vào đâu.
+  const periods = TIMELINE_CONFIG.PERIODS.map((p) => {
+    const trips = all.filter((t) => {
+      const m = t.departureMinutes;
+      if (m == null) return false;
+      const startM = p.fromHour * 60;
+      const endM = p.toHour * 60;
+      // Buổi đêm vắt qua nửa đêm (22h-4h)
+      return p.toHour > 24 ? m >= startM || m < endM - 1440 : m >= startM && m < endM;
+    });
+    return {
+      id: p.id,
+      label: p.label,
+      hint: `${p.fromHour % 24}h-${p.toHour % 24}h`,
+      fromHour: p.fromHour,
+      trips,
+      count: trips.length
+    };
+  });
+
+  let tariff = null;
+  try {
+    tariff = getFixedSegmentTariff(originHub.id, destHub.id, corridor);
+  } catch {
+    tariff = null;
+  }
+
+  return {
+    success: true,
+    origin: describeHub(originHub),
+    destination: describeHub(destHub),
+    corridor,
+    seatsNeeded: cleanSeats,
+    periods,
+    totalTrips: all.length,
+    // Cờ quyết định giao diện hiện màn lịch hay ô gom nhu cầu
+    isDense: all.length >= TIMELINE_CONFIG.MIN_TRIPS_FOR_TIMELINE,
+    minTripsForTimeline: TIMELINE_CONFIG.MIN_TRIPS_FOR_TIMELINE,
+    tariff: tariff ? { pricePerSeat: tariff.pricePerSeat, distanceKm: tariff.distanceKm } : null
+  };
+}

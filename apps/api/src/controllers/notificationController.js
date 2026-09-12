@@ -11,7 +11,7 @@ import {
   getVapidPublicKey
 } from '../services/notificationService.js';
 import { riderConfirmOnTheWay } from '../services/stationQueueService.js';
-import { buildTimeSlotMatrix } from '../services/timeSlotMatrix.js';
+import { buildTimeSlotMatrix, buildCorridorTimeline } from '../services/timeSlotMatrix.js';
 import { getBookingById, updateBookingStatus } from '../db/sqliteStore.js';
 import { getSchedulerStatus, runTickNow } from '../services/scheduler.js';
 
@@ -247,6 +247,28 @@ export function rescueStatusHandler(req, res) {
       driverConfirmed: booking.driverConfirmed === true,
       readyConfirmedAt: booking.readyConfirmedAt || null
     });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/corridor/timeline
+ * LỊCH CHẠY TOÀN TUYẾN — mọi chuyến trong ngày, nhóm theo buổi.
+ */
+export function corridorTimelineHandler(req, res) {
+  try {
+    const { from, to, seats = 1, corridor } = req.query || {};
+    if (!from || !to) {
+      return res.status(400).json({ success: false, error: 'Thiếu trạm đón (from) hoặc trạm trả (to)' });
+    }
+    const result = buildCorridorTimeline({
+      originHubId: from,
+      destinationHubId: to,
+      seatsNeeded: Number(seats) || 1,
+      corridor: corridor || 'Tuyến QL13'
+    });
+    return res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }

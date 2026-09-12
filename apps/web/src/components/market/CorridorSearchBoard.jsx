@@ -256,6 +256,33 @@ export default function CorridorSearchBoard({
     [corridor.dataKey]
   );
 
+  // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
+  // Tuyến ít xe: hiện ô gom nhu cầu (một trang "lịch chạy toàn tuyến" chỉ có
+  // 2-3 dòng thì phơi bày sự trống trải, phản tác dụng).
+  // Tuyến đủ xe: hiện lịch chạy toàn tuyến — đúng thứ khách liên tỉnh cần khi
+  // chọn một khung hẹp mà không thấy xe, thay vì bấm back đổi từng giờ để dò.
+  // Ngưỡng đọc từ chính dữ liệu nên khi tuyến đông lên, app TỰ chuyển.
+  const [timeline, setTimeline] = useState(null);
+  const [showTimeline, setShowTimeline] = useState(false);
+
+  useEffect(() => {
+    if (!fromHubId || !toHubId) return;
+    let alive = true;
+    api
+      .getCorridorTimeline({ from: fromHubId, to: toHubId, corridor: corridor.dataKey })
+      .then((res) => {
+        if (alive && res?.success) setTimeline(res);
+      })
+      .catch(() => {
+        /* mất mạng: giữ mặc định ô gom nhu cầu, không chặn luồng tìm chuyến */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [fromHubId, toHubId, corridor.dataKey]);
+
+  const isDense = timeline?.isDense === true;
+
   const swap = () => setHeading((h) => flipHeading(h));
 
   const hubLabel = (h) => h.shortName || h.name;
@@ -528,22 +555,95 @@ export default function CorridorSearchBoard({
           Câu chữ nay khớp đúng thứ sẽ hiện ra. */}
       <button
         type="button"
-        onClick={() => onOpenIntentModal?.(role, fromHubId)}
+        onClick={() => {
+          if (isDense) setShowTimeline((v) => !v);
+          else onOpenIntentModal?.(role, fromHubId);
+        }}
+        aria-expanded={isDense ? showTimeline : undefined}
         className="group w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] flex items-center justify-between gap-3 hover:bg-white dark:hover:bg-white/[0.07] hover:border-[#0071e3]/50 hover:shadow-sm active:scale-[0.99] transition-all duration-150 cursor-pointer text-left"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <MapPin className="w-4 h-4 text-[#0071e3] shrink-0" />
+          {isDense ? (
+            <Clock className="w-4 h-4 text-[#0071e3] shrink-0" />
+          ) : (
+            <MapPin className="w-4 h-4 text-[#0071e3] shrink-0" />
+          )}
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-              {t('search.scheduleTitle')}
+              {isDense ? t('search.viewTimeline') : t('search.scheduleTitle')}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-              {t('search.scheduleDesc')}
+              {isDense
+                ? t('search.viewTimelineDesc', { n: timeline.totalTrips })
+                : t('search.scheduleDesc')}
             </p>
           </div>
         </div>
-        <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-[#0071e3]" />
+        <ChevronDown
+          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-150 group-hover:text-[#0071e3] ${
+            isDense ? (showTimeline ? 'rotate-0' : '-rotate-90') : '-rotate-90 group-hover:translate-x-0.5'
+          }`}
+        />
       </button>
+
+      {/* BẢNG LỊCH CHẠY TOÀN TUYẾN — mở tại chỗ, không rời trang.
+          Buổi nào không có chuyến vẫn giữ lại và cho đăng nhu cầu ngay tại đó:
+          chính khoảng trống mới là nơi cần gom nhu cầu nhất. */}
+      {isDense && showTimeline && timeline && (
+        <section className="space-y-2 animate-fade-in">
+          {timeline.periods.map((p) => (
+            <div
+              key={p.id}
+              className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08]"
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                  {p.label}
+                  <span className="ml-1.5 font-mono font-normal text-slate-400">{p.hint}</span>
+                </p>
+                <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                  {t('search.tripCount', { n: p.count })}
+                </span>
+              </div>
+
+              {p.count > 0 ? (
+                <div className="mt-2 space-y-1.5">
+                  {p.trips.map((trip) => (
+                    <button
+                      key={trip.tripId || trip.departureLabel}
+                      type="button"
+                      onClick={() => onOpenStationView?.(fromHubId, toHubId)}
+                      className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-[#0071e3]/[0.06] dark:hover:bg-white/[0.07] flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-bold font-mono text-slate-900 dark:text-white shrink-0">
+                          {trip.departureLabel}
+                        </span>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          {trip.assurance?.badge} {trip.vehicleModel || trip.driverName}
+                        </span>
+                      </span>
+                      {trip.seatsAvailable != null && (
+                        <span className="text-[11px] font-mono text-slate-500 shrink-0">
+                          {t('search.seatsLeft', { n: trip.seatsAvailable })}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onOpenIntentModal?.(role, fromHubId)}
+                  className="mt-2 w-full min-h-[44px] rounded-xl border border-dashed border-slate-300 dark:border-white/15 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:border-[#0071e3]/50 hover:text-[#0071e3] transition-colors cursor-pointer"
+                >
+                  {t('search.emptyPeriodCta')}
+                </button>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* ── MA TRẬN KHE THỜI GIAN ── */}
       {matrix && (

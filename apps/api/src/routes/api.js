@@ -79,6 +79,7 @@ import {
   schedulerStatusHandler,
   schedulerRunTickHandler,
   timeSlotMatrixHandler,
+  corridorTimelineHandler,
   driverReadyHandler,
   rescueStatusHandler
 } from '../controllers/notificationController.js';
@@ -246,6 +247,7 @@ router.patch('/admin/station-requests/:id', requireAdmin, updateStationRequestSt
 
 // --- Ma Trận Khe Thời Gian (Time-Slotted Corridor) ---
 router.get('/corridor/time-slots', timeSlotMatrixHandler);
+router.get('/corridor/timeline', corridorTimelineHandler);
 
 // --- Danh Bạ Nhà Xe Tuyến Cố Định (lưới đỡ khi chưa có chuyến CarMate) ---
 router.get('/transit-directory', getTransitDirectoryHandler);

@@ -7,7 +7,7 @@
 
 import assert from 'node:assert';
 import { initDB } from '../apps/api/src/db/sqliteStore.js';
-import { buildTimeSlotMatrix, MATRIX_CONFIG } from '../apps/api/src/services/timeSlotMatrix.js';
+import { buildTimeSlotMatrix, buildCorridorTimeline, MATRIX_CONFIG } from '../apps/api/src/services/timeSlotMatrix.js';
 import { telemetryPing, resetAllStationData } from '../apps/api/src/services/stationQueueService.js';
 
 let passed = 0;
@@ -160,6 +160,42 @@ ok(northIds.every((id) => id.includes('RETURN')),
 const allConfirmed = [...southIds, ...northIds];
 ok(allConfirmed.length > 0 && !allConfirmed.includes('DRV-104') && !allConfirmed.includes('DRV-103'),
    'Chuyến Vũng Tàu / Phan Thiết KHÔNG hiện ở tầng "chắc chắn 100%" của tuyến QL13');
+
+// ── 7. LỊCH CHẠY TOÀN TUYẾN & NGƯỠNG MẬT ĐỘ ───────────────────────────
+console.log('\n── 7. LỊCH CHẠY TOÀN TUYẾN ──');
+
+const tl = buildCorridorTimeline({
+  originHubId: 'hub_ql13_bau_bang',
+  destinationHubId: 'hub_ql13_hang_xanh',
+  seatsNeeded: 1
+});
+
+ok(tl.success, 'Dựng được lịch chạy toàn tuyến');
+ok(tl.periods.length === 6, 'Chia đúng 6 buổi trong ngày');
+ok(tl.periods.every((p) => p.label && p.hint && Array.isArray(p.trips)),
+   'Mỗi buổi đều có nhãn, khung giờ và danh sách chuyến');
+ok(tl.periods.some((p) => p.count === 0),
+   'Buổi không có chuyến VẪN được giữ lại — chính khoảng trống là nơi cần gom nhu cầu');
+
+// Ngưỡng mật độ: đây là thứ quyết định nút đổi mặt giữa "xem lịch" và "đăng nhu cầu"
+ok(typeof tl.isDense === 'boolean', 'Trả về cờ isDense để giao diện tự quyết định');
+ok(tl.isDense === tl.totalTrips >= tl.minTripsForTimeline,
+   `isDense khớp ngưỡng: ${tl.totalTrips} chuyến vs ngưỡng ${tl.minTripsForTimeline}`);
+ok(tl.totalTrips < tl.minTripsForTimeline && tl.isDense === false,
+   'Tuyến đang thưa xe -> KHÔNG mở màn lịch chạy (tránh phơi bày sự trống trải)');
+
+// Không lọc theo giờ: tổng chuyến phải >= số chuyến của một khung hẹp
+const narrow = buildTimeSlotMatrix({
+  originHubId: 'hub_ql13_bau_bang',
+  destinationHubId: 'hub_ql13_hang_xanh',
+  timeSlot: '05:00',
+  seatsNeeded: 1
+});
+ok(tl.totalTrips >= narrow.counts.confirmed,
+   'Lịch toàn tuyến bao trọn kết quả của một khung giờ hẹp');
+
+const badTl = buildCorridorTimeline({ originHubId: 'hub_khong_co', destinationHubId: 'hub_ql13_hang_xanh' });
+ok(badTl.success === false, 'Trạm không tồn tại -> báo lỗi, không ném exception');
 
 resetAllStationData();
 console.log(`\n🎉 TẤT CẢ ${passed} KIỂM THỬ ĐỀU ĐẠT\n`);

@@ -672,6 +672,12 @@ export const api = {
     return request(`/corridor/time-slots?${query.toString()}`);
   },
 
+  async getCorridorTimeline({ from, to, seats = 1, corridor = null } = {}) {
+    const q = new URLSearchParams({ from, to, seats: String(seats) });
+    if (corridor) q.append('corridor', corridor);
+    return request(`/corridor/timeline?${q.toString()}`);
+  },
+
   // ── Bắt Tay T-30 ─────────────────────────────────────────────────────
   async confirmOnTheWay(intentId, coords = {}) {
     return request('/station/rider/on-the-way', {
