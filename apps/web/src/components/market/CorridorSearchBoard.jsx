@@ -399,9 +399,9 @@ export default function CorridorSearchBoard({
       )}
 
       {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
-      <section className="rounded-3xl overflow-hidden border-2 border-slate-200/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-2xl hover:shadow-blue-500/15 dark:hover:shadow-black/70 hover:border-[#0071e3] dark:hover:border-[#0071e3] focus-within:border-[#0071e3] focus-within:shadow-2xl focus-within:shadow-blue-500/20 transition-all duration-300">
+      <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
-        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-emerald-50/70 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
+        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0 group-hover/from:scale-115 transition-transform" />
           <div className="flex-1 min-w-0">
             <label className="block type-label text-slate-400 group-hover/from:text-emerald-700 dark:group-hover/from:text-emerald-400 mb-0.5 cursor-pointer transition-colors">
@@ -435,14 +435,14 @@ export default function CorridorSearchBoard({
             onClick={swap}
             aria-label={t('search.swap')}
             title={t('search.swap')}
-            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-white/20 ring-4 ring-white dark:ring-[#1c1c1e] shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-xl hover:shadow-blue-500/25 hover:scale-110 focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-200 cursor-pointer"
+            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-white/20 ring-4 ring-white dark:ring-[#1c1c1e] shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-lg hover:scale-110 focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-200 cursor-pointer"
           >
             <ArrowUpDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
           </button>
         </div>
 
         {/* Điểm đến */}
-        <div className="group/to py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-blue-50/70 dark:hover:bg-blue-500/10 cursor-pointer transition-all rounded-2xl">
+        <div className="group/to py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-blue-50/60 dark:hover:bg-blue-500/10 cursor-pointer transition-all rounded-2xl">
           <MapPin className="w-5 h-5 text-[#0071e3] shrink-0 group-hover/to:scale-115 transition-transform" />
           <div className="flex-1 min-w-0">
             <label className="block type-label text-slate-400 group-hover/to:text-[#0071e3] mb-0.5 cursor-pointer transition-colors">
@@ -489,10 +489,10 @@ export default function CorridorSearchBoard({
                     if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
                   }}
                   aria-pressed={active}
-                  className={`h-[52px] px-2 rounded-2xl border-2 flex flex-col items-center justify-center leading-tight transition-all duration-200 cursor-pointer active:scale-95 ${
+                  className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
                     active
-                      ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01] hover:bg-[#0062c4] hover:border-[#0062c4] hover:shadow-xl hover:shadow-blue-500/30'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/15 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-lg hover:shadow-blue-500/15 hover:-translate-y-0.5 hover:scale-[1.01]'
+                      ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01] hover:bg-[#0062c4] hover:border-[#0062c4] hover:shadow-lg'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
                   }`}
                 >
                   {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
@@ -516,10 +516,10 @@ export default function CorridorSearchBoard({
               type="button"
               onClick={() => setShowDatePanel((v) => !v)}
               aria-expanded={showDatePanel}
-              className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-95 ${
+              className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
                 showDatePanel
                   ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm hover:bg-slate-800'
-                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-lg hover:shadow-blue-500/15 hover:-translate-y-0.5 hover:scale-[1.01]'
+                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
               }`}
             >
               <Calendar className="w-3.5 h-3.5 shrink-0" />
@@ -642,7 +642,7 @@ export default function CorridorSearchBoard({
             else onOpenIntentModal?.(role, fromHubId);
           }}
           aria-expanded={isDense ? showTimeline : undefined}
-          className="group w-full p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border-2 border-slate-200 dark:border-white/15 flex items-center justify-between gap-3 hover:border-[#0071e3] dark:hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 shadow-sm hover:shadow-xl hover:shadow-blue-500/15 dark:hover:shadow-black/60 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 cursor-pointer text-left"
+          className="group w-full p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 flex items-center justify-between gap-3 hover:border-[#0071e3] hover:bg-blue-50/40 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-150 cursor-pointer text-left shadow-2xs"
         >
           <div className="flex items-center gap-3 min-w-0">
             {isDense ? (
