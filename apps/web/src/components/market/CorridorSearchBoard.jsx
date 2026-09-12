@@ -184,7 +184,7 @@ export default function CorridorSearchBoard({
               className={`shrink-0 px-3.5 h-9 rounded-full text-xs font-bold transition-all cursor-pointer border ${
                 c.id === corridor.id
                   ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:border-[#0071e3]/50'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:border-[#0071e3]/50 hover:text-[#0071e3] hover:shadow-xs'
               }`}
             >
               {c.shortName}
@@ -221,15 +221,20 @@ export default function CorridorSearchBoard({
           </div>
         </div>
 
-        {/* Đảo chiều */}
+        {/* Đảo chiều.
+            Nút nổi trên đường kẻ nên phải tự tách mình khỏi nền: vòng viền trắng
+            (ring) cắt đường kẻ chạy qua phía sau, tránh cảm giác bị dính vào vạch.
+            Vùng chạm 44px theo Apple HIG (icon vẫn 14px), và hover phải đổi CẢ nền
+            lẫn viền — chỉ đổi màu icon thì gần như không thấy gì. */}
         <div className="relative h-px bg-slate-100 dark:bg-white/[0.06] mx-4 sm:mx-5">
           <button
             type="button"
             onClick={swap}
             aria-label={t('search.swap')}
-            className="absolute right-0 -top-4 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-center text-slate-500 hover:text-[#0071e3] hover:border-[#0071e3]/40 active:scale-90 transition-all cursor-pointer"
+            title={t('search.swap')}
+            className="group absolute right-0 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 ring-4 ring-white dark:ring-slate-900 shadow-sm flex items-center justify-center text-slate-500 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-md focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-150 cursor-pointer"
           >
-            <ArrowUpDown className="w-3.5 h-3.5" />
+            <ArrowUpDown className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" />
           </button>
         </div>
 
@@ -262,7 +267,7 @@ export default function CorridorSearchBoard({
             type="button"
             onClick={handleSearchNow}
             disabled={isSearching || !fromHubId || !toHubId}
-            className="w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-60 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.99] transition-all cursor-pointer"
+            className="w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] hover:shadow-lg hover:shadow-[#0071e3]/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.99] transition-all duration-150 cursor-pointer"
           >
             {isSearching ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -285,7 +290,7 @@ export default function CorridorSearchBoard({
       <button
         type="button"
         onClick={() => onOpenIntentModal?.(role, fromHubId)}
-        className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] flex items-center justify-between gap-3 hover:border-[#0071e3]/40 active:scale-[0.99] transition-all cursor-pointer text-left"
+        className="group w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] flex items-center justify-between gap-3 hover:bg-white dark:hover:bg-white/[0.07] hover:border-[#0071e3]/50 hover:shadow-sm active:scale-[0.99] transition-all duration-150 cursor-pointer text-left"
       >
         <div className="flex items-center gap-3 min-w-0">
           <Clock className="w-4 h-4 text-slate-400 shrink-0" />
@@ -298,7 +303,7 @@ export default function CorridorSearchBoard({
             </p>
           </div>
         </div>
-        <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 shrink-0" />
+        <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-[#0071e3]" />
       </button>
 
       {/* ── KẾT QUẢ ── */}
@@ -313,7 +318,7 @@ export default function CorridorSearchBoard({
               <button
                 type="button"
                 onClick={() => onOpenIntentModal?.(role, fromHubId)}
-                className="mt-1 h-10 px-4 rounded-xl bg-[#0071e3] text-white text-xs font-bold cursor-pointer active:scale-[0.98]"
+                className="mt-1 h-11 px-5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] hover:shadow-md text-white text-xs font-bold cursor-pointer active:scale-[0.98] transition-all duration-150"
               >
                 {t('search.emptyCta')}
               </button>
@@ -328,7 +333,7 @@ export default function CorridorSearchBoard({
                   key={trip.id}
                   type="button"
                   onClick={() => onOpenStationView?.(fromHubId, toHubId)}
-                  className="w-full p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08] flex items-center justify-between gap-3 hover:border-[#0071e3]/50 active:scale-[0.99] transition-all cursor-pointer text-left"
+                  className="w-full p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08] flex items-center justify-between gap-3 hover:border-[#0071e3]/50 hover:bg-[#0071e3]/[0.03] dark:hover:bg-white/[0.04] hover:shadow-sm active:scale-[0.99] transition-all duration-150 cursor-pointer text-left"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
@@ -357,10 +362,10 @@ export default function CorridorSearchBoard({
           <button
             type="button"
             onClick={() => switchRole('passenger')}
-            className={`px-3 h-7 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3.5 h-9 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all duration-150 cursor-pointer ${
               role === 'passenger'
                 ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.06]'
             }`}
           >
             <Users className="w-3 h-3" />
@@ -369,10 +374,10 @@ export default function CorridorSearchBoard({
           <button
             type="button"
             onClick={() => switchRole('driver')}
-            className={`px-3 h-7 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3.5 h-9 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all duration-150 cursor-pointer ${
               role === 'driver'
                 ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.06]'
             }`}
           >
             <Car className="w-3 h-3" />
@@ -386,7 +391,7 @@ export default function CorridorSearchBoard({
         <button
           type="button"
           onClick={onOpenCockpit}
-          className="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer"
+          className="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-400 hover:shadow-lg hover:shadow-emerald-500/25 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.99] transition-all duration-150 cursor-pointer"
         >
           <Car className="w-4 h-4" />
           {t('search.cockpitCta')}
