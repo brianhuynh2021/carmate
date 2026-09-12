@@ -4,6 +4,7 @@ import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
 import { isAdminUser } from '../../utils/adminGate.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 const REASON_PRESETS = [
   'Đổi số điện thoại / Email khác',
@@ -13,6 +14,7 @@ const REASON_PRESETS = [
 ];
 
 export default function DeleteAccountModal({ currentUser, onClose, onDeleted, onShowToast }) {
+  const { t } = useI18n();
   const [selectedReason, setSelectedReason] = useState(REASON_PRESETS[0]);
   const [note, setNote] = useState('');
   const [confirmed, setConfirmed] = useState(false);

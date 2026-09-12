@@ -35,10 +35,12 @@ import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 import Modal from '../ui/Modal.jsx';
 import { formatVND, DEFAULT_TRUST_RULES } from '@carmate/shared';
+import { useI18n } from '../../i18n/index.jsx';
 
 const ADMIN_TOKEN_KEY = 'carmate_admin_token';
 
 export default function AdminDashboardView({ onExitAdmin }) {
+  const { t } = useI18n();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return Boolean(sessionStorage.getItem(ADMIN_TOKEN_KEY));
   });

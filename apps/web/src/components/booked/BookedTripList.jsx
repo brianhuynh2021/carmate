@@ -33,6 +33,7 @@ import PresenceDot from '../ui/PresenceDot.jsx';
 
 
 function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
+  const { t } = useI18n();
   const isCompleted = status === 'completed';
   const isReassigned = status === 'reassigned' || Boolean(hasSilentFailover);
   const isCancelled = status === 'cancelled' && !isReassigned;
@@ -71,10 +72,10 @@ function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
         <div className="flex items-center gap-2">
           <span className="text-[12px] font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
-            <span>Tiến trình kết nối an toàn</span>
+            <span>{t('booked2.s001')}</span>
           </span>
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-slate-800 text-[#86868b] border border-black/[0.04]">
-            Quy trình 4 bước
+            {t('booked2.s002')}
           </span>
         </div>
         <span className="text-[11px] font-semibold text-[#86868b] tabular">
@@ -282,7 +283,7 @@ export default function BookedTripList({
         description="Lịch hẹn đi chung xe · Cam kết đồng hành 0đ phí sàn · Trực tiếp kết nối bạn đồng hành"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5 font-medium">
-            0đ Phí sàn · Tự do kết nối
+            {t('booked2.s003')}
           </Badge>
         }
       />
@@ -303,7 +304,7 @@ export default function BookedTripList({
           }`}
         >
           <Clock className={`w-4 h-4 ${activeTab === 'active' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
-          <span>Chuyến đang diễn ra</span>
+          <span>{t('booked2.s004')}</span>
           <span
             className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
               activeTab === 'active'
@@ -329,7 +330,7 @@ export default function BookedTripList({
           }`}
         >
           <History className={`w-4 h-4 ${activeTab === 'history' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
-          <span>Lịch sử chuyến đi</span>
+          <span>{t('booked2.s005')}</span>
           <span
             className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
               activeTab === 'history'
@@ -356,7 +357,7 @@ export default function BookedTripList({
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="Tìm mã chuyến CX, tên đối tác, lộ trình..."
+                placeholder={t('booked2.s051')}
                 className="w-full h-10 pl-9.5 pr-8 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.08] text-xs sm:text-sm text-[#1d1d1f] dark:text-white placeholder-[#86868b] focus:outline-hidden focus:ring-2 focus:ring-[#0071e3]/30 transition-all"
               />
               {searchTerm && (
@@ -442,7 +443,7 @@ export default function BookedTripList({
                   onClick={handleExpandAll}
                   className="hover:text-[#0071e3] transition-colors cursor-pointer"
                 >
-                  Mở rộng tất cả
+                  {t('booked2.s006')}
                 </button>
                 <span>·</span>
                 <button
@@ -450,7 +451,7 @@ export default function BookedTripList({
                   onClick={handleCollapseAll}
                   className="hover:text-[#0071e3] transition-colors cursor-pointer"
                 >
-                  Thu gọn tất cả
+                  {t('booked2.s007')}
                 </button>
               </div>
             )}
@@ -469,13 +470,13 @@ export default function BookedTripList({
                 ? 'Tìm chuyến xe cùng tuyến để kết nối bạn đồng hành ngay.'
                 : 'Các chuyến đi bạn đã hoàn thành hoặc huỷ sẽ lưu lại tại đây.'
             }
-            action={<Button onClick={onFindTrip}>Tìm chuyến tiện đường ngay</Button>}
+            action={<Button onClick={onFindTrip}>{t('booked2.s008')}</Button>}
           />
         </div>
       ) : filteredList.length === 0 ? (
         <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.08] space-y-2">
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-            Không tìm thấy chuyến nào phù hợp với bộ lọc
+            {t('booked2.s009')}
           </p>
           <button
             type="button"
@@ -485,7 +486,7 @@ export default function BookedTripList({
             }}
             className="text-xs text-[#0071e3] hover:underline font-semibold cursor-pointer"
           >
-            Xoá bộ lọc và xem tất cả
+            {t('booked2.s010')}
           </button>
         </div>
       ) : (
@@ -555,15 +556,15 @@ export default function BookedTripList({
                     <div className="flex items-center gap-2 shrink-0">
                       {isCompleted ? (
                         <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          Đã hoàn tất an toàn
+                          {t('booked2.s011')}
                         </Badge>
                       ) : hasSilentFailover ? (
                         <Badge tone="primary" icon={Sparkles} className="h-6.5 px-2.5 text-[11px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
-                          Xe hỗ trợ đang đón
+                          {t('booked2.s012')}
                         </Badge>
                       ) : isCancelled ? (
                         <Badge tone="danger" icon={XCircle} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          Đã huỷ chuyến
+                          {t('booked2.s013')}
                         </Badge>
                       ) : isDelayed ? (
                         <Badge tone="warning" icon={Timer} className="h-6.5 px-2.5 text-[11px] font-semibold">
@@ -571,12 +572,12 @@ export default function BookedTripList({
                         </Badge>
                       ) : isConfirmed ? (
                         <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          Đã chốt chuyến
+                          {t('booked2.s014')}
                         </Badge>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60">
                           <MessageSquare className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span>Đang trao đổi</span>
+                          <span>{t('booked2.s015')}</span>
                         </span>
                       )}
                     </div>
@@ -626,7 +627,7 @@ export default function BookedTripList({
                       <span>{record.seats} ghế</span>
                       <span className="hidden sm:inline">·</span>
                       <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-medium">
-                        0đ phí sàn
+                        {t('booked2.s016')}
                       </span>
                     </div>
 
@@ -641,7 +642,7 @@ export default function BookedTripList({
                           className="px-3 py-1.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Mở chat</span>
+                          <span>{t('booked2.s017')}</span>
                         </button>
                       )}
 
@@ -676,14 +677,14 @@ export default function BookedTripList({
                       <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 space-y-2 text-xs">
                         <div className="flex items-center gap-2 text-sky-700 dark:text-sky-300 font-bold uppercase tracking-wider">
                           <Sparkles className="w-4 h-4 text-sky-500 shrink-0" />
-                          <span>HỆ THỐNG ĐIỀU PHỐI XE HỖ TRỢ HÀNH TRÌNH</span>
+                          <span>{t('booked2.s018')}</span>
                         </div>
                         <p className="text-slate-700 dark:text-slate-200 leading-relaxed font-sans">
-                          Chuyến đi của bạn đã được chuyển sang xe <strong>{record.salvageInfo?.supportVehicleModel || 'Toyota Vios (Đen)'}</strong> (<strong>{record.salvageInfo?.supportPlate || '61A - 892.41'}</strong>), do <strong>{record.salvageInfo?.supportDriverName || 'Anh Hải (Chủ xe)'}</strong> đón bạn lúc <strong>{record.salvageInfo?.supportPickupTime || '06:25'}</strong>.
+                          {t('booked2.s019')} <strong>{record.salvageInfo?.supportVehicleModel || 'Toyota Vios (Đen)'}</strong> (<strong>{record.salvageInfo?.supportPlate || '61A - 892.41'}</strong>), do <strong>{record.salvageInfo?.supportDriverName || 'Anh Hải (Chủ xe)'}</strong> {t('booked2.s020')} <strong>{record.salvageInfo?.supportPickupTime || '06:25'}</strong>.
                         </p>
                         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                           <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                          <span>Ghế ngồi &amp; Lộ trình giữ nguyên 100% · Không phát sinh phụ phí</span>
+                          <span>{t('booked2.s021')}</span>
                         </div>
                       </div>
                     )}
@@ -714,7 +715,7 @@ export default function BookedTripList({
                               </div>
                               <span
                                 className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
-                                title="Đã xác thực CCCD & GPLX"
+                                title={t('booked2.s052')}
                               >
                                 ✓
                               </span>
@@ -725,21 +726,21 @@ export default function BookedTripList({
                                 <PresenceDot isOnline={partnerOnline.isOnline} showLabel detail={partnerOnline.detail} />
                                 <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 inline-flex items-center gap-1">
                                   <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                                  <span>5.0 Tín nhiệm</span>
+                                  <span>{t('booked2.s022')}</span>
                                 </span>
                               </div>
-                              <p className="text-xs text-[#86868b] mt-0.5">Xác thực danh tính thật · 0 rủi ro</p>
+                              <p className="text-xs text-[#86868b] mt-0.5">{t('booked2.s023')}</p>
                             </div>
                           </div>
 
                           {/* Trạng thái liên hệ: 100% trực tiếp qua App */}
                           <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-black/[0.03] dark:border-white/[0.04]">
                             <p className="text-[11px] font-medium text-[#86868b]">
-                              Kênh liên hệ
+                              {t('booked2.s024')}
                             </p>
                             <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-300/40">
                               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Trực tiếp qua App</span>
+                              <span>{t('booked2.s025')}</span>
                             </span>
                           </div>
                         </div>
@@ -753,10 +754,10 @@ export default function BookedTripList({
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200 text-xs">
                                       <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">!</span>
-                                      <span>SĐT Khẩn Cấp Đón Xe (Đã mở khoá)</span>
+                                      <span>{t('booked2.s026')}</span>
                                     </div>
                                     <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-semibold">
-                                      Sau 2 lần gọi ≥25s
+                                      {t('booked2.s027')}
                                     </span>
                                   </div>
                                   <div className="flex items-center justify-between bg-white dark:bg-slate-900/80 p-2.5 rounded-lg border border-amber-500/20">
@@ -767,7 +768,7 @@ export default function BookedTripList({
                                         className="py-1 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
                                       >
                                         <Phone className="w-3 h-3 fill-current" />
-                                        <span>Gọi SĐT</span>
+                                        <span>{t('booked2.s028')}</span>
                                       </a>
                                       <button
                                         type="button"
@@ -783,7 +784,7 @@ export default function BookedTripList({
                                     </div>
                                   </div>
                                   <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                                    💡 Chỉ sử dụng số này để gọi đón khẩn cấp tại điểm hẹn.
+                                    {t('booked2.s029')}
                                   </p>
                                 </div>
                               ) : null}
@@ -791,10 +792,10 @@ export default function BookedTripList({
                               <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
                                 <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                                  <span>Giao tiếp an toàn qua nền tảng</span>
+                                  <span>{t('booked2.s030')}</span>
                                 </span>
                                 <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
-                                  0đ cước · Bảo mật 100% SĐT
+                                  {t('booked2.s031')}
                                 </span>
                               </div>
 
@@ -805,7 +806,7 @@ export default function BookedTripList({
                                   className="w-full h-11 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#0071e3] hover:bg-[#0077ed] text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
                                 >
                                   <MessageSquare className="w-4 h-4 fill-current shrink-0" />
-                                  <span>Mở Khung Chat Hẹn Điểm</span>
+                                  <span>{t('booked2.s032')}</span>
                                 </button>
 
                                 <button
@@ -814,12 +815,12 @@ export default function BookedTripList({
                                   className="w-full h-11 px-4 rounded-xl font-bold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
                                 >
                                   <Phone className="w-4 h-4 fill-current shrink-0" />
-                                  <span>Gọi thoại qua App (0đ)</span>
+                                  <span>{t('booked2.s033')}</span>
                                 </button>
                               </div>
 
                               <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed pt-1 border-t border-slate-200/60 dark:border-slate-800">
-                                💡 Hai bên liên lạc trực tiếp trên app. Nếu đối tác không nghe máy hoặc không phản hồi, bạn có thể bấm <strong>Huỷ chuyến 1-chạm</strong> để tìm người khác ngay lập tức.
+                                {t('booked2.s034')} <strong>{t('booked2.s035')}</strong> {t('booked2.s036')}
                               </p>
                             </div>
                           ) : (
@@ -840,7 +841,7 @@ export default function BookedTripList({
                                   className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
                                 >
                                   <MessageSquare className="w-4 h-4 shrink-0 fill-current" />
-                                  <span>Mở Khung Chat</span>
+                                  <span>{t('booked2.s037')}</span>
                                 </button>
 
                                 <button
@@ -849,12 +850,12 @@ export default function BookedTripList({
                                   className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
                                 >
                                   <Phone className="w-4 h-4 shrink-0 fill-current" />
-                                  <span>Gọi thoại qua App (0đ)</span>
+                                  <span>{t('booked2.s033')}</span>
                                 </button>
                               </div>
 
                               <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed">
-                                💡 Nếu đối tác không phản hồi, bạn có thể bấm <strong>Huỷ chuyến</strong> để tìm xe hoặc đón người khác ngay lập tức.
+                                {t('booked2.s038')} <strong>{t('booked2.s039')}</strong> {t('booked2.s040')}
                               </p>
                             </div>
                           )}
@@ -865,19 +866,19 @@ export default function BookedTripList({
                     {/* Bảng Chi Phí Xăng Xe Chuẩn Apple Wallet */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
-                        <p className="text-xs text-[#86868b] font-medium">Phí nền tảng CarMate</p>
+                        <p className="text-xs text-[#86868b] font-medium">{t('booked2.s041')}</p>
                         <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular mt-1">
-                          0 ₫ · Miễn phí kết nối
+                          {t('booked2.s042')}
                         </p>
-                        <p className="text-[11px] text-[#86868b] mt-0.5">Không thu phí sàn trung gian</p>
+                        <p className="text-[11px] text-[#86868b] mt-0.5">{t('booked2.s043')}</p>
                       </div>
 
                       <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
-                        <p className="text-xs text-[#86868b] font-medium">Chia sẻ chi phí xăng xe</p>
+                        <p className="text-xs text-[#86868b] font-medium">{t('booked2.s044')}</p>
                         <p className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular mt-1">
                           {formatVND(totalCost)}
                         </p>
-                        <p className="text-[11px] text-[#86868b] mt-0.5">Gửi trực tiếp Chủ xe khi lên xe</p>
+                        <p className="text-[11px] text-[#86868b] mt-0.5">{t('booked2.s045')}</p>
                       </div>
                     </div>
 
@@ -893,12 +894,12 @@ export default function BookedTripList({
                           {copiedId === record.escrowId ? (
                             <>
                               <Check className="w-4 h-4 text-emerald-600" />
-                              <span className="text-emerald-600 dark:text-emerald-400">Đã chép thông tin</span>
+                              <span className="text-emerald-600 dark:text-emerald-400">{t('booked2.s046')}</span>
                             </>
                           ) : (
                             <>
                               <Share2 className="w-4 h-4 text-slate-500" />
-                              <span>Gửi tin người thân</span>
+                              <span>{t('booked2.s047')}</span>
                             </>
                           )}
                         </button>
@@ -907,7 +908,7 @@ export default function BookedTripList({
                           type="button"
                           onClick={() => handleSendSMS(record)}
                           className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 py-1.5 px-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                          title="Soạn tin nhắn SMS gửi người thân"
+                          title={t('booked2.s053')}
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>SMS</span>
@@ -924,7 +925,7 @@ export default function BookedTripList({
                             onClick={() => onDelay(record)}
                             className="flex-1 sm:flex-initial justify-center text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40"
                           >
-                            Báo trễ
+                            {t('booked2.s048')}
                           </Button>
                           <Button
                             variant="ghost"
@@ -941,7 +942,7 @@ export default function BookedTripList({
                             className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl sm:rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black text-xs font-semibold shadow-2xs transition-all cursor-pointer min-h-[38px] sm:min-h-0"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
-                            <span>Hoàn tất chuyến</span>
+                            <span>{t('booked2.s049')}</span>
                           </button>
                         </div>
                       )}
@@ -988,7 +989,7 @@ export default function BookedTripList({
                   className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer inline-flex items-center gap-1 font-medium"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
-                  <span>Trước</span>
+                  <span>{t('booked2.s050')}</span>
                 </button>
 
                 {/* Các nút số trang */}

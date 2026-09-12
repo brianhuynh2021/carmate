@@ -58,6 +58,7 @@ export default function EscrowBookingModal({
   onShowToast,
   onOpenInbox
 }) {
+  const { t } = useI18n();
   const { lang } = useI18n();
   const [seats, setSeats] = useState(1);
   const [pickupPoint] = useState('');
@@ -319,7 +320,7 @@ export default function EscrowBookingModal({
         size="md"
         icon={CheckCircle2}
         iconTone="success"
-        title="✓ ĐÃ GIỮ CHỖ TRƯỚC THÀNH CÔNG"
+        title={t('escrow2.s041')}
         subtitle={`Mã vé điện tử #${bookingCode} · Giữ chỗ chắc chắn 0đ cọc`}
         footer={
           <div className="w-full space-y-2">
@@ -332,7 +333,7 @@ export default function EscrowBookingModal({
               className="w-full py-2.5 px-4 rounded-2xl font-semibold text-xs text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>Xem chi tiết trong "Chuyến của tôi"</span>
+              <span>{t('escrow2.s001')}</span>
             </button>
           </div>
         }
@@ -353,7 +354,7 @@ export default function EscrowBookingModal({
                   </span>
                   <div>
                     <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider">
-                      1. THẺ CHI TIẾT CHUYẾN ĐI
+                      {t('escrow2.s002')}
                     </h4>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                       Vé điện tử CarMate #{bookingCode}
@@ -363,7 +364,7 @@ export default function EscrowBookingModal({
 
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 inline-flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Đã xác nhận kết nối</span>
+                  <span>{t('escrow2.s003')}</span>
                 </span>
               </div>
             </div>
@@ -376,7 +377,7 @@ export default function EscrowBookingModal({
                   •
                 </span>
                 <div className="min-w-0 flex-1">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium">Lộ trình: </span>
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{t('escrow2.s004')} </span>
                   <span className="font-bold text-slate-900 dark:text-white">
                     {routeFrom} ➔ {routeTo}
                   </span>
@@ -389,7 +390,7 @@ export default function EscrowBookingModal({
                   •
                 </span>
                 <div className="min-w-0 flex-1">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium">Khung giờ: </span>
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{t('escrow2.s005')} </span>
                   <span className="font-bold text-slate-900 dark:text-white">
                     {timeDisplay}
                   </span>
@@ -415,12 +416,12 @@ export default function EscrowBookingModal({
                   •
                 </span>
                 <div className="min-w-0 flex-1">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium">Chi phí: </span>
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{t('escrow2.s006')} </span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400 font-display text-sm sm:text-base tabular">
                     {formatVND(pricing.total)}
                   </span>
                   <span className="text-slate-600 dark:text-slate-400 font-semibold ml-1">
-                    (0đ cọc · Lên xe gửi tiền xăng)
+                    {t('escrow2.s007')}
                   </span>
                 </div>
               </div>
@@ -431,7 +432,7 @@ export default function EscrowBookingModal({
                   •
                 </span>
                 <div className="min-w-0 flex-1">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium">Hành lý: </span>
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{t('escrow2.s008')} </span>
                   <span className="font-bold text-slate-900 dark:text-white">
                     {luggageDisplay}
                   </span>
@@ -447,7 +448,7 @@ export default function EscrowBookingModal({
                 className="w-full py-2.5 px-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
               >
                 <Scale className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span>🛡️ Thẻ Pháp Lý Hành Trình (Điều 3 BLDS 2015 · Trình CSGT)</span>
+                <span>{t('escrow2.s009')}</span>
               </button>
             </div>
           </div>
@@ -456,10 +457,10 @@ export default function EscrowBookingModal({
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-1.5 px-1">
               <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span>💬 2. LIÊN HỆ TRỰC TIẾP QUA APP</span>
+                <span>{t('escrow2.s010')}</span>
               </span>
               <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
-                0đ cước · Bảo mật SĐT
+                {t('escrow2.s011')}
               </span>
             </div>
 
@@ -497,11 +498,11 @@ export default function EscrowBookingModal({
             <div className="flex items-start gap-2">
               <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <p className="font-bold">
-                Bảo mật 100%: Nhắn tin và gọi điện trực tiếp qua App, không lộ số điện thoại cá nhân.
+                {t('escrow2.s012')}
               </p>
             </div>
             <p className="text-[11.5px] text-slate-600 dark:text-slate-400 pl-6 leading-relaxed">
-              💡 Hai bên chủ động liên lạc hẹn điểm đón trước giờ đi. Nếu nhắn tin hoặc gọi qua app mà đối tác không phản hồi, bạn có thể <strong>bấm Huỷ chuyến 1-chạm</strong> để tìm xe hoặc đón người khác ngay lập tức, không làm mất thời gian của nhau.
+              {t('escrow2.s013')} <strong>{t('escrow2.s014')}</strong> {t('escrow2.s015')}
             </p>
           </div>
 
@@ -539,7 +540,7 @@ export default function EscrowBookingModal({
         className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-base py-3.5 cursor-pointer transition-all duration-150 active:scale-[0.99]"
       >
         <SlidersHorizontal className="w-4 h-4 mr-2" />
-        <span>Quản lý bài đăng của bạn</span>
+        <span>{t('escrow2.s016')}</span>
       </Button>
     </div>
   ) : (
@@ -555,7 +556,7 @@ export default function EscrowBookingModal({
           {submitting ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Đang chốt chuyến & kết nối...</span>
+              <span>{t('escrow2.s017')}</span>
             </>
           ) : (
             <>
@@ -573,7 +574,7 @@ export default function EscrowBookingModal({
       </Button>
       <p className="text-center text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5 pt-0.5">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-        <span>0đ cọc · Nhắn tin & Gọi thoại bảo mật qua App · Lên xe mới gửi tiền xăng</span>
+        <span>{t('escrow2.s018')}</span>
       </p>
     </div>
   );
@@ -593,7 +594,7 @@ export default function EscrowBookingModal({
         {isTripOwner && (
           <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Đây là bài đăng của chính bạn. Bạn không thể tự chốt chuyến với chính mình.</span>
+            <span>{t('escrow2.s019')}</span>
           </div>
         )}
 
@@ -610,7 +611,7 @@ export default function EscrowBookingModal({
                     onClick={() => onViewTrustProfile(item)}
                     className="text-xs text-primary-600 font-semibold hover:underline cursor-pointer"
                   >
-                    · Xem hồ sơ tín nhiệm
+                    {t('escrow2.s020')}
                   </button>
                 )}
               </div>
@@ -628,17 +629,17 @@ export default function EscrowBookingModal({
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5 text-[#0071e3]" />
-                Thông tin nhận vé & đón xe:
+                {t('escrow2.s021')}
               </span>
               <span className="text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                0đ cọc · Không cần mật khẩu
+                {t('escrow2.s022')}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  Số điện thoại của bạn <span className="text-rose-500">*</span>
+                  {t('escrow2.s023')} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -651,13 +652,13 @@ export default function EscrowBookingModal({
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  Tên xưng hô
+                  {t('escrow2.s024')}
                 </label>
                 <input
                   type="text"
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="VD: Anh Minh, Chị Hoa..."
+                  placeholder={t('escrow2.s042')}
                   className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
                 />
               </div>
@@ -665,7 +666,7 @@ export default function EscrowBookingModal({
 
             <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-normal flex items-start gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-              <span>Chủ xe sẽ gọi hoặc gửi tin nhắn xác nhận đón bạn đúng giờ. Số điện thoại được mã hóa an toàn.</span>
+              <span>{t('escrow2.s025')}</span>
             </p>
           </div>
         )}
@@ -683,7 +684,7 @@ export default function EscrowBookingModal({
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>Đặt ghế đi cùng</span>
+              <span>{t('escrow2.s026')}</span>
             </button>
             <button
               type="button"
@@ -695,7 +696,7 @@ export default function EscrowBookingModal({
               }`}
             >
               <Package className="w-3.5 h-3.5" />
-              <span>📦 Gửi đồ tiện chuyến</span>
+              <span>{t('escrow2.s027')}</span>
             </button>
           </div>
         )}
@@ -706,7 +707,7 @@ export default function EscrowBookingModal({
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 inline-flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5 text-amber-600" />
-                Chọn loại đồ cần gửi:
+                {t('escrow2.s028')}
               </span>
               <span className="text-[11px] font-mono font-bold text-amber-700 dark:text-amber-300">
                 {formatVND(effectiveCargoTotal)}/kiện
@@ -750,7 +751,7 @@ export default function EscrowBookingModal({
             <div className="pt-1 space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                  Chi tiết đồ gửi (nông sản, bao bì, kích thước):
+                  {t('escrow2.s029')}
                 </label>
                 {cargoDescription && (
                   <button
@@ -758,7 +759,7 @@ export default function EscrowBookingModal({
                     onClick={() => setCargoDescription('')}
                     className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    Xóa
+                    {t('escrow2.s030')}
                   </button>
                 )}
               </div>
@@ -793,7 +794,7 @@ export default function EscrowBookingModal({
                 type="text"
                 value={cargoDescription}
                 onChange={(e) => setCargoDescription(e.target.value)}
-                placeholder="VD: 1 thùng xốp mít sấy 15kg dán kín, gửi về ngã tư Bình Phước..."
+                placeholder={t('escrow2.s043')}
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
@@ -803,7 +804,7 @@ export default function EscrowBookingModal({
             <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200">
               <span className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2">
                 <Users className="w-4 h-4 text-primary-600" />
-                Số người cùng đi:
+                {t('escrow2.s031')}
               </span>
               <div className="inline-flex items-center gap-1.5 p-1 rounded-lg bg-slate-100">
                 {[1, 2, 3, 4]
@@ -831,9 +832,9 @@ export default function EscrowBookingModal({
         <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-800/40 flex items-start gap-2.5">
           <MessageSquare className="w-4 h-4 text-[#0071e3] shrink-0 mt-0.5" />
           <div className="text-xs text-blue-950 dark:text-blue-200 leading-relaxed">
-            <p className="font-bold">Điểm đón & trả cụ thể:</p>
+            <p className="font-bold">{t('escrow2.s032')}</p>
             <p className="text-blue-700 dark:text-blue-300 text-[11px] mt-0.5 font-normal">
-              Hai bên trao đổi và thống nhất trực tiếp điểm hẹn trong Chat sau khi chốt chuyến để thuận tiện nhất cho lộ trình của Chủ xe.
+              {t('escrow2.s033')}
             </p>
           </div>
         </div>
@@ -851,7 +852,7 @@ export default function EscrowBookingModal({
                 onClick={() => setPassengerNote('')}
                 className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                Xóa
+                {t('escrow2.s030')}
               </button>
             )}
           </div>
@@ -901,7 +902,7 @@ export default function EscrowBookingModal({
             rows={2}
             value={passengerNote}
             onChange={(e) => setPassengerNote(e.target.value)}
-            placeholder="VD: Em có 1 vali nhỏ size 20, đứng chờ trước cây xăng Petrolimex..."
+            placeholder={t('escrow2.s044')}
             className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
           />
         </div>
@@ -911,7 +912,7 @@ export default function EscrowBookingModal({
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
-                <span>Mức phụ xăng:</span>
+                <span>{t('escrow2.s034')}</span>
                 <span className="text-[11.5px] font-mono font-bold text-emerald-700 dark:text-emerald-400">
                   {formatVND(effectiveUnitPrice)}/ghế
                 </span>
@@ -928,7 +929,7 @@ export default function EscrowBookingModal({
             {showNegotiate ? (
               <div className="space-y-2 pt-1">
                 <p className="text-[11px] text-slate-500">
-                  Chọn mức chia sẻ phù hợp (giới hạn tối đa 20% so với giá đề xuất):
+                  {t('escrow2.s035')}
                 </p>
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                   {[
@@ -962,7 +963,7 @@ export default function EscrowBookingModal({
                   })}
                 </div>
                 <p className="text-[10.5px] text-slate-400 leading-tight">
-                  * Mức đề xuất hợp lý giúp Chủ xe dễ dàng đồng thuận đón bạn hơn.
+                  {t('escrow2.s036')}
                 </p>
               </div>
             ) : (
@@ -987,18 +988,18 @@ export default function EscrowBookingModal({
                   Phụ phí gửi đồ ({CARGO_TYPES[selectedCargoPreset]?.shortLabel || 'Hàng tiện chuyến'})
                 </span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-300/60">
-                  0% phí sàn
+                  {t('escrow2.s037')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Giao nhận dọc trục đường thuận tiện · Thanh toán khi giao nhận hàng
+                {t('escrow2.s038')}
               </p>
             </div>
             <div className="text-right">
               <p className="font-display font-black text-xl text-amber-700 dark:text-amber-400 tabular leading-none">
                 {formatVND(effectiveCargoTotal)}
               </p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">{t('escrow2.s039')}</p>
             </div>
           </div>
         ) : (
@@ -1007,14 +1008,14 @@ export default function EscrowBookingModal({
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-slate-900">Chi phí chia sẻ ({seats} người)</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                  0% phí sàn
+                  {t('escrow2.s037')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 {effectiveUnitPrice !== baseSeatPrice ? (
                   <span>Đề xuất: {formatVND(effectiveUnitPrice)}/ghế (Giá gốc {formatVND(baseSeatPrice)})</span>
                 ) : (
-                  <span>Trọn gói xăng & cầu đường · Thanh toán khi lên xe</span>
+                  <span>{t('escrow2.s040')}</span>
                 )}
               </p>
             </div>
@@ -1022,7 +1023,7 @@ export default function EscrowBookingModal({
               <p className="font-display font-black text-xl text-primary-700 tabular leading-none">
                 {formatVND(effectiveTotal)}
               </p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">Không thu cọc</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">{t('escrow2.s039')}</p>
             </div>
           </div>
         )}

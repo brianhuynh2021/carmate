@@ -33,8 +33,10 @@ import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import PlateMaskModal from './PlateMaskModal.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, onDelete }) {
+  const { t } = useI18n();
   // Hook phải gọi trước mọi early return (Rules of Hooks)
 
   const isDriver = trip?.type === 'driver_offer';
@@ -321,7 +323,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             </button>
           )}
           <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-            · Cập nhật lộ trình, mốc đón trả & chi phí phụ xăng
+            {t('editTrip.s001')}
           </span>
         </div>
       }
@@ -343,7 +345,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           )}
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClose} disabled={saving || deleting} className="font-semibold text-slate-700 dark:text-slate-200">
-              Đóng
+              {t('editTrip.s002')}
             </Button>
             <Button
               variant="primary"
@@ -364,10 +366,10 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 space-y-2.5 shadow-2xs">
             <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-bold text-xs sm:text-[13px]">
               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>Xác nhận xoá bài đăng chuyến này?</span>
+              <span>{t('editTrip.s003')}</span>
             </div>
             <p className="text-xs text-rose-700 dark:text-rose-300 font-medium leading-relaxed">
-              Bài đăng sẽ được gỡ khỏi danh sách tìm kiếm trên toàn hệ thống và không thể hoàn tác.
+              {t('editTrip.s004')}
             </p>
             <div className="flex items-center gap-2 pt-1">
               <button
@@ -375,7 +377,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 onClick={() => setConfirmDelete(false)}
                 className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 cursor-pointer"
               >
-                Giữ lại chuyến
+                {t('editTrip.s005')}
               </button>
               <button
                 type="button"
@@ -394,22 +396,22 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           <div className="flex items-center justify-between">
             <span className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <Navigation className="w-3.5 h-3.5 text-[#0071e3]" />
-              <span>Lộ trình di chuyển</span>
+              <span>{t('editTrip.s006')}</span>
             </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Gõ để gợi ý bến xe & tỉnh thành</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('editTrip.s007')}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-center">
             <div>
               <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-2xs" />
-                <span>Điểm đón (Xuất phát)</span>
+                <span>{t('editTrip.s008')}</span>
                 <span className="text-rose-500 text-xs">*</span>
               </label>
               <LocationSuggestInput
                 value={fromLocation}
                 onChange={setFromLocation}
-                placeholder="VD: Hà Nội (Mỹ Đình), Lộc Ninh..."
+                placeholder={t('editTrip.s033')}
                 icon={MapPin}
                 iconColor="text-emerald-500"
               />
@@ -419,7 +421,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
               <button
                 type="button"
                 onClick={handleSwapRoute}
-                title="Đảo chiều lộ trình"
+                title={t('editTrip.s034')}
                 className="w-9 h-9 rounded-full border border-black/[0.1] dark:border-white/10 bg-white dark:bg-[#1e293b] text-slate-700 dark:text-slate-200 hover:text-[#0071e3] hover:border-[#0071e3] shadow-xs flex items-center justify-center cursor-pointer active:scale-90 active:rotate-180 transition-all"
               >
                 <ArrowLeftRight className="w-4 h-4" />
@@ -429,13 +431,13 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             <div>
               <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 shadow-2xs" />
-                <span>Điểm đến (Kết thúc)</span>
+                <span>{t('editTrip.s009')}</span>
                 <span className="text-rose-500 text-xs">*</span>
               </label>
               <LocationSuggestInput
                 value={toLocation}
                 onChange={setToLocation}
-                placeholder="VD: Hải Phòng (Cầu Rào), Sài Gòn..."
+                placeholder={t('editTrip.s035')}
                 icon={Navigation}
                 iconColor="text-rose-500"
               />
@@ -448,15 +450,15 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
               <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Điểm đón cụ thể:</span>
+                  <span>{t('editTrip.s010')}</span>
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Tùy chọn</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('editTrip.s011')}</span>
               </label>
               <input
                 type="text"
                 value={pickupSpot}
                 onChange={(e) => setPickupSpot(e.target.value)}
-                placeholder="VD: Trung tâm hành chính, Cây xăng 17, Quận 3..."
+                placeholder={t('editTrip.s036')}
                 className="w-full h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
               />
             </div>
@@ -465,15 +467,15 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
               <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Navigation className="w-3.5 h-3.5 text-rose-500" />
-                  <span>Điểm trả cụ thể:</span>
+                  <span>{t('editTrip.s012')}</span>
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Tùy chọn</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('editTrip.s011')}</span>
               </label>
               <input
                 type="text"
                 value={dropoffSpot}
                 onChange={(e) => setDropoffSpot(e.target.value)}
-                placeholder="VD: Bến xe Miền Đông, Bệnh viện Chợ Rẫy..."
+                placeholder={t('editTrip.s037')}
                 className="w-full h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-2xs"
               />
             </div>
@@ -485,16 +487,16 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           <div className="flex items-center justify-between">
             <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-[#0071e3]" />
-              <span>Trục đường tiện đón trả dọc tuyến:</span>
+              <span>{t('editTrip.s013')}</span>
             </label>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Tự động gợi ý mốc</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('editTrip.s014')}</span>
           </div>
 
           <input
             type="text"
             value={waypointNote}
             onChange={(e) => setWaypointNote(e.target.value)}
-            placeholder="VD: Dọc Cao tốc 5B, nút giao Yên Mỹ, đón các ngã 3 cây xăng..."
+            placeholder={t('editTrip.s038')}
             className="w-full h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 shadow-2xs"
           />
 
@@ -502,7 +504,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           <div className="pt-1 flex items-center gap-2 flex-wrap">
             <span className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1 mr-1 font-medium">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Gợi ý theo tuyến:</span>
+              <span>{t('editTrip.s015')}</span>
             </span>
             {suggestedWaypoints.map((wp) => {
               const isAdded = waypointNote.includes(wp);
@@ -541,7 +543,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 ) : (
                   <Car className="w-4 h-4 text-[#0071e3]" />
                 )}
-                <span>Phương tiện di chuyển:</span>
+                <span>{t('editTrip.s016')}</span>
               </span>
               <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
                 {vehicleCapacity === 'truck_light'
@@ -571,7 +573,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                     : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>🚗 4–5 chỗ</span>
+                <span>{t('editTrip.s017')}</span>
               </button>
               <button
                 type="button"
@@ -587,7 +589,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                     : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>🚙 Xe 7 chỗ</span>
+                <span>{t('editTrip.s018')}</span>
               </button>
               <button
                 type="button"
@@ -605,7 +607,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                     : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>🛻 Bán tải</span>
+                <span>{t('editTrip.s019')}</span>
               </button>
               <button
                 type="button"
@@ -623,7 +625,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                     : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>🚛 Xe tải nhẹ</span>
+                <span>{t('editTrip.s020')}</span>
               </button>
             </div>
 
@@ -631,7 +633,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Dòng xe cụ thể:
+                  {t('editTrip.s021')}
                 </label>
                 <input
                   type="text"
@@ -644,13 +646,13 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Biển kiểm soát (Bảo mật):
+                  {t('editTrip.s022')}
                 </label>
                 <input
                   type="text"
                   value={plateMask}
                   onChange={(e) => setPlateMask(e.target.value)}
-                  placeholder="VD: 51K - 123.45 hoặc 93A - 541.86"
+                  placeholder={t('editTrip.s039')}
                   className="w-full h-10 px-3.5 rounded-xl text-xs sm:text-sm font-mono font-bold bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] shadow-2xs"
                 />
               </div>
@@ -658,7 +660,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
 
             {/* Preset chips */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Chọn nhanh:</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{t('editTrip.s023')}</span>
               {(vehicleCapacity === 'truck_light'
                 ? ['Kia K200/K250', 'Hyundai Porter H150', 'Isuzu QKR', 'Suzuki Carry Pro', 'Thaco Towner']
                 : vehicleCapacity === 'pickup'
@@ -693,7 +695,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 />
                 <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Nhận gửi hàng / bưu phẩm / thùng xốp tiện chuyến</span>
+                  <span>{t('editTrip.s024')}</span>
                 </span>
               </label>
 
@@ -720,7 +722,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                   <span>Hình ảnh xe thực tế ({carPhotos.filter(Boolean).length}/5):</span>
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                  Tự động che biển số bảo mật
+                  {t('editTrip.s025')}
                 </span>
               </div>
 
@@ -749,7 +751,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                           type="button"
                           onClick={() => setEditingMaskIndex(idx)}
                           className="w-9 h-9 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center cursor-pointer shadow-xs"
-                          title="Chỉnh vị trí che biển"
+                          title={t('editTrip.s040')}
                         >
                           <Crosshair className="w-3.5 h-3.5" />
                         </button>
@@ -757,7 +759,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                           type="button"
                           onClick={() => handleRemovePhoto(idx)}
                           className="w-9 h-9 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer shadow-xs"
-                          title="Xóa hình này"
+                          title={t('editTrip.s041')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -779,7 +781,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                       }}
                     />
                     <Upload className="w-4 h-4 mb-0.5 text-slate-500" />
-                    <span className="text-[10px] font-bold">Thêm ảnh</span>
+                    <span className="text-[10px] font-bold">{t('editTrip.s026')}</span>
                   </label>
                 )}
               </div>
@@ -818,7 +820,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                 <Users className="w-3.5 h-3.5 text-[#0071e3]" />
                 <span>{isDriver ? 'Số ghế trống nhận khách:' : 'Số người cần đi:'}</span>
               </span>
-              {isDriver && <span className="text-[11px] font-medium text-slate-500">(Đã trừ 1 ghế lái)</span>}
+              {isDriver && <span className="text-[11px] font-medium text-slate-500">{t('editTrip.s027')}</span>}
             </label>
             <div className="flex items-center gap-1.5">
               {seatOptions.map((n) => (
@@ -858,7 +860,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
         {/* ── 4. NGÀY ĐI & KHUNG GIỜ (QUICK CHIPS) ── */}
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-4 shadow-2xs">
           <div className="space-y-2">
-            <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white">Ngày xuất phát:</label>
+            <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white">{t('editTrip.s028')}</label>
             <div className="flex items-center gap-1.5 flex-wrap">
               {quickDates.map((d) => (
                 <button
@@ -879,7 +881,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
               type="text"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              placeholder="Hoặc gõ ngày khác..."
+              placeholder={t('editTrip.s042')}
               className="w-full h-9 px-3 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-[#0071e3] shadow-2xs"
             />
           </div>
@@ -887,7 +889,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
           <div className="space-y-2">
             <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-[#0071e3]" />
-              <span>Khung giờ chạy:</span>
+              <span>{t('editTrip.s029')}</span>
             </label>
             <select
               value={timeSlot}
@@ -907,7 +909,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
               ))}
             </select>
             <div className="flex items-center gap-2 pt-0.5">
-              <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Giờ hẹn cụ thể (tùy chọn):</span>
+              <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">{t('editTrip.s030')}</span>
               <input
                 type="time"
                 value={exactTime || ''}
@@ -923,13 +925,13 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
                   type="button"
                   onClick={() => setExactTime('')}
                   className="text-xs text-slate-500 hover:text-rose-600 font-bold px-1.5 py-0.5 rounded cursor-pointer"
-                  title="Xóa giờ cụ thể"
+                  title={t('editTrip.s043')}
                 >
                   ✕
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Hai bên trao đổi hẹn giờ chính xác khi ghép chuyến</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('editTrip.s031')}</p>
           </div>
         </div>
 
@@ -937,13 +939,13 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] space-y-2 shadow-2xs">
           <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
             <FileText className="w-3.5 h-3.5 text-[#0071e3]" />
-            <span>Lời nhắn gửi bạn đồng hành:</span>
+            <span>{t('editTrip.s032')}</span>
           </label>
           <textarea
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="VD: Xe gia đình sạch sẽ, không khói thuốc, đón trả đúng hẹn..."
+            placeholder={t('editTrip.s044')}
             className="w-full p-3.5 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 resize-none shadow-2xs leading-relaxed"
           />
         </div>
