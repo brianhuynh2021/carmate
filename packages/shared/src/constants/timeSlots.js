@@ -282,3 +282,83 @@ export const mapTimeToSlot = (timeStr) => {
   if (h >= 21 && h < 23) return '21:00-23:00';
   return '23:00-03:00';
 };
+
+/**
+ * =============================================================================
+ * CHIP CHỌN NHANH KHUNG KHỞI HÀNH (SMART DEPARTURE CHIPS)
+ * =============================================================================
+ * Trên tuyến liên tỉnh, THỜI GIAN là dữ liệu cấp 1 — ngang hàng Nơi đi và Nơi
+ * đến, không phải một dòng phụ "đặt cho lúc khác" nằm nép bên dưới. Đẩy nó
+ * xuống hàng phụ chính là thứ khiến người dùng mặc định app chạy theo kiểu
+ * "gọi xe tới ngay" của taxi nội đô.
+ *
+ * Người đi xe liên tỉnh thực tế chỉ xoay quanh vài ý định: chiều nay về, tối
+ * nay đi, hoặc sáng mai đi sớm. Cho chọn bằng MỘT CHẠM thay vì bắt mở lịch.
+ *
+ * Danh sách chip được TÍNH THEO GIỜ HIỆN TẠI: 20h tối mà vẫn chìa ra chip
+ * "Chiều nay" thì vô nghĩa. Khung đã trôi qua sẽ tự biến mất.
+ */
+export const DEPARTURE_WINDOWS = Object.freeze([
+  { id: 'early_morning', fromHour: 4, toHour: 8, label: 'Sáng sớm', labelEn: 'Early morning', hint: '04:00 – 08:00' },
+  { id: 'morning', fromHour: 8, toHour: 11, label: 'Buổi sáng', labelEn: 'Morning', hint: '08:00 – 11:00' },
+  { id: 'noon', fromHour: 11, toHour: 14, label: 'Buổi trưa', labelEn: 'Midday', hint: '11:00 – 14:00' },
+  { id: 'afternoon', fromHour: 14, toHour: 18, label: 'Buổi chiều', labelEn: 'Afternoon', hint: '14:00 – 18:00' },
+  { id: 'evening', fromHour: 18, toHour: 22, label: 'Buổi tối', labelEn: 'Evening', hint: '18:00 – 22:00' },
+  { id: 'late_night', fromHour: 22, toHour: 28, label: 'Khuya', labelEn: 'Late night', hint: '22:00 – 04:00' }
+]);
+
+/**
+ * Dựng danh sách chip phù hợp với thời điểm hiện tại.
+ *
+ * Quy tắc: một khung chỉ còn ý nghĩa nếu vẫn còn ít nhất `minLeadMinutes` phút
+ * trước khi nó kết thúc — không ai đặt được chuyến cho khung sắp đóng trong 10
+ * phút nữa. Hết khung hôm nay thì chuyển sang khung của ngày mai.
+ *
+ * @param {object} [opts]
+ * @param {Date|number} [opts.now] - Mốc hiện tại
+ * @param {number} [opts.limit] - Số chip tối đa (mặc định 4)
+ * @param {number} [opts.minLeadMinutes] - Phải còn ít nhất bao nhiêu phút
+ * @returns {Array<{id, label, hint, dayOffset, dayLabel, timeSlot, fromHour, toHour}>}
+ */
+export function buildDepartureChips({ now = new Date(), limit = 4, minLeadMinutes = 45 } = {}) {
+  const ref = now instanceof Date ? now : new Date(now);
+  const nowMinutes = ref.getHours() * 60 + ref.getMinutes();
+  const chips = [];
+
+  // Duyệt hôm nay trước, rồi tới ngày mai
+  for (let dayOffset = 0; dayOffset <= 1 && chips.length < limit; dayOffset++) {
+    for (const w of DEPARTURE_WINDOWS) {
+      if (chips.length >= limit) break;
+
+      const endMinutes = w.toHour * 60;
+      // Khung hôm nay đã trôi qua hoặc sắp đóng thì bỏ
+      if (dayOffset === 0 && endMinutes - nowMinutes < minLeadMinutes) continue;
+
+      const dayLabel = dayOffset === 0 ? 'Hôm nay' : 'Ngày mai';
+      const startHour = String(w.fromHour % 24).padStart(2, '0');
+
+      chips.push({
+        id: `${w.id}_d${dayOffset}`,
+        windowId: w.id,
+        label: dayOffset === 0 ? w.label : `${w.label} mai`,
+        labelEn: dayOffset === 0 ? w.labelEn : `${w.labelEn} tomorrow`,
+        hint: w.hint,
+        dayOffset,
+        dayLabel,
+        fromHour: w.fromHour,
+        toHour: w.toHour,
+        // Khung giờ gửi lên máy chủ để dò chuyến
+        timeSlot: `${startHour}:00`
+      });
+    }
+  }
+
+  return chips;
+}
+
+/** Ngày (YYYY-MM-DD) tương ứng với một chip. */
+export function getChipDate(chip, now = new Date()) {
+  const d = now instanceof Date ? new Date(now) : new Date(now);
+  d.setDate(d.getDate() + (chip?.dayOffset || 0));
+  return d.toISOString().slice(0, 10);
+}

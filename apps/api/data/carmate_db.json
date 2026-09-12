@@ -77,7 +77,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Xe gia đình 7 chỗ êm ái, giờ giấc thoải mái, đón tận nơi tiện đường QL13.",
-      "createdAt": 1789001862372
+      "createdAt": 1789178538911
     },
     {
       "id": "DRV-0984-MORNING",
@@ -147,7 +147,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Mình chở gia đình đi khám bệnh sáng sớm, còn trống 3 ghế rộng rãi.",
-      "createdAt": 1789009062372
+      "createdAt": 1789185738911
     },
     {
       "id": "DRV-0984-RETURN",
@@ -216,7 +216,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến về chiều tối sau khi xong việc tại Sài Gòn. Ghế sau ngả lưng thoải mái.",
-      "createdAt": 1789012662372
+      "createdAt": 1789189338911
     },
     {
       "id": "DRV-0984-FULL",
@@ -273,7 +273,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến xe đã kín chỗ.",
-      "createdAt": 1788987462372
+      "createdAt": 1789164138911
     },
     {
       "id": "DRV-0984-PAST",
@@ -342,7 +342,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến đi đã hoàn thành an toàn tốt đẹp.",
-      "createdAt": 1788908262372
+      "createdAt": 1789084938911
     },
     {
       "id": "DRV-101",
@@ -410,7 +410,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - ***.86",
       "notes": "Xe gia đình sạch sẽ, đón dọc QL13 tiện đường, không hút thuốc.",
-      "createdAt": 1789009062372
+      "createdAt": 1789185738911
     },
     {
       "id": "DRV-102",
@@ -479,109 +479,7 @@
       ],
       "plateMask": "93A - ***.52",
       "notes": "Đi công việc cơ quan, còn 2 ghế ngồi êm ái, xe không chở đồ tanh.",
-      "createdAt": 1788998262372
-    },
-    {
-      "id": "DRV-103",
-      "maskedCode": "CX-103",
-      "type": "driver_offer",
-      "status": "active",
-      "phoneReal": "0900000017",
-      "userId": "USR-0900000017",
-      "publicName": "Chủ xe CX-103",
-      "from": "Phan Thiết (Mũi Né / Trung tâm TP)",
-      "to": "Sài Gòn (Quận 1 / Quận 2 - Cao tốc Dầu Giây)",
-      "routeCategory": "Tuyến Phan Thiết",
-      "direction": "province_to_sg",
-      "hometown": "Bình Thuận",
-      "date": "Hôm nay",
-      "timeSlot": "08:00-09:00",
-      "timeSlotLabel": "08:00 – 09:00 Sáng",
-      "carType": "Toyota Fortuner (Xe 7 chỗ gầm cao)",
-      "capacity": 6,
-      "availableSeats": 3,
-      "price": 220000,
-      "basePricePerSeat": 220000,
-      "depositPerSeat": 0,
-      "carCategory": "family_car",
-      "isVip": true,
-      "rating": 5,
-      "completedCount": 65,
-      "perks": [
-        "Xe gầm cao êm ái",
-        "Bao vé cầu đường cao tốc",
-        "Không khói thuốc"
-      ],
-      "hasCarPhotos": false,
-      "notes": "Chạy thẳng cao tốc Phan Thiết - Dầu Giây chỉ mất 2 tiếng rưỡi.",
-      "createdAt": 1789005462372
-    },
-    {
-      "id": "DRV-104",
-      "maskedCode": "CX-104",
-      "type": "driver_offer",
-      "status": "active",
-      "phoneReal": "0900000012",
-      "userId": "USR-0900000012",
-      "publicName": "Chủ xe CX-104",
-      "from": "Bãi Trước Vũng Tàu (TP. Vũng Tàu)",
-      "to": "Sài Gòn (Quận 7 / Phú Mỹ Hưng - Cao tốc Long Thành)",
-      "routeCategory": "Tuyến Vũng Tàu",
-      "direction": "province_to_sg",
-      "hometown": "Bà Rịa - Vũng Tàu",
-      "date": "Ngày mai",
-      "timeSlot": "14:00-15:00",
-      "timeSlotLabel": "14:00 – 15:00",
-      "carType": "Kia Carnival (Xe 7 chỗ VIP)",
-      "capacity": 6,
-      "availableSeats": 4,
-      "price": 150000,
-      "basePricePerSeat": 150000,
-      "depositPerSeat": 0,
-      "carCategory": "family_car",
-      "isVip": true,
-      "rating": 4.97,
-      "completedCount": 210,
-      "perks": [
-        "Xe VIP thương gia",
-        "Không khói thuốc",
-        "Trọn gói vé cầu đường"
-      ],
-      "hasCarPhotos": true,
-      "carPhotos": [
-        {
-          "angle": "front",
-          "label": "Góc Trước (Đầu xe)",
-          "url": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
-          "caption": "Đầu xe Mitsubishi Xpander sáng bóng, đèn LED hiện đại"
-        },
-        {
-          "angle": "back",
-          "label": "Góc Sau (Đuôi xe & Cốp)",
-          "url": "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80",
-          "caption": "Đuôi xe sạch sẽ, có gắn camera lùi"
-        },
-        {
-          "angle": "side",
-          "label": "Góc Thân xe (Bên hông)",
-          "url": "https://images.unsplash.com/photo-1509000000103-7e6692767b70?auto=format&fit=crop&w=800&q=80",
-          "caption": "Thân xe nguyên bản màu trắng gia đình, không vết xước"
-        },
-        {
-          "angle": "interior",
-          "label": "Nội thất & Ghế ngồi",
-          "url": "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80",
-          "caption": "Ghế bọc da sạch sẽ, 2 giàn lạnh độc lập thơm mát"
-        },
-        {
-          "angle": "trunk",
-          "label": "Khoang cốp để đồ",
-          "url": "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800&q=80",
-          "caption": "Cốp xe rộng rãi, chứa thoải mái 2-3 vali lớn"
-        }
-      ],
-      "notes": "Xe Carnival rộng rãi bậc nhất, phù hợp gia đình có người lớn tuổi hoặc trẻ em.",
-      "createdAt": 1789012662372
+      "createdAt": 1789174938911
     },
     {
       "id": "DRV-105",
@@ -635,7 +533,7 @@
         }
       ],
       "notes": "Đi làm việc Sài Gòn mỗi tuần, xe nhỏ gọn sạch sẽ.",
-      "createdAt": 1788994662372
+      "createdAt": 1789171338911
     }
   ],
   "passengerRequests": [
@@ -660,7 +558,7 @@
       "expectedPrice": 360000,
       "depositPerSeat": 0,
       "notes": "Hai mẹ con đi khám bệnh Chợ Rẫy, xin ngồi ghế trước hoặc hàng 2 chống say xe.",
-      "createdAt": 1789005462372
+      "createdAt": 1789182138911
     },
     {
       "id": "REQ-202",
@@ -683,33 +581,77 @@
       "expectedPrice": 180000,
       "depositPerSeat": 0,
       "notes": "Tan sở về quê cuối tuần, có 1 ba lô gọn nhẹ.",
-      "createdAt": 1789009062372
-    },
-    {
-      "id": "REQ-203",
-      "maskedCode": "KX-203",
-      "type": "passenger_request",
-      "status": "open",
-      "phoneReal": "0900000014",
-      "userId": "USR-0900000014",
-      "publicName": "Khách KX-203",
-      "from": "Quận 7 / Phú Mỹ Hưng (Sài Gòn)",
-      "to": "Bãi Sau - Vũng Tàu",
-      "routeCategory": "Tuyến Vũng Tàu",
-      "direction": "sg_to_province",
-      "date": "Ngày mai",
-      "timeSlot": "08:00-09:30",
-      "timeSlotLabel": "08:00 – 09:30 Sáng",
-      "seatsNeeded": 3,
-      "seats": 3,
-      "price": 450000,
-      "expectedPrice": 450000,
-      "depositPerSeat": 0,
-      "notes": "Đi nghỉ mát gia đình 3 người, tìm xe 7 chỗ rộng rãi đón tại chung cư.",
-      "createdAt": 1789001862372
+      "createdAt": 1789185738911
     }
   ],
-  "bookings": [],
+  "bookings": [
+    {
+      "escrowId": "ESC-ZALO-483-01",
+      "tripId": "DRV-2928",
+      "tripMaskedCode": "CX-483",
+      "status": "zalo_active",
+      "commitmentType": "zalo_direct",
+      "partyRole": "Chủ xe kết nối Khách",
+      "contactName": "Văn Long",
+      "contactPhone": "0900.000.018",
+      "driverPhone": "0984883750",
+      "driverName": "Nguyễn Thành Huỳnh",
+      "seats": 1,
+      "totalDeal": 150000,
+      "paidToEscrow": 0,
+      "remainingCash": 150000,
+      "from": "trung tâm hành chính Tân Khai, Hớn Quản, Bình Phước",
+      "to": "Đường Cống Quỳnh (Quận 1)",
+      "timeSlot": "16:00-18:00",
+      "pickupNote": "Đón tại cổng Chợ Tân Khai đúng 16:15",
+      "createdAt": "Hôm nay, 14:20"
+    },
+    {
+      "escrowId": "ESC-PAID-108-02",
+      "tripId": "DRV-0984-MORNING",
+      "tripMaskedCode": "CX-BP108",
+      "status": "escrow_paid",
+      "commitmentType": "escrow_deposit",
+      "partyRole": "Chủ xe kết nối Khách",
+      "contactName": "Chị Lan Bình Phước",
+      "contactPhone": "0900.000.025",
+      "driverPhone": "0984883750",
+      "driverName": "Nguyễn Thành Huỳnh",
+      "seats": 2,
+      "depositAmount": 100000,
+      "totalDeal": 360000,
+      "paidToEscrow": 100000,
+      "remainingCash": 260000,
+      "from": "Bù Đốp (Cây xăng Petrolimex 17, QL13)",
+      "to": "Sài Gòn (Ngã 4 Hàng Xanh)",
+      "timeSlot": "05:00-07:00",
+      "pickupNote": "Đón tại ngã 3 Lộc Tấn lúc 05:30",
+      "createdAt": "Hôm nay, 15:00"
+    },
+    {
+      "escrowId": "ESC-DONE-110-03",
+      "tripId": "DRV-0984-PAST",
+      "tripMaskedCode": "CX-CT110",
+      "status": "completed",
+      "commitmentType": "zalo_direct",
+      "partyRole": "Chủ xe kết nối Khách",
+      "contactName": "Bác Tuấn",
+      "contactPhone": "0900.000.026",
+      "driverPhone": "0984883750",
+      "driverName": "Nguyễn Thành Huỳnh",
+      "seats": 1,
+      "totalDeal": 140000,
+      "from": "Chợ Chơn Thành (Bình Phước)",
+      "to": "Sân bay Tân Sơn Nhất",
+      "timeSlot": "08:00-10:00",
+      "completedAt": "2026-09-11T04:02:18.912Z",
+      "feedback": {
+        "rating": 5,
+        "review": "Chủ xe lái xe rất êm ái, xe gia đình sạch sẽ, không mùi thuốc lá, tới sân bay kịp giờ check-in!"
+      },
+      "createdAt": "Hôm qua"
+    }
+  ],
   "users": [
     {
       "id": "USR-0984883750",
@@ -724,7 +666,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-09-01T08:00:00.000Z",
-      "updatedAt": "2026-09-10T04:57:42.372Z",
+      "updatedAt": "2026-09-12T06:02:18.911Z",
       "email": "huynh.nguyen@carmate.vn"
     },
     {
@@ -740,7 +682,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-08-15T08:00:00.000Z",
-      "updatedAt": "2026-09-10T04:57:42.372Z"
+      "updatedAt": "2026-09-12T06:02:18.911Z"
     },
     {
       "id": "USR-0900000013",
@@ -755,7 +697,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-08-20T08:00:00.000Z",
-      "updatedAt": "2026-09-10T04:57:42.372Z"
+      "updatedAt": "2026-09-12T06:02:18.911Z"
     },
     {
       "id": "USR-0900000018",
@@ -770,7 +712,7 @@
       "isGplxVerified": 0,
       "isBanned": 0,
       "createdAt": "2026-09-02T08:00:00.000Z",
-      "updatedAt": "2026-09-10T04:57:42.372Z"
+      "updatedAt": "2026-09-12T06:02:18.911Z"
     }
   ]
 }

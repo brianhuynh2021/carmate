@@ -41,6 +41,7 @@ import {
   findNearestVirtualHub,
   calculateDistanceKm,
   FIXED_CORRIDOR_COACH_SCHEDULES,
+  hasVerifiedHotline,
   UNHAPPY_CASE_CODES,
   getDefaultCorridor,
   getEndpointHubs
@@ -2289,7 +2290,7 @@ export default function StationRiderView({
                       <h4 className="text-xs font-bold text-white">{bus.operator}</h4>
                     </div>
                     <span className="text-xs font-mono font-black text-amber-400">
-                      {formatVND(bus.ticketPrice)}
+                      {bus.ticketPrice ? formatVND(bus.ticketPrice) : 'Hỏi giá tại xe'}
                     </span>
                   </div>
 
@@ -2301,18 +2302,26 @@ export default function StationRiderView({
                   </div>
 
                   <p className="text-[11px] text-slate-400 italic">
-                    💡 {bus.notes}
+                    💡 {bus.guidance || bus.notes}
                   </p>
 
-                  <div className="pt-1 flex items-center justify-between">
-                    <a
-                      href={`tel:${bus.hotline.replace(/\s+/g, '')}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-mono font-bold text-emerald-300 transition-all"
-                    >
-                      <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Gọi Hotline: {bus.hotline}</span>
-                    </a>
-                    <span className="text-[10px] font-mono text-slate-500">{t('station.pickupAlongQl13')}</span>
+                  <div className="pt-1 flex items-center justify-between gap-2">
+                    {/* Chỉ hiện nút gọi khi số ĐÃ được kiểm chứng. Số bịa gọi ra
+                        không ai nghe còn tệ hơn nhiều so với không đưa số nào. */}
+                    {hasVerifiedHotline(bus) ? (
+                      <a
+                        href={`tel:${String(bus.hotline).replace(/\s+/g, '')}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-mono font-bold text-emerald-300 transition-all"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Gọi Hotline: {bus.hotline}</span>
+                      </a>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        Vẫy xe trực tiếp tại điểm đón
+                      </span>
+                    )}
+                    <span className="text-[10px] font-mono text-slate-500 shrink-0">{t('station.pickupAlongQl13')}</span>
                   </div>
                 </div>
               ))}

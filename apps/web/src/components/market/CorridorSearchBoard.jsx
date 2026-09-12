@@ -9,7 +9,7 @@ import {
   getHubEndpoint,
   getFixedSegmentTariff,
   formatVND,
-  TIME_SLOTS
+  buildDepartureChips
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import api from '../../api/client.js';
@@ -142,8 +142,15 @@ export default function CorridorSearchBoard({
     }
   }, [fromHubId, toHubId, corridor.dataKey]);
 
-  // ── Giờ muốn đi ────────────────────────────────────────────────────────
-  const [timeSlot, setTimeSlot] = useState('all');
+  // ── Thời gian khởi hành: DỮ LIỆU CẤP 1 ────────────────────────────────
+  // Ngang hàng Nơi đi / Nơi đến, không phải một dòng phụ. Mặc định chọn sẵn
+  // khung gần nhất còn kịp đặt, để khách không phải nghĩ mà vẫn ra kết quả đúng.
+  const departureChips = useMemo(() => buildDepartureChips({ limit: 4 }), []);
+  const [chipId, setChipId] = useState(() => departureChips[0]?.id || null);
+  const selectedChip = useMemo(
+    () => departureChips.find((c) => c.id === chipId) || departureChips[0] || null,
+    [departureChips, chipId]
+  );
 
   // ── Tìm chuyến: MA TRẬN KHE THỜI GIAN ─────────────────────────────────
   // Khách liên tỉnh cần thấy NGAY cả khung lân cận ±30 phút, không chỉ đúng
@@ -159,7 +166,7 @@ export default function CorridorSearchBoard({
       const res = await api.getTimeSlotMatrix({
         from: fromHubId,
         to: toHubId,
-        timeSlot,
+        timeSlot: selectedChip?.timeSlot || 'all',
         seats: 1,
         corridor: corridor.dataKey
       });
@@ -169,7 +176,7 @@ export default function CorridorSearchBoard({
     } finally {
       setIsSearching(false);
     }
-  }, [fromHubId, toHubId, timeSlot, corridor.dataKey]);
+  }, [fromHubId, toHubId, selectedChip, corridor.dataKey]);
 
   const swap = () => setHeading((h) => flipHeading(h));
 
@@ -268,28 +275,42 @@ export default function CorridorSearchBoard({
           </div>
         </div>
 
-        {/* Giờ muốn đi — không bắt buộc, nhưng chọn thì ma trận bám sát hơn */}
+        {/* ── THỜI GIAN KHỞI HÀNH: dữ liệu cấp 1, ngang hàng Nơi đi / Nơi đến ──
+            Chip chạm một phát thay cho lịch picker: người đi liên tỉnh thực tế
+            chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm". */}
         <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4 sm:mx-5" />
-        <div className="p-4 sm:p-5 flex items-center gap-3">
-          <Clock className="w-5 h-5 text-amber-500 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
-              {t('search.timeLabel')}
-            </label>
-            <select
-              value={timeSlot}
-              onChange={(e) => setTimeSlot(e.target.value)}
-              className="w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
-            >
-              <option value="all" className="bg-white dark:bg-slate-900">
-                {t('search.anyTime')}
-              </option>
-              {TIME_SLOTS.filter((s) => s.id !== 'all' && !s.isAlias).map((s) => (
-                <option key={s.id} value={s.id} className="bg-white dark:bg-slate-900">
-                  {s.short}
-                </option>
-              ))}
-            </select>
+        <div className="p-4 sm:p-5">
+          <label className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-2.5">
+            <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+            {t('search.departureLabel')}
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            {departureChips.map((chip) => {
+              const active = chip.id === selectedChip?.id;
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setChipId(chip.id)}
+                  aria-pressed={active}
+                  className={`h-auto min-h-[56px] px-3 py-2.5 rounded-2xl border text-left transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                    active
+                      ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:border-[#0071e3]/50'
+                  }`}
+                >
+                  <span className="block text-xs font-bold truncate">{chip.label}</span>
+                  <span
+                    className={`block text-[10px] font-mono truncate ${
+                      active ? 'text-white/75' : 'text-slate-400'
+                    }`}
+                  >
+                    {chip.dayLabel} · {chip.hint}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -316,7 +337,7 @@ export default function CorridorSearchBoard({
             ) : (
               <Search className="w-4 h-4 relative" />
             )}
-            <span className="relative">{isSearching ? t('search.searching') : t('search.findNow')}</span>
+            <span className="relative">{isSearching ? t('search.searching') : t('search.findTrips')}</span>
           </button>
 
           {/* Giá hiện lặng lẽ dưới nút — kết quả, không phải thông báo */}
@@ -362,6 +383,61 @@ export default function CorridorSearchBoard({
             <p className="px-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
               {t('search.waitingAtHub', { n: matrix.station.waitingCount })}
             </p>
+          )}
+
+          {/* TRẠM ĐÓN NHÂN BẢN HOÁ: mốc nhận diện + tiện ích + lời dặn an toàn.
+              Khách phải biết mình sẽ đứng ở chỗ như thế nào TRƯỚC khi quyết định,
+              nhất là với chuyến 4 giờ sáng. */}
+          {matrix.origin?.landmark && (
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] space-y-1.5">
+              <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 min-w-0">
+                <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="truncate">{matrix.origin.shortName}</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {matrix.origin.landmark}
+              </p>
+              {matrix.origin.amenities?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {matrix.origin.amenities.map((a) => (
+                    <span
+                      key={a.id}
+                      className="px-2 py-0.5 rounded-full bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 text-[10px] text-slate-600 dark:text-slate-300"
+                    >
+                      {a.icon} {a.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {matrix.origin.safetyNote && (
+                <p className="text-[10px] text-slate-400 italic pt-0.5">{matrix.origin.safetyNote}</p>
+              )}
+            </div>
+          )}
+
+          {/* KHUNG GIỜ CHƯA CÓ AI MỞ CHUYẾN — nói thẳng, kèm lối đi tiếp.
+              Không bao giờ để màn hình trống hay báo cụt "không có xe": nhu cầu
+              đăng ký ở đây chính là thứ kéo chủ xe vào mở chuyến. */}
+          {matrix.counts.confirmed === 0 && matrix.counts.forming === 0 && (
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-dashed border-slate-300 dark:border-white/15 space-y-2.5">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t('search.noDriverInWindow')}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {selectedChip
+                  ? `${selectedChip.dayLabel} · ${selectedChip.label} (${selectedChip.hint})`
+                  : ''}
+                {' — '}
+                Đăng ký nhu cầu để chủ xe trên tuyến nhìn thấy và mở chuyến cho khung giờ này.
+              </p>
+              <button
+                type="button"
+                onClick={() => onOpenIntentModal?.(role, fromHubId)}
+                className="w-full h-11 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold cursor-pointer active:scale-[0.99] transition-all duration-150"
+              >
+                {t('search.registerWindow')}
+              </button>
+            </div>
           )}
 
           {matrix.slots.map((slot, idx) => (
@@ -419,27 +495,30 @@ export default function CorridorSearchBoard({
  * mắt khách phải rơi vào thứ đáng tin nhất trước tiên.
  */
 function SlotCard({ slot, t, onAct }) {
+  // Màu sắc bám theo CHỈ SỐ AN TÂM, không bám theo tầng kỹ thuật: khách quan tâm
+  // "tôi có chắc đi được không", chứ không quan tâm dữ liệu đến từ nguồn nào.
+  const level = slot.assurance?.level;
   const tone =
-    slot.tier === 'CONFIRMED'
+    level === 'GUARANTEED'
       ? {
           ring: 'border-emerald-300 dark:border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-500/[0.07]',
           chip: 'bg-emerald-500 text-white',
-          label: t('search.tierConfirmed'),
+          label: slot.assurance?.label || t('search.tierConfirmed'),
           Icon: Zap,
           btn: 'bg-emerald-600 hover:bg-emerald-500 text-white'
         }
-      : slot.tier === 'FORMING'
+      : level === 'COMMUNITY'
         ? {
             ring: 'border-[#0071e3]/40 bg-[#0071e3]/[0.05]',
             chip: 'bg-[#0071e3] text-white',
-            label: t('search.tierForming'),
+            label: slot.assurance?.label || t('search.tierForming'),
             Icon: Navigation,
             btn: 'bg-[#0071e3] hover:bg-[#0077ed] text-white'
           }
         : {
             ring: 'border-slate-200 dark:border-white/[0.08] bg-slate-50/60 dark:bg-white/[0.02]',
             chip: 'bg-slate-300 dark:bg-white/15 text-slate-700 dark:text-slate-200',
-            label: t('search.tierShadow'),
+            label: slot.assurance?.label || t('search.tierShadow'),
             Icon: Clock,
             btn: 'bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-800 dark:text-white'
           };
@@ -478,6 +557,14 @@ function SlotCard({ slot, t, onAct }) {
                 : slot.note}
             </span>
           </p>
+
+          {/* Lịch sử THẬT của chủ xe — khách tự nhìn số liệu mà quyết định,
+              thay vì phải tin một nhãn dán do hệ thống tự phong. */}
+          {slot.assurance?.reasons?.[0] && (
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              {slot.assurance.reasons[0]}
+            </p>
+          )}
         </div>
 
         {slot.pricePerSeat ? (
@@ -486,6 +573,12 @@ function SlotCard({ slot, t, onAct }) {
           </span>
         ) : null}
       </div>
+
+      {slot.promise && (
+        <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+          {slot.promise}
+        </p>
+      )}
 
       <button
         type="button"

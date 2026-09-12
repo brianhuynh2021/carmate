@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { AlertTriangle, Phone, Bus, X } from 'lucide-react';
-import { formatVND } from '@carmate/shared';
+import { AlertTriangle, Phone, Bus, MapPin, X } from 'lucide-react';
+import { formatVND, hasVerifiedHotline } from '@carmate/shared';
 import api from '../../api/client.js';
 
 /**
@@ -86,7 +86,7 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
         <div className="px-4 pb-4 space-y-2">
           <p className="text-[10px] font-mono uppercase tracking-wide text-amber-700/80 dark:text-amber-300/70 flex items-center gap-1.5">
             <Bus className="w-3 h-3" />
-            Xe khách tuyến QL13 gần bạn nhất
+            Phương án đi tiếp trên QL13
           </p>
 
           {lifebuoys.map((bus) => (
@@ -105,20 +105,30 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
                 ) : null}
               </div>
 
-              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                {bus.pickupTime} · {bus.frequency} · {bus.departureStation}
+              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                {bus.pickupTime} · {bus.frequency}
               </p>
 
-              {/* Số điện thoại là một liên kết gọi thẳng: lúc hoảng không ai muốn
-                  copy số rồi mở bàn phím quay số thủ công. */}
-              <a
-                href={`tel:${String(bus.hotline || '').replace(/\s/g, '')}`}
-                onClick={() => onShowToast?.(`Đang gọi ${bus.operator}…`)}
-                className="mt-2 w-full h-10 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                Gọi đặt vé ngay: {bus.hotline}
-              </a>
+              {/* Chỉ hiện nút gọi khi số ĐÃ được đội vận hành kiểm chứng. Khách
+                  bấm số đúng lúc hoảng nhất mà gặp số sai thì mất niềm tin vĩnh
+                  viễn — thà đưa chỉ dẫn tự làm được còn hơn một nút gọi vô vọng. */}
+              {hasVerifiedHotline(bus) ? (
+                <a
+                  href={`tel:${String(bus.hotline).replace(/\s/g, '')}`}
+                  onClick={() => onShowToast?.(`Đang gọi ${bus.operator}…`)}
+                  className="mt-2 w-full h-10 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  Gọi đặt vé ngay: {bus.hotline}
+                </a>
+              ) : (
+                <div className="mt-2 p-2.5 rounded-lg bg-amber-100/70 dark:bg-amber-500/10 flex items-start gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-amber-900 dark:text-amber-200/90 leading-relaxed">
+                    {bus.guidance || `Ra ${bus.departureStation} và vẫy xe hướng Sài Gòn.`}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
 

@@ -22,6 +22,9 @@
 
 import {
   getVirtualHubById,
+  describeHub,
+  computeAssurance,
+  getAssurancePromise,
   getFixedSegmentTariff,
   projectToCorridorFrenet,
   getStationStationKm,
@@ -30,7 +33,7 @@ import {
   parseTimeToMinutes,
   formatMinutesToTime
 } from '@carmate/shared';
-import { getTrips } from '../db/sqliteStore.js';
+import { getTrips, getUserByPhone } from '../db/sqliteStore.js';
 import { getActiveCockpitSessions, getStationQueue } from './stationQueueService.js';
 
 export const MATRIX_CONFIG = Object.freeze({
@@ -166,7 +169,23 @@ function tripServesSegment(trip, originS, destS) {
  * TẦNG 1 — CHUYẾN ĐÃ CÓ THẬT (🟢 CONFIRMED)
  * Đọc từ sàn chuyến đang mở, lọc theo hành lang, chặng và cửa sổ thời gian.
  */
-function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsNeeded, originS, destS }) {
+/**
+ * Đọc lịch sử thật của chủ xe để dựng chỉ số an tâm.
+ * Không có hồ sơ thì trả về null — KHÔNG bịa ra "100% đúng giờ" cho người lạ.
+ */
+function loadDriverHistory(trip) {
+  const phone = trip?.phoneReal || trip?.driverPhone;
+  if (!phone) return null;
+  const user = getUserByPhone(String(phone).replace(/\D/g, ''));
+  if (!user) return null;
+  return {
+    trustScore: Number(user.trustScore ?? 100),
+    completedTrips: Number(user.completedTrips ?? trip.completedCount ?? 0),
+    lateReports: Number(user.lateReports ?? 0)
+  };
+}
+
+function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsNeeded, originS, destS, backupCount = 0 }) {
   const trips = getTrips({ type: 'drivers', includeHidden: false });
 
   // Bản ghi chuyến dùng `availableSeats` (số ghế còn trống thực tế), còn `capacity`
@@ -192,8 +211,19 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
     })
     .map((t) => {
       const tripMinutes = slotStartMinutes(t.timeSlot || t.time);
+      const history = loadDriverHistory(t);
+      const assurance = computeAssurance({
+        baseCertainty: 1,
+        trustScore: history?.trustScore ?? Number(t.rating ? t.rating * 20 : 90),
+        completedTrips: history?.completedTrips ?? Number(t.completedCount || 0),
+        lateReports: history?.lateReports ?? 0,
+        backupCount
+      });
+      const label = tripMinutes != null ? formatMinutesToTime(tripMinutes) : t.timeSlot || t.time || '';
       return {
         tier: 'CONFIRMED',
+        assurance,
+        promise: getAssurancePromise(assurance, label),
         badge: '🟢',
         tripId: t.id,
         departureLabel: tripMinutes != null ? formatMinutesToTime(tripMinutes) : t.timeSlot || t.time || '',
@@ -223,7 +253,7 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
  * lăn bánh ở đâu trên trục 1D và tính bằng phân phối ngẫu nhiên xem nó sẽ tới
  * trạm đón lúc mấy giờ. Không phải lời hứa suông "chút nữa tới".
  */
-function collectFormingTrips({ originHubId, seatsNeeded, nowMs }) {
+function collectFormingTrips({ originHubId, seatsNeeded, nowMs, backupCount = 0 }) {
   const hubS = getStationStationKm(originHubId);
   if (hubS == null) return [];
 
@@ -254,9 +284,19 @@ function collectFormingTrips({ originHubId, seatsNeeded, nowMs }) {
     const arriveMs = nowMs + p80Seconds * 1000;
     const arriveDate = new Date(arriveMs);
 
+    const assurance = computeAssurance({
+      // Xe đang lăn bánh thật nhưng chưa chốt lệnh: nền thấp hơn chuyến đã xác nhận
+      baseCertainty: 0.8,
+      trustScore: 90,
+      completedTrips: 0,
+      lateReports: 0,
+      backupCount
+    });
+
     out.push({
       tier: 'FORMING',
       badge: '🔵',
+      assurance,
       tripId: session.tripId,
       departureLabel: `${String(arriveDate.getHours()).padStart(2, '0')}:${String(arriveDate.getMinutes()).padStart(2, '0')}`,
       departureMinutes: arriveDate.getHours() * 60 + arriveDate.getMinutes(),
@@ -307,6 +347,7 @@ function buildShadowSlots({ desiredMinutes, existingSlots, nowMs }) {
     out.push({
       tier: 'SHADOW',
       badge: '⚪',
+      assurance: computeAssurance({ baseCertainty: 0.35, trustScore: 0, backupCount: 0 }),
       tripId: null,
       departureLabel: formatMinutesToTime(slotMinutes),
       departureMinutes: slotMinutes,
@@ -357,19 +398,29 @@ export function buildTimeSlotMatrix({
   const originS = getStationStationKm(originHub.id);
   const destS = getStationStationKm(destHub.id);
 
+  // Đếm xe dự phòng THẬT trên hành lang: số xe đang lăn bánh còn đủ ghế. Đây là
+  // điều kiện bắt buộc để một khe được gắn nhãn "Chuyến đảm bảo" — không có xe
+  // đỡ phía sau thì không được phép hứa chắc với khách.
+  const backupCount = getActiveCockpitSessions().filter(
+    (s) => !s.isBanned && Number(s.seatsAvailable || 0) >= cleanSeats
+  ).length;
+
   const confirmed = collectConfirmedTrips({
     corridor,
     desiredMinutes,
     windowMinutes,
     seatsNeeded: cleanSeats,
     originS,
-    destS
+    destS,
+    backupCount
   });
 
   const forming = collectFormingTrips({
     originHubId: originHub.id,
     seatsNeeded: cleanSeats,
-    nowMs
+    nowMs,
+    // Xe dự phòng cho một khe FORMING là các xe KHÁC, trừ chính nó ra
+    backupCount: Math.max(0, backupCount - 1)
   });
 
   const realSlots = [...confirmed, ...forming];
@@ -387,8 +438,10 @@ export function buildTimeSlotMatrix({
 
   return {
     success: true,
-    origin: { id: originHub.id, name: originHub.name, shortName: originHub.shortName || originHub.name },
-    destination: { id: destHub.id, name: destHub.name, shortName: destHub.shortName || destHub.name },
+    // Trả về mô tả "nhân bản hoá": mốc nhận diện, tiện ích, lời dặn an toàn —
+    // thứ khách thật sự cần khi phải đứng đợi ven quốc lộ lúc 4 giờ sáng.
+    origin: describeHub(originHub),
+    destination: describeHub(destHub),
     corridor,
     seatsNeeded: cleanSeats,
     desiredTimeLabel: desiredMinutes != null ? formatMinutesToTime(desiredMinutes) : null,
@@ -400,6 +453,7 @@ export function buildTimeSlotMatrix({
       waitingCount: queue.waitingCount,
       estimatedWaitMinutes: queue.estimatedWaitMinutes
     },
+    backupCount,
     slots: [...confirmed, ...forming, ...shadow],
     counts: {
       confirmed: confirmed.length,

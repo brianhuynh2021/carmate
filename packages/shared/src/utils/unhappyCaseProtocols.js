@@ -46,30 +46,45 @@ export const MOTION_SICKNESS_POLICY = Object.freeze({
   obligationText: 'Trường hợp nôn ói làm bẩn nội thất xe, người đi cùng có nghĩa vụ bồi hoàn chi phí dọn dẹp vệ sinh thực tế theo hóa đơn tiệm chăm sóc xe.'
 });
 
+/**
+ * PHAO CỨU SINH CHUYỂN TIẾP TRÊN TRỤC QL13
+ *
+ * KHÔNG ghi số điện thoại nào chưa được xác minh. Khách bấm số này đúng vào lúc
+ * hoảng nhất — một số sai, số đổi chủ hay số không có thật còn tệ hơn nhiều so
+ * với việc không đưa số nào: nó đốt sạch niềm tin đúng khoảnh khắc quyết định.
+ *
+ * Cho tới khi đội vận hành gọi kiểm chứng từng số và điền vào `hotline`, hệ
+ * thống chỉ đưa ra chỉ dẫn HÀNH ĐỘNG THẬT mà khách tự làm được ngay tại chỗ:
+ * đứng đúng vị trí nào trên QL13, vẫy xe nào, nhận biết ra sao.
+ */
 export const EMERGENCY_TRANSIT_LIFEBUOYS = Object.freeze([
   {
     id: 'bus-15',
     name: 'Tuyến Buýt 15 (Chợ Tân Khai ➔ Bến xe Bình Long)',
     frequency: '15 phút/chuyến',
-    contact: '0271.3888.999'
+    hotline: null,
+    guidance: 'Ra mặt tiền QL13 trước chợ Tân Khai, vẫy trực tiếp khi xe buýt trờ tới.'
   },
   {
     id: 'bus-ql13',
     name: 'Tuyến Buýt QL13 (Bến Cát ➔ Bến xe Miền Đông mới)',
     frequency: '20 phút/chuyến',
-    contact: '1900.0123'
+    hotline: null,
+    guidance: 'Đứng tại trạm buýt gần nhất trên QL13 hướng về Sài Gòn.'
   },
   {
     id: 'coach-intercity',
-    name: 'Xe khách liên tỉnh QL13 (Kumho Samco / Thành Công)',
-    frequency: 'Chạy liên tục dọc trục QL13 (vẫy đón tại cây xăng)',
-    contact: '1900.6079'
+    name: 'Xe khách liên tỉnh chạy dọc QL13',
+    frequency: 'Chạy liên tục trong ngày',
+    hotline: null,
+    guidance: 'Đứng trong sân cây xăng mặt tiền QL13 (có mái che, đủ sáng) và vẫy xe khách hướng Sài Gòn.'
   },
   {
-    id: 'rescue-towing',
-    name: 'Tổng đài Cứu hộ Giao thông & Xe kéo Bình Phước - Bình Dương',
+    id: 'emergency-113',
+    name: 'Cảnh sát 113 / Cứu thương 115',
     frequency: 'Trực 24/7',
-    contact: '0903.116.116'
+    hotline: '113',
+    guidance: 'Chỉ dùng khi có tình huống mất an toàn cá nhân. Đây là số công khai toàn quốc.'
   }
 ]);
 
@@ -201,58 +216,85 @@ export function evaluateIncidentSanctions(incidentType, _context = {}) {
 }
 
 /**
- * Lịch xe khách tuyến cố định dọc hành lang QL13 (Physical Transit Lifebuoys)
+ * LỊCH XE KHÁCH TUYẾN CỐ ĐỊNH DỌC HÀNH LANG QL13
+ *
+ * BẤT BIẾN: `hotline` chỉ được điền khi đội vận hành đã GỌI KIỂM CHỨNG số đó.
+ * Trước đây danh sách này chứa những số tổng đài không xác minh; khách bấm gọi
+ * đúng lúc hoảng nhất mà gặp số sai thì mất niềm tin vĩnh viễn — tệ hơn hẳn so
+ * với việc thành thật nói "chưa có số".
+ *
+ * Giá vé cũng vậy: `ticketPrice = null` nghĩa là chưa xác minh, giao diện phải
+ * hiển thị "hỏi giá tại xe" chứ không được bịa ra một con số cụ thể.
+ *
+ * Giá trị thật của danh sách này nằm ở `guidance`: chỉ dẫn khách đứng ở ĐÂU và
+ * làm GÌ để bắt được xe — điều khách tự thực hiện được ngay, không cần gọi ai.
  */
 export const FIXED_CORRIDOR_COACH_SCHEDULES = Object.freeze([
   {
-    id: 'thanh-cong-0445',
-    operator: 'Xe khách Thành Công (Tuyến QL13)',
-    departureStation: 'Cây xăng Petrolimex Tân Khai',
-    destinationStation: 'Bến xe Miền Đông / CMT8',
+    id: 'coach-tan-khai',
+    operator: 'Xe khách liên tỉnh QL13 (đón tại Tân Khai)',
+    departureStation: 'Cây xăng Petrolimex Tân Khai (mặt tiền QL13)',
+    destinationStation: 'Bến xe Miền Đông / trung tâm TP.HCM',
     pickupTime: '04:45',
     estimatedArrival: '07:30',
-    ticketPrice: 90000,
-    hotline: '1900 6962',
-    frequency: '30 phút/chuyến',
-    notes: 'Có thể đứng tại cây xăng vẫy trực tiếp hoặc gọi hotline đón trước 15 phút.'
+    ticketPrice: null,
+    hotline: null,
+    frequency: 'Nhiều chuyến trong buổi sáng',
+    guidance:
+      'Đứng trong sân cây xăng Petrolimex Tân Khai, sát mặt tiền QL13 hướng Sài Gòn, vẫy xe khách khi xe trờ tới. Khu vực có mái che và đèn sáng ban đêm.',
+    verified: false
   },
   {
-    id: 'kumho-samco-0500',
-    operator: 'Kumho Samco Buslines (QL13 Express)',
-    departureStation: 'Ngã tư Chơn Thành / QL13',
+    id: 'coach-chon-thanh',
+    operator: 'Xe khách liên tỉnh QL13 (đón tại Chơn Thành)',
+    departureStation: 'Ngã tư Chơn Thành (mặt tiền QL13)',
     destinationStation: 'Bến xe Miền Đông (cũ & mới)',
     pickupTime: '05:00',
     estimatedArrival: '07:15',
-    ticketPrice: 95000,
-    hotline: '1900 6065',
-    frequency: '20 phút/chuyến',
-    notes: 'Xe giường nằm cao cấp, đón dọc mặt tiền QL13.'
+    ticketPrice: null,
+    hotline: null,
+    frequency: 'Nhiều chuyến trong buổi sáng',
+    guidance:
+      'Ra ngã tư Chơn Thành, đứng phía làn đường hướng về Sài Gòn. Đây là nút giao đông xe khách nhất trên trục QL13.',
+    verified: false
   },
   {
     id: 'bus-15-morning',
     operator: 'Tuyến Xe Buýt 15 (Bình Long ➔ Thủ Dầu Một)',
-    departureStation: 'Mặt tiền chợ Tân Khai / Cây xăng QL13',
+    departureStation: 'Mặt tiền chợ Tân Khai / cây xăng QL13',
     destinationStation: 'Bến xe Khách Tỉnh Bình Dương (Thủ Dầu Một)',
     pickupTime: '05:15',
     estimatedArrival: '07:00',
-    ticketPrice: 35000,
-    hotline: '0271 3888 999',
-    frequency: '15 phút/chuyến',
-    notes: 'Phương án cứu sinh công cộng giá rẻ, kết nối tiếp buýt nhanh vào trung tâm TP.HCM.'
+    ticketPrice: null,
+    hotline: null,
+    frequency: 'Khoảng 15 phút/chuyến',
+    guidance:
+      'Phương án công cộng giá rẻ. Đứng tại trạm buýt trước chợ Tân Khai; tới Thủ Dầu Một có thể nối tiếp buýt vào trung tâm TP.HCM.',
+    verified: false
   },
   {
-    id: 'petro-binh-phuoc-0530',
-    operator: 'Petro Bình Phước Limousine',
-    departureStation: 'Trạm thu phí Bàu Bàng',
-    destinationStation: 'Sân bay Tân Sơn Nhất / Quận 1',
+    id: 'coach-bau-bang',
+    operator: 'Xe khách liên tỉnh QL13 (đón tại Bàu Bàng)',
+    departureStation: 'Khu vực KCN Bàu Bàng (mặt tiền QL13)',
+    destinationStation: 'Sân bay Tân Sơn Nhất / trung tâm TP.HCM',
     pickupTime: '05:30',
     estimatedArrival: '07:15',
-    ticketPrice: 140000,
-    hotline: '0271 3888 888',
-    frequency: '60 phút/chuyến',
-    notes: 'Xe Limousine VIP 9 chỗ đón dọc hành lang QL13.'
+    ticketPrice: null,
+    hotline: null,
+    frequency: 'Nhiều chuyến trong ngày',
+    guidance:
+      'Đứng mặt tiền QL13 khu vực KCN Bàu Bàng hướng Sài Gòn. Đông công nhân chờ xe vào sáng sớm nên rất dễ bắt.',
+    verified: false
   }
 ]);
+
+/**
+ * Chỉ những phương án đã xác minh mới được phép hiển thị số điện thoại.
+ * Dùng hàm này ở mọi nơi render danh sách, đừng đọc thẳng `hotline`.
+ */
+export function hasVerifiedHotline(option) {
+  return Boolean(option?.verified && option?.hotline);
+}
 
 /**
  * Tính toán xác suất bùng chuyến / trễ hẹn sớm của Chủ xe:

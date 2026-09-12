@@ -174,7 +174,13 @@ const afternoon = pickRelevantLifebuoys({ date: '2026-09-20', timeSlot: '16:00' 
 ok(morning.length > 0 && afternoon.length > 0, 'Giờ nào cũng có phương án, không bao giờ trả danh sách rỗng');
 ok(morning[0].id !== afternoon[0].id || morning.length === 1,
    'Xếp theo độ gần giờ: chuyến sáng và chuyến chiều gợi ý khác nhau');
-ok(morning.every((b) => b.hotline), 'Mọi phương án đều có hotline gọi được ngay');
+// Hotline chưa kiểm chứng thì để null; bù lại phải có chỉ dẫn khách tự làm được.
+// Một số điện thoại bịa, gọi đúng lúc hoảng nhất mà không ai nghe, còn tệ hơn
+// nhiều so với việc thành thật nói "chưa có số, hãy ra đây và vẫy xe".
+ok(morning.every((b) => b.guidance && b.guidance.length > 20),
+   'Mọi phương án đều có chỉ dẫn thực địa cụ thể thay cho số điện thoại bịa');
+ok(morning.every((b) => b.hotline === null || b.verified === true),
+   'Không phương án nào mang số điện thoại chưa được kiểm chứng');
 
 db.prepare("DELETE FROM bookings WHERE escrowId LIKE 'TEST-DEP-%'").run();
 resetAllStationData();
