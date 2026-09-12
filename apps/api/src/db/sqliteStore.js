@@ -1037,8 +1037,9 @@ export function getUserByPhone(phone) {
   const database = getRawDB();
   const clean = cleanPhoneNumber(phone);
   if (!clean) return null;
+  const norm = normalizePhoneNumber(phone) || clean;
 
-  const row = database.prepare('SELECT payload FROM users WHERE phone = ?').get(clean);
+  const row = database.prepare('SELECT payload FROM users WHERE phone = ? OR phone = ?').get(clean, norm);
   if (!row) return null;
 
   try {

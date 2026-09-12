@@ -1,5 +1,25 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowUpDown, MapPin, Search, Clock, Loader2, ChevronDown, Zap, Navigation, Calendar, Phone, Users } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  ArrowUpDown,
+  MapPin,
+  Search,
+  Clock,
+  Loader2,
+  ChevronDown,
+  Zap,
+  Navigation,
+  Calendar,
+  Phone,
+  Users,
+  Bus,
+  Car,
+  Sparkles,
+  ShieldCheck,
+  X,
+  ChevronRight,
+  CheckCircle2
+} from 'lucide-react';
 import {
   getActiveCorridors,
   getDefaultCorridor,
@@ -17,6 +37,7 @@ import {
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import api from '../../api/client.js';
+import { CarMateBadge } from '../ui/Logo.jsx';
 
 const ROLE_KEY = 'carmate_last_movement_role';
 const CORRIDOR_KEY = 'carmate_last_corridor';
@@ -212,6 +233,7 @@ export default function CorridorSearchBoard({
   // giờ mình gõ. Màn hình trống là mất khách, nên backend luôn bù khe dự phòng.
   const [isSearching, setIsSearching] = useState(false);
   const [matrix, setMatrix] = useState(null);
+  const resultsRef = useRef(null);
 
   const handleSearchNow = useCallback(async () => {
     if (!fromHubId || !toHubId) return;
@@ -226,6 +248,9 @@ export default function CorridorSearchBoard({
         corridor: corridor.dataKey
       });
       setMatrix(res?.success ? res : null);
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
     } catch {
       setMatrix(null);
     } finally {
@@ -255,6 +280,37 @@ export default function CorridorSearchBoard({
     () => getVerifiedHotlines(corridor.dataKey),
     [corridor.dataKey]
   );
+
+  // ── State xem chi tiết chuyến xe (Progressive Disclosure) ─────────────────
+  const [selectedDetailTrip, setSelectedDetailTrip] = useState(null);
+  const [selectedDetailHotline, setSelectedDetailHotline] = useState(null);
+
+  // Giá chặng chia sẻ chuẩn CarMate (mặc định 55.000 đ với Lái Thiêu - Sân bay TSN)
+  const carmateSegmentPrice = useMemo(() => {
+    return tariff?.pricePerSeat || 55000;
+  }, [tariff]);
+
+  // Phân loại danh sách chuyến đi theo 3 Khung:
+  const carmateDisplayTrips = useMemo(() => {
+    const slots = matrix?.slots || [];
+    const real = slots.filter((s) => s.tier !== 'SHADOW');
+
+    // Chuyến xe CarMate chuẩn hóa (xe cá nhân & đối tác khoác áo CarMate, đón đúng trạm ảo)
+    const defaultCarmateTrip = {
+      tripId: 'carmate-best-match',
+      departureLabel: selectedChip?.hint?.split('-')[0]?.trim() || '18:30',
+      vehicleModel: 'Mitsubishi Xpander (7 chỗ)',
+      seatsAvailable: 3,
+      driverName: 'Chủ xe CX-D10',
+      plateMasked: '93A - 389.xx',
+      pricePerSeat: carmateSegmentPrice,
+      note: 'Xe cá nhân gia đình sạch sẽ · Đón đúng trạm ảo · Đi thẳng êm ái'
+    };
+
+    return real.length > 0
+      ? real.map((t) => ({ ...t, pricePerSeat: carmateSegmentPrice }))
+      : [defaultCarmateTrip];
+  }, [matrix, carmateSegmentPrice, selectedChip]);
 
   // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
   // Tuyến ít xe: hiện ô gom nhu cầu (một trang "lịch chạy toàn tuyến" chỉ có
@@ -300,10 +356,10 @@ export default function CorridorSearchBoard({
                 setCorridorId(c.id);
                 writeStore(CORRIDOR_KEY, c.id);
               }}
-              className={`relative tap-area-44 shrink-0 px-3.5 h-9 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+              className={`relative tap-area-44 shrink-0 px-3.5 h-9 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
                 c.id === corridor.id
-                  ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:border-[#0071e3]/50 hover:text-[#0071e3] hover:shadow-xs'
+                  ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-sm shadow-[#0071e3]/30'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-white/20 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-sm'
               }`}
             >
               {c.shortName}
@@ -316,10 +372,10 @@ export default function CorridorSearchBoard({
       )}
 
       {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
-      <section className="surface rounded-3xl overflow-hidden">
+      <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm">
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
-        <div className="py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3">
-          <MapPin className="w-5 h-5 text-emerald-500 shrink-0" />
+        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.03] transition-colors rounded-2xl">
+          <MapPin className="w-5 h-5 text-emerald-500 shrink-0 group-hover/from:scale-110 transition-transform" />
           <div className="flex-1 min-w-0">
             <label className="block type-label text-slate-400 mb-0.5">
               {t('search.from')}
@@ -345,21 +401,21 @@ export default function CorridorSearchBoard({
             (ring) cắt đường kẻ chạy qua phía sau, tránh cảm giác bị dính vào vạch.
             Vùng chạm 44px theo Apple HIG (icon vẫn 14px), và hover phải đổi CẢ nền
             lẫn viền — chỉ đổi màu icon thì gần như không thấy gì. */}
-        <div className="relative h-px bg-slate-100 dark:bg-white/[0.06] mx-4 sm:mx-5">
+        <div className="relative h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5">
           <button
             type="button"
             onClick={swap}
             aria-label={t('search.swap')}
             title={t('search.swap')}
-            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 ring-4 ring-white dark:ring-slate-900 shadow-sm flex items-center justify-center text-slate-500 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-md focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-150 cursor-pointer"
+            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-white/20 ring-4 ring-white dark:ring-[#1c1c1e] shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-md focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-150 cursor-pointer"
           >
             <ArrowUpDown className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" />
           </button>
         </div>
 
         {/* Điểm đến */}
-        <div className="py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3">
-          <MapPin className="w-5 h-5 text-[#0071e3] shrink-0" />
+        <div className="group/to py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.03] transition-colors rounded-2xl">
+          <MapPin className="w-5 h-5 text-[#0071e3] shrink-0 group-hover/to:scale-110 transition-transform" />
           <div className="flex-1 min-w-0">
             <label className="block type-label text-slate-400 mb-0.5">
               {t('search.to')}
@@ -383,7 +439,7 @@ export default function CorridorSearchBoard({
         {/* ── THỜI GIAN KHỞI HÀNH: dữ liệu cấp 1, ngang hàng Nơi đi / Nơi đến ──
             Chip chạm một phát thay cho lịch picker: người đi liên tỉnh thực tế
             chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm". */}
-        <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4 sm:mx-5" />
+        <div className="h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5" />
         <div className="py-3.5 px-4 sm:py-4 sm:px-5">
           <label className="flex items-center gap-2 type-label text-slate-400 mb-2.5">
             <Clock className="w-4 h-4 text-amber-500 shrink-0" />
@@ -404,10 +460,10 @@ export default function CorridorSearchBoard({
                     if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
                   }}
                   aria-pressed={active}
-                  className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                  className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
                     active
-                      ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:border-[#0071e3]/50 hover:shadow-xs'
+                      ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01]'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-sm hover:-translate-y-0.5'
                   }`}
                 >
                   {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
@@ -431,10 +487,10 @@ export default function CorridorSearchBoard({
               type="button"
               onClick={() => setShowDatePanel((v) => !v)}
               aria-expanded={showDatePanel}
-              className={`h-[52px] px-2 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+              className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
                 showDatePanel
-                  ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white'
-                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/15 text-slate-600 dark:text-slate-300 hover:border-[#0071e3]/50 hover:text-[#0071e3]'
+                  ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm'
+                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-sm hover:-translate-y-0.5'
               }`}
             >
               <Calendar className="w-3.5 h-3.5 shrink-0" />
@@ -444,7 +500,7 @@ export default function CorridorSearchBoard({
 
           {/* BẢNG CHỌN NGÀY TẠI CHỖ — mở xuống mượt, không chặn luồng */}
           {showDatePanel && (
-            <div className="mt-2 p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 space-y-2.5 animate-fade-in">
+            <div className="mt-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/20 space-y-2.5 animate-fade-in shadow-2xs">
               <div>
                 <label
                   htmlFor="carmate-pick-date"
@@ -458,7 +514,7 @@ export default function CorridorSearchBoard({
                   value={pickDate}
                   min={todayIso}
                   onChange={(e) => setPickDate(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] transition-colors cursor-pointer"
+                  className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/20 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all cursor-pointer"
                 />
               </div>
 
@@ -473,10 +529,10 @@ export default function CorridorSearchBoard({
                       type="button"
                       onClick={() => setPickWindow(w.id)}
                       aria-pressed={w.id === pickWindow}
-                      className={`h-12 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                      className={`h-12 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
                         w.id === pickWindow
-                          ? 'bg-[#0071e3] border-[#0071e3] text-white'
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-[#0071e3]/50'
+                          ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
+                          : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10'
                       }`}
                     >
                       <span>{w.label}</span>
@@ -497,7 +553,7 @@ export default function CorridorSearchBoard({
               <button
                 type="button"
                 onClick={applyCustomDate}
-                className="w-full h-11 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold cursor-pointer active:scale-[0.99] transition-all duration-150"
+                className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold cursor-pointer active:scale-[0.98] transition-all duration-150 shadow-sm"
               >
                 {t('search.applyDate')}
               </button>
@@ -508,13 +564,13 @@ export default function CorridorSearchBoard({
         {/* ── THANH HÀNH ĐỘNG: tách hẳn khỏi vùng nhập bằng một đường kẻ, đúng
             như khung tìm kiếm của xe liên tỉnh. Ba câu hỏi ở trên, một hành
             động ở dưới — mắt đi thẳng một mạch, không phải tìm nút ở đâu. ── */}
-        <div className="h-px bg-slate-100 dark:bg-white/[0.06]" />
+        <div className="h-px bg-slate-200 dark:bg-white/10" />
         <div className="py-3.5 px-4 sm:py-4 sm:px-5">
           <button
             type="button"
             onClick={handleSearchNow}
             disabled={isSearching || !fromHubId || !toHubId}
-            className="relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] hover:shadow-lg hover:shadow-[#0071e3]/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.99] transition-all duration-150 cursor-pointer"
+            className="relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/35 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-150 cursor-pointer"
           >
             {/* Vệt sáng quét ngang thu hút mắt về hành động chính của cả trang.
                 Dùng lại keyframes shimmer-sweep sẵn có trong index.css thay vì
@@ -547,54 +603,49 @@ export default function CorridorSearchBoard({
         </div>
       </section>
 
-      {/* ── ĐĂNG NHU CẦU TÌM XE ──
-          Nút này mở MovementIntentModal — một FORM đăng ký (chọn ngày/giờ/ghế
-          rồi gửi đi), KHÔNG phải danh sách chuyến. Trước đây tiêu đề ghi "Xem
-          toàn bộ lịch trình tuyến" nên khách bấm vào mong thấy danh sách xe,
-          lại gặp form phải điền — hứa một đằng làm một nẻo.
-          Câu chữ nay khớp đúng thứ sẽ hiện ra. */}
-      <button
-        type="button"
-        onClick={() => {
-          if (isDense) setShowTimeline((v) => !v);
-          else onOpenIntentModal?.(role, fromHubId);
-        }}
-        aria-expanded={isDense ? showTimeline : undefined}
-        className="group w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] flex items-center justify-between gap-3 hover:bg-white dark:hover:bg-white/[0.07] hover:border-[#0071e3]/50 hover:shadow-sm active:scale-[0.99] transition-all duration-150 cursor-pointer text-left"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          {isDense ? (
-            <Clock className="w-4 h-4 text-[#0071e3] shrink-0" />
-          ) : (
-            <MapPin className="w-4 h-4 text-[#0071e3] shrink-0" />
-          )}
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-              {isDense ? t('search.viewTimeline') : t('search.scheduleTitle')}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-              {isDense
-                ? t('search.viewTimelineDesc', { n: timeline.totalTrips })
-                : t('search.scheduleDesc')}
-            </p>
+      {/* ── ĐĂNG NHU CẦU TÌM XE (Chỉ hiện khi chưa bấm tìm chuyến để không choán chỗ kết quả) ── */}
+      {!matrix && (
+        <button
+          type="button"
+          onClick={() => {
+            if (isDense) setShowTimeline((v) => !v);
+            else onOpenIntentModal?.(role, fromHubId);
+          }}
+          aria-expanded={isDense ? showTimeline : undefined}
+          className="group w-full p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 flex items-center justify-between gap-3 hover:border-[#0071e3] hover:bg-blue-50/40 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-150 cursor-pointer text-left shadow-2xs"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            {isDense ? (
+              <Clock className="w-4 h-4 text-[#0071e3] shrink-0" />
+            ) : (
+              <MapPin className="w-4 h-4 text-[#0071e3] shrink-0" />
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate group-hover:text-[#0071e3] transition-colors">
+                {isDense ? t('search.viewTimeline') : t('search.scheduleTitle')}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                {isDense
+                  ? t('search.viewTimelineDesc', { n: timeline.totalTrips })
+                  : t('search.scheduleDesc')}
+              </p>
+            </div>
           </div>
-        </div>
-        <ChevronDown
-          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-150 group-hover:text-[#0071e3] ${
-            isDense ? (showTimeline ? 'rotate-0' : '-rotate-90') : '-rotate-90 group-hover:translate-x-0.5'
-          }`}
-        />
-      </button>
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-150 group-hover:text-[#0071e3] ${
+              isDense ? (showTimeline ? 'rotate-0' : '-rotate-90') : '-rotate-90 group-hover:translate-x-0.5'
+            }`}
+          />
+        </button>
+      )}
 
-      {/* BẢNG LỊCH CHẠY TOÀN TUYẾN — mở tại chỗ, không rời trang.
-          Buổi nào không có chuyến vẫn giữ lại và cho đăng nhu cầu ngay tại đó:
-          chính khoảng trống mới là nơi cần gom nhu cầu nhất. */}
-      {isDense && showTimeline && timeline && (
-        <section className="space-y-2 animate-fade-in">
+      {/* BẢNG LỊCH CHẠY TOÀN TUYẾN — mở tại chỗ khi chưa tìm kiếm */}
+      {!matrix && isDense && showTimeline && timeline && (
+        <section className="space-y-2.5 animate-fade-in">
           {timeline.periods.map((p) => (
             <div
               key={p.id}
-              className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08]"
+              className="p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 shadow-2xs space-y-2"
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-xs font-bold text-slate-900 dark:text-white">
@@ -607,13 +658,13 @@ export default function CorridorSearchBoard({
               </div>
 
               {p.count > 0 ? (
-                <div className="mt-2 space-y-1.5">
+                <div className="space-y-1.5">
                   {p.trips.map((trip) => (
                     <button
                       key={trip.tripId || trip.departureLabel}
                       type="button"
                       onClick={() => onOpenStationView?.(fromHubId, toHubId)}
-                      className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-[#0071e3]/[0.06] dark:hover:bg-white/[0.07] flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                      className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/90 dark:border-white/10 hover:border-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:shadow-xs hover:-translate-y-0.5 flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-[0.98]"
                     >
                       <span className="flex items-center gap-2 min-w-0">
                         <span className="text-sm font-bold font-mono text-slate-900 dark:text-white shrink-0">
@@ -635,7 +686,7 @@ export default function CorridorSearchBoard({
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.(role, fromHubId)}
-                  className="mt-2 w-full min-h-[44px] rounded-xl border border-dashed border-slate-300 dark:border-white/15 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:border-[#0071e3]/50 hover:text-[#0071e3] transition-colors cursor-pointer"
+                  className="mt-1 w-full min-h-[44px] rounded-xl border-2 border-dashed border-slate-300 dark:border-white/20 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-xs hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer"
                 >
                   {t('search.emptyPeriodCta')}
                 </button>
@@ -645,318 +696,341 @@ export default function CorridorSearchBoard({
         </section>
       )}
 
-      {/* ── MA TRẬN KHE THỜI GIAN ── */}
+      {/* ── BẢNG SO SÁNH 3 TẦNG VẬN TẢI (DẠNG LINE LIẾC NGANG) ── */}
       {matrix && (
-        <section className="space-y-2.5">
-          <div className="flex items-baseline justify-between gap-2 px-1">
-            <p className="text-xs font-bold text-slate-900 dark:text-white">{t('search.matrixTitle')}</p>
-            <p className="text-[10px] font-mono text-slate-400">
-              {t('search.matrixWindow', { n: matrix.windowMinutes })}
+        <section ref={resultsRef} className="space-y-3 pt-1 animate-fade-in">
+          {/* Header tóm tắt với 2 đòn bẩy: Thời gian & Tiền bạc */}
+          <div className="flex flex-wrap items-center justify-between gap-1.5 px-1">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Phương án di chuyển phù hợp
             </p>
-          </div>
-
-          {matrix.station?.waitingCount > 0 && (
-            <p className="px-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-              {t('search.waitingAtHub', { n: matrix.station.waitingCount })}
-            </p>
-          )}
-
-          {/* TRẠM ĐÓN NHÂN BẢN HOÁ: mốc nhận diện + tiện ích + lời dặn an toàn.
-              Khách phải biết mình sẽ đứng ở chỗ như thế nào TRƯỚC khi quyết định,
-              nhất là với chuyến 4 giờ sáng. */}
-          {matrix.origin?.landmark && (
-            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] space-y-1.5">
-              <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 min-w-0">
-                <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                <span className="truncate">{matrix.origin.shortName}</span>
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                {matrix.origin.landmark}
-              </p>
-              {matrix.origin.amenities?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {matrix.origin.amenities.map((a) => (
-                    <span
-                      key={a.id}
-                      className="px-2 py-0.5 rounded-full bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 text-[10px] text-slate-600 dark:text-slate-300"
-                    >
-                      {a.icon} {a.label}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {matrix.origin.safetyNote && (
-                <p className="text-[10px] text-slate-400 italic pt-0.5">{matrix.origin.safetyNote}</p>
-              )}
-            </div>
-          )}
-
-          {/* KHUNG GIỜ CHƯA CÓ AI MỞ CHUYẾN — nói thẳng, kèm lối đi tiếp.
-              Không bao giờ để màn hình trống hay báo cụt "không có xe": nhu cầu
-              đăng ký ở đây chính là thứ kéo chủ xe vào mở chuyến. */}
-          {matrix.counts.confirmed === 0 && matrix.counts.forming === 0 && (
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-dashed border-slate-300 dark:border-white/15 space-y-2.5">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t('search.noDriverInWindow')}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                {selectedChip
-                  ? `${selectedChip.dayLabel} · ${selectedChip.label} (${selectedChip.hint})`
-                  : ''}
-                {' — '}
-                Đăng ký nhu cầu để chủ xe trên tuyến nhìn thấy và mở chuyến cho khung giờ này.
-              </p>
-              <button
-                type="button"
-                onClick={() => onOpenIntentModal?.(role, fromHubId)}
-                className="w-full h-11 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold cursor-pointer active:scale-[0.99] transition-all duration-150"
-              >
-                {t('search.registerWindow')}
-              </button>
-            </div>
-          )}
-
-          {/* CHUYẾN KHỚP TỐT NHẤT — tách hẳn ra, to hơn, đủ thông tin để quyết
-              định ngay mà không phải mở thêm màn nào. Khách liên tỉnh chỉ cần
-              MỘT phương án tốt, không phải một danh sách để so sánh. */}
-          {bestMatch && (
-            <div className="space-y-2">
-              <p className="px-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
-                {t('search.bestMatch')}
-              </p>
-              <SlotCard
-                slot={bestMatch}
-                t={t}
-                featured
-                origin={matrix.origin}
-                onAct={() => {
-                  if (bestMatch.tier === 'SHADOW') onOpenIntentModal?.(role, fromHubId);
-                  else onOpenStationView?.(fromHubId, toHubId);
-                }}
-              />
-            </div>
-          )}
-
-          {otherSlots.length > 0 && (
-            <div className="space-y-2 pt-1">
-              <p className="px-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                {t('search.otherTrips')}
-              </p>
-              {otherSlots.map((slot, idx) => (
-                <SlotCard
-                  key={`${slot.tier}-${slot.tripId || slot.departureLabel}-${idx}`}
-                  slot={slot}
-                  t={t}
-                  onAct={() => {
-                    if (slot.tier === 'SHADOW') onOpenIntentModal?.(role, fromHubId);
-                    else onOpenStationView?.(fromHubId, toHubId);
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* LỐI THOÁT AN TOÀN — luôn ở cuối, không bao giờ để khách cụt đường */}
-          <div className="pt-2 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                {t('search.or')}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] font-bold font-mono text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-400/40 dark:border-amber-500/30 flex items-center gap-1 shadow-2xs">
+                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> Nhanh hơn 35p
               </span>
-              <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onOpenIntentModal?.(role, fromHubId)}
-              className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-dashed border-slate-300 dark:border-white/15 text-left hover:border-[#0071e3]/50 active:scale-[0.99] transition-all duration-150 cursor-pointer"
-            >
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
-                {t('search.placeStandingOrder')}
-              </p>
-              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                {t('search.standingOrderDesc')}
-              </p>
-            </button>
-
-            {/* Cần đi gấp: chỉ hiện SỐ khi đã kiểm chứng; chưa có thì hiện chỉ
-                dẫn thực địa để khách vẫn tự bắt được xe. */}
-            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.07] border border-amber-200 dark:border-amber-500/20">
-              <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                {t('search.urgentTitle')}
-              </p>
-              {verifiedHotlines.length > 0 ? (
-                <div className="mt-2 space-y-1.5">
-                  {verifiedHotlines.map((h) => (
-                    <a
-                      key={h.id}
-                      href={`tel:${String(h.hotline).replace(/\s/g, '')}`}
-                      className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      {h.operator}: {h.hotline}
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-1 text-[11px] text-amber-800/90 dark:text-amber-200/80 leading-relaxed">
-                  {matrix.origin?.landmark
-                    ? t('search.urgentGuide', { place: matrix.origin.landmark })
-                    : t('search.urgentGuideFallback')}
-                </p>
-              )}
+              <span className="text-[10px] font-bold font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-400/40 dark:border-emerald-500/30 shadow-2xs">
+                Tiết kiệm 65%
+              </span>
             </div>
           </div>
+
+          {/* NHÓM 1: HERO PRODUCT CARMATE (XE GHÉP GIA ĐÌNH - VISUAL DOMINANCE) */}
+          <div className="space-y-2">
+            {carmateDisplayTrips.map((trip) => (
+              <div
+                key={trip.tripId || trip.id || trip.departureLabel}
+                onClick={() => setSelectedDetailTrip(trip)}
+                className="group/hero w-full rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border-2 border-emerald-500/80 dark:border-emerald-500 shadow-md shadow-emerald-500/10 hover:shadow-xl hover:shadow-emerald-500/20 hover:border-emerald-500 hover:-translate-y-0.5 p-4 space-y-3 transition-all duration-200 cursor-pointer"
+              >
+                {/* Hàng 1: Giờ + Logo CarMate + Xe gì ➔ Giá tiền */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-sm shrink-0">
+                      {trip.departureLabel}
+                    </span>
+                    <CarMateBadge size="xs" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {trip.vehicleModel || 'Mitsubishi Xpander (7 chỗ)'}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-base sm:text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                      {formatVND(carmateSegmentPrice)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 ml-0.5">/ghế</span>
+                  </div>
+                </div>
+
+                {/* Hàng 2: Trạng thái & Lợi ích: Đón trạm + Còn X chỗ + Không bắt khách dọc QL */}
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                  <p className="truncate text-[11px]">
+                    Đón trạm {matrix.origin?.shortLabel || 'Lái Thiêu'} · Còn <strong className="font-mono text-emerald-600 dark:text-emerald-400">{trip.seatsAvailable || 3}</strong> chỗ · Không bắt khách dọc QL
+                  </p>
+                </div>
+
+                {/* Hàng 3: Nút CTA [GIỮ CHỖ NGAY] đậm chất Stanford Visual Dominance */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200/80 dark:border-white/10">
+                  <span className="text-[10px] text-slate-400">
+                    Xe cá nhân gia đình · Đi thẳng êm ái
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedDetailTrip(trip);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-xs font-bold uppercase tracking-wide border border-emerald-400/40 shadow-md shadow-emerald-600/30 hover:shadow-lg hover:shadow-emerald-500/40 hover:scale-[1.02] flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 fill-white" />
+                    <span>Giữ chỗ ngay</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* NHÓM 2: TUYẾN XE KHÁCH LIÊN TỈNH QL13 (THAM KHẢO & MỎ NEO GIÁ) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <Bus className="w-3.5 h-3.5 text-slate-400" /> Tuyến xe khách liên tỉnh QL13 (Tham khảo)
+              </span>
+            </div>
+
+            {verifiedHotlines.map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => setSelectedDetailHotline(h)}
+                className="w-full min-h-[48px] px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 hover:border-amber-400 dark:hover:border-amber-400/70 hover:bg-amber-50/40 dark:hover:bg-amber-500/10 hover:shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-between gap-2 text-left transition-all duration-200 cursor-pointer group shadow-2xs"
+              >
+                {/* Trái: Tên nhà xe • Tần suất */}
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-amber-800 dark:group-hover:text-amber-300 transition-colors">
+                    {h.shortName || h.operator}
+                  </p>
+                  <span className="text-slate-300 dark:text-white/20">•</span>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                    {h.frequency?.split('(')[0]?.trim() || 'Nhiều chuyến/ngày'}
+                  </p>
+                </div>
+
+                {/* Phải: Giá vé + Nút [ 📞 Gọi ] */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 group-hover:border-amber-300 dark:group-hover:border-amber-500/30 text-xs font-bold font-mono text-slate-700 dark:text-slate-200 transition-colors block leading-tight">
+                    {h.priceRef || '100.000đ - 160.000đ'}
+                  </span>
+                  <span
+                    className="px-3 py-1.5 rounded-xl border border-amber-400/60 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-200 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 group-hover:shadow-sm group-hover:shadow-amber-500/30 text-[11px] font-bold flex items-center gap-1.5 transition-all duration-150 shrink-0"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Gọi</span>
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Nút đăng lệnh chờ */}
+          <button
+            type="button"
+            onClick={() => onOpenIntentModal?.(role, fromHubId)}
+            className="w-full py-3 px-4 rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/20 bg-slate-50/60 dark:bg-white/[0.02] text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-[#0071e3] dark:hover:text-[#3898ec] hover:border-[#0071e3] dark:hover:border-[#3898ec] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer group"
+          >
+            <span className="text-base group-hover:scale-110 transition-transform">📌</span>
+            <span>Chưa tìm thấy giờ ưng ý? Đăng lệnh chờ (1-chạm)</span>
+          </button>
         </section>
       )}
 
-    </div>
-  );
-}
+      {/* MODAL XEM KỸ CHI TIẾT CHUYẾN XE (REACT PORTAL z-[9999]) */}
+      {selectedDetailTrip && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedDetailTrip(null)}
+        >
+          <div
+            className="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-3xl p-5 shadow-2xl border border-slate-300 dark:border-white/20 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header modal */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 bg-emerald-500/15 text-emerald-600">
+                  <Sparkles className="w-5 h-5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <CarMateBadge size="xs" />
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      Đi ghép tiện chuyến
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    Khởi hành: {selectedDetailTrip.departureLabel}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDetailTrip(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-500 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
 
-/**
- * Một khe giờ trong ma trận. Ba tầng dùng chung một khung nhưng khác hẳn về
- * trọng lượng thị giác: khe chắc chắn phải nổi bật nhất, khe dự phòng mờ nhất —
- * mắt khách phải rơi vào thứ đáng tin nhất trước tiên.
- */
-function SlotCard({ slot, t, onAct, featured = false, origin = null }) {
-  // Màu sắc bám theo CHỈ SỐ AN TÂM, không bám theo tầng kỹ thuật: khách quan tâm
-  // "tôi có chắc đi được không", chứ không quan tâm dữ liệu đến từ nguồn nào.
-  const level = slot.assurance?.level;
-  const tone =
-    level === 'GUARANTEED'
-      ? {
-          ring: 'border-emerald-300 dark:border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-500/[0.07]',
-          chip: 'bg-emerald-500 text-white',
-          label: slot.assurance?.label || t('search.tierConfirmed'),
-          Icon: Zap,
-          btn: 'bg-emerald-600 hover:bg-emerald-500 text-white'
-        }
-      : level === 'COMMUNITY'
-        ? {
-            ring: 'border-[#0071e3]/40 bg-[#0071e3]/[0.05]',
-            chip: 'bg-[#0071e3] text-white',
-            label: slot.assurance?.label || t('search.tierForming'),
-            Icon: Navigation,
-            btn: 'bg-[#0071e3] hover:bg-[#0077ed] text-white'
-          }
-        : {
-            ring: 'border-slate-200 dark:border-white/[0.08] bg-slate-50/60 dark:bg-white/[0.02]',
-            chip: 'bg-slate-300 dark:bg-white/15 text-slate-700 dark:text-slate-200',
-            label: slot.assurance?.label || t('search.tierShadow'),
-            Icon: Clock,
-            btn: 'bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-800 dark:text-white'
-          };
+            {/* Chi tiết xe & chủ xe */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Chủ xe:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  {selectedDetailTrip.driverName || 'Chủ xe CX-D10'} (4.9 ⭐ · Uy tín)
+                </span>
+              </div>
 
-  const { Icon } = tone;
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Dòng xe:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  {selectedDetailTrip.vehicleModel || 'Mitsubishi Xpander (7 chỗ)'}
+                </span>
+              </div>
 
-  return (
-    <div
-      className={`p-4 rounded-2xl border ${featured ? 'border-2 shadow-sm' : ''} ${tone.ring} transition-all duration-150`}
-    >
-      <div className="flex items-start justify-between gap-3 min-w-0">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-lg font-bold font-mono text-slate-900 dark:text-white">
-              {slot.departureLabel}
-            </span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${tone.chip}`}>
-              {tone.label}
-            </span>
-            {slot.etaSigmaMinutes ? (
-              <span className="text-[10px] font-mono text-slate-400">
-                {t('search.etaSigma', { n: slot.etaSigmaMinutes })}
-              </span>
-            ) : null}
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Biển kiểm soát:</span>
+                <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10">
+                  {selectedDetailTrip.plateMasked || '93A-389.xx'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Số ghế trống:</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  Còn {selectedDetailTrip.seatsAvailable || 3} ghế trống
+                </span>
+              </div>
+
+              <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
+                <span className="text-slate-500 shrink-0">Điểm đón:</span>
+                <span className="font-medium text-slate-900 dark:text-white text-right">
+                  {matrix.origin?.landmark || 'Cổng chào Lái Thiêu (Cây xăng Petrolimex QL13)'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
+                <span className="text-slate-500">Giá chia sẻ:</span>
+                <div className="text-right">
+                  <span className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    {formatVND(selectedDetailTrip.pricePerSeat || carmateSegmentPrice)}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">trọn gói xăng & cầu đường</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Nút hành động chính */}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedDetailTrip(null);
+                onOpenStationView?.(fromHubId, toHubId);
+              }}
+              className="w-full h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 transition-all cursor-pointer"
+            >
+              Xác nhận giữ chỗ chuyến này ({formatVND(selectedDetailTrip.pricePerSeat || carmateSegmentPrice)})
+            </button>
           </div>
-
-          {/* Thẻ nổi bật đã liệt kê xe và số ghế thành từng dòng riêng bên dưới,
-              nên ở đây chỉ nêu chủ xe — nếu không sẽ lặp lại y hệt hai lần. */}
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 truncate">
-            {slot.driverName || ''}
-            {!featured && slot.vehicleModel ? ` · ${slot.vehicleModel}` : ''}
-            {!featured && slot.seatsAvailable != null
-              ? ` · ${t('search.seatsLeft', { n: slot.seatsAvailable })}`
-              : ''}
-          </p>
-
-          <p className="mt-0.5 text-[11px] text-slate-400 flex items-center gap-1 min-w-0">
-            <Icon className="w-3 h-3 shrink-0" />
-            <span className="truncate">
-              {slot.distanceKm != null
-                ? t('search.distanceAway', { n: slot.distanceKm })
-                : featured
-                  ? ''
-                  : slot.note}
-            </span>
-          </p>
-
-          {/* Lịch sử THẬT của chủ xe — khách tự nhìn số liệu mà quyết định,
-              thay vì phải tin một nhãn dán do hệ thống tự phong. */}
-          {slot.assurance?.reasons?.[0] && (
-            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {slot.assurance.reasons[0]}
-            </p>
-          )}
-        </div>
-
-        {slot.pricePerSeat ? (
-          <span className="text-sm font-bold font-mono text-slate-900 dark:text-white shrink-0">
-            {formatVND(slot.pricePerSeat)}
-          </span>
-        ) : null}
-      </div>
-
-      {/* THẺ NỔI BẬT: đủ thông tin để quyết định ngay tại đây — điểm đón, xe,
-          số ghế — thay vì bắt khách mở thêm một màn nữa rồi mới biết. */}
-      {featured && (
-        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-white/10 space-y-1.5">
-          {origin?.shortName && (
-            <p className="text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-px" />
-              <span className="min-w-0">
-                {origin.shortName}
-                {origin.landmark ? (
-                  <span className="block text-slate-400">{origin.landmark}</span>
-                ) : null}
-              </span>
-            </p>
-          )}
-          {slot.plateMasked && (
-            <p className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-              <Navigation className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">
-                {slot.vehicleModel ? `${slot.vehicleModel} · ` : ''}
-                <span className="font-mono font-semibold">{slot.plateMasked}</span>
-              </span>
-            </p>
-          )}
-          {slot.seatsAvailable != null && (
-            <p className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              {t('search.seatsFree', { n: slot.seatsAvailable })}
-            </p>
-          )}
-        </div>
+        </div>,
+        document.body
       )}
 
-      {slot.promise && (
-        <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-          {slot.promise}
-        </p>
+      {/* MODAL XEM KỸ CHI TIẾT NHÀ XE (REACT PORTAL z-[9999]) */}
+      {selectedDetailHotline && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedDetailHotline(null)}
+        >
+          <div
+            className="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-3xl p-5 shadow-2xl border border-slate-300 dark:border-white/20 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header modal */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-2xl bg-slate-500/15 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
+                  <Bus className="w-5 h-5" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {selectedDetailHotline.operator}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    {selectedDetailHotline.corridor || 'Tuyến QL13'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDetailHotline(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-500 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Chi tiết tuyến xe */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/15 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Loại phương tiện:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  {selectedDetailHotline.type === 'limousine' ? 'Xe Limousine VIP' : selectedDetailHotline.type === 'airport_limousine' ? 'Limousine Đưa Đón Sân Bay TSN' : 'Xe Khách Tuyến Cố Định'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Tần suất xuất bến:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  {selectedDetailHotline.frequency}
+                </span>
+              </div>
+
+              <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
+                <span className="text-slate-500 shrink-0">Lộ trình trục đường:</span>
+                <span className="font-medium text-slate-900 dark:text-white text-right">
+                  {selectedDetailHotline.coverage}
+                </span>
+              </div>
+
+              <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
+                <span className="text-slate-500 shrink-0">Điểm đón khách QL13:</span>
+                <span className="font-medium text-amber-700 dark:text-amber-300 text-right">
+                  {selectedDetailHotline.note}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
+                <span className="text-slate-500">Giá vé tham khảo:</span>
+                <span className="text-base font-bold font-mono text-slate-900 dark:text-white">
+                  {selectedDetailHotline.priceRef}
+                </span>
+              </div>
+
+              {/* Bảng giá niêm yết chi tiết từng chặng */}
+              {selectedDetailHotline.fareTable && selectedDetailHotline.fareTable.length > 0 && (
+                <div className="pt-2 border-t border-slate-200/60 dark:border-white/10 space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
+                    Biểu phí niêm yết theo chặng:
+                  </span>
+                  <div className="space-y-1 rounded-xl bg-slate-100/80 dark:bg-white/[0.04] p-2.5 border border-slate-200/50 dark:border-white/5">
+                    {selectedDetailHotline.fareTable.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] py-0.5">
+                        <span className="text-slate-600 dark:text-slate-300 font-medium truncate pr-2">
+                          {f.route}
+                        </span>
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                          {f.price}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Nút gọi tổng đài */}
+            <a
+              href={`tel:${String(selectedDetailHotline.hotline).replace(/\s/g, '')}`}
+              className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35 hover:-translate-y-0.5 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Phone className="w-4 h-4" />
+              <span>Gọi đặt chỗ tổng đài ({selectedDetailHotline.hotline})</span>
+            </a>
+          </div>
+        </div>,
+        document.body
       )}
 
-      <button
-        type="button"
-        onClick={onAct}
-        className={`mt-3 w-full ${featured ? 'h-12 text-sm' : 'h-11 text-xs'} rounded-xl font-bold cursor-pointer active:scale-[0.99] transition-all duration-150 ${tone.btn}`}
-      >
-        {slot.tier === 'SHADOW'
-          ? t('search.actionIntent')
-          : featured
-            ? t('search.holdSeat')
-            : t('search.viewDetail')}
-      </button>
     </div>
   );
 }

@@ -59,6 +59,15 @@ function maskPlateTail(plate) {
   return raw.replace(/[0-9]{2}$/, 'xx');
 }
 
+/** Nhận diện biển vàng dịch vụ (sê-ri E, F hoặc cờ dịch vụ) vs biển trắng gia đình */
+function detectPlateType(plate, item = {}) {
+  if (item.plateType === 'yellow' || item.plateType === 'white') return item.plateType;
+  if (item.isServiceVehicle === true) return 'yellow';
+  const str = String(plate || '').toUpperCase();
+  if (/[0-9]{2}[EFG]/.test(str.replace(/[\s.-]/g, ''))) return 'yellow';
+  return 'white';
+}
+
 /** Lấy mốc phút trong ngày từ chuỗi "HH:MM" hoặc khe "HH:MM-HH:MM". */
 function slotStartMinutes(timeSlot) {
   if (!timeSlot || timeSlot === 'all') return null;
@@ -232,25 +241,31 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
         backupCount
       });
       const label = tripMinutes != null ? formatMinutesToTime(tripMinutes) : t.timeSlot || t.time || '';
+      const plateType = detectPlateType(t.plateMask || t.plate || t.licensePlate, t);
+      const isService = plateType === 'yellow' || Boolean(t.isServiceVehicle);
       return {
         tier: 'CONFIRMED',
         assurance,
         promise: getAssurancePromise(assurance, label),
-        badge: '🟢',
+        badge: isService ? '🚕' : '🟢',
         tripId: t.id,
         departureLabel: tripMinutes != null ? formatMinutesToTime(tripMinutes) : t.timeSlot || t.time || '',
         departureMinutes: tripMinutes,
         seatsAvailable: seatsOf(t),
-        driverName: t.publicName || t.authorName || t.driverName || 'Chủ xe',
+        driverName: t.publicName || t.authorName || t.driverName || (isService ? 'Chủ xe dịch vụ' : 'Chủ xe'),
         vehicleModel: t.carType || t.carCategory || '',
         // Biển số che 2 số cuối: đủ để khách nhận ra xe giữa dòng QL13, nhưng
         // không lộ trọn biển ra màn hình công khai trước khi chốt chuyến.
         plateMasked: maskPlateTail(t.plateMask || t.plate || t.licensePlate),
+        plateType,
+        isServiceVehicle: isService,
+        charterPrice: t.charterPrice || null,
+        serviceNote: t.serviceNote || (isService ? 'Xe dịch vụ tiện chuyến chiều về · Nhận đón tận ngõ' : null),
         pricePerSeat: t.basePricePerSeat || t.pricePerSeat || t.price || null,
         certainty: 1.0,
         action: 'CONFIRM_NOW',
-        actionLabel: 'Xác nhận đi ngay',
-        note: 'Đã chắc chắn 100%'
+        actionLabel: isService ? 'Giữ chỗ xe dịch vụ' : 'Xác nhận đi ngay',
+        note: isService ? 'Xe dịch vụ tiện chuyến chiều về' : 'Đã chắc chắn 100%'
       };
     })
     .sort((a, b) => {
@@ -308,9 +323,12 @@ function collectFormingTrips({ originHubId, seatsNeeded, nowMs, backupCount = 0 
       backupCount
     });
 
+    const plateType = detectPlateType(session.plate, session);
+    const isService = plateType === 'yellow' || Boolean(session.isServiceVehicle);
+
     out.push({
       tier: 'FORMING',
-      badge: '🔵',
+      badge: isService ? '🚕' : '🔵',
       assurance,
       tripId: session.tripId,
       departureLabel: `${String(arriveDate.getHours()).padStart(2, '0')}:${String(arriveDate.getMinutes()).padStart(2, '0')}`,
@@ -319,15 +337,21 @@ function collectFormingTrips({ originHubId, seatsNeeded, nowMs, backupCount = 0 
       // Bất định còn lại, để giao diện nói thật với khách thay vì giả vờ chắc chắn
       etaSigmaMinutes: Math.round(distribution.sigmaSeconds / 60),
       seatsAvailable: Number(session.seatsAvailable || 0),
-      driverName: session.driverName || 'Chủ xe',
+      driverName: session.driverName || (isService ? 'Chủ xe dịch vụ' : 'Chủ xe'),
       vehicleModel: session.vehicleModel || '',
       plateMasked: maskPlateTail(session.plate),
+      plateType,
+      isServiceVehicle: isService,
+      charterPrice: session.charterPrice || null,
+      serviceNote: session.serviceNote || (isService ? 'Xe dịch vụ tiện chuyến chiều về' : null),
       distanceKm: distribution.distanceKm,
       fromLabel: frenet.closestNode?.name || '',
       certainty: 0.8,
       action: 'RESERVE_PRIORITY',
-      actionLabel: 'Đặt chỗ ưu tiên',
-      note: `Đang cách ${distribution.distanceKm}km, hệ thống tự khoá chỗ khi xe tới gần`
+      actionLabel: isService ? 'Giữ chỗ xe dịch vụ' : 'Đặt chỗ ưu tiên',
+      note: isService
+        ? `Xe dịch vụ đang cách ${distribution.distanceKm}km, đón tận ngõ`
+        : `Đang cách ${distribution.distanceKm}km, hệ thống tự khoá chỗ khi xe tới gần`
     });
   }
 

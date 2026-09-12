@@ -8,7 +8,54 @@ import TermsModal from './TermsModal.jsx';
 import PolicyModal from './PolicyModal.jsx';
 import api from '../../api/client.js';
 import { useI18n } from '../../i18n/index.jsx';
-import { isValidVietnamesePhone, isLikelyFakePhone, cleanPhoneNumber } from '@carmate/shared';
+import { isValidVietnamesePhone, isLikelyFakePhone, cleanPhoneNumber, normalizePhoneNumber } from '@carmate/shared';
+import { auth } from '../../firebase.js';
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+
+// Quản lý Rate Limit & Cooldown gửi OTP trong phiên (Chống Spam SMS & Bảo vệ tài chính)
+const OTP_SESSION_KEY = 'carmate_otp_session_v1';
+const MAX_OTP_ATTEMPTS_PER_SESSION = 3;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // Khóa 15 phút nếu gửi quá 3 lần
+const COOLDOWN_DURATION_SEC = 60; // 60 giây chờ giữa các lần gửi
+
+function getOtpSessionState() {
+  try {
+    const raw = sessionStorage.getItem(OTP_SESSION_KEY);
+    if (!raw) return { attempts: 0, lockedUntil: 0, lastSentAt: 0 };
+    const parsed = JSON.parse(raw);
+    return {
+      attempts: Number(parsed.attempts) || 0,
+      lockedUntil: Number(parsed.lockedUntil) || 0,
+      lastSentAt: Number(parsed.lastSentAt) || 0
+    };
+  } catch {
+    return { attempts: 0, lockedUntil: 0, lastSentAt: 0 };
+  }
+}
+
+function recordOtpAttempt() {
+  try {
+    const current = getOtpSessionState();
+    const newAttempts = current.attempts + 1;
+    const now = Date.now();
+    const isLocked = newAttempts >= MAX_OTP_ATTEMPTS_PER_SESSION;
+    const state = {
+      attempts: newAttempts,
+      lockedUntil: isLocked ? now + LOCKOUT_DURATION_MS : current.lockedUntil,
+      lastSentAt: now
+    };
+    sessionStorage.setItem(OTP_SESSION_KEY, JSON.stringify(state));
+    return state;
+  } catch {
+    return { attempts: 1, lockedUntil: 0, lastSentAt: Date.now() };
+  }
+}
+
+function clearOtpSessionState() {
+  try {
+    sessionStorage.removeItem(OTP_SESSION_KEY);
+  } catch {}
+}
 
 export default function AuthModal({
   onClose,
@@ -20,11 +67,30 @@ export default function AuthModal({
 }) {
   const { t } = useI18n();
   const { lang, setLang } = useI18n();
-  const [authMethod, setAuthMethod] = useState('google'); // 'google' | 'telegram'
+  const [authMethod, setAuthMethod] = useState('phone'); // 'phone' | 'google' | 'telegram'
   const [phone, setPhone] = useState(initialPhone);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [telegramUsername, setTelegramUsername] = useState('minh_carmate');
+  const [phoneStep, setPhoneStep] = useState('input'); // 'input' | 'otp'
+  const [otp, setOtp] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+
+  // 1. Cooldown 60s (Lưu theo phiên để đóng/mở lại modal không bị reset thời gian chờ)
+  const [countdown, setCountdown] = useState(() => {
+    const state = getOtpSessionState();
+    if (!state.lastSentAt) return 0;
+    const elapsed = Math.floor((Date.now() - state.lastSentAt) / 1000);
+    return Math.max(0, COOLDOWN_DURATION_SEC - elapsed);
+  });
+
+  // 2. Khóa phiên 15 phút (nếu gửi lại quá 3 lần mà không xác thực thành công)
+  const [lockRemainingSec, setLockRemainingSec] = useState(() => {
+    const state = getOtpSessionState();
+    if (!state.lockedUntil) return 0;
+    return Math.max(0, Math.ceil((state.lockedUntil - Date.now()) / 1000));
+  });
+
   const [showGoogleForm, setShowGoogleForm] = useState(false);
   const [showTelegramForm, setShowTelegramForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,6 +100,239 @@ export default function AuthModal({
   const [telegramBotUsername, setTelegramBotUsername] = useState('carmate_alert_bot');
   const googleBtnRef = useRef(null);
   const telegramBtnRef = useRef(null);
+
+  // Đếm ngược thời gian Cooldown 60s
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [countdown]);
+
+  // Đếm ngược thời gian Khóa phiên 15 phút
+  useEffect(() => {
+    let timer;
+    if (lockRemainingSec > 0) {
+      timer = setInterval(() => {
+        const state = getOtpSessionState();
+        const rem = Math.max(0, Math.ceil((state.lockedUntil - Date.now()) / 1000));
+        setLockRemainingSec(rem);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [lockRemainingSec]);
+
+  // Dọn dẹp an toàn widget reCAPTCHA và làm trống phần tử DOM
+  const resetRecaptcha = () => {
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch {}
+      window.recaptchaVerifier = null;
+    }
+    const container = document.getElementById('firebase-recaptcha-container');
+    if (container) {
+      container.innerHTML = '';
+    }
+  };
+
+  // Thu dọn reCAPTCHA khi unmount
+  useEffect(() => {
+    return () => {
+      resetRecaptcha();
+    };
+  }, []);
+
+  // Khởi tạo và lấy reCAPTCHA Verifier vô hình an toàn (chống lỗi duplicate render)
+  const getOrCreateRecaptchaVerifier = () => {
+    if (window.recaptchaVerifier) {
+      return window.recaptchaVerifier;
+    }
+    resetRecaptcha();
+    try {
+      const verifier = new RecaptchaVerifier(auth, 'firebase-recaptcha-container', {
+        size: 'invisible',
+        callback: () => {},
+        'expired-callback': () => {
+          resetRecaptcha();
+          setError('Mã reCAPTCHA đã hết hạn, vui lòng bấm gửi lại.');
+        }
+      });
+      window.recaptchaVerifier = verifier;
+      return verifier;
+    } catch (err) {
+      console.warn('[Recaptcha recreation fallback]', err);
+      resetRecaptcha();
+      // Thay thế phần tử container mới trong DOM nếu element cũ bị lưu cache bởi grecaptcha
+      const container = document.getElementById('firebase-recaptcha-container');
+      if (container && container.parentNode) {
+        const fresh = document.createElement('div');
+        fresh.id = 'firebase-recaptcha-container';
+        container.parentNode.replaceChild(fresh, container);
+      }
+      const verifier = new RecaptchaVerifier(auth, 'firebase-recaptcha-container', {
+        size: 'invisible',
+        callback: () => {}
+      });
+      window.recaptchaVerifier = verifier;
+      return verifier;
+    }
+  };
+
+  // Gửi mã OTP qua Firebase SMS (Chấp nhận cả 0984883750, 984883750, +84...)
+  const handleSendPhoneOtp = async (e) => {
+    e?.preventDefault();
+
+    // Kiểm tra giới hạn 3 lần trong phiên (Khóa 15 phút)
+    const sessionState = getOtpSessionState();
+    if (sessionState.lockedUntil > Date.now()) {
+      const waitMin = Math.ceil((sessionState.lockedUntil - Date.now()) / 60000);
+      setError(`Bạn đã gửi yêu cầu quá ${MAX_OTP_ATTEMPTS_PER_SESSION} lần trong phiên. Vui lòng thử lại sau ${waitMin} phút.`);
+      return;
+    }
+
+    // Kiểm tra cooldown 60s
+    if (countdown > 0) {
+      setError(`Vui lòng chờ ${countdown} giây trước khi gửi lại mã OTP.`);
+      return;
+    }
+
+    const normalized = normalizePhoneNumber(phone);
+    if (!normalized || !isValidVietnamesePhone(normalized)) {
+      setError('Số điện thoại không đúng định dạng nhà mạng Việt Nam (Nhập có số 0 hoặc không có số 0 đều được, VD: 0984... hoặc 984...)');
+      return;
+    }
+    if (isLikelyFakePhone(normalized)) {
+      setError('Số điện thoại có dấu hiệu số ảo. Vui lòng nhập số thật của bạn.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      if (import.meta.env.DEV || isLocalhost) {
+        try {
+          auth.settings.appVerificationDisabledForTesting = true;
+        } catch {}
+      }
+      const formattedPhone = '+84' + normalized.slice(1);
+      const verifier = getOrCreateRecaptchaVerifier();
+      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, verifier);
+
+      // Ghi nhận lần gửi mã thành công vào sessionStorage và áp đặt cooldown/lockout
+      const updatedState = recordOtpAttempt();
+      setConfirmationResult(confirmation);
+      setPhoneStep('otp');
+      setCountdown(COOLDOWN_DURATION_SEC);
+      if (updatedState.lockedUntil > Date.now()) {
+        setLockRemainingSec(Math.ceil((updatedState.lockedUntil - Date.now()) / 1000));
+      }
+    } catch (err) {
+      console.error('[Firebase Phone Auth Error]', err);
+      resetRecaptcha();
+      if (err.code === 'auth/invalid-phone-number') {
+        setError('Số điện thoại không hợp lệ theo chuẩn quốc tế (+84).');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Đã gửi quá nhiều yêu cầu SMS từ thiết bị này. Vui lòng thử lại sau ít phút.');
+      } else if (err.code === 'auth/captcha-check-failed' || err.message?.includes('already been rendered')) {
+        setError('Không thể xác thực reCAPTCHA (do chặn domain hoặc kết nối mạng). Bạn có thể bấm nút "Đăng nhập nhanh" bên dưới để vào ngay.');
+      } else if (err.code === 'auth/quota-exceeded') {
+        setError('Đã vượt quá hạn mức SMS hôm nay của hệ thống.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Chưa mở vùng Việt Nam (+84) trên Firebase: Vào Firebase Console ➔ Authentication ➔ Settings ➔ SMS Region Policy để chọn Vietnam (+84). Hoặc bấm "Đăng nhập nhanh" bên dưới để kiểm thử ngay.');
+      } else {
+        setError(err.message || 'Không thể gửi tin nhắn SMS OTP. Vui lòng thử lại.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Xác thực mã OTP Firebase SMS
+  const handleVerifyPhoneOtp = async (e) => {
+    e?.preventDefault();
+    const code = otp.trim();
+    if (!code || code.length < 6) {
+      setError('Vui lòng nhập đầy đủ 6 chữ số mã OTP');
+      return;
+    }
+
+    if (!confirmationResult) {
+      setError('Phiên xác thực đã hết hạn, vui lòng gửi lại mã OTP mới');
+      setPhoneStep('input');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const userCredential = await confirmationResult.confirm(code);
+      const fbUser = userCredential.user;
+      const idToken = await fbUser.getIdToken();
+      const normalized = normalizePhoneNumber(phone) || cleanPhoneNumber(phone);
+
+      const res = await api.firebaseLogin({
+        idToken,
+        phone: normalized,
+        name: name.trim() || undefined
+      });
+
+      if (res?.success && res?.user) {
+        clearOtpSessionState();
+        setCountdown(0);
+        setLockRemainingSec(0);
+        onSuccess?.(res.user, res.tripIds || []);
+        onClose();
+      } else {
+        setError(res?.error || 'Đăng nhập không thành công');
+      }
+    } catch (err) {
+      console.error('[Firebase OTP Confirm Error]', err);
+      if (err.code === 'auth/invalid-verification-code') {
+        setError('Mã OTP không chính xác. Vui lòng kiểm tra lại mã đã cài trên Firebase.');
+      } else if (err.code === 'auth/code-expired') {
+        setError('Mã OTP đã hết hạn. Vui lòng bấm gửi lại mã mới.');
+      } else {
+        setError(err.message || 'Xác thực OTP không thành công.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Đăng nhập nhanh kiểm thử offline / dev
+  const handleDevPhoneLogin = async () => {
+    const normalized = normalizePhoneNumber(phone) || '0984883750';
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.firebaseLogin({
+        idToken: `TEST_FIREBASE_TOKEN_${normalized}:fb_dev_${Date.now()}`,
+        phone: normalized,
+        name: name.trim() || `Thành viên ${normalized.slice(-4)}`
+      });
+      if (res?.success && res?.user) {
+        clearOtpSessionState();
+        setCountdown(0);
+        setLockRemainingSec(0);
+        onSuccess?.(res.user, res.tripIds || []);
+        onClose();
+      } else {
+        setError(res?.error || 'Đăng nhập không thành công');
+      }
+    } catch (err) {
+      setError(err.message || 'Lỗi kết nối máy chủ');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Nhận diện môi trường local (Telegram OAuth Widget chặn localhost theo chính sách bảo mật)
   const isLocalhost =
@@ -312,7 +611,7 @@ export default function AuthModal({
           </div>
         )}
 
-        {/* ── BỘ CHUYỂN PHƯƠNG THỨC CHUẨN APPLE HIG (GOOGLE MẶC ĐỊNH) ── */}
+        {/* ── BỘ CHUYỂN PHƯƠNG THỨC CHUẨN APPLE HIG (SỐ ĐIỆN THOẠI MẶC ĐỊNH) ── */}
         <div className="flex justify-center">
           <Segmented
             fullWidth
@@ -322,13 +621,182 @@ export default function AuthModal({
               setAuthMethod(val);
             }}
             options={[
+              { value: 'phone', label: 'Số điện thoại', icon: Phone },
               { value: 'google', label: 'Google', icon: GoogleIcon },
               { value: 'telegram', label: 'Telegram', icon: TelegramIcon }
             ]}
           />
         </div>
 
-        {/* ── 1. PHƯƠNG THỨC GOOGLE (MẶC ĐỊNH) ── */}
+        {/* ── 1. PHƯƠNG THỨC SỐ ĐIỆN THOẠI (SMS OTP QUA FIREBASE) ── */}
+        {authMethod === 'phone' && (
+          <div className="space-y-3.5">
+            {phoneStep === 'input' ? (
+              <form onSubmit={handleSendPhoneOtp} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Số điện thoại Việt Nam *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-slate-500 dark:text-slate-400 select-none">
+                      🇻🇳 +84
+                    </span>
+                    <input
+                      type="tel"
+                      required
+                      autoFocus
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="0984 883 750 hoặc 984 883 750"
+                      className="w-full h-12 pl-18 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all shadow-xs"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 pl-1">
+                    Nhập có số 0 hoặc không có số 0 đều được (VD: 0984... hoặc 984...)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    {t('auth2.s004')}
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={t('auth2.s020')}
+                      className="w-full h-11 pl-10 pr-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all shadow-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Container reCAPTCHA vô hình cho Firebase */}
+                <div id="firebase-recaptcha-container" />
+
+                {lockRemainingSec > 0 && (
+                  <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>
+                      Đã vượt quá 3 lần gửi OTP trong phiên. Nút gửi tạm khóa trong{' '}
+                      <strong>{Math.floor(lockRemainingSec / 60)}p {lockRemainingSec % 60}s</strong>.
+                    </span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || countdown > 0 || lockRemainingSec > 0}
+                  className="w-full h-12 px-5 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#0055d4] text-white font-bold text-sm shadow-[0_4px_14px_rgba(0,113,227,0.35)] cursor-pointer inline-flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed select-none"
+                >
+                  <Phone className="w-4 h-4 shrink-0" />
+                  <span>
+                    {loading
+                      ? 'Đang gửi mã...'
+                      : lockRemainingSec > 0
+                      ? `Tạm khóa gửi OTP (${Math.floor(lockRemainingSec / 60)}p ${lockRemainingSec % 60}s)`
+                      : countdown > 0
+                      ? `Vui lòng đợi (${countdown}s)`
+                      : 'Nhận mã OTP qua tin nhắn SMS'}
+                  </span>
+                </button>
+
+                {/* Tuỳ chọn đăng nhập nhanh thử nghiệm (chỉ hiện ở dev local) */}
+                {import.meta.env.DEV && (
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={handleDevPhoneLogin}
+                      className="text-[11px] text-[#86868b] dark:text-slate-400 hover:text-[#0071e3] dark:hover:text-[#2997ff] font-medium transition-colors cursor-pointer"
+                    >
+                      ⚡ Đăng nhập nhanh không cần SMS (Dev Test)
+                    </button>
+                  </div>
+                )}
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyPhoneOtp} className="space-y-3">
+                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                  <Phone className="w-4 h-4 shrink-0 text-emerald-600" />
+                  <span>
+                    Mã xác thực SMS đã được gửi đến số <strong>{normalizePhoneNumber(phone) || phone}</strong>
+                  </span>
+                </div>
+
+                {lockRemainingSec > 0 && (
+                  <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>
+                      Đã đạt tối đa 3 lần gửi lại OTP trong phiên. Nút gửi lại tạm khóa trong{' '}
+                      <strong>{Math.floor(lockRemainingSec / 60)}p {lockRemainingSec % 60}s</strong>.
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 text-center">
+                    Nhập mã xác thực gồm 6 chữ số (OTP)
+                  </label>
+                  <div className="flex justify-center">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      autoFocus
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="••••••"
+                      className="w-full max-w-[260px] h-13 text-center font-mono text-2xl tracking-[0.5em] font-bold rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-300 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-1 px-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhoneStep('input');
+                      setOtp('');
+                      setError('');
+                    }}
+                    className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-medium transition-colors cursor-pointer"
+                  >
+                    ← Đổi số khác
+                  </button>
+                  <button
+                    type="button"
+                    disabled={countdown > 0 || lockRemainingSec > 0 || loading}
+                    onClick={handleSendPhoneOtp}
+                    className={`font-semibold transition-colors ${
+                      countdown > 0 || lockRemainingSec > 0
+                        ? 'text-slate-400 cursor-not-allowed'
+                        : 'text-[#0071e3] hover:underline cursor-pointer'
+                    }`}
+                  >
+                    {lockRemainingSec > 0
+                      ? `Khóa gửi lại (${Math.floor(lockRemainingSec / 60)}p ${lockRemainingSec % 60}s)`
+                      : countdown > 0
+                      ? `Gửi lại mã (${countdown}s)`
+                      : 'Gửi lại mã OTP'}
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otp.length < 6}
+                  className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>{loading ? 'Đang xác thực...' : 'Xác nhận đăng nhập'}</span>
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* ── 2. PHƯƠNG THỨC GOOGLE ── */}
         {authMethod === 'google' && (
           <div className="space-y-3.5">
             {!showGoogleForm ? (

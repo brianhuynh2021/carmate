@@ -28,7 +28,7 @@ import {
 } from '../controllers/bookingController.js';
 import { getSupportMessagesHandler, sendSupportMessageHandler } from '../controllers/supportController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
-import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, getMe, updateProfile, deleteAccount, requestAccountDeletion, getAuthConfigHandler } from '../controllers/authController.js';
+import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, firebaseLogin, getMe, updateProfile, deleteAccount, requestAccountDeletion, getAuthConfigHandler } from '../controllers/authController.js';
 import {
   createMovementIntentHandler,
   getMovementIntentsHandler,
@@ -125,6 +125,7 @@ router.post('/agent/chat', optionalAuth, agentChatHandler);
 
 // --- Auth & Identity (Zero-Cost / Google & Zalo với Auth Limiter & JWT) ---
 router.get('/auth/config', getAuthConfigHandler);
+router.post('/auth/firebase-login', authLimiter, firebaseLogin);
 router.post('/auth/google-login', googleLogin);
 router.post('/auth/telegram-login', authLimiter, telegramLogin);
 router.post('/auth/zalo-login', zaloLogin);

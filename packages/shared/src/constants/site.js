@@ -16,13 +16,13 @@ export const SITE_INFO = {
   hotline: '0984 883 750',
   phoneRaw: '0984883750',
   hotlineHours: {
-    vi: 'Hỗ trợ trực tuyến Zalo & Telegram 24/7',
-    en: 'Online Support via Zalo & Telegram 24/7'
+    vi: 'Hỗ trợ trực tuyến Telegram 24/7',
+    en: 'Online Support via Telegram 24/7'
   },
   telegram: 'https://t.me/brianhuynh91',
   telegramSupport: 'https://t.me/brianhuynh91',
-  email: '', // Tạm thời ẩn email, người dùng liên hệ trực tiếp qua Zalo & Telegram 1-chạm
-  zaloOA: 'https://zalo.me/0984883750',
+  email: '', // Hỗ trợ trực tiếp qua Telegram 1-chạm
+  zaloOA: '',
   zaloGroup: 'https://zalo.me/g/carmate',
   facebook: 'https://www.facebook.com/profile.php?id=61593891160413',
   foundedYear: 2024,

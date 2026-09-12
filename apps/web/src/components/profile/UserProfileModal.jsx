@@ -114,6 +114,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'garage' | 'trust'
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [formError, setFormError] = useState('');
 
   // 1. State Thông tin cá nhân
@@ -344,7 +345,10 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     try {
       await onSave?.(payload);
       onShowToast?.('Đã lưu hồ sơ cá nhân và garage xe thành công!');
-      onClose?.();
+      setIsSaved(true);
+      setTimeout(() => {
+        setIsSaved(false);
+      }, 3000);
     } catch (err) {
       setFormError(err.message || 'Không thể lưu hồ sơ, vui lòng thử lại');
     } finally {
@@ -373,12 +377,21 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="h-10 px-6 rounded-xl text-xs font-semibold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[0_2px_8px_rgba(0,113,227,0.3)] transition-all cursor-pointer inline-flex items-center gap-2 active:scale-[0.98] disabled:opacity-50"
+            className={`h-10 px-6 rounded-xl text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-2 active:scale-[0.98] disabled:opacity-50 ${
+              isSaved
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
+                : 'bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-[0_2px_8px_rgba(0,113,227,0.3)]'
+            }`}
           >
             {isSaving ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>{t('profile2.s002')}</span>
+              </>
+            ) : isSaved ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                <span>Đã lưu thành công!</span>
               </>
             ) : (
               <>
@@ -396,6 +409,14 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-800/40 flex items-center gap-2.5 text-xs text-rose-600 dark:text-rose-400">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{formError}</span>
+          </div>
+        )}
+
+        {/* Thông báo đã lưu thành công tại chỗ */}
+        {isSaved && (
+          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-xs font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-2 transition-all">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>Đã lưu thay đổi hồ sơ thành công! Bạn có thể tiếp tục chỉnh sửa các mục khác hoặc bấm Đóng khi hoàn tất.</span>
           </div>
         )}
 

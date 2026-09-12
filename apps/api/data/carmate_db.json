@@ -77,7 +77,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Xe gia đình 7 chỗ êm ái, giờ giấc thoải mái, đón tận nơi tiện đường QL13.",
-      "createdAt": 1789187948203
+      "createdAt": 1789188268672
     },
     {
       "id": "DRV-0984-MORNING",
@@ -147,7 +147,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Mình chở gia đình đi khám bệnh sáng sớm, còn trống 3 ghế rộng rãi.",
-      "createdAt": 1789195148203
+      "createdAt": 1789195468672
     },
     {
       "id": "DRV-0984-RETURN",
@@ -216,7 +216,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến về chiều tối sau khi xong việc tại Sài Gòn. Ghế sau ngả lưng thoải mái.",
-      "createdAt": 1789198748203
+      "createdAt": 1789199068672
     },
     {
       "id": "DRV-0984-FULL",
@@ -273,7 +273,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến xe đã kín chỗ.",
-      "createdAt": 1789173548203
+      "createdAt": 1789173868672
     },
     {
       "id": "DRV-0984-PAST",
@@ -342,7 +342,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - 541.86",
       "notes": "Chuyến đi đã hoàn thành an toàn tốt đẹp.",
-      "createdAt": 1789094348203
+      "createdAt": 1789094668672
     },
     {
       "id": "DRV-101",
@@ -410,7 +410,7 @@
       "hasCarPhotos": true,
       "plateMask": "93A - ***.86",
       "notes": "Xe gia đình sạch sẽ, đón dọc QL13 tiện đường, không hút thuốc.",
-      "createdAt": 1789195148203
+      "createdAt": 1789195468672
     },
     {
       "id": "DRV-102",
@@ -479,7 +479,7 @@
       ],
       "plateMask": "93A - ***.52",
       "notes": "Đi công việc cơ quan, còn 2 ghế ngồi êm ái, xe không chở đồ tanh.",
-      "createdAt": 1789184348203
+      "createdAt": 1789184668672
     },
     {
       "id": "DRV-105",
@@ -533,7 +533,7 @@
         }
       ],
       "notes": "Đi làm việc Sài Gòn mỗi tuần, xe nhỏ gọn sạch sẽ.",
-      "createdAt": 1789180748203
+      "createdAt": 1789181068672
     },
     {
       "id": "DRV-DAY-01",
@@ -568,7 +568,7 @@
       "hasCarPhotos": false,
       "plateMask": "61A - ***.10",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789198748203
+      "createdAt": 1789199068672
     },
     {
       "id": "DRV-DAY-02",
@@ -603,7 +603,7 @@
       "hasCarPhotos": false,
       "plateMask": "62A - ***.11",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789195148203
+      "createdAt": 1789195468672
     },
     {
       "id": "DRV-DAY-03",
@@ -638,7 +638,7 @@
       "hasCarPhotos": false,
       "plateMask": "63A - ***.12",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789191548203
+      "createdAt": 1789191868672
     },
     {
       "id": "DRV-DAY-04",
@@ -673,7 +673,7 @@
       "hasCarPhotos": false,
       "plateMask": "64A - ***.13",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789187948203
+      "createdAt": 1789188268672
     },
     {
       "id": "DRV-DAY-05",
@@ -708,7 +708,7 @@
       "hasCarPhotos": false,
       "plateMask": "65A - ***.14",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789184348203
+      "createdAt": 1789184668672
     },
     {
       "id": "DRV-DAY-06",
@@ -743,7 +743,7 @@
       "hasCarPhotos": false,
       "plateMask": "66A - ***.15",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789180748203
+      "createdAt": 1789181068672
     },
     {
       "id": "DRV-DAY-07",
@@ -778,7 +778,7 @@
       "hasCarPhotos": false,
       "plateMask": "67A - ***.16",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789177148203
+      "createdAt": 1789177468672
     },
     {
       "id": "DRV-DAY-08",
@@ -813,7 +813,7 @@
       "hasCarPhotos": false,
       "plateMask": "68A - ***.17",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789173548203
+      "createdAt": 1789173868672
     },
     {
       "id": "DRV-DAY-09",
@@ -848,7 +848,7 @@
       "hasCarPhotos": false,
       "plateMask": "61A - ***.18",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789169948203
+      "createdAt": 1789170268672
     },
     {
       "id": "DRV-DAY-10",
@@ -883,7 +883,7 @@
       "hasCarPhotos": false,
       "plateMask": "62A - ***.19",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789166348203
+      "createdAt": 1789166668672
     },
     {
       "id": "DRV-DAY-11",
@@ -918,7 +918,7 @@
       "hasCarPhotos": false,
       "plateMask": "63A - ***.20",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789162748203
+      "createdAt": 1789163068672
     },
     {
       "id": "DRV-DAY-12",
@@ -953,7 +953,7 @@
       "hasCarPhotos": false,
       "plateMask": "64A - ***.21",
       "notes": "Chuyến tiện đường dọc QL13, đón tại trạm ảo trên trục chính.",
-      "createdAt": 1789159148203
+      "createdAt": 1789159468672
     }
   ],
   "passengerRequests": [
@@ -978,7 +978,7 @@
       "expectedPrice": 360000,
       "depositPerSeat": 0,
       "notes": "Hai mẹ con đi khám bệnh Chợ Rẫy, xin ngồi ghế trước hoặc hàng 2 chống say xe.",
-      "createdAt": 1789191548203
+      "createdAt": 1789191868672
     },
     {
       "id": "REQ-202",
@@ -1001,7 +1001,7 @@
       "expectedPrice": 180000,
       "depositPerSeat": 0,
       "notes": "Tan sở về quê cuối tuần, có 1 ba lô gọn nhẹ.",
-      "createdAt": 1789195148203
+      "createdAt": 1789195468672
     }
   ],
   "bookings": [
@@ -1064,7 +1064,7 @@
       "from": "Chợ Chơn Thành (Bình Phước)",
       "to": "Sân bay Tân Sơn Nhất",
       "timeSlot": "08:00-10:00",
-      "completedAt": "2026-09-11T06:39:08.203Z",
+      "completedAt": "2026-09-11T06:44:28.672Z",
       "feedback": {
         "rating": 5,
         "review": "Chủ xe lái xe rất êm ái, xe gia đình sạch sẽ, không mùi thuốc lá, tới sân bay kịp giờ check-in!"
@@ -1086,7 +1086,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-09-01T08:00:00.000Z",
-      "updatedAt": "2026-09-12T08:39:08.202Z",
+      "updatedAt": "2026-09-12T08:44:28.672Z",
       "email": "huynh.nguyen@carmate.vn"
     },
     {
@@ -1102,7 +1102,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-08-15T08:00:00.000Z",
-      "updatedAt": "2026-09-12T08:39:08.203Z"
+      "updatedAt": "2026-09-12T08:44:28.672Z"
     },
     {
       "id": "USR-0900000013",
@@ -1117,7 +1117,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-08-20T08:00:00.000Z",
-      "updatedAt": "2026-09-12T08:39:08.203Z"
+      "updatedAt": "2026-09-12T08:44:28.672Z"
     },
     {
       "id": "USR-0900000018",
@@ -1132,7 +1132,7 @@
       "isGplxVerified": 0,
       "isBanned": 0,
       "createdAt": "2026-09-02T08:00:00.000Z",
-      "updatedAt": "2026-09-12T08:39:08.203Z"
+      "updatedAt": "2026-09-12T08:44:28.672Z"
     }
   ]
 }

@@ -282,6 +282,17 @@ export const api = {
     }
   },
 
+  async firebaseLogin(payload) {
+    const res = await request('/auth/firebase-login', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (res?.token) {
+      setStoredAuthToken(res.token);
+    }
+    return res;
+  },
+
   async googleLogin(payload) {
     const res = await request('/auth/google-login', {
       method: 'POST',
