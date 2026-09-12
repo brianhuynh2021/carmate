@@ -47,6 +47,18 @@ export const MATRIX_CONFIG = Object.freeze({
   MAX_FORMING_P80_MINUTES: 120
 });
 
+/**
+ * Che hai ký tự cuối biển số: "93A-285.41" -> "93A-285.xx".
+ * Giữ đủ phần đầu để khách nhận diện xe từ xa trên quốc lộ, nhưng không phơi
+ * trọn biển số ra danh sách công khai khi chưa chốt chuyến.
+ */
+function maskPlateTail(plate) {
+  const raw = String(plate || '').trim();
+  if (!raw) return null;
+  if (raw.includes('xx') || raw.includes('XX')) return raw; // đã che sẵn
+  return raw.replace(/[0-9]{2}$/, 'xx');
+}
+
 /** Lấy mốc phút trong ngày từ chuỗi "HH:MM" hoặc khe "HH:MM-HH:MM". */
 function slotStartMinutes(timeSlot) {
   if (!timeSlot || timeSlot === 'all') return null;
@@ -231,6 +243,9 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
         seatsAvailable: seatsOf(t),
         driverName: t.publicName || t.authorName || t.driverName || 'Chủ xe',
         vehicleModel: t.carType || t.carCategory || '',
+        // Biển số che 2 số cuối: đủ để khách nhận ra xe giữa dòng QL13, nhưng
+        // không lộ trọn biển ra màn hình công khai trước khi chốt chuyến.
+        plateMasked: maskPlateTail(t.plateMask || t.plate || t.licensePlate),
         pricePerSeat: t.basePricePerSeat || t.pricePerSeat || t.price || null,
         certainty: 1.0,
         action: 'CONFIRM_NOW',
@@ -306,6 +321,7 @@ function collectFormingTrips({ originHubId, seatsNeeded, nowMs, backupCount = 0 
       seatsAvailable: Number(session.seatsAvailable || 0),
       driverName: session.driverName || 'Chủ xe',
       vehicleModel: session.vehicleModel || '',
+      plateMasked: maskPlateTail(session.plate),
       distanceKm: distribution.distanceKm,
       fromLabel: frenet.closestNode?.name || '',
       certainty: 0.8,

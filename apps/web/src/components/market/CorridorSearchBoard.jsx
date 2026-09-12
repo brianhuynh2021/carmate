@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowUpDown, MapPin, Search, Clock, Loader2, ChevronDown, Zap, Navigation, Calendar } from 'lucide-react';
+import { ArrowUpDown, MapPin, Search, Clock, Loader2, ChevronDown, Zap, Navigation, Calendar, Phone, Users } from 'lucide-react';
 import {
   getActiveCorridors,
   getDefaultCorridor,
@@ -12,6 +12,7 @@ import {
   buildDepartureChips,
   buildCustomChip,
   toLocalIsoDate,
+  getVerifiedHotlines,
   DEPARTURE_WINDOWS
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
@@ -224,6 +225,29 @@ export default function CorridorSearchBoard({
       setIsSearching(false);
     }
   }, [fromHubId, toHubId, selectedChip, corridor.dataKey]);
+
+  // CHUYẾN KHỚP TỐT NHẤT: ưu tiên độ an tâm cao nhất, hoà thì chọn chuyến tới
+  // sớm hơn. Khách liên tỉnh cần MỘT phương án đáng tin, không phải một danh
+  // sách để tự so sánh — việc so sánh là việc của hệ thống.
+  const { bestMatch, otherSlots } = useMemo(() => {
+    const slots = matrix?.slots || [];
+    const real = slots.filter((s) => s.tier !== 'SHADOW');
+    if (real.length === 0) return { bestMatch: null, otherSlots: slots };
+
+    const ranked = [...real].sort((a, b) => {
+      const sa = a.assurance?.score ?? 0;
+      const sb = b.assurance?.score ?? 0;
+      if (Math.abs(sa - sb) > 0.05) return sb - sa;
+      return (a.departureMinutes ?? 9999) - (b.departureMinutes ?? 9999);
+    });
+    const best = ranked[0];
+    return { bestMatch: best, otherSlots: slots.filter((s) => s !== best) };
+  }, [matrix]);
+
+  const verifiedHotlines = useMemo(
+    () => getVerifiedHotlines(corridor.dataKey),
+    [corridor.dataKey]
+  );
 
   const swap = () => setHeading((h) => flipHeading(h));
 
@@ -580,17 +604,97 @@ export default function CorridorSearchBoard({
             </div>
           )}
 
-          {matrix.slots.map((slot, idx) => (
-            <SlotCard
-              key={`${slot.tier}-${slot.tripId || slot.departureLabel}-${idx}`}
-              slot={slot}
-              t={t}
-              onAct={() => {
-                if (slot.tier === 'SHADOW') onOpenIntentModal?.(role, fromHubId);
-                else onOpenStationView?.(fromHubId, toHubId);
-              }}
-            />
-          ))}
+          {/* CHUYẾN KHỚP TỐT NHẤT — tách hẳn ra, to hơn, đủ thông tin để quyết
+              định ngay mà không phải mở thêm màn nào. Khách liên tỉnh chỉ cần
+              MỘT phương án tốt, không phải một danh sách để so sánh. */}
+          {bestMatch && (
+            <div className="space-y-2">
+              <p className="px-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                {t('search.bestMatch')}
+              </p>
+              <SlotCard
+                slot={bestMatch}
+                t={t}
+                featured
+                origin={matrix.origin}
+                onAct={() => {
+                  if (bestMatch.tier === 'SHADOW') onOpenIntentModal?.(role, fromHubId);
+                  else onOpenStationView?.(fromHubId, toHubId);
+                }}
+              />
+            </div>
+          )}
+
+          {otherSlots.length > 0 && (
+            <div className="space-y-2 pt-1">
+              <p className="px-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                {t('search.otherTrips')}
+              </p>
+              {otherSlots.map((slot, idx) => (
+                <SlotCard
+                  key={`${slot.tier}-${slot.tripId || slot.departureLabel}-${idx}`}
+                  slot={slot}
+                  t={t}
+                  onAct={() => {
+                    if (slot.tier === 'SHADOW') onOpenIntentModal?.(role, fromHubId);
+                    else onOpenStationView?.(fromHubId, toHubId);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* LỐI THOÁT AN TOÀN — luôn ở cuối, không bao giờ để khách cụt đường */}
+          <div className="pt-2 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {t('search.or')}
+              </span>
+              <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onOpenIntentModal?.(role, fromHubId)}
+              className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-dashed border-slate-300 dark:border-white/15 text-left hover:border-[#0071e3]/50 active:scale-[0.99] transition-all duration-150 cursor-pointer"
+            >
+              <p className="text-sm font-bold text-slate-900 dark:text-white">
+                {t('search.placeStandingOrder')}
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {t('search.standingOrderDesc')}
+              </p>
+            </button>
+
+            {/* Cần đi gấp: chỉ hiện SỐ khi đã kiểm chứng; chưa có thì hiện chỉ
+                dẫn thực địa để khách vẫn tự bắt được xe. */}
+            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.07] border border-amber-200 dark:border-amber-500/20">
+              <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                {t('search.urgentTitle')}
+              </p>
+              {verifiedHotlines.length > 0 ? (
+                <div className="mt-2 space-y-1.5">
+                  {verifiedHotlines.map((h) => (
+                    <a
+                      key={h.id}
+                      href={`tel:${String(h.hotline).replace(/\s/g, '')}`}
+                      className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      {h.operator}: {h.hotline}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-1 text-[11px] text-amber-800/90 dark:text-amber-200/80 leading-relaxed">
+                  {matrix.origin?.landmark
+                    ? t('search.urgentGuide', { place: matrix.origin.landmark })
+                    : t('search.urgentGuideFallback')}
+                </p>
+              )}
+            </div>
+          </div>
         </section>
       )}
 
@@ -603,7 +707,7 @@ export default function CorridorSearchBoard({
  * trọng lượng thị giác: khe chắc chắn phải nổi bật nhất, khe dự phòng mờ nhất —
  * mắt khách phải rơi vào thứ đáng tin nhất trước tiên.
  */
-function SlotCard({ slot, t, onAct }) {
+function SlotCard({ slot, t, onAct, featured = false, origin = null }) {
   // Màu sắc bám theo CHỈ SỐ AN TÂM, không bám theo tầng kỹ thuật: khách quan tâm
   // "tôi có chắc đi được không", chứ không quan tâm dữ liệu đến từ nguồn nào.
   const level = slot.assurance?.level;
@@ -635,7 +739,9 @@ function SlotCard({ slot, t, onAct }) {
   const { Icon } = tone;
 
   return (
-    <div className={`p-4 rounded-2xl border ${tone.ring} transition-all duration-150`}>
+    <div
+      className={`p-4 rounded-2xl border ${featured ? 'border-2 shadow-sm' : ''} ${tone.ring} transition-all duration-150`}
+    >
       <div className="flex items-start justify-between gap-3 min-w-0">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -652,10 +758,14 @@ function SlotCard({ slot, t, onAct }) {
             ) : null}
           </div>
 
+          {/* Thẻ nổi bật đã liệt kê xe và số ghế thành từng dòng riêng bên dưới,
+              nên ở đây chỉ nêu chủ xe — nếu không sẽ lặp lại y hệt hai lần. */}
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 truncate">
-            {slot.driverName ? `${slot.driverName}` : ''}
-            {slot.vehicleModel ? ` · ${slot.vehicleModel}` : ''}
-            {slot.seatsAvailable != null ? ` · ${t('search.seatsLeft', { n: slot.seatsAvailable })}` : ''}
+            {slot.driverName || ''}
+            {!featured && slot.vehicleModel ? ` · ${slot.vehicleModel}` : ''}
+            {!featured && slot.seatsAvailable != null
+              ? ` · ${t('search.seatsLeft', { n: slot.seatsAvailable })}`
+              : ''}
           </p>
 
           <p className="mt-0.5 text-[11px] text-slate-400 flex items-center gap-1 min-w-0">
@@ -663,7 +773,9 @@ function SlotCard({ slot, t, onAct }) {
             <span className="truncate">
               {slot.distanceKm != null
                 ? t('search.distanceAway', { n: slot.distanceKm })
-                : slot.note}
+                : featured
+                  ? ''
+                  : slot.note}
             </span>
           </p>
 
@@ -683,6 +795,39 @@ function SlotCard({ slot, t, onAct }) {
         ) : null}
       </div>
 
+      {/* THẺ NỔI BẬT: đủ thông tin để quyết định ngay tại đây — điểm đón, xe,
+          số ghế — thay vì bắt khách mở thêm một màn nữa rồi mới biết. */}
+      {featured && (
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-white/10 space-y-1.5">
+          {origin?.shortName && (
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-px" />
+              <span className="min-w-0">
+                {origin.shortName}
+                {origin.landmark ? (
+                  <span className="block text-slate-400">{origin.landmark}</span>
+                ) : null}
+              </span>
+            </p>
+          )}
+          {slot.plateMasked && (
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+              <Navigation className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="truncate">
+                {slot.vehicleModel ? `${slot.vehicleModel} · ` : ''}
+                <span className="font-mono font-semibold">{slot.plateMasked}</span>
+              </span>
+            </p>
+          )}
+          {slot.seatsAvailable != null && (
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              {t('search.seatsFree', { n: slot.seatsAvailable })}
+            </p>
+          )}
+        </div>
+      )}
+
       {slot.promise && (
         <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
           {slot.promise}
@@ -692,13 +837,13 @@ function SlotCard({ slot, t, onAct }) {
       <button
         type="button"
         onClick={onAct}
-        className={`mt-3 w-full h-11 rounded-xl text-xs font-bold cursor-pointer active:scale-[0.99] transition-all duration-150 ${tone.btn}`}
+        className={`mt-3 w-full ${featured ? 'h-12 text-sm' : 'h-11 text-xs'} rounded-xl font-bold cursor-pointer active:scale-[0.99] transition-all duration-150 ${tone.btn}`}
       >
-        {slot.tier === 'CONFIRMED'
-          ? t('search.actionConfirm')
-          : slot.tier === 'FORMING'
-            ? t('search.actionReserve')
-            : t('search.actionIntent')}
+        {slot.tier === 'SHADOW'
+          ? t('search.actionIntent')
+          : featured
+            ? t('search.holdSeat')
+            : t('search.viewDetail')}
       </button>
     </div>
   );
