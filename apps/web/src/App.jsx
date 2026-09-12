@@ -17,12 +17,14 @@ import AppleMacNotification from './components/common/AppleMacNotification.jsx';
 import CorridorSearchBoard from './components/market/CorridorSearchBoard.jsx';
 import MovementIntentModal from './components/intent/MovementIntentModal.jsx';
 import BookedTripList from './components/booked/BookedTripList.jsx';
-import CockpitMode from './components/cockpit/CockpitMode.jsx';
-import StationRiderView from './components/station/StationRiderView.jsx';
 const AdminDashboardView = React.lazy(() => import('./components/admin/AdminDashboardView.jsx'));
+const CockpitMode = React.lazy(() => import('./components/cockpit/CockpitMode.jsx'));
+const StationRiderView = React.lazy(() => import('./components/station/StationRiderView.jsx'));
+const InboxModal = React.lazy(() => import('./components/modals/InboxModal.jsx'));
+const UserProfileModal = React.lazy(() => import('./components/profile/UserProfileModal.jsx'));
+const EscrowBookingModal = React.lazy(() => import('./components/modals/EscrowBookingModal.jsx'));
 
 // Modals
-import EscrowBookingModal from './components/modals/EscrowBookingModal.jsx';
 import TrustProfileModal from './components/modals/TrustProfileModal.jsx';
 import PolicyModal from './components/modals/PolicyModal.jsx';
 import CancelModal from './components/modals/CancelModal.jsx';
@@ -38,8 +40,6 @@ import CarPhotosModal from './components/modals/CarPhotosModal.jsx';
 import ZaloReentryModal from './components/modals/ZaloReentryModal.jsx';
 import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal.jsx';
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
-import UserProfileModal from './components/profile/UserProfileModal.jsx';
-import InboxModal from './components/modals/InboxModal.jsx';
 
 // Custom Hooks
 import useZaloReentry from './hooks/useZaloReentry.js';
@@ -663,27 +663,12 @@ export default function App() {
   }, []);
 
   // Hook quản lý Bộ lọc thị trường & Phân nhóm thời gian
-  const {
-    searchKeyword,
-    setSearchKeyword,
-    searchFrom,
-    setSearchFrom,
-    searchTo,
-    setSearchTo,
-    selectedTimeSlot,
-    setSelectedTimeSlot,
-    marketViewMode,
-    setMarketViewMode,
-    selectedCarCategory,
-    setSelectedCarCategory,
-    temporalFilter,
-    setTemporalFilter,
-    visibleCount,
-    setVisibleCount,
-    resetFilters,
-    displayedMarketItems,
-    paginatedMarketItems
-  } = useMarketFilters({ driverOffers, passengerRequests });
+  // Chỉ lấy những giá trị còn dùng: phần lớn bộ lọc sàn cũ đã bị gỡ cùng
+  // FilterBar/Hero, để lại 18 biến chết trong lần rà lint.
+  const { searchKeyword, setMarketViewMode, resetFilters } = useMarketFilters({
+    driverOffers,
+    passengerRequests
+  });
 
   // Đồng bộ số lượng chuyến của tôi khi danh sách chuyến đi thay đổi
   useEffect(() => {
@@ -694,9 +679,7 @@ export default function App() {
   }, [currentUser, driverOffers, passengerRequests, updateMyTripsCount]);
 
   // Quản lý Hành lang Tuyến Level 3 & Trạng thái xem sàn
-  const [activeCorridor, setActiveCorridor] = useState('Tuyến QL13');
-  const [activeCorridorContext, setActiveCorridorContext] = useState(null);
-  const [marketLayoutView, setMarketLayoutView] = useState('cards'); // 'cards' (mặc định trực quan) | 'timeline' (dòng thời gian)
+  const [activeCorridor] = useState('Tuyến QL13');
 
   // Quản lý Social Smart Match Suggestions (Ambient Intelligence)
   const [socialMatches, setSocialMatches] = useState([]);
