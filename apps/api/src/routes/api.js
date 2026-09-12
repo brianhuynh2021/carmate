@@ -73,7 +73,9 @@ import {
   riderOnTheWayHandler,
   schedulerStatusHandler,
   schedulerRunTickHandler,
-  timeSlotMatrixHandler
+  timeSlotMatrixHandler,
+  driverReadyHandler,
+  rescueStatusHandler
 } from '../controllers/notificationController.js';
 import { requireAuth, optionalAuth, requireTripOwnership, requireBookingParty } from '../middlewares/authMiddleware.js';
 import {
@@ -173,6 +175,9 @@ router.get('/bookings', optionalAuth, listBookings);
 router.post('/bookings', optionalAuth, createBooking);
 router.get('/bookings/:id/public-summary', optionalAuth, getBookingPublicSummary);
 router.post('/bookings/:id/driver-confirm', optionalAuth, driverConfirmBooking);
+// Chốt T-40/T-30: chủ xe bấm "Tôi đang đi", và khách tra cứu Chế độ Cứu hộ
+router.post('/bookings/:id/driver-ready', optionalAuth, driverReadyHandler);
+router.get('/bookings/:id/rescue-status', optionalAuth, rescueStatusHandler);
 router.post('/bookings/:id/messages', optionalAuth, addBookingMessageHandler);
 router.post('/bookings/:id/pre-confirm', optionalAuth, preConfirmBookingHandler);
 router.post('/bookings/:id/final-confirm', optionalAuth, finalConfirmBookingHandler);

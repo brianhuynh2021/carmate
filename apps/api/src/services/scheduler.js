@@ -14,6 +14,7 @@
  *
  *   T30_TICK      60s   Hội tụ không-thời gian, bắn báo trước 30 phút
  *   HANDSHAKE     60s   Nhắc lần 2 / thu hồi chỗ khi khách im lặng
+ *   DEPARTURE     60s   Canh T-40/T-30/T-20 theo giờ khởi hành THẬT của chuyến
  *   LATENESS      90s   Radar trễ hẹn -> hoán đổi chuyến Shadow
  *   MICRO_BATCH  180s   Phiên gom khớp lệnh (đúng cửa sổ 3 phút đã khai báo)
  *   RADAR_SWEEP  300s   4 chốt đêm T-8h/T-6h/T-1.5h/T-45m
@@ -36,6 +37,12 @@ import {
 } from './stationQueueService.js';
 import { runBatchMatchingEpoch } from './batchMatchingEngine.js';
 import {
+  evaluateDepartureCheckpoints,
+  activateRescueMode,
+  markReadyAsked,
+  markReadyReminded
+} from './departureWatchdog.js';
+import {
   sendNotification,
   NOTIFICATION_KINDS,
   pruneOldNotifications
@@ -47,6 +54,7 @@ export const SCHEDULER_INTERVALS = Object.freeze({
   T30_TICK_MS: 60 * 1000,
   HANDSHAKE_MS: 60 * 1000,
   LATENESS_MS: 90 * 1000,
+  DEPARTURE_MS: 60 * 1000,
   MICRO_BATCH_MS: 3 * 60 * 1000,
   RADAR_SWEEP_MS: 5 * 60 * 1000,
   HOUSEKEEPING_MS: 60 * 60 * 1000
@@ -67,7 +75,9 @@ const stats = {
     seatsReleased: 0,
     shadowSwaps: 0,
     batchEpochs: 0,
-    radarAlerts: 0
+    radarAlerts: 0,
+    readyAsks: 0,
+    rescueActivations: 0
   }
 };
 
@@ -296,6 +306,100 @@ async function tickLateness() {
 }
 
 /**
+ * NHỊP — CANH CHUYẾN THEO GIỜ KHỞI HÀNH (T-40 / T-30 / T-20)
+ *
+ * Bốn chốt đêm là giờ treo cứng, chỉ phủ được chuyến sáng sớm. Nhịp này bám mốc
+ * tương đối so với giờ chạy thật nên mọi khung giờ đều được canh như nhau.
+ *
+ * Điểm quyết định là T-20: nếu chủ xe vẫn im lặng, khách được đẩy thẳng Chế độ
+ * Cứu hộ kèm hotline xe khách QL13 — lúc đó họ vẫn còn 20 phút để gọi xe Thành
+ * Công và ra kịp mặt đường, thay vì ra trạm đứng đợi rồi mới biết mình bị bỏ rơi.
+ */
+async function tickDeparture() {
+  const sessions = getActiveCockpitSessions();
+  const actions = evaluateDepartureCheckpoints({ nowMs: Date.now(), activeSessions: sessions });
+  if (actions.length === 0) return;
+
+  for (const item of actions) {
+    const { booking, action, driverPhone, passengerPhone, departureMs } = item;
+    const depLabel = formatClock(departureMs);
+
+    if (action === 'ASK_READY' || action === 'REMIND_READY') {
+      const isRemind = action === 'REMIND_READY';
+      const res = await sendNotification({
+        phone: driverPhone,
+        kind: NOTIFICATION_KINDS.DRIVER_CONFIRM_REQUEST,
+        title: isRemind ? `Nhắc lại: chuyến ${depLabel} sắp khởi hành` : `Chuyến ${depLabel} — bạn đã sẵn sàng?`,
+        body: isRemind
+          ? `Còn ${item.minutesUntil} phút nữa tới giờ đón. Bấm xác nhận để khách yên tâm ra trạm.`
+          : `Chuyến đi lúc ${depLabel}. Bạn đã sẵn sàng di chuyển đón khách chưa?`,
+        data: {
+          bookingId: booking.escrowId,
+          departureMs,
+          minutesUntil: item.minutesUntil,
+          requiresDriverReady: true
+        },
+        dedupeKey: `${isRemind ? 'READY2' : 'READY1'}:${booking.escrowId}`
+      });
+
+      if (res.success && !res.deduped) {
+        stats.actions.readyAsks += 1;
+        if (isRemind) await markReadyReminded(booking.escrowId);
+        else await markReadyAsked(booking.escrowId);
+      }
+      continue;
+    }
+
+    if (action === 'ACTIVATE_RESCUE') {
+      const result = await activateRescueMode({
+        bookingId: booking.escrowId,
+        reason: item.reason,
+        lifebuoys: item.lifebuoys
+      });
+      if (!result.success || result.alreadyActive) continue;
+      stats.actions.rescueActivations += 1;
+
+      // Khách: nói thẳng sự thật kèm phương án cụ thể, không hứa hão
+      const busLine = (item.lifebuoys || [])
+        .slice(0, 2)
+        .map((b) => `${b.operator} (${b.hotline})`)
+        .join(' · ');
+
+      await sendNotification({
+        phone: passengerPhone,
+        kind: NOTIFICATION_KINDS.TRIP_AT_RISK,
+        title: 'Chuyến đi có thể bị gián đoạn',
+        body: `Hệ thống chưa kết nối được với chủ xe cho chuyến ${depLabel}. Bạn vẫn còn ${item.minutesUntil} phút — CarMate đã chuẩn bị sẵn phương án: ${busLine}`,
+        data: {
+          bookingId: booking.escrowId,
+          rescueMode: true,
+          reason: item.reason,
+          departureMs,
+          minutesUntil: item.minutesUntil,
+          lifebuoys: item.lifebuoys
+        },
+        dedupeKey: `RESCUE:${booking.escrowId}`
+      });
+
+      // Chủ xe: cảnh báo cuối, chuyến VẪN CÒN nếu kịp xuất hiện
+      await sendNotification({
+        phone: driverPhone,
+        kind: NOTIFICATION_KINDS.TRIP_AT_RISK,
+        title: 'Cảnh báo: chưa xác nhận chuyến sắp chạy',
+        body: `Chuyến ${depLabel} còn ${item.minutesUntil} phút. Khách đã được thông báo phương án dự phòng. Bạn vẫn đón được nếu xác nhận ngay.`,
+        data: { bookingId: booking.escrowId, departureMs, requiresDriverReady: true },
+        dedupeKey: `RESCUEDRV:${booking.escrowId}`
+      });
+
+      console.warn(
+        `[Scheduler:departure] Bật cứu hộ cho ${booking.escrowId} (${item.reason}), ` +
+          `chủ xe ${driverPhone} bị ghi nhận trễ hẹn.`
+      );
+    }
+  }
+}
+
+/**
  * NHỊP 4 — PHIÊN GOM KHỚP LỆNH VI MÔ (WATTER MICRO-BATCHING)
  *
  * Gom 3 phút rồi giải một lần cho tỷ lệ ghép cao hơn hẳn so với ghép tham lam
@@ -318,8 +422,11 @@ async function tickMicroBatch() {
  * những khoảnh khắc mà trước đây hoàn toàn không có gì chạy vì khách đang ngủ.
  */
 async function tickRadarSweep() {
-  const bookings = getBookings().filter(
-    (b) => b.status === 'zalo_active' || b.status === 'confirmed' || b.status === 'pre_confirmed'
+  // 'driver_confirmed' PHẢI nằm trong danh sách: driverConfirmBooking ghi đúng
+  // trạng thái này, thiếu nó thì chủ xe vừa bấm xác nhận xong là chuyến rơi khỏi
+  // radar ngay lập tức — đúng những chuyến đang khoẻ lại mất giám sát.
+  const bookings = getBookings().filter((b) =>
+    ['zalo_active', 'confirmed', 'pre_confirmed', 'driver_confirmed', 'reassigned'].includes(b.status)
   );
   if (bookings.length === 0) return;
 
@@ -422,6 +529,7 @@ export function startScheduler({ enabled = true } = {}) {
     ['t30', SCHEDULER_INTERVALS.T30_TICK_MS, tickT30],
     ['handshake', SCHEDULER_INTERVALS.HANDSHAKE_MS, tickHandshake],
     ['lateness', SCHEDULER_INTERVALS.LATENESS_MS, tickLateness],
+    ['departure', SCHEDULER_INTERVALS.DEPARTURE_MS, tickDeparture],
     ['microBatch', SCHEDULER_INTERVALS.MICRO_BATCH_MS, tickMicroBatch],
     ['radarSweep', SCHEDULER_INTERVALS.RADAR_SWEEP_MS, tickRadarSweep],
     ['housekeeping', SCHEDULER_INTERVALS.HOUSEKEEPING_MS, tickHousekeeping]
@@ -478,6 +586,7 @@ export async function runTickNow(name) {
     t30: tickT30,
     handshake: tickHandshake,
     lateness: tickLateness,
+    departure: tickDeparture,
     microBatch: tickMicroBatch,
     radarSweep: tickRadarSweep,
     housekeeping: tickHousekeeping

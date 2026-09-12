@@ -16,7 +16,7 @@
     "dev:all": "node --env-file-if-exists=.env apps/api/src/index.js",
     "build": "npm run build --workspace=@carmate/web",
     "preview": "npm run preview --workspace=@carmate/web",
-    "test": "npm run test:e2e && npm run test:level3 && npm run test:compliance && npm run test:emergency && npm run test:station && npm run test:rendezvous && npm run test:matrix",
+    "test": "npm run test:e2e && npm run test:level3 && npm run test:compliance && npm run test:emergency && npm run test:station && npm run test:rendezvous && npm run test:matrix && npm run test:rescue",
     "test:e2e": "node --env-file-if-exists=.env scripts/test-local-e2e.js",
     "test:level3": "node --env-file-if-exists=.env scripts/test-level3-engine.mjs",
     "test:compliance": "node --env-file-if-exists=.env scripts/test-cost-sharing-compliance.mjs",
@@ -34,7 +34,8 @@
     "db:clear": "node scripts/clear-demo-data.js",
     "db:seed": "node scripts/seed-local-data.js",
     "test:rendezvous": "node --env-file-if-exists=.env scripts/test-spacetime-rendezvous.mjs",
-    "test:matrix": "node --env-file-if-exists=.env scripts/test-timeslot-matrix.mjs"
+    "test:matrix": "node --env-file-if-exists=.env scripts/test-timeslot-matrix.mjs",
+    "test:rescue": "node --env-file-if-exists=.env scripts/test-departure-rescue.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

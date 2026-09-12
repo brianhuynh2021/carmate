@@ -715,6 +715,15 @@ export const api = {
     });
   },
 
+  // ── Chế Độ Cứu Hộ & Chốt Sẵn Sàng ────────────────────────────────────
+  async getRescueStatus(bookingId) {
+    return request(`/bookings/${bookingId}/rescue-status`);
+  },
+
+  async confirmDriverReady(bookingId) {
+    return request(`/bookings/${bookingId}/driver-ready`, { method: 'POST' });
+  },
+
   async getSchedulerStatus() {
     return request('/admin/scheduler-status');
   }

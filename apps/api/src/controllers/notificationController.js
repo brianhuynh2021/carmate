@@ -12,6 +12,7 @@ import {
 } from '../services/notificationService.js';
 import { riderConfirmOnTheWay } from '../services/stationQueueService.js';
 import { buildTimeSlotMatrix } from '../services/timeSlotMatrix.js';
+import { getBookingById, updateBookingStatus } from '../db/sqliteStore.js';
 import { getSchedulerStatus, runTickNow } from '../services/scheduler.js';
 
 /**
@@ -167,6 +168,85 @@ export function timeSlotMatrixHandler(req, res) {
     });
 
     return res.status(matrix.success ? 200 : 400).json(matrix);
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/bookings/:id/driver-ready
+ * CHỦ XE BẤM "TÔI ĐANG ĐI / ĐÃ SẴN SÀNG" tại chốt T-40 hoặc T-30.
+ *
+ * Khác với driver-confirm (chốt lịch từ hôm trước qua Magic Link Zalo), nút này
+ * là tín hiệu sống ngay trước giờ chạy — thứ quyết định có phải bật Chế độ Cứu
+ * hộ hay không. Bấm được thì chuyến đi tiếp bình thường.
+ */
+export async function driverReadyHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
+    }
+
+    // Chỉ chính chủ xe của chuyến mới được xác nhận hộ mình (chống IDOR)
+    const callerPhone = String(req.user?.phone || '').replace(/\D/g, '');
+    const driverPhone = String(booking.driverPhone || booking.phoneReal || '').replace(/\D/g, '');
+    if (!callerPhone || callerPhone !== driverPhone) {
+      return res.status(403).json({
+        success: false,
+        error: 'Bạn không phải chủ xe của chuyến đi này'
+      });
+    }
+
+    const nowIso = new Date().toISOString();
+    const updated = await updateBookingStatus(id, booking.status, {
+      readyConfirmedAt: nowIso,
+      driverConfirmed: true,
+      driverConfirmedAt: booking.driverConfirmedAt || nowIso,
+      // Chủ xe xuất hiện kịp thì gỡ cờ cứu hộ, khách thấy lại màn hình bình thường
+      rescueMode: false,
+      rescueClearedAt: booking.rescueMode ? nowIso : booking.rescueClearedAt || null
+    });
+
+    return res.json({
+      success: true,
+      message: 'Đã ghi nhận. Khách sẽ được thông báo là bạn đang trên đường.',
+      data: updated
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/bookings/:id/rescue-status
+ * Khách hỏi: chuyến của tôi có đang ở Chế độ Cứu hộ không, và gọi số nào?
+ */
+export function rescueStatusHandler(req, res) {
+  try {
+    const booking = getBookingById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
+    }
+
+    const callerPhone = String(req.user?.phone || '').replace(/\D/g, '');
+    const parties = [booking.passengerPhone, booking.driverPhone, booking.phoneReal]
+      .map((p) => String(p || '').replace(/\D/g, ''))
+      .filter(Boolean);
+    if (!callerPhone || !parties.includes(callerPhone)) {
+      return res.status(403).json({ success: false, error: 'Bạn không thuộc chuyến đi này' });
+    }
+
+    return res.json({
+      success: true,
+      rescueMode: booking.rescueMode === true,
+      rescueActivatedAt: booking.rescueActivatedAt || null,
+      reason: booking.rescueReason || null,
+      lifebuoys: booking.rescueLifebuoys || [],
+      driverConfirmed: booking.driverConfirmed === true,
+      readyConfirmedAt: booking.readyConfirmedAt || null
+    });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
