@@ -253,19 +253,19 @@ export default function CorridorSearchBoard({
       )}
 
       {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
-      <section className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08] shadow-sm overflow-hidden">
+      <section className="surface rounded-3xl overflow-hidden">
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
         <div className="p-4 sm:p-5 pr-16 flex items-center gap-3">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0" />
           <div className="flex-1 min-w-0">
-            <label className="block text-[11px] font-medium uppercase tracking-wide text-slate-400 mb-0.5">
+            <label className="block type-label text-slate-400 mb-0.5">
               {t('search.from')}
             </label>
             <div>
               <select
                 value={fromHubId}
                 onChange={(e) => setFromHubId(e.target.value)}
-                className="w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
+                className="tap-44 w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
               >
                 {fromHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900">
@@ -298,14 +298,14 @@ export default function CorridorSearchBoard({
         <div className="p-4 sm:p-5 pr-16 flex items-center gap-3">
           <MapPin className="w-5 h-5 text-[#0071e3] shrink-0" />
           <div className="flex-1 min-w-0">
-            <label className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-0.5">
+            <label className="block type-label text-slate-400 mb-0.5">
               {t('search.to')}
             </label>
             <div>
               <select
                 value={toHubId}
                 onChange={(e) => setToHubId(e.target.value)}
-                className="w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
+                className="tap-44 w-full appearance-none bg-transparent text-base font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
               >
                 {toHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900">
@@ -322,7 +322,7 @@ export default function CorridorSearchBoard({
             chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm". */}
         <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4 sm:mx-5" />
         <div className="p-4 sm:p-5">
-          <label className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-slate-400 mb-2.5">
+          <label className="flex items-center gap-2 type-label text-slate-400 mb-2.5">
             <Clock className="w-4 h-4 text-amber-500 shrink-0" />
             {t('search.departureLabel')}
           </label>
@@ -385,7 +385,7 @@ export default function CorridorSearchBoard({
               <div>
                 <label
                   htmlFor="carmate-pick-date"
-                  className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-1"
+                  className="block type-label text-slate-400 mb-1"
                 >
                   {t('search.pickDate')}
                 </label>
@@ -400,7 +400,7 @@ export default function CorridorSearchBoard({
               </div>
 
               <div>
-                <span className="block text-[10px] font-mono uppercase tracking-wide text-slate-400 mb-1">
+                <span className="block type-label text-slate-400 mb-1">
                   {t('search.pickWindow')}
                 </span>
                 <div className="grid grid-cols-3 gap-1.5">

@@ -187,6 +187,80 @@
     scrollbar-width: none;
   }
 
+  /* ────────────────────────────────────────────────────────────
+     THANG CHỮ APPLE (Apple Type Scale)
+     Đo thực tế trên trang chủ thấy 17 biến thể cỡ/độ đậm khác nhau cho MỘT
+     màn hình — mỗi chỗ tự quyết một kiểu nên mắt không bắt được nhịp phân
+     tầng. Apple dùng thang danh nghĩa (Title / Body / Caption / Footnote),
+     thường 5-6 bậc, và mọi nơi gọi tên bậc chứ không gõ cỡ tuỳ ý.
+
+     Dùng: class="type-title" thay cho "text-lg font-black" v.v.
+     ──────────────────────────────────────────────────────────── */
+  .type-title {
+    font-size: 1.0625rem; /* 17px — cỡ Title iOS */
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.3;
+  }
+  .type-heading {
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 600;
+    letter-spacing: -0.016em;
+    line-height: 1.35;
+  }
+  .type-body {
+    font-size: 0.875rem; /* 14px */
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.45;
+  }
+  .type-caption {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.4;
+  }
+  .type-footnote {
+    font-size: 0.75rem; /* 12px */
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  /* Nhãn trường: Apple dùng chữ thường, KHÔNG in hoa toàn bộ. All-caps chỉ
+     dành cho tiêu đề nhóm trong Settings, không dùng cho nhãn ô nhập. */
+  .type-label {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.3;
+  }
+
+  /* Vùng chạm tối thiểu 44px theo HIG, kể cả khi nội dung thấp hơn.
+     Dùng cho <select> và các nút nhỏ mà không phải phình chữ lên. */
+  .tap-44 {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* VÙNG CHẠM VÔ HÌNH (Extended Hit Area)
+     Nút biểu tượng trên thanh tiêu đề chỉ cao 34px — dưới ngưỡng 44pt của HIG.
+     Phóng to nút lên 44px sẽ làm thanh tiêu đề nặng nề, nên thay vào đó nới
+     vùng chạm ra ngoài bằng pseudo-element: mắt vẫn thấy nút 34px, nhưng ngón
+     tay chạm được cả vùng 44px. Đây đúng cách Apple xử lý các nút nhỏ trong
+     thanh điều hướng iOS.
+     Lưu ý: nút cha phải có position:relative (class `relative`). */
+  .tap-area-44::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    /* Không vẽ gì, chỉ bắt sự kiện chạm */
+  }
+
   /* Apple Precision Craft Surface (Card & Container) */
   .surface {
     background-color: #ffffff;
