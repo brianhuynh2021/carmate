@@ -674,8 +674,15 @@ export default {
     resultCount: '{count} matching rides',
     youAre: 'You are a',
     rolePassenger: 'Co-rider',
-    roleDriver: 'Car owner',
-    cockpitCta: 'Turn on dashboard mode'
+    roleDriver: 'Car owner'
+  },
+  cockpit: {
+    navLabel: 'Pick up',
+    navLabelFull: 'Pick up along the way',
+    start: 'Start picking up',
+    startAria: 'Start picking up riders along the way',
+    exit: 'Stop picking up',
+    desc: 'Voice alerts you when someone is waiting at a station ahead'
   },
   footer: {
     aboutDesc:

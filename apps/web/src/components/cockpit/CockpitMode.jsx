@@ -614,7 +614,7 @@ export default function CockpitMode({
     setVehicle(verified);
     setSeatsAvailable(verified.seats || inputSeats || 2);
     playAudioChime();
-    speakText('Hồ sơ xe đã được kích hoạt thành công! Chào mừng chủ xe vào buồng lái Taplo CarMate.');
+    speakText('Hồ sơ xe đã được kích hoạt thành công! CarMate bắt đầu dò khách dọc đường cho bạn.');
     onShowToast?.('🎉 Hồ sơ đã được kích hoạt! Sẵn sàng đón khách dọc QL13.');
   };
 
@@ -887,7 +887,7 @@ export default function CockpitMode({
                 <span>Thời gian duyệt: Dưới 5 phút</span>
               </p>
               <p className="text-[10.5px] text-slate-400">
-                (Hệ thống sẽ tự động chuyển sang Taplo khi hoàn tất)
+                (Hệ thống sẽ tự động bắt đầu nhận khách khi hoàn tất)
               </p>
             </div>
 
@@ -936,7 +936,7 @@ export default function CockpitMode({
             type="button"
             onClick={onBack}
             className="w-11 h-11 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] active:scale-95 flex items-center justify-center border border-white/[0.08] transition-all cursor-pointer"
-            title="Thoát chế độ Taplo"
+            title="Dừng nhận khách dọc đường"
           >
             <ChevronLeft className="w-6 h-6 text-slate-300" />
           </button>
@@ -1578,7 +1578,7 @@ export default function CockpitMode({
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 text-slate-400">
             <Radio className="w-4 h-4 text-emerald-400" />
-            <span className="font-mono">Bộ thử nghiệm Taplo:</span>
+            <span className="font-mono">Bộ thử nghiệm:</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

@@ -1096,7 +1096,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   <th className="py-3 px-4">Họ Tên & Quê Quán</th>
                   <th className="py-3 px-4">Số Điện Thoại</th>
                   <th className="py-3 px-4">Phương Tiện / Biển Số</th>
-                  <th className="py-3 px-4">Trạng Thái Xe / Taplo</th>
+                  <th className="py-3 px-4">Trạng Thái Xe / Nhận Khách</th>
                   <th className="py-3 px-4">Phê Duyệt Kích Hoạt</th>
                   <th className="py-3 px-4 text-right">Khoá / Mở Khoá</th>
                 </tr>

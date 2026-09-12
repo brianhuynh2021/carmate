@@ -991,7 +991,6 @@ export default function App() {
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenCockpit={() => setActiveTab('cockpit')}
         onRequestPostTrip={handleRequestPostTrip}
         setShowPolicyModal={setShowPolicyModal}
         bookedCount={activeBookedCount}

@@ -73,13 +73,12 @@ export default function Header({
   readBookingTimestamps = {},
   unreadBookingIds = [],
   socialMatches = [],
-  onOpenCockpit
 }) {
   const { t, lang, setLang } = useI18n();
   const tabs = [
     { id: 'market', label: 'Tuyến Tiện Chuyến', icon: Compass },
     { id: 'station', label: 'Điểm Đón Xe', icon: Fuel },
-    { id: 'cockpit', label: 'Taplo Chủ Xe', icon: Car },
+    { id: 'cockpit', label: 'Nhận khách dọc đường', icon: Car },
     { id: 'booked', label: t('nav.booked') || 'Lịch hẹn', icon: Clock, badge: bookedCount }
   ];
 
@@ -198,20 +197,6 @@ export default function Header({
             </kbd>
           </button>
 
-          {/* NÚT 1-CHẠM VÀO CHẾ ĐỘ TAPLO Ô TÔ (COCKPIT MODE) */}
-          {onOpenCockpit && (
-            <button
-              type="button"
-              onClick={onOpenCockpit}
-              title="Bật Chế độ Taplo Ô Tô (Cockpit Mode)"
-              className="h-9 px-3.5 rounded-full inline-flex items-center gap-2 text-xs font-black bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer select-none shrink-0"
-            >
-              <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
-              <Car className="w-4 h-4 text-slate-950" strokeWidth={2.4} />
-              <span>BẬT TAPLO</span>
-            </button>
-          )}
-
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>
               <button
@@ -311,23 +296,6 @@ export default function Header({
                         {inboxCount}
                       </span>
                     )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenCockpit?.();
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer group"
-                  >
-                    <div className="inline-flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                      <span>Chế độ Taplo Ô Tô (Cockpit)</span>
-                    </div>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
-                      Radar
-                    </span>
                   </button>
 
                   <button

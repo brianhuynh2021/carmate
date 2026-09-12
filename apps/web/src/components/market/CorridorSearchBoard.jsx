@@ -46,7 +46,6 @@ function writeStore(key, value) {
  */
 export default function CorridorSearchBoard({
   currentUser = null,
-  onOpenCockpit,
   onOpenStationView,
   onOpenIntentModal
 }) {
@@ -386,17 +385,6 @@ export default function CorridorSearchBoard({
         </div>
       </div>
 
-      {/* Chủ xe: lối vào Taplo, chỉ hiện đúng vai trò */}
-      {role === 'driver' && (
-        <button
-          type="button"
-          onClick={onOpenCockpit}
-          className="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-400 hover:shadow-lg hover:shadow-emerald-500/25 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.99] transition-all duration-150 cursor-pointer"
-        >
-          <Car className="w-4 h-4" />
-          {t('search.cockpitCta')}
-        </button>
-      )}
     </div>
   );
 }

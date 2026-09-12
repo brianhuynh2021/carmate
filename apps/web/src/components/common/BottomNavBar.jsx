@@ -10,7 +10,7 @@ export default function BottomNavBar({
   const items = [
     { id: 'market', label: 'Tiện chuyến', icon: Compass },
     { id: 'station', label: 'Điểm đón', icon: Fuel },
-    { id: 'cockpit', label: 'Taplo', icon: Car, fab: true },
+    { id: 'cockpit', label: 'Nhận khách', icon: Car, fab: true },
     { id: 'booked', label: 'Lịch hẹn', icon: Clock, badge: bookedCount },
     { id: 'inbox', label: 'Hộp thoại', icon: MessageSquare }
   ];
@@ -38,7 +38,7 @@ export default function BottomNavBar({
                 key={item.id}
                 type="button"
                 onClick={() => handleTabClick(item.id)}
-                aria-label="Bật Taplo Chủ Xe"
+                aria-label="Bắt đầu nhận khách dọc đường"
                 className="flex flex-col items-center justify-center -mt-6 cursor-pointer active:scale-95 transition-transform touch-manipulation"
               >
                 <span

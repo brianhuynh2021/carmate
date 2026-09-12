@@ -671,8 +671,15 @@ export default {
     resultCount: '{count} chuyến phù hợp',
     youAre: 'Bạn là',
     rolePassenger: 'Người đi cùng',
-    roleDriver: 'Chủ xe',
-    cockpitCta: 'Bật Taplo nhận khách'
+    roleDriver: 'Chủ xe'
+  },
+  cockpit: {
+    navLabel: 'Nhận khách',
+    navLabelFull: 'Nhận khách dọc đường',
+    start: 'Bắt đầu nhận khách',
+    startAria: 'Bắt đầu nhận khách dọc đường',
+    exit: 'Dừng nhận khách',
+    desc: 'Tự động báo giọng nói khi có người đang chờ ở trạm phía trước'
   },
   footer: {
     aboutDesc:
