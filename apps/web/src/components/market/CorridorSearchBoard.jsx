@@ -237,7 +237,7 @@ export default function CorridorSearchBoard({
                 setCorridorId(c.id);
                 writeStore(CORRIDOR_KEY, c.id);
               }}
-              className={`shrink-0 px-3.5 h-9 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+              className={`relative tap-area-44 shrink-0 px-3.5 h-9 rounded-full text-xs font-bold transition-all cursor-pointer border ${
                 c.id === corridor.id
                   ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-sm'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:border-[#0071e3]/50 hover:text-[#0071e3] hover:shadow-xs'
@@ -596,7 +596,7 @@ export default function CorridorSearchBoard({
           <button
             type="button"
             onClick={() => switchRole('passenger')}
-            className={`px-3.5 h-9 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all duration-150 cursor-pointer ${
+            className={`relative tap-area-44 px-3.5 h-9 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all duration-150 cursor-pointer ${
               role === 'passenger'
                 ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.06]'
@@ -608,7 +608,7 @@ export default function CorridorSearchBoard({
           <button
             type="button"
             onClick={() => switchRole('driver')}
-            className={`px-3.5 h-9 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all duration-150 cursor-pointer ${
+            className={`relative tap-area-44 px-3.5 h-9 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all duration-150 cursor-pointer ${
               role === 'driver'
                 ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.06]'

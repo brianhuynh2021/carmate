@@ -63,7 +63,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               href={SITE_INFO.zaloOA}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-3 rounded-2xl bg-[#0068ff]/10 hover:bg-[#0068ff]/15 active:scale-[0.98] border border-[#0068ff]/20 text-[#0068ff] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+              className="h-11 px-3 rounded-2xl bg-[#0068ff]/10 hover:bg-[#0068ff]/15 active:scale-[0.98] border border-[#0068ff]/20 text-[#0068ff] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <ZaloIcon className="w-4 h-4" />
               <span>{lang === 'en' ? 'Zalo Support' : 'Hỗ trợ Zalo'}</span>
@@ -73,7 +73,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+              className="h-11 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <TelegramIcon className="w-4 h-4" />
               <span>{lang === 'en' ? 'Telegram Support' : 'Hỗ trợ Telegram'}</span>
@@ -86,7 +86,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               <button
                 type="button"
                 onClick={onOpenTerms}
-                className="hover:text-[#0071e3] transition-colors cursor-pointer"
+                className="relative tap-area-44 hover:text-[#0071e3] transition-colors cursor-pointer"
               >
                 {lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản'}
               </button>
@@ -94,7 +94,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               <button
                 type="button"
                 onClick={onOpenPolicy}
-                className="hover:text-[#0071e3] transition-colors cursor-pointer"
+                className="relative tap-area-44 hover:text-[#0071e3] transition-colors cursor-pointer"
               >
                 {lang === 'en' ? 'Safety Policy' : 'Chính sách an toàn'}
               </button>
