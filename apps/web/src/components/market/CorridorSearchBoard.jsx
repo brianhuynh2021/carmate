@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowUpDown, MapPin, Search, Clock, Car, Users, Loader2, ChevronDown, Zap, Navigation, Calendar } from 'lucide-react';
+import { ArrowUpDown, MapPin, Search, Clock, Loader2, ChevronDown, Zap, Navigation, Calendar } from 'lucide-react';
 import {
   getActiveCorridors,
   getDefaultCorridor,
@@ -78,13 +78,18 @@ export default function CorridorSearchBoard({
     return 'passenger';
   }, [currentUser]);
 
-  const [role, setRole] = useState(detectedRole);
-  useEffect(() => setRole(detectedRole), [detectedRole]);
-
-  const switchRole = (next) => {
-    setRole(next);
-    writeStore(ROLE_KEY, next);
-  };
+  // Vai trò được SUY RA, không bắt người dùng tự khai.
+  //
+  // Trước đây có thanh pill "Bạn là: [Người đi cùng | Chủ xe]" ở cuối trang.
+  // Bỏ đi vì hai lý do đo được:
+  //   1. Xung đột với nút "Nhận khách" ở thanh điều hướng dưới — người đang
+  //      chọn vai "Người đi cùng" vẫn thấy nút nhận khách, gây bối rối.
+  //   2. Ở iPhone SE (667px) nó nằm ở mốc 719px, tức NGOÀI tầm nhìn hoàn toàn
+  //      (thanh nav đã che từ 585px) — không ai thấy để mà bấm.
+  //
+  // Vai trò giờ suy từ hồ sơ (có xe = chủ xe) hoặc thói quen đã lưu; chủ xe
+  // muốn mở chuyến thì dùng nút "Nhận khách" ở thanh dưới, rõ ràng hơn hẳn.
+  const role = detectedRole;
 
   // ── Điểm đi / điểm đến ─────────────────────────────────────────────────
   const fromKey = heading === 'b_to_a' ? 'b' : 'a';
@@ -225,10 +230,10 @@ export default function CorridorSearchBoard({
   const hubLabel = (h) => h.shortName || h.name;
 
   return (
-    <div className="w-full max-w-2xl mx-auto min-w-0 space-y-4 animate-fade-in pb-10">
+    <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-10">
       {/* ── CHỌN TUYẾN (chỉ hiện khi có nhiều hơn 1 tuyến) ── */}
       {corridors.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {corridors.map((c) => (
             <button
               key={c.id}
@@ -255,7 +260,7 @@ export default function CorridorSearchBoard({
       {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
       <section className="surface rounded-3xl overflow-hidden">
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
-        <div className="p-4 sm:p-5 pr-16 flex items-center gap-3">
+        <div className="py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0" />
           <div className="flex-1 min-w-0">
             <label className="block type-label text-slate-400 mb-0.5">
@@ -295,7 +300,7 @@ export default function CorridorSearchBoard({
         </div>
 
         {/* Điểm đến */}
-        <div className="p-4 sm:p-5 pr-16 flex items-center gap-3">
+        <div className="py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3">
           <MapPin className="w-5 h-5 text-[#0071e3] shrink-0" />
           <div className="flex-1 min-w-0">
             <label className="block type-label text-slate-400 mb-0.5">
@@ -321,7 +326,7 @@ export default function CorridorSearchBoard({
             Chip chạm một phát thay cho lịch picker: người đi liên tỉnh thực tế
             chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm". */}
         <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4 sm:mx-5" />
-        <div className="p-4 sm:p-5">
+        <div className="py-3.5 px-4 sm:py-4 sm:px-5">
           <label className="flex items-center gap-2 type-label text-slate-400 mb-2.5">
             <Clock className="w-4 h-4 text-amber-500 shrink-0" />
             {t('search.departureLabel')}
@@ -446,7 +451,7 @@ export default function CorridorSearchBoard({
             như khung tìm kiếm của xe liên tỉnh. Ba câu hỏi ở trên, một hành
             động ở dưới — mắt đi thẳng một mạch, không phải tìm nút ở đâu. ── */}
         <div className="h-px bg-slate-100 dark:bg-white/[0.06]" />
-        <div className="p-4 sm:p-5">
+        <div className="py-3.5 px-4 sm:py-4 sm:px-5">
           <button
             type="button"
             onClick={handleSearchNow}
@@ -588,37 +593,6 @@ export default function CorridorSearchBoard({
           ))}
         </section>
       )}
-
-      {/* ── ĐỔI VAI TRÒ: nhỏ, ở cuối, không chắn đường ── */}
-      <div className="flex items-center justify-center gap-2 pt-1">
-        <span className="text-xs text-slate-400">{t('search.youAre')}</span>
-        <div className="inline-flex p-0.5 rounded-full bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10">
-          <button
-            type="button"
-            onClick={() => switchRole('passenger')}
-            className={`relative tap-area-44 px-3.5 h-9 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all duration-150 cursor-pointer ${
-              role === 'passenger'
-                ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.06]'
-            }`}
-          >
-            <Users className="w-3 h-3" />
-            {t('search.rolePassenger')}
-          </button>
-          <button
-            type="button"
-            onClick={() => switchRole('driver')}
-            className={`relative tap-area-44 px-3.5 h-9 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all duration-150 cursor-pointer ${
-              role === 'driver'
-                ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-xs'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.06]'
-            }`}
-          >
-            <Car className="w-3 h-3" />
-            {t('search.roleDriver')}
-          </button>
-        </div>
-      </div>
 
     </div>
   );
