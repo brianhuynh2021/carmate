@@ -25,6 +25,7 @@ import { formatVND, VIRTUAL_HUBS } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 /**
  * BẢN ĐỒ TUYẾN ➔ TRẠM ẢO (HUB)
@@ -78,6 +79,7 @@ export default function DriverScheduleCardView({
   onShowToast,
   onChangeVehicle
 }) {
+  const { t } = useI18n();
   // NGUỒN SỰ THẬT DUY NHẤT LÀ MÁY CHỦ.
   // Trước đây danh sách này đọc/ghi thẳng vào localStorage nên lịch tạo tại đây
   // KHÔNG BAO GIỜ tới được máy chủ — không lọt vào sổ khớp lệnh, không ai ghép
@@ -355,7 +357,7 @@ export default function DriverScheduleCardView({
                 {vehicle?.plate || '93A - 541.86'}
               </span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
-                CHỦ XE
+                {t('driverSchedule.roleDriver')}
               </span>
             </div>
             <p className="text-xs text-slate-400">
@@ -369,13 +371,13 @@ export default function DriverScheduleCardView({
           type="button"
           onClick={() => setShowTrustModal(true)}
           className="px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400 active:scale-95 transition-all text-left flex items-center justify-between gap-3 cursor-pointer group"
-          title="Xem bảng đánh giá Điểm Tín Nhiệm (CarMate Trust Engine)"
+          title={t('driverSchedule.viewTrustTable')}
         >
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 font-mono block">Điểm tín nhiệm:</span>
+                <span className="text-xs text-slate-400 font-mono block">{t('driverSchedule.trustLabel')}</span>
                 <span className="text-sm font-black font-mono text-emerald-400">
                   {trustScore ?? '—'}/100
                 </span>
@@ -393,13 +395,13 @@ export default function DriverScheduleCardView({
       <div className="flex items-center justify-between pt-1">
         <div>
           <h2 className="text-base sm:text-lg font-black tracking-wide uppercase font-mono text-white flex items-center gap-2">
-            <span>🚗 LỊCH TRÌNH CỦA BẠN</span>
+            <span>{t('driverSchedule.yourSchedule')}</span>
             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-white/[0.08] text-slate-300">
               {schedules.filter((s) => s.status !== 'CANCELLED').length}
             </span>
           </h2>
           <p className="text-xs text-slate-400">
-            Chủ động dời giờ, đổi ghế hoặc huỷ trong 3 giây · Không ràng buộc
+            {t('driverSchedule.scheduleDesc')}
           </p>
         </div>
 
@@ -409,7 +411,7 @@ export default function DriverScheduleCardView({
           className="h-10 px-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/20 transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>Thêm lịch mới</span>
+          <span>{t('driverSchedule.addSchedule')}</span>
         </button>
       </div>
 
@@ -417,15 +419,15 @@ export default function DriverScheduleCardView({
       <div className="space-y-4">
         {isLoadingSchedules && (
           <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/[0.10] text-center text-sm text-slate-400 font-mono">
-            Đang tải lịch trình từ máy chủ…
+            {t('driverSchedule.loadingSchedules')}
           </div>
         )}
 
         {!isLoadingSchedules && schedules.filter((t) => t.status !== 'CANCELLED').length === 0 && (
           <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/[0.10] text-center space-y-2">
-            <p className="text-sm font-bold text-white">Bạn chưa có lịch trình nào</p>
+            <p className="text-sm font-bold text-white">{t('driverSchedule.emptyTitle')}</p>
             <p className="text-xs text-slate-400">
-              Bấm “Thêm lịch mới” để hệ thống bắt đầu tự động gom người đi cùng tuyến QL13.
+              {t('driverSchedule.emptyDesc')}
             </p>
           </div>
         )}
@@ -485,11 +487,11 @@ export default function DriverScheduleCardView({
                   <div className="sm:text-right space-y-1">
                     <div className="flex sm:justify-end items-center gap-2 text-xs font-mono">
                       <Users className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span>Đã ghép: <strong className="text-white text-sm">{trip.matchedCount}/{trip.totalSeats}</strong> ghế</span>
+                      <span>{t('driverSchedule.matched')} <strong className="text-white text-sm">{trip.matchedCount}/{trip.totalSeats}</strong> {t('driverSchedule.seat')}</span>
                     </div>
                     <p className="text-xs text-slate-400 font-mono">
-                      Phụ xăng dự kiến: <strong className="text-emerald-400 font-bold">{formatVND(trip.fareEstimated)}</strong>
-                      <span className="text-[10px] text-slate-500 block">Tiền tươi/VietQR trao tay khi lên xe</span>
+                      {t('driverSchedule.fuelEstimate')} <strong className="text-emerald-400 font-bold">{formatVND(trip.fareEstimated)}</strong>
+                      <span className="text-[10px] text-slate-500 block">{t('driverSchedule.cashOrQr')}</span>
                     </p>
                   </div>
                 </div>
@@ -537,25 +539,25 @@ export default function DriverScheduleCardView({
                           type="button"
                           onClick={() => setActiveCheckpoint('NIGHT_LOCK')}
                           className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'NIGHT_LOCK' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                          title="Mốc 21:00 đêm hôm trước"
+                          title={t('driverSchedule.cp1Title')}
                         >
-                          21h Đêm
+                          {t('driverSchedule.night21')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveCheckpoint('MORNING_WAKE')}
                           className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'MORNING_WAKE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                          title="Mốc 05:15 sáng (T - 60p)"
+                          title={t('driverSchedule.cp2Title')}
                         >
-                          05h15 Sáng
+                          {t('driverSchedule.morning0515')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveCheckpoint('RED_LINE')}
                           className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'RED_LINE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                          title="Mốc 05:30 sáng (T - 45p Fail-safe)"
+                          title={t('driverSchedule.cp3Title')}
                         >
-                          05h30 Lằn ranh đỏ
+                          {t('driverSchedule.redline0530')}
                         </button>
                       </div>
                     </div>
@@ -563,7 +565,7 @@ export default function DriverScheduleCardView({
                     {activeCheckpoint === 'NIGHT_LOCK' && (
                       <div className="flex items-center justify-between gap-2 pt-0.5">
                         <p className="text-xs text-slate-300">
-                          🌙 <strong>21:00 Tối:</strong> Xác nhận chắc chắn chuyến đi sáng mai để khách an tâm ngủ ngon.
+                          🌙 <strong>{t('driverSchedule.cp1')}</strong> {t('driverSchedule.cp1Desc')}
                         </p>
                         <button
                           type="button"
@@ -581,7 +583,7 @@ export default function DriverScheduleCardView({
                     {activeCheckpoint === 'MORNING_WAKE' && (
                       <div className="flex items-center justify-between gap-2 pt-0.5">
                         <p className="text-xs text-slate-300">
-                          ⏰ <strong>05:15 Sáng (T-60p):</strong> Báo thức 1-chạm xác nhận đã thức dậy và chuẩn bị xe.
+                          ⏰ <strong>{t('driverSchedule.cp2')}</strong> {t('driverSchedule.cp2Desc')}
                         </p>
                         <button
                           type="button"
@@ -603,11 +605,11 @@ export default function DriverScheduleCardView({
                     {activeCheckpoint === 'RED_LINE' && (
                       <div className="space-y-1.5 pt-0.5">
                         <div className="flex items-center justify-between text-xs text-rose-300">
-                          <span>🚨 <strong>05:30 Sáng (T-45p):</strong> Lằn ranh đỏ Fail-safe</span>
-                          <span className="font-mono text-[10px] text-rose-400 font-bold">Tự hủy nếu vắng mặt</span>
+                          <span>🚨 <strong>{t('driverSchedule.cp3')}</strong> {t('driverSchedule.redline')}</span>
+                          <span className="font-mono text-[10px] text-rose-400 font-bold">{t('driverSchedule.autoCancelIfAbsent')}</span>
                         </div>
                         <p className="text-[11px] text-slate-300 leading-relaxed">
-                          Nếu chủ xe chưa bấm "Đã thức dậy" hoặc mất mạng 4G trước 05:30, hệ thống <strong>hủy tự động ngay lúc 05:30</strong> để khách còn nguyên 45 phút đón xe khách/buýt sớm, không bị lỡ giờ làm việc ở Sài Gòn!
+                          {t('driverSchedule.failsafe1')} <strong>{t('driverSchedule.failsafe2')}</strong> {t('driverSchedule.failsafe3')}
                         </p>
                       </div>
                     )}
@@ -626,9 +628,9 @@ export default function DriverScheduleCardView({
                         type="button"
                         onClick={() => handleDelayTrip(trip.id, 15)}
                         className="px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] active:scale-95 text-xs font-mono font-bold text-slate-200 border border-white/[0.08] transition-all cursor-pointer flex items-center gap-1"
-                        title="Dời lịch khởi hành thêm 15 phút"
+                        title={t('driverSchedule.delay15Title')}
                       >
-                        <span>⏱️ Dời +15p</span>
+                        <span>{t('driverSchedule.delay15')}</span>
                       </button>
 
                       {/* DỜI +30P */}
@@ -636,19 +638,19 @@ export default function DriverScheduleCardView({
                         type="button"
                         onClick={() => handleDelayTrip(trip.id, 30)}
                         className="px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] active:scale-95 text-xs font-mono font-bold text-slate-200 border border-white/[0.08] transition-all cursor-pointer flex items-center gap-1"
-                        title="Dời lịch khởi hành thêm 30 phút"
+                        title={t('driverSchedule.delay30Title')}
                       >
-                        <span>⏱️ Dời +30p</span>
+                        <span>{t('driverSchedule.delay30')}</span>
                       </button>
 
                       {/* BỘ ĐẾM ĐỔI GHẾ ([-] 1 [+]) */}
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.06] border border-white/[0.08]">
-                        <span className="text-[11px] text-slate-400 font-mono">💺 Ghế:</span>
+                        <span className="text-[11px] text-slate-400 font-mono">{t('driverSchedule.seatsLabel')}</span>
                         <button
                           type="button"
                           onClick={() => handleChangeSeats(trip.id, -1)}
                           className="w-9 h-9 rounded-lg bg-white/[0.10] hover:bg-white/[0.20] active:bg-white/[0.28] text-xs font-bold font-mono flex items-center justify-center cursor-pointer active:scale-90"
-                          title="Bớt 1 ghế"
+                          title={t('driverSchedule.seatMinus')}
                         >
                           -
                         </button>
@@ -659,7 +661,7 @@ export default function DriverScheduleCardView({
                           type="button"
                           onClick={() => handleChangeSeats(trip.id, 1)}
                           className="w-9 h-9 rounded-lg bg-white/[0.10] hover:bg-white/[0.20] active:bg-white/[0.28] text-xs font-bold font-mono flex items-center justify-center cursor-pointer active:scale-90"
-                          title="Thêm 1 ghế"
+                          title={t('driverSchedule.seatPlus')}
                         >
                           +
                         </button>
@@ -671,9 +673,9 @@ export default function DriverScheduleCardView({
                       type="button"
                       onClick={() => setCancelingTrip(trip)}
                       className="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-mono font-bold text-rose-400 border border-rose-500/30 transition-all cursor-pointer flex items-center gap-1 ml-auto"
-                      title="Huỷ chuyến đi đột xuất"
+                      title={t('driverSchedule.cancelTripTitle')}
                     >
-                      <span>✕ Huỷ chuyến</span>
+                      <span>{t('driverSchedule.cancelTrip')}</span>
                     </button>
                   </>
                 ) : (
@@ -705,9 +707,9 @@ export default function DriverScheduleCardView({
                       type="button"
                       onClick={() => handleQuickCancelWaitingTrip(trip.id)}
                       className="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-rose-500/20 active:scale-95 text-xs font-mono font-bold text-slate-400 hover:text-rose-400 border border-white/[0.06] hover:border-rose-500/30 transition-all cursor-pointer ml-auto"
-                      title="Huỷ lịch đăng chờ (không phạt)"
+                      title={t('driverSchedule.cancelScheduleTitle')}
                     >
-                      <span>✕ Huỷ lịch</span>
+                      <span>{t('driverSchedule.cancelSchedule')}</span>
                     </button>
                   </>
                 )}
@@ -720,10 +722,10 @@ export default function DriverScheduleCardView({
           <div className="p-8 rounded-3xl bg-white/[0.02] border border-dashed border-white/[0.10] text-center space-y-3">
             <Calendar className="w-10 h-10 text-slate-500 mx-auto" />
             <p className="text-sm font-semibold text-slate-300">
-              Bạn chưa có lịch trình nào được lưu.
+              {t('driverSchedule.noSavedSchedule')}
             </p>
             <p className="text-xs text-slate-500">
-              Hãy bấm <strong>[+ Thêm lịch mới]</strong> để đăng ý định đi làm cố định hoặc chuyến lẻ.
+              {t('driverSchedule.pressHint')} <strong>{t('driverSchedule.addScheduleBtn')}</strong> {t('driverSchedule.addScheduleHint')}
             </p>
           </div>
         )}
@@ -739,9 +741,9 @@ export default function DriverScheduleCardView({
           <div className="flex items-center gap-3 text-left">
             <Radio className="w-6 h-6 animate-pulse shrink-0" />
             <div>
-              <div className="text-sm font-black font-mono">BẮT ĐẦU LĂN BÁNH: BUỒNG LÁI RADAR</div>
+              <div className="text-sm font-black font-mono">{t('driverSchedule.startRadar')}</div>
               <div className="text-[11px] text-slate-900/80 font-medium">
-                Tự động quét trạm đón 3.5km & đọc giọng nói TTS
+                {t('driverSchedule.startRadarDesc')}
               </div>
             </div>
           </div>
@@ -758,11 +760,11 @@ export default function DriverScheduleCardView({
           size="lg"
           icon={Award}
           iconTone="warning"
-          title="Hệ Thống Điểm Tín Nhiệm (CarMate Trust Engine)"
-          subtitle="Dựa trên công trình Nobel Kinh tế của Elinor Ostrom & Mô hình D.R.E.A.M.S"
+          title={t('driverSchedule.trustModalTitle')}
+          subtitle={t('driverSchedule.trustModalSub')}
           footer={
             <div className="w-full flex justify-end">
-              <Button onClick={() => setShowTrustModal(false)}>Đã hiểu quy chế</Button>
+              <Button onClick={() => setShowTrustModal(false)}>{t('driverSchedule.understood')}</Button>
             </div>
           }
         >
@@ -771,46 +773,46 @@ export default function DriverScheduleCardView({
             <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
               <strong className="font-bold flex items-center gap-1.5 mb-1 text-amber-800 dark:text-amber-300">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
-                <span>Không cọc tiền · Không phạt tiền · Quản trị bằng Danh dự số:</span>
+                <span>{t('driverSchedule.honorTitle')}</span>
               </strong>
-              CarMate tuyệt đối không ôm tiền của bạn. Để ngăn chặn tình trạng huỷ hẹn vô trách nhiệm (Moral Hazard), hệ thống áp dụng nguyên lý <strong>Chế tài leo thang (Graduated Sanctions)</strong> của GS. Elinor Ostrom (Nobel Kinh tế 2009) để thưởng người có trách nhiệm và tự động lọc người hay thất hứa.
+              {t('driverSchedule.honorDesc1')} <strong>{t('driverSchedule.graduatedSanctions')}</strong> {t('driverSchedule.honorDesc2')}
             </div>
 
             {/* BẢNG THANG ĐIỂM VÀ HÀNH VI */}
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-500 mb-2">
-                Bảng quy đổi hành vi và điểm số:
+                {t('driverSchedule.scoreTable')}
               </h4>
               <div className="space-y-1.5 text-xs">
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                  <span>✓ Hoàn thành chuyến xe an toàn, đúng giờ</span>
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">+2 điểm</span>
+                  <span>{t('driverSchedule.score1')}</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{t('driverSchedule.score1v')}</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between">
-                  <span>⏱️ Báo dời giờ / Huỷ chuyến trước &gt; 2 tiếng</span>
-                  <span className="font-mono font-bold text-slate-500">0 điểm (Tự do)</span>
+                  <span>{t('driverSchedule.score2')}</span>
+                  <span className="font-mono font-bold text-slate-500">{t('driverSchedule.score2v')}</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
-                  <span>⚠️ Dời giờ hoặc Huỷ chuyến trước &lt; 30 phút</span>
-                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">-5 điểm</span>
+                  <span>{t('driverSchedule.score3')}</span>
+                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{t('driverSchedule.score3v')}</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
-                  <span>🚨 Huỷ chuyến sát giờ (&lt; 15 phút)</span>
-                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">-20 điểm</span>
+                  <span>{t('driverSchedule.score4')}</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">{t('driverSchedule.score4v')}</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-between">
-                  <span>⛔ Bỏ bom (No-show tại trạm đón không báo)</span>
-                  <span className="font-mono font-bold text-rose-700 dark:text-rose-300">-35 điểm</span>
+                  <span>{t('driverSchedule.score5')}</span>
+                  <span className="font-mono font-bold text-rose-700 dark:text-rose-300">{t('driverSchedule.score5v')}</span>
                 </div>
               </div>
             </div>
 
             {/* CÁC MỨC QUYỀN LỢI */}
             <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.08] text-xs space-y-1.5">
-              <span className="font-mono font-bold uppercase text-slate-500 block">Quyền lợi và Hạn chế tự động:</span>
-              <p>• <strong className="text-emerald-600 dark:text-emerald-400">≥ 90 điểm (VIP):</strong> Thuật toán ưu tiên ghép khách trong 30 giây.</p>
-              <p>• <strong className="text-amber-600 dark:text-amber-400">50 - 69 điểm:</strong> Dán nhãn cảnh báo công khai ("Hay huỷ chuyến").</p>
-              <p>• <strong className="text-rose-600 dark:text-rose-400">&lt; 50 điểm:</strong> Tự động ngắt quyền tạo chuyến trong 7 ngày.</p>
+              <span className="font-mono font-bold uppercase text-slate-500 block">{t('driverSchedule.benefitsTitle')}</span>
+              <p>• <strong className="text-emerald-600 dark:text-emerald-400">{t('driverSchedule.vipTier')}</strong> {t('driverSchedule.vipDesc')}</p>
+              <p>• <strong className="text-amber-600 dark:text-amber-400">{t('driverSchedule.warnTier')}</strong> {t('driverSchedule.warnDesc')}</p>
+              <p>• <strong className="text-rose-600 dark:text-rose-400">{t('driverSchedule.lowTier')}</strong> {t('driverSchedule.lowDesc')}</p>
             </div>
           </div>
         </Modal>
@@ -825,26 +827,26 @@ export default function DriverScheduleCardView({
           size="md"
           icon={AlertTriangle}
           iconTone="danger"
-          title="Xác nhận huỷ chuyến khẩn cấp"
+          title={t('driverSchedule.confirmCancelTitle')}
           subtitle={`Mã chuyến: ${cancelingTrip.id} · Đã khớp ${cancelingTrip.matchedCount} người đi cùng`}
           footer={
             <div className="grid grid-cols-2 gap-3 w-full">
               <Button variant="outline" onClick={() => setCancelingTrip(null)}>
-                Quay lại tiếp tục đi
+                {t('driverSchedule.backToTrip')}
               </Button>
               <Button
                 variant="danger"
                 onClick={handleConfirmCancelMatchedTrip}
                 className="font-bold"
               >
-                <span>Vẫn huỷ (-20 điểm)</span>
+                <span>{t('driverSchedule.cancelAnyway')}</span>
               </Button>
             </div>
           }
         >
           <div className="space-y-4 text-sm">
             <div className="p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08]">
-              <span className="text-xs text-slate-500 font-mono block">Lộ trình bị huỷ:</span>
+              <span className="text-xs text-slate-500 font-mono block">{t('driverSchedule.cancelledRoute')}</span>
               <p className="font-bold text-[#1d1d1f] dark:text-white mt-0.5">
                 {cancelingTrip.from} ➔ {cancelingTrip.to} ({cancelingTrip.timeDisplay})
               </p>
@@ -852,13 +854,13 @@ export default function DriverScheduleCardView({
 
             <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-900 dark:text-rose-200 leading-relaxed space-y-2">
               <strong className="font-bold block text-rose-700 dark:text-rose-300">
-                ⚠️ Cảnh báo Chế tài Tín nhiệm (Ostrom Sanction):
+                {t('driverSchedule.sanctionWarn')}
               </strong>
               <p>
-                Chỉ còn ít phút nữa là đến giờ hẹn đón. Việc huỷ lúc này sẽ khiến <strong>{cancelingTrip.matchedCount} người đi cùng</strong> bị lỡ giờ làm.
+                {t('driverSchedule.sanctionDesc1')} <strong>{cancelingTrip.matchedCount} người đi cùng</strong> {t('driverSchedule.sanctionDesc2')}
               </p>
               <div className="flex items-center justify-between p-2 rounded-xl bg-black/10 dark:bg-black/40 font-mono text-xs">
-                <span>Điểm tín nhiệm của bạn:</span>
+                <span>{t('driverSchedule.yourTrust')}</span>
                 <span className="font-black text-rose-500">
                   {trustScore ?? '—'} ➔ {Math.max(0, (trustScore ?? 98) - 20)} điểm (-20đ)
                 </span>
@@ -866,7 +868,7 @@ export default function DriverScheduleCardView({
             </div>
 
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              * Hệ thống sẽ tự động gửi tin nhắn SMS xin lỗi và kích hoạt luồng kết nối xe kế tiếp cho hành khách.
+              {t('driverSchedule.smsNote')}
             </p>
           </div>
         </Modal>
@@ -881,12 +883,12 @@ export default function DriverScheduleCardView({
           size="md"
           icon={Plus}
           iconTone="primary"
-          title="Thêm Ý Định Chuyến Mới"
-          subtitle="Tự động ghép người đi cùng trên trục QL13"
+          title={t('driverSchedule.addModalTitle')}
+          subtitle={t('driverSchedule.addModalSub')}
           footer={
             <div className="grid grid-cols-2 gap-3 w-full">
               <Button variant="outline" onClick={() => setShowAddTripModal(false)}>
-                Huỷ bỏ
+                {t('driverSchedule.cancel')}
               </Button>
               <Button onClick={handleCreateNewTrip} disabled={isSavingTrip}>
                 {isSavingTrip ? 'Đang lưu…' : 'Lưu lịch trình ➔'}
@@ -898,7 +900,7 @@ export default function DriverScheduleCardView({
             {/* TUYẾN ĐƯỜNG */}
             <div>
               <label className="text-xs font-bold uppercase font-mono text-slate-500 mb-1.5 block">
-                Tuyến đường chia sẻ:
+                {t('driverSchedule.sharedRoute')}
               </label>
               <div className="flex items-center gap-2">
                 <div className="flex-1 p-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs font-bold">
@@ -912,9 +914,9 @@ export default function DriverScheduleCardView({
                     setNewTo(temp);
                   }}
                   className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-xs font-mono cursor-pointer"
-                  title="Đảo chiều khứ hồi"
+                  title={t('driverSchedule.swapTitle')}
                 >
-                  ⇄ Đảo chiều
+                  {t('driverSchedule.swap')}
                 </button>
               </div>
             </div>
@@ -922,7 +924,7 @@ export default function DriverScheduleCardView({
             {/* CHỌN NHANH GIỜ KHỞI HÀNH */}
             <div>
               <label className="text-xs font-bold uppercase font-mono text-slate-500 mb-1.5 block">
-                Giờ khởi hành:
+                {t('driverSchedule.departureTime')}
               </label>
               <div className="grid grid-cols-4 gap-2 text-xs font-mono">
                 {['06:15', '06:45', '17:30', '18:00'].map((t) => (
@@ -945,7 +947,7 @@ export default function DriverScheduleCardView({
             {/* SỐ GHẾ TRỐNG CHIA SẺ */}
             <div>
               <label className="text-xs font-bold uppercase font-mono text-slate-500 mb-1.5 block">
-                Số ghế trống mở ghép:
+                {t('driverSchedule.openSeats')}
               </label>
               <div className="flex items-center gap-3">
                 {[1, 2, 3, 4].map((s) => (
@@ -969,10 +971,10 @@ export default function DriverScheduleCardView({
             <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-emerald-300 block">
-                  Lịch đi làm cố định (T2 - T6):
+                  {t('driverSchedule.weeklyCommute')}
                 </span>
                 <span className="text-[11px] text-slate-400 block">
-                  Cài đặt 1 lần duy nhất, tự động gom khách mỗi tối
+                  {t('driverSchedule.weeklyDesc')}
                 </span>
               </div>
               <input

@@ -2471,6 +2471,40 @@ function updateExchangeOrderRow(database, id, updates = {}) {
 }
 
 /**
+ * Lấy hồ sơ người dùng để GHI CHẾ TÀI, tự tạo hồ sơ tối thiểu nếu chưa có.
+ *
+ * CarMate cho phép đăng chuyến mà không cần đăng ký trước (Unified Auth /
+ * Upsert Flow) — đó là chủ ý sản phẩm để giảm ma sát. Nhưng hệ quả là mọi
+ * đường trừ điểm đều bọc `if (user) {...}`, nên chủ xe chưa có tài khoản
+ * THOÁT TOÀN BỘ chế tài: huỷ sát giờ, bị tố giác nhồi nhét, bỏ bom khách —
+ * không gì bám được vào họ. Ai muốn né phạt chỉ cần đừng bấm đăng nhập.
+ *
+ * Hàm này khép lỗ hổng đó mà không thêm bước đăng ký nào: khi cần ghi chế tài
+ * cho một số điện thoại chưa có hồ sơ, tạo hồ sơ tối thiểu ngay tại chỗ. Lần
+ * sau người đó đăng nhập bằng số ấy sẽ nhận đúng lịch sử tín nhiệm của mình.
+ */
+export async function getOrCreateUserForPenalty(phone, seed = {}) {
+  const clean = cleanPhoneNumber(phone || '');
+  if (!clean) return null;
+
+  const existing = getUserByPhone(clean);
+  if (existing) return existing;
+
+  await saveUser({
+    id: `USR-${clean}`,
+    phone: clean,
+    name: seed.name || '',
+    role: seed.role || 'member',
+    trustScore: 98,
+    // Đánh dấu hồ sơ sinh tự động do chế tài, chưa từng đăng nhập.
+    isAutoCreated: 1,
+    createdAt: Date.now()
+  });
+
+  return getUserByPhone(clean);
+}
+
+/**
  * Áp dụng kỷ luật hủy chuyến theo hàm suy giảm thời gian (Time-Decay Penalty Engine)
  * - deltaMinutes > 120: An toàn 0đ, không phạt.
  * - 30 <= deltaMinutes <= 120: Cảnh cáo, trừ 15 điểm tín nhiệm.
@@ -2507,7 +2541,8 @@ export async function applyCancellationPenalty(booking, cancellingUserPhone, del
 
   // Khấu trừ điểm tín nhiệm nếu có người dùng
   if (cleanPhone && penaltyPoints > 0) {
-    const user = getUserByPhone(cleanPhone);
+    // Tạo hồ sơ nếu chưa có, để chủ xe chưa đăng ký KHÔNG thoát chế tài.
+    const user = await getOrCreateUserForPenalty(cleanPhone, { role: isDriver ? 'driver' : 'passenger' });
     if (user) {
       const currentScore = Number(user.trustScore ?? 98);
       const newScore = Math.max(10, currentScore - penaltyPoints);

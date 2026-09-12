@@ -14,6 +14,7 @@ import {
   saveSupportMessage,
   resolveDisputeAndUnban,
   isUserDeactivated,
+  getOrCreateUserForPenalty,
   applyCancellationPenalty
 } from '../db/sqliteStore.js';
 import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
@@ -1416,7 +1417,8 @@ export async function reportVehicleMismatchHandler(req, res) {
     // quản trị viên xác minh qua `resolve-mismatch` rồi mới ra chế tài nặng.
     const driverPhone = cleanPhoneNumber(booking.driverPhone || '');
     if (driverPhone) {
-      const driver = getUserByPhone(driverPhone);
+      // Tạo hồ sơ nếu chủ xe chưa đăng ký, để họ không thoát chế tài.
+      const driver = await getOrCreateUserForPenalty(driverPhone, { role: 'driver' });
       if (driver) {
         await saveUser({
           ...driver,
@@ -1487,7 +1489,7 @@ export async function reportUnreachablePhoneHandler(req, res) {
 
     // Số bị báo không liên lạc được làm giảm độ tin cậy, nhưng chưa khoá ngay:
     // mất sóng hay hết pin cũng cho ra cùng hiện tượng.
-    const reported = getUserByPhone(clean);
+    const reported = await getOrCreateUserForPenalty(clean);
     if (reported) {
       await saveUser({
         ...reported,
