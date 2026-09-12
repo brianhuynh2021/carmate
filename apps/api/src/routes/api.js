@@ -65,6 +65,11 @@ import {
   updateStationRequestStatusHandler
 } from '../controllers/stationRequestController.js';
 import {
+  getTransitDirectoryHandler,
+  getAdminTransitDirectoryHandler,
+  updateAdminTransitDirectoryHandler
+} from '../controllers/transitDirectoryController.js';
+import {
   getVapidKeyHandler,
   subscribePushHandler,
   unsubscribePushHandler,
@@ -242,6 +247,9 @@ router.patch('/admin/station-requests/:id', requireAdmin, updateStationRequestSt
 // --- Ma Trận Khe Thời Gian (Time-Slotted Corridor) ---
 router.get('/corridor/time-slots', timeSlotMatrixHandler);
 
+// --- Danh Bạ Nhà Xe Tuyến Cố Định (lưới đỡ khi chưa có chuyến CarMate) ---
+router.get('/transit-directory', getTransitDirectoryHandler);
+
 // --- Thông Báo Đẩy & Hộp Thư In-App (Kênh đánh thức khách ngoài giờ mở app) ---
 router.get('/notifications/vapid-key', getVapidKeyHandler);
 router.post('/notifications/subscribe', optionalAuth, subscribePushHandler);
@@ -253,6 +261,8 @@ router.post('/notifications/read', optionalAuth, markReadHandler);
 router.post('/admin/auth', adminAuth);
 router.get('/admin/metrics', requireAdmin, getMetrics);
 router.get('/admin/scheduler-status', requireAdmin, schedulerStatusHandler);
+router.get('/admin/transit-directory', requireAdmin, getAdminTransitDirectoryHandler);
+router.put('/admin/transit-directory', requireAdmin, updateAdminTransitDirectoryHandler);
 router.post('/admin/scheduler-run', requireAdmin, schedulerRunTickHandler);
 router.get('/admin/trips', requireAdmin, listAdminTrips);
 router.patch('/admin/trips/:id/toggle-hide', requireAdmin, toggleHideTripHandler);

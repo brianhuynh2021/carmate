@@ -53,7 +53,7 @@ export default {
   nav: {
     tabCorridor: 'Tiện chuyến',
     tabStation: 'Điểm đón',
-    tabPickup: 'Nhận khách',
+    tabPickup: 'Đăng chuyến',
     tabRides: 'Lịch hẹn',
     tabInbox: 'Hộp thoại',
     corridorTab: 'Tuyến Tiện Chuyến',

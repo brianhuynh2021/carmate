@@ -50,6 +50,12 @@ export function LanguageToggle({ className = '' } = {}) {
   );
 }
 
+/**
+ * Giai đoạn 1 tập trung vào tìm chuyến; nút trợ lý AI tạm ẩn khỏi thanh tiêu đề.
+ * Đổi về true để bật lại — không cần sửa gì thêm.
+ */
+const SHOW_AI_ASSISTANT_BUTTON = false;
+
 export default function Header({
   activeTab,
   setActiveTab,
@@ -79,7 +85,6 @@ export default function Header({
   const tabs = [
     { id: 'market', label: t('nav.corridorTab'), icon: Compass },
     { id: 'station', label: t('nav.stationTab'), icon: Fuel },
-    { id: 'cockpit', label: t('nav.cockpitTab'), icon: Car },
     { id: 'booked', label: t('nav.booked') || 'Lịch hẹn', icon: Clock, badge: bookedCount }
   ];
 
@@ -183,7 +188,32 @@ export default function Header({
           })}
         </nav>
 
+        {/* ĐĂNG CHUYẾN — tách khỏi nhóm tab tra cứu và tạo điểm nhấn riêng.
+            Đây là nút sinh ra NGUỒN CUNG cho nền tảng: chủ xe lướt vào phải
+            thấy ngay lối đi của mình, không để nó chìm lẫn giữa các tab xem
+            thông tin. Dùng xanh mint đồng bộ với nút nổi trên thanh dưới. */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('cockpit')}
+          aria-current={activeTab === 'cockpit' ? 'page' : undefined}
+          className={`hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-xs font-bold border transition-all duration-200 cursor-pointer select-none shrink-0 ${
+            activeTab === 'cockpit'
+              ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/25'
+              : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/25 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+          }`}
+        >
+          <Car className="w-3.5 h-3.5 shrink-0" strokeWidth={2.2} />
+          <span>{t('nav.tabPickup')}</span>
+        </button>
+
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* NÚT TRỢ LÝ AI — TẠM ẨN Ở GIAI ĐOẠN 1.
+              Bài toán cốt lõi lúc này là niềm tin và thanh khoản trên trục QL13.
+              Một nút trợ lý nằm ngay cạnh hành động chính chỉ làm phân tán sự
+              chú ý khỏi việc quan trọng nhất: TÌM CHUYẾN XE.
+              Phím tắt ⌘K vẫn hoạt động cho người dùng nội bộ; bật lại nút chỉ
+              cần đổi cờ này về true khi nghiệp vụ trợ lý đủ sâu. */}
+          {SHOW_AI_ASSISTANT_BUTTON && (
           <button
             type="button"
             onClick={onOpenAi}
@@ -197,6 +227,7 @@ export default function Header({
               {isMac ? '⌘K' : 'Ctrl K'}
             </kbd>
           </button>
+          )}
 
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>

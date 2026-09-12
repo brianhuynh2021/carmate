@@ -162,13 +162,20 @@ export default function CorridorSearchBoard({
   // lặp lại một khung giờ — ai quen chuyến 4h sáng thì lần sau vẫn 4h sáng. Nhớ
   // khung họ chọn lần trước và tự bật sẵn, để họ không phải chọn lại mỗi lần.
   const [chipId, setChipId] = useState(() => {
-    // Ưu tiên khung khách hay đi (ai quen chuyến 4h sáng thì vẫn 4h sáng), NHƯNG
-    // chỉ khi khung đó còn nằm trong 3 chip khả thi lúc này. Khung đã trôi qua
-    // thì rơi về chip 1 — khách luôn bấm được TÌM CHUYẾN XE ngay một chạm,
-    // không bao giờ rơi vào cảnh chip đang chọn lại là khung không đặt được.
+    // LUÔN chọn sẵn khung GẦN NHẤT (chip 1), không để thói quen nhảy cóc.
+    //
+    // Trước đây ưu tiên khung khách hay đi, nhưng đo ra một kịch bản hỏng thật:
+    // lúc 14h49, khách từng chọn "Đêm nay" hôm trước thì chip active lại là
+    // "Đêm nay (22h-4h)" — trong khi "Chiều nay (14h49-18h)" đang nằm ngay đó.
+    // Khách bấm TÌM CHUYẾN XE liền sẽ ra kết quả lúc nửa đêm, phải bấm lại chip
+    // mới đúng ý. Mục tiêu một-chạm bị phá.
+    //
+    // Thói quen chỉ được áp dụng khi nó TRÙNG chip 1 hoặc chip 2 — tức vẫn là
+    // khung sắp tới gần. Xa hơn thì rơi về chip 1.
     const remembered = readStore(WINDOW_KEY);
-    const stillFeasible = remembered && departureChips.find((c) => c.windowId === remembered);
-    return (stillFeasible || departureChips[0])?.id || null;
+    const idx = remembered ? departureChips.findIndex((c) => c.windowId === remembered) : -1;
+    const pick = idx >= 0 && idx <= 1 ? departureChips[idx] : departureChips[0];
+    return pick?.id || null;
   });
   const [customChip, setCustomChip] = useState(null);
   const [showDatePanel, setShowDatePanel] = useState(false);

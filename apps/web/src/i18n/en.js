@@ -53,7 +53,7 @@ export default {
   nav: {
     tabCorridor: 'Rides',
     tabStation: 'Stations',
-    tabPickup: 'Pick up',
+    tabPickup: 'Post a trip',
     tabRides: 'Bookings',
     tabInbox: 'Inbox',
     corridorTab: 'QL13 Corridor',

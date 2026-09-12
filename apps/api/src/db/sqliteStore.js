@@ -1639,6 +1639,48 @@ export function saveTrustRules(rules) {
 }
 
 /**
+ * =============================================================================
+ * DANH BẠ NHÀ XE TUYẾN CỐ ĐỊNH (TRANSIT FALLBACK DIRECTORY)
+ * =============================================================================
+ * Lưu trong key_values để Cổng Quản Trị sửa được mà không phải deploy lại.
+ *
+ * BẤT BIẾN: mỗi số phải có `verified: true` kèm `verifiedAt` thì giao diện mới
+ * hiện nút gọi. Số chưa kiểm chứng vẫn lưu được (để đội vận hành theo dõi) nhưng
+ * KHÔNG bao giờ lộ ra cho khách — khách bấm gọi đúng lúc gấp nhất mà gặp số sai
+ * thì mất niềm tin vĩnh viễn, tệ hơn hẳn việc không có số nào.
+ */
+export function getTransitDirectory() {
+  const database = getRawDB();
+  try {
+    const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('transit_directory');
+    if (row && row.value) {
+      const parsed = JSON.parse(row.value);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('[SQLite DB] Lỗi đọc transit_directory:', e.message);
+  }
+  return [];
+}
+
+/** Lưu danh bạ nhà xe (Admin cập nhật). */
+export function saveTransitDirectory(providers) {
+  if (!Array.isArray(providers)) {
+    throw new Error('Danh bạ phải là một danh sách mảng');
+  }
+  const database = getRawDB();
+  database
+    .prepare(
+      `
+    INSERT INTO key_values (key, value) VALUES ('transit_directory', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `
+    )
+    .run(JSON.stringify(providers));
+  return providers;
+}
+
+/**
  * Khôi phục cấu hình quy tắc tính điểm tín nhiệm về mặc định
  */
 export function resetTrustRules() {
