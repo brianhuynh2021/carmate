@@ -290,12 +290,10 @@ export default function CorridorSearchBoard({
   const [selectedDetailHotline, setSelectedDetailHotline] = useState(null);
   const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
 
-  // Tự động tìm kiếm ngay khi cặp trạm sẵn sàng
+  // Khi người dùng thay đổi trạm hoặc khung giờ, xóa kết quả cũ để yêu cầu bấm Tìm chuyến mới
   useEffect(() => {
-    if (fromHubId && toHubId && !matrix && !isSearching) {
-      handleSearchNow();
-    }
-  }, [fromHubId, toHubId, matrix, isSearching, handleSearchNow]);
+    setMatrix(null);
+  }, [fromHubId, toHubId, chipId, corridorId]);
 
   // Giá chặng chia sẻ chuẩn CarMate (mặc định 170.000 đ cho chặng Tân Khai - Cụm Chợ Rẫy)
   const carmateSegmentPrice = useMemo(() => {
