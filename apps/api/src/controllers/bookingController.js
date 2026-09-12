@@ -1306,3 +1306,189 @@ export async function disputeBookingHandler(req, res) {
   }
 }
 
+
+/**
+ * =========================================================================
+ * BÁO CÁO VI PHẠM AN TOÀN & CAM KẾT (SAFETY INVARIANTS)
+ * =========================================================================
+ *
+ * Màn hình quản trị `resolve-mismatch` vốn đã tồn tại và chờ xử lý
+ * `booking.vehicleMismatchReport`, nhưng endpoint để KHÁCH gửi báo cáo thì
+ * chưa từng được hiện thực (trả 404). Nghĩa là người đi cùng không có bất kỳ
+ * cách nào tố giác xe nhồi nhét, bị bán khách giữa đường hay bị chặt chém —
+ * còn quản trị viên thì ngồi chờ những báo cáo không bao giờ tới.
+ */
+
+/** Ba nhóm vi phạm an toàn được ghi nhận, kèm mức trừ điểm tín nhiệm. */
+const VEHICLE_MISMATCH_TYPES = {
+  overcrowded: {
+    title: 'Xe nhồi nhét khách / Chở quá tải',
+    severity: 'high',
+    trustPenalty: 25
+  },
+  passenger_transfer: {
+    title: 'Bắt sang xe / Đổi xe giữa đường (Xe dù)',
+    severity: 'critical',
+    trustPenalty: 35
+  },
+  price_gouging: {
+    title: 'Chặt chém giá / Đòi thêm tiền ngoài thỏa thuận',
+    severity: 'high',
+    trustPenalty: 25
+  },
+  wrong_plate: {
+    title: 'Sai biển số so với thông tin đã đăng',
+    severity: 'medium',
+    trustPenalty: 15
+  }
+};
+
+/**
+ * POST /api/bookings/:id/report-vehicle-mismatch
+ * Người đi cùng tố giác hành vi vi phạm cam kết an toàn của chuyến xe.
+ */
+export async function reportVehicleMismatchHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { mismatchType = '', actualPlate = '', passengerNote = '' } = req.body || {};
+
+    const rule = VEHICLE_MISMATCH_TYPES[mismatchType];
+    if (!rule) {
+      return res.status(400).json({
+        success: false,
+        error: `Loại vi phạm không hợp lệ. Chọn một trong: ${Object.keys(VEHICLE_MISMATCH_TYPES).join(', ')}`
+      });
+    }
+
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
+    }
+
+    const report = {
+      mismatchType,
+      mismatchTitle: rule.title,
+      severity: rule.severity,
+      actualPlate: actualPlate || '',
+      declaredPlate: booking.licensePlate || booking.plate || '',
+      // Ghi chú do khách tự gõ nên có thể lọt SĐT/danh tính; che trước khi lưu.
+      passengerNote: detectPiiLeak(String(passengerNote).slice(0, 1000)).maskedText,
+      reportedBy: maskPhoneNumber(req.user?.phone || booking.passengerPhone || ''),
+      reportedAt: new Date().toISOString(),
+      status: 'pending',
+      trustPenalty: rule.trustPenalty
+    };
+
+    const updated = await updateBookingStatus(id, booking.status || 'zalo_active', {
+      vehicleMismatchReport: report
+    });
+
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
+    }
+
+    // Trừ điểm tín nhiệm chủ xe và đếm số lần bị tố giác.
+    // Cố ý KHÔNG khoá tài khoản tự động: một báo cáo một phía chưa đủ căn cứ,
+    // quản trị viên xác minh qua `resolve-mismatch` rồi mới ra chế tài nặng.
+    const driverPhone = cleanPhoneNumber(booking.driverPhone || '');
+    if (driverPhone) {
+      const driver = getUserByPhone(driverPhone);
+      if (driver) {
+        await saveUser({
+          ...driver,
+          trustScore: Math.max(10, Number(driver.trustScore ?? 98) - rule.trustPenalty),
+          mismatchReports: Number(driver.mismatchReports || 0) + 1
+        });
+      }
+    }
+
+    sendBusinessAlert({
+      title: `⚠️ BÁO CÁO VI PHẠM AN TOÀN (${rule.severity.toUpperCase()})`,
+      details: {
+        'Mã chuyến': id,
+        'Hành vi': rule.title,
+        'Biển số khai báo': report.declaredPlate || '(không có)',
+        'Biển số thực tế': report.actualPlate || '(không ghi nhận)',
+        'Trừ điểm tín nhiệm': rule.trustPenalty,
+        'Ghi chú của khách': passengerNote || '(không có)'
+      },
+      req
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã ghi nhận báo cáo vi phạm. Đội ngũ vận hành sẽ xác minh và xử lý.',
+      data: report
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/bookings/:id/report-unreachable-phone
+ * Báo số điện thoại ảo / gọi mãi không nghe máy.
+ */
+export async function reportUnreachablePhoneHandler(req, res) {
+  try {
+    const { id } = req.params;
+    const { unreachablePhone = '', reason = '' } = req.body || {};
+
+    const clean = cleanPhoneNumber(unreachablePhone);
+    if (!clean) {
+      return res.status(400).json({ success: false, error: 'Thiếu số điện thoại cần báo cáo' });
+    }
+
+    const booking = getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
+    }
+
+    const report = {
+      unreachablePhoneMasked: maskPhoneNumber(clean),
+      reason: String(reason).slice(0, 500),
+      reportedBy: maskPhoneNumber(req.user?.phone || ''),
+      reportedAt: new Date().toISOString(),
+      status: 'pending',
+      looksFake: isLikelyFakePhone(clean)
+    };
+
+    const updated = await updateBookingStatus(id, booking.status || 'zalo_active', {
+      unreachablePhoneReport: report
+    });
+
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
+    }
+
+    // Số bị báo không liên lạc được làm giảm độ tin cậy, nhưng chưa khoá ngay:
+    // mất sóng hay hết pin cũng cho ra cùng hiện tượng.
+    const reported = getUserByPhone(clean);
+    if (reported) {
+      await saveUser({
+        ...reported,
+        trustScore: Math.max(10, Number(reported.trustScore ?? 98) - 10),
+        unreachableReports: Number(reported.unreachableReports || 0) + 1
+      });
+    }
+
+    sendBusinessAlert({
+      title: '📵 BÁO CÁO SỐ ĐIỆN THOẠI KHÔNG LIÊN LẠC ĐƯỢC',
+      details: {
+        'Mã chuyến': id,
+        'Số bị báo': report.unreachablePhoneMasked,
+        'Nghi số ảo': report.looksFake ? 'CÓ' : 'không',
+        'Lý do': reason || '(không có)'
+      },
+      req
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã ghi nhận báo cáo số điện thoại không liên lạc được.',
+      data: report
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}

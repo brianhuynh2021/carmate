@@ -22,7 +22,9 @@ import {
   preConfirmBookingHandler,
   finalConfirmBookingHandler,
   resetBanHandler,
-  disputeBookingHandler
+  disputeBookingHandler,
+  reportVehicleMismatchHandler,
+  reportUnreachablePhoneHandler
 } from '../controllers/bookingController.js';
 import { getSupportMessagesHandler, sendSupportMessageHandler } from '../controllers/supportController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
@@ -167,6 +169,10 @@ router.post('/bookings/:id/delay', optionalAuth, requireBookingParty, reportDela
 router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
 router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitReview);
+
+// --- Báo cáo vi phạm an toàn (chỉ hai bên trong chuyến mới được tố giác) ---
+router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, requireBookingParty, reportVehicleMismatchHandler);
+router.post('/bookings/:id/report-unreachable-phone', optionalAuth, requireBookingParty, reportUnreachablePhoneHandler);
 router.post('/bookings/:id/reset-ban', optionalAuth, resetBanHandler);
 router.post('/bookings/:id/dispute', optionalAuth, disputeBookingHandler);
 
@@ -181,6 +187,8 @@ router.post('/escrows/:id/delay', optionalAuth, requireBookingParty, reportDelay
 router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
 router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);
 router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitReview);
+router.post('/escrows/:id/report-vehicle-mismatch', optionalAuth, requireBookingParty, reportVehicleMismatchHandler);
+router.post('/escrows/:id/report-unreachable-phone', optionalAuth, requireBookingParty, reportUnreachablePhoneHandler);
 router.post('/escrows/:id/reset-ban', optionalAuth, resetBanHandler);
 router.post('/escrows/:id/dispute', optionalAuth, disputeBookingHandler);
 
