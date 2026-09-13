@@ -1158,6 +1158,59 @@ export default function CockpitMode({
               </div>
             </div>
 
+            {/* HÀNH LANG TRẠM ĐÓN ẢO QL13 (RADAR CORRIDOR TRACKER) */}
+            <div className="bg-white/[0.03] border border-white/[0.08] rounded-3xl p-5 space-y-3.5">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-400 uppercase flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>HÀNH LANG TRẠM ĐÓN ẢO QL13</span>
+                </span>
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  Đang quét tự động
+                </span>
+              </div>
+
+              {/* CHUỖI TRẠM ĐÓN ẢO DỌC TUYẾN */}
+              <div className="grid grid-cols-5 gap-1 text-center font-mono">
+                {[
+                  { name: 'Tân Khai', dist: '0 km', active: true },
+                  { name: 'Chơn Thành', dist: '+28 km', active: false },
+                  { name: 'Bến Cát', dist: '+55 km', active: false },
+                  { name: 'Thủ Dầu Một', dist: '+78 km', active: false },
+                  { name: 'Hàng Xanh', dist: '+105 km', active: false }
+                ].map((station) => (
+                  <div key={station.name} className="flex flex-col items-center gap-1">
+                    <div
+                      className={`w-full py-2 px-1 rounded-xl text-[11px] font-bold truncate ${
+                        station.active
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/10'
+                          : 'bg-white/[0.02] text-slate-400 border border-white/[0.04]'
+                      }`}
+                    >
+                      {station.name}
+                    </div>
+                    <span className="text-[9.5px] text-slate-400">{station.dist}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* THÔNG TIN HƯỚNG DẪN NGỮ CẢNH */}
+              <div className="pt-2 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+                <p className="text-[11.5px] text-slate-400 leading-relaxed">
+                  💡 Buồng lái Taplo dành riêng khi đang cầm lái. Để đăng chuyến theo giờ hoặc xem danh sách khách đặt, vui lòng sang <strong className="text-white">Lịch trình của bạn</strong>.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveCockpitTab('SCHEDULE')}
+                  className="px-3.5 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-xs font-mono font-bold text-slate-200 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Xem Lịch trình</span>
+                </button>
+              </div>
+            </div>
+
             {/* HỘP KÍCH HOẠT MÔ PHỎNG TIẾP CẬN TRẠM THỰC CHIẾN (CHỈ HIỆN Ở DEV) */}
             {import.meta.env.DEV && (
               <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">

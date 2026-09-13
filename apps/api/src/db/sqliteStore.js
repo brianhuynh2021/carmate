@@ -1600,6 +1600,48 @@ export function clearSupportMessages() {
   return res.changes;
 }
 
+export function clearAllTrips() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM trips').run();
+  return res.changes;
+}
+
+export function clearAllIntents() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM intents').run();
+  return res.changes;
+}
+
+export function clearAllStationRequests() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM station_requests').run();
+  return res.changes;
+}
+
+export function clearAllTripIncidents() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM trip_incidents').run();
+  return res.changes;
+}
+
+export function clearAllMatchingEpochs() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM matching_epochs').run();
+  return res.changes;
+}
+
+export function clearAllSeatExchangeOrders() {
+  const database = getRawDB();
+  const res = database.prepare('DELETE FROM seat_exchange_orders').run();
+  return res.changes;
+}
+
+export function clearNonAdminUsers() {
+  const database = getRawDB();
+  const res = database.prepare("DELETE FROM users WHERE role != 'admin' AND phone != '0984883750' AND id NOT LIKE 'USR-GG-%'").run();
+  return res.changes;
+}
+
 /**
  * Lấy cấu hình quy tắc tính điểm tín nhiệm (Dynamic Trust Policy Rules)
  */

@@ -57,15 +57,20 @@ export default function useTripsData({
       if (typeof localStorage !== 'undefined') {
         const local = JSON.parse(localStorage.getItem('carmate_cached_bookings') || '[]');
         const map = new Map();
-        // Nạp dữ liệu từ server
+        // Nạp dữ liệu từ server (Source of Truth)
         serverBookings.forEach((b) => {
           const id = b.escrowId || b.id;
           if (id) map.set(id, b);
         });
-        // Giữ lại các booking vừa tạo cục bộ chưa kịp lên server
+        // Chỉ giữ lại các booking vừa tạo cục bộ lạc quan dưới 60s chưa kịp lên server
+        const now = Date.now();
         local.forEach((b) => {
           const id = b.escrowId || b.id;
-          if (id && !map.has(id)) map.set(id, b);
+          const createdAtMs = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime();
+          const isVeryRecent = b._isLocalOptimistic || (now - createdAtMs < 60000 && !b.escrowId?.startsWith('ESC-SAMPLE'));
+          if (id && !map.has(id) && isVeryRecent) {
+            map.set(id, b);
+          }
         });
         const merged = Array.from(map.values());
         localStorage.setItem('carmate_cached_bookings', JSON.stringify(merged.slice(0, 50)));

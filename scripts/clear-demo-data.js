@@ -35,15 +35,45 @@ if (fs.existsSync(DB_PATH)) {
   const bookingResult = db.prepare('DELETE FROM bookings').run();
   console.log(`✅ Đã xóa ${bookingResult.changes} đơn đặt xe / ghép chỗ trong SQLite.`);
 
-  // 3. Xóa các báo cáo sự cố mẫu nếu có
+  // 3. Xóa toàn bộ ý định gom xe (intents)
   try {
-    const reportResult = db.prepare('DELETE FROM reports').run();
-    console.log(`✅ Đã xóa ${reportResult.changes} báo cáo sự cố mẫu.`);
-  } catch {
-    // Bỏ qua nếu bảng chưa tạo
+    const intentResult = db.prepare('DELETE FROM intents').run();
+    console.log(`✅ Đã xóa ${intentResult.changes} ý định gom xe (intents).`);
+  } catch (e) {
+    console.warn('Lưu ý dọn intents:', e.message);
   }
 
-  // 4. Giữ lại tài khoản Admin, bảo toàn tài khoản Google thật
+  // 4. Xóa toàn bộ yêu cầu trạm đón ảo (station_requests)
+  try {
+    const stationResult = db.prepare('DELETE FROM station_requests').run();
+    console.log(`✅ Đã xóa ${stationResult.changes} vé trạm đón ảo (station_requests).`);
+  } catch (e) {
+    console.warn('Lưu ý dọn station_requests:', e.message);
+  }
+
+  // 5. Xóa các báo cáo sự cố mẫu nếu có
+  try {
+    const reportResult = db.prepare('DELETE FROM trip_incidents').run();
+    console.log(`✅ Đã xóa ${reportResult.changes} báo cáo sự cố (trip_incidents).`);
+  } catch {}
+
+  try {
+    const legacyReportResult = db.prepare('DELETE FROM reports').run();
+    console.log(`✅ Đã xóa ${legacyReportResult.changes} báo cáo sự cố mẫu (reports).`);
+  } catch {}
+
+  // 6. Xóa chu kỳ gom khớp lệnh & lệnh hoán đổi chỗ
+  try {
+    const epochResult = db.prepare('DELETE FROM matching_epochs').run();
+    console.log(`✅ Đã xóa ${epochResult.changes} chu kỳ gom khớp (matching_epochs).`);
+  } catch {}
+
+  try {
+    const exchangeResult = db.prepare('DELETE FROM seat_exchange_orders').run();
+    console.log(`✅ Đã xóa ${exchangeResult.changes} lệnh hoán đổi ghế (seat_exchange_orders).`);
+  } catch {}
+
+  // 7. Giữ lại tài khoản Admin, bảo toàn tài khoản Google thật
   try {
     const userResult = db
       .prepare(
@@ -55,7 +85,7 @@ if (fs.existsSync(DB_PATH)) {
     console.warn('Lưu ý dọn user:', err.message);
   }
 
-  // 5. Xóa toàn bộ sự kiện phân tích, phễu chuyển đổi & nhật ký AI
+  // 8. Xóa toàn bộ sự kiện phân tích, phễu chuyển đổi & nhật ký AI
   try {
     const trajResult = db.prepare('DELETE FROM ai_trajectories').run();
     console.log(`✅ Đã xóa ${trajResult.changes} nhật ký quỹ đạo AI (ai_trajectories).`);
@@ -74,7 +104,7 @@ if (fs.existsSync(DB_PATH)) {
   db.close();
 }
 
-// 5. Cập nhật file JSON đồng bộ rỗng
+// 9. Cập nhật file JSON đồng bộ rỗng (bảo toàn tài khoản admin)
 if (fs.existsSync(JSON_PATH)) {
   const cleanJson = {
     version: '1.0.0',
@@ -87,10 +117,28 @@ if (fs.existsSync(JSON_PATH)) {
     },
     driverOffers: [],
     passengerRequests: [],
-    bookings: []
+    bookings: [],
+    users: [
+      {
+        id: 'USR-0984883750',
+        phone: '0984883750',
+        name: 'Nguyễn Thành Huỳnh',
+        role: 'admin',
+        avatar: '',
+        trustScore: 99,
+        safeTripsCount: 0,
+        provider: 'zalo',
+        isCccdVerified: 1,
+        isGplxVerified: 1,
+        isBanned: 0,
+        createdAt: '2026-09-01T08:00:00.000Z',
+        updatedAt: new Date().toISOString(),
+        email: 'huynh.nguyen@carmate.vn'
+      }
+    ]
   };
   fs.writeFileSync(JSON_PATH, JSON.stringify(cleanJson, null, 2), 'utf-8');
-  console.log('✅ Đã đồng bộ file carmate_db.json về trạng thái rỗng.');
+  console.log('✅ Đã đồng bộ file carmate_db.json về trạng thái rỗng chuẩn.');
 }
 
 console.log('\n🎉 ĐÃ XOÁ SẠCH DỮ LIỆU MẪU THÀNH CÔNG!');
