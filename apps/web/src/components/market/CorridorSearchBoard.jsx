@@ -98,6 +98,9 @@ function getCleanOperatorName(h) {
   if (/trung kén/i.test(raw)) return 'Trung Kén';
   if (/huy hiếu/i.test(raw)) return 'Huy Hiếu';
   if (/thành công/i.test(raw)) return 'Thành Công';
+  if (/chín nghĩa/i.test(raw)) return 'Chín Nghĩa';
+  if (/quốc đạt/i.test(raw)) return 'Quốc Đạt';
+  if (/ba đàm/i.test(raw)) return 'Ba Đàm';
   return raw.replace(/\(.*?\)/g, '').trim();
 }
 
