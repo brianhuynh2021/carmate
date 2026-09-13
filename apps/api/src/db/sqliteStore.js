@@ -1185,6 +1185,16 @@ export async function deleteUserAccount(userId, phone) {
     database.prepare('DELETE FROM trips WHERE phoneReal = ?').run(effectivePhone);
   }
 
+  // 1b. Xóa các ý định di chuyển (intents) của người dùng này
+  try {
+    if (effectiveUserId) {
+      database.prepare('DELETE FROM intents WHERE userId = ?').run(effectiveUserId);
+    }
+    if (effectivePhone) {
+      database.prepare('DELETE FROM intents WHERE phone = ?').run(effectivePhone);
+    }
+  } catch {}
+
   // 2. Ẩn danh hóa các cuốc ghép trong lịch sử để không làm hỏng dữ liệu của người đi cùng
   if (effectivePhone) {
     const userBookings = database
@@ -1336,6 +1346,13 @@ export async function updateUserStatus(userId, updates = {}) {
     database
       .prepare('UPDATE trips SET isBanned = ? WHERE phoneReal = ? OR userId = ?')
       .run(isBannedInt, cleanPhoneNumber(found.phone), userId);
+  }
+
+  if (updates.isDeactivated !== undefined) {
+    const isHiddenInt = updates.isDeactivated ? 1 : 0;
+    database
+      .prepare('UPDATE trips SET isHidden = ? WHERE phoneReal = ? OR userId = ?')
+      .run(isHiddenInt, cleanPhoneNumber(found.phone), userId);
   }
 
   return found;

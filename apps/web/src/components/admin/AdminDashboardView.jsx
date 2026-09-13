@@ -9,6 +9,7 @@ import {
   EyeOff,
   Trash2,
   Ban,
+  PauseCircle,
   CheckCircle2,
   AlertTriangle,
   Clock,
@@ -79,6 +80,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [noticeType, setNoticeType] = useState('success'); // 'success' | 'error'
   const [adminTripToDelete, setAdminTripToDelete] = useState(null);
   const [adminUserToBan, setAdminUserToBan] = useState(null);
+  const [adminUserToDeactivate, setAdminUserToDeactivate] = useState(null);
+  const [adminUserToDelete, setAdminUserToDelete] = useState(null);
   const [deletionRequests, setDeletionRequests] = useState([]);
   const [adminReqToProcess, setAdminReqToProcess] = useState(null); // { req, action: 'approved' | 'rejected' }
   const [showClearDataModal, setShowClearDataModal] = useState(false);
@@ -387,6 +390,52 @@ export default function AdminDashboardView({ onExitAdmin }) {
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
       showNotice('Lỗi cập nhật: ' + err.message, 'error');
+    }
+  };
+
+  const handleExecuteToggleDeactivate = async () => {
+    if (!adminUserToDeactivate) return;
+    const user = adminUserToDeactivate;
+    const isCurrentlyDeactivated = Boolean(user.isDeactivated || user.status === 'deactivated');
+    const nextDeactivated = !isCurrentlyDeactivated;
+    const actionText = nextDeactivated ? 'tạm ngưng' : 'kích hoạt lại';
+    setAdminUserToDeactivate(null);
+
+    try {
+      await api.updateUserStatus(user.id, {
+        isDeactivated: nextDeactivated,
+        status: nextDeactivated ? 'deactivated' : 'active'
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id
+            ? { ...u, isDeactivated: nextDeactivated, status: nextDeactivated ? 'deactivated' : 'active' }
+            : u
+        )
+      );
+      showNotice(`Đã ${actionText} tài khoản ${user.name} thành công`);
+      api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
+    } catch (err) {
+      showNotice('Lỗi cập nhật: ' + err.message, 'error');
+    }
+  };
+
+  const handleExecuteDeleteUser = async () => {
+    if (!adminUserToDelete) return;
+    const user = adminUserToDelete;
+    setAdminUserToDelete(null);
+
+    try {
+      const res = await api.deleteUserAdmin(user.id);
+      if (res?.success) {
+        setUsers((prev) => prev.filter((u) => u.id !== user.id));
+        showNotice(`Đã xóa vĩnh viễn tài khoản ${user.name} thành công`);
+        loadAllAdminData();
+      } else {
+        showNotice(res?.error || 'Không thể xóa tài khoản', 'error');
+      }
+    } catch (err) {
+      showNotice('Lỗi xóa tài khoản: ' + err.message, 'error');
     }
   };
 
@@ -1086,7 +1135,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   <th className="py-3 px-4">Phương Tiện / Biển Số</th>
                   <th className="py-3 px-4">Trạng Thái Xe / Nhận Khách</th>
                   <th className="py-3 px-4">Phê Duyệt Kích Hoạt</th>
-                  <th className="py-3 px-4 text-right">Khoá / Mở Khoá</th>
+                  <th className="py-3 px-4 text-right">Thao Tác Quản Trị</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
@@ -1094,7 +1143,11 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   <tr
                     key={u.id}
                     className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${
-                      u.isBanned ? 'opacity-60 bg-rose-50/20 dark:bg-rose-950/20' : ''
+                      u.isBanned
+                        ? 'opacity-60 bg-rose-50/20 dark:bg-rose-950/20'
+                        : u.isDeactivated || u.status === 'deactivated'
+                          ? 'opacity-70 bg-amber-50/20 dark:bg-amber-950/20'
+                          : ''
                     }`}
                   >
                     <td className="py-3 px-4">
@@ -1103,6 +1156,11 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         {u.isBanned && (
                           <span className="px-1.5 py-0.2 rounded text-[9.5px] font-mono font-bold bg-rose-600 text-white">
                             BANNED
+                          </span>
+                        )}
+                        {(u.isDeactivated || u.status === 'deactivated') && !u.isBanned && (
+                          <span className="px-1.5 py-0.2 rounded text-[9.5px] font-mono font-bold bg-amber-500 text-white">
+                            TẠM NGƯNG
                           </span>
                         )}
                       </div>
@@ -1157,19 +1215,54 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         <span className="text-[11px] text-slate-400 font-mono">---</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setAdminUserToBan(u)}
-                        className={`px-3 py-1 rounded-full text-[11px] font-bold border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
-                          u.isBanned
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                            : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300'
-                        }`}
-                      >
-                        <Ban className="w-3 h-3" />
-                        <span>{u.isBanned ? 'Mở khoá' : 'Khoá cấm'}</span>
-                      </button>
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center justify-end gap-1.5">
+                        {/* Tạm ngưng / Kích hoạt lại */}
+                        <button
+                          type="button"
+                          onClick={() => setAdminUserToDeactivate(u)}
+                          title={
+                            u.isDeactivated || u.status === 'deactivated'
+                              ? 'Kích hoạt lại tài khoản'
+                              : 'Tạm ngưng hoạt động tài khoản'
+                          }
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
+                            u.isDeactivated || u.status === 'deactivated'
+                              ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300'
+                              : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'
+                          }`}
+                        >
+                          <PauseCircle className="w-3 h-3" />
+                          <span>{u.isDeactivated || u.status === 'deactivated' ? 'Kích hoạt' : 'Tạm ngưng'}</span>
+                        </button>
+
+                        {/* Khoá cấm / Mở khoá */}
+                        <button
+                          type="button"
+                          onClick={() => setAdminUserToBan(u)}
+                          title={u.isBanned ? 'Mở khoá cấm' : 'Khoá cấm do vi phạm'}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
+                            u.isBanned
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                              : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300'
+                          }`}
+                        >
+                          <Ban className="w-3 h-3" />
+                          <span>{u.isBanned ? 'Mở khoá' : 'Khoá cấm'}</span>
+                        </button>
+
+                        {/* Xóa vĩnh viễn (Bảo vệ MIT: không cho xoá Admin) */}
+                        {u.role !== 'admin' && u.phone !== '0984883750' && (
+                          <button
+                            type="button"
+                            onClick={() => setAdminUserToDelete(u)}
+                            title="Xóa vĩnh viễn tài khoản khỏi hệ thống"
+                            className="p-1.5 rounded-lg text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 dark:border-rose-900/40 transition-colors cursor-pointer active:scale-95 inline-flex items-center justify-center"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -2296,6 +2389,137 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 ? 'Tài khoản này sẽ được khôi phục quyền truy cập, có thể đăng bài và ghép chuyến bình thường trên hệ thống CarMate.'
                 : 'Tài khoản này sẽ bị cấm ngay lập tức: không thể đăng nhập, không thể đăng bài và không thể kết nối ghép chuyến trên toàn hệ thống.'}
             </p>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── MODAL TẠM NGƯNG / KÍCH HOẠT LẠI TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
+      {adminUserToDeactivate && (
+        <Modal
+          onClose={() => setAdminUserToDeactivate(null)}
+          size="sm"
+          icon={PauseCircle}
+          iconTone={
+            adminUserToDeactivate.isDeactivated || adminUserToDeactivate.status === 'deactivated'
+              ? 'success'
+              : 'warning'
+          }
+          title={
+            adminUserToDeactivate.isDeactivated || adminUserToDeactivate.status === 'deactivated'
+              ? 'Kích hoạt lại tài khoản'
+              : 'Tạm ngưng tài khoản'
+          }
+          subtitle={`Người dùng: ${adminUserToDeactivate.name} (${adminUserToDeactivate.phone || 'N/A'})`}
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdminUserToDeactivate(null)}
+                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Quay lại
+              </Button>
+              <Button
+                variant={
+                  adminUserToDeactivate.isDeactivated || adminUserToDeactivate.status === 'deactivated'
+                    ? 'success'
+                    : 'warning'
+                }
+                size="sm"
+                onClick={handleExecuteToggleDeactivate}
+                className="px-5 font-bold rounded-full shadow-sm"
+              >
+                {adminUserToDeactivate.isDeactivated || adminUserToDeactivate.status === 'deactivated'
+                  ? 'Xác nhận kích hoạt'
+                  : 'Xác nhận tạm ngưng'}
+              </Button>
+            </div>
+          }
+        >
+          <div className="p-1 space-y-3 text-left">
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5 text-xs">
+              <p className="text-slate-500 font-medium">
+                Họ tên: <strong className="text-slate-900 dark:text-white">{adminUserToDeactivate.name}</strong>
+              </p>
+              <p className="text-slate-500 font-medium">
+                Số điện thoại:{' '}
+                <strong className="text-slate-900 dark:text-white font-mono">{adminUserToDeactivate.phone || 'N/A'}</strong>
+              </p>
+              <p className="text-slate-500 font-medium">
+                Vai trò:{' '}
+                <strong className="text-slate-900 dark:text-white">
+                  {adminUserToDeactivate.role === 'driver'
+                    ? 'Chủ xe'
+                    : adminUserToDeactivate.role === 'admin'
+                      ? 'Quản trị viên'
+                      : 'Người đi cùng'}
+                </strong>
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {adminUserToDeactivate.isDeactivated || adminUserToDeactivate.status === 'deactivated'
+                ? 'Tài khoản này sẽ được mở lại hoạt động bình thường trên hệ thống CarMate.'
+                : 'Tài khoản này sẽ được tạm đóng băng: các bài đăng chuyến đi sẽ tạm ẩn khỏi sàn, thành viên không bị coi là vi phạm và điểm tín nhiệm được bảo toàn nguyên vẹn.'}
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── MODAL XÓA VĨNH VIỄN TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
+      {adminUserToDelete && (
+        <Modal
+          onClose={() => setAdminUserToDelete(null)}
+          size="sm"
+          icon={Trash2}
+          iconTone="danger"
+          title="Xóa vĩnh viễn tài khoản"
+          subtitle={`Người dùng: ${adminUserToDelete.name} (${adminUserToDelete.phone || 'N/A'})`}
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdminUserToDelete(null)}
+                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleExecuteDeleteUser}
+                className="px-5 font-bold rounded-full shadow-sm bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                Xóa vĩnh viễn
+              </Button>
+            </div>
+          }
+        >
+          <div className="p-1 space-y-3 text-left">
+            <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 space-y-1.5 text-xs">
+              <p className="text-rose-700 dark:text-rose-300 font-medium">
+                Họ tên: <strong className="text-slate-900 dark:text-white">{adminUserToDelete.name}</strong>
+              </p>
+              <p className="text-rose-700 dark:text-rose-300 font-medium">
+                Số điện thoại:{' '}
+                <strong className="text-slate-900 dark:text-white font-mono">{adminUserToDelete.phone || 'N/A'}</strong>
+              </p>
+              <p className="text-rose-700 dark:text-rose-300 font-medium">
+                Mã định danh: <strong className="font-mono text-slate-900 dark:text-white">{adminUserToDelete.id}</strong>
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 text-[11.5px] text-amber-800 dark:text-amber-200 space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Cảnh báo an toàn dữ liệu:</span>
+              </p>
+              <p>
+                Thao tác này sẽ xóa hoàn toàn tài khoản khỏi CSDL, xóa toàn bộ bài đăng / chuyến xe và ẩn danh hóa lịch sử cuốc xe theo Nghị định 13/2023. <strong>Hành động không thể khôi phục.</strong>
+              </p>
+            </div>
           </div>
         </Modal>
       )}
