@@ -192,9 +192,9 @@ export default function TripDetailBottomSheet({
         {/* ── NỘI DUNG CUỘN (SCROLLABLE BODY) ── */}
         <div className="overflow-y-auto px-5 py-4 space-y-4 text-slate-900 dark:text-white">
           {/* 1. KHỐI THỜI GIAN & TÌNH TRẠNG CHỖ */}
-          <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/30">
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-emerald-900/50 border border-emerald-200/70 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-lg sm:text-xl shrink-0 shadow-2xs">
+              <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-600 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-lg sm:text-xl shrink-0 shadow-2xs">
                 {trip.departureLabel || '04:30'}
               </span>
               <div className="min-w-0">
@@ -213,7 +213,7 @@ export default function TripDetailBottomSheet({
                   Đã hết chỗ
                 </span>
               ) : (
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold font-mono bg-white dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-700/60 shadow-2xs inline-flex items-center gap-1.5">
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold font-mono bg-white dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600 shadow-2xs inline-flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                   Còn {seatsAvailable}/{totalSeats} chỗ
                 </span>
@@ -222,7 +222,7 @@ export default function TripDetailBottomSheet({
           </div>
 
           {/* 2. LỘ TRÌNH THỰC TẾ (ĐÓN / TRẢ) */}
-          <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/10 space-y-3">
+          <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3">
             <div className="flex items-start gap-3">
               <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold shadow-2xs">
                 ●
@@ -262,7 +262,7 @@ export default function TripDetailBottomSheet({
           </div>
 
           {/* 3. THÔNG TIN CHỦ XE & PHƯƠNG TIỆN */}
-          <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/10 space-y-2.5">
+          <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Chủ xe:</span>
@@ -298,7 +298,7 @@ export default function TripDetailBottomSheet({
           </div>
 
           {/* 4. CAM KẾT NỀN TẢNG (AN TÂM 100%) */}
-          <div className="p-3.5 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/30 space-y-1.5 text-[11.5px] text-slate-700 dark:text-slate-300">
+          <div className="p-3.5 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-800/40 space-y-1.5 text-[11.5px] text-slate-700 dark:text-slate-300">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>Xe nhà chạy định kỳ hàng tuần · Cam kết khởi hành đúng giờ</span>
