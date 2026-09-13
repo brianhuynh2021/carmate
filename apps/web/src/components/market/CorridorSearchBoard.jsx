@@ -60,6 +60,18 @@ const WINDOW_KEY = 'carmate_last_departure_window';
  */
 export const ENABLE_DEPARTURE_CHIPS = false;
 
+/**
+ * ── FEATURE FLAG: ACCORDION LỊCH CHẠY TOÀN TUYẾN (COLD START CRO) ──────
+ * Giai đoạn Cold Start (1-2 xe/ngày): Ẩn thanh accordion "Xem lịch chạy toàn tuyến"
+ * để:
+ * 1. Tránh số lượng ảo ("6 chuyến có sẵn") gây nghi ngờ dữ liệu mẫu (mock data).
+ * 2. Triệt tiêu 1 cú click thừa (Click Friction): Show thẳng chuyến xe thật ra giữa màn hình.
+ * 3. Tránh việc chưa tìm kiếm mà đã ghi "trên chặng này".
+ * TUYỆT ĐỐI KHÔNG XÓA code timeline/accordion: Bật lại (true) khi hệ thống đã có mạng lưới
+ * xe chạy cố định nhiều chuyến/ngày trên toàn tuyến.
+ */
+export const ENABLE_TIMELINE_ACCORDION = false;
+
 /** Đọc localStorage an toàn (chế độ riêng tư / bị chặn đều không được ném lỗi). */
 function readStore(key, fallback = null) {
   try {
@@ -737,8 +749,8 @@ export default function CorridorSearchBoard({
         </div>
       </section>
 
-      {/* ── ĐĂNG NHU CẦU TÌM XE (Chỉ hiện khi chưa bấm tìm chuyến để không choán chỗ kết quả) ── */}
-      {!matrix && (
+      {/* ── ACCORDION LỊCH CHẠY TOÀN TUYẾN (BẢO LƯU CODE - ẨN Ở GIAI ĐOẠN COLD START CRO) ── */}
+      {ENABLE_TIMELINE_ACCORDION && !matrix && (
         <button
           type="button"
           onClick={() => {
@@ -774,7 +786,7 @@ export default function CorridorSearchBoard({
       )}
 
       {/* BẢNG LỊCH CHẠY TOÀN TUYẾN — mở tại chỗ khi chưa tìm kiếm */}
-      {!matrix && isDense && showTimeline && timeline && (
+      {ENABLE_TIMELINE_ACCORDION && !matrix && isDense && showTimeline && timeline && (
         <section className="space-y-2.5 animate-fade-in">
           {timeline.periods.map((p) => (
             <div
@@ -828,6 +840,21 @@ export default function CorridorSearchBoard({
             </div>
           ))}
         </section>
+      )}
+
+      {/* ── SKELETON TRẠNG THÁI TẢI CHUYẾN XE (Zero Layout Shift & Mượt mà) ── */}
+      {isSearching && !matrix && (
+        <div className="p-4 rounded-3xl bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-md border border-slate-200 dark:border-white/10 animate-pulse space-y-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-36 bg-slate-200 dark:bg-white/10 rounded-full" />
+            <div className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full" />
+          </div>
+          <div className="h-24 bg-slate-100 dark:bg-white/5 rounded-2xl" />
+          <div className="flex gap-2">
+            <div className="h-10 flex-1 bg-slate-200 dark:bg-white/10 rounded-xl" />
+            <div className="h-10 flex-1 bg-slate-200 dark:bg-white/10 rounded-xl" />
+          </div>
+        </div>
       )}
 
       {/* ── BẢNG SO SÁNH 3 TẦNG VẬN TẢI (DẠNG LINE LIẾC NGANG) ── */}
