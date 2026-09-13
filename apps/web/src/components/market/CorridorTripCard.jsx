@@ -118,7 +118,7 @@ export default function CorridorTripCard({
           handleClick();
         }
       }}
-      className={`group w-full rounded-2xl border transition-all duration-150 p-3.5 select-none ${
+      className={`group w-full rounded-2xl border transition-all duration-150 px-3.5 py-3 select-none ${
         isSoldOut
           ? 'bg-slate-50/70 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-70 cursor-not-allowed'
           : isEarliest
@@ -127,13 +127,13 @@ export default function CorridorTripCard({
       }`}
     >
       <div className="flex items-center justify-between min-w-0">
-        {/* ── Cột 1: Giờ (Cố định 64px - w-16 shrink-0) ── */}
-        <div className="w-16 shrink-0 flex flex-col items-start">
+        {/* ── Cột 1: Giờ (Khóa cứng 58px vừa khít) ── */}
+        <div className="w-[58px] shrink-0 flex flex-col items-start">
           <span className="text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
             {trip.departureLabel || '04:30'}
           </span>
           {isEarliest ? (
-            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-white bg-[#0071e3] rounded-full mt-0.5 leading-none">
+            <span className="px-1.5 py-0.5 text-[9.5px] font-semibold text-white bg-[#0071e3] rounded-full mt-0.5 leading-none">
               Gần nhất
             </span>
           ) : (
@@ -143,8 +143,8 @@ export default function CorridorTripCard({
           )}
         </div>
 
-        {/* ── Cột 2: Thông tin xe (Co giãn tự do - flex-1 min-w-0 mx-2) ── */}
-        <div className="flex-1 min-w-0 mx-2">
+        {/* ── Cột 2: Thông tin xe (Nới rộng ml-2.5 mr-1 bung trọn vẹn 100% chữ) ── */}
+        <div className="flex-1 min-w-0 ml-2.5 mr-1">
           <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
             {vehicleTypeLabel}
           </div>

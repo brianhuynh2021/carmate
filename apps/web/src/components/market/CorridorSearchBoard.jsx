@@ -90,6 +90,47 @@ function writeStore(key, value) {
   }
 }
 
+/** Helper rút gọn tên nhà xe, loại bỏ ngoặc đơn cồng kềnh */
+function getCleanOperatorName(h) {
+  const raw = h.shortName || h.operator || '';
+  if (/hoàng yến/i.test(raw)) return 'Hoàng Yến';
+  if (/petro/i.test(raw)) return 'Petro Bình Phước';
+  if (/trung kén/i.test(raw)) return 'Trung Kén';
+  if (/huy hiếu/i.test(raw)) return 'Huy Hiếu';
+  if (/thành công/i.test(raw)) return 'Thành Công';
+  return raw.replace(/\(.*?\)/g, '').trim();
+}
+
+/** Helper phân loại dòng xe và tần suất xuất bến */
+function getBusSubtext(h) {
+  const freq = h.frequency?.split('(')[0]?.trim() || 'Nhiều chuyến/ngày';
+  let vehicleType = 'Limousine';
+  if (/giường nằm/i.test(h.operator || h.note || '')) vehicleType = 'Xe giường nằm';
+  else if (/thành công/i.test(h.operator || '')) vehicleType = 'Xe khách 29-45 chỗ';
+  else if (/9 chỗ/i.test(h.operator || '')) vehicleType = 'Limousine 9 chỗ';
+  else if (/ghế ngả/i.test(h.operator || '')) vehicleType = 'Limousine ghế ngả';
+
+  return `${vehicleType} · ${freq}`;
+}
+
+/** Helper đòn bẩy tâm lý điểm trả (so sánh với trả cổng viện của CarMate) */
+function getPsychologyBadge(h) {
+  if (/sân bay|tsn/i.test(h.note || h.coverage || '')) return 'Trả tại VP / Sân bay TSN';
+  if (/vp 220/i.test(h.note || h.coverage || '')) return 'Trả tại VP 220 QL13';
+  if (/bến xe|bx/i.test(h.coverage || h.note || '')) return 'Trả tại bến xe (tốn thêm Grab)';
+  return 'Trả tại bến xe (tốn thêm Grab)';
+}
+
+/** Helper định dạng giá vé dạng text mỏng (200k – 260k) */
+function formatShortPriceRef(raw = '') {
+  if (!raw) return '140k – 260k';
+  return raw
+    .replace(/\.000đ/g, 'k')
+    .replace(/\.000\s*đ/g, 'k')
+    .replace(/\s*-\s*/g, ' – ')
+    .trim();
+}
+
 /**
  * MÀN HÌNH CHÍNH: MỘT Ô TÌM KIẾM DUY NHẤT
  *
@@ -1135,56 +1176,63 @@ export default function CorridorSearchBoard({
               bảng hotline xe khách để ưu tiên 100% gom khách cho chủ xe CarMate. */}
           {!isFutureSearch && verifiedHotlines.length > 0 && (
             <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <Bus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span>CarMate chưa có xe chạy liền trong 30–60 phút tới. Bạn hãy tham khảo nhà xe dự phòng để kịp giờ:</span>
+              <div className="flex items-center justify-between text-[11px] pb-0.5 px-1">
+                <span className="font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Phương án xe khách dự phòng
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono shrink-0">
-                  {verifiedHotlines.length} nhà xe
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {verifiedHotlines.length} nhà xe QL13
                 </span>
               </div>
 
               <div className="space-y-1.5">
-                {verifiedHotlines.map((h) => (
-                  <div
-                    key={h.id}
-                    onClick={() => {
-                      trackViewBusDetail(h.operator, {
-                        hotline: h.hotline,
-                        corridor: corridor.id,
-                        fromHubId,
-                        toHubId,
-                        timeSlot: selectedChip?.timeSlot,
-                        dayOffset: selectedChip?.dayOffset
-                      });
-                      setSelectedDetailHotline(h);
-                    }}
-                    className="w-full min-h-[48px] px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/15 hover:border-[#0071e3]/50 dark:hover:border-[#0071e3]/50 hover:bg-blue-50/20 dark:hover:bg-blue-500/[0.03] flex items-center justify-between gap-2 text-left transition-all duration-150 cursor-pointer shadow-2xs group"
-                  >
-                    {/* Trái: Tên nhà xe • Tần suất */}
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-[#0071e3] transition-colors">
-                        {h.shortName || h.operator}
-                      </p>
-                      <span className="text-slate-300 dark:text-white/20">•</span>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                        {h.frequency?.split('(')[0]?.trim() || 'Nhiều chuyến/ngày'}
-                      </p>
-                    </div>
+                {verifiedHotlines.map((h) => {
+                  const cleanBusName = getCleanOperatorName(h);
+                  const busSubtext = getBusSubtext(h);
+                  const psychologyBadge = getPsychologyBadge(h);
+                  const shortPrice = formatShortPriceRef(h.priceRef);
 
-                    {/* Phải: Giá vé + Cột "Chi tiết >" */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 text-[11px] sm:text-xs font-bold font-mono text-slate-700 dark:text-slate-200 block leading-tight">
-                        {h.priceRef || '100.000đ - 160.000đ'}
-                      </span>
-                      <div className="flex items-center gap-0.5 text-xs font-semibold text-slate-500 group-hover:text-[#0071e3] dark:group-hover:text-blue-400 transition-colors">
-                        <span className="hidden sm:inline">Chi tiết</span>
-                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0071e3] group-hover:translate-x-0.5 transition-all" />
+                  return (
+                    <div
+                      key={h.id}
+                      onClick={() => {
+                        trackViewBusDetail(h.operator, {
+                          hotline: h.hotline,
+                          corridor: corridor.id,
+                          fromHubId,
+                          toHubId,
+                          timeSlot: selectedChip?.timeSlot,
+                          dayOffset: selectedChip?.dayOffset
+                        });
+                        setSelectedDetailHotline(h);
+                      }}
+                      className="p-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200/90 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 flex flex-col justify-between transition-all duration-150 cursor-pointer shadow-2xs group"
+                    >
+                      {/* Hàng 1: Tên nhà xe + Giá xám mờ + Icon > */}
+                      <div className="flex items-center justify-between min-w-0">
+                        <p className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 transition-colors">
+                          {cleanBusName}
+                        </p>
+                        <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                          <span className="text-xs font-mono font-medium text-slate-400 dark:text-slate-500">
+                            {shortPrice}
+                          </span>
+                          <span className="text-slate-400 group-hover:text-blue-600 text-xs font-bold transition-all group-hover:translate-x-0.5">
+                            ›
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Hàng 2: Loại xe & Tần suất + Đòn bẩy tâm lý */}
+                      <div className="flex items-center justify-between text-[10.5px] mt-1 text-slate-400 dark:text-slate-500">
+                        <span className="truncate">{busSubtext}</span>
+                        <span className="text-amber-600/90 dark:text-amber-400/90 font-medium shrink-0 ml-1.5">
+                          {psychologyBadge}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
