@@ -94,8 +94,9 @@ export default function CorridorTripCard({
       return `Đón trạm ${fromClean}`;
     }
     if (tripIndex === 1) {
-      const driverName = trip.driverName || 'Huỳnh';
-      return `Chủ xe ${driverName}`;
+      const rawDriverName = trip.driverName || trip.driver?.publicName || trip.driver?.name || 'CX-102';
+      const cleanDriverName = rawDriverName.replace(/^Chủ xe\s+/i, '').trim();
+      return `Chủ xe ${cleanDriverName}`;
     }
     return 'Không nhồi nhét';
   })();
