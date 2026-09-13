@@ -113,6 +113,10 @@ export default function App() {
 
     // 2. Nhận diện Clean URL Pathname (/booked, /radar, /match, /market, /admin, /cockpit, /tram, /intent, /post)
     const rawPath = window.location.pathname.replace(/^\/+/, '').split('/')[0].trim().toLowerCase();
+    if (!rawPath) {
+      // Khi truy cập đường dẫn gốc '/' (carmate.vn) -> 100% luôn là trang chủ 'market'
+      return 'market';
+    }
     if (rawPath === 'admin' && !canAccessAdmin) {
       // Chặn truy cập /admin trên domain chính (MIT Zero Attack Surface)
     } else if (rawPath === 'cockpit') {
@@ -154,14 +158,6 @@ export default function App() {
       }
     } catch {}
 
-    // 5. Khôi phục tab trước đó từ sessionStorage (Kháng văng trang chủ khi F5 / Reload)
-    try {
-      const savedTab = sessionStorage.getItem('carmate_active_tab');
-      if (savedTab && VALID_TABS.includes(savedTab) && savedTab !== 'admin') {
-        return savedTab;
-      }
-    } catch {}
-
     return 'market';
   }, [canAccessAdmin, isLocalhost, isOpsPortal, VALID_TABS]);
 
@@ -189,10 +185,10 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
     trackPageView(activeTab);
 
-    // Đồng bộ Clean URL Pathname & SessionStorage 2 chiều (Zero #, Chuẩn Apple & Vercel)
+    // Đồng bộ Clean URL Pathname 2 chiều (Zero #, Chuẩn Apple & Vercel)
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.setItem('carmate_active_tab', activeTab);
+        sessionStorage.removeItem('carmate_active_tab');
         const targetPath = getPathForTab(activeTab);
         const currentPath = window.location.pathname;
         const currentHash = window.location.hash;
@@ -965,7 +961,10 @@ export default function App() {
               currentUser={currentUser}
               onSuccess={(newTrip) => {
                 handlePostTrip(newTrip, currentUser);
-                setActiveTab('cockpit');
+                try {
+                  sessionStorage.setItem('carmate_booked_subtab', 'driver');
+                } catch {}
+                setActiveTab('booked');
               }}
               onShowToast={showToast}
             />
@@ -1072,6 +1071,9 @@ export default function App() {
                 setActiveTab('market');
               }}
               onOpenChat={(id, opts) => handleOpenInbox(id, opts)}
+              onOpenCockpit={() => setActiveTab('cockpit')}
+              onOpenQuickPostTrip={() => setIsQuickPostTripOpen(true)}
+              onShowToast={showToast}
             />
           </div>
         )}
@@ -1310,7 +1312,10 @@ export default function App() {
             currentUser={currentUser}
             onSuccess={(newTrip) => {
               handlePostTrip(newTrip, currentUser);
-              setActiveTab('cockpit');
+              try {
+                sessionStorage.setItem('carmate_booked_subtab', 'driver');
+              } catch {}
+              setActiveTab('booked');
             }}
             onShowToast={showToast}
           />

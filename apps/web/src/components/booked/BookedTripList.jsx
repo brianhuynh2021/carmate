@@ -45,6 +45,7 @@ import EmptyState, { SectionHeader } from '../ui/EmptyState.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
 import RescueModeBanner from './RescueModeBanner.jsx';
+import DriverScheduleCardView from '../cockpit/DriverScheduleCardView.jsx';
 
 const WEEKDAY_NAMES = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 
@@ -98,67 +99,61 @@ function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-[12px] font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
-            <span>{t('booked2.s001')}</span>
+            <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Tiến trình kết nối an toàn</span>
           </span>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-slate-800 text-[#86868b] border border-black/[0.04]">
-            {t('booked2.s002')}
+          <span className="text-[10px] text-[#86868b] dark:text-slate-400">
+            {isCompleted ? 'Đã hoàn tất' : isCancelled ? 'Đã huỷ' : 'Đang xử lý'}
           </span>
         </div>
-        <span className="text-[11px] font-semibold text-[#86868b] tabular">
-          {isCompleted
-            ? '4/4 hoàn tất'
-            : isReassigned
-              ? 'Bước 2/4 (Xe hỗ trợ)'
-              : isCancelled
-                ? 'Đã dừng'
-                : isDelayed
-                  ? 'Bước 2/4 (Báo trễ)'
-                  : 'Bước 2/4 đang kết nối'}
-        </span>
+        <Badge tone={isCompleted ? 'success' : isCancelled ? 'danger' : isDelayed ? 'warning' : 'info'} size="xs">
+          {isCompleted ? 'Hoàn tất' : isCancelled ? 'Đã huỷ' : isDelayed ? 'Báo trễ' : 'Đang kết nối'}
+        </Badge>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
         {steps.map((step) => {
           const isDone = step.state === 'completed';
           const isActive = step.state === 'active';
-          const isDelayState = step.state === 'delayed';
-          const isCancelState = step.state === 'cancelled';
+          const isStepDelayed = step.state === 'delayed';
+          const isStepCancelled = step.state === 'cancelled';
 
           return (
             <div
               key={step.id}
-              className={`p-2 sm:p-2.5 rounded-xl border transition-all ${
+              className={`p-2 sm:p-2.5 rounded-xl border text-center transition-all ${
                 isDone
-                  ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/70 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-200'
+                  ? 'bg-emerald-500/10 dark:bg-emerald-950/20 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
                   : isActive
-                    ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-1 ring-blue-500/25'
-                    : isDelayState
-                      ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
-                      : isCancelState
-                        ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 text-rose-900'
-                        : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] text-[#86868b] opacity-60'
+                  ? 'bg-[#0071e3]/10 dark:bg-[#0071e3]/20 border-[#0071e3]/40 text-[#0071e3] dark:text-sky-300 ring-2 ring-[#0071e3]/20'
+                  : isStepDelayed
+                  ? 'bg-amber-500/10 dark:bg-amber-950/20 border-amber-500/40 text-amber-700 dark:text-amber-300'
+                  : isStepCancelled
+                  ? 'bg-rose-500/10 dark:bg-rose-950/20 border-rose-500/30 text-rose-700 dark:text-rose-300'
+                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] dark:border-white/[0.04] text-[#86868b] dark:text-slate-500'
               }`}
             >
-              <div className="flex items-center gap-1.5 mb-0.5 sm:mb-1">
-                <span
-                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold shrink-0 ${
-                    isDone
-                      ? 'bg-emerald-600 text-white'
-                      : isActive
-                        ? 'bg-[#0071e3] text-white shadow-xs'
-                        : isDelayState
-                          ? 'bg-amber-500 text-white'
-                          : isCancelState
-                            ? 'bg-rose-500 text-white'
-                            : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#86868b]'
-                  }`}
-                >
-                  {isDone ? '✓' : isCancelState ? '✕' : step.id}
-                </span>
-                <span className="text-[10.5px] sm:text-[11.5px] font-bold leading-tight truncate">{step.label}</span>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                {isDone ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                ) : isStepCancelled ? (
+                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                ) : isStepDelayed ? (
+                  <Timer className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                ) : (
+                  <span
+                    className={`w-4 h-4 rounded-full text-[10px] font-bold inline-flex items-center justify-center ${
+                      isActive ? 'bg-[#0071e3] text-white' : 'bg-black/10 dark:bg-white/10 text-[#86868b]'
+                    }`}
+                  >
+                    {step.id}
+                  </span>
+                )}
+                <span className="text-[11px] font-bold truncate">{step.label}</span>
               </div>
-              <p className="text-[9.5px] sm:text-[10.5px] leading-tight opacity-75 truncate font-medium">{step.desc}</p>
+              <p className="text-[9px] text-[#86868b] dark:text-slate-400 truncate hidden sm:block">
+                {step.desc}
+              </p>
             </div>
           );
         })}
@@ -175,10 +170,45 @@ export default function BookedTripList({
   onComplete,
   onFindTrip,
   onReview,
-  onOpenChat
+  onOpenChat,
+  onOpenCockpit,
+  onOpenQuickPostTrip,
+  onShowToast,
+  defaultSubTab = null
 }) {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (defaultSubTab) return defaultSubTab;
+    try {
+      const preferred = sessionStorage.getItem('carmate_booked_subtab');
+      if (preferred === 'driver' || preferred === 'active' || preferred === 'history') {
+        return preferred;
+      }
+    } catch {}
+    if (currentUser?.vehicle?.plate || currentUser?.isDriverVerified) {
+      return 'driver';
+    }
+    return 'active';
+  });
+
+  const driverVehicle = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('carmate_cockpit_vehicle');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    if (currentUser?.vehicle?.plate) {
+      return {
+        plate: currentUser.vehicle.plate,
+        model: `${currentUser.vehicle.brand || ''} ${currentUser.vehicle.model || ''} - Màu ${currentUser.vehicle.color || 'Trắng'}`.trim(),
+        seats: currentUser.vehicle.capacity ? Math.min(4, currentUser.vehicle.capacity - 1) : 2,
+        status: currentUser.vehicle.status || (currentUser.isDriverVerified ? 'VERIFIED' : 'PENDING'),
+        photos: currentUser.vehicle.photos || [],
+        amenities: currentUser.vehicle.amenities || ['ac', 'no_smoking']
+      };
+    }
+    return null;
+  }, [currentUser]);
+
   const [copiedId, setCopiedId] = useState(null);
   const [copiedPhoneId, setCopiedPhoneId] = useState(null);
 
@@ -309,7 +339,7 @@ export default function BookedTripList({
       <SectionHeader
         icon={Clock}
         title={t('booked.title') || 'Chuyến của tôi'}
-        description="Ví vé điện tử hành khách · 0đ phí sàn · Kết nối Chủ xe trực tiếp"
+        description="Quản lý chuyến xe Chủ xe & Ví vé điện tử hành khách · 0đ phí sàn"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5 font-medium">
             {t('booked2.s003')}
@@ -317,16 +347,35 @@ export default function BookedTripList({
         }
       />
 
-      {/* Tabs Chuyển Đổi: Sắp đi vs Lịch sử */}
+      {/* Tabs Chuyển Đổi: Đăng chuyến & Taplo (T1) | Sắp đi (T2) | Lịch sử (T3) */}
       <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/80 dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs">
+        {/* Tab 1: Đăng chuyến & Taplo */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('driver');
+            try { sessionStorage.setItem('carmate_booked_subtab', 'driver'); } catch {}
+          }}
+          className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeTab === 'driver'
+              ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-xs'
+              : 'text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
+          }`}
+        >
+          <Car className={`w-4 h-4 ${activeTab === 'driver' ? 'text-emerald-400 dark:text-emerald-600' : 'text-emerald-500'}`} />
+          <span>Đăng chuyến & Taplo</span>
+        </button>
+
+        {/* Tab 2: Sắp đi */}
         <button
           type="button"
           onClick={() => {
             setActiveTab('active');
             setStatusSubFilter('all');
             setCurrentPage(1);
+            try { sessionStorage.setItem('carmate_booked_subtab', 'active'); } catch {}
           }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === 'active'
               ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-xs'
               : 'text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
@@ -345,14 +394,16 @@ export default function BookedTripList({
           </span>
         </button>
 
+        {/* Tab 3: Lịch sử */}
         <button
           type="button"
           onClick={() => {
             setActiveTab('history');
             setStatusSubFilter('all');
             setCurrentPage(1);
+            try { sessionStorage.setItem('carmate_booked_subtab', 'history'); } catch {}
           }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === 'history'
               ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-xs'
               : 'text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
@@ -372,7 +423,22 @@ export default function BookedTripList({
         </button>
       </div>
 
-      {/* Thanh Tìm Kiếm & Lọc Nhanh Chuẩn Cursor Ambient (< 1ms) */}
+      {/* ── NỘI DUNG TAB 1: ĐĂNG CHUYẾN & TAPLO CHỦ XE ── */}
+      {activeTab === 'driver' && (
+        <div className="pt-1 animate-fade-in">
+          <DriverScheduleCardView
+            vehicle={driverVehicle}
+            onSwitchToRadar={onOpenCockpit}
+            onShowToast={onShowToast}
+            onOpenQuickPostTrip={onOpenQuickPostTrip}
+          />
+        </div>
+      )}
+
+      {/* ── NỘI DUNG TAB 2 & 3: VÉ XE HÀNH KHÁCH (SẮP ĐI & LỊCH SỬ) ── */}
+      {activeTab !== 'driver' && (
+        <div className="space-y-5 animate-fade-in">
+          {/* Thanh Tìm Kiếm & Lọc Nhanh Chuẩn Cursor Ambient (< 1ms) */}
       {baseList.length > 0 && (
         <div className="space-y-2.5">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
@@ -911,5 +977,7 @@ export default function BookedTripList({
         </div>
       )}
     </div>
+  )}
+</div>
   );
 }
