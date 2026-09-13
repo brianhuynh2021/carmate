@@ -1069,14 +1069,14 @@ export default function CorridorSearchBoard({
               ))}
 
               {/* ⭐️ ƯU TIÊN #1: GOM NHU CẦU LỆCH GIỜ (ĐẶT LỊCH TRƯỚC - BẢO TOÀN PHỄU CHUYỂN ĐỔI) */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 text-center space-y-2 shadow-sm">
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 text-center space-y-2 shadow-sm">
                 <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Chưa tìm thấy giờ phù hợp lịch trình?
                 </p>
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-amber-500/25 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0062c4] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5"
                 >
                   <span>⚡ Báo giờ bạn muốn đi · {formatVND(carmateSegmentPrice)}</span>
                 </button>
