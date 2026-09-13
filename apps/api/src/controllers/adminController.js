@@ -768,7 +768,7 @@ export function clearAdminTestData(req, res) {
     const incidentsCount = clearAllTripIncidents();
     const epochsCount = clearAllMatchingEpochs();
     const exchangeCount = clearAllSeatExchangeOrders();
-    const usersCount = clearAllNonAdminUsers();
+    const usersCount = clearNonAdminUsers();
 
     // Đồng bộ file carmate_db.json về trạng thái sạch chuẩn
     try {
