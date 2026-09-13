@@ -65,6 +65,8 @@ export default function TripDetailBottomSheet({
   destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
   destNote = 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh',
   segmentPrice = 165000,
+  isMyTrip = false,
+  onManageTrip,
   onConfirmBook
 }) {
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
@@ -196,6 +198,19 @@ export default function TripDetailBottomSheet({
 
         {/* ── NỘI DUNG CUỘN (SCROLLABLE BODY - CHUẨN MIT TRANSIT CANVAS #DFE5EC) ── */}
         <div className="overflow-y-auto px-4 sm:px-5 py-3.5 space-y-3 text-slate-900 dark:text-white bg-[#DFE5EC] dark:bg-[#121721] transition-colors">
+          {/* BANNER DÀNH CHO CHỦ XE (STANFORD ERGONOMICS) */}
+          {isMyTrip && (
+            <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-2.5 text-xs text-emerald-900 dark:text-emerald-100 shadow-xs">
+              <span className="text-base shrink-0">🚗</span>
+              <div className="flex-1 leading-snug">
+                <strong className="block font-bold text-emerald-950 dark:text-emerald-50">Đây là bài đăng chuyến xe của chính bạn</strong>
+                <span className="text-[11px] text-emerald-800 dark:text-emerald-200">
+                  Chuyến xe đang hiển thị trực tiếp trên sàn để người đi cùng tìm và đặt chỗ đón.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* 1. KHỐI THỜI GIAN & TÌNH TRẠNG CHỖ */}
           <div className="flex items-center justify-between gap-2.5 p-3 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -400,24 +415,37 @@ export default function TripDetailBottomSheet({
         <div className="p-3 sm:p-3.5 border-t border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md shrink-0 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] sm:text-[10.5px] text-slate-400 uppercase tracking-wider font-semibold">
-              Chi phí chia sẻ
+              {isMyTrip ? 'Mức phụ xăng bạn nhận' : 'Chi phí chia sẻ'}
             </p>
             <div className="flex items-baseline gap-1">
               <span className="text-xl sm:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                {formatVND(displayPrice * selectedSeats)}
+                {formatVND(displayPrice * (isMyTrip ? 1 : selectedSeats))}
               </span>
-              <span className="text-[11px] text-slate-500 font-medium">/ {selectedSeats} ghế</span>
+              <span className="text-[11px] text-slate-500 font-medium">/ {isMyTrip ? '1 ghế' : `${selectedSeats} ghế`}</span>
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={isSoldOut}
-            onClick={() => onConfirmBook?.(trip, selectedSeats)}
-            className="flex-1 max-w-xs h-11 sm:h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-          >
-            <span>{isSoldOut ? 'Đã hết chỗ' : 'GIỮ CHỖ NGAY (0đ CỌC)'}</span>
-          </button>
+          {isMyTrip ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose?.();
+                onManageTrip?.(trip);
+              }}
+              className="flex-1 max-w-xs h-11 sm:h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 text-sm font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/35 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>⚙️ QUẢN LÝ CHUYẾN XE</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={isSoldOut}
+              onClick={() => onConfirmBook?.(trip, selectedSeats)}
+              className="flex-1 max-w-xs h-11 sm:h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>{isSoldOut ? 'Đã hết chỗ' : 'GIỮ CHỖ NGAY (0đ CỌC)'}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

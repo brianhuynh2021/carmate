@@ -19,7 +19,8 @@ import {
   Info,
   Radio,
   Share2,
-  Car
+  Car,
+  Sparkles
 } from 'lucide-react';
 import { formatVND, VIRTUAL_HUBS, cleanPhoneNumber } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
@@ -382,23 +383,23 @@ export default function DriverScheduleCardView({
   };
 
   return (
-    <div className="space-y-5 animate-fade-in font-sans text-white max-w-2xl mx-auto w-full">
+    <div className="space-y-5 animate-fade-in font-sans text-[#1d1d1f] dark:text-white max-w-2xl mx-auto w-full">
       {/* ── THANH TRẠNG THÁI CHỦ XE & ĐIỂM TÍN NHIỆM ── */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+      <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <Car className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-mono font-black text-white">
+              <span className="text-base font-mono font-black text-[#1d1d1f] dark:text-white">
                 {vehicle?.plate || '93A - 541.86'}
               </span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono font-bold border border-emerald-500/30">
                 {t('driverSchedule.roleDriver')}
               </span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {vehicle?.model || 'Mitsubishi Xpander · Màu Trắng'}
             </p>
           </div>
@@ -408,24 +409,24 @@ export default function DriverScheduleCardView({
         <button
           type="button"
           onClick={() => setShowTrustModal(true)}
-          className="px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400 active:scale-95 transition-all text-left flex items-center justify-between gap-3 cursor-pointer group"
+          className="px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-emerald-500/30 hover:border-emerald-400 active:scale-95 transition-all text-left flex items-center justify-between gap-3 cursor-pointer group"
           title={t('driverSchedule.viewTrustTable')}
         >
           <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+            <Award className="w-5 h-5 text-amber-500 shrink-0 group-hover:scale-110 transition-transform" />
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 font-mono block">{t('driverSchedule.trustLabel')}</span>
-                <span className="text-sm font-black font-mono text-emerald-400">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono block">{t('driverSchedule.trustLabel')}</span>
+                <span className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">
                   {trustScore ?? '—'}/100
                 </span>
               </div>
-              <span className="text-[11px] text-amber-300 font-medium block">
+              <span className="text-[11px] text-amber-600 dark:text-amber-300 font-medium block">
                 {trustScore == null ? 'Đang tải hồ sơ…' : trustScore >= 90 ? '🟢 Uy Tín Hạng Vàng' : trustScore >= 70 ? '🟡 Mức Bình Thường' : '🔴 Cần Chú Ý'}
               </span>
             </div>
           </div>
-          <Info className="w-4 h-4 text-slate-500 group-hover:text-white" />
+          <Info className="w-4 h-4 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white" />
         </button>
       </div>
 
@@ -433,7 +434,7 @@ export default function DriverScheduleCardView({
       {displayedActiveTrip && (
         <div className="space-y-2 animate-fade-in">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+            <span className="text-xs font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Chuyến xe đang mở nhận khách trực tiếp</span>
             </span>
@@ -455,13 +456,13 @@ export default function DriverScheduleCardView({
       {/* ── HEADER DANH SÁCH LỊCH TRÌNH & NÚT THÊM ── */}
       <div className="flex items-center justify-between pt-1">
         <div>
-          <h2 className="text-base sm:text-lg font-black tracking-wide uppercase font-mono text-white flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-black tracking-wide uppercase font-mono text-[#1d1d1f] dark:text-white flex items-center gap-2">
             <span>{t('driverSchedule.yourSchedule')}</span>
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-white/[0.08] text-slate-300">
+            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-black/[0.06] dark:bg-white/[0.08] text-slate-700 dark:text-slate-300">
               {schedules.filter((s) => s.status !== 'CANCELLED').length}
             </span>
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('driverSchedule.scheduleDesc')}
           </p>
         </div>
@@ -482,15 +483,15 @@ export default function DriverScheduleCardView({
       {/* ── DANH SÁCH CÁC THẺ LỊCH TRÌNH ── */}
       <div className="space-y-4">
         {isLoadingSchedules && (
-          <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/[0.10] text-center text-sm text-slate-400 font-mono">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 text-center text-sm text-slate-500 dark:text-slate-400 font-mono shadow-xs">
             {t('driverSchedule.loadingSchedules')}
           </div>
         )}
 
         {!isLoadingSchedules && schedules.filter((t) => t.status !== 'CANCELLED').length === 0 && (
-          <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/[0.10] text-center space-y-2">
-            <p className="text-sm font-bold text-white">{t('driverSchedule.emptyTitle')}</p>
-            <p className="text-xs text-slate-400">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 text-center space-y-2 shadow-xs">
+            <p className="text-sm font-bold text-[#1d1d1f] dark:text-white">{t('driverSchedule.emptyTitle')}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {t('driverSchedule.emptyDesc')}
             </p>
           </div>
@@ -504,10 +505,10 @@ export default function DriverScheduleCardView({
           return (
             <div
               key={trip.id}
-              className={`rounded-3xl border transition-all overflow-hidden ${
+              className={`rounded-3xl border transition-all overflow-hidden shadow-xs hover:shadow-md ${
                 isMatched
-                  ? 'bg-gradient-to-b from-emerald-950/20 via-[#0e1017] to-[#07080d] border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.08)]'
-                  : 'bg-white/[0.03] border-white/[0.10]'
+                  ? 'bg-emerald-50/40 dark:bg-gradient-to-b dark:from-emerald-950/20 dark:via-[#0e1017] dark:to-[#07080d] border-emerald-500/40'
+                  : 'bg-white dark:bg-[#1a2232] border-slate-300/70 dark:border-white/10'
               }`}
             >
               {/* PHẦN TRÊN: THÔNG TIN LỘ TRÌNH & GIỜ GIẤC */}
@@ -538,50 +539,50 @@ export default function DriverScheduleCardView({
                 {/* LỘ TRÌNH & THỜI GIAN */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm font-bold text-white">
-                      <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div className="flex items-center gap-2 text-sm font-bold text-[#1d1d1f] dark:text-white">
+                      <MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
                       <span>{trip.from} ➔ {trip.to}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-400 font-mono pl-6">
-                      <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span>{trip.dateDisplay}: <strong className="text-emerald-400 font-mono text-sm">{trip.timeDisplay}</strong></span>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono pl-6">
+                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{trip.dateDisplay}: <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-sm">{trip.timeDisplay}</strong></span>
                     </div>
                   </div>
 
                   <div className="sm:text-right space-y-1">
                     <div className="flex sm:justify-end items-center gap-2 text-xs font-mono">
-                      <Users className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span>{t('driverSchedule.matched')} <strong className="text-white text-sm">{trip.matchedCount}/{trip.totalSeats}</strong> {t('driverSchedule.seat')}</span>
+                      <Users className="w-4 h-4 text-sky-500 shrink-0" />
+                      <span className="text-slate-600 dark:text-slate-300">{t('driverSchedule.matched')} <strong className="text-[#1d1d1f] dark:text-white text-sm">{trip.matchedCount}/{trip.totalSeats}</strong> {t('driverSchedule.seat')}</span>
                     </div>
-                    <p className="text-xs text-slate-400 font-mono">
-                      {t('driverSchedule.fuelEstimate')} <strong className="text-emerald-400 font-bold">{formatVND(trip.fareEstimated)}</strong>
-                      <span className="text-[10px] text-slate-500 block">{t('driverSchedule.cashOrQr')}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                      {t('driverSchedule.fuelEstimate')} <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{formatVND(trip.fareEstimated)}</strong>
+                      <span className="text-[10px] text-slate-400 block">{t('driverSchedule.cashOrQr')}</span>
                     </p>
                   </div>
                 </div>
 
                 {/* DANH SÁCH NGƯỜI ĐI CÙNG (NẾU ĐÃ KHỚP) */}
                 {isMatched && trip.riders && trip.riders.length > 0 && (
-                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/[0.06] space-y-2">
-                    <span className="text-[11px] font-mono font-bold uppercase text-slate-400 block">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] space-y-2">
+                    <span className="text-[11px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
                       Khách đi cùng trên xe ({trip.riders.length} người):
                     </span>
                     <div className="space-y-1.5">
                       {trip.riders.map((r, idx) => (
                         <div
                           key={r.id}
-                          className="flex items-center justify-between text-xs p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]"
+                          className="flex items-center justify-between text-xs p-2 rounded-xl bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono font-bold flex items-center justify-center text-[11px]">
+                            <span className="w-5 h-5 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold flex items-center justify-center text-[11px]">
                               {idx + 1}
                             </span>
-                            <span className="font-semibold text-white">{r.name}</span>
-                            <span className="text-[11px] text-slate-400">({r.phoneMasked})</span>
+                            <span className="font-semibold text-[#1d1d1f] dark:text-white">{r.name}</span>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">({r.phoneMasked})</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-[11px] text-slate-300 block">{r.pickup}</span>
-                            <span className="text-[10px] font-mono text-emerald-400">PIN: {r.pin}</span>
+                            <span className="text-[11px] text-slate-600 dark:text-slate-300 block">{r.pickup}</span>
+                            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">PIN: {r.pin}</span>
                           </div>
                         </div>
                       ))}
@@ -761,9 +762,9 @@ export default function DriverScheduleCardView({
                           updateSchedulesState(updated);
                           onShowToast?.(`Đã đổi giờ thành ${newT}`);
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] active:scale-95 text-xs font-mono font-bold text-slate-200 border border-white/[0.08] transition-all cursor-pointer flex items-center gap-1.5"
+                        className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.12] active:scale-95 text-xs font-mono font-bold text-slate-700 dark:text-slate-200 border border-slate-300/70 dark:border-white/[0.08] transition-all cursor-pointer flex items-center gap-1.5"
                       >
-                        <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+                        <Edit3 className="w-3.5 h-3.5 text-sky-500 dark:text-cyan-400" />
                         <span>Đổi giờ ({trip.timeDisplay})</span>
                       </button>
                     </div>
@@ -772,7 +773,7 @@ export default function DriverScheduleCardView({
                     <button
                       type="button"
                       onClick={() => handleQuickCancelWaitingTrip(trip.id)}
-                      className="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-rose-500/20 active:scale-95 text-xs font-mono font-bold text-slate-400 hover:text-rose-400 border border-white/[0.06] hover:border-rose-500/30 transition-all cursor-pointer ml-auto"
+                      className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] hover:bg-rose-50 dark:hover:bg-rose-500/20 active:scale-95 text-xs font-mono font-bold text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-300/70 dark:border-white/[0.06] hover:border-rose-300 dark:hover:border-rose-500/30 transition-all cursor-pointer ml-auto"
                       title={t('driverSchedule.cancelScheduleTitle')}
                     >
                       <span>{t('driverSchedule.cancelSchedule')}</span>
@@ -785,9 +786,9 @@ export default function DriverScheduleCardView({
         })}
 
         {schedules.filter((s) => s.status !== 'CANCELLED').length === 0 && (
-          <div className="p-8 rounded-3xl bg-white/[0.02] border border-dashed border-white/[0.10] text-center space-y-3">
-            <Calendar className="w-10 h-10 text-slate-500 mx-auto" />
-            <p className="text-sm font-semibold text-slate-300">
+          <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.02] border border-dashed border-slate-300 dark:border-white/[0.10] text-center space-y-3 shadow-xs">
+            <Calendar className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto" />
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               {t('driverSchedule.noSavedSchedule')}
             </p>
             <p className="text-xs text-slate-500">

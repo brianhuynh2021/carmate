@@ -70,9 +70,11 @@ export default function CorridorTripCard({
   destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
   segmentPrice = 165000,
   isEarliest = false,
+  isMyTrip = false,
   tripIndex = 0,
   onSelectTrip,
-  onBookNow
+  onBookNow,
+  onManageTrip
 }) {
   if (!trip) return null;
 
@@ -125,6 +127,8 @@ export default function CorridorTripCard({
       className={`group w-full rounded-2xl border transition-all duration-200 px-3.5 py-3 select-none ${
         isSoldOut
           ? 'bg-slate-50/70 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-70 cursor-not-allowed'
+          : isMyTrip
+          ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-400/60 dark:border-emerald-500/40 ring-1 ring-emerald-400/20 shadow-sm hover:shadow-md hover:border-emerald-500 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
           : isEarliest
           ? 'bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/15 shadow-md hover:shadow-lg hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
           : 'bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/15 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
@@ -136,7 +140,11 @@ export default function CorridorTripCard({
           <span className="text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
             {trip.departureLabel || '04:30'}
           </span>
-          {isEarliest ? (
+          {isMyTrip ? (
+            <span className="px-1.5 py-0.5 text-[8.5px] font-bold text-emerald-900 dark:text-emerald-100 bg-emerald-400 dark:bg-emerald-500 rounded-full mt-0.5 leading-none shadow-2xs whitespace-nowrap">
+              Xe của bạn
+            </span>
+          ) : isEarliest ? (
             <span className="px-1.5 py-0.5 text-[9.5px] font-semibold text-white bg-[#0071e3] rounded-full mt-0.5 leading-none">
               Gần nhất
             </span>
@@ -149,8 +157,8 @@ export default function CorridorTripCard({
 
         {/* ── Cột 2: Thông tin xe (Nới rộng ml-2.5 mr-1 bung trọn vẹn 100% chữ) ── */}
         <div className="flex-1 min-w-0 ml-2.5 mr-1">
-          <div className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight">
-            {vehicleTypeLabel}
+          <div className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight flex items-center gap-1.5">
+            <span>{vehicleTypeLabel}</span>
           </div>
           <div className="text-[11.5px] font-medium text-slate-600 dark:text-slate-400 truncate mt-0.5 leading-tight">
             {uspLabel}
@@ -178,18 +186,35 @@ export default function CorridorTripCard({
             </div>
           </div>
 
-          <button
-            type="button"
-            tabIndex={-1}
-            aria-label="Xem chi tiết chuyến xe"
-            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
-              isEarliest
-                ? 'bg-[#0071e3] text-white shadow-xs group-hover:scale-110'
-                : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 group-hover:bg-[#0071e3] group-hover:text-white'
-            }`}
-          >
-            <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
-          </button>
+          {isMyTrip ? (
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-label="Quản lý chuyến xe của bạn"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onManageTrip) onManageTrip(trip);
+                else handleClick();
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 text-[11px] font-bold font-mono flex items-center gap-1 transition-all cursor-pointer shadow-xs shrink-0"
+            >
+              <span>Quản lý</span>
+              <ChevronRight className="w-3 h-3 stroke-[2.5]" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-label="Xem chi tiết chuyến xe"
+              className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
+                isEarliest
+                  ? 'bg-[#0071e3] text-white shadow-xs group-hover:scale-110'
+                  : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 group-hover:bg-[#0071e3] group-hover:text-white'
+              }`}
+            >
+              <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+            </button>
+          )}
         </div>
       </div>
     </div>
