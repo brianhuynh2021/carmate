@@ -206,8 +206,35 @@ function loadDriverHistory(trip) {
   };
 }
 
-function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsNeeded, originS, destS, backupCount = 0 }) {
+function getDayOffset(dateStr, nowMs) {
+  if (!dateStr || dateStr === 'Hôm nay') return 0;
+  if (dateStr === 'Ngày mai') return 1;
+  const target = new Date(dateStr);
+  if (!isNaN(target.getTime())) {
+    const today = new Date(nowMs);
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(today);
+    const targetStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(target);
+    if (targetStr === todayStr) return 0;
+    const diffMs = target.getTime() - today.getTime();
+    return Math.max(0, Math.round(diffMs / 86400000));
+  }
+  return 0;
+}
+
+function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsNeeded, originS, destS, backupCount = 0, nowMs = Date.now() }) {
   const trips = getTrips({ type: 'drivers', includeHidden: false });
+
+  // Tính phút hiện tại trong ngày theo múi giờ Việt Nam (UTC+7)
+  const now = new Date(nowMs);
+  const vnTimeParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(now);
+  const curH = Number(vnTimeParts.find((p) => p.type === 'hour')?.value || 0);
+  const curM = Number(vnTimeParts.find((p) => p.type === 'minute')?.value || 0);
+  const currentMinutesVN = curH * 60 + curM;
 
   // Bản ghi chuyến dùng `availableSeats` (số ghế còn trống thực tế), còn `capacity`
   // là sức chứa tổng của xe. Tra nhầm sang `seats` sẽ ra undefined và lọc rớt sạch
@@ -224,9 +251,19 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
         // để không đánh rơi dữ liệu cũ chưa gắn nhãn tuyến.
         if (t.routeCategory) return false;
       }
-      if (desiredMinutes == null) return true;
 
       const tripMinutes = slotStartMinutes(t.timeSlot || t.time);
+
+      // Khi duyệt tất cả chuyến sẵn có (desiredMinutes == null):
+      // Lọc bỏ các chuyến xe trong quá khứ của ngày hôm nay (dung sai 15 phút).
+      if (desiredMinutes == null) {
+        const isToday = !t.date || t.date === 'Hôm nay';
+        if (isToday && tripMinutes != null && tripMinutes < currentMinutesVN - 15) {
+          return false;
+        }
+        return true;
+      }
+
       if (tripMinutes == null) return true;
       return circularDistanceMinutes(tripMinutes, desiredMinutes) <= windowMinutes;
     })
@@ -278,7 +315,14 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
       };
     })
     .sort((a, b) => {
-      if (desiredMinutes == null) return 0;
+      const dateA = getDayOffset(a.departureDate, nowMs);
+      const dateB = getDayOffset(b.departureDate, nowMs);
+      if (dateA !== dateB) return dateA - dateB;
+      if (desiredMinutes == null) {
+        const ma = a.departureMinutes ?? 9999;
+        const mb = b.departureMinutes ?? 9999;
+        return ma - mb;
+      }
       const da = a.departureMinutes == null ? 999 : circularDistanceMinutes(a.departureMinutes, desiredMinutes);
       const db = b.departureMinutes == null ? 999 : circularDistanceMinutes(b.departureMinutes, desiredMinutes);
       return da - db;
@@ -467,7 +511,8 @@ export function buildTimeSlotMatrix({
     seatsNeeded: cleanSeats,
     originS,
     destS,
-    backupCount
+    backupCount,
+    nowMs
   });
 
   const forming = collectFormingTrips({

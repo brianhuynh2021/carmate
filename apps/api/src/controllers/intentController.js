@@ -17,6 +17,7 @@ import {
 } from '../services/batchMatchingEngine.js';
 
 import { cleanPhoneNumber, isValidVietnamesePhone, maskPhoneNumber } from '@carmate/shared';
+import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
  * POST /api/intents - Khai báo ý định di chuyển (Chủ xe hoặc Khách)
@@ -88,6 +89,27 @@ export async function createMovementIntentHandler(req, res) {
       contactName: contactName || req.user?.name || (role === 'driver' ? 'Chủ xe' : 'Khách đi cùng'),
       estimatedPricing: pricingEstimate
     });
+
+    // ⚡️ Bắn cảnh báo khẩn cấp về Telegram của Founder để khớp lệnh thủ công siêu tốc (Wizard of Oz Engine)
+    if (role === 'passenger') {
+      const priceText = pricingEstimate?.finalPricePerSeat
+        ? `${Number(pricingEstimate.finalPricePerSeat).toLocaleString('vi-VN')} đ`
+        : '165.000 đ';
+      sendBusinessAlert({
+        title: '🚨 YÊU CẦU XE TIỆN CHUYẾN MỚI (QL13)',
+        details: {
+          'Khách hàng': `${contactName || 'Người đi cùng'} (${clean})`,
+          'Lộ trình': `${originName} ➔ ${destinationName}`,
+          'Thời gian': `${date} (${timeSlot})`,
+          'Số chỗ': `${seats} ghế`,
+          'Ước tính giá': priceText,
+          '⚡️ ĐIỀU PHỐI': 'Bốc máy kiểm tra lịch xe nhà / gọi chủ xe quen trong 5 phút!'
+        },
+        req
+      }).catch((alertErr) => {
+        console.warn('[IntentController] Failed to dispatch Telegram business alert:', alertErr?.message);
+      });
+    }
 
     return res.status(201).json({
       success: true,

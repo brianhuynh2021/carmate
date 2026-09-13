@@ -33,6 +33,7 @@ import {
   buildDepartureChips,
   buildCustomChip,
   toLocalIsoDate,
+  getChipDate,
   getVerifiedHotlines,
   DEPARTURE_WINDOWS
 } from '@carmate/shared';
@@ -40,11 +41,37 @@ import { useI18n } from '../../i18n/index.jsx';
 import api from '../../api/client.js';
 import { CarMateBadge } from '../ui/Logo.jsx';
 import CorridorTripCard from './CorridorTripCard.jsx';
+import TripDetailBottomSheet from './TripDetailBottomSheet.jsx';
 import InstantBookingModal from '../modals/InstantBookingModal.jsx';
+import {
+  trackViewBusDetail,
+  trackBusSheetCarMateCta
+} from '../../utils/analytics.js';
 
 const ROLE_KEY = 'carmate_last_movement_role';
 const CORRIDOR_KEY = 'carmate_last_corridor';
 const WINDOW_KEY = 'carmate_last_departure_window';
+
+/**
+ * ── FEATURE FLAG: BỘ LỌC KHUNG GIỜ (COLD START CRO) ───────────────────
+ * Giai đoạn Cold Start (1-2 xe/ngày): Tắt bộ lọc giờ để tránh bẫy Click-to-Empty.
+ * Khách thấy ngay toàn bộ chuyến sẵn có (hôm nay & ngày mai) mà không bị lọc rớt.
+ * TUYỆT ĐỐI KHÔNG XÓA code chips: Bật lại (true) khi mỗi buổi (Sáng - Trưa - Chiều)
+ * đều có ít nhất 1 chuyến ổn định.
+ */
+export const ENABLE_DEPARTURE_CHIPS = false;
+
+/**
+ * ── FEATURE FLAG: ACCORDION LỊCH CHẠY TOÀN TUYẾN (COLD START CRO) ──────
+ * Giai đoạn Cold Start (1-2 xe/ngày): Ẩn thanh accordion "Xem lịch chạy toàn tuyến"
+ * để:
+ * 1. Tránh số lượng ảo ("6 chuyến có sẵn") gây nghi ngờ dữ liệu mẫu (mock data).
+ * 2. Triệt tiêu 1 cú click thừa (Click Friction): Show thẳng chuyến xe thật ra giữa màn hình.
+ * 3. Tránh việc chưa tìm kiếm mà đã ghi "trên chặng này".
+ * TUYỆT ĐỐI KHÔNG XÓA code timeline/accordion: Bật lại (true) khi hệ thống đã có mạng lưới
+ * xe chạy cố định nhiều chuyến/ngày trên toàn tuyến.
+ */
+export const ENABLE_TIMELINE_ACCORDION = false;
 
 /** Đọc localStorage an toàn (chế độ riêng tư / bị chặn đều không được ném lỗi). */
 function readStore(key, fallback = null) {
@@ -63,6 +90,56 @@ function writeStore(key, value) {
   }
 }
 
+/** Helper rút gọn tên nhà xe, loại bỏ ngoặc đơn cồng kềnh */
+function getCleanOperatorName(h) {
+  const raw = h.shortName || h.operator || '';
+  if (/hoàng yến/i.test(raw)) return 'Hoàng Yến';
+  if (/petro/i.test(raw)) return 'Petro Bình Phước';
+  if (/trung kén/i.test(raw)) return 'Trung Kén';
+  if (/huy hiếu/i.test(raw)) return 'Huy Hiếu';
+  if (/thành công/i.test(raw)) return 'Thành Công';
+  if (/chín nghĩa/i.test(raw)) return 'Chín Nghĩa';
+  if (/quốc đạt/i.test(raw)) return 'Quốc Đạt';
+  if (/ba đàm/i.test(raw)) return 'Ba Đàm';
+  return raw.replace(/\(.*?\)/g, '').trim();
+}
+
+/** Helper phân loại dòng xe ngắn gọn, chuẩn mực */
+function getBusSubtext(h) {
+  const raw = `${h.operator || ''} ${h.shortName || ''}`.toLowerCase();
+  if (/thành công/i.test(raw)) return 'Xe khách 29-45 chỗ';
+  if (/petro/i.test(raw)) return 'Limousine VIP';
+  if (/trung kén/i.test(raw) || /giường nằm/i.test(h.note || '')) return 'Xe giường nằm';
+  if (/huy hiếu/i.test(raw) || /ghế ngả/i.test(h.note || '')) return 'Limousine ghế ngả';
+  if (/quốc đạt/i.test(raw)) return 'Limousine phòng nằm';
+  if (/chín nghĩa/i.test(raw)) return 'Xe giường nằm 40 chỗ';
+  if (/ba đàm|minh thắng/i.test(raw)) return 'Xe khách 29 chỗ';
+  return 'Limousine 9 chỗ';
+}
+
+/** Helper điểm trả khách thực tế (tương phản khách quan với CarMate trả tận cổng) */
+function getBusDropoff(h) {
+  const id = (h.id || '').toLowerCase();
+  const name = (h.shortName || h.operator || '').toLowerCase();
+  if (id === 'petro-binh-phuoc' || /petro bình phước/i.test(name)) {
+    return 'Trả tại VP Tân Bình / TSN';
+  }
+  if (id === 'huy-hieu' || /huy hiếu/i.test(name)) {
+    return 'Trả tại VP 220 QL13';
+  }
+  return 'Trả tại Bến xe Miền Đông';
+}
+
+/** Helper định dạng giá vé dạng text mỏng (200k – 260k) */
+function formatShortPriceRef(raw = '') {
+  if (!raw) return '140k – 260k';
+  return raw
+    .replace(/\.000đ/g, 'k')
+    .replace(/\.000\s*đ/g, 'k')
+    .replace(/\s*-\s*/g, ' – ')
+    .trim();
+}
+
 /**
  * MÀN HÌNH CHÍNH: MỘT Ô TÌM KIẾM DUY NHẤT
  *
@@ -75,7 +152,7 @@ function writeStore(key, value) {
  * - Apple: một cột, squircle, phân tầng rõ, chạm được bằng ngón cái trên mobile.
  */
 export default function CorridorSearchBoard({
-  currentUser = null,
+  currentUser,
   onOpenStationView,
   onOpenIntentModal,
   onAuthSuccess,
@@ -94,8 +171,28 @@ export default function CorridorSearchBoard({
     [corridors, corridorId]
   );
 
-  // ── Chiều đi ───────────────────────────────────────────────────────────
-  const [heading, setHeading] = useState('b_to_a'); // mặc định: từ tỉnh lên thành phố
+  // ── Chiều đi: Đọc thông minh từ URL hoặc mặc định từ tỉnh lên thành phố ───
+  const [heading, setHeading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const urlFrom = p.get('from');
+      const urlTo = p.get('to');
+      const targetCorridorId = corridors.some((c) => c.id === readStore(CORRIDOR_KEY))
+        ? readStore(CORRIDOR_KEY)
+        : getDefaultCorridor().id;
+      if (urlFrom) {
+        const ep = getHubEndpoint(targetCorridorId, urlFrom);
+        if (ep === 'a') return 'a_to_b';
+        if (ep === 'b') return 'b_to_a';
+      }
+      if (urlTo) {
+        const ep = getHubEndpoint(targetCorridorId, urlTo);
+        if (ep === 'a') return 'b_to_a';
+        if (ep === 'b') return 'a_to_b';
+      }
+    }
+    return 'b_to_a'; // mặc định: từ tỉnh lên thành phố
+  });
 
   // ── Vai trò: TỰ ĐOÁN, vẫn đổi được ────────────────────────────────────
   const detectedRole = useMemo(() => {
@@ -114,10 +211,20 @@ export default function CorridorSearchBoard({
   const toHubs = useMemo(() => getEndpointHubs(corridor.id, toKey, heading), [corridor.id, toKey, heading]);
 
   const [fromHubId, setFromHubId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const urlFrom = p.get('from');
+      if (urlFrom && fromHubs.some((h) => h.id === urlFrom)) return urlFrom;
+    }
     const hasTanKhai = fromHubs.find((h) => h.id === 'hub_ql13_tan_khai');
     return hasTanKhai ? hasTanKhai.id : (fromHubs[0]?.id || '');
   });
   const [toHubId, setToHubId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const urlTo = p.get('to');
+      if (urlTo && toHubs.some((h) => h.id === urlTo)) return urlTo;
+    }
     const hasChoRay = toHubs.find((h) => h.id === 'hub_ql13_cho_ray');
     return hasChoRay ? hasChoRay.id : (toHubs[0]?.id || '');
   });
@@ -135,6 +242,10 @@ export default function CorridorSearchBoard({
       setToHubId(hasChoRay ? hasChoRay.id : (toHubs[0]?.id || ''));
     }
   }, [toHubs, toHubId]);
+
+  const fromHub = useMemo(() => fromHubs.find((h) => h.id === fromHubId), [fromHubs, fromHubId]);
+  const toHub = useMemo(() => toHubs.find((h) => h.id === toHubId), [toHubs, toHubId]);
+  const [isEditingRoute, setIsEditingRoute] = useState(false);
 
   // ── Trí tuệ bản địa: tự chọn tuyến + chiều theo GPS, im lặng ──────────
   useEffect(() => {
@@ -173,7 +284,7 @@ export default function CorridorSearchBoard({
   const tariff = useMemo(() => {
     if (!fromHubId || !toHubId) return null;
     try {
-      return getFixedSegmentTariff(fromHubId, toHubId, corridor.dataKey);
+      return getFixedSegmentTariff(fromHubId, toHubId, { corridor: corridor.dataKey });
     } catch {
       return null;
     }
@@ -234,6 +345,29 @@ export default function CorridorSearchBoard({
     writeStore(WINDOW_KEY, chip.windowId);
   }, [pickDate, pickWindow]);
 
+  // Phân đoạn ngữ cảnh thời gian (Hôm nay vs Ngày mai/Tương lai):
+  // Ngày mai / tương lai có biên độ thời gian lớn -> Ưu tiên 100% gom nhu cầu cho chủ xe,
+  // ẩn bảng hotline xe khách để không rò rỉ khách vàng vào tay nhà xe truyền thống.
+  const isFutureSearch = useMemo(() => {
+    if (!ENABLE_DEPARTURE_CHIPS) return false;
+    if (selectedChip?.dayOffset != null) {
+      return selectedChip.dayOffset >= 1;
+    }
+    if (selectedChip?.date && todayIso) {
+      return selectedChip.date > todayIso;
+    }
+    return false;
+  }, [selectedChip, todayIso]);
+
+  const targetDepartureDate = useMemo(() => {
+    if (selectedChip?.date) return selectedChip.date;
+    return getChipDate(selectedChip, new Date());
+  }, [selectedChip]);
+
+  const targetDepartureTimeSlot = useMemo(() => {
+    return selectedChip?.timeSlot || '06:00';
+  }, [selectedChip]);
+
   // ── Tìm chuyến: MA TRẬN KHE THỜI GIAN ─────────────────────────────────
   // Khách liên tỉnh cần thấy NGAY cả khung lân cận ±30 phút, không chỉ đúng
   // giờ mình gõ. Màn hình trống là mất khách, nên backend luôn bù khe dự phòng.
@@ -241,22 +375,23 @@ export default function CorridorSearchBoard({
   const [matrix, setMatrix] = useState(null);
   const resultsRef = useRef(null);
 
-  const handleSearchNow = useCallback(async () => {
+  const handleSearchNow = useCallback(async (shouldScroll = true) => {
     if (!fromHubId || !toHubId) return;
     setIsSearching(true);
-    setMatrix(null);
     try {
       const res = await api.getTimeSlotMatrix({
         from: fromHubId,
         to: toHubId,
-        timeSlot: selectedChip?.timeSlot || 'all',
+        timeSlot: ENABLE_DEPARTURE_CHIPS ? (selectedChip?.timeSlot || 'all') : 'all',
         seats: 1,
         corridor: corridor.dataKey
       });
       setMatrix(res?.success ? res : null);
-      setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 50);
+      if (shouldScroll) {
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+      }
     } catch {
       setMatrix(null);
     } finally {
@@ -289,27 +424,95 @@ export default function CorridorSearchBoard({
   // ── State xem chi tiết chuyến xe (Progressive Disclosure) ─────────────────
   const [selectedDetailTrip, setSelectedDetailTrip] = useState(null);
   const [selectedDetailHotline, setSelectedDetailHotline] = useState(null);
+  const [showAllBuses, setShowAllBuses] = useState(false);
   const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
 
-  // Khi người dùng thay đổi trạm hoặc khung giờ, xóa kết quả cũ để yêu cầu bấm Tìm chuyến mới
+  // Quản lý tải kết quả tìm kiếm:
+  // - Ở chế độ Cold Start (!ENABLE_DEPARTURE_CHIPS): Tự động tải chuyến sẵn có ngay khi mở trang
+  //   hoặc khi khách đổi trạm đón/trả, không bắt bấm thêm nút (Zero-Click discovery).
+  // - Khi bật chips (ENABLE_DEPARTURE_CHIPS): Xóa kết quả cũ khi đổi trạm/khung giờ để người dùng bấm tìm.
   useEffect(() => {
-    setMatrix(null);
-  }, [fromHubId, toHubId, chipId, corridorId]);
+    if (!ENABLE_DEPARTURE_CHIPS) {
+      if (fromHubId && toHubId) {
+        handleSearchNow(false);
+      }
+    } else {
+      setMatrix(null);
+    }
+  }, [fromHubId, toHubId, chipId, corridorId, handleSearchNow]);
 
-  // Giá chặng chia sẻ chuẩn CarMate (mặc định 170.000 đ cho chặng Tân Khai - Cụm Chợ Rẫy)
+  // Giá chặng chia sẻ chuẩn CarMate (tính toán động theo cự ly thực tế giữa 2 trạm)
   const carmateSegmentPrice = useMemo(() => {
-    return tariff?.pricePerSeat || 170000;
+    return tariff?.pricePerSeat || 165000;
   }, [tariff]);
 
-  // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang
+  // Phân tích tương quan giá giữa nhà xe đang xem & CarMate (Dynamic Visual Leverage)
+  const busPriceData = useMemo(() => {
+    if (!selectedDetailHotline) return null;
+    const str = selectedDetailHotline.priceRef || '';
+    const numbers = str
+      .replace(/[^\d-–]/g, ' ')
+      .split(/[-–]/)
+      .map((s) => {
+        const clean = s.replace(/\D/g, '');
+        const num = parseInt(clean, 10);
+        if (isNaN(num)) return null;
+        return num < 1000 ? num * 1000 : num;
+      })
+      .filter(Boolean);
+
+    const min = numbers.length > 0 ? Math.min(...numbers) : 200000;
+    const max = numbers.length > 0 ? Math.max(...numbers) : 260000;
+    const isCheaperOrEqual = min <= carmateSegmentPrice;
+    const savingMax = Math.max(0, Math.round((max - carmateSegmentPrice) / 1000));
+    const savingMin = Math.max(0, Math.round((min - carmateSegmentPrice) / 1000));
+    const busWithGrab = min + 70000;
+    const totalSavingVsBus = Math.max(0, Math.round((busWithGrab - carmateSegmentPrice) / 1000));
+
+    return {
+      min,
+      max,
+      isCheaperOrEqual,
+      savingMax,
+      savingMin,
+      busWithGrab,
+      totalSavingVsBus
+    };
+  }, [selectedDetailHotline, carmateSegmentPrice]);
+
+  // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang (ORDER BY date ASC, time ASC)
   const carmateDisplayTrips = useMemo(() => {
     const slots = matrix?.slots || [];
     const real = slots.filter((s) => s.tier !== 'SHADOW');
     if (real.length > 0) {
-      return real.map((t) => ({
-        ...t,
-        pricePerSeat: t.pricePerSeat || carmateSegmentPrice
-      }));
+      const getTripSortWeight = (t) => {
+        let dayOffset = 0;
+        if (t.departureDate === 'Ngày mai') dayOffset = 1;
+        else if (t.departureDate && t.departureDate !== 'Hôm nay') {
+          const parsed = new Date(t.departureDate);
+          if (!isNaN(parsed.getTime())) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const target = new Date(parsed);
+            target.setHours(0, 0, 0, 0);
+            dayOffset = Math.max(0, Math.round((target - today) / 86400000));
+          }
+        }
+        let minutes = t.departureMinutes;
+        if (minutes == null && t.departureLabel) {
+          const [h, m] = t.departureLabel.split(':').map((num) => parseInt(num, 10));
+          if (!isNaN(h) && !isNaN(m)) minutes = h * 60 + m;
+        }
+        return dayOffset * 1440 + (minutes ?? 9999);
+      };
+
+      return [...real]
+        .sort((a, b) => getTripSortWeight(a) - getTripSortWeight(b))
+        .map((t) => ({
+          ...t,
+          // Giá phân đoạn tính chính xác theo điểm đón/trả của khách trên hành lang
+          pricePerSeat: carmateSegmentPrice || t.pricePerSeat || 170000
+        }));
     }
     // Tuyệt đối KHÔNG hiển thị xe ảo khi chưa có chuyến thật
     return [];
@@ -352,8 +555,77 @@ export default function CorridorSearchBoard({
 
   const hubLabel = (h) => h.shortName || h.name;
 
+  // Bảng định danh vĩ mô cấp tỉnh / huyện (Macro-level Landmarks - Airbnb / Google Maps style)
+  const macroFromLabel = useMemo(() => {
+    if (!fromHub) return 'Tân Khai';
+    const MACRO_HUB_LABELS = {
+      hub_ql13_tan_khai: 'Tân Khai',
+      hub_ql13_tthc_tan_khai: 'Tân Khai',
+      hub_ql13_cho_ray: 'BV Chợ Rẫy (TP.HCM)',
+      hub_ql13_hang_xanh: 'Hàng Xanh (TP.HCM)',
+      hub_ql13_san_bay_tsn: 'Sân bay TSN (TP.HCM)',
+      hub_ql13_binh_trieu: 'Bình Triệu (TP.HCM)',
+      hub_ql13_van_phuc_city: 'Vạn Phúc City (TP.HCM)',
+      hub_ql13_nga4_binh_phuoc: 'Ngã 4 Bình Phước (TP.HCM)',
+      hub_ql13_binh_long: 'Bình Long',
+      hub_ql13_tthc_binh_long: 'Bình Long',
+      hub_ql13_nga4_chon_thanh: 'Chơn Thành',
+      hub_ql13_bau_bang: 'Bàu Bàng',
+      hub_ql13_ben_cat: 'Bến Cát',
+      hub_ql13_thu_dau_mot: 'Thủ Dầu Một',
+      hub_ql13_cho_loc_ninh: 'Lộc Ninh',
+      hub_ql13_budop: 'Bù Đốp',
+      hub_ql13_dong_xoai: 'Đồng Xoài'
+    };
+    if (MACRO_HUB_LABELS[fromHub.id]) return MACRO_HUB_LABELS[fromHub.id];
+    const name = fromHub.shortName || fromHub.name || 'Tân Khai';
+    return name
+      .replace(/^Cây xăng Petrolimex\s+/i, '')
+      .replace(/^Cụm BV Chợ Rẫy\s*\/\s*BV Đại học Y Dược/i, 'BV Chợ Rẫy (TP.HCM)')
+      .replace(/^Cụm BV\s+/i, 'BV ')
+      .replace(/^Cụm\s+/i, '')
+      .replace(/\s*\(QL13\)/i, '')
+      .replace(/\s*\/\s*BV Đại học Y Dược/i, '')
+      .replace(/^Trung tâm Hành chính\s+/i, 'TTHC ')
+      .trim() || 'Tân Khai';
+  }, [fromHub]);
+
+  const macroToLabel = useMemo(() => {
+    if (!toHub) return 'BV Chợ Rẫy (TP.HCM)';
+    const MACRO_HUB_LABELS = {
+      hub_ql13_tan_khai: 'Tân Khai',
+      hub_ql13_tthc_tan_khai: 'Tân Khai',
+      hub_ql13_cho_ray: 'BV Chợ Rẫy (TP.HCM)',
+      hub_ql13_hang_xanh: 'Hàng Xanh (TP.HCM)',
+      hub_ql13_san_bay_tsn: 'Sân bay TSN (TP.HCM)',
+      hub_ql13_binh_trieu: 'Bình Triệu (TP.HCM)',
+      hub_ql13_van_phuc_city: 'Vạn Phúc City (TP.HCM)',
+      hub_ql13_nga4_binh_phuoc: 'Ngã 4 Bình Phước (TP.HCM)',
+      hub_ql13_binh_long: 'Bình Long',
+      hub_ql13_tthc_binh_long: 'Bình Long',
+      hub_ql13_nga4_chon_thanh: 'Chơn Thành',
+      hub_ql13_bau_bang: 'Bàu Bàng',
+      hub_ql13_ben_cat: 'Bến Cát',
+      hub_ql13_thu_dau_mot: 'Thủ Dầu Một',
+      hub_ql13_cho_loc_ninh: 'Lộc Ninh',
+      hub_ql13_budop: 'Bù Đốp',
+      hub_ql13_dong_xoai: 'Đồng Xoài'
+    };
+    if (MACRO_HUB_LABELS[toHub.id]) return MACRO_HUB_LABELS[toHub.id];
+    const name = toHub.shortName || toHub.name || 'BV Chợ Rẫy (TP.HCM)';
+    return name
+      .replace(/^Cây xăng Petrolimex\s+/i, '')
+      .replace(/^Cụm BV Chợ Rẫy\s*\/\s*BV Đại học Y Dược/i, 'BV Chợ Rẫy (TP.HCM)')
+      .replace(/^Cụm BV\s+/i, 'BV ')
+      .replace(/^Cụm\s+/i, '')
+      .replace(/\s*\(QL13\)/i, '')
+      .replace(/\s*\/\s*BV Đại học Y Dược/i, '')
+      .replace(/^Trung tâm Hành chính\s+/i, 'TTHC ')
+      .trim() || 'BV Chợ Rẫy (TP.HCM)';
+  }, [toHub]);
+
   return (
-    <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-10">
+    <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-28 sm:pb-32">
       {/* ── CHỌN TUYẾN (chỉ hiện khi có từ 2 tuyến trở lên để tối ưu không gian) ── */}
       {corridors.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -380,8 +652,62 @@ export default function CorridorSearchBoard({
         </div>
       )}
 
-      {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
-      <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
+      {/* ── THANH CHẶNG TINH GỌN (CLICKABLE PILL - AIRBNB / GOOGLE MAPS STYLE) ── */}
+      {!ENABLE_DEPARTURE_CHIPS && !isEditingRoute ? (
+        <div
+          onClick={() => setIsEditingRoute(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsEditingRoute(true);
+            }
+          }}
+          title="Chạm vào để đổi tuyến đón / trả"
+          className="group flex items-center justify-between max-w-xl mx-auto px-4 py-2.5 bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/15 rounded-full shadow-xs cursor-pointer transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500/60 hover:shadow-md hover:bg-slate-50/60 dark:hover:bg-white/5 active:scale-[0.99] select-none"
+        >
+          {/* Khu vực text (Chạm vào đâu cũng mở chọn tuyến) */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 shrink-0" />
+
+            <div className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5">
+              <span className="truncate">{macroFromLabel}</span>
+              <span className="text-slate-400 dark:text-slate-500 mx-1.5 shrink-0 font-normal">➔</span>
+              <span className="truncate">{macroToLabel}</span>
+            </div>
+          </div>
+
+          {/* Nút đảo chiều duy nhất bên phải */}
+          <button
+            type="button"
+            title="Đảo chiều tuyến"
+            aria-label={t('search.swap')}
+            onClick={(e) => {
+              e.stopPropagation();
+              swap();
+            }}
+            className="p-1.5 ml-1 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition-colors shrink-0 active:scale-90 cursor-pointer"
+          >
+            <ArrowUpDown className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
+          <div className="flex items-center justify-between px-4 sm:px-5 pt-3 pb-2 border-b border-slate-100 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300">
+            <span className="flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5 text-slate-400" />
+              Chọn trạm đón & trả trên QL13
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsEditingRoute(false)}
+              className="p-1 -mr-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              title="Đóng / Thu gọn"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
         <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0 group-hover/from:scale-115 transition-transform" />
@@ -451,179 +777,194 @@ export default function CorridorSearchBoard({
 
         {/* ── THỜI GIAN KHỞI HÀNH: dữ liệu cấp 1, ngang hàng Nơi đi / Nơi đến ──
             Chip chạm một phát thay cho lịch picker: người đi liên tỉnh thực tế
-            chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm". */}
-        <div className="h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5" />
-        <div className="py-3.5 px-4 sm:py-4 sm:px-5">
-          <label className="flex items-center gap-2 type-label text-slate-400 mb-2.5">
-            <Clock className="w-4 h-4 text-amber-500 shrink-0" />
-            {t('search.departureLabel')}
-          </label>
+            chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm".
+            [FEATURE FLAG COLD START - CRO]: Chỉ ẨN giao diện, TUYỆT ĐỐI KHÔNG XÓA.
+            Tránh bẫy "Click-to-Empty" khi ít nguồn cung (1-2 xe/ngày).
+            Bật lại (ENABLE_DEPARTURE_CHIPS = true) khi mỗi buổi (Sáng-Trưa-Chiều) có ít nhất 1 chuyến ổn định. */}
+        {ENABLE_DEPARTURE_CHIPS && (
+          <>
+            <div className="h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5" />
+            <div className="py-3.5 px-4 sm:py-4 sm:px-5">
+              <label className="flex items-center gap-2 type-label text-slate-400 mb-2.5">
+                <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                {t('search.departureLabel')}
+              </label>
 
-          <div className="grid grid-cols-2 gap-2">
-            {allChips.map((chip) => {
-              const active = chip.id === selectedChip?.id;
-              return (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => {
-                    setChipId(chip.id);
-                    setShowDatePanel(false);
-                    // Học im lặng, không hỏi, không thông báo
-                    if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
-                  }}
-                  aria-pressed={active}
-                  className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
-                    active
-                      ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01] hover:bg-[#0062c4] hover:border-[#0062c4] hover:shadow-lg'
-                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
-                  }`}
-                >
-                  {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
-                      (Android phổ thông) chuỗi "Chiều nay (16h30-18h)" bị cắt cụt
-                      đúng phần giờ — mất chính thông tin quan trọng nhất. */}
-                  <span className="text-xs font-bold truncate max-w-full">{chip.label}</span>
-                  <span
-                    className={`text-[10px] font-mono truncate max-w-full ${
-                      active ? 'text-white/80' : 'text-slate-400'
-                    }`}
-                  >
-                    {chip.hint}
-                  </span>
-                </button>
-              );
-            })}
-
-            {/* Ô thứ 4 luôn là lối mở lịch. Bảng chọn hiện NGAY TẠI CHỖ bên dưới,
-                tuyệt đối không dùng popup hệ thống — tinh thần Cursor: zero blocking. */}
-            <button
-              type="button"
-              onClick={() => setShowDatePanel((v) => !v)}
-              aria-expanded={showDatePanel}
-              className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
-                showDatePanel
-                  ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm hover:bg-slate-800'
-                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{t('search.pickAnotherDay')}</span>
-            </button>
-          </div>
-
-          {/* BẢNG CHỌN NGÀY TẠI CHỖ — mở xuống mượt, không chặn luồng */}
-          {showDatePanel && (
-            <div className="mt-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/20 space-y-2.5 animate-fade-in shadow-2xs">
-              <div>
-                <label
-                  htmlFor="carmate-pick-date"
-                  className="block type-label text-slate-400 mb-1"
-                >
-                  {t('search.pickDate')}
-                </label>
-                <input
-                  id="carmate-pick-date"
-                  type="date"
-                  value={pickDate}
-                  min={todayIso}
-                  onChange={(e) => setPickDate(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/20 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <span className="block type-label text-slate-400 mb-1">
-                  {t('search.pickWindow')}
-                </span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {DEPARTURE_WINDOWS.map((w) => (
+              <div className="grid grid-cols-2 gap-2">
+                {allChips.map((chip) => {
+                  const active = chip.id === selectedChip?.id;
+                  return (
                     <button
-                      key={w.id}
+                      key={chip.id}
                       type="button"
-                      onClick={() => setPickWindow(w.id)}
-                      aria-pressed={w.id === pickWindow}
-                      className={`h-12 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
-                        w.id === pickWindow
-                          ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
-                          : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10'
+                      onClick={() => {
+                        setChipId(chip.id);
+                        setShowDatePanel(false);
+                        // Học im lặng, không hỏi, không thông báo
+                        if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
+                      }}
+                      aria-pressed={active}
+                      className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
+                        active
+                          ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01] hover:bg-[#0062c4] hover:border-[#0062c4] hover:shadow-lg'
+                          : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
                       }`}
                     >
-                      <span>{w.label}</span>
-                      {/* Kèm giờ ngay dưới nhãn: "Sáng" một mình là mơ hồ, mà
-                          các chip phía trên đều có giờ nên thiếu ở đây thành lệch. */}
+                      {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
+                          (Android phổ thông) chuỗi "Chiều nay (16h30-18h)" bị cắt cụt
+                          đúng phần giờ — mất chính thông tin quan trọng nhất. */}
+                      <span className="text-xs font-bold truncate max-w-full">{chip.label}</span>
                       <span
-                        className={`text-[9px] font-mono ${
-                          w.id === pickWindow ? 'text-white/75' : 'text-slate-400'
+                        className={`text-[10px] font-mono truncate max-w-full ${
+                          active ? 'text-white/80' : 'text-slate-400'
                         }`}
                       >
-                        {w.fromHour % 24}h-{w.toHour % 24}h
+                        {chip.hint}
                       </span>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
+
+                {/* Ô thứ 4 luôn là lối mở lịch. Bảng chọn hiện NGAY TẠI CHỖ bên dưới,
+                    tuyệt đối không dùng popup hệ thống — tinh thần Cursor: zero blocking. */}
+                <button
+                  type="button"
+                  onClick={() => setShowDatePanel((v) => !v)}
+                  aria-expanded={showDatePanel}
+                  className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
+                    showDatePanel
+                      ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm hover:bg-slate-800'
+                      : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{t('search.pickAnotherDay')}</span>
+                </button>
               </div>
 
+              {/* BẢNG CHỌN NGÀY TẠI CHỖ — mở xuống mượt, không chặn luồng */}
+              {showDatePanel && (
+                <div className="mt-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/20 space-y-2.5 animate-fade-in shadow-2xs">
+                  <div>
+                    <label
+                      htmlFor="carmate-pick-date"
+                      className="block type-label text-slate-400 mb-1"
+                    >
+                      {t('search.pickDate')}
+                    </label>
+                    <input
+                      id="carmate-pick-date"
+                      type="date"
+                      value={pickDate}
+                      min={todayIso}
+                      onChange={(e) => setPickDate(e.target.value)}
+                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/20 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="block type-label text-slate-400 mb-1">
+                      {t('search.pickWindow')}
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {DEPARTURE_WINDOWS.map((w) => (
+                        <button
+                          key={w.id}
+                          type="button"
+                          onClick={() => setPickWindow(w.id)}
+                          aria-pressed={w.id === pickWindow}
+                          className={`h-12 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
+                            w.id === pickWindow
+                              ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
+                              : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10'
+                          }`}
+                        >
+                          <span>{w.label}</span>
+                          {/* Kèm giờ ngay dưới nhãn: "Sáng" một mình là mơ hồ, mà
+                              các chip phía trên đều có giờ nên thiếu ở đây thành lệch. */}
+                          <span
+                            className={`text-[9px] font-mono ${
+                              w.id === pickWindow ? 'text-white/75' : 'text-slate-400'
+                            }`}
+                          >
+                            {w.fromHour % 24}h-{w.toHour % 24}h
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={applyCustomDate}
+                    className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold cursor-pointer active:scale-[0.98] transition-all duration-150 shadow-sm"
+                  >
+                    {t('search.applyDate')}
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ── THANH HÀNH ĐỘNG ── */}
+        {ENABLE_DEPARTURE_CHIPS ? (
+          <>
+            <div className="h-px bg-slate-200 dark:bg-white/10" />
+            <div className="py-3.5 px-4 sm:py-4 sm:px-5">
               <button
                 type="button"
-                onClick={applyCustomDate}
-                className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold cursor-pointer active:scale-[0.98] transition-all duration-150 shadow-sm"
+                onClick={() => handleSearchNow(true)}
+                disabled={isSearching || !fromHubId || !toHubId}
+                className="group relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0062c4] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/45 hover:-translate-y-0.5 hover:scale-[1.008] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 disabled:hover:scale-100 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-200 cursor-pointer"
               >
-                {t('search.applyDate')}
+                {!isSearching && fromHubId && toHubId && (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer-sweep motion-reduce:hidden"
+                  />
+                )}
+                {isSearching ? (
+                  <Loader2 className="w-4 h-4 animate-spin relative" />
+                ) : (
+                  <Search className="w-4 h-4 relative group-hover:scale-115 transition-transform duration-200" />
+                )}
+                <span className="relative">{isSearching ? t('search.searching') : t('search.findTrips')}</span>
               </button>
+
+              {tariff && (
+                <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400 font-mono">
+                  <span>~{tariff.distanceKm}km</span>
+                  {' · '}
+                  <span>Hành lang Quốc Lộ 13</span>
+                </p>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* ── THANH HÀNH ĐỘNG: tách hẳn khỏi vùng nhập bằng một đường kẻ, đúng
-            như khung tìm kiếm của xe liên tỉnh. Ba câu hỏi ở trên, một hành
-            động ở dưới — mắt đi thẳng một mạch, không phải tìm nút ở đâu. ── */}
-        <div className="h-px bg-slate-200 dark:bg-white/10" />
-        <div className="py-3.5 px-4 sm:py-4 sm:px-5">
-          <button
-            type="button"
-            onClick={handleSearchNow}
-            disabled={isSearching || !fromHubId || !toHubId}
-            className="group relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0062c4] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/45 hover:-translate-y-0.5 hover:scale-[1.008] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 disabled:hover:scale-100 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-200 cursor-pointer"
-          >
-            {/* Vệt sáng quét ngang thu hút mắt về hành động chính của cả trang.
-                Dùng lại keyframes shimmer-sweep sẵn có trong index.css thay vì
-                viết animation mới. Tắt khi đang tìm hoặc nút bị vô hiệu hoá —
-                nhấp nháy lúc không bấm được chỉ gây bực bội. */}
-            {!isSearching && fromHubId && toHubId && (
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer-sweep motion-reduce:hidden"
-              />
-            )}
-            {isSearching ? (
-              <Loader2 className="w-4 h-4 animate-spin relative" />
-            ) : (
-              <Search className="w-4 h-4 relative group-hover:scale-115 transition-transform duration-200" />
-            )}
-            <span className="relative">{isSearching ? t('search.searching') : t('search.findTrips')}</span>
-          </button>
-
-
-          {/* Giá hiện lặng lẽ dưới nút — kết quả, không phải thông báo */}
-          {tariff && (
-            <p className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400 break-words">
-              <span className="font-mono font-semibold">{formatVND(tariff.pricePerSeat)}</span>
-              {' · '}
-              <span className="font-mono">{tariff.distanceKm}km</span>
-              {' · '}
-              {t('search.allInclusive')}
-            </p>
-          )}
-        </div>
+          </>
+        ) : (
+          <div className="p-3 sm:px-5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              ~{tariff?.distanceKm || 105}km · Tuyến Quốc Lộ 13
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsEditingRoute(false)}
+              className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-all cursor-pointer active:scale-95"
+            >
+              Xong / Thu gọn
+            </button>
+          </div>
+        )}
       </section>
+    )}
 
-      {/* ── ĐĂNG NHU CẦU TÌM XE (Chỉ hiện khi chưa bấm tìm chuyến để không choán chỗ kết quả) ── */}
-      {!matrix && (
+      {/* ── ACCORDION LỊCH CHẠY TOÀN TUYẾN (BẢO LƯU CODE - ẨN Ở GIAI ĐOẠN COLD START CRO) ── */}
+      {ENABLE_TIMELINE_ACCORDION && !matrix && (
         <button
           type="button"
           onClick={() => {
             if (isDense) setShowTimeline((v) => !v);
-            else onOpenIntentModal?.(role, fromHubId, toHubId);
+            else onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot);
           }}
           aria-expanded={isDense ? showTimeline : undefined}
           className="group w-full p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 flex items-center justify-between gap-3 hover:border-[#0071e3] hover:bg-blue-50/40 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-150 cursor-pointer text-left shadow-2xs"
@@ -654,7 +995,7 @@ export default function CorridorSearchBoard({
       )}
 
       {/* BẢNG LỊCH CHẠY TOÀN TUYẾN — mở tại chỗ khi chưa tìm kiếm */}
-      {!matrix && isDense && showTimeline && timeline && (
+      {ENABLE_TIMELINE_ACCORDION && !matrix && isDense && showTimeline && timeline && (
         <section className="space-y-2.5 animate-fade-in">
           {timeline.periods.map((p) => (
             <div
@@ -699,7 +1040,7 @@ export default function CorridorSearchBoard({
               ) : (
                 <button
                   type="button"
-                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
                   className="mt-1 w-full min-h-[44px] rounded-xl border-2 border-dashed border-slate-300 dark:border-white/20 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-xs hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer"
                 >
                   {t('search.emptyPeriodCta')}
@@ -710,274 +1051,257 @@ export default function CorridorSearchBoard({
         </section>
       )}
 
+      {/* ── SKELETON TRẠNG THÁI TẢI CHUYẾN XE (Zero Layout Shift & Mượt mà) ── */}
+      {isSearching && !matrix && (
+        <div className="p-4 rounded-3xl bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-md border border-slate-200 dark:border-white/10 animate-pulse space-y-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-36 bg-slate-200 dark:bg-white/10 rounded-full" />
+            <div className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full" />
+          </div>
+          <div className="h-24 bg-slate-100 dark:bg-white/5 rounded-2xl" />
+          <div className="flex gap-2">
+            <div className="h-10 flex-1 bg-slate-200 dark:bg-white/10 rounded-xl" />
+            <div className="h-10 flex-1 bg-slate-200 dark:bg-white/10 rounded-xl" />
+          </div>
+        </div>
+      )}
+
       {/* ── BẢNG SO SÁNH 3 TẦNG VẬN TẢI (DẠNG LINE LIẾC NGANG) ── */}
       {matrix && (
         <section ref={resultsRef} className="space-y-3 pt-1 animate-fade-in">
-          {/* Header tóm tắt với Logo CarMate.vn & 2 đòn bẩy: Thời gian & Tiền bạc */}
-          <div className="flex flex-wrap items-center justify-between gap-1.5 px-1">
-            <div className="flex items-center gap-1.5">
-              <img src="/icons/icon-192.png" alt="CarMate" className="w-4 h-4 rounded-md object-contain shrink-0" />
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Chuyến xe xác thực · <span className="text-[#0071e3] font-bold lowercase">carmate.vn</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] font-bold font-mono text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-400/40 dark:border-amber-500/30 flex items-center gap-1 shadow-2xs">
-                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> Nhanh hơn 35p
-              </span>
-              <span className="text-[10px] font-bold font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-400/40 dark:border-emerald-500/30 shadow-2xs">
-                Tiết kiệm 65%
-              </span>
-            </div>
+          {/* Header tóm tắt: Tiêu đề gọn gàng & Badge Xe nhà xác thực */}
+          <div className="flex items-center justify-between gap-1.5 px-1 pb-0.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 truncate">
+              {carmateDisplayTrips.length > 0 ? `${carmateDisplayTrips.length} chuyến sẵn sàng đi` : 'Chuyến xe hôm nay'}
+            </p>
+            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 shrink-0 whitespace-nowrap bg-emerald-50 dark:bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-300/80 dark:border-emerald-500/30 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Xe nhà xác thực
+            </span>
           </div>
 
-          {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE */}
+          {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE (DANH SÁCH RÚT GỌN SCANNABLE) */}
           {carmateDisplayTrips.length > 0 ? (
-            <div className="space-y-3">
-              {carmateDisplayTrips.map((trip) => (
+            <div className="space-y-2 sm:space-y-2.5">
+              {carmateDisplayTrips.map((trip, idx) => (
                 <CorridorTripCard
                   key={trip.tripId || trip.id || trip.departureLabel}
                   trip={trip}
-                  originName={matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai'}
-                  originNote={matrix?.origin?.landmark || 'đón tận nơi dọc QL13 & cây xăng'}
-                  destName={matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD'}
-                  destNote={matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
+                  isEarliest={idx === 0}
+                  tripIndex={idx}
+                  originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
+                  destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
                   segmentPrice={carmateSegmentPrice}
+                  onSelectTrip={(selectedTrip) => {
+                    setSelectedDetailTrip(selectedTrip);
+                  }}
                   onBookNow={(selectedTrip) => {
-                    setSelectedBookingTrip(selectedTrip);
+                    setSelectedDetailTrip(selectedTrip);
                   }}
                 />
               ))}
 
-              {/* ⭐️ ƯU TIÊN #1: NÚT 1-CHẠM [ ĐĂNG NHU CẦU ĐÓN TẠI TRẠM ] (GOM KHÁCH CHO CHỦ XE TIỆN CHUYẾN) */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-50/70 via-white to-emerald-50/50 dark:from-[#1c1c1e] dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-[#0071e3]/20 dark:border-white/10 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-[#0071e3]/10 dark:bg-[#0071e3]/20 text-[#0071e3] flex items-center justify-center shrink-0">
-                    <Sparkles className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                      Chưa tìm thấy giờ phù hợp lịch trình?
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      Gửi nhu cầu đón tại trạm để chủ xe tiện chuyến chủ động liên hệ.
-                    </p>
-                  </div>
-                </div>
+              {/* ⭐️ ƯU TIÊN #1: GOM NHU CẦU LỆCH GIỜ (ĐẶT LỊCH TRƯỚC - BẢO TOÀN PHỄU CHUYỂN ĐỔI) */}
+              <div className="p-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-dashed border-slate-300 dark:border-white/15 text-center space-y-1.5 shadow-2xs">
+                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                  Chưa tìm thấy giờ phù hợp lịch trình?
+                </p>
                 <button
                   type="button"
-                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
-                  className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0"
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
+                  className="w-full py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-transform cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.99]"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Đăng nhu cầu đón tại trạm</span>
+                  <span>⚡ Báo giờ bạn muốn đi · {formatVND(carmateSegmentPrice)}</span>
                 </button>
               </div>
             </div>
           ) : (
-            <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-blue-50/50 via-white to-slate-50/40 dark:from-blue-950/20 dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-blue-500/20 dark:border-white/15 ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_12px_36px_rgba(0,113,227,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] text-center space-y-4">
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
-              <div className="relative w-12 h-12 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200/60 dark:border-blue-500/30 text-[#0071e3] flex items-center justify-center shadow-xs ring-4 ring-blue-500/5">
-                <Clock className="w-5 h-5" />
+            <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-50/40 via-white to-slate-50/40 dark:from-amber-950/20 dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-amber-300/60 dark:border-amber-500/30 ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_12px_36px_rgba(245,158,11,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] text-center space-y-4">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 bg-amber-500/10 dark:bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Badge trên cùng theo State 2: ⚡ Ghép xe theo giờ của bạn (Màu cam) */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 dark:bg-amber-400/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold select-none shadow-2xs">
+                <span className="text-amber-600 dark:text-amber-400">⚡</span>
+                <span>{heading === 'a_to_b' ? 'Báo giờ bạn cần về Bình Phước' : 'Ghép xe theo giờ của bạn'}</span>
               </div>
+
               <div className="relative space-y-1.5">
                 <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  Khung giờ này chưa có chuyến xe ghép trực tiếp
+                  {heading === 'a_to_b'
+                    ? 'Chiều về hiện chưa có xe nổ máy đúng phút này'
+                    : `Chưa có xe nổ máy đúng phút này${ENABLE_DEPARTURE_CHIPS && isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}`}
                 </p>
-                <p className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Đăng nhu cầu đón tại trạm (1-chạm), hệ thống CarMate sẽ kết nối ngay khi có chủ xe tiện chuyến đi qua lộ trình của bạn.
+                <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                  {heading === 'a_to_b'
+                    ? 'Đặt lịch trước điểm đón & khung giờ bạn cần về, CarMate sẽ kết nối chủ xe tiện chuyến đón bạn về lại Bình Phước.'
+                    : 'Đặt lịch trước điểm đón & khung giờ bạn muốn đi dọc QL13, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.'}
                 </p>
               </div>
-              <div className="relative pt-0.5">
+              <div className="relative pt-0.5 space-y-2.5">
                 <button
                   type="button"
-                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
-                  className="h-11 px-6 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 hover:-translate-y-0.5 active:scale-95"
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
+                  className="h-11 sm:h-12 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:-translate-y-0.5 active:scale-95"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>Đăng nhu cầu đón tại trạm</span>
+                  <span>
+                    {heading === 'a_to_b'
+                      ? `BÁO GIỜ BẠN CẦN VỀ · CHỈ TỪ ${formatVND(carmateSegmentPrice)}`
+                      : `ĐẶT LỊCH TRƯỚC · CHỈ TỪ ${formatVND(carmateSegmentPrice)}`}
+                  </span>
                 </button>
+
+                {/* Huy hiệu uy tín thực tế & Social Proof */}
+                <div className="pt-1 space-y-1">
+                  <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span>Chuyến xe nhà tiện đường · Đón tận nơi dọc QL13 · 0đ cọc</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                    <span>
+                      {isFutureSearch
+                        ? 'Chủ xe quen hoặc điều phối viên sẽ gọi/Zalo xác nhận trong 15 phút'
+                        : 'Sáng nay đã có 3 chuyến xe ghép kết nối thành công trên trục QL13'}
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
           )}
 
-          {/* 🛡️ ƯU TIÊN #2 (DƯỚI CÙNG - SAFETY NET): THAM KHẢO XE KHÁCH LIÊN TỈNH KHI CẦN GẤP */}
-          {verifiedHotlines.length > 0 && (
+          {/* 🛡️ ƯU TIÊN #2 (DƯỚI CÙNG - SAFETY NET): THAM KHẢO XE KHÁCH LIÊN TỈNH KHI CẦN GẤP
+              CHỈ HIỆN KHI TÌM CHUYẾN HÔM NAY / ĐI LIỀN. Nếu tìm cho ngày mai/tương lai, ẩn toàn bộ
+              bảng hotline xe khách để ưu tiên 100% gom khách cho chủ xe CarMate. */}
+          {!isFutureSearch && verifiedHotlines.length > 0 && (
             <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <Bus className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Cần di chuyển gấp? Hotline xe khách liên tỉnh QL13 (Dự phòng)</span>
+              <div className="flex items-center justify-between text-[11px] pb-0.5 px-1">
+                <span className="font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Lịch trình & số điện thoại các nhà xe
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono">
-                  {verifiedHotlines.length} nhà xe
+                  {verifiedHotlines.length} nhà xe QL13
                 </span>
               </div>
 
               <div className="space-y-1.5">
-                {verifiedHotlines.map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    onClick={() => setSelectedDetailHotline(h)}
-                    className="w-full min-h-[48px] px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 hover:border-amber-400 dark:hover:border-amber-400/70 hover:bg-amber-50/40 dark:hover:bg-amber-500/10 hover:shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-between gap-2 text-left transition-all duration-200 cursor-pointer group shadow-2xs"
-                  >
-                    {/* Trái: Tên nhà xe • Tần suất */}
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-amber-800 dark:group-hover:text-amber-300 transition-colors">
-                        {h.shortName || h.operator}
-                      </p>
-                      <span className="text-slate-300 dark:text-white/20">•</span>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                        {h.frequency?.split('(')[0]?.trim() || 'Nhiều chuyến/ngày'}
-                      </p>
-                    </div>
+                {(showAllBuses ? verifiedHotlines : verifiedHotlines.slice(0, 5)).map((h) => {
+                  const cleanBusName = getCleanOperatorName(h);
+                  const busSubtext = getBusSubtext(h);
+                  const busDropoff = getBusDropoff(h);
+                  const shortPrice = formatShortPriceRef(h.priceRef);
 
-                    {/* Phải: Giá vé + Nút [ 📞 Gọi ] */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 group-hover:border-amber-300 dark:group-hover:border-amber-500/30 text-xs font-bold font-mono text-slate-700 dark:text-slate-200 transition-colors block leading-tight">
-                        {h.priceRef || '100.000đ - 160.000đ'}
-                      </span>
-                      <span
-                        className="px-3 py-1.5 rounded-xl border border-amber-400/60 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-200 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 group-hover:shadow-sm group-hover:shadow-amber-500/30 text-[11px] font-bold flex items-center gap-1.5 transition-all duration-150 shrink-0"
-                      >
-                        <Phone className="w-3.5 h-3.5" />
-                        <span>Gọi</span>
-                      </span>
+                  return (
+                    <div
+                      key={h.id}
+                      onClick={() => {
+                        trackViewBusDetail(h.operator, {
+                          hotline: h.hotline,
+                          corridor: corridor.id,
+                          fromHubId,
+                          toHubId,
+                          timeSlot: selectedChip?.timeSlot,
+                          dayOffset: selectedChip?.dayOffset
+                        });
+                        setSelectedDetailHotline(h);
+                      }}
+                      className="p-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200/90 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 flex flex-col justify-between transition-all duration-150 cursor-pointer shadow-2xs group"
+                    >
+                      {/* Hàng 1: Tên nhà xe (Chữ đen text-slate-800 đồng bộ, không dính màu xanh) + Giá xám mờ + Icon > */}
+                      <div className="flex items-center justify-between min-w-0">
+                        <p className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">
+                          {cleanBusName}
+                        </p>
+                        <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                          <span className="text-xs font-mono font-medium text-slate-400 dark:text-slate-500">
+                            {shortPrice}
+                          </span>
+                          <span className="text-slate-400 text-xs font-bold transition-transform group-hover:translate-x-0.5">
+                            ›
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Hàng 2: Loại xe & Điểm trả thực tế (Màu xám trung tính text-slate-500) */}
+                      <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
+                        <span className="truncate">{busSubtext}</span>
+                        <span className="font-medium shrink-0 ml-1.5 text-slate-500 dark:text-slate-400">
+                          {busDropoff}
+                        </span>
+                      </div>
                     </div>
+                  );
+                })}
+
+                {/* Nút bấm nhẹ Xem thêm / Thu gọn (Mặc định 5 xe, nút mở thêm 3 xe, viền xám trung tính border-slate-200) */}
+                {verifiedHotlines.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllBuses(!showAllBuses)}
+                    className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-[0.99] outline-none"
+                  >
+                    <span>
+                      {showAllBuses
+                        ? 'Thu gọn'
+                        : `Xem thêm ${verifiedHotlines.length - 5} nhà xe khác`}
+                    </span>
+                    <span className="text-xs">{showAllBuses ? '▴' : '▾'}</span>
                   </button>
-                ))}
+                )}
               </div>
             </div>
           )}
         </section>
       )}
 
-      {/* MODAL XEM KỸ CHI TIẾT CHUYẾN XE (REACT PORTAL z-[9999]) */}
-      {selectedDetailTrip && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setSelectedDetailTrip(null)}
-        >
-          <div
-            className="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-3xl p-5 shadow-2xl border border-slate-300 dark:border-white/20 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header modal */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 bg-emerald-500/15 text-emerald-600">
-                  <Sparkles className="w-5 h-5" />
-                </span>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <CarMateBadge size="xs" />
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                      Đi ghép tiện chuyến
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-mono">
-                    Khởi hành: {selectedDetailTrip.departureLabel}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDetailTrip(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-500 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Chi tiết xe & chủ xe */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Chủ xe:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailTrip.driverName || 'Chủ xe'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Dòng xe:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailTrip.vehicleModel || 'Xe tiện chuyến'}
-                </span>
-              </div>
-
-              {selectedDetailTrip.plateMasked && (
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Biển kiểm soát:</span>
-                  <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10">
-                    {selectedDetailTrip.plateMasked}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Số ghế trống:</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  Còn {selectedDetailTrip.seatsAvailable ?? 1} ghế trống
-                </span>
-              </div>
-
-              <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500 shrink-0">Điểm đón:</span>
-                <span className="font-medium text-slate-900 dark:text-white text-right">
-                  {matrix?.origin?.landmark || matrix?.origin?.name || 'Trạm đón quy chuẩn'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500">Giá chia sẻ:</span>
-                <div className="text-right">
-                  <span className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                    {formatVND(selectedDetailTrip.pricePerSeat || carmateSegmentPrice)}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">trọn gói xăng & cầu đường</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Nút hành động chính */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedDetailTrip(null);
-                onOpenStationView?.(fromHubId, toHubId);
-              }}
-              className="w-full h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 transition-all cursor-pointer"
-            >
-              Xác nhận giữ chỗ chuyến này ({formatVND(selectedDetailTrip.pricePerSeat || carmateSegmentPrice)})
-            </button>
-          </div>
-        </div>,
-        document.body
+      {/* ── BOTTOM SHEET CHI TIẾT CHUYẾN XE (PROGRESSIVE DISCLOSURE) ── */}
+      {selectedDetailTrip && (
+        <TripDetailBottomSheet
+          isOpen={Boolean(selectedDetailTrip)}
+          onClose={() => setSelectedDetailTrip(null)}
+          trip={selectedDetailTrip}
+          originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
+          destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
+          destNote={toHub?.landmark || matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
+          segmentPrice={carmateSegmentPrice}
+          onConfirmBook={(tripToBook) => {
+            setSelectedDetailTrip(null);
+            setSelectedBookingTrip(tripToBook);
+          }}
+        />
       )}
 
-      {/* MODAL XEM KỸ CHI TIẾT NHÀ XE (REACT PORTAL z-[9999]) */}
+      {/* ── BOTTOM SHEET CHI TIẾT LỘ TRÌNH NHÀ XE & ĐỐI CHIẾU CARMATE (REACT PORTAL z-[9999]) ── */}
       {selectedDetailHotline && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-[9999] bg-black/65 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-fade-in"
           onClick={() => setSelectedDetailHotline(null)}
         >
           <div
-            className="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-3xl p-5 shadow-2xl border border-slate-300 dark:border-white/20 space-y-4"
+            className="w-full max-w-lg bg-white dark:bg-[#1c1c1e] rounded-t-[32px] sm:rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-200/80 dark:border-white/15 space-y-4 max-h-[92vh] sm:max-h-[85vh] overflow-y-auto anim-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header modal */}
+            {/* Thanh gạt trang trí chuẩn Bottom Sheet trên Mobile */}
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto -mt-1 mb-2 sm:hidden" />
+
+            {/* ── KHỐI 1: KHỐI TIÊU ĐỀ (TRUNG TÍNH HÓA THƯƠNG HIỆU NHÀ XE) ── */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-9 h-9 rounded-2xl bg-slate-500/15 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Icon vector đơn sắc màu xám trung tính (#64748B) */}
+                <span className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
                   <Bus className="w-5 h-5" />
                 </span>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                    {selectedDetailHotline.operator}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                      {selectedDetailHotline.operator}
+                    </h3>
+                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10">
+                      Xe tuyến cố định QL13
+                    </span>
+                  </div>
                   <p className="text-[11px] text-slate-400 font-mono">
-                    {selectedDetailHotline.corridor || 'Tuyến QL13'}
+                    {selectedDetailHotline.corridor || 'Tuyến QL13'} · {selectedDetailHotline.frequency}
                   </p>
                 </div>
               </div>
@@ -990,73 +1314,190 @@ export default function CorridorSearchBoard({
               </button>
             </div>
 
-            {/* Chi tiết tuyến xe */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/15 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Loại phương tiện:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailHotline.type === 'limousine' ? 'Xe Limousine VIP' : selectedDetailHotline.type === 'airport_limousine' ? 'Limousine Đưa Đón Sân Bay TSN' : 'Xe Khách Tuyến Cố Định'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Tần suất xuất bến:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailHotline.frequency}
-                </span>
-              </div>
-
-              <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500 shrink-0">Lộ trình trục đường:</span>
-                <span className="font-medium text-slate-900 dark:text-white text-right">
-                  {selectedDetailHotline.coverage}
-                </span>
-              </div>
-
-              <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500 shrink-0">Điểm đón khách QL13:</span>
-                <span className="font-medium text-amber-700 dark:text-amber-300 text-right">
-                  {selectedDetailHotline.note}
-                </span>
+            {/* ── KHỐI 2: BẢNG TÓM TẮT NHÀ XE SIÊU GỌN (< 110px, KHÔNG VỠ VỤN, KHÔNG NÚT GỌI) ── */}
+            <div className="p-3 rounded-2xl bg-slate-50/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+              <div className="flex items-start gap-2">
+                <span className="text-slate-400 dark:text-slate-500 shrink-0 mt-0.5">• Lộ trình trả:</span>
+                <div>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">
+                    Bến xe Miền Đông / VP Nhà xe
+                  </span>
+                  <p className="text-[10.5px] text-amber-600 dark:text-amber-400 font-medium">
+                    (Không vào bệnh viện, cần gọi thêm xe)
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500">Giá tham khảo:</span>
-                <span className="text-base font-bold font-mono text-slate-900 dark:text-white">
-                  {selectedDetailHotline.priceRef}
+                <span className="text-slate-400 dark:text-slate-500">• Giá vé:</span>
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                  {selectedDetailHotline.priceRef || '200.000đ – 260.000đ'} / vé
                 </span>
               </div>
 
-              {/* Bảng giá niêm yết chi tiết từng chặng */}
-              {selectedDetailHotline.fareTable && selectedDetailHotline.fareTable.length > 0 && (
-                <div className="pt-2 border-t border-slate-200/60 dark:border-white/10 space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
-                    Biểu phí niêm yết theo chặng:
+              {selectedDetailHotline.hotline && (
+                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
+                  <span className="text-slate-400 dark:text-slate-500">• Tổng đài xe:</span>
+                  <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 select-all">
+                    {selectedDetailHotline.hotline}
                   </span>
-                  <div className="space-y-1 rounded-xl bg-slate-100/80 dark:bg-white/[0.04] p-2.5 border border-slate-200/50 dark:border-white/5">
-                    {selectedDetailHotline.fareTable.map((f, i) => (
-                      <div key={i} className="flex items-center justify-between text-[11px] py-0.5">
-                        <span className="text-slate-600 dark:text-slate-300 font-medium truncate pr-2">
-                          {f.route}
-                        </span>
-                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
-                          {f.price}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* Nút gọi tổng đài */}
-            <a
-              href={`tel:${String(selectedDetailHotline.hotline).replace(/\s/g, '')}`}
-              className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35 hover:-translate-y-0.5 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <Phone className="w-4 h-4" />
-              <span>Gọi đặt chỗ tổng đài ({selectedDetailHotline.hotline})</span>
-            </a>
+            {/* ── KHỐI 3: KHỐI CARMATE SỐNG ĐỘNG (HOVER & 2 STATES DỰA TRÊN DATABASE) ── */}
+            {(() => {
+              const hasRealTrips = carmateDisplayTrips.length > 0;
+              const firstRealTrip = hasRealTrips ? carmateDisplayTrips[0] : null;
+
+              return (
+                <div className="relative p-4 rounded-2xl border-2 border-amber-300 dark:border-amber-500/50 bg-gradient-to-b from-amber-50/80 via-white to-amber-50/40 dark:from-amber-950/25 dark:via-[#1c1c1e] dark:to-amber-950/15 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 hover:border-amber-400">
+                  {/* Header Card với icon tia chớp nảy & badge chuẩn theo 2 State */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
+                      <span className="animate-bounce text-amber-600 dark:text-amber-400 text-sm sm:text-base">⚡</span>
+                      <span>Gợi ý tiện chuyến từ CarMate.vn</span>
+                    </div>
+                    {hasRealTrips ? (
+                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-emerald-600 rounded-full shadow-xs select-none inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        Còn {firstRealTrip.seatsAvailable ?? 1} chỗ trống
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-amber-900 dark:text-amber-100 bg-amber-400/30 border border-amber-500/40 rounded-full shadow-xs select-none">
+                        ⚡ Ghép xe theo giờ của bạn
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Nội dung chi tiết theo State */}
+                  {hasRealTrips ? (
+                    <div className="space-y-2 text-xs text-slate-700 dark:text-slate-200 mb-3.5">
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                        <span>
+                          <strong className="text-slate-900 dark:text-white">Có chuyến xe thật:</strong>{' '}
+                          {firstRealTrip.vehicleModel || 'Xe 5-7 chỗ'} ({firstRealTrip.driverName || 'Chủ xe'}) khởi hành lúc{' '}
+                          <strong className="font-mono text-emerald-600 dark:text-emerald-400">{firstRealTrip.departureLabel}</strong>
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                        <span>
+                          <strong className="text-slate-900 dark:text-white">Giá chia sẻ trọn gói:</strong>{' '}
+                          <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-sm">{formatVND(firstRealTrip.pricePerSeat || carmateSegmentPrice)}</strong>{' '}
+                          <span className="text-slate-500 dark:text-slate-400">(Chở thẳng cổng viện, không tốn thêm Grab)</span>
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                        <span>
+                          <strong className="text-slate-900 dark:text-white">Xe ô tô gia đình:</strong> Êm ái, cốp rộng, không hút thuốc ·{' '}
+                          <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-200 mb-3.5">
+                      {/* Lời nhắn trung thực trạng thái gom cầu */}
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
+                        Chưa có xe nổ máy đúng phút này. Đặt lịch trước, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
+                      </div>
+
+                      {busPriceData?.isCheaperOrEqual ? (
+                        <>
+                          <div className="flex items-start gap-2">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                            <span>
+                              <strong className="text-slate-900 dark:text-white">Giá trọn gói: Chỉ từ {formatVND(carmateSegmentPrice)}</strong>{' '}
+                              <span className="text-slate-500 dark:text-slate-400">(Không tốn thêm tiền Grab từ bến xe)</span>
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                            <div className="leading-relaxed">
+                              <strong className="text-slate-900 dark:text-white">So sánh chi phí thực tế:</strong>{' '}
+                              <span className="text-slate-600 dark:text-slate-300 block">
+                                Đi xe khách ({Math.round((busPriceData?.min || 140000) / 1000)}k) + Grab vào viện (70k) = <strong>~{Math.round((busPriceData?.busWithGrab || 210000) / 1000)}k</strong>
+                              </span>
+                              <span className="text-emerald-700 dark:text-emerald-400 font-bold block mt-0.5">
+                                ➔ Xe ghép CarMate: {formatVND(carmateSegmentPrice)} đưa thẳng cổng viện{busPriceData?.totalSavingVsBus > 0 ? ` (Tiết kiệm ~${busPriceData.totalSavingVsBus}k)` : ''}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-2">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                            <span>
+                              <strong className="text-slate-900 dark:text-white">Giá ghép: Chỉ từ {formatVND(carmateSegmentPrice)}</strong>{' '}
+                              <span className="text-slate-500 dark:text-slate-400">
+                                (Rẻ hơn {busPriceData?.savingMin ? `${busPriceData.savingMin}k–` : ''}{busPriceData?.savingMax || 95}k so với xe khách/limousine)
+                              </span>
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                            <span>
+                              <strong className="text-slate-900 dark:text-white">Đưa đón tận viện:</strong> BV Chợ Rẫy / ĐH Y Dược{' '}
+                              <span className="text-emerald-700 dark:text-emerald-400 font-medium">(Đỡ tốn 70k Grab)</span>
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                        <span>
+                          <strong className="text-slate-900 dark:text-white">Xe gia đình êm ái:</strong> Không mùi xe đò, không nhồi nhét ·{' '}
+                          <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Nút bấm CTA phân hóa rạch ròi 2 State */}
+                  {hasRealTrips ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDetailHotline(null);
+                        setSelectedBookingTrip(firstRealTrip);
+                      }}
+                      className="w-full py-3 px-4 rounded-xl font-bold text-white text-xs sm:text-sm bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 shadow-md shadow-emerald-500/20 transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer group"
+                    >
+                      <Sparkles className="w-4 h-4 fill-white shrink-0 group-hover:rotate-12 transition-transform duration-300" />
+                      <span>GIỮ CHỖ NGAY · {formatVND(firstRealTrip.pricePerSeat || carmateSegmentPrice)}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        trackBusSheetCarMateCta(selectedDetailHotline.operator, {
+                          corridor: corridor.id,
+                          fromHubId,
+                          toHubId,
+                          carmatePrice: carmateSegmentPrice
+                        });
+                        setSelectedDetailHotline(null);
+                        onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot);
+                      }}
+                      className="w-full py-3 px-4 rounded-xl font-bold text-white text-xs sm:text-sm bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 shadow-md shadow-amber-500/20 transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-amber-500/30 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer group"
+                    >
+                      <Sparkles className="w-4 h-4 fill-white shrink-0 group-hover:rotate-12 transition-transform duration-300" />
+                      <span>ĐẶT LỊCH TRƯỚC · CHỈ TỪ {formatVND(carmateSegmentPrice)}</span>
+                    </button>
+                  )}
+
+                  <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-2">
+                    {hasRealTrips
+                      ? 'Chủ xe xác nhận qua SĐT trong 5 phút · Hủy tự do không mất phí'
+                      : 'Chủ xe hoặc điều phối viên sẽ gọi/Zalo xác nhận trong 15 phút · 0đ cọc'}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>,
         document.body

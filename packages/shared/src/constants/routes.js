@@ -451,8 +451,8 @@ export const VIRTUAL_HUBS = [
   },
   {
     id: 'hub_ql13_cho_ray',
-    name: 'Cụm BV Chợ Rẫy / BV Đại học Y Dược (Quận 5 - TP.HCM)',
-    shortName: 'Cụm Chợ Rẫy / ĐHYD',
+    name: 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
+    shortName: 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
     corridor: 'Tuyến QL13',
     lat: 10.7578,
     lng: 106.6596,
@@ -570,7 +570,7 @@ export const VIRTUAL_HUBS = [
   },
   {
     id: 'hub_ql13_nga4_chon_thanh',
-    name: 'Ngã 4 Chơn Thành (Giao QL14 & QL13)',
+    name: 'Ngã 4 Chơn Thành (QL13)',
     shortName: 'Ngã 4 Chơn Thành',
     corridor: 'Tuyến QL13',
     lat: 11.4791,
@@ -618,8 +618,8 @@ export const VIRTUAL_HUBS = [
   },
   {
     id: 'hub_ql13_tan_khai',
-    name: 'Cây xăng Petrolimex Tân Khai / Chợ Tân Khai (Hớn Quản)',
-    shortName: 'Petrolimex Tân Khai',
+    name: 'Cây xăng Petrolimex Tân Khai (QL13)',
+    shortName: 'Cây xăng Petrolimex Tân Khai (QL13)',
     corridor: 'Tuyến QL13',
     lat: 11.5620,
     lng: 106.6340,
@@ -654,8 +654,8 @@ export const VIRTUAL_HUBS = [
   },
   {
     id: 'hub_ql13_binh_long',
-    name: 'Cổng chào TX. Bình Long / Vòng xoay An Lộc',
-    shortName: 'TX. Bình Long (An Lộc)',
+    name: 'Vòng xoay An Lộc (Bình Long)',
+    shortName: 'Vòng xoay An Lộc (Bình Long)',
     corridor: 'Tuyến QL13',
     lat: 11.6482,
     lng: 106.6025,

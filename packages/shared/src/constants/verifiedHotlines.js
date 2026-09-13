@@ -85,6 +85,26 @@ export const VERIFIED_HOTLINES = Object.freeze([
     verifiedBy: 'CarMate Transit Team'
   },
   {
+    id: 'thanh-cong',
+    operator: 'Xe khách & Limousine Thành Công',
+    shortName: 'Thành Công',
+    corridor: 'Tuyến QL13',
+    hotline: '1900 6952',
+    altHotline: '02713 888 888',
+    type: 'limousine',
+    frequency: '30 phút/chuyến (03:00 - 20:30)',
+    priceRef: '140.000đ - 180.000đ',
+    coverage: 'BX Miền Đông ⇄ Lái Thiêu ⇄ Thủ Dầu Một ⇄ Bến Cát ⇄ Chơn Thành ⇄ Đồng Xoài',
+    note: 'Đón dọc QL13 (Cây xăng Petrolimex Lái Thiêu, Cầu Ông Bố, Aeon Mall)',
+    fareTable: [
+      { route: 'Đồng Xoài ➔ Sân bay Tân Sơn Nhất / BX Miền Đông', price: '160.000 đ - 180.000 đ' },
+      { route: 'Chơn Thành / Bến Cát ➔ Sài Gòn', price: '120.000 đ - 140.000 đ' }
+    ],
+    verified: true,
+    verifiedAt: '2026-09-12',
+    verifiedBy: 'CarMate Transit Team'
+  },
+  {
     id: 'huy-hieu',
     operator: 'Huy Hiếu (Limousine / Ghế ngả VIP)',
     shortName: 'Huy Hiếu Limousine',
@@ -104,23 +124,60 @@ export const VERIFIED_HOTLINES = Object.freeze([
     verifiedBy: 'CarMate Transit Team'
   },
   {
-    id: 'thanh-cong',
-    operator: 'Xe khách & Limousine Thành Công',
-    shortName: 'Thành Công',
+    id: 'chin-nghia',
+    operator: 'Xe khách & Giường nằm Chín Nghĩa',
+    shortName: 'Chín Nghĩa',
     corridor: 'Tuyến QL13',
-    hotline: '1900 6952',
-    altHotline: '02713 888 888',
-    type: 'limousine',
-    frequency: '30 phút/chuyến (03:00 - 20:30)',
-    priceRef: '140.000đ - 180.000đ',
-    coverage: 'BX Miền Đông ⇄ Lái Thiêu ⇄ Thủ Dầu Một ⇄ Bến Cát ⇄ Chơn Thành ⇄ Đồng Xoài',
-    note: 'Đón dọc QL13 (Cây xăng Petrolimex Lái Thiêu, Cầu Ông Bố, Aeon Mall)',
+    hotline: '02713 888 777',
+    altHotline: '1900 636 636',
+    type: 'sleeper_bus',
+    frequency: '4 chuyến/ngày (Sáng - Tối)',
+    priceRef: '150.000đ - 190.000đ',
+    coverage: 'Bù Đốp ⇄ Lộc Ninh ⇄ Bình Long ⇄ Chơn Thành ⇄ Bến xe Miền Đông',
+    note: 'Xe giường nằm 40 chỗ tuyến QL13 trả Bến xe Miền Đông',
     fareTable: [
-      { route: 'Đồng Xoài ➔ Sân bay Tân Sơn Nhất / BX Miền Đông', price: '160.000 đ - 180.000 đ' },
-      { route: 'Chơn Thành / Bến Cát ➔ Sài Gòn', price: '120.000 đ - 140.000 đ' }
+      { route: 'Bù Đốp / Bình Long ➔ Bến xe Miền Đông', price: '150.000 đ – 190.000 đ' }
     ],
     verified: true,
-    verifiedAt: '2026-09-12',
+    verifiedAt: '2026-09-13',
+    verifiedBy: 'CarMate Transit Team'
+  },
+  {
+    id: 'quoc-dat',
+    operator: 'Quốc Đạt (Limousine phòng nằm)',
+    shortName: 'Quốc Đạt',
+    corridor: 'Tuyến QL13',
+    hotline: '0914 068 070',
+    altHotline: '02713 605 605',
+    type: 'limousine',
+    frequency: 'Nhiều chuyến/ngày',
+    priceRef: '220.000đ - 260.000đ',
+    coverage: 'Bình Long ⇄ Chơn Thành ⇄ Bến Cát ⇄ QL13 ⇄ Bến xe Miền Đông',
+    note: 'Limousine phòng nằm cao cấp chạy trục QL13',
+    fareTable: [
+      { route: 'Bình Phước ➔ Sài Gòn / BX Miền Đông', price: '220.000 đ – 260.000 đ' }
+    ],
+    verified: true,
+    verifiedAt: '2026-09-13',
+    verifiedBy: 'CarMate Transit Team'
+  },
+  {
+    id: 'ba-dam',
+    operator: 'Xe khách Ba Đàm (Ghế ngồi 29 chỗ)',
+    shortName: 'Ba Đàm',
+    corridor: 'Tuyến QL13',
+    hotline: '0913 723 371',
+    altHotline: '02713 879 879',
+    type: 'coach',
+    frequency: 'Chạy liên tục ban ngày',
+    priceRef: '120.000đ - 150.000đ',
+    coverage: 'Bù Đăng ⇄ Đồng Xoài ⇄ Chơn Thành ⇄ Bến Cát ⇄ Bến xe Miền Đông',
+    note: 'Xe khách liên tỉnh truyền thống đón trả dọc tuyến QL13',
+    fareTable: [
+      { route: 'Bình Phước ➔ Bến xe Miền Đông', price: '120.000 đ – 150.000 đ' }
+    ],
+    verified: true,
+    verifiedAt: '2026-09-13',
     verifiedBy: 'CarMate Transit Team'
   }
 ]);

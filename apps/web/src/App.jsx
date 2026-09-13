@@ -764,12 +764,16 @@ export default function App() {
   const [movementIntentRole, setMovementIntentRole] = useState('passenger');
   const [movementIntentOriginHub, setMovementIntentOriginHub] = useState(null);
   const [movementIntentDestHub, setMovementIntentDestHub] = useState(null);
+  const [movementIntentDate, setMovementIntentDate] = useState(null);
+  const [movementIntentTimeSlot, setMovementIntentTimeSlot] = useState(null);
 
-  const handleOpenMovementIntent = useCallback((targetRole = 'passenger', hubId = null, destHubId = null) => {
+  const handleOpenMovementIntent = useCallback((targetRole = 'passenger', hubId = null, destHubId = null, initialDate = null, initialTimeSlot = null) => {
     const validRole = targetRole === 'driver' ? 'driver' : 'passenger';
     setMovementIntentRole(validRole);
     setMovementIntentOriginHub(hubId || null);
     setMovementIntentDestHub(destHubId || null);
+    setMovementIntentDate(initialDate || null);
+    setMovementIntentTimeSlot(initialTimeSlot || null);
     setMovementIntentModalOpen(true);
   }, []);
 
@@ -997,8 +1001,8 @@ export default function App() {
                 setStationDestinationHubId(destHub || null);
                 setActiveTab('station');
               }}
-              onOpenIntentModal={(targetRole, hubId, destHubId) => {
-                handleOpenMovementIntent(targetRole, hubId, destHubId);
+              onOpenIntentModal={(targetRole, hubId, destHubId, targetDate, targetTimeSlot) => {
+                handleOpenMovementIntent(targetRole, hubId, destHubId, targetDate, targetTimeSlot);
               }}
               onAuthSuccess={handleAuthSuccess}
               onShowToast={showToast}
@@ -1237,6 +1241,8 @@ export default function App() {
           initialRole={movementIntentRole}
           initialOriginHubId={movementIntentOriginHub}
           initialDestHubId={movementIntentDestHub}
+          initialDate={movementIntentDate}
+          initialTimeSlot={movementIntentTimeSlot}
           currentUser={currentUser}
           onSuccess={() => {
             setActiveTab('booked');
