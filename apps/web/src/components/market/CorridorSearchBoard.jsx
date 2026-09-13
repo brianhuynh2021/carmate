@@ -33,6 +33,7 @@ import {
   buildDepartureChips,
   buildCustomChip,
   toLocalIsoDate,
+  getChipDate,
   getVerifiedHotlines,
   DEPARTURE_WINDOWS
 } from '@carmate/shared';
@@ -75,7 +76,7 @@ function writeStore(key, value) {
  * - Apple: một cột, squircle, phân tầng rõ, chạm được bằng ngón cái trên mobile.
  */
 export default function CorridorSearchBoard({
-  currentUser = null,
+  currentUser,
   onOpenStationView,
   onOpenIntentModal,
   onAuthSuccess,
@@ -94,8 +95,28 @@ export default function CorridorSearchBoard({
     [corridors, corridorId]
   );
 
-  // ── Chiều đi ───────────────────────────────────────────────────────────
-  const [heading, setHeading] = useState('b_to_a'); // mặc định: từ tỉnh lên thành phố
+  // ── Chiều đi: Đọc thông minh từ URL hoặc mặc định từ tỉnh lên thành phố ───
+  const [heading, setHeading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const urlFrom = p.get('from');
+      const urlTo = p.get('to');
+      const targetCorridorId = corridors.some((c) => c.id === readStore(CORRIDOR_KEY))
+        ? readStore(CORRIDOR_KEY)
+        : getDefaultCorridor().id;
+      if (urlFrom) {
+        const ep = getHubEndpoint(targetCorridorId, urlFrom);
+        if (ep === 'a') return 'a_to_b';
+        if (ep === 'b') return 'b_to_a';
+      }
+      if (urlTo) {
+        const ep = getHubEndpoint(targetCorridorId, urlTo);
+        if (ep === 'a') return 'b_to_a';
+        if (ep === 'b') return 'a_to_b';
+      }
+    }
+    return 'b_to_a'; // mặc định: từ tỉnh lên thành phố
+  });
 
   // ── Vai trò: TỰ ĐOÁN, vẫn đổi được ────────────────────────────────────
   const detectedRole = useMemo(() => {
@@ -114,10 +135,20 @@ export default function CorridorSearchBoard({
   const toHubs = useMemo(() => getEndpointHubs(corridor.id, toKey, heading), [corridor.id, toKey, heading]);
 
   const [fromHubId, setFromHubId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const urlFrom = p.get('from');
+      if (urlFrom && fromHubs.some((h) => h.id === urlFrom)) return urlFrom;
+    }
     const hasTanKhai = fromHubs.find((h) => h.id === 'hub_ql13_tan_khai');
     return hasTanKhai ? hasTanKhai.id : (fromHubs[0]?.id || '');
   });
   const [toHubId, setToHubId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const urlTo = p.get('to');
+      if (urlTo && toHubs.some((h) => h.id === urlTo)) return urlTo;
+    }
     const hasChoRay = toHubs.find((h) => h.id === 'hub_ql13_cho_ray');
     return hasChoRay ? hasChoRay.id : (toHubs[0]?.id || '');
   });
@@ -236,6 +267,28 @@ export default function CorridorSearchBoard({
     setShowDatePanel(false);
     writeStore(WINDOW_KEY, chip.windowId);
   }, [pickDate, pickWindow]);
+
+  // Phân đoạn ngữ cảnh thời gian (Hôm nay vs Ngày mai/Tương lai):
+  // Ngày mai / tương lai có biên độ thời gian lớn -> Ưu tiên 100% gom nhu cầu cho chủ xe,
+  // ẩn bảng hotline xe khách để không rò rỉ khách vàng vào tay nhà xe truyền thống.
+  const isFutureSearch = useMemo(() => {
+    if (selectedChip?.dayOffset != null) {
+      return selectedChip.dayOffset >= 1;
+    }
+    if (selectedChip?.date && todayIso) {
+      return selectedChip.date > todayIso;
+    }
+    return false;
+  }, [selectedChip, todayIso]);
+
+  const targetDepartureDate = useMemo(() => {
+    if (selectedChip?.date) return selectedChip.date;
+    return getChipDate(selectedChip, new Date());
+  }, [selectedChip]);
+
+  const targetDepartureTimeSlot = useMemo(() => {
+    return selectedChip?.timeSlot || '06:00';
+  }, [selectedChip]);
 
   // ── Tìm chuyến: MA TRẬN KHE THỜI GIAN ─────────────────────────────────
   // Khách liên tỉnh cần thấy NGAY cả khung lân cận ±30 phút, không chỉ đúng
@@ -626,7 +679,7 @@ export default function CorridorSearchBoard({
           type="button"
           onClick={() => {
             if (isDense) setShowTimeline((v) => !v);
-            else onOpenIntentModal?.(role, fromHubId, toHubId);
+            else onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot);
           }}
           aria-expanded={isDense ? showTimeline : undefined}
           className="group w-full p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 flex items-center justify-between gap-3 hover:border-[#0071e3] hover:bg-blue-50/40 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-150 cursor-pointer text-left shadow-2xs"
@@ -702,7 +755,7 @@ export default function CorridorSearchBoard({
               ) : (
                 <button
                   type="button"
-                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
                   className="mt-1 w-full min-h-[44px] rounded-xl border-2 border-dashed border-slate-300 dark:border-white/20 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-xs hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer"
                 >
                   {t('search.emptyPeriodCta')}
@@ -784,7 +837,7 @@ export default function CorridorSearchBoard({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
                   className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
@@ -800,20 +853,28 @@ export default function CorridorSearchBoard({
               </div>
               <div className="relative space-y-1.5">
                 <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  Chưa có xe xuất phát đúng phút này
+                  {isFutureSearch
+                    ? `Chưa có xe xuất phát đúng phút này cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}`
+                    : 'Chưa có xe xuất phát đúng phút này'}
                 </p>
                 <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Để lại điểm đón trên QL13 & giờ bạn muốn đi. 80% chủ xe tiện chuyến sẽ nhận chuyến khi bạn đăng trước 1–2 tiếng.
+                  {isFutureSearch
+                    ? `Chuyến ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'} đang có 2–3 chủ xe quen chuẩn bị mở chuyến. Đăng điểm đón ngay để giữ chỗ giá ${formatVND(carmateSegmentPrice)}!`
+                    : 'Để lại điểm đón trên QL13 & giờ bạn muốn đi. 80% chủ xe tiện chuyến sẽ nhận chuyến khi bạn đăng trước 1–2 tiếng.'}
                 </p>
               </div>
               <div className="relative pt-0.5 space-y-2.5">
                 <button
                   type="button"
-                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
                   className="h-11 sm:h-12 px-6 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 hover:-translate-y-0.5 active:scale-95"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>Báo giờ tôi muốn đi · Chỉ {formatVND(carmateSegmentPrice)}</span>
+                  <span>
+                    {isFutureSearch
+                      ? `Đăng điểm đón ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'} · Giữ chỗ ${formatVND(carmateSegmentPrice)}`
+                      : `Báo giờ tôi muốn đi · Chỉ ${formatVND(carmateSegmentPrice)}`}
+                  </span>
                 </button>
 
                 {/* Huy hiệu uy tín thực tế & Social Proof */}
@@ -824,22 +885,28 @@ export default function CorridorSearchBoard({
                   </p>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
                     <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
-                    <span>Sáng nay đã có 3 chuyến xe ghép kết nối thành công trên trục QL13</span>
+                    <span>
+                      {isFutureSearch
+                        ? 'Điều phối viên liên hệ xác nhận giờ đón cụ thể với bạn trong 5–10 phút'
+                        : 'Sáng nay đã có 3 chuyến xe ghép kết nối thành công trên trục QL13'}
+                    </span>
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 🛡️ ƯU TIÊN #2 (DƯỚI CÙNG - SAFETY NET): THAM KHẢO XE KHÁCH LIÊN TỈNH KHI CẦN GẤP */}
-          {verifiedHotlines.length > 0 && (
+          {/* 🛡️ ƯU TIÊN #2 (DƯỚI CÙNG - SAFETY NET): THAM KHẢO XE KHÁCH LIÊN TỈNH KHI CẦN GẤP
+              CHỈ HIỆN KHI TÌM CHUYẾN HÔM NAY / ĐI LIỀN. Nếu tìm cho ngày mai/tương lai, ẩn toàn bộ
+              bảng hotline xe khách để ưu tiên 100% gom khách cho chủ xe CarMate. */}
+          {!isFutureSearch && verifiedHotlines.length > 0 && (
             <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-2">
-              <div className="flex items-center justify-between px-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <Bus className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Bảng tra cứu xe tuyến cố định & limousine QL13 (Tham khảo)</span>
+                  <Bus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>CarMate chưa có xe chạy liền trong 30–60 phút tới. Bạn hãy tham khảo nhà xe dự phòng để kịp giờ:</span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-slate-400 font-mono shrink-0">
                   {verifiedHotlines.length} nhà xe
                 </span>
               </div>

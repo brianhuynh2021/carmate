@@ -127,13 +127,20 @@ export default function CorridorTripCard({
             </span>
           )}
 
-          {trip.isServiceVehicle ? (
-            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-300/50">
-              🚕 Biển vàng
+          {trip.assurance?.level === 'GUARANTEED' || trip.tier === 'GUARANTEED' || trip.isVerified || trip.isHostCar ? (
+            <span
+              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/50"
+              title="Chuyến cố định hàng tuần của chủ xe quen, khởi hành đúng giờ"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>Xe nhà chạy định kỳ</span>
             </span>
           ) : (
-            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-500/10 text-[#0071e3] dark:text-blue-300 border border-blue-200/60">
-              🚗 Xe cá nhân
+            <span
+              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50"
+              title="Xe đi ghép tự do giữa hai cá nhân, chia sẻ chi phí lăn bánh"
+            >
+              <span>Xe tiện chuyến</span>
             </span>
           )}
         </div>

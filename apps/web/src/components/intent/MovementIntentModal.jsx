@@ -42,12 +42,33 @@ const DEFAULT_CORRIDOR = getDefaultCorridor();
 export const SAIGON_HUB_IDS = getEndpointHubs(DEFAULT_CORRIDOR.id, 'a').map((h) => h.id);
 export const BINH_PHUOC_HUB_IDS = getEndpointHubs(DEFAULT_CORRIDOR.id, 'b').map((h) => h.id);
 
+function resolveSlotId(input) {
+  if (!input) return '05:00-07:00';
+  if (TIME_SLOTS.some((s) => s.id === input && s.id !== 'all')) return input;
+  const hour = parseInt(String(input).split(':')[0], 10);
+  if (!isNaN(hour)) {
+    if (hour < 5) return '03:00-05:00';
+    if (hour < 7) return '05:00-07:00';
+    if (hour < 9) return '07:00-09:00';
+    if (hour < 11) return '09:00-11:00';
+    if (hour < 13) return '11:00-13:00';
+    if (hour < 15) return '13:00-15:00';
+    if (hour < 17) return '15:00-17:00';
+    if (hour < 19) return '17:00-19:00';
+    if (hour < 21) return '19:00-21:00';
+    return '21:00-23:00';
+  }
+  return '05:00-07:00';
+}
+
 export default function MovementIntentModal({
   isOpen,
   onClose,
   initialRole = 'passenger',
   initialOriginHubId = null,
   initialDestHubId = null,
+  initialDate = null,
+  initialTimeSlot = null,
   currentUser = null,
   onSuccess,
   onShowToast
@@ -114,17 +135,38 @@ export default function MovementIntentModal({
       return `${dd}/${mm}`;
     };
 
-    return [
+    const base = [
       { value: fmt(today), title: 'Hôm nay', subDate: fmtSub(today) },
       { value: fmt(tomorrow), title: 'Ngày mai', subDate: fmtSub(tomorrow) },
       { value: fmt(dayAfter), title: 'Ngày mốt', subDate: fmtSub(dayAfter) }
     ];
-  }, []);
 
-  const [date, setDate] = useState(() => dateOptions[1].value); // Mặc định ngày mai
-  const [timeSlot, setTimeSlot] = useState('05:00-07:00'); // Giờ cao điểm sáng sớm
+    if (initialDate && !base.some((b) => b.value === initialDate)) {
+      const d = new Date(initialDate);
+      if (!isNaN(d.getTime())) {
+        base.push({
+          value: initialDate,
+          title: fmtSub(d),
+          subDate: `${d.getFullYear()}`
+        });
+      }
+    }
+    return base;
+  }, [initialDate]);
+
+  const [date, setDate] = useState(() => initialDate || dateOptions[1].value); // Mặc định ngày được chọn hoặc ngày mai
+  const [timeSlot, setTimeSlot] = useState(() => resolveSlotId(initialTimeSlot)); // Giờ cao điểm hoặc slot được truyền
   const [isRecurring, setIsRecurring] = useState(false); // Lên lịch lặp lại hàng tuần (T2-T6)
   const [recurringDays, setRecurringDays] = useState(['T2', 'T3', 'T4', 'T5', 'T6']);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialDate) setDate(initialDate);
+      if (initialTimeSlot) setTimeSlot(resolveSlotId(initialTimeSlot));
+      if (initialOriginHubId) setOriginHubId(initialOriginHubId);
+      if (initialDestHubId) setDestHubId(initialDestHubId);
+    }
+  }, [isOpen, initialDate, initialTimeSlot, initialOriginHubId, initialDestHubId]);
 
   const toggleRecurringDay = (dayKey) => {
     setRecurringDays((prev) => {
