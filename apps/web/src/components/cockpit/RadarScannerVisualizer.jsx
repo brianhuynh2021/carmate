@@ -85,7 +85,7 @@ const QL13_STATIONS = [
 
 export default function RadarScannerVisualizer({
   isReceivingGuests = true,
-  speed = 78,
+  speed = 0,
   simDistanceKm = 3.4,
   _nextStationName = 'Cây xăng Tân Khai (QL13)',
   onTriggerApproach
@@ -137,7 +137,9 @@ export default function RadarScannerVisualizer({
           </div>
           <div className="px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-right font-mono">
             <span className="text-[9px] uppercase text-emerald-400 block">VẬN TỐC TAPLO</span>
-            <span className="text-xs font-black text-cyan-300">{speed} km/h</span>
+            <span className="text-xs font-black text-cyan-300">
+              {speed === 0 ? '0 km/h (Dừng)' : `${speed} km/h`}
+            </span>
           </div>
         </div>
       </div>
@@ -280,7 +282,7 @@ export default function RadarScannerVisualizer({
             </div>
           </div>
           <span className="mt-1 px-2 py-0.5 rounded-full bg-slate-900/95 border border-cyan-400/50 text-[9px] font-mono font-black text-cyan-300 uppercase tracking-tight shadow-md whitespace-nowrap">
-            XE BẠN
+            {speed > 0 ? `XE BẠN · ${speed} KM/H` : 'XE BẠN · ĐANG DỪNG'}
           </span>
         </div>
       </div>

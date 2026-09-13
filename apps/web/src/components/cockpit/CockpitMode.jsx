@@ -115,7 +115,32 @@ export default function CockpitMode({
   // Trạng thái chung của Cockpit Taplo
   const [isReceivingGuests, setIsReceivingGuests] = useState(true);
   const [seatsAvailable, setSeatsAvailable] = useState(2);
-  const [speed] = useState(78);
+  const [speed, setSpeed] = useState(0);
+
+  // Đọc vận tốc thực tế từ GPS phần cứng thiết bị (Live Speedometer)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) return;
+    let watchId = null;
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (pos?.coords?.speed != null && !isNaN(pos.coords.speed) && pos.coords.speed > 0) {
+            setSpeed(Math.round(pos.coords.speed * 3.6));
+          } else {
+            setSpeed(0);
+          }
+        },
+        () => {
+          setSpeed(0);
+        },
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 }
+      );
+    } catch {}
+    return () => {
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
+
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [boardedCount, setBoardedCount] = useState(0);
   const [showLegalShield, setShowLegalShield] = useState(false);
@@ -233,7 +258,7 @@ export default function CockpitMode({
   const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
 
   // Giả lập khoảng cách tiếp cận trạm (km)
-  const [simDistanceKm, setSimDistanceKm] = useState(6.2);
+  const [simDistanceKm, setSimDistanceKm] = useState(3.4);
 
   // 1. SCREEN WAKE LOCK API (Giữ màn hình luôn sáng trên giá đỡ Taplo)
   useEffect(() => {
@@ -1294,12 +1319,16 @@ export default function CockpitMode({
                     <span className="text-sm sm:text-base font-bold text-slate-200 block truncate">
                       {t('cockpitUi.s035')}
                     </span>
-                    <span className="text-xs text-amber-400 font-mono">Cách ~{simDistanceKm} km</span>
+                    <span className="text-xs text-amber-400 font-mono">
+                      {speed > 0 ? `Cách ~${simDistanceKm} km` : 'Trạm đón đầu hành lang'}
+                    </span>
                   </div>
                   <div className="text-right shrink-0 ml-2">
                     <span className="text-xs uppercase text-slate-400 font-mono block">{t('cockpitUi.s036')}</span>
                     <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-400">{speed}</span>
-                    <span className="text-[10px] text-slate-400 font-mono block">km/h</span>
+                    <span className="text-[10px] text-slate-400 font-mono block">
+                      {speed === 0 ? 'km/h (Dừng)' : 'km/h'}
+                    </span>
                   </div>
                 </div>
               </div>
