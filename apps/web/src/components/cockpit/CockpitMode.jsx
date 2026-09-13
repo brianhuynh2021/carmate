@@ -1106,12 +1106,22 @@ export default function CockpitMode({
                 </div>
               </div>
 
-              <div
-                className={`px-5 py-2.5 rounded-2xl font-black text-sm font-mono uppercase tracking-wider shrink-0 ${
-                  isReceivingGuests ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-white'
-                }`}
-              >
-                {isReceivingGuests ? 'BẬT' : 'TẮT'}
+              {/* NÚT TOGGLE ON/OFF CHUẨN APPLE HIG */}
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-xs sm:text-sm font-mono font-black tracking-wider uppercase text-slate-300">
+                  {isReceivingGuests ? 'ON' : 'OFF'}
+                </span>
+                <div
+                  className={`w-14 h-8 sm:w-16 sm:h-9 rounded-full p-1 transition-colors duration-200 ease-in-out flex items-center ${
+                    isReceivingGuests ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+                      isReceivingGuests ? 'translate-x-6 sm:translate-x-7' : 'translate-x-0'
+                    }`}
+                  />
+                </div>
               </div>
             </button>
 
