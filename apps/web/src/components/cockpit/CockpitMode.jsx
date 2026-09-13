@@ -1038,7 +1038,7 @@ export default function CockpitMode({
             <div className="flex items-center gap-2">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <h1 className="text-base sm:text-lg font-black tracking-wide uppercase font-mono text-emerald-400">
-                COCKPIT MODE · {initialCorridor.toUpperCase()}
+                TAPLO CHỦ XE · {initialCorridor.toUpperCase()}
               </h1>
             </div>
             <p className="text-xs text-slate-400 font-medium flex items-center gap-2">
