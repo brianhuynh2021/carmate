@@ -92,3 +92,6 @@ export const trackViewTrip = (tripId, route) => trackEvent('view_trip', { tripId
 export const trackInitiateBooking = (tripId, seats) => trackEvent('initiate_booking', { tripId, seats });
 export const trackOpenZalo = (tripId, role, route) => trackEvent('open_zalo', { tripId, role, route });
 export const trackDriverConfirm = (bookingId, tripId) => trackEvent('driver_confirm', { bookingId, tripId });
+export const trackViewBusDetail = (operator, meta = {}) => trackEvent('click_view_bus_detail', { operator, ...meta });
+export const trackCallBus = (operator, hotline, meta = {}) => trackEvent('click_call_bus', { operator, hotline, ...meta });
+export const trackBusSheetCarMateCta = (operator, meta = {}) => trackEvent('click_bus_sheet_carmate_cta', { operator, ...meta });

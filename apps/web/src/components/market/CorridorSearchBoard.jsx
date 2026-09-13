@@ -42,6 +42,11 @@ import api from '../../api/client.js';
 import { CarMateBadge } from '../ui/Logo.jsx';
 import CorridorTripCard from './CorridorTripCard.jsx';
 import InstantBookingModal from '../modals/InstantBookingModal.jsx';
+import {
+  trackViewBusDetail,
+  trackCallBus,
+  trackBusSheetCarMateCta
+} from '../../utils/analytics.js';
 
 const ROLE_KEY = 'carmate_last_movement_role';
 const CORRIDOR_KEY = 'carmate_last_corridor';
@@ -915,8 +920,18 @@ export default function CorridorSearchBoard({
                 {verifiedHotlines.map((h) => (
                   <div
                     key={h.id}
-                    onClick={() => setSelectedDetailHotline(h)}
-                    className="w-full min-h-[48px] px-3.5 py-2 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/15 hover:border-[#0071e3]/40 dark:hover:border-[#0071e3]/40 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] flex items-center justify-between gap-2 text-left transition-all duration-150 cursor-pointer shadow-2xs group"
+                    onClick={() => {
+                      trackViewBusDetail(h.operator, {
+                        hotline: h.hotline,
+                        corridor: corridor.id,
+                        fromHubId,
+                        toHubId,
+                        timeSlot: selectedChip?.timeSlot,
+                        dayOffset: selectedChip?.dayOffset
+                      });
+                      setSelectedDetailHotline(h);
+                    }}
+                    className="w-full min-h-[48px] px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/15 hover:border-[#0071e3]/50 dark:hover:border-[#0071e3]/50 hover:bg-blue-50/20 dark:hover:bg-blue-500/[0.03] flex items-center justify-between gap-2 text-left transition-all duration-150 cursor-pointer shadow-2xs group"
                   >
                     {/* Trái: Tên nhà xe • Tần suất */}
                     <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -929,23 +944,15 @@ export default function CorridorSearchBoard({
                       </p>
                     </div>
 
-                    {/* Phải: Giá vé + Text link số điện thoại */}
-                    <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 text-xs font-bold font-mono text-slate-700 dark:text-slate-200 block leading-tight">
+                    {/* Phải: Giá vé + Cột "Chi tiết >" */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 text-[11px] sm:text-xs font-bold font-mono text-slate-700 dark:text-slate-200 block leading-tight">
                         {h.priceRef || '100.000đ - 160.000đ'}
                       </span>
-                      {h.hotline ? (
-                        <a
-                          href={`tel:${String(h.hotline).replace(/\s/g, '')}`}
-                          className="px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-[#0071e3] dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-mono font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                          title={`Gọi ${h.operator}`}
-                        >
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          <span>{h.hotline}</span>
-                        </a>
-                      ) : (
-                        <span className="text-[11px] text-slate-400">Xem lộ trình</span>
-                      )}
+                      <div className="flex items-center gap-0.5 text-xs font-semibold text-slate-500 group-hover:text-[#0071e3] dark:group-hover:text-blue-400 transition-colors">
+                        <span className="hidden sm:inline">Chi tiết</span>
+                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0071e3] group-hover:translate-x-0.5 transition-all" />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1058,28 +1065,36 @@ export default function CorridorSearchBoard({
         document.body
       )}
 
-      {/* MODAL XEM KỸ CHI TIẾT NHÀ XE (REACT PORTAL z-[9999]) */}
+      {/* ── BOTTOM SHEET CHI TIẾT LỘ TRÌNH NHÀ XE & ĐỐI CHIẾU CARMATE (REACT PORTAL z-[9999]) ── */}
       {selectedDetailHotline && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-[9999] bg-black/65 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-fade-in"
           onClick={() => setSelectedDetailHotline(null)}
         >
           <div
-            className="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-3xl p-5 shadow-2xl border border-slate-300 dark:border-white/20 space-y-4"
+            className="w-full max-w-lg bg-white dark:bg-[#1c1c1e] rounded-t-[32px] sm:rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-200/80 dark:border-white/15 space-y-4 max-h-[92vh] sm:max-h-[85vh] overflow-y-auto anim-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header modal */}
+            {/* Thanh gạt trang trí chuẩn Bottom Sheet trên Mobile */}
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto -mt-1 mb-2 sm:hidden" />
+
+            {/* Header Bottom Sheet */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-9 h-9 rounded-2xl bg-slate-500/15 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-2xs">
                   <Bus className="w-5 h-5" />
                 </span>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                    {selectedDetailHotline.operator}
-                  </h3>
-                  <p className="text-[11px] text-slate-400 font-mono">
-                    {selectedDetailHotline.corridor || 'Tuyến QL13'}
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
+                      {selectedDetailHotline.operator}
+                    </h3>
+                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300/50">
+                      {selectedDetailHotline.type === 'limousine' ? 'Limousine VIP' : selectedDetailHotline.type === 'airport_limousine' ? 'Limousine Sân Bay' : 'Xe tuyến cố định'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-mono">
+                    {selectedDetailHotline.corridor || 'Tuyến QL13'} · {selectedDetailHotline.frequency}
                   </p>
                 </div>
               </div>
@@ -1092,7 +1107,25 @@ export default function CorridorSearchBoard({
               </button>
             </div>
 
-            {/* Chi tiết tuyến xe */}
+            {/* 1. Nút gọi tổng đài xe khách to, rõ ràng */}
+            {selectedDetailHotline.hotline ? (
+              <a
+                href={`tel:${String(selectedDetailHotline.hotline).replace(/\s/g, '')}`}
+                onClick={() => {
+                  trackCallBus(selectedDetailHotline.operator, selectedDetailHotline.hotline, {
+                    corridor: corridor.id,
+                    fromHubId,
+                    toHubId
+                  });
+                }}
+                className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white text-sm font-bold shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Phone className="w-4 h-4" />
+                <span>Gọi tổng đài đặt vé: {selectedDetailHotline.hotline}</span>
+              </a>
+            ) : null}
+
+            {/* 2. Chi tiết tuyến xe khách */}
             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/15 space-y-2.5 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Loại phương tiện:</span>
@@ -1109,22 +1142,25 @@ export default function CorridorSearchBoard({
               </div>
 
               <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500 shrink-0">Lộ trình trục đường:</span>
-                <span className="font-medium text-slate-900 dark:text-white text-right">
-                  {selectedDetailHotline.coverage}
+                <span className="text-slate-500 shrink-0">Điểm đón QL13:</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200 text-right">
+                  {selectedDetailHotline.note || selectedDetailHotline.coverage}
                 </span>
               </div>
 
               <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500 shrink-0">Điểm đón khách QL13:</span>
-                <span className="font-medium text-amber-700 dark:text-amber-300 text-right">
-                  {selectedDetailHotline.note}
+                <span className="text-slate-500 shrink-0">Điểm trả tại TP.HCM:</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200 text-right">
+                  Bến xe Miền Đông / Bến xe An Sương / VP Nhà xe
+                  <span className="block text-[10px] text-amber-600 dark:text-amber-400 font-normal mt-0.5">
+                    (Thường không trả sâu vào bệnh viện, cần đi thêm taxi)
+                  </span>
                 </span>
               </div>
 
               <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500">Giá tham khảo:</span>
-                <span className="text-base font-bold font-mono text-slate-900 dark:text-white">
+                <span className="text-slate-500">Giá vé tham khảo:</span>
+                <span className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white">
                   {selectedDetailHotline.priceRef}
                 </span>
               </div>
@@ -1141,7 +1177,7 @@ export default function CorridorSearchBoard({
                         <span className="text-slate-600 dark:text-slate-300 font-medium truncate pr-2">
                           {f.route}
                         </span>
-                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 shrink-0">
                           {f.price}
                         </span>
                       </div>
@@ -1151,14 +1187,56 @@ export default function CorridorSearchBoard({
               )}
             </div>
 
-            {/* Nút gọi tổng đài */}
-            <a
-              href={`tel:${String(selectedDetailHotline.hotline).replace(/\s/g, '')}`}
-              className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35 hover:-translate-y-0.5 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <Phone className="w-4 h-4" />
-              <span>Gọi đặt chỗ tổng đài ({selectedDetailHotline.hotline})</span>
-            </a>
+            {/* 3. Khung gợi ý CarMate (Soft Comparison - Đối chiếu tự nhiên & Nhã nhặn) */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50/80 via-white to-emerald-50/60 dark:from-blue-950/25 dark:via-[#1c1c1e] dark:to-emerald-950/20 border border-blue-500/25 dark:border-emerald-500/30 space-y-2.5 shadow-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#0071e3]/10 dark:bg-[#0071e3]/20 text-[#0071e3] flex items-center justify-center shrink-0">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                  Gợi ý tiện chuyến từ CarMate.vn
+                </p>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 pl-8">
+                <div className="flex items-start gap-1.5">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓ Chi phí:</span>
+                  <span>
+                    Chỉ <strong className="text-slate-900 dark:text-white font-mono">{formatVND(carmateSegmentPrice)}</strong> / ghế (tiết kiệm ~65.000đ so với xe khách/limousine)
+                  </span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓ Điểm trả:</span>
+                  <span>
+                    Trả thẳng cổng Cụm BV Chợ Rẫy / ĐH Y Dược / Ung Bướu / Hàng Xanh (không tốn thêm tiền taxi từ bến xe)
+                  </span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓ Uy tín:</span>
+                  <span>Chuyến xe nhà định kỳ · 0đ cọc · Phụ xăng trực tiếp khi lên xe</span>
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    trackBusSheetCarMateCta(selectedDetailHotline.operator, {
+                      corridor: corridor.id,
+                      fromHubId,
+                      toHubId,
+                      carmatePrice: carmateSegmentPrice
+                    });
+                    setSelectedDetailHotline(null);
+                    onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot);
+                  }}
+                  className="w-full h-11 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Báo giờ tôi muốn đi · Chỉ {formatVND(carmateSegmentPrice)}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>,
         document.body
