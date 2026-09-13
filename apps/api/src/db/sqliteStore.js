@@ -14,7 +14,8 @@ import {
   isTripExpired,
   getTomorrowISO,
   DEFAULT_TRUST_RULES,
-  sanitizeTimeLabel
+  sanitizeTimeLabel,
+  VERIFIED_HOTLINES
 } from '@carmate/shared';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1698,12 +1699,18 @@ export function getTransitDirectory() {
     const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('transit_directory');
     if (row && row.value) {
       const parsed = JSON.parse(row.value);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch (e) {
     console.warn('[SQLite DB] Lỗi đọc transit_directory:', e.message);
   }
-  return [];
+  return [...VERIFIED_HOTLINES];
+}
+
+export function resetTransitDirectory() {
+  const database = getRawDB();
+  database.prepare('DELETE FROM key_values WHERE key = ?').run('transit_directory');
+  return [...VERIFIED_HOTLINES];
 }
 
 /** Lưu danh bạ nhà xe (Admin cập nhật). */

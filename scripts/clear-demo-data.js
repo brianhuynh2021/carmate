@@ -15,6 +15,7 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { VERIFIED_HOTLINES } from '@carmate/shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -101,10 +102,26 @@ if (fs.existsSync(DB_PATH)) {
     console.log(`✅ Đã xóa ${supportResult.changes} tin nhắn hỗ trợ CSKH.`);
   } catch {}
 
+  // 9. Bảo toàn và đồng bộ danh bạ nhà xe kiểm chứng (Verified Transit Directory)
+  try {
+    const existing = db.prepare('SELECT value FROM key_values WHERE key = ?').get('transit_directory');
+    const existingList = existing ? JSON.parse(existing.value) : [];
+    if (!Array.isArray(existingList) || existingList.length === 0) {
+      db.prepare("INSERT OR REPLACE INTO key_values (key, value) VALUES ('transit_directory', ?)").run(
+        JSON.stringify(VERIFIED_HOTLINES)
+      );
+      console.log(`✅ Đã bảo toàn & nạp danh bạ ${VERIFIED_HOTLINES.length} nhà xe QL13 kiểm chứng.`);
+    } else {
+      console.log(`✅ Đã bảo toàn ${existingList.length} nhà xe hiện có trong danh bạ hệ thống.`);
+    }
+  } catch (e) {
+    console.warn('Lưu ý bảo toàn danh bạ nhà xe:', e.message);
+  }
+
   db.close();
 }
 
-// 9. Cập nhật file JSON đồng bộ rỗng (bảo toàn tài khoản admin)
+// 10. Cập nhật file JSON đồng bộ rỗng (bảo toàn tài khoản admin)
 if (fs.existsSync(JSON_PATH)) {
   const cleanJson = {
     version: '1.0.0',
