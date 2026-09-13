@@ -845,7 +845,7 @@ export default function CorridorSearchBoard({
                   className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Báo giờ tôi muốn đi · Chỉ {formatVND(carmateSegmentPrice)}</span>
+                  <span>Đặt xe tiện chuyến · Chỉ {formatVND(carmateSegmentPrice)}</span>
                 </button>
               </div>
             </div>
@@ -864,7 +864,7 @@ export default function CorridorSearchBoard({
                 <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
                   {isFutureSearch
                     ? `Chuyến ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'} đang có 2–3 chủ xe quen chuẩn bị mở chuyến. Đăng điểm đón ngay để giữ chỗ giá ${formatVND(carmateSegmentPrice)}!`
-                    : 'Để lại điểm đón trên QL13 & giờ bạn muốn đi. 80% chủ xe tiện chuyến sẽ nhận chuyến khi bạn đăng trước 1–2 tiếng.'}
+                    : 'Để lại điểm đón trên QL13 & khung giờ đón thuận tiện. 80% chủ xe tiện chuyến sẽ nhận chuyến khi đặt trước 1–2 tiếng.'}
                 </p>
               </div>
               <div className="relative pt-0.5 space-y-2.5">
@@ -877,7 +877,7 @@ export default function CorridorSearchBoard({
                   <span>
                     {isFutureSearch
                       ? `Đăng điểm đón ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'} · Giữ chỗ ${formatVND(carmateSegmentPrice)}`
-                      : `Báo giờ tôi muốn đi · Chỉ ${formatVND(carmateSegmentPrice)}`}
+                      : `Đặt xe tiện chuyến · Chỉ ${formatVND(carmateSegmentPrice)}`}
                   </span>
                 </button>
 
@@ -1259,7 +1259,7 @@ export default function CorridorSearchBoard({
                   className="w-full h-12 sm:h-13 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white text-xs sm:text-sm font-extrabold uppercase tracking-wide shadow-lg shadow-emerald-600/30 hover:shadow-xl hover:shadow-emerald-500/40 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 fill-white shrink-0" />
-                  <span>ĐĂNG GIỜ TÔI MUỐN ĐI · CHỈ {formatVND(carmateSegmentPrice)}</span>
+                  <span>ĐẶT XE TIỆN CHUYẾN · CHỈ {formatVND(carmateSegmentPrice)}</span>
                 </button>
                 <p className="text-[10.5px] text-slate-500 dark:text-slate-400 italic">
                   (Chủ xe nhận chuyến sẽ liên hệ lại sau 5–10 phút · Hủy tự do)
