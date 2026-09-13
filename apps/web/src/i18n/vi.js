@@ -86,15 +86,17 @@ export default {
     adminBadge: 'Quản trị viên',
     profileGarage: 'Hồ sơ & Garage của tôi',
     noVehicle: 'Chưa có xe',
-    myTrips: 'Bài đăng của tôi',
+    myTrips: 'Chuyến đi & Lịch hẹn của tôi',
+    postTripShortcut: 'Đăng chuyến đón khách',
+    driverShortcutBadge: 'Chủ xe',
     adminPortal: 'Cổng Quản Trị Hệ Thống',
-    safetyPolicy: 'Quy chế an toàn 100%',
+    safetyPolicy: 'Quy chế & Chính sách an toàn',
     language: 'Ngôn ngữ',
-    support: 'Hỗ trợ bạn',
+    support: 'Hỗ trợ qua Telegram',
     logout: 'Đăng xuất',
     adminAccount: 'Tài khoản Quản trị',
     protected: 'Bảo vệ',
-    deleteAccount: 'Xóa tài khoản vĩnh viễn'
+    deleteAccount: 'Yêu cầu xoá tài khoản'
   },
 
   postMenu: {

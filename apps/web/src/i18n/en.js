@@ -86,15 +86,17 @@ export default {
     adminBadge: 'Administrator',
     profileGarage: 'My Profile & Garage',
     noVehicle: 'No vehicle',
-    myTrips: 'My Listings',
+    myTrips: 'My Trips & Bookings',
+    postTripShortcut: 'Offer empty seats',
+    driverShortcutBadge: 'Host',
     adminPortal: 'Admin Portal',
     safetyPolicy: 'Safety & Policies',
     language: 'Language',
-    support: 'Support',
+    support: 'Telegram Support',
     logout: 'Log out',
     adminAccount: 'Admin Account',
     protected: 'Protected',
-    deleteAccount: 'Delete Account Permanently'
+    deleteAccount: 'Request account deletion'
   },
 
   postMenu: {
