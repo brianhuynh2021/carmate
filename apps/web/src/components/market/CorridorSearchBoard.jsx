@@ -45,7 +45,8 @@ import TripDetailBottomSheet from './TripDetailBottomSheet.jsx';
 import InstantBookingModal from '../modals/InstantBookingModal.jsx';
 import {
   trackViewBusDetail,
-  trackBusSheetCarMateCta
+  trackBusSheetCarMateCta,
+  trackCallBus
 } from '../../utils/analytics.js';
 
 const ROLE_KEY = 'carmate_last_movement_role';
@@ -1305,10 +1306,19 @@ export default function CorridorSearchBoard({
                       <span className="text-slate-500 dark:text-slate-400 shrink-0 font-medium">Liên hệ:</span>
                       <a
                         href={`tel:${selectedDetailHotline.hotline.replace(/\s+/g, '')}`}
-                        className="inline-flex items-center gap-1.5 font-mono font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline tracking-wide transition-colors"
+                        onClick={() => {
+                          trackCallBus(selectedDetailHotline.operator, selectedDetailHotline.hotline, {
+                            corridor: corridor?.id,
+                            fromHubId,
+                            toHubId,
+                            frequency: selectedDetailHotline.frequency || ''
+                          });
+                          onShowToast?.('Chúc bạn chuyến đi thuận lợi! Lần tới cần xe đón tận nhà, nhớ mở CarMate nhé.');
+                        }}
+                        className="inline-flex items-center gap-1.5 font-mono font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:underline tracking-wide transition-colors"
                         title={`Bấm gọi ngay: ${selectedDetailHotline.hotline}`}
                       >
-                        <Phone className="w-3 h-3 shrink-0" />
+                        <Phone className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
                         <span>{selectedDetailHotline.hotline}</span>
                       </a>
                     </div>
