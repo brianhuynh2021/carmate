@@ -417,6 +417,7 @@ export default function CorridorSearchBoard({
   // ── State xem chi tiết chuyến xe (Progressive Disclosure) ─────────────────
   const [selectedDetailTrip, setSelectedDetailTrip] = useState(null);
   const [selectedDetailHotline, setSelectedDetailHotline] = useState(null);
+  const [showAllBuses, setShowAllBuses] = useState(false);
   const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
 
   // Quản lý tải kết quả tìm kiếm:
@@ -1188,7 +1189,7 @@ export default function CorridorSearchBoard({
               </div>
 
               <div className="space-y-1.5">
-                {verifiedHotlines.map((h) => {
+                {(showAllBuses ? verifiedHotlines : verifiedHotlines.slice(0, 2)).map((h) => {
                   const cleanBusName = getCleanOperatorName(h);
                   const busSubtext = getBusSubtext(h);
                   const busDropoff = getBusDropoff(h);
@@ -1235,6 +1236,22 @@ export default function CorridorSearchBoard({
                     </div>
                   );
                 })}
+
+                {/* Nút bấm nhẹ Xem thêm / Thu gọn (Bảo toàn màn hình gọn gàng, tập trung CarMate) */}
+                {verifiedHotlines.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllBuses(!showAllBuses)}
+                    className="w-full py-2 px-3 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-[0.99]"
+                  >
+                    <span>
+                      {showAllBuses
+                        ? 'Thu gọn'
+                        : `Xem thêm ${verifiedHotlines.length - 2} nhà xe khác`}
+                    </span>
+                    <span className="text-xs">{showAllBuses ? '▴' : '▾'}</span>
+                  </button>
+                )}
               </div>
             </div>
           )}
