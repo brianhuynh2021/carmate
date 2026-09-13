@@ -1114,7 +1114,7 @@ export default function CorridorSearchBoard({
                   onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
                   className="w-full py-2.5 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0062c4] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5"
                 >
-                  <span>⚡ Báo giờ bạn muốn đi · {formatVND(carmateSegmentPrice)}</span>
+                  <span>⚡ Thời gian bạn muốn đi · {formatVND(carmateSegmentPrice)}</span>
                 </button>
               </div>
             </div>
