@@ -12,7 +12,6 @@ import {
   LogOut,
   ChevronDown,
   HelpCircle,
-  Trash2,
   Lock,
   Users,
   MessageCircle,
@@ -70,7 +69,6 @@ export default function Header({
   onLogout,
   onOpenAi,
   onOpenProfile,
-  onOpenDeleteAccount,
   bookedEscrows = [],
   onSelectBooking,
   onSelectTrip,
@@ -512,20 +510,6 @@ export default function Header({
                         <LogOut className="w-4 h-4 text-slate-400 shrink-0" />
                         <span>{t('userMenu.logout')}</span>
                       </button>
-
-                      {currentUser.role !== 'admin' && onOpenDeleteAccount && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsUserMenuOpen(false);
-                            onOpenDeleteAccount();
-                          }}
-                          className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center gap-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer active:scale-[0.99]"
-                        >
-                          <Trash2 className="w-4 h-4 text-rose-500 shrink-0" />
-                          <span>{t('userMenu.deleteAccount')}</span>
-                        </button>
-                      )}
                     </div>
                   </div>
                 </>

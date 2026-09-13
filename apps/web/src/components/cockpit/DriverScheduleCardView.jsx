@@ -79,7 +79,9 @@ export default function DriverScheduleCardView({
   onSwitchToRadar,
   onShowToast,
   onOpenQuickPostTrip,
-  onChangeVehicle: _onChangeVehicle
+  onChangeVehicle: _onChangeVehicle,
+  activeDriverTrip: externalActiveDriverTrip,
+  onRefreshActiveTrip: externalRefreshActiveTrip
 }) {
   const { t } = useI18n();
   // NGUỒN SỰ THẬT DUY NHẤT LÀ MÁY CHỦ.
@@ -89,6 +91,7 @@ export default function DriverScheduleCardView({
 
   // Chuyến xe active thật trên Sàn Tuyến Tiện Chuyến
   const [activeDriverTrip, setActiveDriverTrip] = useState(null);
+  const displayedActiveTrip = externalActiveDriverTrip !== undefined ? externalActiveDriverTrip : activeDriverTrip;
   const [, setIsLoadingActiveTrip] = useState(true);
 
   const driverPhone = (() => {
@@ -427,7 +430,7 @@ export default function DriverScheduleCardView({
       </div>
 
       {/* ── THẺ QUẢN LÝ CHUYẾN XE ĐANG NHẬN KHÁCH TRỰC TIẾP (ACTIVE TRIP DASHBOARD) ── */}
-      {activeDriverTrip && (
+      {displayedActiveTrip && (
         <div className="space-y-2 animate-fade-in">
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono font-bold uppercase text-emerald-400 flex items-center gap-1.5">
@@ -436,14 +439,14 @@ export default function DriverScheduleCardView({
             </span>
           </div>
           <ActiveTripCard
-            trip={activeDriverTrip}
+            trip={displayedActiveTrip}
             onLockTrip={(tripId, newStatus) => {
               setActiveDriverTrip((prev) => (prev ? { ...prev, status: newStatus } : null));
             }}
             onCancelTrip={() => {
               setActiveDriverTrip(null);
             }}
-            onRefresh={reloadActiveTrip}
+            onRefresh={externalRefreshActiveTrip || reloadActiveTrip}
             onShowToast={onShowToast}
           />
         </div>
