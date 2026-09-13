@@ -1020,7 +1020,12 @@ export default function App() {
               onDelay={setDelayRecord}
               onComplete={handleCompleteTrip}
               onReview={setReviewRecord}
-              onFindTrip={() => setActiveTab('market')}
+              onFindTrip={(record) => {
+                if (record && (record.from || record.to)) {
+                  showToast(`Đang tìm xe trên tuyến ${record.from || ''} ➔ ${record.to || ''}`);
+                }
+                setActiveTab('market');
+              }}
               onOpenChat={(id, opts) => handleOpenInbox(id, opts)}
             />
           </div>

@@ -383,6 +383,77 @@ export async function sendNewBookingTelegramAlert({
 }
 
 /**
+ * Bắn thông báo tức thì khi khách hủy chỗ:
+ * [HỦY ĐẶT CHỖ] 1 ghế trống đã mở lại
+ * • Hành khách: 098***3750
+ * • Chuyến đi: 16:00 ngày 14/09
+ * • Tuyến: [Tân Khai] ➔ [Chợ Rẫy]
+ * • Lý do: Đổi lịch khám bệnh
+ * • Trạng thái xe: Đã tự động mở lại ghế trống trên hệ thống
+ */
+export async function sendBookingCancelledTelegramAlert({
+  targetTelegramId,
+  passengerPhone,
+  seats = 1,
+  timeSlot = '',
+  date = '',
+  from = '',
+  to = '',
+  reason = '',
+  req = null
+}) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const isMockToken = token?.startsWith('mock_');
+  if (!isMockToken) {
+    if (
+      req?.isAutomatedTest ||
+      req?.headers?.['x-carmate-testing'] === 'true' ||
+      process.env.CARMATE_DISABLE_TELEGRAM === 'true' ||
+      process.env.NODE_ENV === 'test'
+    ) {
+      return false;
+    }
+  }
+
+  const cleanDigits = String(passengerPhone || '').replace(/\D/g, '');
+  const maskedPhone = cleanDigits.length >= 8
+    ? `${cleanDigits.slice(0, 3)}***${cleanDigits.slice(-4)}`
+    : '098***xxxx';
+
+  const timePart = timeSlot ? ` lúc ${escapeHtml(timeSlot)}` : '';
+  const datePart = date ? ` ngày ${escapeHtml(date)}` : '';
+
+  let text = `❌ <b>[HỦY ĐẶT CHỖ] ${seats} ghế trống đã mở lại</b>\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `• <b>Hành khách:</b> <code>${escapeHtml(maskedPhone)}</code>\n`;
+  text += `• <b>Chuyến đi:</b>${timePart}${datePart}\n`;
+  if (from || to) {
+    text += `• <b>Lộ trình:</b> [${escapeHtml(from || 'Điểm đón')}] ➔ [${escapeHtml(to || 'Điểm đến')}]\n`;
+  }
+  if (reason) {
+    text += `• <b>Lý do hủy:</b> <i>${escapeHtml(reason)}</i>\n`;
+  }
+  text += `• <b>Trạng thái:</b> Đã tự động khôi phục <b>+${seats} chỗ trống</b> lên hệ thống.\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `💡 <i>Mô hình 0đ cọc – Tự động mở ghế cho người khác cùng tuyến đặt ngay!</i>`;
+
+  if (targetTelegramId) {
+    sendTelegramMessage(text, {
+      chatId: targetTelegramId,
+      parseMode: 'HTML',
+      disableNotification: false,
+      req
+    }).catch((e) => console.warn('[Telegram Cancel Alert] Gửi chủ xe thất bại:', e.message));
+  }
+
+  return sendTelegramMessage(text, {
+    parseMode: 'HTML',
+    disableNotification: false,
+    req
+  });
+}
+
+/**
  * Hàm hỗ trợ Unit Testing dọn dẹp cache
  */
 export function _resetDeduplicationCache() {

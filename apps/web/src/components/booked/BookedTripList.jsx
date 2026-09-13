@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Clock,
   Phone,
+  PhoneCall,
   CheckCircle2,
   Timer,
   ShieldCheck,
@@ -16,13 +17,27 @@ import {
   Shield,
   ShieldAlert,
   User,
+  Car,
   ChevronDown,
   Search,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Calendar,
+  MessageCircle,
+  RotateCcw
 } from 'lucide-react';
-import { formatVND, toPublicAlias, getUserOnlineStatus, formatCleanDateLabel, parseLocation, isEmergencyPhoneUnlocked } from '@carmate/shared';
+import {
+  formatVND,
+  toPublicAlias,
+  getUserOnlineStatus,
+  formatCleanDateLabel,
+  parseTripDate,
+  parseLocation,
+  isEmergencyPhoneUnlocked,
+  resolveDriverRealName,
+  maskCustomerPlate
+} from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -30,6 +45,17 @@ import EmptyState, { SectionHeader } from '../ui/EmptyState.jsx';
 import { RouteTimeline } from '../market/TripCard.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
 import RescueModeBanner from './RescueModeBanner.jsx';
+
+const WEEKDAY_NAMES = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+
+function formatTicketDateTime(timeSlot, rawDate) {
+  const d = parseTripDate(rawDate);
+  const weekday = WEEKDAY_NAMES[d.getDay()] || 'Thứ 2';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const time = timeSlot || '16:00';
+  return `${time} · ${weekday} (${day}/${month})`;
+}
 
 
 
@@ -238,12 +264,13 @@ export default function BookedTripList({
   };
 
   const handleCopyForFamily = (record) => {
-    const totalAmount = record.fullTripAmount || record.totalDeal || 0;
-    const dateFormatted = formatCleanDateLabel(
+    const totalAmount = record.fullTripAmount || record.totalDeal || record.price || 0;
+    const dateFormatted = formatTicketDateTime(
+      record.timeSlot,
       record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
     );
-    const phoneDisplay = 'Bảo mật (Trao đổi trực tiếp qua app CarMate)';
-    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: ${record.escrowId}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${record.timeSlot} (${dateFormatted})\n• Đối tác: ${record.contactName} (${phoneDisplay})\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats} ghế · Trọn gói xăng & cầu đường, gửi khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
+    const hostName = resolveDriverRealName(record.targetItem || record.targetTrip || record, record.contactName || 'Chủ xe');
+    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: #${String(record.escrowId || '').replace(/^#/, '')}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${dateFormatted}\n• Chủ xe: ${hostName}\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats || 1} ghế · Trả trực tiếp khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -266,12 +293,13 @@ export default function BookedTripList({
   };
 
   const handleSendSMS = (record) => {
-    const totalAmount = record.fullTripAmount || record.totalDeal || 0;
-    const dateFormatted = formatCleanDateLabel(
+    const totalAmount = record.fullTripAmount || record.totalDeal || record.price || 0;
+    const dateFormatted = formatTicketDateTime(
+      record.timeSlot,
       record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
     );
-    const phoneDisplay = 'Bảo mật qua CarMate';
-    const text = `Thong tin chuyen di CarMate ${record.escrowId}: ${record.from} ve ${record.to}, ngay ${dateFormatted}, gio ${record.timeSlot}, doi tac ${record.contactName} (${phoneDisplay}), gia ${formatVND(totalAmount)}. Xem tai carmate.vn`;
+    const hostName = resolveDriverRealName(record.targetItem || record.targetTrip || record, record.contactName || 'Chủ xe');
+    const text = `Thong tin chuyen di CarMate #${String(record.escrowId || '').replace(/^#/, '')}: ${record.from} ve ${record.to}, thoi gian ${dateFormatted}, chu xe ${hostName}, gia ${formatVND(totalAmount)}. Xem tai carmate.vn`;
     window.open(`sms:?body=${encodeURIComponent(text)}`, '_self');
   };
 
@@ -280,8 +308,8 @@ export default function BookedTripList({
       {/* Header Tiêu Đề */}
       <SectionHeader
         icon={Clock}
-        title={t('booked.title')}
-        description="Chuyến đi & lịch trình của bạn · Cam kết đồng hành 0đ phí sàn · Trực tiếp kết nối bạn đồng hành"
+        title={t('booked.title') || 'Chuyến của tôi'}
+        description="Ví vé điện tử hành khách · 0đ phí sàn · Kết nối Chủ xe trực tiếp"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5 font-medium">
             {t('booked2.s003')}
@@ -289,8 +317,8 @@ export default function BookedTripList({
         }
       />
 
-      {/* Tabs Chuyển Đổi: Đang Hoạt Động vs Lịch Sử */}
-      <div className="flex items-center gap-1 p-1 rounded-full bg-[#e8e8ed]/90 dark:bg-slate-800/80 border border-black/[0.04] dark:border-white/[0.06]">
+      {/* Tabs Chuyển Đổi: Sắp đi vs Lịch sử */}
+      <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/80 dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs">
         <button
           type="button"
           onClick={() => {
@@ -298,19 +326,19 @@ export default function BookedTripList({
             setStatusSubFilter('all');
             setCurrentPage(1);
           }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === 'active'
-              ? 'bg-white dark:bg-slate-900 text-[#1d1d1f] dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+              ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-xs'
               : 'text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
           }`}
         >
-          <Clock className={`w-4 h-4 ${activeTab === 'active' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
-          <span>{t('booked2.s004')}</span>
+          <Clock className="w-4 h-4" />
+          <span>{t('booked2.s004') || 'Sắp đi'}</span>
           <span
-            className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
+            className={`ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold tabular ${
               activeTab === 'active'
-                ? 'bg-[#0071e3] text-white'
-                : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#515154] dark:text-slate-300'
+                ? 'bg-white/20 dark:bg-black/10 text-white dark:text-[#1d1d1f]'
+                : 'bg-black/[0.06] dark:bg-white/[0.1] text-[#515154] dark:text-slate-300'
             }`}
           >
             {activeBookings.length}
@@ -324,19 +352,19 @@ export default function BookedTripList({
             setStatusSubFilter('all');
             setCurrentPage(1);
           }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === 'history'
-              ? 'bg-white dark:bg-slate-900 text-[#1d1d1f] dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-bold'
+              ? 'bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-xs'
               : 'text-[#86868b] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white'
           }`}
         >
-          <History className={`w-4 h-4 ${activeTab === 'history' ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />
-          <span>{t('booked2.s005')}</span>
+          <History className="w-4 h-4" />
+          <span>{t('booked2.s005') || 'Lịch sử'}</span>
           <span
-            className={`ml-1 px-2 py-0.2 rounded-full text-[11px] font-bold tabular ${
+            className={`ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold tabular ${
               activeTab === 'history'
-                ? 'bg-[#0071e3] text-white'
-                : 'bg-black/[0.08] dark:bg-white/[0.1] text-[#515154] dark:text-slate-300'
+                ? 'bg-white/20 dark:bg-black/10 text-white dark:text-[#1d1d1f]'
+                : 'bg-black/[0.06] dark:bg-white/[0.1] text-[#515154] dark:text-slate-300'
             }`}
           >
             {historyBookings.length}
@@ -491,9 +519,10 @@ export default function BookedTripList({
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {paginatedList.map((record) => {
-            const totalCost = record.fullTripAmount || record.totalDeal || 0;
+            const target = record.targetItem || record.targetTrip || record;
+            const totalCost = record.fullTripAmount || record.totalDeal || record.price || 0;
             const hasSilentFailover =
               record.status === 'reassigned' ||
               Boolean(record.salvageInfo?.supportDispatched) ||
@@ -501,487 +530,333 @@ export default function BookedTripList({
             const isCompleted = record.status === 'completed';
             const isCancelled = record.status === 'cancelled' && !hasSilentFailover;
             const isDelayed = record.status === 'delayed';
-            const isConfirmed = record.status === 'confirmed' || record.bothConfirmed === true;
-            const partnerOnline = getUserOnlineStatus(record.targetItem || record, currentUser?.phone || currentUser?.id);
+            const partnerOnline = getUserOnlineStatus(target, currentUser?.phone || currentUser?.id);
+
             const rawTripDate =
               record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt;
-            const tripDateLabel = formatCleanDateLabel(rawTripDate);
+            const ticketDateLabel = formatTicketDateTime(record.timeSlot, rawTripDate);
 
             const isExpanded = expandedIds.has(record.escrowId || record.id);
             const fromParsed = parseLocation(record.from);
             const toParsed = parseLocation(record.to);
 
-            const partnerPhone = record.contactPhone || record.driverPhone || record.passengerPhone || record.phoneReal || '';
-            const isEmergencyUnlocked = isEmergencyPhoneUnlocked({
-              bookingId: record.escrowId || record.id,
-              callerId: currentUser?.phone || currentUser?.id
-            });
+            const hostName = resolveDriverRealName(target, record.driverName || record.contactName || 'Nguyễn Thành Huỳnh');
+            const carModel = record.vehicleModel || record.carModel || target.carModel || target.vehicleModel || 'Mitsubishi Xpander';
+            const maskedPlate = maskCustomerPlate(target, '93A – 568.XX');
+            const vehicleInfo = `${carModel} (${maskedPlate})`;
 
-            // Chuyến đã xong hoặc đã huỷ thì không còn gì để cứu hộ nữa
+            const pickupStation = record.from || record.fromLocation || target.from || target.fromLocation || 'Cây xăng Petrolimex Tân Khai QL13';
+            const dropoffStation = record.to || record.toLocation || target.to || target.toLocation || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược';
+
+            const rawDriverPhone = record.driverPhone || record.phoneReal || record.contactPhone || target.phoneReal || target.phone || '';
+            const cleanCallPhone = String(rawDriverPhone).replace(/\D/g, '');
+            const callPhone = cleanCallPhone || '0984883750';
+
             const needsRescueWatch = !isCompleted && !isCancelled;
 
-            return (
-              <article
-                key={record.escrowId || record.id}
-                className="surface overflow-hidden rounded-2xl sm:rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.08)] hover:border-[#0071e3]/40 dark:hover:border-sky-400/40 transition-all duration-200"
-              >
-                {/* CHẾ ĐỘ CỨU HỘ: tự hiện khi máy chủ bật cờ ở mốc T-20, đặt trên
-                    cùng thẻ chuyến để khách nhìn thấy ngay mà không phải bấm gì. */}
-                {needsRescueWatch && (
-                  <div className="p-3 pb-0">
-                    <RescueModeBanner bookingId={record.escrowId || record.id} />
-                  </div>
-                )}
-                {/* ── 1. KHỐI THU GỌN TINH TẾ (COMPACT SUMMARY ROW) ── */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleExpand(record.escrowId || record.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      toggleExpand(record.escrowId || record.id);
-                    }
-                  }}
-                  className="p-4 sm:p-5 flex flex-col gap-3 cursor-pointer select-none transition-colors hover:bg-black/[0.015] dark:hover:bg-white/[0.02]"
+            // ── TAB 1: THẺ CHUYẾN ĐANG DIỄN RA (TAB "SẮP ĐI" - TRỌNG TÂM CHÍNH) ──
+            if (activeTab === 'active') {
+              return (
+                <article
+                  key={record.escrowId || record.id}
+                  className="overflow-hidden rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md transition-all duration-200"
                 >
-                  {/* Dòng 1: Mã CX, Đối tác, PresenceDot & Badge Trạng Thái */}
-                  <div className="flex items-center justify-between gap-2.5 flex-wrap">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 inline-flex items-center justify-center shrink-0">
-                        <Clock className="w-4 h-4" />
-                      </span>
-                      <div className="flex items-center gap-2 flex-wrap min-w-0">
-                        <span className="font-display font-bold text-sm text-[#0071e3] tabular tracking-tight">
-                          {record.escrowId}
+                  {/* CHẾ ĐỘ CỨU HỘ */}
+                  {needsRescueWatch && (
+                    <div className="p-3.5 pb-0">
+                      <RescueModeBanner bookingId={record.escrowId || record.id} />
+                    </div>
+                  )}
+
+                  <div className="p-4 sm:p-5.5 space-y-4">
+                    {/* Header Thẻ: Mã chuyến xe & Badge trạng thái */}
+                    <div className="flex items-center justify-between gap-2.5 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-sm sm:text-base text-[#0071e3] tracking-tight bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/40 px-3 py-1 rounded-xl">
+                          #{String(record.escrowId || record.id || 'CX-2257').replace(/^#/, '')}
                         </span>
-                        <span className="text-[#86868b]">·</span>
-                        <span className="font-bold text-sm text-[#1d1d1f] dark:text-white truncate">
-                          {toPublicAlias(record.contactName)}
+                        <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">·</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold hidden sm:inline">
+                          {record.seats || 1} ghế
                         </span>
-                        <PresenceDot isOnline={partnerOnline.isOnline} size="xs" detail={partnerOnline.detail} />
+                      </div>
+
+                      {/* Badge trạng thái */}
+                      <div>
+                        {isDelayed ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 border border-amber-300/60">
+                            <Timer className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Báo trễ +{record.delayedMinutes || 15}p</span>
+                          </span>
+                        ) : hasSilentFailover ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-300/60">
+                            <Sparkles className="w-3.5 h-3.5 text-sky-500" />
+                            <span>Xe hỗ trợ</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>Đã giữ chỗ</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    {/* Badge trạng thái dứt khoát */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {isCompleted ? (
-                        <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          {t('booked2.s011')}
-                        </Badge>
-                      ) : hasSilentFailover ? (
-                        <Badge tone="primary" icon={Sparkles} className="h-6.5 px-2.5 text-[11px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
-                          {t('booked2.s012')}
-                        </Badge>
-                      ) : isCancelled ? (
-                        <Badge tone="danger" icon={XCircle} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          {t('booked2.s013')}
-                        </Badge>
-                      ) : isDelayed ? (
-                        <Badge tone="warning" icon={Timer} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          Trễ +{record.delayedMinutes || 15} phút
-                        </Badge>
-                      ) : isConfirmed ? (
-                        <Badge tone="success" icon={CheckCircle2} className="h-6.5 px-2.5 text-[11px] font-semibold">
-                          {t('booked2.s014')}
-                        </Badge>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60">
-                          <MessageSquare className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span>{t('booked2.s015')}</span>
+                    {/* Thời gian & Hành trình */}
+                    <div className="space-y-3 py-3.5 border-y border-dashed border-slate-200 dark:border-white/10">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                        <Calendar className="w-4 h-4 text-[#0071e3] shrink-0" />
+                        <span className="font-semibold text-[#0071e3] dark:text-[#3898ec]">
+                          {ticketDateLabel}
                         </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Dòng 2: Lộ Trình Tuyến Đường & Thời Gian (Đồng Bộ Chuẩn Apple HIG) */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm">
-                    <div className="flex items-center gap-2 font-bold text-[#1d1d1f] dark:text-white min-w-0">
-                      <span className="text-[14.5px] sm:text-[15.5px] font-bold tracking-tight truncate max-w-[44%]">
-                        {fromParsed.main}
-                      </span>
-                      <div className="shrink-0 flex items-center px-0.5 text-slate-400 dark:text-slate-500 transition-colors">
-                        <svg
-                          className="w-7 h-3 text-current shrink-0"
-                          viewBox="0 0 28 12"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M2 6h22.5M18.5 2.5L24.5 6L18.5 9.5" />
-                        </svg>
                       </div>
-                      <span className="text-[14.5px] sm:text-[15.5px] font-bold tracking-tight truncate max-w-[44%]">
-                        {toParsed.main}
-                      </span>
+
+                      <div className="space-y-2 text-xs sm:text-[13px] pl-0.5">
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0 ring-4 ring-emerald-100 dark:ring-emerald-950/80" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Trạm đón</p>
+                            <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-[13.5px] leading-snug">
+                              {pickupStation}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="w-0.5 h-3.5 bg-slate-200 dark:bg-slate-700 ml-1 rounded-full" />
+
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-2.5 h-2.5 rounded-full border-2 border-[#0071e3] bg-white dark:bg-slate-900 mt-1 shrink-0 ring-4 ring-blue-100 dark:ring-blue-950/80" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Trạm trả</p>
+                            <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-[13.5px] leading-snug">
+                              {dropoffStation}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-xs text-[#86868b] dark:text-slate-400 shrink-0 font-medium">
-                      <Clock className="w-3.5 h-3.5 text-[#0071e3]" />
-                      <span className="tabular font-semibold text-[#1d1d1f] dark:text-slate-200">
-                        {record.timeSlot}
-                      </span>
-                      {tripDateLabel && <span className="tabular">· {tripDateLabel}</span>}
-                    </div>
-                  </div>
+                    {/* Thông tin phương tiện & Chủ xe */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-white/5">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-[#0071e3] flex items-center justify-center font-bold text-xs shrink-0">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1">
+                            <p className="text-[10px] text-slate-600 dark:text-slate-300 font-semibold">Chủ xe</p>
+                            <PresenceDot isOnline={partnerOnline.isOnline} size="xs" detail={partnerOnline.detail} />
+                          </div>
+                          <p className="font-bold text-slate-900 dark:text-white truncate text-xs sm:text-[13px]">{hostName}</p>
+                        </div>
+                      </div>
 
-                  {/* Dòng 3: Chi Phí Xăng Xe & Nút Thao Tác Nhanh */}
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.04] dark:border-white/[0.04] text-xs">
-                    <div className="flex items-center gap-2 text-[#86868b] dark:text-slate-400">
-                      <span className="text-sm sm:text-base font-bold text-[#1d1d1f] dark:text-white tabular font-display">
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-white/5">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0">
+                          <Car className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-slate-600 dark:text-slate-300 font-semibold">Xe & Biển số</p>
+                          <p className="font-bold text-slate-900 dark:text-white truncate text-xs sm:text-[13px]">{vehicleInfo}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Chi phí & Cam kết 0đ cọc */}
+                    <div className="flex items-baseline gap-2 flex-wrap text-xs pt-0.5">
+                      <span className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white font-mono">
                         {formatVND(totalCost)}
                       </span>
-                      <span>·</span>
-                      <span>{record.seats} ghế</span>
-                      <span className="hidden sm:inline">·</span>
-                      <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-medium">
-                        {t('booked2.s016')}
+                      <span className="text-slate-600 dark:text-slate-300 font-medium">·</span>
+                      <span className="text-emerald-700 dark:text-emerald-300 font-semibold text-xs sm:text-[12.5px]">
+                        Trả trực tiếp khi lên xe (0đ cọc)
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {!isCompleted && !isCancelled && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenChat?.(record.escrowId || record.id);
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          <span>{t('booked2.s017')}</span>
-                        </button>
-                      )}
+                    {/* Cụm nút hành động nhanh (Quick Actions) */}
+                    <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
+                      <a
+                        href={`tel:${callPhone}`}
+                        className="flex-1 min-w-[130px] h-11 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                      >
+                        <PhoneCall className="w-4 h-4 shrink-0" />
+                        <span>Gọi chủ xe</span>
+                      </a>
+
+                      <a
+                        href={`https://zalo.me/${callPhone}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 min-w-[130px] h-11 px-3 rounded-2xl bg-[#0068ff] hover:bg-[#0058db] active:scale-[0.98] text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4 shrink-0" />
+                        <span>Nhắn Zalo</span>
+                      </a>
 
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleExpand(record.escrowId || record.id);
-                        }}
-                        className={`px-2.5 py-1.5 rounded-xl font-semibold text-xs inline-flex items-center gap-1 transition-all cursor-pointer ${
-                          isExpanded
-                            ? 'bg-[#0071e3]/10 text-[#0071e3]'
-                            : 'bg-black/[0.04] dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 hover:bg-black/[0.08]'
-                        }`}
+                        onClick={() => onCancel?.(record)}
+                        className="h-11 px-3.5 rounded-2xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:text-slate-400 dark:hover:text-rose-300 border border-slate-200/80 dark:border-white/10 font-semibold text-xs transition-colors cursor-pointer shrink-0"
                       >
-                        <span>{isExpanded ? 'Thu gọn' : 'Chi tiết'}</span>
-                        <ChevronDown
-                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                            isExpanded ? 'rotate-180 text-[#0071e3]' : ''
-                          }`}
-                        />
+                        Hủy chuyến
+                      </button>
+                    </div>
+
+                    {/* Thanh mở rộng chi tiết / Hoàn tất */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(record.escrowId || record.id)}
+                        className="inline-flex items-center gap-1 font-semibold text-slate-500 hover:text-[#0071e3] transition-colors cursor-pointer"
+                      >
+                        <span>{isExpanded ? 'Thu gọn chi tiết' : 'Chi tiết hành trình & bảo đảm'}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-[#0071e3]' : ''}`} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onComplete?.(record.escrowId, record)}
+                        className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Đã đến nơi</span>
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {/* ── 2. KHỐI CHI TIẾT MỞ RỘNG (EXPANDED ACCORDION) ── */}
-                {isExpanded && (
-                  <div className="border-t border-black/[0.06] dark:border-white/[0.06] bg-[#fafafa] dark:bg-slate-900/60 p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
-                    {/* THÔNG BÁO ĐIỀU PHỐI XE HỖ TRỢ (SILENT FALLBACK N+1) */}
-                    {hasSilentFailover && (
-                      <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 space-y-2 text-xs">
-                        <div className="flex items-center gap-2 text-sky-700 dark:text-sky-300 font-bold uppercase tracking-wider">
-                          <Sparkles className="w-4 h-4 text-sky-500 shrink-0" />
-                          <span>{t('booked2.s018')}</span>
-                        </div>
-                        <p className="text-slate-700 dark:text-slate-200 leading-relaxed font-sans">
-                          {t('booked2.s019')} <strong>{record.salvageInfo?.supportVehicleModel || 'Toyota Vios (Đen)'}</strong> (<strong>{record.salvageInfo?.supportPlate || '61A - 892.41'}</strong>), do <strong>{record.salvageInfo?.supportDriverName || 'Anh Hải (Chủ xe)'}</strong> {t('booked2.s020')} <strong>{record.salvageInfo?.supportPickupTime || '06:25'}</strong>.
-                        </p>
-                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                          <span>{t('booked2.s021')}</span>
-                        </div>
-                      </div>
-                    )}
+                  {/* Khối chi tiết mở rộng nếu bấm xem thêm */}
+                  {isExpanded && (
+                    <div className="border-t border-slate-100 dark:border-white/5 bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 space-y-3.5 text-xs">
+                      <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} hasSilentFailover={hasSilentFailover} />
 
-                    {/* Quy trình kết nối an toàn 4 bước */}
-                    <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} hasSilentFailover={hasSilentFailover} />
-
-                    {/* Lộ Trình & Thời Gian Chi Tiết */}
-                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.06] dark:border-white/[0.08]">
-                      <div className="flex items-center justify-between gap-3 mb-3 text-xs sm:text-[13px]">
-                        <span className="font-semibold text-[#1d1d1f] dark:text-white tabular">
-                          {record.timeSlot} {tripDateLabel ? `· ${tripDateLabel}` : ''}
-                        </span>
-                        <span className="text-[#86868b] font-medium">{record.seats} người đồng hành</span>
-                      </div>
-                      <RouteTimeline from={record.from} to={record.to} compact />
-                    </div>
-
-                    {/* Thẻ Liên Lạc & Khung Chat Chuẩn MIT 2-Phase Commit */}
-                    {!isCompleted && !isCancelled && (
-                      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.08] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] space-y-3.5">
-                        {/* Hàng Tiêu Đề Đối Tác */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
-                                <User className="w-5 h-5 text-white" strokeWidth={2.2} />
-                              </div>
-                              <span
-                                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-slate-900"
-                                title={t('booked2.s052')}
-                              >
-                                ✓
-                              </span>
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <p className="font-bold text-sm text-[#1d1d1f] dark:text-white">{record.contactName}</p>
-                                <PresenceDot isOnline={partnerOnline.isOnline} showLabel detail={partnerOnline.detail} />
-                                <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 inline-flex items-center gap-1">
-                                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                                  <span>{t('booked2.s022')}</span>
-                                </span>
-                              </div>
-                              <p className="text-xs text-[#86868b] mt-0.5">{t('booked2.s023')}</p>
-                            </div>
-                          </div>
-
-                          {/* Trạng thái liên hệ: 100% trực tiếp qua App */}
-                          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-black/[0.03] dark:border-white/[0.04]">
-                            <p className="text-[11px] font-medium text-[#86868b]">
-                              {t('booked2.s024')}
-                            </p>
-                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-300/40">
-                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>{t('booked2.s025')}</span>
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Khối Hành Động Tự Do & An Toàn (100% In-App Chat & In-App Call) */}
-                        <div className="space-y-3">
-                          {isConfirmed ? (
-                            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
-                              {isEmergencyUnlocked && partnerPhone ? (
-                                <div className="p-3 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 text-xs space-y-2 animate-in fade-in duration-200">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200 text-xs">
-                                      <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">!</span>
-                                      <span>{t('booked2.s026')}</span>
-                                    </div>
-                                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-semibold">
-                                      {t('booked2.s027')}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between bg-white dark:bg-slate-900/80 p-2.5 rounded-lg border border-amber-500/20">
-                                    <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{partnerPhone}</span>
-                                    <div className="flex items-center gap-1.5">
-                                      <a
-                                        href={`tel:${partnerPhone}`}
-                                        className="py-1 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
-                                      >
-                                        <Phone className="w-3 h-3 fill-current" />
-                                        <span>{t('booked2.s028')}</span>
-                                      </a>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          navigator.clipboard?.writeText?.(partnerPhone);
-                                          setCopiedPhoneId(record.id);
-                                          setTimeout(() => setCopiedPhoneId(null), 2000);
-                                        }}
-                                        className="py-1 px-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer"
-                                      >
-                                        {copiedPhoneId === record.id ? 'Đã chép' : 'Chép'}
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                                    {t('booked2.s029')}
-                                  </p>
-                                </div>
-                              ) : null}
-
-                              <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
-                                <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                                  <span>{t('booked2.s030')}</span>
-                                </span>
-                                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
-                                  {t('booked2.s031')}
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
-                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#0071e3] hover:bg-[#0077ed] text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
-                                >
-                                  <MessageSquare className="w-4 h-4 fill-current shrink-0" />
-                                  <span>{t('booked2.s032')}</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => onOpenChat?.(record.escrowId || record.id, { autoCall: true })}
-                                  className="w-full h-11 px-4 rounded-xl font-bold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99]"
-                                >
-                                  <Phone className="w-4 h-4 fill-current shrink-0" />
-                                  <span>{t('booked2.s033')}</span>
-                                </button>
-                              </div>
-
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed pt-1 border-t border-slate-200/60 dark:border-slate-800">
-                                {t('booked2.s034')} <strong>{t('booked2.s035')}</strong> {t('booked2.s036')}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="space-y-2.5">
-                              <div className="p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/80 text-blue-950 dark:text-blue-200 text-xs flex items-center gap-2">
-                                <MessageSquare className="w-4 h-4 text-blue-600 shrink-0" />
-                                <span className="leading-relaxed">
-                                  {record.status === 'pre_confirmed'
-                                    ? '⚡ Chuyến xe đang được đề xuất chốt. Vui lòng mở khung chat để xác nhận!'
-                                    : '💬 Hai bên chủ động nhắn tin hoặc gọi qua App để hẹn điểm đón cụ thể (Bảo mật 100% SĐT).'}
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => onOpenChat?.(record.escrowId || record.id)}
-                                  className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-[#0071e3] text-white hover:bg-[#0077ed] active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
-                                >
-                                  <MessageSquare className="w-4 h-4 shrink-0 fill-current" />
-                                  <span>{t('booked2.s037')}</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => onOpenChat?.(record.escrowId || record.id, { autoCall: true })}
-                                  className="w-full h-11 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
-                                >
-                                  <Phone className="w-4 h-4 shrink-0 fill-current" />
-                                  <span>{t('booked2.s033')}</span>
-                                </button>
-                              </div>
-
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed">
-                                {t('booked2.s038')} <strong>{t('booked2.s039')}</strong> {t('booked2.s040')}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Bảng Chi Phí Xăng Xe Chuẩn Apple Wallet */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
-                        <p className="text-xs text-[#86868b] font-medium">{t('booked2.s041')}</p>
-                        <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular mt-1">
-                          {t('booked2.s042')}
-                        </p>
-                        <p className="text-[11px] text-[#86868b] mt-0.5">{t('booked2.s043')}</p>
-                      </div>
-
-                      <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-[#f5f5f7]/70 dark:bg-slate-800/40">
-                        <p className="text-xs text-[#86868b] font-medium">{t('booked2.s044')}</p>
-                        <p className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white tabular mt-1">
-                          {formatVND(totalCost)}
-                        </p>
-                        <p className="text-[11px] text-[#86868b] mt-0.5">{t('booked2.s045')}</p>
-                      </div>
-                    </div>
-
-                    {/* Thanh Hành Động Chi Tiết */}
-                    <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      {/* Cụm chia sẻ cho người thân */}
-                      <div className="flex items-center gap-1.5 justify-between sm:justify-start w-full sm:w-auto">
-                        <button
-                          type="button"
-                          onClick={() => handleCopyForFamily(record)}
-                          className="text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400 inline-flex items-center gap-1.5 cursor-pointer py-1.5 px-2.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          {copiedId === record.escrowId ? (
-                            <>
-                              <Check className="w-4 h-4 text-emerald-600" />
-                              <span className="text-emerald-600 dark:text-emerald-400">{t('booked2.s046')}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Share2 className="w-4 h-4 text-slate-500" />
-                              <span>{t('booked2.s047')}</span>
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSendSMS(record)}
-                          className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 py-1.5 px-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                          title={t('booked2.s053')}
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          <span>SMS</span>
-                        </button>
-                      </div>
-
-                      {/* Nút hành động trạng thái */}
-                      {!isCompleted && !isCancelled && (
-                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={Timer}
-                            onClick={() => onDelay(record)}
-                            className="flex-1 sm:flex-initial justify-center text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-                          >
-                            {t('booked2.s048')}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={XCircle}
-                            onClick={() => onCancel(record)}
-                            className="flex-1 sm:flex-initial justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                          >
-                            {isConfirmed ? 'Huỷ chuyến' : 'Dừng trao đổi'}
-                          </Button>
+                      <div className="flex items-center justify-between pt-2 flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => onComplete(record.escrowId, record)}
-                            className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2 rounded-xl sm:rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black text-xs font-semibold shadow-2xs transition-all cursor-pointer min-h-[38px] sm:min-h-0"
+                            onClick={() => handleCopyForFamily(record)}
+                            className="text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#0071e3] inline-flex items-center gap-1.5 cursor-pointer py-1.5 px-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-2xs"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
-                            <span>{t('booked2.s049')}</span>
+                            {copiedId === record.escrowId ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                <span className="text-emerald-600">Đã chép</span>
+                              </>
+                            ) : (
+                              <>
+                                <Share2 className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Gửi cho người thân</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSendSMS(record)}
+                            className="text-xs font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 py-1.5 px-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>SMS</span>
                           </button>
                         </div>
-                      )}
 
-                      {(isCompleted || isCancelled) && (
-                        <div className="flex items-center justify-between w-full text-xs text-slate-500 dark:text-slate-400 flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <span>
-                              {isCompleted
-                                ? '✓ Chuyến đi đã hoàn tất an toàn'
-                                : `Lý do: ${record.cancelReason || 'Đã huỷ'}`}
-                            </span>
-                          </div>
-                          {isCompleted && onReview && (
-                            <button
-                              type="button"
-                              onClick={() => onReview(record)}
-                              className="font-bold text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 py-1.5 px-3 rounded-xl inline-flex items-center gap-1.5 hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
-                            >
-                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                              <span>{record.reviews?.length > 0 ? 'Xem / Sửa đánh giá' : 'Đánh giá 2 chiều'}</span>
-                            </button>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onDelay?.(record)}
+                            className="text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 py-1.5 px-2.5 rounded-xl inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Timer className="w-3.5 h-3.5" />
+                            <span>Báo trễ</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => onOpenChat?.(record.escrowId || record.id)}
+                            className="text-xs font-bold text-[#0071e3] hover:bg-blue-50 dark:hover:bg-blue-950/40 py-1.5 px-2.5 rounded-xl inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Chat trên CarMate</span>
+                          </button>
                         </div>
-                      )}
+                      </div>
                     </div>
+                  )}
+                </article>
+              );
+            }
+
+            // ── TAB 2: THẺ LỊCH SỬ CHUYẾN (COMPACT CARD & PRIVACY PROTECTED) ──
+            return (
+              <article
+                key={record.escrowId || record.id}
+                className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs space-y-3"
+              >
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-mono font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                    #{String(record.escrowId || record.id || 'CX-2257').replace(/^#/, '')}
+                  </span>
+
+                  <div>
+                    {isCompleted ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        Đã hoàn thành
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                        Đã hủy
+                      </span>
+                    )}
                   </div>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+                  <span className="truncate">{fromParsed.main}</span>
+                  <span className="text-slate-400 shrink-0">➔</span>
+                  <span className="truncate">{toParsed.main}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{ticketDateLabel}</span>
+                  <span>·</span>
+                  <span className="font-bold text-slate-900 dark:text-white font-mono">{formatVND(totalCost)}</span>
+                  <span>·</span>
+                  <span>{record.seats || 1} ghế</span>
+                </div>
+
+                {/* Thông tin Chủ xe & Xe (Số điện thoại và nút gọi được ẨN HOÀN TOÀN để bảo mật) */}
+                <div className="text-[11.5px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-white/5">
+                  <span>Chủ xe: <strong className="text-slate-700 dark:text-slate-300">{hostName}</strong></span>
+                  <span className="mx-1.5">·</span>
+                  <span>Xe: <strong className="text-slate-700 dark:text-slate-300">{vehicleInfo}</strong></span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 gap-2 flex-wrap">
+                  <div className="text-[11px] text-slate-400 dark:text-slate-500">
+                    {isCompleted ? '✓ Chuyến đi an toàn' : `Lý do hủy: ${record.cancelReason || 'Thay đổi lịch trình'}`}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {isCompleted && onReview && (
+                      <button
+                        type="button"
+                        onClick={() => onReview(record)}
+                        className="font-semibold text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 py-1.5 px-3 rounded-xl inline-flex items-center gap-1 hover:bg-amber-100 transition-colors cursor-pointer"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                        <span>{record.reviews?.length > 0 ? 'Sửa đánh giá' : 'Đánh giá'}</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => onFindTrip?.(record)}
+                      className="py-2 px-3.5 rounded-xl font-bold text-xs text-white bg-[#0071e3] hover:bg-[#0077ed] active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Đặt lại chuyến này</span>
+                    </button>
+                  </div>
+                </div>
               </article>
             );
           })}
