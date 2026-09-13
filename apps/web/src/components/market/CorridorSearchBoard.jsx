@@ -51,6 +51,15 @@ const ROLE_KEY = 'carmate_last_movement_role';
 const CORRIDOR_KEY = 'carmate_last_corridor';
 const WINDOW_KEY = 'carmate_last_departure_window';
 
+/**
+ * ── FEATURE FLAG: BỘ LỌC KHUNG GIỜ (COLD START CRO) ───────────────────
+ * Giai đoạn Cold Start (1-2 xe/ngày): Tắt bộ lọc giờ để tránh bẫy Click-to-Empty.
+ * Khách thấy ngay toàn bộ chuyến sẵn có (hôm nay & ngày mai) mà không bị lọc rớt.
+ * TUYỆT ĐỐI KHÔNG XÓA code chips: Bật lại (true) khi mỗi buổi (Sáng - Trưa - Chiều)
+ * đều có ít nhất 1 chuyến ổn định.
+ */
+export const ENABLE_DEPARTURE_CHIPS = false;
+
 /** Đọc localStorage an toàn (chế độ riêng tư / bị chặn đều không được ném lỗi). */
 function readStore(key, fallback = null) {
   try {
@@ -276,6 +285,7 @@ export default function CorridorSearchBoard({
   // Ngày mai / tương lai có biên độ thời gian lớn -> Ưu tiên 100% gom nhu cầu cho chủ xe,
   // ẩn bảng hotline xe khách để không rò rỉ khách vàng vào tay nhà xe truyền thống.
   const isFutureSearch = useMemo(() => {
+    if (!ENABLE_DEPARTURE_CHIPS) return false;
     if (selectedChip?.dayOffset != null) {
       return selectedChip.dayOffset >= 1;
     }
@@ -301,22 +311,23 @@ export default function CorridorSearchBoard({
   const [matrix, setMatrix] = useState(null);
   const resultsRef = useRef(null);
 
-  const handleSearchNow = useCallback(async () => {
+  const handleSearchNow = useCallback(async (shouldScroll = true) => {
     if (!fromHubId || !toHubId) return;
     setIsSearching(true);
-    setMatrix(null);
     try {
       const res = await api.getTimeSlotMatrix({
         from: fromHubId,
         to: toHubId,
-        timeSlot: selectedChip?.timeSlot || 'all',
+        timeSlot: ENABLE_DEPARTURE_CHIPS ? (selectedChip?.timeSlot || 'all') : 'all',
         seats: 1,
         corridor: corridor.dataKey
       });
       setMatrix(res?.success ? res : null);
-      setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 50);
+      if (shouldScroll) {
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+      }
     } catch {
       setMatrix(null);
     } finally {
@@ -351,10 +362,19 @@ export default function CorridorSearchBoard({
   const [selectedDetailHotline, setSelectedDetailHotline] = useState(null);
   const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
 
-  // Khi người dùng thay đổi trạm hoặc khung giờ, xóa kết quả cũ để yêu cầu bấm Tìm chuyến mới
+  // Quản lý tải kết quả tìm kiếm:
+  // - Ở chế độ Cold Start (!ENABLE_DEPARTURE_CHIPS): Tự động tải chuyến sẵn có ngay khi mở trang
+  //   hoặc khi khách đổi trạm đón/trả, không bắt bấm thêm nút (Zero-Click discovery).
+  // - Khi bật chips (ENABLE_DEPARTURE_CHIPS): Xóa kết quả cũ khi đổi trạm/khung giờ để người dùng bấm tìm.
   useEffect(() => {
-    setMatrix(null);
-  }, [fromHubId, toHubId, chipId, corridorId]);
+    if (!ENABLE_DEPARTURE_CHIPS) {
+      if (fromHubId && toHubId) {
+        handleSearchNow(false);
+      }
+    } else {
+      setMatrix(null);
+    }
+  }, [fromHubId, toHubId, chipId, corridorId, handleSearchNow]);
 
   // Giá chặng chia sẻ chuẩn CarMate (tính toán động theo cự ly thực tế giữa 2 trạm)
   const carmateSegmentPrice = useMemo(() => {
@@ -546,128 +566,135 @@ export default function CorridorSearchBoard({
 
         {/* ── THỜI GIAN KHỞI HÀNH: dữ liệu cấp 1, ngang hàng Nơi đi / Nơi đến ──
             Chip chạm một phát thay cho lịch picker: người đi liên tỉnh thực tế
-            chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm". */}
-        <div className="h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5" />
-        <div className="py-3.5 px-4 sm:py-4 sm:px-5">
-          <label className="flex items-center gap-2 type-label text-slate-400 mb-2.5">
-            <Clock className="w-4 h-4 text-amber-500 shrink-0" />
-            {t('search.departureLabel')}
-          </label>
+            chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm".
+            [FEATURE FLAG COLD START - CRO]: Chỉ ẨN giao diện, TUYỆT ĐỐI KHÔNG XÓA.
+            Tránh bẫy "Click-to-Empty" khi ít nguồn cung (1-2 xe/ngày).
+            Bật lại (ENABLE_DEPARTURE_CHIPS = true) khi mỗi buổi (Sáng-Trưa-Chiều) có ít nhất 1 chuyến ổn định. */}
+        {ENABLE_DEPARTURE_CHIPS && (
+          <>
+            <div className="h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5" />
+            <div className="py-3.5 px-4 sm:py-4 sm:px-5">
+              <label className="flex items-center gap-2 type-label text-slate-400 mb-2.5">
+                <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                {t('search.departureLabel')}
+              </label>
 
-          <div className="grid grid-cols-2 gap-2">
-            {allChips.map((chip) => {
-              const active = chip.id === selectedChip?.id;
-              return (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => {
-                    setChipId(chip.id);
-                    setShowDatePanel(false);
-                    // Học im lặng, không hỏi, không thông báo
-                    if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
-                  }}
-                  aria-pressed={active}
-                  className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
-                    active
-                      ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01] hover:bg-[#0062c4] hover:border-[#0062c4] hover:shadow-lg'
-                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
-                  }`}
-                >
-                  {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
-                      (Android phổ thông) chuỗi "Chiều nay (16h30-18h)" bị cắt cụt
-                      đúng phần giờ — mất chính thông tin quan trọng nhất. */}
-                  <span className="text-xs font-bold truncate max-w-full">{chip.label}</span>
-                  <span
-                    className={`text-[10px] font-mono truncate max-w-full ${
-                      active ? 'text-white/80' : 'text-slate-400'
-                    }`}
-                  >
-                    {chip.hint}
-                  </span>
-                </button>
-              );
-            })}
-
-            {/* Ô thứ 4 luôn là lối mở lịch. Bảng chọn hiện NGAY TẠI CHỖ bên dưới,
-                tuyệt đối không dùng popup hệ thống — tinh thần Cursor: zero blocking. */}
-            <button
-              type="button"
-              onClick={() => setShowDatePanel((v) => !v)}
-              aria-expanded={showDatePanel}
-              className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
-                showDatePanel
-                  ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm hover:bg-slate-800'
-                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{t('search.pickAnotherDay')}</span>
-            </button>
-          </div>
-
-          {/* BẢNG CHỌN NGÀY TẠI CHỖ — mở xuống mượt, không chặn luồng */}
-          {showDatePanel && (
-            <div className="mt-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/20 space-y-2.5 animate-fade-in shadow-2xs">
-              <div>
-                <label
-                  htmlFor="carmate-pick-date"
-                  className="block type-label text-slate-400 mb-1"
-                >
-                  {t('search.pickDate')}
-                </label>
-                <input
-                  id="carmate-pick-date"
-                  type="date"
-                  value={pickDate}
-                  min={todayIso}
-                  onChange={(e) => setPickDate(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/20 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <span className="block type-label text-slate-400 mb-1">
-                  {t('search.pickWindow')}
-                </span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {DEPARTURE_WINDOWS.map((w) => (
+              <div className="grid grid-cols-2 gap-2">
+                {allChips.map((chip) => {
+                  const active = chip.id === selectedChip?.id;
+                  return (
                     <button
-                      key={w.id}
+                      key={chip.id}
                       type="button"
-                      onClick={() => setPickWindow(w.id)}
-                      aria-pressed={w.id === pickWindow}
-                      className={`h-12 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
-                        w.id === pickWindow
-                          ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
-                          : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10'
+                      onClick={() => {
+                        setChipId(chip.id);
+                        setShowDatePanel(false);
+                        // Học im lặng, không hỏi, không thông báo
+                        if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
+                      }}
+                      aria-pressed={active}
+                      className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
+                        active
+                          ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01] hover:bg-[#0062c4] hover:border-[#0062c4] hover:shadow-lg'
+                          : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
                       }`}
                     >
-                      <span>{w.label}</span>
-                      {/* Kèm giờ ngay dưới nhãn: "Sáng" một mình là mơ hồ, mà
-                          các chip phía trên đều có giờ nên thiếu ở đây thành lệch. */}
+                      {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
+                          (Android phổ thông) chuỗi "Chiều nay (16h30-18h)" bị cắt cụt
+                          đúng phần giờ — mất chính thông tin quan trọng nhất. */}
+                      <span className="text-xs font-bold truncate max-w-full">{chip.label}</span>
                       <span
-                        className={`text-[9px] font-mono ${
-                          w.id === pickWindow ? 'text-white/75' : 'text-slate-400'
+                        className={`text-[10px] font-mono truncate max-w-full ${
+                          active ? 'text-white/80' : 'text-slate-400'
                         }`}
                       >
-                        {w.fromHour % 24}h-{w.toHour % 24}h
+                        {chip.hint}
                       </span>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
+
+                {/* Ô thứ 4 luôn là lối mở lịch. Bảng chọn hiện NGAY TẠI CHỖ bên dưới,
+                    tuyệt đối không dùng popup hệ thống — tinh thần Cursor: zero blocking. */}
+                <button
+                  type="button"
+                  onClick={() => setShowDatePanel((v) => !v)}
+                  aria-expanded={showDatePanel}
+                  className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
+                    showDatePanel
+                      ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm hover:bg-slate-800'
+                      : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{t('search.pickAnotherDay')}</span>
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={applyCustomDate}
-                className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold cursor-pointer active:scale-[0.98] transition-all duration-150 shadow-sm"
-              >
-                {t('search.applyDate')}
-              </button>
+              {/* BẢNG CHỌN NGÀY TẠI CHỖ — mở xuống mượt, không chặn luồng */}
+              {showDatePanel && (
+                <div className="mt-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/20 space-y-2.5 animate-fade-in shadow-2xs">
+                  <div>
+                    <label
+                      htmlFor="carmate-pick-date"
+                      className="block type-label text-slate-400 mb-1"
+                    >
+                      {t('search.pickDate')}
+                    </label>
+                    <input
+                      id="carmate-pick-date"
+                      type="date"
+                      value={pickDate}
+                      min={todayIso}
+                      onChange={(e) => setPickDate(e.target.value)}
+                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/20 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="block type-label text-slate-400 mb-1">
+                      {t('search.pickWindow')}
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {DEPARTURE_WINDOWS.map((w) => (
+                        <button
+                          key={w.id}
+                          type="button"
+                          onClick={() => setPickWindow(w.id)}
+                          aria-pressed={w.id === pickWindow}
+                          className={`h-12 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
+                            w.id === pickWindow
+                              ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
+                              : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10'
+                          }`}
+                        >
+                          <span>{w.label}</span>
+                          {/* Kèm giờ ngay dưới nhãn: "Sáng" một mình là mơ hồ, mà
+                              các chip phía trên đều có giờ nên thiếu ở đây thành lệch. */}
+                          <span
+                            className={`text-[9px] font-mono ${
+                              w.id === pickWindow ? 'text-white/75' : 'text-slate-400'
+                            }`}
+                          >
+                            {w.fromHour % 24}h-{w.toHour % 24}h
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={applyCustomDate}
+                    className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold cursor-pointer active:scale-[0.98] transition-all duration-150 shadow-sm"
+                  >
+                    {t('search.applyDate')}
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* ── THANH HÀNH ĐỘNG: tách hẳn khỏi vùng nhập bằng một đường kẻ, đúng
             như khung tìm kiếm của xe liên tỉnh. Ba câu hỏi ở trên, một hành
@@ -676,7 +703,7 @@ export default function CorridorSearchBoard({
         <div className="py-3.5 px-4 sm:py-4 sm:px-5">
           <button
             type="button"
-            onClick={handleSearchNow}
+            onClick={() => handleSearchNow(true)}
             disabled={isSearching || !fromHubId || !toHubId}
             className="group relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0062c4] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/45 hover:-translate-y-0.5 hover:scale-[1.008] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 disabled:hover:scale-100 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-200 cursor-pointer"
           >
@@ -811,7 +838,7 @@ export default function CorridorSearchBoard({
             <div className="flex items-center gap-1.5">
               <img src="/icons/icon-192.png" alt="CarMate" className="w-4 h-4 rounded-md object-contain shrink-0" />
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Chuyến xe xác thực · <span className="text-[#0071e3] font-bold lowercase">carmate.vn</span>
+                {ENABLE_DEPARTURE_CHIPS ? 'Chuyến xe xác thực' : 'Các chuyến sẵn có hôm nay & ngày mai'} · <span className="text-[#0071e3] font-bold lowercase">carmate.vn</span>
               </p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -894,7 +921,7 @@ export default function CorridorSearchBoard({
 
               <div className="relative space-y-1.5">
                 <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  Chưa có xe nổ máy đúng phút này{isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}
+                  Chưa có xe nổ máy đúng phút này{ENABLE_DEPARTURE_CHIPS && isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}
                 </p>
                 <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
                   Đặt lịch trước điểm đón & khung giờ bạn muốn đi dọc QL13, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
