@@ -1172,18 +1172,18 @@ export default function CorridorSearchBoard({
                         });
                         setSelectedDetailHotline(h);
                       }}
-                      className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200/90 dark:border-white/10 shadow-xs hover:border-blue-400 dark:hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:shadow-sm flex flex-col justify-between transition-all duration-150 cursor-pointer group"
+                      className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/15 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5 active:scale-[0.99] flex flex-col justify-between transition-all duration-200 cursor-pointer group select-none"
                     >
                       {/* Hàng 1: Tên nhà xe (Chữ đen đậm text-slate-900 rõ ràng) + Giá vé in đậm + Icon > */}
                       <div className="flex items-center justify-between min-w-0">
-                        <p className="text-xs sm:text-[13.5px] font-bold text-slate-900 dark:text-white truncate group-hover:text-[#0071e3] transition-colors">
+                        <p className="text-xs sm:text-[13.5px] font-bold text-slate-900 dark:text-white truncate">
                           {cleanBusName}
                         </p>
                         <div className="shrink-0 flex items-center gap-1.5 ml-2">
                           <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
                             {shortPrice}
                           </span>
-                          <span className="text-slate-400 group-hover:text-[#0071e3] text-xs font-bold transition-transform group-hover:translate-x-0.5">
+                          <span className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 text-xs font-bold transition-transform group-hover:translate-x-0.5">
                             ›
                           </span>
                         </div>
