@@ -119,11 +119,12 @@ function getBusSubtext(h) {
 
 /** Helper điểm trả khách thực tế (tương phản khách quan với CarMate trả tận cổng) */
 function getBusDropoff(h) {
-  const raw = `${h.operator || ''} ${h.shortName || ''} ${h.note || ''} ${h.coverage || ''}`.toLowerCase();
-  if (/petro/i.test(raw) || /sân bay|tsn|tân bình/i.test(raw)) {
+  const id = (h.id || '').toLowerCase();
+  const name = (h.shortName || h.operator || '').toLowerCase();
+  if (id === 'petro-binh-phuoc' || /petro bình phước/i.test(name)) {
     return 'Trả tại VP Tân Bình / TSN';
   }
-  if (/huy hiếu/i.test(raw) || /vp 220/i.test(raw)) {
+  if (id === 'huy-hieu' || /huy hiếu/i.test(name)) {
     return 'Trả tại VP 220 QL13';
   }
   return 'Trả tại Bến xe Miền Đông';
@@ -624,7 +625,7 @@ export default function CorridorSearchBoard({
   }, [toHub]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-10">
+    <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-28 sm:pb-32">
       {/* ── CHỌN TUYẾN (chỉ hiện khi có từ 2 tuyến trở lên để tối ưu không gian) ── */}
       {corridors.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -1100,28 +1101,17 @@ export default function CorridorSearchBoard({
                 />
               ))}
 
-              {/* ⭐️ ƯU TIÊN #1: NÚT 1-CHẠM [ ĐĂNG NHU CẦU ĐÓN TẠI TRẠM ] (GOM KHÁCH CHO CHỦ XE TIỆN CHUYẾN) */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-50/70 via-white to-emerald-50/50 dark:from-[#1c1c1e] dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-[#0071e3]/20 dark:border-white/10 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-[#0071e3]/10 dark:bg-[#0071e3]/20 text-[#0071e3] flex items-center justify-center shrink-0">
-                    <Sparkles className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                      Chưa tìm thấy giờ phù hợp lịch trình?
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      Gửi điểm đón để chủ xe tiện chuyến chủ động liên hệ (80% nhận khi báo trước).
-                    </p>
-                  </div>
-                </div>
+              {/* ⭐️ ƯU TIÊN #1: GOM NHU CẦU LỆCH GIỜ (ĐẶT LỊCH TRƯỚC - BẢO TOÀN PHỄU CHUYỂN ĐỔI) */}
+              <div className="p-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-dashed border-slate-300 dark:border-white/15 text-center space-y-1.5 shadow-2xs">
+                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                  Chưa tìm thấy giờ phù hợp lịch trình?
+                </p>
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
-                  className="w-full sm:w-auto h-9 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0"
+                  className="w-full py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-transform cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.99]"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Đặt lịch trước</span>
+                  <span>⚡ Báo giờ bạn muốn đi · {formatVND(carmateSegmentPrice)}</span>
                 </button>
               </div>
             </div>
