@@ -875,10 +875,10 @@ export default function CorridorSearchBoard({
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
-                  className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0"
+                  className="w-full sm:w-auto h-9 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Báo giờ tôi cần đi · Chỉ {formatVND(carmateSegmentPrice)}</span>
+                  <span>Đặt lịch trước</span>
                 </button>
               </div>
             </div>
@@ -897,7 +897,7 @@ export default function CorridorSearchBoard({
                   Chưa có xe nổ máy đúng phút này{isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}
                 </p>
                 <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Đăng giờ bạn muốn đi & điểm đón dọc QL13, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
+                  Đặt lịch trước điểm đón & khung giờ bạn muốn đi dọc QL13, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
                 </p>
               </div>
               <div className="relative pt-0.5 space-y-2.5">
@@ -908,7 +908,7 @@ export default function CorridorSearchBoard({
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>
-                    BÁO GIỜ TÔI CẦN ĐI · CHỈ TỪ {formatVND(carmateSegmentPrice)}
+                    ĐẶT LỊCH TRƯỚC · CHỈ TỪ {formatVND(carmateSegmentPrice)}
                   </span>
                 </button>
 
@@ -1225,7 +1225,7 @@ export default function CorridorSearchBoard({
                     <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-200 mb-3.5">
                       {/* Lời nhắn trung thực trạng thái gom cầu */}
                       <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
-                        Chưa có xe nổ máy đúng phút này. Báo giờ bạn muốn đi, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
+                        Chưa có xe nổ máy đúng phút này. Đặt lịch trước, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
                       </div>
 
                       {busPriceData?.isCheaperOrEqual ? (
@@ -1310,7 +1310,7 @@ export default function CorridorSearchBoard({
                       className="w-full py-3 px-4 rounded-xl font-bold text-white text-xs sm:text-sm bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 shadow-md shadow-amber-500/20 transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-amber-500/30 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer group"
                     >
                       <Sparkles className="w-4 h-4 fill-white shrink-0 group-hover:rotate-12 transition-transform duration-300" />
-                      <span>BÁO GIỜ TÔI CẦN ĐI · CHỈ TỪ {formatVND(carmateSegmentPrice)}</span>
+                      <span>ĐẶT LỊCH TRƯỚC · CHỈ TỪ {formatVND(carmateSegmentPrice)}</span>
                     </button>
                   )}
 

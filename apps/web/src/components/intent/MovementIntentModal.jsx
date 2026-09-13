@@ -377,7 +377,7 @@ export default function MovementIntentModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
-                  {role === 'driver' ? t('intent.titleDriver') : 'Báo giờ bạn cần đi ghép'}
+                  {role === 'driver' ? t('intent.titleDriver') : 'Đặt lịch trước'}
                 </h2>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                   role === 'driver'
@@ -390,7 +390,7 @@ export default function MovementIntentModal({
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {role === 'driver'
                   ? t('intent.subtitleDriver')
-                  : 'Chưa có xe nổ máy đúng phút này. Đăng giờ bạn muốn đi, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.'}
+                  : 'Chưa có xe nổ máy đúng phút này. Đặt lịch trước, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.'}
               </p>
             </div>
           </div>
@@ -485,7 +485,7 @@ export default function MovementIntentModal({
             <div className="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-300/80 dark:border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
               <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <p className="leading-relaxed font-medium">
-                Chưa có xe nổ máy đúng phút này. Báo giờ bạn muốn đi, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
+                Chưa có xe nổ máy đúng phút này. Đặt lịch trước, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
               </p>
             </div>
 
