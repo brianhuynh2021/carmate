@@ -156,6 +156,7 @@ export default function CorridorSearchBoard({
   currentUser,
   onOpenStationView,
   onOpenIntentModal,
+  onViewBookedTab,
   onAuthSuccess,
   onShowToast
 }) {
@@ -1424,6 +1425,10 @@ export default function CorridorSearchBoard({
         <InstantBookingModal
           isOpen={Boolean(selectedBookingTrip)}
           onClose={() => setSelectedBookingTrip(null)}
+          onViewBookedTab={() => {
+            setSelectedBookingTrip(null);
+            onViewBookedTab?.();
+          }}
           trip={selectedBookingTrip}
           originHub={matrix?.origin}
           destinationHub={matrix?.destination}

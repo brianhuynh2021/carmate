@@ -1004,6 +1004,7 @@ export default function App() {
               onOpenIntentModal={(targetRole, hubId, destHubId, targetDate, targetTimeSlot) => {
                 handleOpenMovementIntent(targetRole, hubId, destHubId, targetDate, targetTimeSlot);
               }}
+              onViewBookedTab={() => setActiveTab('booked')}
               onAuthSuccess={handleAuthSuccess}
               onShowToast={showToast}
             />

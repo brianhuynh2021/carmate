@@ -67,6 +67,7 @@ function formatTripTimeHeader(departureLabel = '04:30', departureDate = null) {
 export default function InstantBookingModal({
   isOpen,
   onClose,
+  onViewBookedTab,
   trip,
   originHub,
   destinationHub,
@@ -211,6 +212,19 @@ export default function InstantBookingModal({
   );
   const timeHeader = formatTripTimeHeader(trip?.departureLabel, trip?.departureDate);
   const dropoffPoint = destinationHub?.name || trip?.toLocation || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược';
+
+  const handleCompleteAndClose = () => {
+    onClose?.();
+    if (onViewBookedTab) {
+      onViewBookedTab('booked');
+    } else {
+      try {
+        sessionStorage.setItem('carmate_active_tab', 'booked');
+        window.history.pushState(null, '', '/my-trips');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } catch {}
+    }
+  };
 
   if (typeof document === 'undefined') return null;
 
@@ -508,7 +522,7 @@ export default function InstantBookingModal({
 
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleCompleteAndClose}
                   className="flex items-center justify-center w-full h-10 rounded-2xl bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 border border-slate-300/70 dark:border-white/10 font-bold text-xs transition-colors cursor-pointer"
                 >
                   Hoàn tất & Đóng
