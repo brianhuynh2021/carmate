@@ -1095,8 +1095,8 @@ export default function CorridorSearchBoard({
               <div className="relative space-y-1.5">
                 <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
                   {heading === 'a_to_b'
-                    ? 'Chiều về hiện chưa có xe nổ máy đúng phút này'
-                    : `Chưa có xe nổ máy đúng phút này${ENABLE_DEPARTURE_CHIPS && isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}`}
+                    ? 'Chiều về xe chưa lăn bánh thời điểm này'
+                    : `Xe chưa lăn bánh thời điểm này${ENABLE_DEPARTURE_CHIPS && isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}`}
                 </p>
                 <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
                   {heading === 'a_to_b'
