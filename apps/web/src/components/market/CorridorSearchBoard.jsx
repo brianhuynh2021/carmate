@@ -1283,7 +1283,7 @@ export default function CorridorSearchBoard({
             <div className="space-y-1">
               <div className="flex items-center justify-between px-1">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  Thông tin tuyến tra cứu
+                  Thông tin nhà xe
                 </span>
               </div>
               <div className="p-3.5 bg-slate-50/70 hover:bg-white dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border border-slate-200 hover:border-slate-300 dark:border-white/10 dark:hover:border-white/25 hover:shadow-md rounded-2xl transition-all duration-200 cursor-default group/bus shadow-2xs">
@@ -1305,9 +1305,11 @@ export default function CorridorSearchBoard({
                       <span className="text-slate-500 dark:text-slate-400 shrink-0 font-medium">Liên hệ:</span>
                       <a
                         href={`tel:${selectedDetailHotline.hotline.replace(/\s+/g, '')}`}
-                        className="font-mono font-bold text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors tracking-wide"
+                        className="inline-flex items-center gap-1.5 font-mono font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline tracking-wide transition-colors"
+                        title={`Bấm gọi ngay: ${selectedDetailHotline.hotline}`}
                       >
-                        {selectedDetailHotline.hotline}
+                        <Phone className="w-3 h-3 shrink-0" />
+                        <span>{selectedDetailHotline.hotline}</span>
                       </a>
                     </div>
                   )}
@@ -1336,11 +1338,11 @@ export default function CorridorSearchBoard({
                       <div className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                         {hasRealTrips ? (
                           <>
-                            Hôm nay có <strong className="text-slate-900 dark:text-white font-semibold">{carmateDisplayTrips.length} chuyến xe ghép tiện chuyến</strong> cùng tuyến này (đón trả tận nơi, ghé các BV lớn) · <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatVND(firstRealTrip?.pricePerSeat || carmateSegmentPrice)}</span>
+                            Hôm nay có <strong className="text-slate-900 dark:text-white font-semibold">{carmateDisplayTrips.length} chuyến xe ghép</strong> cùng tuyến này (đón trả tận nơi, ghé các BV lớn) · <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{formatVND(firstRealTrip?.pricePerSeat || carmateSegmentPrice)}</span>
                           </>
                         ) : (
                           <>
-                            Tuyến này có xe ghép tiện đường kết nối theo yêu cầu (đón trả tận nơi, ghé các BV lớn) · từ <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatVND(carmateSegmentPrice)}</span>
+                            Tuyến này có xe ghép tiện đường kết nối theo yêu cầu (đón trả tận nơi, ghé các BV lớn) · từ <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{formatVND(carmateSegmentPrice)}</span>
                           </>
                         )}
                       </div>
