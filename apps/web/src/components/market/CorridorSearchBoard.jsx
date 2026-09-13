@@ -1018,31 +1018,26 @@ export default function CorridorSearchBoard({
       {/* ── BẢNG SO SÁNH 3 TẦNG VẬN TẢI (DẠNG LINE LIẾC NGANG) ── */}
       {matrix && (
         <section ref={resultsRef} className="space-y-3 pt-1 animate-fade-in">
-          {/* Header tóm tắt với Logo CarMate.vn & 2 đòn bẩy: Thời gian & Tiền bạc */}
-          <div className="flex flex-wrap items-center justify-between gap-1.5 px-1">
-            <div className="flex items-center gap-1.5">
-              <img src="/icons/icon-192.png" alt="CarMate" className="w-4 h-4 rounded-md object-contain shrink-0" />
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                {ENABLE_DEPARTURE_CHIPS ? 'Chuyến xe xác thực' : 'Các chuyến sẵn có hôm nay & ngày mai'} · <span className="text-[#0071e3] font-bold lowercase">carmate.vn</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] font-bold font-mono text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-400/40 dark:border-amber-500/30 flex items-center gap-1 shadow-2xs">
-                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> Nhanh hơn 35p
-              </span>
-              <span className="text-[10px] font-bold font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-400/40 dark:border-emerald-500/30 shadow-2xs">
-                Tiết kiệm 65%
-              </span>
-            </div>
+          {/* Header tóm tắt: Tiêu đề gọn gàng & Badge Xe nhà xác thực */}
+          <div className="flex items-center justify-between gap-1.5 px-1 pb-0.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 truncate">
+              {carmateDisplayTrips.length > 0 ? `${carmateDisplayTrips.length} chuyến sẵn sàng đi` : 'Chuyến xe hôm nay'}
+            </p>
+            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 shrink-0 whitespace-nowrap bg-emerald-50 dark:bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-300/80 dark:border-emerald-500/30 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Xe nhà xác thực
+            </span>
           </div>
 
           {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE (DANH SÁCH RÚT GỌN SCANNABLE) */}
           {carmateDisplayTrips.length > 0 ? (
             <div className="space-y-2 sm:space-y-2.5">
-              {carmateDisplayTrips.map((trip) => (
+              {carmateDisplayTrips.map((trip, idx) => (
                 <CorridorTripCard
                   key={trip.tripId || trip.id || trip.departureLabel}
                   trip={trip}
+                  isEarliest={idx === 0}
+                  tripIndex={idx}
                   originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
                   destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
                   segmentPrice={carmateSegmentPrice}

@@ -67,8 +67,10 @@ function cleanStationName(raw, fallback = '') {
 export default function CorridorTripCard({
   trip,
   originName = 'Tân Khai (QL13)',
-  destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
+  _destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
   segmentPrice = 165000,
+  isEarliest = false,
+  tripIndex = 0,
   onSelectTrip,
   onBookNow
 }) {
@@ -82,10 +84,23 @@ export default function CorridorTripCard({
   // Phân loại xe
   const totalSeats = Number(trip.totalSeats || trip.capacity || 4);
   const is7Seater = totalSeats >= 6 || /7 chỗ|xpander|innova|veloz|fortuner|carnival/i.test(trip.vehicleModel || '');
-  const vehicleTypeLabel = is7Seater ? 'Xe 7 chỗ gia đình' : 'Xe gia đình tiện chuyến';
+  const vehicleTypeLabel = is7Seater ? 'Xe nhà 7 chỗ' : 'Xe nhà 5 chỗ';
 
-  const fromLabel = cleanStationName(originName, 'Tân Khai');
-  const toLabel = cleanStationName(destName, 'Chợ Rẫy');
+  // Lấy USP thực chiến cho từng chuyến xe (Tufte Data-Ink)
+  const uspLabel = (() => {
+    if (trip.usp) return trip.usp;
+    if (trip.pickupSubtext) return trip.pickupSubtext;
+    if (isEarliest || tripIndex === 0) {
+      const fromClean = cleanStationName(originName, 'Tân Khai');
+      return `Đón trạm ${fromClean}`;
+    }
+    if (tripIndex === 1) {
+      const driverName = trip.driverName || 'Huỳnh';
+      const rating = trip.driverRating ? `★${trip.driverRating}` : '★5.0';
+      return `Chủ xe ${driverName} (${rating})`;
+    }
+    return 'Không nhồi nhét ghế';
+  })();
 
   const handleClick = () => {
     if (isSoldOut) return;
@@ -104,59 +119,81 @@ export default function CorridorTripCard({
           handleClick();
         }
       }}
-      className={`group w-full rounded-2xl border transition-all duration-150 p-3 sm:p-3.5 select-none ${
+      className={`group w-full rounded-2xl border transition-all duration-150 px-3 py-2.5 sm:px-3.5 select-none ${
         isSoldOut
           ? 'bg-slate-50/70 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-70 cursor-not-allowed'
-          : 'bg-white dark:bg-[#1c1c1e] border-slate-200/90 dark:border-white/15 shadow-2xs hover:shadow-md hover:border-[#0071e3]/60 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
+          : isEarliest
+          ? 'bg-blue-50/30 dark:bg-blue-950/20 border-blue-400/60 dark:border-blue-500/40 ring-1 ring-blue-500/20 shadow-2xs hover:shadow-md hover:border-[#0071e3] hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
+          : 'bg-white dark:bg-[#1c1c1e] border-slate-200/90 dark:border-white/15 shadow-2xs hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
       }`}
     >
-      <div className="flex items-center justify-between gap-2.5 sm:gap-3.5 min-w-0">
-        {/* ── CỘT 1: GIỜ CHẠY & BUỔI ── */}
-        <div className="shrink-0 min-w-[68px] sm:min-w-[78px]">
-          <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-tight">
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        {/* ── CỘT 1: GIỜ CHẠY & BUỔI (Khóa cứng w-[70px]) ── */}
+        <div className="w-[70px] shrink-0 text-left">
+          <div className="text-[15px] sm:text-base font-extrabold font-mono text-slate-900 dark:text-white leading-tight">
             {trip.departureLabel || '04:30'}
           </div>
-          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            {timeSubLabel}
+          <div className="mt-0.5">
+            {isEarliest ? (
+              <span className="inline-block text-[8.5px] font-bold px-1.5 py-0.2 rounded-full bg-[#0071e3] text-white tracking-tight">
+                Gần nhất
+              </span>
+            ) : (
+              <span className="text-[10px] sm:text-[10.5px] font-medium text-slate-500 dark:text-slate-400 truncate block">
+                {timeSubLabel}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Vạch chia nhẹ */}
-        <div className="w-px h-8 bg-slate-100 dark:bg-white/10 shrink-0" />
-
-        {/* ── CỘT 2: LOẠI XE & LỘ TRÌNH ── */}
+        {/* ── CỘT 2: LOẠI XE & ĐIỂM ĐẶC TRƯNG (Bung trọn vẹn không bị cắt ...) ── */}
         <div className="flex-1 min-w-0 pr-1">
-          <div className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">
+          <div className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white truncate leading-tight">
             {vehicleTypeLabel}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1 font-medium">
-            <span className="truncate">{fromLabel}</span>
-            <span className="text-slate-400 shrink-0 font-normal">➔</span>
-            <span className="truncate text-slate-700 dark:text-slate-300 font-semibold">{toLabel}</span>
+          <div
+            className={`text-[11px] font-medium truncate mt-0.5 leading-tight ${
+              isEarliest
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : tripIndex === 1
+                ? 'text-blue-700 dark:text-blue-400'
+                : 'text-purple-700 dark:text-purple-400'
+            }`}
+          >
+            {uspLabel}
           </div>
         </div>
 
-        {/* ── CỘT 3: GIÁ VÉ, SỐ CHỖ & ICON › ── */}
-        <div className="shrink-0 flex items-center gap-2 sm:gap-3 text-right">
+        {/* ── CỘT 3: GIÁ VÉ, SỐ CHỖ & NÚT TRÒN 26PX (Khóa cứng shrink-0) ── */}
+        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2 text-right">
           <div>
-            <div className="text-sm sm:text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 leading-tight">
+            <div className="text-[13.5px] sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 leading-tight">
               {formatVND(displayPrice)}
             </div>
-            <div className="text-[10.5px] sm:text-[11px] mt-0.5 font-medium">
+            <div className="text-[10px] mt-0.5 font-semibold">
               {isSoldOut ? (
                 <span className="text-slate-400">Hết chỗ</span>
+              ) : seatsAvailable === 1 ? (
+                <span className="text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
+                  Còn 1 chỗ
+                </span>
               ) : (
-                <span className="text-emerald-700 dark:text-emerald-400 font-semibold inline-flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
                   Còn {seatsAvailable} chỗ
                 </span>
               )}
             </div>
           </div>
 
-          {/* Affordance icon › */}
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 dark:bg-white/10 group-hover:bg-[#0071e3] group-hover:text-white text-slate-400 flex items-center justify-center transition-colors duration-150 shrink-0">
-            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          {/* Affordance icon › 26px: Chỉ chuyến Gần nhất có nút xanh đậm Apple Blue, các chuyến còn lại màu xám nhạt */}
+          <div
+            className={`w-[26px] h-[26px] rounded-full flex items-center justify-center transition-colors duration-150 shrink-0 font-bold text-xs ${
+              isEarliest
+                ? 'bg-[#0071e3] text-white shadow-2xs group-hover:scale-110'
+                : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 group-hover:bg-[#0071e3] group-hover:text-white'
+            }`}
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
           </div>
         </div>
       </div>
