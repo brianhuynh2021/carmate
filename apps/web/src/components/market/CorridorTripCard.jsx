@@ -83,6 +83,26 @@ export default function CorridorTripCard({
     ? trip.amenities.slice(0, 2).join(', ')
     : 'Không khói thuốc, cốp rộng';
 
+  // ── XỬ LÝ TÂM LÝ THỰC CHIẾN ĐÓN / TRẢ ────────────────────────────────
+  const tripOriginCity = trip.fromLocation || trip.originName || 'Bình Long';
+  const pickupTime = trip.departureLabel || '04:30';
+
+  // Nhận diện điểm đến y tế / bệnh viện
+  const isHospital = /(viện|bệnh viện|chợ rẫy|ung bướu|y dược|pasteur|nhi đồng|hùng vương|từ dũ)/i.test(
+    `${destName} ${destNote || ''}`
+  );
+
+  // Subtext điểm đón: làm rõ nguồn gốc chuyến đi và tính tiện chuyến đón đúng giờ
+  const pickupSubtext = tripOriginCity && tripOriginCity.toLowerCase() !== originName.toLowerCase()
+    ? `Xe xuất phát từ [${tripOriginCity}], tiện đường ghé đón (~${pickupTime} có mặt tại trạm ${originName})`
+    : `Đón đúng giờ tại trạm ${originName} (~${pickupTime} có mặt · ${originNote || 'Tiện đường ghé đón'})`;
+
+  // Tag và Subtext điểm trả: điểm neo tâm lý tiết kiệm 70k Grab/taxi vào viện
+  const dropoffBadge = isHospital ? 'Trả tận cổng bệnh viện' : 'Chở thẳng tới điểm đến';
+  const dropoffSubtext = isHospital
+    ? 'Chở thẳng tới cổng viện (Tiết kiệm ~70k tiền Grab từ bến xe)'
+    : 'Không thả giữa đường (Tiết kiệm ~50k-70k tiền Grab từ bến xe)';
+
   return (
     <div
       onClick={() => {
@@ -146,19 +166,19 @@ export default function CorridorTripCard({
         </div>
       </div>
 
-      {/* ── TẦNG 2: THÂN THẺ (HÀNH LANG DI CHUYỂN RÕ RÀNG) ── */}
-      <div className="space-y-1.5 pl-1">
-        {/* Điểm đón */}
+      {/* ── TẦNG 2: THÂN THẺ (HÀNH LANG DI CHUYỂN RÕ RÀNG - XÓA CẢM GIÁC KHÁCH PHỤ) ── */}
+      <div className="space-y-2 pl-1">
+        {/* Điểm đón: luôn hiển thị đúng trạm khách chọn làm tiêu đề chính */}
         <div className="flex items-start gap-2.5">
           <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold shadow-2xs">
             ●
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-              {trip.fromLocation || originName}
+              {originName}
             </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {originNote}
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              {pickupSubtext}
             </p>
           </div>
         </div>
@@ -168,23 +188,34 @@ export default function CorridorTripCard({
           <span className="text-xs font-mono select-none">↓</span>
         </div>
 
-        {/* Điểm đến */}
+        {/* Điểm đến: ghim trạm khách chọn, gắn badge trả tận nơi & neo tâm lý tiết kiệm Grab */}
         <div className="flex items-start gap-2.5">
           <span className="w-4 h-4 rounded-full border-2 border-[#0071e3] bg-white dark:bg-[#1c1c1e] text-[#0071e3] flex items-center justify-center shrink-0 mt-0.5 text-[8px] font-bold shadow-2xs">
             ○
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-              {trip.toLocation || destName}
-            </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {destNote}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                {destName}
+              </p>
+              <span
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold border inline-flex items-center shrink-0 select-none ${
+                  isHospital
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/60'
+                    : 'bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-300 border-blue-200/80 dark:border-blue-800/60'
+                }`}
+              >
+                {dropoffBadge}
+              </span>
+            </div>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium leading-relaxed">
+              {dropoffSubtext}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── TẦNG 3: CHÂN THẺ (PHƯƠNG TIỆN, GIÁ & NÚT HÀNH ĐỘNG) ── */}
+      {/* ── TẦNG 3: CHÂN THẺ (PHƯƠNG TIỆN, GIÁ TRỌN GÓI & NÚT XẢ ÁP LỰC) ── */}
       <div className="pt-3 border-t border-slate-100 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Bên trái: Thumbnail xe 64x64 + Thông tin xe */}
         <div className="flex items-center gap-3 min-w-0">
@@ -221,37 +252,43 @@ export default function CorridorTripCard({
           </div>
         </div>
 
-        {/* Bên phải: Giá cước + Nút CTA GIỮ CHỖ NGAY */}
-        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-dashed border-slate-200/60 dark:border-white/5">
-          <div className="text-left sm:text-right">
-            <div className="flex items-baseline gap-0.5">
+        {/* Bên phải: Giá cước trọn gói + Cụm nút CTA giải tỏa áp lực */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-dashed border-slate-200/60 dark:border-white/5">
+          <div className="text-left sm:text-right space-y-0.5">
+            <div className="flex items-baseline sm:justify-end gap-0.5">
               <span className="text-base sm:text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
                 {formatVND(displayPrice)}
               </span>
               <span className="text-[11px] text-slate-400 font-normal">/ghế</span>
             </div>
-            <span className="text-[10px] text-slate-400 block -mt-0.5">
-              0đ cọc · Phụ xăng trực tiếp · <strong className="text-[#0071e3] font-semibold">carmate.vn</strong>
-            </span>
+            <p className="text-[10.5px] sm:text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center sm:justify-end gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span>Giá trọn gói · 0đ cọc · Không phụ thu hành lý</span>
+            </p>
           </div>
 
-          {/* Nút hành động CTA */}
-          <button
-            type="button"
-            disabled={isSoldOut}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isSoldOut) onBookNow?.(trip);
-            }}
-            className={`h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all duration-150 shrink-0 select-none ${
-              isSoldOut
-                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white shadow-md shadow-emerald-600/30 hover:shadow-lg hover:shadow-emerald-500/40 cursor-pointer'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 fill-white shrink-0" />
-            <span>{isSoldOut ? 'Đã hết chỗ' : 'Giữ chỗ ngay'}</span>
-          </button>
+          {/* Nút hành động CTA & Dòng phụ giải tỏa áp lực (Tuân thủ danh xưng Chủ xe) */}
+          <div className="flex flex-col sm:items-end">
+            <button
+              type="button"
+              disabled={isSoldOut}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isSoldOut) onBookNow?.(trip);
+              }}
+              className={`w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all duration-150 shrink-0 select-none ${
+                isSoldOut
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white shadow-md shadow-emerald-600/30 hover:shadow-lg hover:shadow-emerald-500/40 cursor-pointer'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-white shrink-0" />
+              <span>{isSoldOut ? 'Đã hết chỗ' : 'Giữ chỗ ngay (0đ cọc)'}</span>
+            </button>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center sm:text-right mt-1 font-normal">
+              Chủ xe xác nhận qua SĐT trong 5p · Không đi hủy tự do
+            </p>
+          </div>
         </div>
       </div>
     </div>

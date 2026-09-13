@@ -665,14 +665,12 @@ export default function CorridorSearchBoard({
           </button>
 
 
-          {/* Giá hiện lặng lẽ dưới nút — kết quả, không phải thông báo */}
+          {/* Thông tin cự ly & hành lang — không hiển thị giá ước tính ở đây để tránh mâu thuẫn nhận thức */}
           {tariff && (
-            <p className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400 break-words">
-              <span className="font-mono font-semibold">{formatVND(tariff.pricePerSeat)}</span>
+            <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400 font-mono">
+              <span>~{tariff.distanceKm}km</span>
               {' · '}
-              <span className="font-mono">{tariff.distanceKm}km</span>
-              {' · '}
-              {t('search.allInclusive')}
+              <span>Hành lang Quốc Lộ 13</span>
             </p>
           )}
         </div>
@@ -814,10 +812,10 @@ export default function CorridorSearchBoard({
                 <CorridorTripCard
                   key={trip.tripId || trip.id || trip.departureLabel}
                   trip={trip}
-                  originName={matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai'}
-                  originNote={matrix?.origin?.landmark || 'đón tận nơi dọc QL13 & cây xăng'}
-                  destName={matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD'}
-                  destNote={matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
+                  originName={fromHub?.name || matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai'}
+                  originNote={fromHub?.landmark || matrix?.origin?.landmark || 'đón tận nơi dọc QL13 & cây xăng'}
+                  destName={toHub?.name || matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD'}
+                  destNote={toHub?.landmark || matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
                   segmentPrice={carmateSegmentPrice}
                   onBookNow={(selectedTrip) => {
                     setSelectedBookingTrip(selectedTrip);
