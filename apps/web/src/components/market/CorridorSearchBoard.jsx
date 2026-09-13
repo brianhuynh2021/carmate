@@ -1283,7 +1283,7 @@ export default function CorridorSearchBoard({
                   Thông tin chuyến xe
                 </span>
               </div>
-              <div className="p-3.5 sm:p-4 bg-white dark:bg-white/[0.03] border border-blue-200/80 hover:border-blue-400 dark:border-white/10 dark:hover:border-white/25 hover:shadow-md rounded-2xl transition-all duration-200 cursor-default group/bus shadow-2xs">
+              <div className="p-3.5 sm:p-4 bg-white dark:bg-white/[0.03] border border-blue-100 dark:border-white/10 hover:border-blue-200/80 dark:hover:border-white/20 hover:shadow-xs rounded-2xl transition-all duration-200 cursor-default group/bus shadow-2xs">
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start justify-between gap-3">
                     <span className="font-semibold text-[#0B3B7A] dark:text-blue-300 shrink-0">Điểm trả:</span>
