@@ -154,6 +154,9 @@ function formatShortPriceRef(raw = '') {
  */
 export default function CorridorSearchBoard({
   currentUser,
+  checkIsMyTrip,
+  onManageTrip,
+  onOpenCockpit,
   onOpenStationView,
   onOpenIntentModal,
   onViewBookedTab,
@@ -1086,23 +1089,31 @@ export default function CorridorSearchBoard({
           {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE (DANH SÁCH RÚT GỌN SCANNABLE) */}
           {carmateDisplayTrips.length > 0 ? (
             <div className="space-y-2 sm:space-y-2.5">
-              {carmateDisplayTrips.map((trip, idx) => (
-                <CorridorTripCard
-                  key={trip.tripId || trip.id || trip.departureLabel}
-                  trip={trip}
-                  isEarliest={idx === 0}
-                  tripIndex={idx}
-                  originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
-                  destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
-                  segmentPrice={carmateSegmentPrice}
-                  onSelectTrip={(selectedTrip) => {
-                    setSelectedDetailTrip(selectedTrip);
-                  }}
-                  onBookNow={(selectedTrip) => {
-                    setSelectedDetailTrip(selectedTrip);
-                  }}
-                />
-              ))}
+              {carmateDisplayTrips.map((trip, idx) => {
+                const isMyTrip = checkIsMyTrip ? checkIsMyTrip(trip) : false;
+                return (
+                  <CorridorTripCard
+                    key={trip.tripId || trip.id || trip.departureLabel}
+                    trip={trip}
+                    isEarliest={idx === 0}
+                    isMyTrip={isMyTrip}
+                    tripIndex={idx}
+                    originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
+                    destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
+                    segmentPrice={carmateSegmentPrice}
+                    onSelectTrip={(selectedTrip) => {
+                      setSelectedDetailTrip(selectedTrip);
+                    }}
+                    onBookNow={(selectedTrip) => {
+                      setSelectedDetailTrip(selectedTrip);
+                    }}
+                    onManageTrip={(tripToManage) => {
+                      if (onManageTrip) onManageTrip(tripToManage);
+                      else if (onOpenCockpit) onOpenCockpit();
+                    }}
+                  />
+                );
+              })}
 
               {/* ⭐️ ƯU TIÊN #1: GOM NHU CẦU LỆCH GIỜ (ĐẶT LỊCH TRƯỚC - BẢO TOÀN PHỄU CHUYỂN ĐỔI) */}
               <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 text-center space-y-2 shadow-sm">
@@ -1263,6 +1274,12 @@ export default function CorridorSearchBoard({
           isOpen={Boolean(selectedDetailTrip)}
           onClose={() => setSelectedDetailTrip(null)}
           trip={selectedDetailTrip}
+          isMyTrip={checkIsMyTrip ? checkIsMyTrip(selectedDetailTrip) : false}
+          onManageTrip={(tripToManage) => {
+            setSelectedDetailTrip(null);
+            if (onManageTrip) onManageTrip(tripToManage);
+            else if (onOpenCockpit) onOpenCockpit();
+          }}
           originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
           destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
           destNote={toHub?.landmark || matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}

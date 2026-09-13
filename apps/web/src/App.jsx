@@ -1031,6 +1031,8 @@ export default function App() {
           <div className={`${container} py-5 sm:py-8`}>
             <CorridorSearchBoard
               currentUser={currentUser}
+              checkIsMyTrip={checkIsMyTrip}
+              onManageTrip={handleManageMyTrip}
               onOpenCockpit={() => setActiveTab('cockpit')}
               onOpenStationView={(hub, destHub) => {
                 setStationHubId(hub || 'hub_ql13_tan_khai');
