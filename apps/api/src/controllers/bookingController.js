@@ -61,7 +61,15 @@ function canAccessBooking(req, booking) {
  */
 export function listBookings(req, res) {
   try {
-    const user = req.user;
+    let user = req.user;
+    const queryPhone = cleanPhoneNumber(req.query?.phone || req.headers?.['x-user-phone'] || '');
+
+    // Nếu chưa có token nhưng có SĐT từ header/query hợp lệ:
+    if (!user && queryPhone) {
+      const dbUser = getUserByPhone(queryPhone);
+      user = dbUser || { phone: queryPhone, role: 'rider' };
+    }
+
     // Nếu chưa đăng nhập: Không bao giờ trả về danh sách booking công khai
     if (!user) {
       return res.status(200).json({
@@ -88,7 +96,7 @@ export function listBookings(req, res) {
         const bPass = cleanPhoneNumber(b.passengerPhone || '');
         return (
           (userPhone && (bContact === userPhone || bCreator === userPhone || bTarget === userPhone || bDriver === userPhone || bPass === userPhone)) ||
-          (user.id && (b.userId === user.id || b.creatorId === user.id || b.driverId === user.id))
+          (user.id && (b.userId === user.id || b.creatorId === user.id || b.driverId === user.id || b.passengerId === user.id))
         );
       });
     }

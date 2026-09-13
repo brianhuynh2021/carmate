@@ -28,7 +28,7 @@ import {
   maskCustomerPlate,
   getTelegramChatUrl
 } from '@carmate/shared';
-import { api } from '../../api/client.js';
+import { api, setStoredAuthToken } from '../../api/client.js';
 import { CarMateBadge } from '../ui/Logo.jsx';
 
 /**
@@ -134,12 +134,32 @@ export default function InstantBookingModal({
     try {
       const res = await api.createBooking(bookingPayload);
       const created = res?.data || bookingPayload;
+      if (res?.token) {
+        setStoredAuthToken(res.token);
+      }
+      if (res?.user) {
+        onAuthSuccess?.(res.user);
+      }
+      // Lưu tức thì vào bộ nhớ đệm thiết bị để bảo toàn dữ liệu (MIT Invariant & Zero-Blocking)
+      try {
+        const cached = JSON.parse(localStorage.getItem('carmate_cached_bookings') || '[]');
+        const updated = [created, ...cached.filter((b) => (b.escrowId || b.id) !== (created.escrowId || created.id))];
+        localStorage.setItem('carmate_cached_bookings', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+
       setConfirmedBooking(created);
       onBookingSuccess?.(created);
       onShowToast?.('🎉 Đã giữ chỗ thành công! Đang mở thông tin Chủ xe...', 'success');
       setStep(3);
     } catch (err) {
       console.warn('[InstantBookingModal] Lỗi tạo booking:', err.message);
+      // Fallback lưu cục bộ ngay cả khi lỗi mạng để khách không bị mất vé
+      try {
+        const cached = JSON.parse(localStorage.getItem('carmate_cached_bookings') || '[]');
+        const updated = [bookingPayload, ...cached.filter((b) => (b.escrowId || b.id) !== (bookingPayload.escrowId || bookingPayload.id))];
+        localStorage.setItem('carmate_cached_bookings', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+
       setConfirmedBooking(bookingPayload);
       onBookingSuccess?.(bookingPayload);
       setStep(3);
@@ -215,8 +235,12 @@ export default function InstantBookingModal({
 
   const handleCompleteAndClose = () => {
     onClose?.();
+    const finalBooking = confirmedBooking || trip;
+    if (finalBooking) {
+      onBookingSuccess?.(finalBooking);
+    }
     if (onViewBookedTab) {
-      onViewBookedTab('booked');
+      onViewBookedTab('booked', finalBooking);
     } else {
       try {
         sessionStorage.setItem('carmate_active_tab', 'booked');

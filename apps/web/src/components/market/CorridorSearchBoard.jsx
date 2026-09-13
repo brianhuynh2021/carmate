@@ -158,7 +158,8 @@ export default function CorridorSearchBoard({
   onOpenIntentModal,
   onViewBookedTab,
   onAuthSuccess,
-  onShowToast
+  onShowToast,
+  onBookingCreated
 }) {
   const { t } = useI18n();
   const corridors = useMemo(() => getActiveCorridors(), []);
@@ -1425,9 +1426,12 @@ export default function CorridorSearchBoard({
         <InstantBookingModal
           isOpen={Boolean(selectedBookingTrip)}
           onClose={() => setSelectedBookingTrip(null)}
-          onViewBookedTab={() => {
+          onViewBookedTab={(tab, booking) => {
+            if (booking) {
+              onBookingCreated?.(booking);
+            }
             setSelectedBookingTrip(null);
-            onViewBookedTab?.();
+            onViewBookedTab?.(tab, booking);
           }}
           trip={selectedBookingTrip}
           originHub={matrix?.origin}
@@ -1436,7 +1440,9 @@ export default function CorridorSearchBoard({
           currentUser={currentUser}
           onAuthSuccess={onAuthSuccess}
           onBookingSuccess={(booking) => {
-            // Cập nhật ngay số ghế còn lại trên giao diện trang chủ
+            // 1. Chuyển tiếp tức thì lên App.jsx để cập nhật Ví vé điện tử (Chuyến của tôi)
+            onBookingCreated?.(booking);
+            // 2. Cập nhật ngay số ghế còn lại trên giao diện trang chủ
             setMatrix((prev) => {
               if (!prev || !prev.slots) return prev;
               return {

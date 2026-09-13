@@ -472,6 +472,8 @@ export default function App() {
     driverOffers,
     passengerRequests,
     bookedEscrows,
+    setBookedEscrows,
+    handleBookingCreated,
     refreshBookings,
     toastMessage,
     showToast,
@@ -499,6 +501,13 @@ export default function App() {
     onSaveProfile: handleSaveProfile,
     t
   });
+
+  // Tự động làm mới danh sách chuyến khi người dùng mở tab Chuyến của tôi
+  useEffect(() => {
+    if (activeTab === 'booked') {
+      refreshBookings();
+    }
+  }, [activeTab, refreshBookings]);
 
   // Quét mã QR & Liên kết sâu trực tiếp chuyến xe (?trip=... hoặc /t/...)
   useEffect(() => {
@@ -1004,7 +1013,14 @@ export default function App() {
               onOpenIntentModal={(targetRole, hubId, destHubId, targetDate, targetTimeSlot) => {
                 handleOpenMovementIntent(targetRole, hubId, destHubId, targetDate, targetTimeSlot);
               }}
-              onViewBookedTab={() => setActiveTab('booked')}
+              onViewBookedTab={(tab, booking) => {
+                if (booking) {
+                  handleBookingCreated(booking);
+                }
+                setActiveTab('booked');
+                refreshBookings();
+              }}
+              onBookingCreated={handleBookingCreated}
               onAuthSuccess={handleAuthSuccess}
               onShowToast={showToast}
             />
