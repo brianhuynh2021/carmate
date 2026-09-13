@@ -1181,7 +1181,7 @@ export default function CorridorSearchBoard({
             <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-2">
               <div className="flex items-center justify-between text-[11px] pb-0.5 px-1">
                 <span className="font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Phương án xe khách dự phòng
+                  Lịch trình & số điện thoại các nhà xe
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono">
                   {verifiedHotlines.length} nhà xe QL13
@@ -1211,16 +1211,16 @@ export default function CorridorSearchBoard({
                       }}
                       className="p-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200/90 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 flex flex-col justify-between transition-all duration-150 cursor-pointer shadow-2xs group"
                     >
-                      {/* Hàng 1: Tên nhà xe + Giá xám mờ + Icon > */}
+                      {/* Hàng 1: Tên nhà xe (Chữ đen text-slate-800 đồng bộ, không dính màu xanh) + Giá xám mờ + Icon > */}
                       <div className="flex items-center justify-between min-w-0">
-                        <p className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 transition-colors">
+                        <p className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">
                           {cleanBusName}
                         </p>
                         <div className="shrink-0 flex items-center gap-1.5 ml-2">
                           <span className="text-xs font-mono font-medium text-slate-400 dark:text-slate-500">
                             {shortPrice}
                           </span>
-                          <span className="text-slate-400 group-hover:text-blue-600 text-xs font-bold transition-all group-hover:translate-x-0.5">
+                          <span className="text-slate-400 text-xs font-bold transition-transform group-hover:translate-x-0.5">
                             ›
                           </span>
                         </div>
@@ -1237,12 +1237,12 @@ export default function CorridorSearchBoard({
                   );
                 })}
 
-                {/* Nút bấm nhẹ Xem thêm / Thu gọn (Bảo toàn màn hình gọn gàng, tập trung CarMate) */}
+                {/* Nút bấm nhẹ Xem thêm / Thu gọn (Viền xám trung tính border-slate-200, không viền cam) */}
                 {verifiedHotlines.length > 2 && (
                   <button
                     type="button"
                     onClick={() => setShowAllBuses(!showAllBuses)}
-                    className="w-full py-2 px-3 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-[0.99]"
+                    className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-[0.99] outline-none"
                   >
                     <span>
                       {showAllBuses
