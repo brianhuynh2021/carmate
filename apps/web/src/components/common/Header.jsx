@@ -85,7 +85,7 @@ export default function Header({
   const tabs = [
     { id: 'market', label: t('nav.corridorTab'), icon: Compass },
     { id: 'station', label: t('nav.stationTab'), icon: Fuel },
-    { id: 'booked', label: t('nav.booked') || 'Lịch hẹn', icon: Clock, badge: bookedCount }
+    { id: 'booked', label: t('nav.booked') || 'Chuyến của tôi', icon: Clock, badge: bookedCount }
   ];
 
   const isMac =

@@ -54,7 +54,7 @@ export default {
     tabCorridor: 'Tiện chuyến',
     tabStation: 'Điểm đón',
     tabPickup: 'Đăng chuyến',
-    tabRides: 'Lịch hẹn',
+    tabRides: 'Chuyến của tôi',
     tabInbox: 'Hộp thoại',
     corridorTab: 'Tuyến Tiện Chuyến',
     stationTab: 'Điểm Đón Xe',
@@ -63,7 +63,7 @@ export default {
     match: 'Ghép chuyến',
     post: 'Đăng chuyến',
     myTrips: 'Bài đăng',
-    booked: 'Lịch hẹn',
+    booked: 'Chuyến của tôi',
     profile: 'Tín nhiệm',
     policy: 'Quy chế',
     postCta: 'Đăng chuyến',
@@ -76,7 +76,7 @@ export default {
       match: 'Ghép chuyến',
       post: 'Đăng chuyến',
       myTrips: 'Bài đăng',
-      booked: 'Lịch hẹn',
+      booked: 'Chuyến của tôi',
       profile: 'Tín nhiệm'
     }
   },
@@ -250,10 +250,10 @@ export default {
   },
 
   booked: {
-    emptyTitle: 'Chưa có lịch hẹn chuyến nào',
+    emptyTitle: 'Chưa có chuyến nào',
     emptyDesc: 'Tìm chuyến tiện đường và nhắn Zalo với chủ xe để chốt điểm đón.',
     emptyCta: 'Tìm chuyến ngay',
-    title: 'Lịch hẹn đi chung xe',
+    title: 'Chuyến của tôi',
     count: '{n} chuyến đang chờ khởi hành',
     escrowNote: 'Cam kết đang được giữ',
     codeLabel: 'Mã kết nối',

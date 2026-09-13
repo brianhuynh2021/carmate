@@ -281,7 +281,7 @@ export default function BookedTripList({
       <SectionHeader
         icon={Clock}
         title={t('booked.title')}
-        description="Lịch hẹn đi chung xe · Cam kết đồng hành 0đ phí sàn · Trực tiếp kết nối bạn đồng hành"
+        description="Chuyến đi & lịch trình của bạn · Cam kết đồng hành 0đ phí sàn · Trực tiếp kết nối bạn đồng hành"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5 font-medium">
             {t('booked2.s003')}
