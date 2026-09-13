@@ -150,11 +150,11 @@ router.get('/locations/suggest', suggestLocationsHandler);
 // --- Trips (với Post Limiter chống spam và bảo vệ quyền sở hữu Anti-IDOR & PII) ---
 router.get('/trips', optionalAuth, listTrips);
 router.get('/trips/:id', optionalAuth, getTrip);
-router.post('/trips', postTripLimiter, optionalAuth, createTrip);
+router.post('/trips', optionalAuth, postTripLimiter, createTrip);
 router.put('/trips/:id', optionalAuth, requireTripOwnership, updateTripHandler);
 router.delete('/trips/:id', optionalAuth, requireTripOwnership, deleteTripHandler);
 router.patch('/trips/:id/status', optionalAuth, requireTripOwnership, updateStatus);
-router.post('/trips/:id/republish', postTripLimiter, optionalAuth, requireTripOwnership, republishTripHandler);
+router.post('/trips/:id/republish', optionalAuth, requireTripOwnership, postTripLimiter, republishTripHandler);
 
 // --- Smart Matching Radar & Social Suggestions ---
 router.get('/matches', optionalAuth, getMatches);
@@ -169,7 +169,7 @@ router.get('/intents/epochs', optionalAuth, getMatchingEpochsHandler);
 // --- Sàn Giao Dịch Ghế Trống (Seat Exchange - LOB, CDA 24/7 Spot Market & Dynamic Sliding TTL) ---
 // Đặt lệnh: chống spam bằng postTripLimiter; optionalAuth cho phép khách vãng lai
 // đặt lệnh, nhưng khi ĐÃ đăng nhập thì SĐT trong token luôn thắng SĐT gửi từ body.
-router.post('/seat-exchange/order', postTripLimiter, optionalAuth, placeOrderHandler);
+router.post('/seat-exchange/order', optionalAuth, postTripLimiter, placeOrderHandler);
 // Sổ lệnh công khai: mọi lệnh trả ra đều đi qua lớp chắn PII (Nghị định 13/2023).
 router.get('/seat-exchange/order-book', optionalAuth, getOrderBookHandler);
 // Lịch sử lệnh cá nhân: BẮT BUỘC đăng nhập (chống dò quét bằng số điện thoại).
