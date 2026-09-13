@@ -763,11 +763,13 @@ export default function App() {
   const [movementIntentModalOpen, setMovementIntentModalOpen] = useState(false);
   const [movementIntentRole, setMovementIntentRole] = useState('passenger');
   const [movementIntentOriginHub, setMovementIntentOriginHub] = useState(null);
+  const [movementIntentDestHub, setMovementIntentDestHub] = useState(null);
 
-  const handleOpenMovementIntent = useCallback((targetRole = 'passenger', hubId = null) => {
+  const handleOpenMovementIntent = useCallback((targetRole = 'passenger', hubId = null, destHubId = null) => {
     const validRole = targetRole === 'driver' ? 'driver' : 'passenger';
     setMovementIntentRole(validRole);
     setMovementIntentOriginHub(hubId || null);
+    setMovementIntentDestHub(destHubId || null);
     setMovementIntentModalOpen(true);
   }, []);
 
@@ -995,8 +997,8 @@ export default function App() {
                 setStationDestinationHubId(destHub || null);
                 setActiveTab('station');
               }}
-              onOpenIntentModal={(targetRole, hubId) => {
-                handleOpenMovementIntent(targetRole, hubId);
+              onOpenIntentModal={(targetRole, hubId, destHubId) => {
+                handleOpenMovementIntent(targetRole, hubId, destHubId);
               }}
               onAuthSuccess={handleAuthSuccess}
               onShowToast={showToast}
@@ -1234,6 +1236,7 @@ export default function App() {
           onClose={() => setMovementIntentModalOpen(false)}
           initialRole={movementIntentRole}
           initialOriginHubId={movementIntentOriginHub}
+          initialDestHubId={movementIntentDestHub}
           currentUser={currentUser}
           onSuccess={() => {
             setActiveTab('booked');
