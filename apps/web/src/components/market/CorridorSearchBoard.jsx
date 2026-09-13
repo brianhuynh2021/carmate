@@ -370,37 +370,31 @@ export default function CorridorSearchBoard({
         </span>
       </div>
 
-      {/* ── CHỌN TUYẾN (Luôn hiển thị để định danh hành lang & sẵn sàng mở rộng) ── */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-        {corridors.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => {
-              setCorridorId(c.id);
-              writeStore(CORRIDOR_KEY, c.id);
-            }}
-            className={`relative tap-area-44 shrink-0 px-3.5 h-9 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
-              c.id === corridor.id
-                ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-sm shadow-[#0071e3]/30'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-white/20 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-sm'
-            }`}
-          >
-            {c.shortName}
-            {c.status === 'beta' && (
-              <span className="ml-1.5 text-[9px] font-mono opacity-70 uppercase">beta</span>
-            )}
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => onShowToast?.(t('common.comingSoon') || 'CarMate đang chuẩn bị mở rộng thêm các tuyến mới!')}
-          className="relative tap-area-44 shrink-0 px-3 h-9 rounded-full text-xs font-medium border border-dashed border-slate-300 dark:border-white/20 text-slate-400 dark:text-slate-500 hover:border-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 cursor-pointer transition-colors"
-          title="Các tuyến mới đang được chuẩn bị"
-        >
-          <span>+ Tuyến khác</span>
-        </button>
-      </div>
+      {/* ── CHỌN TUYẾN (chỉ hiện khi có từ 2 tuyến trở lên để tối ưu không gian) ── */}
+      {corridors.length > 1 && (
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {corridors.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => {
+                setCorridorId(c.id);
+                writeStore(CORRIDOR_KEY, c.id);
+              }}
+              className={`relative tap-area-44 shrink-0 px-3.5 h-9 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
+                c.id === corridor.id
+                  ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-sm shadow-[#0071e3]/30'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-white/20 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-sm'
+              }`}
+            >
+              {c.shortName}
+              {c.status === 'beta' && (
+                <span className="ml-1.5 text-[9px] font-mono opacity-70 uppercase">beta</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
       <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
