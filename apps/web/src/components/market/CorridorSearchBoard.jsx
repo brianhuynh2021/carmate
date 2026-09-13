@@ -878,39 +878,37 @@ export default function CorridorSearchBoard({
                   className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Đặt xe tiện chuyến · Chỉ {formatVND(carmateSegmentPrice)}</span>
+                  <span>Báo giờ tôi cần đi · Chỉ {formatVND(carmateSegmentPrice)}</span>
                 </button>
               </div>
             </div>
           ) : (
-            <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-blue-50/50 via-white to-slate-50/40 dark:from-blue-950/20 dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-blue-500/20 dark:border-white/15 ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_12px_36px_rgba(0,113,227,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] text-center space-y-4">
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
-              <div className="relative w-12 h-12 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200/60 dark:border-blue-500/30 text-[#0071e3] flex items-center justify-center shadow-xs ring-4 ring-blue-500/5">
-                <Clock className="w-5 h-5" />
+            <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-50/40 via-white to-slate-50/40 dark:from-amber-950/20 dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-amber-300/60 dark:border-amber-500/30 ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_12px_36px_rgba(245,158,11,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] text-center space-y-4">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 bg-amber-500/10 dark:bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Badge trên cùng theo State 2: ⚡ Ghép xe theo giờ của bạn (Màu cam) */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 dark:bg-amber-400/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold select-none shadow-2xs">
+                <span className="text-amber-600 dark:text-amber-400">⚡</span>
+                <span>Ghép xe theo giờ của bạn</span>
               </div>
+
               <div className="relative space-y-1.5">
                 <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  {isFutureSearch
-                    ? `Chưa có xe xuất phát đúng phút này cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}`
-                    : 'Chưa có xe xuất phát đúng phút này'}
+                  Chưa có xe nổ máy đúng phút này{isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}
                 </p>
                 <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  {isFutureSearch
-                    ? `Chuyến ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'} đang có 2–3 chủ xe quen chuẩn bị mở chuyến. Đăng điểm đón ngay để giữ chỗ giá ${formatVND(carmateSegmentPrice)}!`
-                    : 'Để lại điểm đón trên QL13 & khung giờ đón thuận tiện. 80% chủ xe tiện chuyến sẽ nhận chuyến khi đặt trước 1–2 tiếng.'}
+                  Đăng giờ bạn muốn đi & điểm đón dọc QL13, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
                 </p>
               </div>
               <div className="relative pt-0.5 space-y-2.5">
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
-                  className="h-11 sm:h-12 px-6 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 hover:-translate-y-0.5 active:scale-95"
+                  className="h-11 sm:h-12 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:-translate-y-0.5 active:scale-95"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>
-                    {isFutureSearch
-                      ? `Đăng điểm đón ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'} · Giữ chỗ ${formatVND(carmateSegmentPrice)}`
-                      : `Đặt xe tiện chuyến · Chỉ ${formatVND(carmateSegmentPrice)}`}
+                    BÁO GIỜ TÔI CẦN ĐI · CHỈ TỪ {formatVND(carmateSegmentPrice)}
                   </span>
                 </button>
 
@@ -918,13 +916,13 @@ export default function CorridorSearchBoard({
                 <div className="pt-1 space-y-1">
                   <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Chuyến xe nhà định kỳ · Đón đúng giờ dọc QL13 · 0đ cọc</span>
+                    <span>Chuyến xe nhà tiện đường · Đón tận nơi dọc QL13 · 0đ cọc</span>
                   </p>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
                     <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
                     <span>
                       {isFutureSearch
-                        ? 'Điều phối viên liên hệ xác nhận giờ đón cụ thể với bạn trong 5–10 phút'
+                        ? 'Chủ xe quen hoặc điều phối viên sẽ gọi/Zalo xác nhận trong 15 phút'
                         : 'Sáng nay đã có 3 chuyến xe ghép kết nối thành công trên trục QL13'}
                     </span>
                   </p>
@@ -1171,108 +1169,159 @@ export default function CorridorSearchBoard({
               )}
             </div>
 
-            {/* ── KHỐI 3: KHỐI CARMATE SỐNG ĐỘNG (HOVER & DYNAMIC VISUAL LEVERAGE) ── */}
-            <div className="relative p-4 rounded-2xl border-2 border-amber-300 dark:border-amber-500/50 bg-gradient-to-b from-amber-50/80 via-white to-amber-50/40 dark:from-amber-950/25 dark:via-[#1c1c1e] dark:to-amber-950/15 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 hover:border-amber-400">
-              {/* Header Card với icon tia chớp nảy & badge động */}
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
-                  <span className="animate-bounce text-amber-600 dark:text-amber-400 text-sm sm:text-base">⚡</span>
-                  <span>Gợi ý tiện chuyến từ CarMate.vn</span>
-                </div>
-                {busPriceData?.isCheaperOrEqual ? (
-                  <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full shadow-xs select-none">
-                    Nâng cấp xe 5-7 chỗ
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-full shadow-xs animate-pulse select-none">
-                    Tiết kiệm tới {busPriceData?.savingMax || 95}k
-                  </span>
-                )}
-              </div>
+            {/* ── KHỐI 3: KHỐI CARMATE SỐNG ĐỘNG (HOVER & 2 STATES DỰA TRÊN DATABASE) ── */}
+            {(() => {
+              const hasRealTrips = carmateDisplayTrips.length > 0;
+              const firstRealTrip = hasRealTrips ? carmateDisplayTrips[0] : null;
 
-              {/* Lợi ích cốt lõi (Render động theo tương quan giá với nhà xe đang xem) */}
-              <div className="space-y-2 text-xs text-slate-700 dark:text-slate-200 mb-3.5">
-                {busPriceData?.isCheaperOrEqual ? (
-                  <>
-                    <div className="flex items-start gap-2">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                      <span>
-                        <strong className="text-slate-900 dark:text-white">Giá trọn gói: {formatVND(carmateSegmentPrice)}</strong>{' '}
-                        <span className="text-slate-500 dark:text-slate-400">(Không tốn thêm tiền Grab từ bến xe)</span>
-                      </span>
+              return (
+                <div className="relative p-4 rounded-2xl border-2 border-amber-300 dark:border-amber-500/50 bg-gradient-to-b from-amber-50/80 via-white to-amber-50/40 dark:from-amber-950/25 dark:via-[#1c1c1e] dark:to-amber-950/15 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 hover:border-amber-400">
+                  {/* Header Card với icon tia chớp nảy & badge chuẩn theo 2 State */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
+                      <span className="animate-bounce text-amber-600 dark:text-amber-400 text-sm sm:text-base">⚡</span>
+                      <span>Gợi ý tiện chuyến từ CarMate.vn</span>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                      <div className="leading-relaxed">
-                        <strong className="text-slate-900 dark:text-white">So sánh chi phí thực tế:</strong>{' '}
-                        <span className="text-slate-600 dark:text-slate-300 block">
-                          Đi xe khách ({Math.round((busPriceData?.min || 140000) / 1000)}k) + Grab vào viện (70k) = <strong>~{Math.round((busPriceData?.busWithGrab || 210000) / 1000)}k</strong>
+                    {hasRealTrips ? (
+                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-emerald-600 rounded-full shadow-xs select-none inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        Còn {firstRealTrip.seatsAvailable ?? 1} chỗ trống
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-amber-900 dark:text-amber-100 bg-amber-400/30 border border-amber-500/40 rounded-full shadow-xs select-none">
+                        ⚡ Ghép xe theo giờ của bạn
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Nội dung chi tiết theo State */}
+                  {hasRealTrips ? (
+                    <div className="space-y-2 text-xs text-slate-700 dark:text-slate-200 mb-3.5">
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                        <span>
+                          <strong className="text-slate-900 dark:text-white">Có chuyến xe thật:</strong>{' '}
+                          {firstRealTrip.vehicleModel || 'Xe 5-7 chỗ'} ({firstRealTrip.driverName || 'Chủ xe'}) khởi hành lúc{' '}
+                          <strong className="font-mono text-emerald-600 dark:text-emerald-400">{firstRealTrip.departureLabel}</strong>
                         </span>
-                        <span className="text-emerald-700 dark:text-emerald-400 font-bold block mt-0.5">
-                          ➔ Xe ghép CarMate: {formatVND(carmateSegmentPrice)} đưa thẳng cổng viện{busPriceData?.totalSavingVsBus > 0 ? ` (Tiết kiệm ~${busPriceData.totalSavingVsBus}k)` : ''}
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                        <span>
+                          <strong className="text-slate-900 dark:text-white">Giá chia sẻ trọn gói:</strong>{' '}
+                          <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-sm">{formatVND(firstRealTrip.pricePerSeat || carmateSegmentPrice)}</strong>{' '}
+                          <span className="text-slate-500 dark:text-slate-400">(Chở thẳng cổng viện, không tốn thêm Grab)</span>
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                        <span>
+                          <strong className="text-slate-900 dark:text-white">Xe ô tô gia đình:</strong> Êm ái, cốp rộng, không hút thuốc ·{' '}
+                          <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                      <span>
-                        <strong className="text-slate-900 dark:text-white">Xe gia đình êm ái:</strong> Không nhồi nhét ghế nhựa, không mùi xe đò ·{' '}
-                        <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-start gap-2">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                      <span>
-                        <strong className="text-slate-900 dark:text-white">Giá ghép: {formatVND(carmateSegmentPrice)}</strong>{' '}
-                        <span className="text-slate-500 dark:text-slate-400">
-                          (Rẻ hơn {busPriceData?.savingMin ? `${busPriceData.savingMin}k–` : ''}{busPriceData?.savingMax || 95}k so với xe khách/limousine)
+                  ) : (
+                    <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-200 mb-3.5">
+                      {/* Lời nhắn trung thực trạng thái gom cầu */}
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
+                        Chưa có xe nổ máy đúng phút này. Báo giờ bạn muốn đi, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
+                      </div>
+
+                      {busPriceData?.isCheaperOrEqual ? (
+                        <>
+                          <div className="flex items-start gap-2">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                            <span>
+                              <strong className="text-slate-900 dark:text-white">Giá trọn gói: Chỉ từ {formatVND(carmateSegmentPrice)}</strong>{' '}
+                              <span className="text-slate-500 dark:text-slate-400">(Không tốn thêm tiền Grab từ bến xe)</span>
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                            <div className="leading-relaxed">
+                              <strong className="text-slate-900 dark:text-white">So sánh chi phí thực tế:</strong>{' '}
+                              <span className="text-slate-600 dark:text-slate-300 block">
+                                Đi xe khách ({Math.round((busPriceData?.min || 140000) / 1000)}k) + Grab vào viện (70k) = <strong>~{Math.round((busPriceData?.busWithGrab || 210000) / 1000)}k</strong>
+                              </span>
+                              <span className="text-emerald-700 dark:text-emerald-400 font-bold block mt-0.5">
+                                ➔ Xe ghép CarMate: {formatVND(carmateSegmentPrice)} đưa thẳng cổng viện{busPriceData?.totalSavingVsBus > 0 ? ` (Tiết kiệm ~${busPriceData.totalSavingVsBus}k)` : ''}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-2">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                            <span>
+                              <strong className="text-slate-900 dark:text-white">Giá ghép: Chỉ từ {formatVND(carmateSegmentPrice)}</strong>{' '}
+                              <span className="text-slate-500 dark:text-slate-400">
+                                (Rẻ hơn {busPriceData?.savingMin ? `${busPriceData.savingMin}k–` : ''}{busPriceData?.savingMax || 95}k so với xe khách/limousine)
+                              </span>
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                            <span>
+                              <strong className="text-slate-900 dark:text-white">Đưa đón tận viện:</strong> BV Chợ Rẫy / ĐH Y Dược{' '}
+                              <span className="text-emerald-700 dark:text-emerald-400 font-medium">(Đỡ tốn 70k Grab)</span>
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                        <span>
+                          <strong className="text-slate-900 dark:text-white">Xe gia đình êm ái:</strong> Không mùi xe đò, không nhồi nhét ·{' '}
+                          <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
                         </span>
-                      </span>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                      <span>
-                        <strong className="text-slate-900 dark:text-white">Đưa đón tận viện:</strong> BV Chợ Rẫy / ĐH Y Dược{' '}
-                        <span className="text-emerald-700 dark:text-emerald-400 font-medium">(Đỡ tốn 70k Grab)</span>
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                      <span>
-                        <strong className="text-slate-900 dark:text-white">Xe gia đình:</strong> Êm ái, cốp rộng, không hút thuốc ·{' '}
-                        <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
+                  )}
 
-              {/* Nút bấm chính siêu hút ngón tay */}
-              <button
-                type="button"
-                onClick={() => {
-                  trackBusSheetCarMateCta(selectedDetailHotline.operator, {
-                    corridor: corridor.id,
-                    fromHubId,
-                    toHubId,
-                    carmatePrice: carmateSegmentPrice
-                  });
-                  setSelectedDetailHotline(null);
-                  onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot);
-                }}
-                className="w-full py-3 px-4 rounded-xl font-bold text-white text-xs sm:text-sm bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 shadow-md shadow-emerald-500/20 transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer group"
-              >
-                <Sparkles className="w-4 h-4 fill-white shrink-0 group-hover:rotate-12 transition-transform duration-300" />
-                <span>ĐẶT XE TIỆN CHUYẾN · CHỈ {formatVND(carmateSegmentPrice)}</span>
-              </button>
+                  {/* Nút bấm CTA phân hóa rạch ròi 2 State */}
+                  {hasRealTrips ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDetailHotline(null);
+                        setSelectedBookingTrip(firstRealTrip);
+                      }}
+                      className="w-full py-3 px-4 rounded-xl font-bold text-white text-xs sm:text-sm bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 shadow-md shadow-emerald-500/20 transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer group"
+                    >
+                      <Sparkles className="w-4 h-4 fill-white shrink-0 group-hover:rotate-12 transition-transform duration-300" />
+                      <span>GIỮ CHỖ NGAY · {formatVND(firstRealTrip.pricePerSeat || carmateSegmentPrice)}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        trackBusSheetCarMateCta(selectedDetailHotline.operator, {
+                          corridor: corridor.id,
+                          fromHubId,
+                          toHubId,
+                          carmatePrice: carmateSegmentPrice
+                        });
+                        setSelectedDetailHotline(null);
+                        onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot);
+                      }}
+                      className="w-full py-3 px-4 rounded-xl font-bold text-white text-xs sm:text-sm bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 shadow-md shadow-amber-500/20 transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-amber-500/30 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer group"
+                    >
+                      <Sparkles className="w-4 h-4 fill-white shrink-0 group-hover:rotate-12 transition-transform duration-300" />
+                      <span>BÁO GIỜ TÔI CẦN ĐI · CHỈ TỪ {formatVND(carmateSegmentPrice)}</span>
+                    </button>
+                  )}
 
-              <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-2">
-                Chủ xe liên hệ lại sau 5–10 phút · Hủy tự do không mất phí
-              </p>
-            </div>
+                  <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-2">
+                    {hasRealTrips
+                      ? 'Chủ xe xác nhận qua SĐT trong 5 phút · Hủy tự do không mất phí'
+                      : 'Chủ xe hoặc điều phối viên sẽ gọi/Zalo xác nhận trong 15 phút · 0đ cọc'}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>,
         document.body
