@@ -1340,15 +1340,17 @@ export default function CorridorSearchBoard({
                   </div>
                   <div className="p-3.5 sm:p-4 bg-[#f0f6ff]/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/60 rounded-2xl space-y-3 shadow-2xs">
                     <div className="flex items-start gap-2.5">
-                      <span className="text-base shrink-0 mt-0.5">💡</span>
+                      <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0 mt-0.5 text-[#0071e3] dark:text-blue-400">
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </div>
                       <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-200">
                         {hasRealTrips ? (
                           <>
-                            Hôm nay có <strong className="text-slate-900 dark:text-white font-bold">{carmateDisplayTrips.length} chuyến xe ghép tiện chuyến</strong> cùng tuyến này (đón trả tận nơi, ghé các BV lớn) · <span className="font-mono font-bold text-[#18532c] dark:text-emerald-400">{formatVND(firstRealTrip?.pricePerSeat || carmateSegmentPrice)}</span>
+                            Hôm nay có <strong className="text-slate-900 dark:text-white font-bold">{carmateDisplayTrips.length} chuyến xe ghép</strong> cùng tuyến này · <span className="font-mono font-bold text-slate-900 dark:text-white">{formatVND(firstRealTrip?.pricePerSeat || carmateSegmentPrice)}</span>
                           </>
                         ) : (
                           <>
-                            Tuyến này có <strong className="text-slate-900 dark:text-white font-bold">xe ghép tiện chuyến</strong> kết nối theo yêu cầu (đón trả tận nơi, ghé các BV lớn) · từ <span className="font-mono font-bold text-[#18532c] dark:text-emerald-400">{formatVND(carmateSegmentPrice)}</span>
+                            Tuyến này có <strong className="text-slate-900 dark:text-white font-bold">xe tiện chuyến</strong> kết nối theo yêu cầu · từ <span className="font-mono font-bold text-slate-900 dark:text-white">{formatVND(carmateSegmentPrice)}</span>
                           </>
                         )}
                       </div>
