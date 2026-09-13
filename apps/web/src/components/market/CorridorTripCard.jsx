@@ -97,9 +97,10 @@ export default function CorridorTripCard({
       return `Đón trạm ${fromClean}`;
     }
     if (tripIndex === 1) {
-      const rawDriverName = trip.driverName || trip.driver?.publicName || trip.driver?.name || 'CX-102';
-      const cleanDriverName = rawDriverName.replace(/^Chủ xe\s+/i, '').trim();
-      return `Chủ xe ${cleanDriverName}`;
+      const rawCode = trip.maskedCode || trip.driver?.maskedCode || trip.driverCode || trip.id || '';
+      const numMatch = String(rawCode).match(/\d+/);
+      const codeSuffix = numMatch ? `#${numMatch[0]}` : '#102';
+      return `Chủ xe H. (${codeSuffix})`;
     }
     return 'Không nhồi nhét';
   })();

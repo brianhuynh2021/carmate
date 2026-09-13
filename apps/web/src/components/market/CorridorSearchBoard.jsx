@@ -249,17 +249,27 @@ export default function CorridorSearchBoard({
   const [isEditingRoute, setIsEditingRoute] = useState(false);
 
   // ── Trí tuệ bản địa: tự chọn tuyến + chiều theo GPS, im lặng ──────────
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+  const [isDetectingGPS, setIsDetectingGPS] = useState(false);
+
+  const handleAutoDetectGPS = useCallback((e) => {
+    if (e) e.stopPropagation();
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      onShowToast?.('Trình duyệt không hỗ trợ định vị');
+      return;
+    }
+    setIsDetectingGPS(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setIsDetectingGPS(false);
         const { latitude, longitude } = pos.coords;
         const guessed = detectCorridorByCoords(latitude, longitude);
-        if (!guessed) return;
+        if (!guessed) {
+          onShowToast?.('Bạn đang ở ngoài tuyến đường phục vụ (QL13)');
+          return;
+        }
         setCorridorId(guessed.id);
         writeStore(CORRIDOR_KEY, guessed.id);
 
-        // Đứng ở đầu nào thì mặc định đi từ đầu đó
         let nearest = null;
         let best = Infinity;
         for (const h of getEndpointHubs(guessed.id, 'a').concat(getEndpointHubs(guessed.id, 'b'))) {
@@ -271,15 +281,24 @@ export default function CorridorSearchBoard({
         }
         if (nearest) {
           const ep = getHubEndpoint(guessed.id, nearest.id);
-          if (ep) setHeading(ep === 'a' ? 'a_to_b' : 'b_to_a');
+          if (ep) {
+            setHeading(ep === 'a' ? 'a_to_b' : 'b_to_a');
+            setFromHubId(nearest.id);
+            onShowToast?.(`Đã tìm thấy trạm gần nhất: ${nearest.shortName || nearest.name}`);
+          }
         }
       },
-      () => {
-        /* từ chối GPS: giữ nguyên mặc định, không làm phiền */
+      (err) => {
+        setIsDetectingGPS(false);
+        if (err.code === 1) {
+          onShowToast?.('Vui lòng cấp quyền truy cập vị trí trong cài đặt trình duyệt');
+        } else {
+          onShowToast?.('Không thể lấy vị trí hiện tại');
+        }
       },
-      { timeout: 8000, maximumAge: 600000 }
+      { timeout: 8000, maximumAge: 600000, enableHighAccuracy: true }
     );
-  }, []);
+  }, [onShowToast]);
 
   // ── Giá tính NGẦM tại máy, không thông báo ────────────────────────────
   const tariff = useMemo(() => {
@@ -676,8 +695,8 @@ export default function CorridorSearchBoard({
             </button>
           </div>
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
-        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
-          <MapPin className="w-5 h-5 text-emerald-500 shrink-0 group-hover/from:scale-115 transition-transform" />
+        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-start gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
+          <MapPin className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5 group-hover/from:scale-115 transition-transform" />
           <div className="flex-1 min-w-0">
             <label className="block type-label text-slate-400 group-hover/from:text-emerald-700 dark:group-hover/from:text-emerald-400 mb-0.5 cursor-pointer transition-colors">
               {t('search.from')}
@@ -697,6 +716,21 @@ export default function CorridorSearchBoard({
               </select>
               <ChevronDown className="w-4 h-4 text-slate-400 group-hover/from:text-emerald-600 dark:group-hover/from:text-emerald-400 transition-all pointer-events-none absolute right-1 group-hover/from:translate-y-0.5 shrink-0" />
             </div>
+            
+            {/* Lấy vị trí GPS thủ công */}
+            <button
+              type="button"
+              onClick={handleAutoDetectGPS}
+              disabled={isDetectingGPS}
+              className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-2 py-1.5 rounded-lg transition-colors border border-emerald-200/50 dark:border-emerald-500/20 active:scale-95"
+            >
+              {isDetectingGPS ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Navigation className="w-3.5 h-3.5" />
+              )}
+              Lấy vị trí đón của tôi
+            </button>
           </div>
         </div>
 
@@ -1231,9 +1265,9 @@ export default function CorridorSearchBoard({
           destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
           destNote={toHub?.landmark || matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
           segmentPrice={carmateSegmentPrice}
-          onConfirmBook={(tripToBook) => {
+          onConfirmBook={(tripToBook, bookedSeats = 1) => {
             setSelectedDetailTrip(null);
-            setSelectedBookingTrip(tripToBook);
+            setSelectedBookingTrip({ ...tripToBook, initialSeats: bookedSeats });
           }}
         />
       )}

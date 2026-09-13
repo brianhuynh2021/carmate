@@ -537,30 +537,8 @@ export default function StationRiderView({
   }, [boardingPass?.intentId, currentHub.id, viewStep]);
 
   // 3. TỰ ĐỘNG LẤY TỌA ĐỘ GPS, KÉO VỀ TRẠM GẦN NHẤT & ĐỐI SOÁT GEOFENCE (SNAP-TO-STATION)
-  useEffect(() => {
-    if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setClientCoords({ lat, lng });
-
-          const nearest = findNearestVirtualHub(lat, lng, 'Tuyến QL13');
-          if (nearest) {
-            const dKm = nearest.distanceKm != null ? nearest.distanceKm : calculateDistanceKm(lat, lng, nearest.lat, nearest.lng);
-            const distM = Math.round(dKm * 1000);
-            setNearestHubInfo({
-              ...nearest,
-              distanceKm: dKm,
-              distanceMeters: distM
-            });
-          }
-        },
-        () => {},
-        { timeout: 5000, enableHighAccuracy: true }
-      );
-    }
-  }, [currentHub.lat, currentHub.lng]);
+  // Tính năng auto-GPS đã bị xoá để tránh popup friction cho khách hàng mới.
+  // Khách sẽ chủ động bấm khi cần.
 
   // ĐỒNG BỘ THÔNG TIN NGƯỜI DÙNG HIỆN TẠI
   useEffect(() => {

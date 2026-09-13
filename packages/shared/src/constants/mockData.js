@@ -4,6 +4,8 @@ export const INITIAL_DRIVER_OFFERS = [
     type: 'driver_offer',
     maskedCode: 'CX-101',
     publicName: 'Chủ xe CX-101',
+    realName: 'Anh Tuấn',
+    driverRealName: 'Anh Tuấn',
     phoneReal: '0900.000.019',
     direction: 'province_to_sg',
     from: 'Bù Đốp (Cây xăng Petrolimex 17, QL13)',
@@ -60,6 +62,8 @@ export const INITIAL_DRIVER_OFFERS = [
     ],
     hasCarPhotos: true,
     plateMask: '93A - ***.86',
+    fullPlate: '93A - 541.86',
+    plate: '93A - 541.86',
     plateType: 'white',
     isServiceVehicle: false,
     notes: 'Xe gia đình sạch sẽ, đón dọc QL13 tiện đường, không hút thuốc. Cốp rộng nhận gửi thêm thùng xốp nông sản quê.',
@@ -95,6 +99,8 @@ export const INITIAL_DRIVER_OFFERS = [
     rating: 4.95,
     completedCount: 215,
     plateMask: '61E - ***.24',
+    fullPlate: '61E - 482.24',
+    plate: '61E - 482.24',
     perks: ['Xe dịch vụ (Biển vàng)', 'Tiện chuyến chiều về rỗng', 'Đón trả tận ngõ', 'Nhiều vali hành lý', 'Bao xe trọn gói 300k'],
     serviceNote: 'Xe 7 chỗ rộng rãi chiều về từ TSN, đón tận ngõ, nhận ghép 100k/ghế hoặc bao nguyên xe 300k.',
     notes: 'Xe 7 chỗ rộng rãi chiều về rỗng từ Sân bay TSN, nhận đón trả tận ngõ quanh Lái Thiêu, Thủ Dầu Một, Bến Cát, Chơn Thành.',
@@ -104,7 +110,9 @@ export const INITIAL_DRIVER_OFFERS = [
     id: 'DRV-102',
     type: 'driver_offer',
     maskedCode: 'CX-102',
-    publicName: 'Chủ xe CX-102',
+    publicName: 'Chủ xe H. (#102)',
+    realName: 'Anh Hùng',
+    driverRealName: 'Anh Hùng',
     phoneReal: '0900.000.013',
     direction: 'province_to_sg',
     from: 'Lộc Ninh (Chợ Ninh Thịnh / Ngã 3 Lộc Tấn)',
@@ -129,34 +137,50 @@ export const INITIAL_DRIVER_OFFERS = [
     rating: 4.9,
     completedCount: 98,
     perks: ['Trọn gói xăng & cầu đường', 'Cốp rộng', 'Xe gia đình', 'Nhận gửi bưu phẩm'],
+    photos: [
+      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1509000000103-7e6692767b70?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800&q=80'
+    ],
+    carPhotoUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
     carPhotos: [
       {
         angle: 'front',
         label: 'Góc Trước (Đầu xe)',
-        url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80',
-        caption: 'Mặt trước thể thao, đèn chiếu sáng sắc nét'
-      },
-      {
-        angle: 'back',
-        label: 'Góc Sau (Đuôi xe & Cốp)',
-        url: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=800&q=80',
-        caption: 'Cốp sau rộng, mở nhẹ nhàng'
+        url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
+        caption: 'Đầu xe gia đình 7 chỗ sáng bóng, đèn LED hiện đại'
       },
       {
         angle: 'side',
         label: 'Góc Thân xe (Bên hông)',
-        url: 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&w=800&q=80',
-        caption: 'Dáng xe cao ráo, gầm thoáng'
+        url: 'https://images.unsplash.com/photo-1509000000103-7e6692767b70?auto=format&fit=crop&w=800&q=80',
+        caption: 'Thân xe màu trắng sạch sẽ, không trầy xước'
+      },
+      {
+        angle: 'back',
+        label: 'Góc Sau (Đuôi xe & Cốp)',
+        url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
+        caption: 'Đuôi xe nguyên bản, camera lùi an toàn'
       },
       {
         angle: 'interior',
         label: 'Nội thất & Ghế ngồi',
-        url: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=800&q=80',
-        caption: 'Ghế da phối nỉ êm ái, sạch sẽ không mùi thuốc'
+        url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80',
+        caption: 'Nội thất ghế bọc da sạch sẽ, không mùi thuốc lá'
+      },
+      {
+        angle: 'trunk',
+        label: 'Khoang cốp để đồ',
+        url: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800&q=80',
+        caption: 'Cốp xe 7 chỗ rộng rãi, chứa thoải mái 2-3 vali lớn'
       }
     ],
     hasCarPhotos: true,
     plateMask: '93A - ***.52',
+    fullPlate: '93A - 283.52',
+    plate: '93A - 283.52',
     notes: 'Xe gia đình rộng rãi, cốp lớn để hành lý. Đón trả linh hoạt dọc tuyến, nhận kèm đồ gọn/thùng xốp.',
     createdAt: Date.now() - 3600000 * 4
   },

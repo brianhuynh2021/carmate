@@ -17,7 +17,7 @@ import {
   applyCancellationPenalty
 } from '../db/sqliteStore.js';
 import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
-import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
+import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail, resolveDriverRealName, resolveFullPlate } from '@carmate/shared';
 import crypto from 'crypto';
 import { generateToken } from '../utils/token.js';
 import { sendBusinessAlert, sendDirectBookingTelegramAlert, sendNewBookingTelegramAlert } from '../utils/telegramAlert.js';
@@ -206,7 +206,9 @@ export async function createBooking(req, res) {
         } else {
           // Bên ra kèo là Chủ xe đăng xe trống
           body.driverPhone = tripPhoneFinal;
-          body.driverName = targetTrip.publicName || targetTrip.driverName || targetTrip.name || 'Chủ xe';
+          const driverUser = (targetTrip?.userId && getUserById(targetTrip.userId)) ||
+                             (tripPhoneFinal && getUserByPhone(tripPhoneFinal));
+          body.driverName = resolveDriverRealName(targetTrip, driverUser?.name || body.driverName || 'Chủ xe');
           body.driverId = targetTrip.userId;
           body.passengerPhone = body.passengerPhone || req.user?.phone || '';
           body.passengerName = body.passengerName || req.user?.name || 'Người đi cùng';
@@ -343,9 +345,12 @@ export async function createBooking(req, res) {
 
     // Mở khoá thông tin 2 chiều cho luồng Match & Reveal (Biển số thật & SĐT Chủ xe)
     if (targetTrip) {
-      booking.fullPlate = targetTrip.plate || targetTrip.licensePlate || targetTrip.fullPlate || '93A-568.89';
+      const driverUser = (targetTrip.userId && getUserById(targetTrip.userId)) ||
+                         (targetTrip.phoneReal && getUserByPhone(targetTrip.phoneReal)) ||
+                         (body.driverPhone && getUserByPhone(body.driverPhone));
+      booking.fullPlate = resolveFullPlate(targetTrip, '93A - 541.86');
       booking.driverPhone = targetTrip.phoneReal || targetTrip.phone || '0984.123.456';
-      booking.driverName = targetTrip.publicName || targetTrip.driverName || 'Chủ xe';
+      booking.driverName = resolveDriverRealName(targetTrip, driverUser?.name || targetTrip.driverRealName || targetTrip.authorName || body.driverName || 'Chủ xe');
       booking.carModel = targetTrip.carType || targetTrip.vehicleModel || 'Toyota Vios 2022';
       booking.availableSeats = remainingSeatsAfterBooking;
     }
@@ -359,7 +364,7 @@ export async function createBooking(req, res) {
       to: body.to,
       remainingSeats: remainingSeatsAfterBooking ?? 0,
       carModel: targetTrip?.carType || body.carModel || 'Toyota Vios 2022',
-      fullPlate: targetTrip?.plate || targetTrip?.licensePlate || '93A-568.89',
+      fullPlate: resolveFullPlate(targetTrip, '93A - 541.86'),
       req
     }).catch(() => {});
 
@@ -734,7 +739,7 @@ export function getBookingPublicSummary(req, res) {
         seats: booking.seats || 1,
         totalDeal: booking.totalDeal || booking.price || 0,
         passengerName: booking.passengerName || booking.contactName || 'Khách CarMate',
-        driverName: booking.driverName || 'Chủ xe',
+        driverName: resolveDriverRealName(booking, booking.driverName || 'Chủ xe'),
         createdAt: booking.createdAt
       }
     });

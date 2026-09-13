@@ -367,31 +367,37 @@ export default function MovementIntentModal({
           <div className="flex items-center gap-3">
             <div
               className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
-                role === 'driver'
+                submittedIntent
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                  : role === 'driver'
                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                   : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
               }`}
             >
-              {role === 'driver' ? <Car className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+              {submittedIntent ? <CheckCircle2 className="w-5 h-5" /> : (role === 'driver' ? <Car className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />)}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
-                  {role === 'driver' ? t('intent.titleDriver') : 'Đặt lịch trước'}
+                  {submittedIntent ? 'Xác nhận đặt lịch' : (role === 'driver' ? t('intent.titleDriver') : 'Đặt lịch trước')}
                 </h2>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
-                  role === 'driver'
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                    : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                }`}>
-                  {role === 'driver' ? t('intent.roleDriver') : '⚡ Ghép xe theo giờ của bạn'}
-                </span>
+                {!submittedIntent && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                    role === 'driver'
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                  }`}>
+                    {role === 'driver' ? t('intent.roleDriver') : '⚡ Ghép xe theo giờ của bạn'}
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {role === 'driver'
-                  ? t('intent.subtitleDriver')
-                  : 'Xe chưa lăn bánh thời điểm này. Đặt lịch trước, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.'}
-              </p>
+              {!submittedIntent && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {role === 'driver'
+                    ? t('intent.subtitleDriver')
+                    : 'Xe chưa lăn bánh thời điểm này. Đặt lịch trước, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.'}
+                </p>
+              )}
             </div>
           </div>
           <button
@@ -415,12 +421,9 @@ export default function MovementIntentModal({
             </div>
 
             <div className="space-y-1.5">
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                Đã ghi nhận nhu cầu!
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                Đã ghi nhận yêu cầu!
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                CarMate đang kết nối với các chủ xe chạy tuyến {submittedIntent.originName} – {submittedIntent.destinationName} {submittedIntent.date ? `ngày ${submittedIntent.date}` : ''}. Chúng tôi sẽ gọi điện hoặc nhắn tin Zalo xác nhận trong 15 phút.
-              </p>
             </div>
 
             {/* Thẻ tóm tắt cuốc xe */}
@@ -432,13 +435,15 @@ export default function MovementIntentModal({
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/50 dark:border-white/5">
-                <span className="text-slate-500">Khung giờ đón:</span>
+                <span className="text-slate-500">Thời gian:</span>
                 <span className="font-medium text-slate-900 dark:text-white font-mono">
-                  {submittedIntent.date} ({submittedIntent.timeSlot})
+                  {submittedIntent.date && !isNaN(new Date(submittedIntent.date).getTime()) 
+                    ? new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(submittedIntent.date))
+                    : submittedIntent.date} ({submittedIntent.timeSlot})
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/50 dark:border-white/5">
-                <span className="text-slate-500">Số điện thoại liên hệ:</span>
+                <span className="text-slate-500">SĐT nhận:</span>
                 <span className="font-bold text-slate-900 dark:text-white font-mono">
                   {submittedIntent.phone}
                 </span>
@@ -450,10 +455,10 @@ export default function MovementIntentModal({
               <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div className="min-w-0 space-y-0.5">
                 <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                  Chủ xe hoặc điều phối viên sẽ liên hệ trong 15 phút
+                  Điều phối viên sẽ gọi hoặc nhắn Zalo trong 15 phút
                 </p>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Chúng tôi sẽ gọi điện hoặc nhắn tin Zalo xác nhận điểm đón chính xác và giờ xe đến đón bạn.
+                  Để thông báo điểm đón chính xác và giờ xe đến đón bạn.
                 </p>
               </div>
             </div>
@@ -461,7 +466,7 @@ export default function MovementIntentModal({
             {/* Cam kết uy tín thực tế */}
             <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Chuyến xe nhà tiện chuyến · 0đ cọc · Phụ xăng trực tiếp khi lên xe</span>
+              <span>0đ cọc · Phụ xăng trực tiếp cho tài xế khi lên xe</span>
             </p>
 
             {/* Nút đóng */}
@@ -473,9 +478,9 @@ export default function MovementIntentModal({
                   setSubmittedIntent(null);
                   onClose();
                 }}
-                className="w-full h-11 sm:h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-all cursor-pointer active:scale-[0.98]"
+                className="w-full h-11 sm:h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-all cursor-pointer active:scale-[0.98] uppercase tracking-wide"
               >
-                Đã hiểu & Quay lại tìm kiếm
+                VỀ TRANG CHỦ
               </button>
             </div>
           </div>

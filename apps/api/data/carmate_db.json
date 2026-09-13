@@ -351,6 +351,8 @@
       "status": "active",
       "phoneReal": "0900000019",
       "userId": "USR-0900000019",
+      "realName": "Anh Tuấn",
+      "driverRealName": "Anh Tuấn",
       "publicName": "Chủ xe CX-101",
       "from": "Bù Đốp (Cây xăng Petrolimex 17, QL13)",
       "to": "Sài Gòn (Ngã tư Hàng Xanh / BX Miền Đông mới)",
@@ -409,6 +411,8 @@
       ],
       "hasCarPhotos": true,
       "plateMask": "93A - ***.86",
+      "fullPlate": "93A - 541.86",
+      "plate": "93A - 541.86",
       "notes": "Xe gia đình sạch sẽ, đón dọc QL13 tiện đường, không hút thuốc.",
       "createdAt": 1789195468672
     },
@@ -419,7 +423,9 @@
       "status": "active",
       "phoneReal": "0900000013",
       "userId": "USR-0900000013",
-      "publicName": "Chủ xe CX-102",
+      "realName": "Anh Hùng",
+      "driverRealName": "Anh Hùng",
+      "publicName": "Chủ xe H. (#102)",
       "from": "Lộc Ninh (Chợ Ninh Thịnh / Ngã 3 Lộc Tấn)",
       "to": "Sài Gòn (Quận Tân Bình / Sân bay TSN)",
       "routeCategory": "Tuyến QL13",
@@ -445,6 +451,14 @@
         "Cốp rộng"
       ],
       "hasCarPhotos": true,
+      "photos": [
+        "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1509000000103-7e6692767b70?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800&q=80"
+      ],
+      "carPhotoUrl": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
       "carPhotos": [
         {
           "angle": "front",
@@ -478,6 +492,8 @@
         }
       ],
       "plateMask": "93A - ***.52",
+      "fullPlate": "93A - 283.52",
+      "plate": "93A - 283.52",
       "notes": "Đi công việc cơ quan, còn 2 ghế ngồi êm ái, xe không chở đồ tanh.",
       "createdAt": 1789184668672
     },

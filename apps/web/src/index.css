@@ -4,12 +4,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ────────────────────────────────────────────────────────────
-   DESIGN TOKENS — Apple Warm Minimalism & Eye-Care Design System
-   Zero-Glare Warm Neutral Aluminum Canvas (#f5f5f7), Pure White Surfaces,
+   DESIGN TOKENS — MIT Transit Lab & Apple Eye-Care Design System
+   MIT Transit Glare-Shield Canvas (#DFE5EC), Pure White Surfaces (#ffffff),
    Precision Apple Typography (#1d1d1f), and Apple Signature Blue (#0071e3)
    ──────────────────────────────────────────────────────────── */
 @theme {
   --breakpoint-xs: 420px;
+  --color-canvas: #DFE5EC;
+  --color-canvas-dark: #0b0f19;
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', 'Plus Jakarta Sans', 'Inter', 'Helvetica Neue', Arial,
     sans-serif;
@@ -57,7 +59,7 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
-    background-color: #f1f5f9;
+    background-color: #DFE5EC;
   }
 
   body {
@@ -68,7 +70,7 @@
     font-size: 14.5px;
     line-height: 1.55;
     letter-spacing: -0.012em;
-    background-color: #f1f5f9;
+    background-color: #DFE5EC;
     color: #0f172a;
   }
 
