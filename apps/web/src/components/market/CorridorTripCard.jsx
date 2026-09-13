@@ -67,7 +67,7 @@ function cleanStationName(raw, fallback = '') {
 export default function CorridorTripCard({
   trip,
   originName = 'Tân Khai (QL13)',
-  _destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
+  destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
   segmentPrice = 165000,
   isEarliest = false,
   tripIndex = 0,
@@ -90,6 +90,9 @@ export default function CorridorTripCard({
   const uspLabel = (() => {
     if (trip.usp) return trip.usp;
     if (isEarliest || tripIndex === 0) {
+      if (/chợ rẫy|bệnh viện|đại học y dược|y dược|bv\b/i.test(destName || '')) {
+        return 'Trả tận cổng viện';
+      }
       const fromClean = cleanStationName(originName, 'Tân Khai');
       return `Đón trạm ${fromClean}`;
     }

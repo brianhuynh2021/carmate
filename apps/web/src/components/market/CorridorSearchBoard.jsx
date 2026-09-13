@@ -101,24 +101,26 @@ function getCleanOperatorName(h) {
   return raw.replace(/\(.*?\)/g, '').trim();
 }
 
-/** Helper phân loại dòng xe và tần suất xuất bến */
+/** Helper phân loại dòng xe ngắn gọn, chuẩn mực */
 function getBusSubtext(h) {
-  const freq = h.frequency?.split('(')[0]?.trim() || 'Nhiều chuyến/ngày';
-  let vehicleType = 'Limousine';
-  if (/giường nằm/i.test(h.operator || h.note || '')) vehicleType = 'Xe giường nằm';
-  else if (/thành công/i.test(h.operator || '')) vehicleType = 'Xe khách 29-45 chỗ';
-  else if (/9 chỗ/i.test(h.operator || '')) vehicleType = 'Limousine 9 chỗ';
-  else if (/ghế ngả/i.test(h.operator || '')) vehicleType = 'Limousine ghế ngả';
-
-  return `${vehicleType} · ${freq}`;
+  const raw = `${h.operator || ''} ${h.shortName || ''}`.toLowerCase();
+  if (/thành công/i.test(raw)) return 'Xe khách 29-45 chỗ';
+  if (/petro/i.test(raw)) return 'Limousine VIP';
+  if (/trung kén/i.test(raw) || /giường nằm/i.test(h.note || '')) return 'Xe giường nằm';
+  if (/huy hiếu/i.test(raw) || /ghế ngả/i.test(h.note || '')) return 'Limousine ghế ngả';
+  return 'Limousine 9 chỗ';
 }
 
-/** Helper đòn bẩy tâm lý điểm trả (so sánh với trả cổng viện của CarMate) */
-function getPsychologyBadge(h) {
-  if (/sân bay|tsn/i.test(h.note || h.coverage || '')) return 'Trả tại VP / Sân bay TSN';
-  if (/vp 220/i.test(h.note || h.coverage || '')) return 'Trả tại VP 220 QL13';
-  if (/bến xe|bx/i.test(h.coverage || h.note || '')) return 'Trả tại bến xe (tốn thêm Grab)';
-  return 'Trả tại bến xe (tốn thêm Grab)';
+/** Helper điểm trả khách thực tế (tương phản khách quan với CarMate trả tận cổng) */
+function getBusDropoff(h) {
+  const raw = `${h.operator || ''} ${h.shortName || ''} ${h.note || ''} ${h.coverage || ''}`.toLowerCase();
+  if (/petro/i.test(raw) || /sân bay|tsn|tân bình/i.test(raw)) {
+    return 'Trả tại VP Tân Bình / TSN';
+  }
+  if (/huy hiếu/i.test(raw) || /vp 220/i.test(raw)) {
+    return 'Trả tại VP 220 QL13';
+  }
+  return 'Trả tại Bến xe Miền Đông';
 }
 
 /** Helper định dạng giá vé dạng text mỏng (200k – 260k) */
@@ -1189,7 +1191,7 @@ export default function CorridorSearchBoard({
                 {verifiedHotlines.map((h) => {
                   const cleanBusName = getCleanOperatorName(h);
                   const busSubtext = getBusSubtext(h);
-                  const psychologyBadge = getPsychologyBadge(h);
+                  const busDropoff = getBusDropoff(h);
                   const shortPrice = formatShortPriceRef(h.priceRef);
 
                   return (
@@ -1223,11 +1225,11 @@ export default function CorridorSearchBoard({
                         </div>
                       </div>
 
-                      {/* Hàng 2: Loại xe & Tần suất + Đòn bẩy tâm lý */}
-                      <div className="flex items-center justify-between text-[10.5px] mt-1 text-slate-400 dark:text-slate-500">
+                      {/* Hàng 2: Loại xe & Điểm trả thực tế (Màu xám trung tính text-slate-500) */}
+                      <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
                         <span className="truncate">{busSubtext}</span>
-                        <span className="text-amber-600/90 dark:text-amber-400/90 font-medium shrink-0 ml-1.5">
-                          {psychologyBadge}
+                        <span className="font-medium shrink-0 ml-1.5 text-slate-500 dark:text-slate-400">
+                          {busDropoff}
                         </span>
                       </div>
                     </div>
