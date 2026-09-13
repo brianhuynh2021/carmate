@@ -39,13 +39,13 @@ function formatShortTime(departureLabel = '04:30', departureDate = null) {
 function cleanStationName(raw, fallback = '') {
   const text = String(raw || fallback).trim();
   if (!text) return fallback;
-  if (/tân khai/i.test(text)) return 'Tân Khai (QL13)';
+  if (/tân khai/i.test(text)) return 'Tân Khai';
   if (/bù đốp/i.test(text)) return 'Bù Đốp';
   if (/lộc ninh/i.test(text)) return 'Lộc Ninh';
   if (/bình long/i.test(text)) return 'Bình Long';
   if (/chơn thành/i.test(text)) return 'Chơn Thành';
   if (/bàu bàng/i.test(text)) return 'Bàu Bàng';
-  if (/chợ rẫy/i.test(text)) return 'Cụm BV Chợ Rẫy';
+  if (/chợ rẫy/i.test(text)) return 'BV Chợ Rẫy (TP.HCM)';
   if (/hàng xanh/i.test(text)) return 'Hàng Xanh';
   if (/tân sơn nhất|tsn/i.test(text)) return 'Sân bay TSN';
   if (/bến xe miền đông|bình triệu/i.test(text)) return 'Bình Triệu / BX';

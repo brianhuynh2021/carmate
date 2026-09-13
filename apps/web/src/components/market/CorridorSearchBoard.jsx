@@ -504,6 +504,75 @@ export default function CorridorSearchBoard({
 
   const hubLabel = (h) => h.shortName || h.name;
 
+  // Bảng định danh vĩ mô cấp tỉnh / huyện (Macro-level Landmarks - Airbnb / Google Maps style)
+  const macroFromLabel = useMemo(() => {
+    if (!fromHub) return 'Tân Khai';
+    const MACRO_HUB_LABELS = {
+      hub_ql13_tan_khai: 'Tân Khai',
+      hub_ql13_tthc_tan_khai: 'Tân Khai',
+      hub_ql13_cho_ray: 'BV Chợ Rẫy (TP.HCM)',
+      hub_ql13_hang_xanh: 'Hàng Xanh (TP.HCM)',
+      hub_ql13_san_bay_tsn: 'Sân bay TSN (TP.HCM)',
+      hub_ql13_binh_trieu: 'Bình Triệu (TP.HCM)',
+      hub_ql13_van_phuc_city: 'Vạn Phúc City (TP.HCM)',
+      hub_ql13_nga4_binh_phuoc: 'Ngã 4 Bình Phước (TP.HCM)',
+      hub_ql13_binh_long: 'Bình Long',
+      hub_ql13_tthc_binh_long: 'Bình Long',
+      hub_ql13_nga4_chon_thanh: 'Chơn Thành',
+      hub_ql13_bau_bang: 'Bàu Bàng',
+      hub_ql13_ben_cat: 'Bến Cát',
+      hub_ql13_thu_dau_mot: 'Thủ Dầu Một',
+      hub_ql13_cho_loc_ninh: 'Lộc Ninh',
+      hub_ql13_budop: 'Bù Đốp',
+      hub_ql13_dong_xoai: 'Đồng Xoài'
+    };
+    if (MACRO_HUB_LABELS[fromHub.id]) return MACRO_HUB_LABELS[fromHub.id];
+    const name = fromHub.shortName || fromHub.name || 'Tân Khai';
+    return name
+      .replace(/^Cây xăng Petrolimex\s+/i, '')
+      .replace(/^Cụm BV Chợ Rẫy\s*\/\s*BV Đại học Y Dược/i, 'BV Chợ Rẫy (TP.HCM)')
+      .replace(/^Cụm BV\s+/i, 'BV ')
+      .replace(/^Cụm\s+/i, '')
+      .replace(/\s*\(QL13\)/i, '')
+      .replace(/\s*\/\s*BV Đại học Y Dược/i, '')
+      .replace(/^Trung tâm Hành chính\s+/i, 'TTHC ')
+      .trim() || 'Tân Khai';
+  }, [fromHub]);
+
+  const macroToLabel = useMemo(() => {
+    if (!toHub) return 'BV Chợ Rẫy (TP.HCM)';
+    const MACRO_HUB_LABELS = {
+      hub_ql13_tan_khai: 'Tân Khai',
+      hub_ql13_tthc_tan_khai: 'Tân Khai',
+      hub_ql13_cho_ray: 'BV Chợ Rẫy (TP.HCM)',
+      hub_ql13_hang_xanh: 'Hàng Xanh (TP.HCM)',
+      hub_ql13_san_bay_tsn: 'Sân bay TSN (TP.HCM)',
+      hub_ql13_binh_trieu: 'Bình Triệu (TP.HCM)',
+      hub_ql13_van_phuc_city: 'Vạn Phúc City (TP.HCM)',
+      hub_ql13_nga4_binh_phuoc: 'Ngã 4 Bình Phước (TP.HCM)',
+      hub_ql13_binh_long: 'Bình Long',
+      hub_ql13_tthc_binh_long: 'Bình Long',
+      hub_ql13_nga4_chon_thanh: 'Chơn Thành',
+      hub_ql13_bau_bang: 'Bàu Bàng',
+      hub_ql13_ben_cat: 'Bến Cát',
+      hub_ql13_thu_dau_mot: 'Thủ Dầu Một',
+      hub_ql13_cho_loc_ninh: 'Lộc Ninh',
+      hub_ql13_budop: 'Bù Đốp',
+      hub_ql13_dong_xoai: 'Đồng Xoài'
+    };
+    if (MACRO_HUB_LABELS[toHub.id]) return MACRO_HUB_LABELS[toHub.id];
+    const name = toHub.shortName || toHub.name || 'BV Chợ Rẫy (TP.HCM)';
+    return name
+      .replace(/^Cây xăng Petrolimex\s+/i, '')
+      .replace(/^Cụm BV Chợ Rẫy\s*\/\s*BV Đại học Y Dược/i, 'BV Chợ Rẫy (TP.HCM)')
+      .replace(/^Cụm BV\s+/i, 'BV ')
+      .replace(/^Cụm\s+/i, '')
+      .replace(/\s*\(QL13\)/i, '')
+      .replace(/\s*\/\s*BV Đại học Y Dược/i, '')
+      .replace(/^Trung tâm Hành chính\s+/i, 'TTHC ')
+      .trim() || 'BV Chợ Rẫy (TP.HCM)';
+  }, [toHub]);
+
   return (
     <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-10">
       {/* ── CHỌN TUYẾN (chỉ hiện khi có từ 2 tuyến trở lên để tối ưu không gian) ── */}
@@ -532,56 +601,62 @@ export default function CorridorSearchBoard({
         </div>
       )}
 
-      {/* ── THANH CHẶNG TINH GỌN (SLIM ROUTE BAR - ZERO CLUTTER) ── */}
+      {/* ── THANH CHẶNG TINH GỌN (CLICKABLE PILL - AIRBNB / GOOGLE MAPS STYLE) ── */}
       {!ENABLE_DEPARTURE_CHIPS && !isEditingRoute ? (
-        <section className="surface rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md transition-all duration-200">
-          <div className="flex items-center justify-between gap-2 sm:gap-3">
-            {/* Chặng đường mỏng */}
-            <div
-              onClick={() => setIsEditingRoute(true)}
-              className="flex-1 min-w-0 flex items-center gap-2.5 cursor-pointer py-1 px-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group/route"
-              title="Bấm để đổi trạm đón / trả"
-            >
-              <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300/80 dark:border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400 group-hover/route:scale-110 transition-transform">
-                <MapPin className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  <span className="truncate">{fromHub?.shortName || fromHub?.name || 'Tân Khai (QL13)'}</span>
-                  <span className="text-slate-400 dark:text-slate-500 shrink-0 font-normal">➔</span>
-                  <span className="truncate text-[#0071e3] dark:text-blue-400">{toHub?.shortName || toHub?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}</span>
-                </div>
-                <p className="text-[10.5px] sm:text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">
-                  ~{tariff?.distanceKm || 105}km · Tuyến Quốc Lộ 13
-                </p>
-              </div>
-            </div>
+        <div
+          onClick={() => setIsEditingRoute(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsEditingRoute(true);
+            }
+          }}
+          title="Chạm vào để đổi tuyến đón / trả"
+          className="flex items-center justify-between max-w-xl mx-auto px-4 py-2.5 bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/15 rounded-full shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 transition-all cursor-pointer select-none group/route"
+        >
+          {/* Khu vực text (Chạm vào đâu cũng mở chọn tuyến) */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0 group-hover/route:text-slate-600 dark:group-hover/route:text-slate-300 transition-colors" />
 
-            {/* Các nút hành động: Đổi chặng + Đảo chiều */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsEditingRoute(true)}
-                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer active:scale-95"
-              >
-                <span>Đổi chặng</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-              </button>
-
-              <button
-                type="button"
-                onClick={swap}
-                aria-label={t('search.swap')}
-                title={t('search.swap')}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90"
-              >
-                <ArrowUpDown className="w-3.5 h-3.5" />
-              </button>
+            <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5">
+              <span className="truncate">{macroFromLabel}</span>
+              <span className="text-slate-400 dark:text-slate-500 mx-1.5 shrink-0 font-normal">➔</span>
+              <span className="truncate">{macroToLabel}</span>
             </div>
           </div>
-        </section>
+
+          {/* Nút đảo chiều duy nhất bên phải */}
+          <button
+            type="button"
+            title="Đảo chiều tuyến"
+            aria-label={t('search.swap')}
+            onClick={(e) => {
+              e.stopPropagation();
+              swap();
+            }}
+            className="p-1.5 ml-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10 rounded-full transition-colors shrink-0 active:scale-90 cursor-pointer"
+          >
+            <ArrowUpDown className="w-4 h-4" />
+          </button>
+        </div>
       ) : (
         <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
+          <div className="flex items-center justify-between px-4 sm:px-5 pt-3 pb-2 border-b border-slate-100 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300">
+            <span className="flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5 text-slate-400" />
+              Chọn trạm đón & trả trên QL13
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsEditingRoute(false)}
+              className="p-1 -mr-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              title="Đóng / Thu gọn"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
         <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0 group-hover/from:scale-115 transition-transform" />
