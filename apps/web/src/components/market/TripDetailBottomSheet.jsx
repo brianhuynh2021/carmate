@@ -161,7 +161,7 @@ export default function TripDetailBottomSheet({
       onClick={onClose}
     >
       <div
-        className="w-full max-h-[90vh] sm:max-w-lg bg-white dark:bg-[#1c1c1e] rounded-t-3xl sm:rounded-3xl border-t sm:border border-slate-200 dark:border-white/15 shadow-2xl flex flex-col overflow-hidden animate-slide-up"
+        className="w-full max-h-[90vh] sm:max-w-lg bg-white dark:bg-[#1c1c1e] rounded-t-3xl sm:rounded-3xl border-t sm:border border-slate-200/70 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Thanh kéo trên mobile (Apple Pull Handle) */}
@@ -173,7 +173,7 @@ export default function TripDetailBottomSheet({
         <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <CarMateBadge size="xs" />
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-50 dark:bg-blue-950/50 text-[#0071e3] dark:text-blue-300 border border-blue-200/90 dark:border-blue-700/50">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-50 dark:bg-blue-950/50 text-[#0071e3] dark:text-blue-300 border border-blue-200/60 dark:border-blue-700/40">
               <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
               <span>Chuyến xe xác thực</span>
             </span>
@@ -194,7 +194,7 @@ export default function TripDetailBottomSheet({
           {/* 1. KHỐI THỜI GIAN & TÌNH TRẠNG CHỖ */}
           <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-lg sm:text-xl shrink-0 shadow-2xs">
+              <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-600 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-lg sm:text-xl shrink-0 shadow-2xs">
                 {trip.departureLabel || '04:30'}
               </span>
               <div className="min-w-0">
@@ -213,7 +213,7 @@ export default function TripDetailBottomSheet({
                   Đã hết chỗ
                 </span>
               ) : (
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold font-mono bg-white dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs inline-flex items-center gap-1.5">
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold font-mono bg-white dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600 shadow-2xs inline-flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                   Còn {seatsAvailable}/{totalSeats} chỗ
                 </span>
@@ -222,7 +222,7 @@ export default function TripDetailBottomSheet({
           </div>
 
           {/* 2. LỘ TRÌNH THỰC TẾ (ĐÓN / TRẢ) */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/10 space-y-3">
+          <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3">
             <div className="flex items-start gap-3">
               <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold shadow-2xs">
                 ●
@@ -250,7 +250,7 @@ export default function TripDetailBottomSheet({
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                     {destName}
                   </p>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/60">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
                     Trả tận cổng bệnh viện
                   </span>
                 </div>
@@ -262,7 +262,7 @@ export default function TripDetailBottomSheet({
           </div>
 
           {/* 3. THÔNG TIN CHỦ XE & PHƯƠNG TIỆN */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/10 space-y-2.5">
+          <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Chủ xe:</span>
@@ -277,19 +277,19 @@ export default function TripDetailBottomSheet({
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-white/10">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Dòng xe:</span>
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                   {vehicleModel}
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-200/70 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-slate-300/80 dark:border-white/10">
+              <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-200/70 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10">
                 {maskedPlate}
               </span>
             </div>
 
-            <div className="pt-2 border-t border-slate-200/60 dark:border-white/10">
+            <div className="pt-2 border-t border-slate-100 dark:border-white/5">
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 <span className="font-semibold text-slate-700 dark:text-slate-300">Tiện nghi: </span>
                 {amenitiesText}
@@ -298,7 +298,7 @@ export default function TripDetailBottomSheet({
           </div>
 
           {/* 4. CAM KẾT NỀN TẢNG (AN TÂM 100%) */}
-          <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-800/40 space-y-1.5 text-[11.5px] text-slate-700 dark:text-slate-300">
+          <div className="p-3.5 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-800/40 space-y-1.5 text-[11.5px] text-slate-700 dark:text-slate-300">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>Xe nhà chạy định kỳ hàng tuần · Cam kết khởi hành đúng giờ</span>

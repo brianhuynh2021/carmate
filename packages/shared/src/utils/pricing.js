@@ -2,7 +2,7 @@ import { ROUTE_BENCHMARKS } from '../constants/routes.js';
 import { findLocationCoords, calculateDistanceKm } from './geo.js';
 
 export const formatVND = (num) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
+  return `${new Intl.NumberFormat('vi-VN').format(num || 0)}đ`;
 };
 
 /**
