@@ -369,7 +369,8 @@ export default function CorridorSearchBoard({
     if (real.length > 0) {
       return real.map((t) => ({
         ...t,
-        pricePerSeat: t.pricePerSeat || carmateSegmentPrice
+        // Giá phân đoạn tính chính xác theo điểm đón/trả của khách trên hành lang
+        pricePerSeat: carmateSegmentPrice || t.pricePerSeat || 170000
       }));
     }
     // Tuyệt đối KHÔNG hiển thị xe ảo khi chưa có chuyến thật
@@ -800,7 +801,7 @@ export default function CorridorSearchBoard({
             </div>
             <div className="text-right shrink-0">
               <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                {tariff?.distanceKm ? `~${tariff.distanceKm} km` : 'Tuyến QL13'} · <span className="font-semibold text-slate-700 dark:text-slate-200">{formatVND(carmateSegmentPrice)}</span> / ghế
+                {tariff?.distanceKm ? `~${tariff.distanceKm} km` : 'Tuyến QL13'} · <span>Hành lang QL13</span>
               </p>
             </div>
           </div>

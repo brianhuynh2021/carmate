@@ -216,11 +216,11 @@ export default function CorridorTripCard({
       </div>
 
       {/* ── TẦNG 3: CHÂN THẺ (PHƯƠNG TIỆN, GIÁ TRỌN GÓI & NÚT XẢ ÁP LỰC) ── */}
-      <div className="pt-3 border-t border-slate-100 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Bên trái: Thumbnail xe 64x64 + Thông tin xe */}
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Thumbnail xe 64x64px bo góc tròn mềm mại kèm logo carmate */}
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shrink-0 border border-black/[0.08] dark:border-white/15 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-200 relative">
+      <div className="pt-3 border-t border-slate-100 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+        {/* Bên trái: Thumbnail xe + Thông tin xe (Bảo toàn không gian không bao giờ vỡ chữ) */}
+        <div className="flex items-center gap-3 min-w-0 md:min-w-[200px] flex-1">
+          {/* Thumbnail xe bo góc tròn mềm mại kèm logo carmate */}
+          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden shrink-0 border border-black/[0.08] dark:border-white/15 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-200 relative">
             {trip.carPhotoUrl ? (
               <img
                 src={trip.carPhotoUrl}
@@ -230,8 +230,8 @@ export default function CorridorTripCard({
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 p-1 text-center">
-                <img src="/icons/icon-192.png" alt="CarMate" className="w-6 h-6 rounded-lg object-contain opacity-90 mb-0.5 shadow-2xs" />
-                <span className="text-[8.5px] font-bold text-slate-600 dark:text-slate-300">
+                <img src="/icons/icon-192.png" alt="CarMate" className="w-5 h-5 rounded-lg object-contain opacity-90 mb-0.5 shadow-2xs" />
+                <span className="text-[8px] font-bold text-slate-600 dark:text-slate-300">
                   carmate.vn
                 </span>
               </div>
@@ -239,11 +239,11 @@ export default function CorridorTripCard({
           </div>
 
           {/* Chi tiết tên xe, biển số che đuôi, tiện ích */}
-          <div className="min-w-0 space-y-0.5">
+          <div className="min-w-0 flex-1 space-y-0.5">
             <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
               {vehicleModel}
             </p>
-            <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
               Biển số: <span className="font-bold text-slate-700 dark:text-slate-200">{maskedPlate}</span>
             </p>
             <p className="text-[10.5px] text-slate-400 dark:text-slate-500 italic truncate">
@@ -254,21 +254,21 @@ export default function CorridorTripCard({
 
         {/* Bên phải: Giá cước trọn gói + Cụm nút CTA giải tỏa áp lực */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-dashed border-slate-200/60 dark:border-white/5">
-          <div className="text-left sm:text-right space-y-0.5">
+          <div className="text-left sm:text-right space-y-0.5 shrink-0">
             <div className="flex items-baseline sm:justify-end gap-0.5">
               <span className="text-base sm:text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
                 {formatVND(displayPrice)}
               </span>
               <span className="text-[11px] text-slate-400 font-normal">/ghế</span>
             </div>
-            <p className="text-[10.5px] sm:text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center sm:justify-end gap-1">
+            <p className="text-[10.5px] sm:text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center sm:justify-end gap-1 whitespace-nowrap">
               <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <span>Giá trọn gói · 0đ cọc · Không phụ thu hành lý</span>
+              <span>Giá trọn gói · 0đ cọc · Không phụ thu</span>
             </p>
           </div>
 
           {/* Nút hành động CTA & Dòng phụ giải tỏa áp lực (Tuân thủ danh xưng Chủ xe) */}
-          <div className="flex flex-col sm:items-end">
+          <div className="flex flex-col items-stretch sm:items-end shrink-0">
             <button
               type="button"
               disabled={isSoldOut}
@@ -285,7 +285,7 @@ export default function CorridorTripCard({
               <Sparkles className="w-3.5 h-3.5 fill-white shrink-0" />
               <span>{isSoldOut ? 'Đã hết chỗ' : 'Giữ chỗ ngay (0đ cọc)'}</span>
             </button>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center sm:text-right mt-1 font-normal">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center sm:text-right mt-1 font-normal whitespace-nowrap">
               Chủ xe xác nhận qua SĐT trong 5p · Không đi hủy tự do
             </p>
           </div>
