@@ -775,26 +775,29 @@ export default function CorridorSearchBoard({
               </div>
             </div>
           ) : (
-            <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 text-center space-y-3.5 shadow-xs">
-              <div className="w-11 h-11 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-[#0071e3] flex items-center justify-center">
+            <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-blue-50/50 via-white to-slate-50/40 dark:from-blue-950/20 dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-blue-500/20 dark:border-white/15 ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_12px_36px_rgba(0,113,227,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] text-center space-y-4">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="relative w-12 h-12 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200/60 dark:border-blue-500/30 text-[#0071e3] flex items-center justify-center shadow-xs ring-4 ring-blue-500/5">
                 <Clock className="w-5 h-5" />
               </div>
-              <div className="space-y-1">
-                <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
+              <div className="relative space-y-1.5">
+                <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
                   Khung giờ này chưa có chuyến xe ghép trực tiếp
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                <p className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
                   Đăng nhu cầu đón tại trạm (1-chạm), hệ thống CarMate sẽ kết nối ngay khi có chủ xe tiện chuyến đi qua lộ trình của bạn.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
-                className="px-5 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center gap-2 shadow-md shadow-blue-500/25 active:scale-95"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Đăng nhu cầu đón tại trạm</span>
-              </button>
+              <div className="relative pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
+                  className="h-11 px-6 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 hover:-translate-y-0.5 active:scale-95"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Đăng nhu cầu đón tại trạm</span>
+                </button>
+              </div>
             </div>
           )}
 
