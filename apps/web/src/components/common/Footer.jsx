@@ -90,7 +90,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               </button>
             </div>
             <div className="flex items-center gap-1.5">
-              <span>© CarMate</span>
+              <span>© CarMate.vn</span>
               <span>·</span>
               <LanguageToggle size="sm" />
             </div>
@@ -109,6 +109,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               <LogoMark className="w-6 h-6" />
               <span className="font-display font-black text-sm tracking-tight text-[#1d1d1f] dark:text-white">
                 Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
+                <span className="text-[#0071e3] font-mono text-xs font-bold ml-0.5">.vn</span>
               </span>
             </div>
             <span className="text-black/[0.15]">·</span>

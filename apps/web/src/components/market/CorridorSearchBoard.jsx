@@ -392,7 +392,8 @@ export default function CorridorSearchBoard({
               <select
                 value={fromHubId}
                 onChange={(e) => setFromHubId(e.target.value)}
-                className="tap-44 w-full appearance-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/from:text-emerald-800 dark:group-hover/from:text-emerald-300 outline-none cursor-pointer truncate transition-colors"
+                style={{ backgroundImage: 'none' }}
+                className="tap-44 w-full appearance-none !bg-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/from:text-emerald-800 dark:group-hover/from:text-emerald-300 outline-none cursor-pointer truncate transition-colors"
               >
                 {fromHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
@@ -433,7 +434,8 @@ export default function CorridorSearchBoard({
               <select
                 value={toHubId}
                 onChange={(e) => setToHubId(e.target.value)}
-                className="tap-44 w-full appearance-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/to:text-[#0071e3] outline-none cursor-pointer truncate transition-colors"
+                style={{ backgroundImage: 'none' }}
+                className="tap-44 w-full appearance-none !bg-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/to:text-[#0071e3] outline-none cursor-pointer truncate transition-colors"
               >
                 {toHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
