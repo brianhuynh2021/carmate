@@ -475,7 +475,7 @@ export default function DriverScheduleCardView({
           className="h-10 px-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/20 transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Đăng chuyến mới</span>
+          <span>Đăng chuyến mới</span>
         </button>
       </div>
 
