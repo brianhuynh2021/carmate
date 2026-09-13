@@ -111,11 +111,11 @@ function getBusSubtext(h) {
   if (/thành công/i.test(raw)) return 'Xe khách 29-45 chỗ';
   if (/petro/i.test(raw)) return 'Limousine VIP';
   if (/trung kén/i.test(raw) || /giường nằm/i.test(h.note || '')) return 'Xe giường nằm';
-  if (/huy hiếu/i.test(raw) || /ghế ngả/i.test(h.note || '')) return 'Limousine ghế ngả';
-  if (/quốc đạt/i.test(raw)) return 'Limousine phòng nằm';
-  if (/chín nghĩa/i.test(raw)) return 'Xe giường nằm 40 chỗ';
+  if (/huy hiếu/i.test(raw) || /ghế ngả/i.test(h.note || '')) return 'Ghế ngả VIP';
+  if (/quốc đạt/i.test(raw)) return 'Phòng nằm VIP';
+  if (/chín nghĩa/i.test(raw)) return 'Giường nằm 40 chỗ';
   if (/ba đàm|minh thắng/i.test(raw)) return 'Xe khách 29 chỗ';
-  return 'Limousine 9 chỗ';
+  return 'VIP 9 chỗ';
 }
 
 /** Helper điểm trả khách thực tế (tương phản khách quan với CarMate trả tận cổng) */
@@ -1260,7 +1260,7 @@ export default function CorridorSearchBoard({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
-                      {selectedDetailHotline.operator}
+                      {selectedDetailHotline.shortName || selectedDetailHotline.operator.replace(/\(.*?\)/g, '').trim()}
                     </h3>
                     <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10">
                       {getBusSubtext(selectedDetailHotline)}
