@@ -125,7 +125,7 @@ export default function CorridorTripCard({
         isSoldOut
           ? 'bg-slate-50/70 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-70 cursor-not-allowed'
           : isEarliest
-          ? 'bg-white dark:bg-[#1c1c1e] border-blue-400 dark:border-blue-500/60 ring-2 ring-blue-500/20 shadow-sm hover:shadow-md hover:border-[#0071e3] hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
+          ? 'bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/15 shadow-md hover:shadow-lg hover:border-[#0071e3] hover:ring-2 hover:ring-blue-500/20 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
           : 'bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/15 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
       }`}
     >
