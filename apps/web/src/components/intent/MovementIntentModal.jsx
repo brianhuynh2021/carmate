@@ -84,6 +84,13 @@ export default function MovementIntentModal({
   });
 
   const [seats, setSeats] = useState(initialRole === 'driver' ? 3 : 1);
+  const [submittedIntent, setSubmittedIntent] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSubmittedIntent(null);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (initialRole) {
@@ -289,18 +296,17 @@ export default function MovementIntentModal({
         console.warn('[MovementIntent] Auto batch match trigger:', matchErr);
       }
 
-      onShowToast?.(
-        role === 'driver'
-          ? (isRecurring
-              ? `⚡ Đã lưu lịch xe cố định hàng tuần (${recurringDays.join(', ')})! Hệ thống tự động gom khách cùng giờ mỗi tuần.`
-              : '⚡ Đã lưu ý định chuyến xe! Hệ thống đang tự động gom khách cùng tuyến vào khung giờ hẹn.')
-          : (isRecurring
-              ? `⚡ Đã lưu lịch đi lại hàng tuần (${recurringDays.join(', ')})! Hệ thống tự động ghép xe tiện đường mỗi tuần.`
-              : '⚡ Đã lưu nhu cầu đi chung! Hệ thống CarMate đang tự động kết nối xe tiện đường cho bạn.')
-      );
-
-      onSuccess?.(res?.data || payload);
-      onClose();
+      if (role === 'passenger') {
+        setSubmittedIntent(res?.data || payload);
+      } else {
+        onShowToast?.(
+          isRecurring
+            ? `⚡ Đã lưu lịch xe cố định hàng tuần (${recurringDays.join(', ')})! Hệ thống tự động gom khách cùng giờ mỗi tuần.`
+            : '⚡ Đã lưu ý định chuyến xe! Hệ thống đang tự động gom khách cùng tuyến vào khung giờ hẹn.'
+        );
+        onSuccess?.(res?.data || payload);
+        onClose();
+      }
     } catch (err) {
       console.error('[MovementIntent] Submit error:', err);
       setPhoneError(err?.message || 'Có lỗi xảy ra khi lưu ý định. Vui lòng thử lại!');
@@ -348,7 +354,11 @@ export default function MovementIntentModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              if (submittedIntent) onSuccess?.(submittedIntent);
+              setSubmittedIntent(null);
+              onClose();
+            }}
             className="w-11 h-11 rounded-full bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.15] text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
             aria-label={t('common.close')}
           >
@@ -356,7 +366,79 @@ export default function MovementIntentModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        {submittedIntent ? (
+          <div className="p-6 sm:p-8 text-center space-y-5 animate-fade-in">
+            <div className="w-14 h-14 mx-auto rounded-3xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 text-[#0071e3] ring-8 ring-blue-500/5 flex items-center justify-center shadow-xs">
+              <CheckCircle2 className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                CarMate đang kiểm tra lịch xe nhà
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                Nhu cầu của bạn đã được chuyển tới điều phối viên. Chúng tôi sẽ đối soát lịch xe nhà và chủ xe quen cùng lộ trình để liên hệ bạn ngay.
+              </p>
+            </div>
+
+            {/* Thẻ tóm tắt cuốc xe */}
+            <div className="rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 p-4 text-left space-y-2 text-xs">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-slate-500 shrink-0">Lộ trình đón/trả:</span>
+                <span className="font-semibold text-slate-900 dark:text-white text-right">
+                  {submittedIntent.originName} ➔ {submittedIntent.destinationName}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/50 dark:border-white/5">
+                <span className="text-slate-500">Khung giờ đón:</span>
+                <span className="font-medium text-slate-900 dark:text-white font-mono">
+                  {submittedIntent.date} ({submittedIntent.timeSlot})
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/50 dark:border-white/5">
+                <span className="text-slate-500">Số điện thoại liên hệ:</span>
+                <span className="font-bold text-slate-900 dark:text-white font-mono">
+                  {submittedIntent.phone}
+                </span>
+              </div>
+            </div>
+
+            {/* Hộp cam kết thời gian phản hồi */}
+            <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-200/80 dark:border-blue-500/25 flex items-start gap-3 text-left">
+              <Clock className="w-5 h-5 text-[#0071e3] shrink-0 mt-0.5" />
+              <div className="min-w-0 space-y-0.5">
+                <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Điều phối viên sẽ liên hệ trong 5–10 phút
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Chúng tôi sẽ gọi điện hoặc nhắn tin Zalo xác nhận điểm đón chính xác và giờ xe đến đón bạn.
+                </p>
+              </div>
+            </div>
+
+            {/* Cam kết uy tín thực tế */}
+            <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Chuyến xe nhà định kỳ · 0đ cọc · Phụ xăng trực tiếp khi lên xe</span>
+            </p>
+
+            {/* Nút đóng */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onSuccess?.(submittedIntent);
+                  setSubmittedIntent(null);
+                  onClose();
+                }}
+                className="w-full h-11 sm:h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-all cursor-pointer active:scale-[0.98]"
+              >
+                Đã hiểu & Quay lại tìm kiếm
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* 1. CHỌN HÀNH TRÌNH QL13 (PHÂN ĐỊNH RẠCH RÒI 2 CHIỀU ĐI - VỀ) */}
           <div className="space-y-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -710,6 +792,7 @@ export default function MovementIntentModal({
             )}
           </button>
         </form>
+        )}
       </div>
     </div>
   );
