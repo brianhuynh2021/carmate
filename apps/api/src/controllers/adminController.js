@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { getJwtSecret } from '../utils/token.js';
@@ -24,8 +27,20 @@ import {
   clearAiTrajectories,
   clearAnalyticsEvents,
   clearSupportMessages,
-  clearAllBookings
+  clearAllBookings,
+  clearAllTrips,
+  clearAllIntents,
+  clearAllStationRequests,
+  clearAllTripIncidents,
+  clearAllMatchingEpochs,
+  clearAllSeatExchangeOrders,
+  clearNonAdminUsers
 } from '../db/sqliteStore.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '../../data');
+const LEGACY_JSON_FILE = path.join(DATA_DIR, 'carmate_db.json');
 
 const JWT_SECRET = getJwtSecret();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -747,15 +762,66 @@ export function clearAdminTestData(req, res) {
     const analyticsCount = clearAnalyticsEvents();
     const supportCount = clearSupportMessages();
     const bookingsCount = clearAllBookings();
+    const tripsCount = clearAllTrips();
+    const intentsCount = clearAllIntents();
+    const stationCount = clearAllStationRequests();
+    const incidentsCount = clearAllTripIncidents();
+    const epochsCount = clearAllMatchingEpochs();
+    const exchangeCount = clearAllSeatExchangeOrders();
+    const usersCount = clearNonAdminUsers();
+
+    // Đồng bộ file carmate_db.json về trạng thái sạch chuẩn
+    try {
+      if (fs.existsSync(LEGACY_JSON_FILE)) {
+        const cleanJson = {
+          version: '1.0.0',
+          lastUpdated: new Date().toISOString(),
+          stats: {
+            members: 1,
+            tripsCompleted: 0,
+            routes: 0,
+            avgRating: 5.0
+          },
+          driverOffers: [],
+          passengerRequests: [],
+          bookings: [],
+          users: [
+            {
+              id: 'USR-0984883750',
+              phone: '0984883750',
+              name: 'Nguyễn Thành Huỳnh',
+              role: 'admin',
+              trustScore: 99,
+              safeTripsCount: 0,
+              provider: 'zalo',
+              isCccdVerified: 1,
+              isGplxVerified: 1,
+              isBanned: 0,
+              createdAt: '2026-09-01T08:00:00.000Z',
+              updatedAt: new Date().toISOString(),
+              email: 'huynh.nguyen@carmate.vn'
+            }
+          ]
+        };
+        fs.writeFileSync(LEGACY_JSON_FILE, JSON.stringify(cleanJson, null, 2), 'utf-8');
+      }
+    } catch {}
 
     return res.status(200).json({
       success: true,
-      message: 'Đã dọn sạch toàn bộ dữ liệu kiểm thử thành công',
+      message: 'Đã dọn sạch toàn bộ dữ liệu kiểm thử thành công, đưa hệ thống về 0',
       data: {
+        tripsCleared: tripsCount,
+        bookingsCleared: bookingsCount,
+        intentsCleared: intentsCount,
+        stationRequestsCleared: stationCount,
+        incidentsCleared: incidentsCount,
+        epochsCleared: epochsCount,
+        exchangeCleared: exchangeCount,
+        usersCleared: usersCount,
         aiTrajectoriesCleared: trajCount,
         analyticsCleared: analyticsCount,
-        supportMessagesCleared: supportCount,
-        bookingsCleared: bookingsCount
+        supportMessagesCleared: supportCount
       }
     });
   } catch (err) {
@@ -769,11 +835,13 @@ export function clearAdminTestData(req, res) {
 export function clearAdminBookings(req, res) {
   try {
     const bookingsCount = clearAllBookings();
+    const intentsCount = clearAllIntents();
     return res.status(200).json({
       success: true,
-      message: 'Đã dọn sạch toàn bộ lịch hẹn thành công',
+      message: 'Đã dọn sạch toàn bộ lịch hẹn và ý định thành công',
       data: {
-        bookingsCleared: bookingsCount
+        bookingsCleared: bookingsCount,
+        intentsCleared: intentsCount
       }
     });
   } catch (err) {

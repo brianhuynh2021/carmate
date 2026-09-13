@@ -1014,7 +1014,6 @@ export default function App() {
         onLogout={handleLogout}
         onOpenAi={() => setShowAiModal(true)}
         onOpenProfile={() => setShowProfileModal(true)}
-        onOpenDeleteAccount={() => setShowDeleteAccountModal(true)}
         bookedEscrows={bookedEscrows}
         onSelectBooking={(id) => handleOpenInbox(id)}
         onSelectTrip={setSelectedTripForRoute}

@@ -33,11 +33,14 @@ import {
   CORRIDOR_1D_POLICY,
   MOTION_SICKNESS_POLICY,
   EMERGENCY_TRANSIT_LIFEBUOYS,
-  evaluateIncidentSanctions
+  evaluateIncidentSanctions,
+  cleanPhoneNumber
 } from '@carmate/shared';
 import { api } from '../../api/client.js';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 import DriverScheduleCardView from './DriverScheduleCardView.jsx';
+import RadarScannerVisualizer from './RadarScannerVisualizer.jsx';
+import ActiveTripCard from './ActiveTripCard.jsx';
 import MutualReviewModal from '../modals/MutualReviewModal.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -112,10 +115,93 @@ export default function CockpitMode({
   // Trạng thái chung của Cockpit Taplo
   const [isReceivingGuests, setIsReceivingGuests] = useState(true);
   const [seatsAvailable, setSeatsAvailable] = useState(2);
-  const [speed] = useState(78);
+  const [speed, setSpeed] = useState(0);
+
+  // Đọc vận tốc thực tế từ GPS phần cứng thiết bị (Live Speedometer)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) return;
+    let watchId = null;
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (pos?.coords?.speed != null && !isNaN(pos.coords.speed) && pos.coords.speed > 0) {
+            setSpeed(Math.round(pos.coords.speed * 3.6));
+          } else {
+            setSpeed(0);
+          }
+        },
+        () => {
+          setSpeed(0);
+        },
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 }
+      );
+    } catch {}
+    return () => {
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
+
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [boardedCount, setBoardedCount] = useState(0);
   const [showLegalShield, setShowLegalShield] = useState(false);
+
+  // Chuyến xe active thật của chủ xe đang mở trên sàn
+  const [activeDriverTrip, setActiveDriverTrip] = useState(null);
+  const [, setIsLoadingActiveTrip] = useState(false);
+
+  const driverPhone = (() => {
+    try {
+      return currentUser?.phone || localStorage.getItem('carmate_rider_phone') || localStorage.getItem('carmate_driver_phone') || '';
+    } catch {
+      return '';
+    }
+  })();
+
+  const reloadActiveTrip = useCallback(async () => {
+    setIsLoadingActiveTrip(true);
+    try {
+      const clean = driverPhone ? cleanPhoneNumber(driverPhone) : '';
+      const res = await api.getTrips({ type: 'drivers' });
+      const allDriverTrips = res?.data?.driverOffers || res?.data?.all || [];
+
+      let storedTripId = null;
+      try {
+        const storedIds = JSON.parse(
+          localStorage.getItem(`carmate_my_trip_ids_${clean}`) ||
+          localStorage.getItem('carmate_my_trip_ids') ||
+          '[]'
+        );
+        if (storedIds.length > 0) storedTripId = storedIds[0];
+      } catch {}
+
+      const myActiveTrip = allDriverTrips.find((t) => {
+        if (t.status === 'cancelled' || t.status === 'completed') return false;
+        if (storedTripId && t.id === storedTripId) return true;
+        const pReal = cleanPhoneNumber(t.phoneReal || t.phone || '');
+        if (clean && pReal === clean) return true;
+        return false;
+      });
+
+      if (myActiveTrip) {
+        try {
+          const detailRes = await api.getTrip(myActiveTrip.id);
+          setActiveDriverTrip(detailRes?.data || myActiveTrip);
+        } catch {
+          setActiveDriverTrip(myActiveTrip);
+        }
+      } else {
+        setActiveDriverTrip(null);
+      }
+    } catch (err) {
+      console.warn('[CockpitMode] Load active trip error:', err);
+    } finally {
+      setIsLoadingActiveTrip(false);
+    }
+  }, [driverPhone]);
+
+  useEffect(() => {
+    reloadActiveTrip();
+  }, [reloadActiveTrip]);
 
   // Chuyển đổi giữa [ 📅 LỊCH TRÌNH CỦA BẠN ] và [ ⚡ BUỒNG LÁI RADAR QL13 ]
   const [activeCockpitTab, setActiveCockpitTab] = useState('SCHEDULE');
@@ -172,7 +258,7 @@ export default function CockpitMode({
   const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
 
   // Giả lập khoảng cách tiếp cận trạm (km)
-  const [simDistanceKm, setSimDistanceKm] = useState(6.2);
+  const [simDistanceKm, setSimDistanceKm] = useState(3.4);
 
   // 1. SCREEN WAKE LOCK API (Giữ màn hình luôn sáng trên giá đỡ Taplo)
   useEffect(() => {
@@ -952,7 +1038,7 @@ export default function CockpitMode({
             <div className="flex items-center gap-2">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <h1 className="text-base sm:text-lg font-black tracking-wide uppercase font-mono text-emerald-400">
-                COCKPIT MODE · {initialCorridor.toUpperCase()}
+                TAPLO CHỦ XE · {initialCorridor.toUpperCase()}
               </h1>
             </div>
             <p className="text-xs text-slate-400 font-medium flex items-center gap-2">
@@ -1036,7 +1122,15 @@ export default function CockpitMode({
       </div>
 
       {/* ── NỘI DUNG CHÍNH (QUẢN LÝ LỊCH TRÌNH HOẶC BUỒNG LÁI TAPLO) ── */}
-      <main className="flex-1 flex flex-col justify-center my-auto max-w-2xl mx-auto w-full">
+      <main
+        className={`flex-1 flex flex-col justify-center my-auto w-full transition-all duration-300 ${
+          activeCockpitTab === 'RADAR' && cockpitState === 'STANDBY'
+            ? 'max-w-7xl mx-auto'
+            : activeCockpitTab === 'SCHEDULE' && cockpitState === 'STANDBY'
+            ? 'max-w-3xl mx-auto'
+            : 'max-w-2xl mx-auto'
+        }`}
+      >
         {/* ========================================================================= */}
         {/* VIEW A: QUẢN LÝ LỊCH TRÌNH DẠNG THẺ (CARD VIEW & TRUST ENGINE)             */}
         {/* ========================================================================= */}
@@ -1053,133 +1147,248 @@ export default function CockpitMode({
               setInputAmenities(vehicle?.amenities || ['ac', 'no_smoking']);
               setIsEditingVehicle(true);
             }}
+            activeDriverTrip={activeDriverTrip}
+            onRefreshActiveTrip={reloadActiveTrip}
           />
         )}
 
         {/* ========================================================================= */}
-        {/* MÀN HÌNH D1: TAPLO CHỜ (STANDBY) KHI Ở TAB RADAR                          */}
+        {/* MÀN HÌNH D1: BUỒNG LÁI RADAR QL13 (AUTOMOTIVE HUD SPLIT VIEW)             */}
         {/* ========================================================================= */}
         {activeCockpitTab === 'RADAR' && cockpitState === 'STANDBY' && (
-          <div className="space-y-6 animate-fade-in">
-            {/* TOGGLE TO BẬT / TẮT NHẬN GHÉP XE DỌC ĐƯỜNG */}
-            <button
-              type="button"
-              onClick={() => {
-                const nextState = !isReceivingGuests;
-                setIsReceivingGuests(nextState);
-                if (nextState) {
-                  speakText('Đang bật nhận ghép xe dọc Quốc lộ 13');
-                }
-              }}
-              className={`w-full py-6 sm:py-8 px-6 rounded-3xl border-2 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer active:scale-[0.99] ${
-                isReceivingGuests
-                  ? 'bg-emerald-950/40 border-emerald-500/80 shadow-[0_0_50px_rgba(16,185,129,0.18)]'
-                  : 'bg-white/[0.03] border-white/[0.12] opacity-75'
-              }`}
-            >
-              <div className="flex items-center gap-4 text-left">
-                <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                    isReceivingGuests
-                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/30'
-                      : 'bg-slate-800 text-slate-400'
-                  }`}
-                >
-                  <Radio className={`w-7 h-7 ${isReceivingGuests ? 'animate-pulse' : ''}`} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-block w-3 h-3 rounded-full ${
-                        isReceivingGuests ? 'bg-emerald-400 animate-ping' : 'bg-slate-600'
-                      }`}
-                    />
-                    <span className="text-lg sm:text-xl font-black tracking-wide uppercase">
-                      {isReceivingGuests ? 'ĐANG BẬT NHẬN GHÉP XE' : 'TẠM TẮT NHẬN GHÉP XE'}
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                    {isReceivingGuests
-                      ? 'Radar đang quét tự động các trạm đón ảo trước mặt 3.5 km'
-                      : 'Bấm để kích hoạt quét trạm đón trên Quốc lộ 13'}
-                  </p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in w-full">
+            {/* ── CỘT TRÁI: RADAR SCANNER VISUALIZER 360° (COL-SPAN-7) ── */}
+            <div className="lg:col-span-7 space-y-4">
+              <RadarScannerVisualizer
+                isReceivingGuests={isReceivingGuests}
+                speed={speed}
+                simDistanceKm={simDistanceKm}
+                _nextStationName="Cây xăng Tân Khai (QL13)"
+                onTriggerApproach={import.meta.env.DEV ? triggerApproachRadar : undefined}
+              />
+            </div>
 
-              <div
-                className={`px-5 py-2.5 rounded-2xl font-black text-sm font-mono uppercase tracking-wider shrink-0 ${
-                  isReceivingGuests ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-white'
+            {/* ── CỘT PHẢI: BẢNG ĐIỀU KHIỂN TAPLO & TELEMETRY (COL-SPAN-5) ── */}
+            <div className="lg:col-span-5 space-y-4">
+              {/* THẺ CHUYẾN XE THẬT CỦA CHỦ XE ĐANG MỞ HOẶC GỢI Ý ĐĂNG CHUYẾN */}
+              {activeDriverTrip ? (
+                <div className="bg-white/[0.03] border border-white/[0.08] rounded-3xl p-4 space-y-2 shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Chuyến xe đang mở trên sàn</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveCockpitTab('SCHEDULE')}
+                      className="text-[11px] font-mono text-slate-400 hover:text-white underline cursor-pointer"
+                    >
+                      Xem lịch trình
+                    </button>
+                  </div>
+                  <ActiveTripCard
+                    trip={activeDriverTrip}
+                    onLockTrip={(tripId, newStatus) => {
+                      setActiveDriverTrip((prev) => (prev ? { ...prev, status: newStatus } : null));
+                    }}
+                    onCancelTrip={() => {
+                      setActiveDriverTrip(null);
+                    }}
+                    onRefresh={reloadActiveTrip}
+                    onShowToast={onShowToast}
+                  />
+                </div>
+              ) : (
+                <div className="bg-white/[0.03] border border-white/[0.08] rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+                  <div className="flex items-center gap-3 text-left">
+                    <div className="w-11 h-11 rounded-2xl bg-white/[0.06] border border-white/[0.1] text-emerald-400 flex items-center justify-center shrink-0">
+                      <Car className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono uppercase text-slate-400 block">TRẠNG THÁI LỊCH TRÌNH</span>
+                      <span className="text-sm font-bold text-slate-200 block">Chưa có chuyến công bố</span>
+                      <span className="text-[11px] text-slate-400">Đăng chuyến để đón khách đặt trước</span>
+                    </div>
+                  </div>
+                  {onOpenQuickPostTrip && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenQuickPostTrip()}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all shrink-0"
+                    >
+                      <span>+ Đăng chuyến</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* TOGGLE TO BẬT / TẮT NHẬN GHÉP XE DỌC ĐƯỜNG (APPLE HIG) */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nextState = !isReceivingGuests;
+                  setIsReceivingGuests(nextState);
+                  if (nextState) {
+                    speakText('Đang bật nhận ghép xe dọc Quốc lộ 13');
+                  }
+                }}
+                className={`w-full py-5 px-5 sm:px-6 rounded-3xl border-2 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer active:scale-[0.99] ${
+                  isReceivingGuests
+                    ? 'bg-emerald-950/40 border-emerald-500/80 shadow-[0_0_40px_rgba(16,185,129,0.18)]'
+                    : 'bg-white/[0.03] border-white/[0.12] opacity-75'
                 }`}
               >
-                {isReceivingGuests ? 'BẬT' : 'TẮT'}
-              </div>
-            </button>
-
-            {/* BẢNG ĐIỀU KHIỂN SỐ GHẾ TRỐNG & THÔNG SỐ HUD */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* SỐ GHẾ MỞ */}
-              <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-5 flex items-center justify-between">
-                <div>
-                  <span className="text-xs uppercase text-slate-400 font-mono block">{t('cockpitUi.s033')}</span>
-                  <span className="text-3xl font-black font-mono text-white">{seatsAvailable} ghế</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSeatsAvailable((prev) => Math.max(1, prev - 1))}
-                    className="w-12 h-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.16] active:scale-95 text-xl font-bold font-mono flex items-center justify-center cursor-pointer"
+                <div className="flex items-center gap-3.5 text-left">
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                      isReceivingGuests
+                        ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/30'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
                   >
-                    -
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSeatsAvailable((prev) => Math.min(6, prev + 1))}
-                    className="w-12 h-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.16] active:scale-95 text-xl font-bold font-mono flex items-center justify-center cursor-pointer"
-                  >
-                    +
-                  </button>
+                    <Radio className={`w-6 h-6 ${isReceivingGuests ? 'animate-pulse' : ''}`} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-block w-2.5 h-2.5 rounded-full ${
+                          isReceivingGuests ? 'bg-emerald-400 animate-ping' : 'bg-slate-600'
+                        }`}
+                      />
+                      <span className="text-base sm:text-lg font-black tracking-wide uppercase">
+                        {isReceivingGuests ? 'ĐANG BẬT NHẬN GHÉP XE' : 'TẠM TẮT NHẬN GHÉP XE'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {isReceivingGuests
+                        ? 'Radar đang quét tự động các trạm đón ảo 3.5 km'
+                        : 'Bấm để kích hoạt quét trạm đón trên Quốc lộ 13'}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              {/* VẬN TỐC & TRẠM KẾ TIẾP */}
-              <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-5 flex items-center justify-between">
-                <div>
-                  <span className="text-xs uppercase text-slate-400 font-mono block">{t('cockpitUi.s034')}</span>
-                  <span className="text-base sm:text-lg font-bold text-slate-200 block truncate max-w-[170px]">
-                    {t('cockpitUi.s035')}
+                {/* NÚT TOGGLE ON/OFF CHUẨN APPLE HIG */}
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs sm:text-sm font-mono font-black tracking-wider uppercase text-slate-300">
+                    {isReceivingGuests ? 'ON' : 'OFF'}
                   </span>
-                  <span className="text-xs text-amber-400 font-mono">Cách ~{simDistanceKm} km</span>
+                  <div
+                    className={`w-14 h-8 sm:w-16 sm:h-9 rounded-full p-1 transition-colors duration-200 ease-in-out flex items-center ${
+                      isReceivingGuests ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-slate-700'
+                    }`}
+                  >
+                    <div
+                      className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+                        isReceivingGuests ? 'translate-x-6 sm:translate-x-7' : 'translate-x-0'
+                      }`}
+                    />
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs uppercase text-slate-400 font-mono block">{t('cockpitUi.s036')}</span>
-                  <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-400">{speed}</span>
-                  <span className="text-[10px] text-slate-400 font-mono block">km/h</span>
+              </button>
+
+              {/* BẢNG ĐIỀU KHIỂN SỐ GHẾ TRỐNG & THÔNG SỐ HUD */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* SỐ GHẾ MỞ */}
+                <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs uppercase text-slate-400 font-mono block">{t('cockpitUi.s033')}</span>
+                    <span className="text-2xl sm:text-3xl font-black font-mono text-white">{seatsAvailable} ghế</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSeatsAvailable((prev) => Math.max(1, prev - 1))}
+                      className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.16] active:scale-95 text-xl font-bold font-mono flex items-center justify-center cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSeatsAvailable((prev) => Math.min(6, prev + 1))}
+                      className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.16] active:scale-95 text-xl font-bold font-mono flex items-center justify-center cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* VẬN TỐC & TRẠM KẾ TIẾP */}
+                <div className="bg-white/[0.04] border border-white/[0.08] rounded-3xl p-4 sm:p-5 flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs uppercase text-slate-400 font-mono block">{t('cockpitUi.s034')}</span>
+                    <span className="text-sm sm:text-base font-bold text-slate-200 block truncate">
+                      {t('cockpitUi.s035')}
+                    </span>
+                    <span className="text-xs text-amber-400 font-mono">
+                      {speed > 0 ? `Cách ~${simDistanceKm} km` : 'Trạm đón đầu hành lang'}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0 ml-2">
+                    <span className="text-xs uppercase text-slate-400 font-mono block">{t('cockpitUi.s036')}</span>
+                    <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-400">{speed}</span>
+                    <span className="text-[10px] text-slate-400 font-mono block">
+                      {speed === 0 ? 'km/h (Dừng)' : 'km/h'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* BẢNG CÔNG CỤ BUỒNG LÁI 1-CHẠM (QUICK ACTION TOOLKIT) */}
+              <div className="bg-white/[0.03] border border-white/[0.08] rounded-3xl p-4 space-y-3">
+                <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                  <span className="uppercase font-bold text-slate-300">CÔNG CỤ BUỒNG LÁI 1-CHẠM</span>
+                  <span className="text-emerald-400">Hỗ trợ khẩn cấp</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowLegalShield(true)}
+                    className="p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all text-center"
+                    title="Mở Thẻ Pháp lý Nghị định 168 trình CSGT"
+                  >
+                    <Scale className="w-5 h-5 text-amber-400" />
+                    <span className="text-xs font-mono font-bold text-slate-200">Thẻ CSGT</span>
+                    <span className="text-[10px] text-slate-400">NĐ 168</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedIncidentType('BREAKDOWN_ASSISTANCE');
+                      setShowBreakdownModal(true);
+                    }}
+                    className="p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all text-center"
+                    title="Báo hỏng xe hoặc gọi cứu hộ khẩn cấp"
+                  >
+                    <Wrench className="w-5 h-5 text-rose-400" />
+                    <span className="text-xs font-mono font-bold text-slate-200">Cứu hộ</span>
+                    <span className="text-[10px] text-slate-400">Sự cố xe</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowIncidentModal(true)}
+                    className="p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all text-center"
+                    title="Hotline cứu viện các nhà xe cố định QL13"
+                  >
+                    <LifeBuoy className="w-5 h-5 text-cyan-400" />
+                    <span className="text-xs font-mono font-bold text-slate-200">Hotline Tuyến</span>
+                    <span className="text-[10px] text-slate-400">Cứu viện</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveCockpitTab('SCHEDULE')}
+                    className="p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all text-center"
+                    title="Chuyển sang Quản lý Lịch trình"
+                  >
+                    <Calendar className="w-5 h-5 text-emerald-400" />
+                    <span className="text-xs font-mono font-bold text-slate-200">Lịch trình</span>
+                    <span className="text-[10px] text-slate-400">Xem danh sách</span>
+                  </button>
                 </div>
               </div>
             </div>
-
-            {/* HỘP KÍCH HOẠT MÔ PHỎNG TIẾP CẬN TRẠM THỰC CHIẾN (CHỈ HIỆN Ở DEV) */}
-            {import.meta.env.DEV && (
-              <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-                <div className="text-left space-y-0.5">
-                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 font-mono uppercase">
-                    <Zap className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{t('cockpitUi.s037')}</span>
-                  </span>
-                  <p className="text-[11.5px] text-slate-300">
-                    {t('cockpitUi.s038')}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => triggerApproachRadar()}
-                  className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer shrink-0 transition-all"
-                >
-                  <Zap className="w-4 h-4 fill-slate-950" />
-                  <span>{t('cockpitUi.s039')}</span>
-                </button>
-              </div>
-            )}
           </div>
         )}
 
