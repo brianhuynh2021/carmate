@@ -1038,10 +1038,10 @@ export default function CorridorSearchBoard({
         <section ref={resultsRef} className="space-y-3 pt-1 animate-fade-in">
           {/* Header tóm tắt: Tiêu đề gọn gàng & Badge Xe nhà xác thực */}
           <div className="flex items-center justify-between gap-1.5 px-1 pb-0.5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 truncate">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 truncate">
               {carmateDisplayTrips.length > 0 ? `${carmateDisplayTrips.length} chuyến sẵn sàng đi` : 'Chuyến xe hôm nay'}
             </p>
-            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 shrink-0 whitespace-nowrap bg-emerald-50 dark:bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-300/80 dark:border-emerald-500/30 shadow-2xs">
+            <span className="text-[10.5px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-white dark:bg-white/10 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-white/10 shadow-xs">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               Xe nhà xác thực
             </span>
@@ -1069,14 +1069,14 @@ export default function CorridorSearchBoard({
               ))}
 
               {/* ⭐️ ƯU TIÊN #1: GOM NHU CẦU LỆCH GIỜ (ĐẶT LỊCH TRƯỚC - BẢO TOÀN PHỄU CHUYỂN ĐỔI) */}
-              <div className="p-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-dashed border-slate-300 dark:border-white/15 text-center space-y-1.5 shadow-2xs">
-                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-blue-200/80 dark:border-blue-900/40 text-center space-y-2 shadow-sm">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Chưa tìm thấy giờ phù hợp lịch trình?
                 </p>
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot)}
-                  className="w-full py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-transform cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.99]"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0062c4] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5"
                 >
                   <span>⚡ Báo giờ bạn muốn đi · {formatVND(carmateSegmentPrice)}</span>
                 </button>
@@ -1143,10 +1143,10 @@ export default function CorridorSearchBoard({
           {!isFutureSearch && verifiedHotlines.length > 0 && (
             <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-2">
               <div className="flex items-center justify-between text-[11px] pb-0.5 px-1">
-                <span className="font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span className="font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   Lịch trình & số điện thoại các nhà xe
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-slate-500 font-mono">
                   {verifiedHotlines.length} nhà xe QL13
                 </span>
               </div>
@@ -1172,27 +1172,27 @@ export default function CorridorSearchBoard({
                         });
                         setSelectedDetailHotline(h);
                       }}
-                      className="p-3 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200/90 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 flex flex-col justify-between transition-all duration-150 cursor-pointer shadow-2xs group"
+                      className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200/90 dark:border-white/10 shadow-xs hover:border-blue-400 dark:hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:shadow-sm flex flex-col justify-between transition-all duration-150 cursor-pointer group"
                     >
-                      {/* Hàng 1: Tên nhà xe (Chữ đen text-slate-800 đồng bộ, không dính màu xanh) + Giá xám mờ + Icon > */}
+                      {/* Hàng 1: Tên nhà xe (Chữ đen đậm text-slate-900 rõ ràng) + Giá vé in đậm + Icon > */}
                       <div className="flex items-center justify-between min-w-0">
-                        <p className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">
+                        <p className="text-xs sm:text-[13.5px] font-bold text-slate-900 dark:text-white truncate group-hover:text-[#0071e3] transition-colors">
                           {cleanBusName}
                         </p>
                         <div className="shrink-0 flex items-center gap-1.5 ml-2">
-                          <span className="text-xs font-mono font-medium text-slate-400 dark:text-slate-500">
+                          <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
                             {shortPrice}
                           </span>
-                          <span className="text-slate-400 text-xs font-bold transition-transform group-hover:translate-x-0.5">
+                          <span className="text-slate-400 group-hover:text-[#0071e3] text-xs font-bold transition-transform group-hover:translate-x-0.5">
                             ›
                           </span>
                         </div>
                       </div>
 
-                      {/* Hàng 2: Loại xe & Điểm trả thực tế (Màu xám trung tính text-slate-500) */}
-                      <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
+                      {/* Hàng 2: Loại xe & Điểm trả thực tế (Màu xám trung tính text-slate-600) */}
+                      <div className="flex items-center justify-between text-[11.5px] mt-1 text-slate-600 dark:text-slate-400">
                         <span className="truncate">{busSubtext}</span>
-                        <span className="font-medium shrink-0 ml-1.5 text-slate-500 dark:text-slate-400">
+                        <span className="font-medium shrink-0 ml-1.5 text-slate-600 dark:text-slate-400">
                           {busDropoff}
                         </span>
                       </div>

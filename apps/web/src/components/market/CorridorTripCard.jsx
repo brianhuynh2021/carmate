@@ -121,12 +121,12 @@ export default function CorridorTripCard({
           handleClick();
         }
       }}
-      className={`group w-full rounded-2xl border transition-all duration-150 px-3.5 py-3 select-none ${
+      className={`group w-full rounded-2xl border transition-all duration-200 px-3.5 py-3 select-none ${
         isSoldOut
           ? 'bg-slate-50/70 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-70 cursor-not-allowed'
           : isEarliest
-          ? 'bg-blue-50/30 dark:bg-blue-950/20 border-blue-400/60 dark:border-blue-500/40 ring-1 ring-blue-500/20 shadow-2xs hover:shadow-md hover:border-[#0071e3] hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
-          : 'bg-white dark:bg-[#1c1c1e] border-slate-200/90 dark:border-white/15 shadow-2xs hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
+          ? 'bg-white dark:bg-[#1c1c1e] border-blue-400 dark:border-blue-500/60 ring-2 ring-blue-500/20 shadow-sm hover:shadow-md hover:border-[#0071e3] hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
+          : 'bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/15 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer'
       }`}
     >
       <div className="flex items-center justify-between min-w-0">
@@ -148,18 +148,10 @@ export default function CorridorTripCard({
 
         {/* ── Cột 2: Thông tin xe (Nới rộng ml-2.5 mr-1 bung trọn vẹn 100% chữ) ── */}
         <div className="flex-1 min-w-0 ml-2.5 mr-1">
-          <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
+          <div className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight">
             {vehicleTypeLabel}
           </div>
-          <div
-            className={`text-[11px] font-medium truncate mt-0.5 leading-tight ${
-              isEarliest
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : tripIndex === 1
-                ? 'text-blue-600 dark:text-blue-400'
-                : 'text-purple-600 dark:text-purple-400'
-            }`}
-          >
+          <div className="text-[11.5px] font-medium text-slate-600 dark:text-slate-400 truncate mt-0.5 leading-tight">
             {uspLabel}
           </div>
         </div>
@@ -167,14 +159,14 @@ export default function CorridorTripCard({
         {/* ── Cột 3: Giá & Nút (Cố định bên phải - shrink-0 flex items-center gap-2) ── */}
         <div className="shrink-0 flex items-center gap-2">
           <div className="text-right">
-            <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 leading-tight">
+            <div className="text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
               {formatVND(displayPrice)}
             </div>
             <div className="text-[10px] mt-0.5">
               {isSoldOut ? (
                 <span className="text-slate-400">Hết chỗ</span>
               ) : seatsAvailable === 1 ? (
-                <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                <span className="text-amber-700 dark:text-amber-400 font-semibold">
                   Còn 1 chỗ
                 </span>
               ) : (
@@ -191,8 +183,8 @@ export default function CorridorTripCard({
             aria-label="Xem chi tiết chuyến xe"
             className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
               isEarliest
-                ? 'bg-[#0071e3] text-white shadow-2xs group-hover:scale-110'
-                : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 group-hover:bg-[#0071e3] group-hover:text-white'
+                ? 'bg-[#0071e3] text-white shadow-xs group-hover:scale-110'
+                : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 group-hover:bg-[#0071e3] group-hover:text-white'
             }`}
           >
             <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
