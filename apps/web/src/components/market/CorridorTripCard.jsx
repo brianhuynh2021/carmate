@@ -8,7 +8,11 @@ import { formatVND } from '@carmate/shared';
 function formatTripTimeHeader(departureLabel = '04:30', departureDate = null) {
   let targetDate = new Date();
 
-  if (departureDate) {
+  if (departureDate === 'Ngày mai') {
+    targetDate = new Date(Date.now() + 86400000);
+  } else if (departureDate === 'Hôm nay') {
+    targetDate = new Date();
+  } else if (departureDate) {
     const parsed = new Date(departureDate);
     if (!isNaN(parsed.getTime())) {
       targetDate = parsed;
@@ -62,7 +66,7 @@ function formatTripTimeHeader(departureLabel = '04:30', departureDate = null) {
 export default function CorridorTripCard({
   trip,
   originName = 'Ngã ba Tân Khai',
-  originNote = 'đón tận nơi dọc QL13 & cây xăng',
+  _originNote = 'đón tận nơi dọc QL13 & cây xăng',
   destName = 'TP.HCM (Cụm Bệnh viện)',
   destNote = 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh',
   segmentPrice = 170000,
@@ -100,10 +104,28 @@ export default function CorridorTripCard({
     `${destName} ${destNote || ''}`
   );
 
-  // Subtext điểm đón: làm rõ nguồn gốc chuyến đi và tính tiện chuyến đón đúng giờ
-  const pickupSubtext = tripOriginCity && tripOriginCity.toLowerCase() !== originName.toLowerCase()
-    ? `Xe xuất phát từ [${tripOriginCity}], tiện đường ghé đón (~${pickupTime} có mặt tại trạm ${originName})`
-    : `Đón đúng giờ tại trạm ${originName} (~${pickupTime} có mặt · ${originNote || 'Tiện đường ghé đón'})`;
+  // Subtext điểm đón: gãy gọn tự nhiên, dứt khoát mốc địa lý, triệt tiêu text bloat
+  const cleanOrigin = (raw) => {
+    const text = String(raw || '').trim();
+    if (!text) return 'Tân Khai';
+    if (/bù đốp/i.test(text)) return 'Bù Đốp';
+    if (/lộc ninh/i.test(text)) return 'Lộc Ninh';
+    if (/bình long/i.test(text)) return 'Bình Long';
+    if (/tân khai/i.test(text)) return 'Cây xăng Tân Khai';
+    if (/chơn thành/i.test(text)) return 'Chơn Thành';
+    if (/bàu bàng/i.test(text)) return 'Bàu Bàng';
+    if (/bến cát/i.test(text)) return 'Bến Cát';
+    if (/thủ dầu một/i.test(text)) return 'Thủ Dầu Một';
+    if (/sài gòn|tp\.hcm|hcm/i.test(text)) return 'Sài Gòn';
+    return text.split('/')[0].replace(/\(.*?\)/g, '').trim();
+  };
+
+  const originTown = cleanOrigin(tripOriginCity);
+  const stationTown = cleanOrigin(originName);
+  const isPassingBy = originTown.toLowerCase() !== stationTown.toLowerCase() && !stationTown.toLowerCase().includes(originTown.toLowerCase());
+  const pickupSubtext = isPassingBy
+    ? `Xe từ ${originTown} xuống, ghé đón bạn đúng ~${pickupTime} tại trạm ${stationTown}.`
+    : `Đón bạn đúng ~${pickupTime} tại trạm ${stationTown} (xe nhà tiện chuyến).`;
 
   // Tag và Subtext điểm trả: điểm neo tâm lý tiết kiệm 70k Grab/taxi vào viện
   const dropoffBadge = isHospital ? 'Trả tận cổng bệnh viện' : 'Chở thẳng tới điểm đến';

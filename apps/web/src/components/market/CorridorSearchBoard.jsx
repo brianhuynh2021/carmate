@@ -194,6 +194,7 @@ export default function CorridorSearchBoard({
 
   const fromHub = useMemo(() => fromHubs.find((h) => h.id === fromHubId), [fromHubs, fromHubId]);
   const toHub = useMemo(() => toHubs.find((h) => h.id === toHubId), [toHubs, toHubId]);
+  const [isEditingRoute, setIsEditingRoute] = useState(false);
 
   // ── Trí tuệ bản địa: tự chọn tuyến + chiều theo GPS, im lặng ──────────
   useEffect(() => {
@@ -507,8 +508,56 @@ export default function CorridorSearchBoard({
         </div>
       )}
 
-      {/* ── Ô TÌM KIẾM DUY NHẤT ── */}
-      <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
+      {/* ── THANH CHẶNG TINH GỌN (SLIM ROUTE BAR - ZERO CLUTTER) ── */}
+      {!ENABLE_DEPARTURE_CHIPS && !isEditingRoute ? (
+        <section className="surface rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md transition-all duration-200">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            {/* Chặng đường mỏng */}
+            <div
+              onClick={() => setIsEditingRoute(true)}
+              className="flex-1 min-w-0 flex items-center gap-2.5 cursor-pointer py-1 px-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group/route"
+              title="Bấm để đổi trạm đón / trả"
+            >
+              <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300/80 dark:border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400 group-hover/route:scale-110 transition-transform">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                  <span className="truncate">{fromHub?.shortName || fromHub?.name || 'Tân Khai (QL13)'}</span>
+                  <span className="text-slate-400 dark:text-slate-500 shrink-0 font-normal">➔</span>
+                  <span className="truncate text-[#0071e3] dark:text-blue-400">{toHub?.shortName || toHub?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}</span>
+                </div>
+                <p className="text-[10.5px] sm:text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">
+                  ~{tariff?.distanceKm || 105}km · Tuyến Quốc Lộ 13
+                </p>
+              </div>
+            </div>
+
+            {/* Các nút hành động: Đổi chặng + Đảo chiều */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsEditingRoute(true)}
+                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer active:scale-95"
+              >
+                <span>Đổi chặng</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              </button>
+
+              <button
+                type="button"
+                onClick={swap}
+                aria-label={t('search.swap')}
+                title={t('search.swap')}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90"
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
         <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0 group-hover/from:scale-115 transition-transform" />
@@ -708,46 +757,56 @@ export default function CorridorSearchBoard({
           </>
         )}
 
-        {/* ── THANH HÀNH ĐỘNG: tách hẳn khỏi vùng nhập bằng một đường kẻ, đúng
-            như khung tìm kiếm của xe liên tỉnh. Ba câu hỏi ở trên, một hành
-            động ở dưới — mắt đi thẳng một mạch, không phải tìm nút ở đâu. ── */}
-        <div className="h-px bg-slate-200 dark:bg-white/10" />
-        <div className="py-3.5 px-4 sm:py-4 sm:px-5">
-          <button
-            type="button"
-            onClick={() => handleSearchNow(true)}
-            disabled={isSearching || !fromHubId || !toHubId}
-            className="group relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0062c4] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/45 hover:-translate-y-0.5 hover:scale-[1.008] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 disabled:hover:scale-100 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-200 cursor-pointer"
-          >
-            {/* Vệt sáng quét ngang thu hút mắt về hành động chính của cả trang.
-                Dùng lại keyframes shimmer-sweep sẵn có trong index.css thay vì
-                viết animation mới. Tắt khi đang tìm hoặc nút bị vô hiệu hoá —
-                nhấp nháy lúc không bấm được chỉ gây bực bội. */}
-            {!isSearching && fromHubId && toHubId && (
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer-sweep motion-reduce:hidden"
-              />
-            )}
-            {isSearching ? (
-              <Loader2 className="w-4 h-4 animate-spin relative" />
-            ) : (
-              <Search className="w-4 h-4 relative group-hover:scale-115 transition-transform duration-200" />
-            )}
-            <span className="relative">{isSearching ? t('search.searching') : t('search.findTrips')}</span>
-          </button>
+        {/* ── THANH HÀNH ĐỘNG ── */}
+        {ENABLE_DEPARTURE_CHIPS ? (
+          <>
+            <div className="h-px bg-slate-200 dark:bg-white/10" />
+            <div className="py-3.5 px-4 sm:py-4 sm:px-5">
+              <button
+                type="button"
+                onClick={() => handleSearchNow(true)}
+                disabled={isSearching || !fromHubId || !toHubId}
+                className="group relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0062c4] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/45 hover:-translate-y-0.5 hover:scale-[1.008] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 disabled:hover:scale-100 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-200 cursor-pointer"
+              >
+                {!isSearching && fromHubId && toHubId && (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer-sweep motion-reduce:hidden"
+                  />
+                )}
+                {isSearching ? (
+                  <Loader2 className="w-4 h-4 animate-spin relative" />
+                ) : (
+                  <Search className="w-4 h-4 relative group-hover:scale-115 transition-transform duration-200" />
+                )}
+                <span className="relative">{isSearching ? t('search.searching') : t('search.findTrips')}</span>
+              </button>
 
-
-          {/* Thông tin cự ly & hành lang — không hiển thị giá ước tính ở đây để tránh mâu thuẫn nhận thức */}
-          {tariff && (
-            <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400 font-mono">
-              <span>~{tariff.distanceKm}km</span>
-              {' · '}
-              <span>Hành lang Quốc Lộ 13</span>
-            </p>
-          )}
-        </div>
+              {tariff && (
+                <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400 font-mono">
+                  <span>~{tariff.distanceKm}km</span>
+                  {' · '}
+                  <span>Hành lang Quốc Lộ 13</span>
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="p-3 sm:px-5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              ~{tariff?.distanceKm || 105}km · Tuyến Quốc Lộ 13
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsEditingRoute(false)}
+              className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-all cursor-pointer active:scale-95"
+            >
+              Xong / Thu gọn
+            </button>
+          </div>
+        )}
       </section>
+    )}
 
       {/* ── ACCORDION LỊCH CHẠY TOÀN TUYẾN (BẢO LƯU CODE - ẨN Ở GIAI ĐOẠN COLD START CRO) ── */}
       {ENABLE_TIMELINE_ACCORDION && !matrix && (

@@ -206,8 +206,20 @@ function loadDriverHistory(trip) {
   };
 }
 
-function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsNeeded, originS, destS, backupCount = 0 }) {
+function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsNeeded, originS, destS, backupCount = 0, nowMs = Date.now() }) {
   const trips = getTrips({ type: 'drivers', includeHidden: false });
+
+  // Tính phút hiện tại trong ngày theo múi giờ Việt Nam (UTC+7)
+  const now = new Date(nowMs);
+  const vnTimeParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(now);
+  const curH = Number(vnTimeParts.find((p) => p.type === 'hour')?.value || 0);
+  const curM = Number(vnTimeParts.find((p) => p.type === 'minute')?.value || 0);
+  const currentMinutesVN = curH * 60 + curM;
 
   // Bản ghi chuyến dùng `availableSeats` (số ghế còn trống thực tế), còn `capacity`
   // là sức chứa tổng của xe. Tra nhầm sang `seats` sẽ ra undefined và lọc rớt sạch
@@ -224,9 +236,19 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
         // để không đánh rơi dữ liệu cũ chưa gắn nhãn tuyến.
         if (t.routeCategory) return false;
       }
-      if (desiredMinutes == null) return true;
 
       const tripMinutes = slotStartMinutes(t.timeSlot || t.time);
+
+      // Khi duyệt tất cả chuyến sẵn có (desiredMinutes == null):
+      // Lọc bỏ các chuyến xe trong quá khứ của ngày hôm nay (dung sai 15 phút).
+      if (desiredMinutes == null) {
+        const isToday = !t.date || t.date === 'Hôm nay';
+        if (isToday && tripMinutes != null && tripMinutes < currentMinutesVN - 15) {
+          return false;
+        }
+        return true;
+      }
+
       if (tripMinutes == null) return true;
       return circularDistanceMinutes(tripMinutes, desiredMinutes) <= windowMinutes;
     })
@@ -467,7 +489,8 @@ export function buildTimeSlotMatrix({
     seatsNeeded: cleanSeats,
     originS,
     destS,
-    backupCount
+    backupCount,
+    nowMs
   });
 
   const forming = collectFormingTrips({

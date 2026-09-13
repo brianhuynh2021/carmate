@@ -99,7 +99,7 @@ export default function StationRiderView({
     { id: 'hub_ql13_binh_long', name: '📍 Cổng chào TX. Bình Long (Vòng xoay An Lộc)' },
     { id: 'hub_ql13_tthc_binh_long', name: '🏛️ TTHC TX. Bình Long / Bến xe Bình Long' },
     { id: 'hub_ql13_tthc_tan_khai', name: '🏛️ TTHC Huyện Hớn Quản (TT. Tân Khai - Trụ sở Huyện ủy)' },
-    { id: 'hub_ql13_tan_khai', name: '⛽ Cây xăng Petrolimex Tân Khai / Chợ Tân Khai' },
+    { id: 'hub_ql13_tan_khai', name: '⛽ Cây xăng Petrolimex Tân Khai (QL13)' },
     { id: 'hub_ql13_minh_hung', name: '🏭 Cổng KCN Minh Hưng - Hàn Quốc (Chơn Thành)' },
     { id: 'hub_ql13_tthc_chon_thanh', name: '🏛️ TTHC TX. Chơn Thành / Quảng trường' },
     { id: 'hub_ql13_vincom_chon_thanh', name: '🛍️ Vincom Plaza Chơn Thành (Số 01 QL13)' },
@@ -370,8 +370,8 @@ export default function StationRiderView({
         },
         {
           id: 'hub_ql13_tan_khai',
-          title: 'Tân Khai (Hớn Quản)',
-          subtitle: 'Cây xăng Petrolimex · Chợ Tân Khai',
+          title: 'Tân Khai (QL13)',
+          subtitle: 'Cây xăng Petrolimex Tân Khai',
           price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_tan_khai').pricePerSeat
         },
         {
@@ -1315,7 +1315,7 @@ export default function StationRiderView({
         {viewStep === 'BOARDING_PASS' && boardingPass && (() => {
           const hasAssignedCar = Boolean(boardingPass.carInfo && (boardingPass.carInfo.plate || boardingPass.carInfo.driverName));
           const isWaiting = boardingPass.status === 'WAITING' || !hasAssignedCar;
-          const isArriving = boardingPass.status === 'ARRIVING' && hasAssignedCar;
+          const _isArriving = boardingPass.status === 'ARRIVING' && hasAssignedCar;
           const isBoarded = (boardingPass.status === 'BOARDED' || boardingPass.status === 'COMPLETED');
 
           return (
