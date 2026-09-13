@@ -108,6 +108,9 @@ function getBusSubtext(h) {
   if (/petro/i.test(raw)) return 'Limousine VIP';
   if (/trung kén/i.test(raw) || /giường nằm/i.test(h.note || '')) return 'Xe giường nằm';
   if (/huy hiếu/i.test(raw) || /ghế ngả/i.test(h.note || '')) return 'Limousine ghế ngả';
+  if (/quốc đạt/i.test(raw)) return 'Limousine phòng nằm';
+  if (/chín nghĩa/i.test(raw)) return 'Xe giường nằm 40 chỗ';
+  if (/ba đàm|minh thắng/i.test(raw)) return 'Xe khách 29 chỗ';
   return 'Limousine 9 chỗ';
 }
 
@@ -1189,7 +1192,7 @@ export default function CorridorSearchBoard({
               </div>
 
               <div className="space-y-1.5">
-                {(showAllBuses ? verifiedHotlines : verifiedHotlines.slice(0, 2)).map((h) => {
+                {(showAllBuses ? verifiedHotlines : verifiedHotlines.slice(0, 5)).map((h) => {
                   const cleanBusName = getCleanOperatorName(h);
                   const busSubtext = getBusSubtext(h);
                   const busDropoff = getBusDropoff(h);
@@ -1237,8 +1240,8 @@ export default function CorridorSearchBoard({
                   );
                 })}
 
-                {/* Nút bấm nhẹ Xem thêm / Thu gọn (Viền xám trung tính border-slate-200, không viền cam) */}
-                {verifiedHotlines.length > 2 && (
+                {/* Nút bấm nhẹ Xem thêm / Thu gọn (Mặc định 5 xe, nút mở thêm 3 xe, viền xám trung tính border-slate-200) */}
+                {verifiedHotlines.length > 5 && (
                   <button
                     type="button"
                     onClick={() => setShowAllBuses(!showAllBuses)}
@@ -1247,7 +1250,7 @@ export default function CorridorSearchBoard({
                     <span>
                       {showAllBuses
                         ? 'Thu gọn'
-                        : `Xem thêm ${verifiedHotlines.length - 2} nhà xe khác`}
+                        : `Xem thêm ${verifiedHotlines.length - 5} nhà xe khác`}
                     </span>
                     <span className="text-xs">{showAllBuses ? '▴' : '▾'}</span>
                   </button>
