@@ -469,7 +469,7 @@ export default function InstantBookingModal({
               {/* DÒNG THÔNG BÁO CHỮ VÀNG NGHIÊNG */}
               <div className="px-3 py-2 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-600/30 text-center shadow-2xs">
                 <p className="text-xs sm:text-[12.5px] italic font-medium text-amber-700 dark:text-amber-300">
-                  Chủ xe sẽ liên hệ với bạn ngay vòng 10' tới
+                  Chủ xe sẽ liên hệ với bạn ngay trong vòng 10' tới
                 </p>
               </div>
 
