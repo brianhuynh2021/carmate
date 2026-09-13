@@ -140,18 +140,25 @@ export default function Header({
       }`}
     >
       <div className="max-w-[1320px] mx-auto px-3 sm:px-6 lg:px-8 h-15 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
-        <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('market')}
             className="flex items-center gap-2 cursor-pointer select-none text-left group"
-            aria-label="CarMate Home"
+            aria-label="CarMate.vn Home"
           >
             <LogoMark className="w-7 h-7 sm:w-8 sm:h-8 group-hover:scale-105 transition-transform" />
             <span className="font-display font-black text-lg sm:text-xl tracking-tight leading-none text-[#1d1d1f] dark:text-white">
               Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
+              <span className="text-[#0071e3] font-mono text-sm sm:text-base font-bold ml-0.5">.vn</span>
             </span>
           </button>
+
+          {/* Badge cam kết bảo chứng toàn cục theo tư duy MIT Invariants */}
+          <span className="hidden lg:inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-500/20 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>0% Phí sàn · 0đ Cọc</span>
+          </span>
         </div>
 
         <nav

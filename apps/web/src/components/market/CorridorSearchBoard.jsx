@@ -353,23 +353,6 @@ export default function CorridorSearchBoard({
 
   return (
     <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-10">
-      {/* ── BANNER THƯƠNG HIỆU CARMATE.VN ── */}
-      <div className="flex items-center justify-between px-1.5 pt-1 text-xs select-none">
-        <div className="flex items-center gap-2">
-          <img src="/icons/icon-192.png" alt="CarMate" className="w-5 h-5 rounded-lg object-contain shadow-2xs" />
-          <span className="font-display font-black tracking-tight text-sm text-[#1d1d1f] dark:text-white">
-            Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span><span className="text-[#0071e3] font-mono text-xs ml-0.5 font-bold">.vn</span>
-          </span>
-          <span className="text-[10px] text-slate-400 border-l border-slate-300 dark:border-white/20 pl-2 hidden sm:inline">
-            Hành lang xe tiện chuyến trực tiếp
-          </span>
-        </div>
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-500/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>0% Phí sàn · 0đ Cọc</span>
-        </span>
-      </div>
-
       {/* ── CHỌN TUYẾN (chỉ hiện khi có từ 2 tuyến trở lên để tối ưu không gian) ── */}
       {corridors.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
