@@ -206,6 +206,21 @@ function loadDriverHistory(trip) {
   };
 }
 
+function getDayOffset(dateStr, nowMs) {
+  if (!dateStr || dateStr === 'Hôm nay') return 0;
+  if (dateStr === 'Ngày mai') return 1;
+  const target = new Date(dateStr);
+  if (!isNaN(target.getTime())) {
+    const today = new Date(nowMs);
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(today);
+    const targetStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(target);
+    if (targetStr === todayStr) return 0;
+    const diffMs = target.getTime() - today.getTime();
+    return Math.max(0, Math.round(diffMs / 86400000));
+  }
+  return 0;
+}
+
 function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsNeeded, originS, destS, backupCount = 0, nowMs = Date.now() }) {
   const trips = getTrips({ type: 'drivers', includeHidden: false });
 
@@ -300,7 +315,14 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
       };
     })
     .sort((a, b) => {
-      if (desiredMinutes == null) return 0;
+      const dateA = getDayOffset(a.departureDate, nowMs);
+      const dateB = getDayOffset(b.departureDate, nowMs);
+      if (dateA !== dateB) return dateA - dateB;
+      if (desiredMinutes == null) {
+        const ma = a.departureMinutes ?? 9999;
+        const mb = b.departureMinutes ?? 9999;
+        return ma - mb;
+      }
       const da = a.departureMinutes == null ? 999 : circularDistanceMinutes(a.departureMinutes, desiredMinutes);
       const db = b.departureMinutes == null ? 999 : circularDistanceMinutes(b.departureMinutes, desiredMinutes);
       return da - db;

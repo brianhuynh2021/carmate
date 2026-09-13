@@ -428,16 +428,39 @@ export default function CorridorSearchBoard({
     };
   }, [selectedDetailHotline, carmateSegmentPrice]);
 
-  // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang
+  // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang (ORDER BY date ASC, time ASC)
   const carmateDisplayTrips = useMemo(() => {
     const slots = matrix?.slots || [];
     const real = slots.filter((s) => s.tier !== 'SHADOW');
     if (real.length > 0) {
-      return real.map((t) => ({
-        ...t,
-        // Giá phân đoạn tính chính xác theo điểm đón/trả của khách trên hành lang
-        pricePerSeat: carmateSegmentPrice || t.pricePerSeat || 170000
-      }));
+      const getTripSortWeight = (t) => {
+        let dayOffset = 0;
+        if (t.departureDate === 'Ngày mai') dayOffset = 1;
+        else if (t.departureDate && t.departureDate !== 'Hôm nay') {
+          const parsed = new Date(t.departureDate);
+          if (!isNaN(parsed.getTime())) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const target = new Date(parsed);
+            target.setHours(0, 0, 0, 0);
+            dayOffset = Math.max(0, Math.round((target - today) / 86400000));
+          }
+        }
+        let minutes = t.departureMinutes;
+        if (minutes == null && t.departureLabel) {
+          const [h, m] = t.departureLabel.split(':').map((num) => parseInt(num, 10));
+          if (!isNaN(h) && !isNaN(m)) minutes = h * 60 + m;
+        }
+        return dayOffset * 1440 + (minutes ?? 9999);
+      };
+
+      return [...real]
+        .sort((a, b) => getTripSortWeight(a) - getTripSortWeight(b))
+        .map((t) => ({
+          ...t,
+          // Giá phân đoạn tính chính xác theo điểm đón/trả của khách trên hành lang
+          pricePerSeat: carmateSegmentPrice || t.pricePerSeat || 170000
+        }));
     }
     // Tuyệt đối KHÔNG hiển thị xe ảo khi chưa có chuyến thật
     return [];
@@ -934,21 +957,6 @@ export default function CorridorSearchBoard({
               <span className="text-[10px] font-bold font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-400/40 dark:border-emerald-500/30 shadow-2xs">
                 Tiết kiệm 65%
               </span>
-            </div>
-          </div>
-
-          {/* Thanh ngữ cảnh lộ trình trực quan (Route Context Banner) */}
-          <div className="px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200/90 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0" />
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                Lộ trình: {fromHub?.name || matrix?.origin?.name || 'Ngã ba Tân Khai'} ➔ {toHub?.name || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD'}
-              </p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                {tariff?.distanceKm ? `~${tariff.distanceKm} km` : 'Tuyến QL13'} · <span>Hành lang QL13</span>
-              </p>
             </div>
           </div>
 
