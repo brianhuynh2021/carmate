@@ -41,6 +41,7 @@ import { useI18n } from '../../i18n/index.jsx';
 import api from '../../api/client.js';
 import { CarMateBadge } from '../ui/Logo.jsx';
 import CorridorTripCard from './CorridorTripCard.jsx';
+import TripDetailBottomSheet from './TripDetailBottomSheet.jsx';
 import InstantBookingModal from '../modals/InstantBookingModal.jsx';
 import {
   trackViewBusDetail,
@@ -960,20 +961,21 @@ export default function CorridorSearchBoard({
             </div>
           </div>
 
-          {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE */}
+          {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE (DANH SÁCH RÚT GỌN SCANNABLE) */}
           {carmateDisplayTrips.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-2.5">
               {carmateDisplayTrips.map((trip) => (
                 <CorridorTripCard
                   key={trip.tripId || trip.id || trip.departureLabel}
                   trip={trip}
-                  originName={fromHub?.name || matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai'}
-                  originNote={fromHub?.landmark || matrix?.origin?.landmark || 'đón tận nơi dọc QL13 & cây xăng'}
-                  destName={toHub?.name || matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD'}
-                  destNote={toHub?.landmark || matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
+                  originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
+                  destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
                   segmentPrice={carmateSegmentPrice}
+                  onSelectTrip={(selectedTrip) => {
+                    setSelectedDetailTrip(selectedTrip);
+                  }}
                   onBookNow={(selectedTrip) => {
-                    setSelectedBookingTrip(selectedTrip);
+                    setSelectedDetailTrip(selectedTrip);
                   }}
                 />
               ))}
@@ -1119,107 +1121,21 @@ export default function CorridorSearchBoard({
         </section>
       )}
 
-      {/* MODAL XEM KỸ CHI TIẾT CHUYẾN XE (REACT PORTAL z-[9999]) */}
-      {selectedDetailTrip && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setSelectedDetailTrip(null)}
-        >
-          <div
-            className="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-3xl p-5 shadow-2xl border border-slate-300 dark:border-white/20 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header modal */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 bg-emerald-500/15 text-emerald-600">
-                  <Sparkles className="w-5 h-5" />
-                </span>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <CarMateBadge size="xs" />
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                      Đi ghép tiện chuyến
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-mono">
-                    Khởi hành: {selectedDetailTrip.departureLabel}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDetailTrip(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-500 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Chi tiết xe & chủ xe */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Chủ xe:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailTrip.driverName || 'Chủ xe'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Dòng xe:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedDetailTrip.vehicleModel || 'Xe tiện chuyến'}
-                </span>
-              </div>
-
-              {selectedDetailTrip.plateMasked && (
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Biển kiểm soát:</span>
-                  <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10">
-                    {selectedDetailTrip.plateMasked}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Số ghế trống:</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  Còn {selectedDetailTrip.seatsAvailable ?? 1} ghế trống
-                </span>
-              </div>
-
-              <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500 shrink-0">Điểm đón:</span>
-                <span className="font-medium text-slate-900 dark:text-white text-right">
-                  {matrix?.origin?.landmark || matrix?.origin?.name || 'Trạm đón quy chuẩn'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500">Giá chia sẻ:</span>
-                <div className="text-right">
-                  <span className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                    {formatVND(selectedDetailTrip.pricePerSeat || carmateSegmentPrice)}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">trọn gói xăng & cầu đường</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Nút hành động chính */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedDetailTrip(null);
-                onOpenStationView?.(fromHubId, toHubId);
-              }}
-              className="w-full h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 transition-all cursor-pointer"
-            >
-              Xác nhận giữ chỗ chuyến này ({formatVND(selectedDetailTrip.pricePerSeat || carmateSegmentPrice)})
-            </button>
-          </div>
-        </div>,
-        document.body
+      {/* ── BOTTOM SHEET CHI TIẾT CHUYẾN XE (PROGRESSIVE DISCLOSURE) ── */}
+      {selectedDetailTrip && (
+        <TripDetailBottomSheet
+          isOpen={Boolean(selectedDetailTrip)}
+          onClose={() => setSelectedDetailTrip(null)}
+          trip={selectedDetailTrip}
+          originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
+          destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
+          destNote={toHub?.landmark || matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
+          segmentPrice={carmateSegmentPrice}
+          onConfirmBook={(tripToBook) => {
+            setSelectedDetailTrip(null);
+            setSelectedBookingTrip(tripToBook);
+          }}
+        />
       )}
 
       {/* ── BOTTOM SHEET CHI TIẾT LỘ TRÌNH NHÀ XE & ĐỐI CHIẾU CARMATE (REACT PORTAL z-[9999]) ── */}
