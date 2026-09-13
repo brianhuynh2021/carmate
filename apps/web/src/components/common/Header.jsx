@@ -124,9 +124,11 @@ export default function Header({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
@@ -140,18 +142,25 @@ export default function Header({
       }`}
     >
       <div className="max-w-[1320px] mx-auto px-3 sm:px-6 lg:px-8 h-15 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
-        <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('market')}
             className="flex items-center gap-2 cursor-pointer select-none text-left group"
-            aria-label="CarMate Home"
+            aria-label="CarMate.vn Home"
           >
             <LogoMark className="w-7 h-7 sm:w-8 sm:h-8 group-hover:scale-105 transition-transform" />
             <span className="font-display font-black text-lg sm:text-xl tracking-tight leading-none text-[#1d1d1f] dark:text-white">
               Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
+              <span className="text-[#0071e3] font-mono text-sm sm:text-base font-bold ml-0.5">.vn</span>
             </span>
           </button>
+
+          {/* Badge cam kết bảo chứng toàn cục theo tư duy MIT Invariants */}
+          <span className="hidden lg:inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-500/20 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>0% Phí sàn · 0đ Cọc</span>
+          </span>
         </div>
 
         <nav
@@ -260,224 +269,248 @@ export default function Header({
 
               {/* Apple Profile Popover Menu */}
               {isUserMenuOpen && (
-                <div className="absolute right-0 top-[calc(100%+8px)] w-60 rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
-                  {/* Header Thông tin tài khoản */}
-                  <div className="px-3 py-2.5 border-b border-black/[0.05] dark:border-white/[0.06] mb-1 flex items-center gap-2.5">
-                    {currentUser.avatar ? (
-                      <img
-                        src={currentUser.avatar}
-                        alt={currentUser.name}
-                        className="w-9 h-9 rounded-full object-cover shadow-xs ring-1 ring-emerald-500/30 shrink-0"
-                      />
-                    ) : (
-                      <span className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white inline-flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20 shrink-0">
-                        <User className="w-4.5 h-4.5 text-white" strokeWidth={2.2} />
-                      </span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-[#1d1d1f] dark:text-white truncate">{currentUser.name}</p>
-                      <p className="text-[11px] text-[#86868b] font-mono truncate">
-                        {currentUser.phone || t('userMenu.verifiedIdentity')}
-                      </p>
-                      {isAdminUser(currentUser) && (
-                        <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
-                          <ShieldCheck className="w-3 h-3" /> {t('userMenu.adminBadge')}
+                <>
+                  {/* Backdrop cho mobile để chạm ngoài đóng popover tức thì */}
+                  <div
+                    className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] sm:hidden"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    aria-hidden="true"
+                  />
+
+                  <div className="absolute right-0 top-[calc(100%+8px)] w-[calc(100vw-24px)] sm:w-72 max-w-[320px] max-h-[calc(100vh-80px)] overflow-y-auto overscroll-contain rounded-3xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_20px_50px_rgba(0,0,0,0.18)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-left select-none custom-scrollbar">
+                    {/* KHỐI 1: Nhận diện & Trạng thái tài khoản */}
+                    <div className="p-2.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.04] mb-1.5 flex items-center gap-2.5">
+                      <div className="relative shrink-0">
+                        {currentUser.avatar ? (
+                          <img
+                            src={currentUser.avatar}
+                            alt={currentUser.name}
+                            className="w-10 h-10 rounded-full object-cover shadow-xs ring-2 ring-[#0071e3]/20"
+                          />
+                        ) : (
+                          <span className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white inline-flex items-center justify-center shadow-xs ring-2 ring-[#0071e3]/20">
+                            <User className="w-5 h-5 text-white" strokeWidth={2.2} />
+                          </span>
+                        )}
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-[#1c1c1e]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs sm:text-sm font-bold text-[#1d1d1f] dark:text-white truncate">
+                            {currentUser.name}
+                          </p>
+                          {isAdminUser(currentUser) && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                              <ShieldCheck className="w-2.5 h-2.5" />
+                              {t('userMenu.adminBadge')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#86868b] font-mono truncate mt-0.5">
+                          {currentUser.phone || t('userMenu.verifiedIdentity')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* KHỐI 2: Hoạt động cá nhân & Chuyến đi */}
+                    <div className="space-y-0.5">
+                      {/* Hồ sơ & Garage của tôi */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOpenProfile?.();
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                      >
+                        <div className="inline-flex items-center gap-2.5">
+                          <User className="w-4 h-4 text-[#0071e3] group-hover:scale-110 transition-transform shrink-0" />
+                          <span>{t('userMenu.profileGarage')}</span>
+                        </div>
+                        {currentUser?.vehicle?.brand ? (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                            {currentUser.vehicle.brand}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-[#86868b] font-normal">{t('userMenu.noVehicle')}</span>
+                        )}
+                      </button>
+
+                      {/* Chuyến đi & Lịch hẹn của tôi */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('booked');
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                      >
+                        <div className="inline-flex items-center gap-2.5">
+                          <Clock className="w-4 h-4 text-[#0071e3] group-hover:scale-110 transition-transform shrink-0" />
+                          <span>{t('userMenu.myTrips')}</span>
+                        </div>
+                        {bookedCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#0071e3] text-white tabular">
+                            {bookedCount}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Hộp thư & Chat chuyến */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOpenInbox?.();
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                      >
+                        <div className="inline-flex items-center gap-2.5">
+                          <Inbox className="w-4 h-4 text-[#0071e3] group-hover:scale-110 transition-transform shrink-0" />
+                          <span>{t('header2.s001')}</span>
+                        </div>
+                        {inboxCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500 text-white tabular">
+                            {inboxCount}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Lối tắt: Đăng chuyến đón khách */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onRequestPostTrip?.('driver');
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer group active:scale-[0.99]"
+                      >
+                        <div className="inline-flex items-center gap-2.5">
+                          <Sparkles className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform shrink-0" />
+                          <span>{t('userMenu.postTripShortcut')}</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/40">
+                          {t('userMenu.driverShortcutBadge')}
                         </span>
+                      </button>
+                    </div>
+
+                    {/* KHỐI 3: Quản trị hệ thống (Chỉ dành cho Admin) */}
+                    {isAdminUser(currentUser) && (
+                      <>
+                        <div className="my-1.5 border-t border-black/[0.05] dark:border-white/[0.06]" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('admin');
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer group active:scale-[0.99]"
+                        >
+                          <div className="inline-flex items-center gap-2.5">
+                            <ShieldCheck className="w-4 h-4 text-rose-600 group-hover:scale-110 transition-transform shrink-0" />
+                            <span>{t('userMenu.adminPortal')}</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200/60 dark:border-rose-800/40">
+                            Admin
+                          </span>
+                        </button>
+                      </>
+                    )}
+
+                    {/* KHỐI 4: Tuỳ chọn & Hỗ trợ */}
+                    <div className="my-1.5 border-t border-black/[0.05] dark:border-white/[0.06]" />
+                    <div className="space-y-0.5">
+                      {/* Chuyển đổi ngôn ngữ */}
+                      <div className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
+                        <div className="inline-flex items-center gap-2.5 font-semibold">
+                          <Globe className="w-4 h-4 text-[#0071e3] shrink-0" />
+                          <span>{t('userMenu.language')}</span>
+                        </div>
+                        <div className="inline-flex items-center p-0.5 rounded-lg bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.06]">
+                          <button
+                            type="button"
+                            onClick={() => setLang('vi')}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                              lang === 'vi' ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
+                            }`}
+                          >
+                            VI
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLang('en')}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                              lang === 'en' ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
+                            }`}
+                          >
+                            EN
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quy chế & Chính sách an toàn */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPolicyModal?.(true);
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center gap-2.5 text-xs font-semibold text-[#515154] dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer active:scale-[0.99]"
+                      >
+                        <HelpCircle className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>{t('userMenu.safetyPolicy')}</span>
+                      </button>
+
+                      {/* Hỗ trợ trực tiếp qua Telegram */}
+                      <a
+                        href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                      >
+                        <div className="inline-flex items-center gap-2.5">
+                          <MessageCircle className="w-4 h-4 text-[#229ED9] group-hover:scale-110 transition-transform shrink-0" />
+                          <span>{t('userMenu.support')}</span>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-[#229ED9] bg-[#229ED9]/10 px-2 py-0.5 rounded-md">
+                          Telegram
+                        </span>
+                      </a>
+                    </div>
+
+                    {/* KHỐI 5: Thoát & Quyền riêng tư */}
+                    <div className="my-1.5 border-t border-black/[0.05] dark:border-white/[0.06]" />
+                    <div className="space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onLogout?.();
+                        }}
+                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center gap-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer active:scale-[0.99]"
+                      >
+                        <LogOut className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>{t('userMenu.logout')}</span>
+                      </button>
+
+                      {currentUser.role !== 'admin' && onOpenDeleteAccount && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onOpenDeleteAccount();
+                          }}
+                          className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center gap-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer active:scale-[0.99]"
+                        >
+                          <Trash2 className="w-4 h-4 text-rose-500 shrink-0" />
+                          <span>{t('userMenu.deleteAccount')}</span>
+                        </button>
                       )}
                     </div>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenProfile?.();
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group"
-                  >
-                    <div className="inline-flex items-center gap-2">
-                      <User className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
-                      {/* Hồ sơ & Garage của tôi */}
-                      <span>{t('userMenu.profileGarage')}</span>
-                    </div>
-                    {currentUser?.vehicle?.brand ? (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
-                        {currentUser.vehicle.brand}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-[#86868b] font-normal">{t('userMenu.noVehicle')}</span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenInbox?.();
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group"
-                  >
-                    <div className="inline-flex items-center gap-2">
-                      <Inbox className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
-                      <span>{t('header2.s001')}</span>
-                    </div>
-                    {inboxCount > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white">
-                        {inboxCount}
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onRequestPostTrip?.('driver');
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer group"
-                  >
-                    <div className="inline-flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                      <span>{t('header2.s002')}</span>
-                    </div>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
-                      {t('header2.s003')}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('booked');
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
-                  >
-                    <div className="inline-flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-[#0071e3]" />
-                      <span>{t('userMenu.myTrips') || 'Lịch hẹn & Chuyến đi'}</span>
-                    </div>
-                    {bookedCount > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#0071e3] text-white">
-                        {bookedCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {isAdminUser(currentUser) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('admin');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
-                      <span>{t('userMenu.adminPortal')}</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPolicyModal?.(true);
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-medium text-[#515154] dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{t('userMenu.safetyPolicy')}</span>
-                  </button>
-
-                  <div className="w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
-                    <div className="inline-flex items-center gap-2 font-medium">
-                      <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
-                      <span>{t('userMenu.language')}</span>
-                    </div>
-                    <div className="inline-flex items-center p-0.5 rounded-lg bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.06]">
-                      <button
-                        type="button"
-                        onClick={() => setLang('vi')}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                          lang === 'vi' ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
-                        }`}
-                      >
-                        VI
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLang('en')}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                          lang === 'en' ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
-                        }`}
-                      >
-                        EN
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Mục 5: Hỗ trợ bạn qua Telegram trực tiếp */}
-                  <a
-                    href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setIsUserMenuOpen(false)}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center justify-between text-xs font-medium text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
-                  >
-                    <div className="inline-flex items-center gap-2">
-                      <MessageCircle className="w-3.5 h-3.5 text-[#229ED9]" />
-                      <span>{t('userMenu.support')}</span>
-                    </div>
-                    <span className="text-[10.5px] font-bold text-[#229ED9] bg-[#229ED9]/10 px-1.5 py-0.5 rounded">
-                      Telegram
-                    </span>
-                  </a>
-
-                  <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      onLogout?.();
-                    }}
-                    className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
-                  >
-                    <LogOut className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{t('userMenu.logout')}</span>
-                  </button>
-
-                  {currentUser.role !== 'admin' && onOpenDeleteAccount && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        onOpenDeleteAccount();
-                      }}
-                      className="w-full h-8.5 px-2.5 rounded-xl inline-flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                      <span>{t('userMenu.deleteAccount') || 'Yêu cầu xoá tài khoản'}</span>
-                    </button>
-                  )}
-
-                  <div className="my-1 border-t border-black/[0.05] dark:border-white/[0.06]" />
-
-                  {isAdminUser(currentUser) ? (
-                    <div className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      <span className="inline-flex items-center gap-1.5 font-medium">
-                        <Lock className="w-3 h-3 text-slate-400" />
-                        {/* Tài khoản Quản trị */}
-                        <span>{t('userMenu.adminAccount')}</span>
-                      </span>
-                      {/* Bảo vệ */}
-                      <span className="text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/40">
-                        {t('userMenu.protected')}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
+                </>
               )}
             </div>
           ) : (

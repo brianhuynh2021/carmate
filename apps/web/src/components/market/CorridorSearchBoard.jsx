@@ -16,6 +16,7 @@ import {
   Car,
   Sparkles,
   ShieldCheck,
+  PlusCircle,
   X,
   ChevronRight,
   CheckCircle2
@@ -290,12 +291,10 @@ export default function CorridorSearchBoard({
   const [selectedDetailHotline, setSelectedDetailHotline] = useState(null);
   const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
 
-  // Tự động tìm kiếm ngay khi cặp trạm sẵn sàng
+  // Khi người dùng thay đổi trạm hoặc khung giờ, xóa kết quả cũ để yêu cầu bấm Tìm chuyến mới
   useEffect(() => {
-    if (fromHubId && toHubId && !matrix && !isSearching) {
-      handleSearchNow();
-    }
-  }, [fromHubId, toHubId, matrix, isSearching, handleSearchNow]);
+    setMatrix(null);
+  }, [fromHubId, toHubId, chipId, corridorId]);
 
   // Giá chặng chia sẻ chuẩn CarMate (mặc định 170.000 đ cho chặng Tân Khai - Cụm Chợ Rẫy)
   const carmateSegmentPrice = useMemo(() => {
@@ -312,29 +311,9 @@ export default function CorridorSearchBoard({
         pricePerSeat: t.pricePerSeat || carmateSegmentPrice
       }));
     }
-    return [
-      {
-        id: 'trip_ql13_vios_0430',
-        tripId: 'trip_ql13_vios_0430',
-        tier: 'CONFIRMED',
-        departureLabel: '04:30',
-        departureDate: selectedChip?.date || new Date().toISOString().slice(0, 10),
-        departureMinutes: 270,
-        seatsAvailable: 3,
-        totalSeats: 4,
-        driverName: 'Anh Tuấn (Chủ xe)',
-        vehicleModel: 'Toyota Vios 2022',
-        plateMasked: '93A-56x.xx',
-        fullPlate: '93A - 568.89',
-        phone: '0984.123.456',
-        amenities: ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
-        pricePerSeat: carmateSegmentPrice || 170000,
-        fromLocation: matrix?.origin?.shortLabel || matrix?.origin?.name || 'Ngã ba Tân Khai (ven QL13)',
-        toLocation: matrix?.destination?.shortLabel || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / ĐHYD',
-        note: 'Xe cá nhân gia đình · Đi thẳng êm ái'
-      }
-    ];
-  }, [matrix, carmateSegmentPrice, selectedChip]);
+    // Tuyệt đối KHÔNG hiển thị xe ảo khi chưa có chuyến thật
+    return [];
+  }, [matrix, carmateSegmentPrice]);
 
   // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
   // Tuyến ít xe: hiện ô gom nhu cầu (một trang "lịch chạy toàn tuyến" chỉ có
@@ -375,24 +354,7 @@ export default function CorridorSearchBoard({
 
   return (
     <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-10">
-      {/* ── BANNER THƯƠNG HIỆU CARMATE.VN ── */}
-      <div className="flex items-center justify-between px-1.5 pt-1 text-xs select-none">
-        <div className="flex items-center gap-2">
-          <img src="/icons/icon-192.png" alt="CarMate" className="w-5 h-5 rounded-lg object-contain shadow-2xs" />
-          <span className="font-display font-black tracking-tight text-sm text-[#1d1d1f] dark:text-white">
-            Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span><span className="text-[#0071e3] font-mono text-xs ml-0.5 font-bold">.vn</span>
-          </span>
-          <span className="text-[10px] text-slate-400 border-l border-slate-300 dark:border-white/20 pl-2 hidden sm:inline">
-            Hành lang xe tiện chuyến trực tiếp
-          </span>
-        </div>
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-500/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>0% Phí sàn · 0đ Cọc</span>
-        </span>
-      </div>
-
-      {/* ── CHỌN TUYẾN (chỉ hiện khi có nhiều hơn 1 tuyến) ── */}
+      {/* ── CHỌN TUYẾN (chỉ hiện khi có từ 2 tuyến trở lên để tối ưu không gian) ── */}
       {corridors.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {corridors.map((c) => (
@@ -431,7 +393,8 @@ export default function CorridorSearchBoard({
               <select
                 value={fromHubId}
                 onChange={(e) => setFromHubId(e.target.value)}
-                className="tap-44 w-full appearance-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/from:text-emerald-800 dark:group-hover/from:text-emerald-300 outline-none cursor-pointer truncate transition-colors"
+                style={{ backgroundImage: 'none' }}
+                className="tap-44 w-full appearance-none !bg-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/from:text-emerald-800 dark:group-hover/from:text-emerald-300 outline-none cursor-pointer truncate transition-colors"
               >
                 {fromHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
@@ -472,7 +435,8 @@ export default function CorridorSearchBoard({
               <select
                 value={toHubId}
                 onChange={(e) => setToHubId(e.target.value)}
-                className="tap-44 w-full appearance-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/to:text-[#0071e3] outline-none cursor-pointer truncate transition-colors"
+                style={{ backgroundImage: 'none' }}
+                className="tap-44 w-full appearance-none !bg-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/to:text-[#0071e3] outline-none cursor-pointer truncate transition-colors"
               >
                 {toHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
@@ -659,7 +623,7 @@ export default function CorridorSearchBoard({
           type="button"
           onClick={() => {
             if (isDense) setShowTimeline((v) => !v);
-            else onOpenIntentModal?.(role, fromHubId);
+            else onOpenIntentModal?.(role, fromHubId, toHubId);
           }}
           aria-expanded={isDense ? showTimeline : undefined}
           className="group w-full p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 flex items-center justify-between gap-3 hover:border-[#0071e3] hover:bg-blue-50/40 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-150 cursor-pointer text-left shadow-2xs"
@@ -735,7 +699,7 @@ export default function CorridorSearchBoard({
               ) : (
                 <button
                   type="button"
-                  onClick={() => onOpenIntentModal?.(role, fromHubId)}
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
                   className="mt-1 w-full min-h-[44px] rounded-xl border-2 border-dashed border-slate-300 dark:border-white/20 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-xs hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer"
                 >
                   {t('search.emptyPeriodCta')}
@@ -784,81 +748,108 @@ export default function CorridorSearchBoard({
                   }}
                 />
               ))}
+
+              {/* ⭐️ ƯU TIÊN #1: NÚT 1-CHẠM [ ĐĂNG NHU CẦU ĐÓN TẠI TRẠM ] (GOM KHÁCH CHO CHỦ XE TIỆN CHUYẾN) */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-50/70 via-white to-emerald-50/50 dark:from-[#1c1c1e] dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-[#0071e3]/20 dark:border-white/10 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#0071e3]/10 dark:bg-[#0071e3]/20 text-[#0071e3] flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                      Chưa tìm thấy giờ phù hợp lịch trình?
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      Gửi nhu cầu đón tại trạm để chủ xe tiện chuyến chủ động liên hệ.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
+                  className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Đăng nhu cầu đón tại trạm</span>
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 text-center space-y-3 shadow-xs">
-              <div className="w-10 h-10 mx-auto rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#0071e3] flex items-center justify-center">
+            <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-blue-50/50 via-white to-slate-50/40 dark:from-blue-950/20 dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-blue-500/20 dark:border-white/15 ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_12px_36px_rgba(0,113,227,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] text-center space-y-4">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="relative w-12 h-12 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200/60 dark:border-blue-500/30 text-[#0071e3] flex items-center justify-center shadow-xs ring-4 ring-blue-500/5">
                 <Clock className="w-5 h-5" />
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              <div className="relative space-y-1.5">
+                <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
                   Khung giờ này chưa có chuyến xe ghép trực tiếp
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Bạn có thể gửi yêu cầu đặt chỗ để các chủ xe tiện chuyến liên hệ đón, hoặc tham khảo các tuyến xe khách liên tỉnh bên dưới.
+                <p className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Đăng nhu cầu đón tại trạm (1-chạm), hệ thống CarMate sẽ kết nối ngay khi có chủ xe tiện chuyến đi qua lộ trình của bạn.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => onOpenIntentModal?.(role, fromHubId)}
-                className="px-4 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95"
-              >
-                <span>Đăng nhu cầu đón tại trạm</span>
-              </button>
+              <div className="relative pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => onOpenIntentModal?.(role, fromHubId, toHubId)}
+                  className="h-11 px-6 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 hover:-translate-y-0.5 active:scale-95"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Đăng nhu cầu đón tại trạm</span>
+                </button>
+              </div>
             </div>
           )}
 
-          {/* NHÓM 2: TUYẾN XE KHÁCH LIÊN TỈNH QL13 (THAM KHẢO & MỎ NEO GIÁ) */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <Bus className="w-3.5 h-3.5 text-slate-400" /> Tuyến xe khách liên tỉnh QL13 (Tham khảo)
-              </span>
-            </div>
+          {/* 🛡️ ƯU TIÊN #2 (DƯỚI CÙNG - SAFETY NET): THAM KHẢO XE KHÁCH LIÊN TỈNH KHI CẦN GẤP */}
+          {verifiedHotlines.length > 0 && (
+            <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Bus className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Cần di chuyển gấp? Hotline xe khách liên tỉnh QL13 (Dự phòng)</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {verifiedHotlines.length} nhà xe
+                </span>
+              </div>
 
-            {verifiedHotlines.map((h) => (
-              <button
-                key={h.id}
-                type="button"
-                onClick={() => setSelectedDetailHotline(h)}
-                className="w-full min-h-[48px] px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 hover:border-amber-400 dark:hover:border-amber-400/70 hover:bg-amber-50/40 dark:hover:bg-amber-500/10 hover:shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-between gap-2 text-left transition-all duration-200 cursor-pointer group shadow-2xs"
-              >
-                {/* Trái: Tên nhà xe • Tần suất */}
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-amber-800 dark:group-hover:text-amber-300 transition-colors">
-                    {h.shortName || h.operator}
-                  </p>
-                  <span className="text-slate-300 dark:text-white/20">•</span>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                    {h.frequency?.split('(')[0]?.trim() || 'Nhiều chuyến/ngày'}
-                  </p>
-                </div>
-
-                {/* Phải: Giá vé + Nút [ 📞 Gọi ] */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 group-hover:border-amber-300 dark:group-hover:border-amber-500/30 text-xs font-bold font-mono text-slate-700 dark:text-slate-200 transition-colors block leading-tight">
-                    {h.priceRef || '100.000đ - 160.000đ'}
-                  </span>
-                  <span
-                    className="px-3 py-1.5 rounded-xl border border-amber-400/60 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-200 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 group-hover:shadow-sm group-hover:shadow-amber-500/30 text-[11px] font-bold flex items-center gap-1.5 transition-all duration-150 shrink-0"
+              <div className="space-y-1.5">
+                {verifiedHotlines.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => setSelectedDetailHotline(h)}
+                    className="w-full min-h-[48px] px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 hover:border-amber-400 dark:hover:border-amber-400/70 hover:bg-amber-50/40 dark:hover:bg-amber-500/10 hover:shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-between gap-2 text-left transition-all duration-200 cursor-pointer group shadow-2xs"
                   >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>Gọi</span>
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+                    {/* Trái: Tên nhà xe • Tần suất */}
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-amber-800 dark:group-hover:text-amber-300 transition-colors">
+                        {h.shortName || h.operator}
+                      </p>
+                      <span className="text-slate-300 dark:text-white/20">•</span>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                        {h.frequency?.split('(')[0]?.trim() || 'Nhiều chuyến/ngày'}
+                      </p>
+                    </div>
 
-          {/* Nút đăng lệnh chờ */}
-          <button
-            type="button"
-            onClick={() => onOpenIntentModal?.(role, fromHubId)}
-            className="w-full py-3 px-4 rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/20 bg-slate-50/60 dark:bg-white/[0.02] text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-[#0071e3] dark:hover:text-[#3898ec] hover:border-[#0071e3] dark:hover:border-[#3898ec] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer group"
-          >
-            <span className="text-base group-hover:scale-110 transition-transform">📌</span>
-            <span>Chưa tìm thấy giờ ưng ý? Đăng lệnh chờ (1-chạm)</span>
-          </button>
+                    {/* Phải: Giá vé + Nút [ 📞 Gọi ] */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 group-hover:border-amber-300 dark:group-hover:border-amber-500/30 text-xs font-bold font-mono text-slate-700 dark:text-slate-200 transition-colors block leading-tight">
+                        {h.priceRef || '100.000đ - 160.000đ'}
+                      </span>
+                      <span
+                        className="px-3 py-1.5 rounded-xl border border-amber-400/60 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-200 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 group-hover:shadow-sm group-hover:shadow-amber-500/30 text-[11px] font-bold flex items-center gap-1.5 transition-all duration-150 shrink-0"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Gọi</span>
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       )}
 
