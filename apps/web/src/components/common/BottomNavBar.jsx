@@ -6,6 +6,7 @@ export default function BottomNavBar({
   activeTab,
   setActiveTab,
   onOpenInbox,
+  onOpenQuickPostTrip,
   bookedCount = 0
 }) {
   const { t } = useI18n();
@@ -20,6 +21,10 @@ export default function BottomNavBar({
   const handleTabClick = (itemId) => {
     if (itemId === 'inbox' && onOpenInbox) {
       onOpenInbox();
+      return;
+    }
+    if (itemId === 'cockpit' && onOpenQuickPostTrip) {
+      onOpenQuickPostTrip();
       return;
     }
     setActiveTab(itemId);

@@ -282,6 +282,8 @@ export async function sendNotification({
   return { success: true, channel, notificationId: id };
 }
 
+export const dispatchNotification = sendNotification;
+
 /** Đọc hộp thư in-app của một người dùng. */
 export function getNotifications({ phone, limit = 30, unreadOnly = false } = {}) {
   const db = getRawDB();

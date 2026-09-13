@@ -30,7 +30,18 @@ export default function useTripsData({
   // Khởi tạo rỗng: sàn trống là sự thật, và empty state sẽ mời đăng chuyến.
   const [driverOffers, setDriverOffers] = useState([]);
   const [passengerRequests, setPassengerRequests] = useState([]);
-  const [bookedEscrows, setBookedEscrows] = useState([]);
+  const [bookedEscrows, setBookedEscrows] = useState(() => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const cached = localStorage.getItem('carmate_cached_bookings');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch {}
+    return [];
+  });
   const [platformStats, setPlatformStats] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -39,14 +50,40 @@ export default function useTripsData({
     setTimeout(() => setToastMessage(null), 4000);
   }, []);
 
+  // Helper đồng bộ cache bền vững vé điện tử (MIT Invariant & Zero-Blocking)
+  const syncBookingsCache = useCallback((serverBookings) => {
+    if (!Array.isArray(serverBookings)) return serverBookings;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const local = JSON.parse(localStorage.getItem('carmate_cached_bookings') || '[]');
+        const map = new Map();
+        // Nạp dữ liệu từ server
+        serverBookings.forEach((b) => {
+          const id = b.escrowId || b.id;
+          if (id) map.set(id, b);
+        });
+        // Giữ lại các booking vừa tạo cục bộ chưa kịp lên server
+        local.forEach((b) => {
+          const id = b.escrowId || b.id;
+          if (id && !map.has(id)) map.set(id, b);
+        });
+        const merged = Array.from(map.values());
+        localStorage.setItem('carmate_cached_bookings', JSON.stringify(merged.slice(0, 50)));
+        return merged;
+      }
+    } catch {}
+    return serverBookings;
+  }, []);
+
   // Đồng bộ dữ liệu từ CarMate Backend API
   useEffect(() => {
     let active = true;
     async function fetchBackendData() {
       try {
+        const phoneParam = currentUser?.phone ? { phone: currentUser.phone } : {};
         const [tripsRes, bookingsRes, statsRes] = await Promise.allSettled([
           api.getTrips(),
-          api.getBookings(),
+          api.getBookings(phoneParam),
           api.getStats()
         ]);
 
@@ -63,7 +100,8 @@ export default function useTripsData({
         if (bookingsRes.status === 'fulfilled' && bookingsRes.value?.success) {
           const bookings = bookingsRes.value.data;
           if (Array.isArray(bookings)) {
-            setBookedEscrows(bookings);
+            const merged = syncBookingsCache(bookings);
+            setBookedEscrows(merged || bookings);
           }
         }
 
@@ -456,16 +494,36 @@ export default function useTripsData({
     [showToast]
   );
 
-  const refreshBookings = useCallback(async () => {
+  const refreshBookings = useCallback(async (params = {}) => {
     try {
-      const res = await api.getBookings();
+      const phoneParam = params?.phone || currentUser?.phone || '';
+      const res = await api.getBookings(phoneParam ? { phone: phoneParam } : {});
       if (res?.success && Array.isArray(res.data)) {
-        setBookedEscrows(res.data);
+        const merged = syncBookingsCache(res.data);
+        setBookedEscrows(merged || res.data);
       }
     } catch (err) {
       console.warn('[refreshBookings] Lỗi:', err);
     }
-  }, []);
+  }, [currentUser, syncBookingsCache]);
+
+  // Tiếp nhận booking tạo mới tức thì từ giao diện (Zero-Blocking & MIT Invariant)
+  const handleBookingCreated = useCallback((newBooking) => {
+    if (!newBooking) return;
+    setBookedEscrows((prev) => {
+      const bId = newBooking.escrowId || newBooking.id;
+      const filtered = (prev || []).filter((b) => (b.escrowId || b.id) !== bId);
+      const updated = [newBooking, ...filtered];
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('carmate_cached_bookings', JSON.stringify(updated.slice(0, 50)));
+        }
+      } catch {}
+      return updated;
+    });
+    // Kích hoạt đồng bộ ngầm
+    refreshBookings();
+  }, [refreshBookings]);
 
   // Polling đồng bộ ngầm & Bắn thông báo In-app (AppleMacNotification) cho Chủ xe khi có khách đặt
   useEffect(() => {
@@ -473,7 +531,8 @@ export default function useTripsData({
 
     const pollInterval = setInterval(async () => {
       try {
-        const res = await api.getBookings();
+        const phoneParam = currentUser?.phone ? { phone: currentUser.phone } : {};
+        const res = await api.getBookings(phoneParam);
         if (res?.success && Array.isArray(res.data)) {
           const newBookings = res.data;
           const userPhone = currentUser?.phone ? normalizePhoneNumber(currentUser.phone) : '';
@@ -502,7 +561,8 @@ export default function useTripsData({
             }
           });
 
-          setBookedEscrows(newBookings);
+          const merged = syncBookingsCache(newBookings);
+          setBookedEscrows(merged || newBookings);
         }
       } catch {
         // Bỏ qua lỗi ngầm nếu mất mạng thoáng qua
@@ -510,7 +570,7 @@ export default function useTripsData({
     }, 6000);
 
     return () => clearInterval(pollInterval);
-  }, [currentUser, showToast, bookedEscrows]);
+  }, [currentUser, showToast, bookedEscrows, syncBookingsCache]);
 
   return {
     driverOffers,
@@ -519,6 +579,7 @@ export default function useTripsData({
     setPassengerRequests,
     bookedEscrows,
     setBookedEscrows,
+    handleBookingCreated,
     refreshBookings,
     platformStats,
     setPlatformStats,

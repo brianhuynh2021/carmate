@@ -28,7 +28,7 @@ import {
   maskCustomerPlate,
   getTelegramChatUrl
 } from '@carmate/shared';
-import { api } from '../../api/client.js';
+import { api, setStoredAuthToken } from '../../api/client.js';
 import { CarMateBadge } from '../ui/Logo.jsx';
 
 /**
@@ -67,6 +67,7 @@ function formatTripTimeHeader(departureLabel = '04:30', departureDate = null) {
 export default function InstantBookingModal({
   isOpen,
   onClose,
+  onViewBookedTab,
   trip,
   originHub,
   destinationHub,
@@ -133,12 +134,32 @@ export default function InstantBookingModal({
     try {
       const res = await api.createBooking(bookingPayload);
       const created = res?.data || bookingPayload;
+      if (res?.token) {
+        setStoredAuthToken(res.token);
+      }
+      if (res?.user) {
+        onAuthSuccess?.(res.user);
+      }
+      // Lưu tức thì vào bộ nhớ đệm thiết bị để bảo toàn dữ liệu (MIT Invariant & Zero-Blocking)
+      try {
+        const cached = JSON.parse(localStorage.getItem('carmate_cached_bookings') || '[]');
+        const updated = [created, ...cached.filter((b) => (b.escrowId || b.id) !== (created.escrowId || created.id))];
+        localStorage.setItem('carmate_cached_bookings', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+
       setConfirmedBooking(created);
       onBookingSuccess?.(created);
       onShowToast?.('🎉 Đã giữ chỗ thành công! Đang mở thông tin Chủ xe...', 'success');
       setStep(3);
     } catch (err) {
       console.warn('[InstantBookingModal] Lỗi tạo booking:', err.message);
+      // Fallback lưu cục bộ ngay cả khi lỗi mạng để khách không bị mất vé
+      try {
+        const cached = JSON.parse(localStorage.getItem('carmate_cached_bookings') || '[]');
+        const updated = [bookingPayload, ...cached.filter((b) => (b.escrowId || b.id) !== (bookingPayload.escrowId || bookingPayload.id))];
+        localStorage.setItem('carmate_cached_bookings', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+
       setConfirmedBooking(bookingPayload);
       onBookingSuccess?.(bookingPayload);
       setStep(3);
@@ -211,6 +232,23 @@ export default function InstantBookingModal({
   );
   const timeHeader = formatTripTimeHeader(trip?.departureLabel, trip?.departureDate);
   const dropoffPoint = destinationHub?.name || trip?.toLocation || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược';
+
+  const handleCompleteAndClose = () => {
+    onClose?.();
+    const finalBooking = confirmedBooking || trip;
+    if (finalBooking) {
+      onBookingSuccess?.(finalBooking);
+    }
+    if (onViewBookedTab) {
+      onViewBookedTab('booked', finalBooking);
+    } else {
+      try {
+        sessionStorage.setItem('carmate_active_tab', 'booked');
+        window.history.pushState(null, '', '/my-trips');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } catch {}
+    }
+  };
 
   if (typeof document === 'undefined') return null;
 
@@ -508,7 +546,7 @@ export default function InstantBookingModal({
 
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleCompleteAndClose}
                   className="flex items-center justify-center w-full h-10 rounded-2xl bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 border border-slate-300/70 dark:border-white/10 font-bold text-xs transition-colors cursor-pointer"
                 >
                   Hoàn tất & Đóng

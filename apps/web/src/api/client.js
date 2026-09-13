@@ -49,11 +49,19 @@ async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const adminToken = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('carmate_admin_token') : null;
   const authToken = getStoredAuthToken();
+  let userPhone = null;
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const cachedUser = JSON.parse(localStorage.getItem('carmate_user') || '{}');
+      if (cachedUser?.phone) userPhone = cachedUser.phone;
+    } catch {}
+  }
   const config = {
     headers: {
       'Content-Type': 'application/json',
       ...(adminToken ? { 'x-admin-key': adminToken } : {}),
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(userPhone ? { 'x-user-phone': userPhone } : {}),
       ...options.headers
     },
     ...options
@@ -157,8 +165,11 @@ export const api = {
   },
 
   // Bookings / Zalo Connections
-  async getBookings() {
-    return request('/bookings');
+  async getBookings(params = {}) {
+    const query = new URLSearchParams();
+    if (params?.phone) query.append('phone', params.phone);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/bookings${queryString}`);
   },
 
   async createBooking(bookingData) {

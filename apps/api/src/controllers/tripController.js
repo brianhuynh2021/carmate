@@ -10,8 +10,14 @@ import {
   getUserById,
   getUserByPhone,
   saveUser,
-  isUserDeactivated
+  isUserDeactivated,
+  getBookings,
+  getIntents,
+  updateIntent,
+  updateBookingStatus,
+  applyCancellationPenalty
 } from '../db/sqliteStore.js';
+import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
 import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
 import { sendBusinessAlert, sendSmartMatchTelegramAlert } from '../utils/telegramAlert.js';
 
@@ -218,6 +224,38 @@ export function getTrip(req, res) {
     }
 
     const sanitized = sanitizeTripForPublic(trip, req.user);
+
+    // Nếu là chính Chủ xe sở hữu chuyến hoặc Quản trị viên: nạp danh sách hành khách đã đặt (Seat Manifest)
+    const userPhone = req.user ? cleanPhoneNumber(req.user.phone || '') : null;
+    const tripPhone = cleanPhoneNumber(trip.phoneReal || trip.phone || '');
+    const isOwner = Boolean(
+      (userPhone && tripPhone && userPhone === tripPhone) ||
+      (req.user && (req.user.role === 'admin' || req.user.role === 'super_admin')) ||
+      (req.user && req.user.id && (req.user.id === trip.userId || req.user.id === trip.creatorId))
+    );
+
+    if (isOwner) {
+      const allBookings = getBookings();
+      const tripBookings = allBookings.filter((b) => {
+        return (
+          (b.targetTripId === trip.id || b.tripId === trip.id) &&
+          b.status !== 'cancelled'
+        );
+      });
+      sanitized.manifest = tripBookings.map((b, idx) => ({
+        seatIndex: idx + 1,
+        bookingId: b.id || b.escrowId,
+        passengerName: b.passengerName || b.contactName || b.userName || 'Người đi cùng',
+        passengerPhone: b.passengerPhone || b.contactPhone || b.userPhone || '',
+        pickupSpot: b.pickupSpot || b.from || b.fromLocation || 'Trạm đón dọc tuyến',
+        dropoffSpot: b.dropoffSpot || b.to || b.toLocation || 'Trạm trả dọc tuyến',
+        seatsBooked: Number(b.seatsBooked || b.seats || 1),
+        status: b.status || 'confirmed',
+        createdAt: b.createdAt
+      }));
+      sanitized.bookedSeatsCount = tripBookings.reduce((sum, b) => sum + Number(b.seatsBooked || b.seats || 1), 0);
+    }
+
     return res.status(200).json({ success: true, data: sanitized });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -399,6 +437,71 @@ export async function createTrip(req, res) {
       }
     }
 
+    // BẤT BIẾN THỜI GIAN (MIT): Giờ khởi hành của chuyến trong ngày hôm nay phải lớn hơn thời gian hiện tại ít nhất 30 phút
+    if (body.type === 'driver_offer' && (body.time || body.timeSlot)) {
+      const todayIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+      const isExplicitToday = body.date === 'Hôm nay' || body.date === todayIso;
+      if (isExplicitToday) {
+        const timeRaw = body.time || (body.timeSlot && body.timeSlot.split('-')[0]) || '';
+        const timeMatch = String(timeRaw).match(/^(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          const tripHour = parseInt(timeMatch[1], 10);
+          const tripMin = parseInt(timeMatch[2], 10);
+          const tripTotalMinutes = tripHour * 60 + tripMin;
+
+          const now = new Date();
+          const vnParts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Ho_Chi_Minh',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }).formatToParts(now);
+          const curH = Number(vnParts.find((p) => p.type === 'hour')?.value || 0);
+          const curM = Number(vnParts.find((p) => p.type === 'minute')?.value || 0);
+          const curTotalMinutes = curH * 60 + curM;
+
+          if (tripTotalMinutes < curTotalMinutes + 30) {
+            return res.status(400).json({
+              success: false,
+              error: `Giờ khởi hành (${timeRaw}) phải cách thời điểm hiện tại ít nhất 30 phút để chuẩn bị đón khách chu đáo.`
+            });
+          }
+        }
+      }
+    }
+
+    // BẤT BIẾN KHÔNG TRÙNG LỊCH: Chủ xe không được đăng chuyến trùng khung giờ đã có
+    if (body.type === 'driver_offer') {
+      const existingActiveTrips = getTrips({ type: 'drivers', includeHidden: false }).filter((t) => {
+        if (t.status && t.status !== 'active') return false;
+        const samePhone = posterPhone && cleanPhoneNumber(t.phoneReal || t.phone || '') === posterPhone;
+        const sameUserId = req.user?.id && (t.userId === req.user.id);
+        return samePhone || sameUserId;
+      });
+
+      const newDate = body.date || 'Hôm nay';
+      const timeRaw = body.time || (body.timeSlot && body.timeSlot.split('-')[0]) || '';
+      const timeMatch = String(timeRaw).match(/^(\d{1,2}):(\d{2})/);
+      const newMinutes = timeMatch ? parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10) : null;
+
+      for (const t of existingActiveTrips) {
+        const tDate = t.date || 'Hôm nay';
+        if (tDate === newDate && newMinutes != null) {
+          const tTimeRaw = t.time || (t.timeSlot && t.timeSlot.split('-')[0]) || '';
+          const tTimeMatch = String(tTimeRaw).match(/^(\d{1,2}):(\d{2})/);
+          if (tTimeMatch) {
+            const tMinutes = parseInt(tTimeMatch[1], 10) * 60 + parseInt(tTimeMatch[2], 10);
+            if (Math.abs(newMinutes - tMinutes) < 60) {
+              return res.status(400).json({
+                success: false,
+                error: `Bạn đã có chuyến xe (#${t.id}) khởi hành lúc ${tTimeRaw} cùng ngày. Vui lòng quản lý chuyến hiện tại hoặc chọn khung giờ khác cách ít nhất 1 tiếng.`
+              });
+            }
+          }
+        }
+      }
+    }
+
     const newTrip = await addTrip(body);
 
     // Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
@@ -417,6 +520,36 @@ export async function createTrip(req, res) {
       },
       req
     }).catch(() => {});
+
+    // Kích hoạt Hook thông báo (Waitlist Matcher):
+    // Quét nhóm khách đang để lại SĐT ở phễu chờ của Trạm hoặc Intent cùng khung giờ
+    setTimeout(async () => {
+      try {
+        if (newTrip.type === 'driver_offer') {
+          const waitingIntents = getIntents({ role: 'passenger', status: 'waiting' });
+          const matchedIntents = waitingIntents.filter((intent) => {
+            if (intent.date && newTrip.date && intent.date !== newTrip.date) return false;
+            const corridorMatch = !intent.corridor || !newTrip.routeCategory || intent.corridor.includes('QL13');
+            return corridorMatch;
+          });
+
+          if (matchedIntents.length > 0) {
+            sendBusinessAlert({
+              title: `🎯 KHỚP LỆNH CHỜ (WAITLIST MATCHER): ${matchedIntents.length} KHÁCH CÙNG GIỜ`,
+              details: {
+                'Chuyến xe mới': `#${newTrip.id} (${newTrip.carType || 'Ô tô'} · ${newTrip.availableSeats} chỗ)`,
+                'Lộ trình': `${newTrip.from} ➔ ${newTrip.to}`,
+                'Khởi hành': `${newTrip.date || 'Hôm nay'} lúc ${newTrip.time || newTrip.timeSlot || 'Linh hoạt'}`,
+                'Nhóm khách chờ': matchedIntents.slice(0, 5).map((i) => `${i.contactName} (${cleanPhoneNumber(i.phone || '')})`).join(', ')
+              },
+              req
+            }).catch(() => {});
+          }
+        }
+      } catch (waitlistErr) {
+        console.warn('[Waitlist Matcher Hook Error]:', waitlistErr.message);
+      }
+    }, 20);
 
     // Radar AI Omni-channel: Tự động phát hiện và gửi thông báo cho các đối tác khớp lộ trình cao (>= 85%)
     setTimeout(async () => {
@@ -523,11 +656,124 @@ export async function updateTripHandler(req, res) {
 }
 
 /**
- * DELETE /api/trips/:id - Xóa chuyến đi
+ * DELETE /api/trips/:id - Xóa hoặc hủy chuyến đi
+ * Tuân thủ Công trình 4 (Time-Decay Penalty) & Công trình 6 (Standby Rescue Buffer):
+ * - Nếu chuyến chưa có khách đặt: xóa an toàn (Idempotent 100%).
+ * - Nếu chuyến đã có khách đặt vé: tính toán deltaMinutes, áp dụng chế tài dốc thời gian,
+ *   kích hoạt xe cứu hộ đệm (Standby Buffer) giải cứu hành khách và chuyển trạng thái chuyến sang cancelled.
  */
 export async function deleteTripHandler(req, res) {
   try {
     const { id } = req.params;
+    const existingTrip = getTripById(id);
+    if (!existingTrip) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến xe cần xóa' });
+    }
+
+    const { reason = 'Chủ xe bận việc gia đình đột xuất' } = req.body || {};
+    const allBookings = getBookings();
+    const activeBookings = allBookings.filter(
+      (b) => (b.tripId === id || b.targetTripId === id) && b.status !== 'cancelled'
+    );
+
+    // Kịch bản chuyến đã có khách đặt: Bảo vệ quyền lợi hành khách và chế tài chủ xe
+    if (activeBookings.length > 0) {
+      let departureTimeMs = null;
+      const tripDate = existingTrip.date;
+      const tripTimeSlot = existingTrip.timeSlot || existingTrip.time || '';
+      if (tripDate) {
+        const hourMatch = String(tripTimeSlot).match(/(\d{1,2}):(\d{2})/);
+        const depDate = new Date(tripDate);
+        if (hourMatch) {
+          depDate.setHours(parseInt(hourMatch[1], 10), parseInt(hourMatch[2], 10), 0, 0);
+        } else {
+          depDate.setHours(12, 0, 0, 0);
+        }
+        departureTimeMs = depDate.getTime();
+      }
+
+      const nowMs = Date.now();
+      let deltaMinutes = 180;
+      if (departureTimeMs && !isNaN(departureTimeMs)) {
+        deltaMinutes = (departureTimeMs - nowMs) / (60 * 1000);
+      }
+
+      const driverPhone = cleanPhoneNumber(existingTrip.phoneReal || existingTrip.phone || req.user?.phone || '');
+
+      // 1. Áp dụng kỷ luật dốc thời gian (Time-Decay Penalty Engine) cho chủ xe
+      let penaltyResult = { penaltyTier: 'safe_free', penaltyPoints: 0 };
+      if (driverPhone) {
+        penaltyResult = await applyCancellationPenalty(
+          activeBookings[0],
+          driverPhone,
+          deltaMinutes,
+          'driver'
+        );
+      }
+
+      // 2. Kích hoạt Radar cứu hộ đệm (Standby Rescue Buffer ±45m) cho từng hành khách
+      const db = getDB();
+      const allActiveTrips = (db.trips || []).filter((t) => t.status === 'active' && !t.isHidden && t.id !== id);
+
+      for (const booking of activeBookings) {
+        let salvageInfo = null;
+        if (deltaMinutes < 90) {
+          const standbyCandidate = findStandbyBufferOffer(
+            { ...booking, corridor: existingTrip.routeCategory || 'Tuyến QL13', direction: existingTrip.direction },
+            allActiveTrips
+          );
+          if (standbyCandidate) {
+            const supportVehicleModel = standbyCandidate.carModel || standbyCandidate.vehicleModel || 'Toyota Vios (Đen)';
+            const supportPlate = standbyCandidate.licensePlate || standbyCandidate.plate || '61A - 892.41';
+            const supportTime = standbyCandidate.timeSlot || standbyCandidate.time || '06:25';
+            const supportDriver = standbyCandidate.authorName || standbyCandidate.driverName || 'Anh Hải (Chủ xe)';
+            salvageInfo = {
+              salvaged: true,
+              supportDispatched: true,
+              standbyTripId: standbyCandidate.id,
+              supportTripId: standbyCandidate.id,
+              supportDriverName: supportDriver,
+              supportVehicleModel,
+              supportPlate,
+              supportPickupTime: supportTime,
+              supportPhone: standbyCandidate.phoneReal || standbyCandidate.phone,
+              note: `CarMate điều phối xe hỗ trợ: Xe ${supportVehicleModel} (${supportPlate}) sẽ đón bạn lúc ${supportTime} tại trạm đón.`
+            };
+          }
+        }
+
+        const newStatus = salvageInfo?.supportDispatched ? 'reassigned' : 'cancelled';
+        await updateBookingStatus(booking.id || booking.escrowId, newStatus, {
+          cancelReason: reason,
+          cancelledAt: new Date().toISOString(),
+          cancelledBy: 'driver',
+          penaltyTier: penaltyResult.penaltyTier,
+          penaltyPoints: penaltyResult.penaltyPoints,
+          salvageInfo,
+          supportDispatched: Boolean(salvageInfo?.supportDispatched)
+        });
+      }
+
+      // Đổi trạng thái chuyến sang cancelled để lưu vết kiểm toán (Audit Trail)
+      await updateTrip(id, {
+        status: 'cancelled',
+        cancelReason: reason,
+        cancelledAt: new Date().toISOString()
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Đã hủy chuyến và kích hoạt bảo vệ cứu hộ cho hành khách đã đặt',
+        data: {
+          tripId: id,
+          activeBookingsSalvaged: activeBookings.length,
+          penaltyTier: penaltyResult.penaltyTier,
+          penaltyPoints: penaltyResult.penaltyPoints
+        }
+      });
+    }
+
+    // Nếu chưa có khách đặt: xóa chuyến sạch sẽ
     const deleted = await deleteTrip(id);
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến xe cần xóa' });

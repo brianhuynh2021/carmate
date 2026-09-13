@@ -21,11 +21,12 @@ import {
   Share2,
   Car
 } from 'lucide-react';
-import { formatVND, VIRTUAL_HUBS } from '@carmate/shared';
+import { formatVND, VIRTUAL_HUBS, cleanPhoneNumber } from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import api from '../../api/client.js';
 import { useI18n } from '../../i18n/index.jsx';
+import ActiveTripCard from './ActiveTripCard.jsx';
 
 /**
  * BẢN ĐỒ TUYẾN ➔ TRẠM ẢO (HUB)
@@ -77,18 +78,18 @@ export default function DriverScheduleCardView({
   vehicle,
   onSwitchToRadar,
   onShowToast,
-  // TODO: CockpitMode đã truyền callback sửa hồ sơ xe nhưng màn này chưa dựng
-  // nút bấm tương ứng, nên chủ xe không sửa được xe từ thẻ lịch trình.
+  onOpenQuickPostTrip,
   onChangeVehicle: _onChangeVehicle
 }) {
   const { t } = useI18n();
   // NGUỒN SỰ THẬT DUY NHẤT LÀ MÁY CHỦ.
-  // Trước đây danh sách này đọc/ghi thẳng vào localStorage nên lịch tạo tại đây
-  // KHÔNG BAO GIỜ tới được máy chủ — không lọt vào sổ khớp lệnh, không ai ghép
-  // được, dù giao diện vẫn báo "đang tự động gom khách".
   const [schedules, setSchedules] = useState([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
   const [isSavingTrip, setIsSavingTrip] = useState(false);
+
+  // Chuyến xe active thật trên Sàn Tuyến Tiện Chuyến
+  const [activeDriverTrip, setActiveDriverTrip] = useState(null);
+  const [, setIsLoadingActiveTrip] = useState(true);
 
   const driverPhone = (() => {
     try {
@@ -98,12 +99,51 @@ export default function DriverScheduleCardView({
     }
   })();
 
+  const reloadActiveTrip = useCallback(async () => {
+    setIsLoadingActiveTrip(true);
+    try {
+      const clean = driverPhone ? cleanPhoneNumber(driverPhone) : '';
+      const res = await api.getTrips({ type: 'drivers' });
+      const allDriverTrips = res?.data?.driverOffers || res?.data?.all || [];
+
+      let storedTripId = null;
+      try {
+        const storedIds = JSON.parse(
+          localStorage.getItem(`carmate_my_trip_ids_${clean}`) ||
+          localStorage.getItem('carmate_my_trip_ids') ||
+          '[]'
+        );
+        if (storedIds.length > 0) storedTripId = storedIds[0];
+      } catch {}
+
+      const myActiveTrip = allDriverTrips.find((t) => {
+        if (t.status === 'cancelled' || t.status === 'completed') return false;
+        if (storedTripId && t.id === storedTripId) return true;
+        const pReal = cleanPhoneNumber(t.phoneReal || t.phone || '');
+        if (clean && pReal === clean) return true;
+        return false;
+      });
+
+      if (myActiveTrip) {
+        try {
+          const detailRes = await api.getTrip(myActiveTrip.id);
+          setActiveDriverTrip(detailRes?.data || myActiveTrip);
+        } catch {
+          setActiveDriverTrip(myActiveTrip);
+        }
+      } else {
+        setActiveDriverTrip(null);
+      }
+    } catch (err) {
+      console.warn('[DriverScheduleCardView] Load active trip error:', err);
+    } finally {
+      setIsLoadingActiveTrip(false);
+    }
+  }, [driverPhone]);
+
   const reloadSchedules = useCallback(async () => {
     setIsLoadingSchedules(true);
     try {
-      // Để máy chủ lọc theo danh tính (?mine=1) thay vì tải toàn bộ ý định rồi
-      // tự so số điện thoại ở client — cách cũ chỉ chạy được khi máy chủ lộ số
-      // thật của mọi người, chính là lỗ hổng PII vừa vá.
       const res = await api.getMovementIntents({ role: 'driver', mine: 1 });
       const rows = Array.isArray(res?.data) ? res.data : [];
       setSchedules(rows.map(intentToSchedule));
@@ -117,7 +157,8 @@ export default function DriverScheduleCardView({
 
   useEffect(() => {
     reloadSchedules();
-  }, [reloadSchedules]);
+    reloadActiveTrip();
+  }, [reloadSchedules, reloadActiveTrip]);
 
   // Nạp điểm tín nhiệm THẬT từ máy chủ (/api/trust), không bịa ở client.
   useEffect(() => {
@@ -385,6 +426,29 @@ export default function DriverScheduleCardView({
         </button>
       </div>
 
+      {/* ── THẺ QUẢN LÝ CHUYẾN XE ĐANG NHẬN KHÁCH TRỰC TIẾP (ACTIVE TRIP DASHBOARD) ── */}
+      {activeDriverTrip && (
+        <div className="space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Chuyến xe đang mở nhận khách trực tiếp</span>
+            </span>
+          </div>
+          <ActiveTripCard
+            trip={activeDriverTrip}
+            onLockTrip={(tripId, newStatus) => {
+              setActiveDriverTrip((prev) => (prev ? { ...prev, status: newStatus } : null));
+            }}
+            onCancelTrip={() => {
+              setActiveDriverTrip(null);
+            }}
+            onRefresh={reloadActiveTrip}
+            onShowToast={onShowToast}
+          />
+        </div>
+      )}
+
       {/* ── HEADER DANH SÁCH LỊCH TRÌNH & NÚT THÊM ── */}
       <div className="flex items-center justify-between pt-1">
         <div>
@@ -401,11 +465,14 @@ export default function DriverScheduleCardView({
 
         <button
           type="button"
-          onClick={() => setShowAddTripModal(true)}
+          onClick={() => {
+            if (onOpenQuickPostTrip) onOpenQuickPostTrip();
+            else setShowAddTripModal(true);
+          }}
           className="h-10 px-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/20 transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>{t('driverSchedule.addSchedule')}</span>
+          <span>+ Đăng chuyến mới</span>
         </button>
       </div>
 

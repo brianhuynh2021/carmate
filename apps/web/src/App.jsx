@@ -23,6 +23,7 @@ const StationRiderView = React.lazy(() => import('./components/station/StationRi
 const InboxModal = React.lazy(() => import('./components/modals/InboxModal.jsx'));
 const UserProfileModal = React.lazy(() => import('./components/profile/UserProfileModal.jsx'));
 const EscrowBookingModal = React.lazy(() => import('./components/modals/EscrowBookingModal.jsx'));
+const QuickPostTripModal = React.lazy(() => import('./components/modals/QuickPostTripModal.jsx'));
 
 // Modals
 import TrustProfileModal from './components/modals/TrustProfileModal.jsx';
@@ -328,6 +329,8 @@ export default function App() {
 
   // State Hồ sơ & Garage của tôi (Apple Portal Modal)
   const [showProfileModal, setShowProfileModal] = useState(false);
+  // State Modal Đăng Chuyến Nhanh 15s
+  const [isQuickPostTripOpen, setIsQuickPostTripOpen] = useState(false);
 
   // Xử lý lưu thông tin cá nhân & Garage xe của Chủ xe
   const handleSaveProfile = async (profileData) => {
@@ -472,6 +475,8 @@ export default function App() {
     driverOffers,
     passengerRequests,
     bookedEscrows,
+    setBookedEscrows,
+    handleBookingCreated,
     refreshBookings,
     toastMessage,
     showToast,
@@ -499,6 +504,13 @@ export default function App() {
     onSaveProfile: handleSaveProfile,
     t
   });
+
+  // Tự động làm mới danh sách chuyến khi người dùng mở tab Chuyến của tôi
+  useEffect(() => {
+    if (activeTab === 'booked') {
+      refreshBookings();
+    }
+  }, [activeTab, refreshBookings]);
 
   // Quét mã QR & Liên kết sâu trực tiếp chuyến xe (?trip=... hoặc /t/...)
   useEffect(() => {
@@ -777,9 +789,13 @@ export default function App() {
     setMovementIntentModalOpen(true);
   }, []);
 
-  // Level 3 Autonomous Gateway: Thay thế form đăng bài cũ bằng Khai báo Ý định (Zero-Search)
+  // Level 3 Autonomous Gateway: Chủ xe mở QuickPostTripModal 15s; Người đi cùng mở Khai báo Ý định
   const handleRequestPostTrip = useCallback((targetRole = 'driver') => {
-    handleOpenMovementIntent(targetRole);
+    if (targetRole === 'driver') {
+      setIsQuickPostTripOpen(true);
+    } else {
+      handleOpenMovementIntent('passenger');
+    }
   }, [handleOpenMovementIntent]);
 
   // Nếu người dùng truy cập /intent hoặc /post, tự động mở modal Khai báo Ý định
@@ -939,7 +955,22 @@ export default function App() {
           currentUser={currentUser}
           onBack={() => setActiveTab('market')}
           onShowToast={showToast}
+          onOpenQuickPostTrip={() => setIsQuickPostTripOpen(true)}
         />
+        {isQuickPostTripOpen && (
+          <React.Suspense fallback={null}>
+            <QuickPostTripModal
+              isOpen={isQuickPostTripOpen}
+              onClose={() => setIsQuickPostTripOpen(false)}
+              currentUser={currentUser}
+              onSuccess={(newTrip) => {
+                handlePostTrip(newTrip, currentUser);
+                setActiveTab('cockpit');
+              }}
+              onShowToast={showToast}
+            />
+          </React.Suspense>
+        )}
         <Toast message={toastMessage} />
       </>
     );
@@ -955,6 +986,12 @@ export default function App() {
           currentUser={currentUser}
           onBack={() => setActiveTab('market')}
           onShowToast={showToast}
+          onViewBookedTab={(tab, booking) => {
+            if (booking) handleBookingCreated(booking);
+            setActiveTab('booked');
+          }}
+          onBookingCreated={handleBookingCreated}
+          onAuthSuccess={handleAuthSuccess}
         />
         <Toast message={toastMessage} />
       </>
@@ -1004,6 +1041,14 @@ export default function App() {
               onOpenIntentModal={(targetRole, hubId, destHubId, targetDate, targetTimeSlot) => {
                 handleOpenMovementIntent(targetRole, hubId, destHubId, targetDate, targetTimeSlot);
               }}
+              onViewBookedTab={(tab, booking) => {
+                if (booking) {
+                  handleBookingCreated(booking);
+                }
+                setActiveTab('booked');
+                refreshBookings();
+              }}
+              onBookingCreated={handleBookingCreated}
               onAuthSuccess={handleAuthSuccess}
               onShowToast={showToast}
             />
@@ -1019,7 +1064,12 @@ export default function App() {
               onDelay={setDelayRecord}
               onComplete={handleCompleteTrip}
               onReview={setReviewRecord}
-              onFindTrip={() => setActiveTab('market')}
+              onFindTrip={(record) => {
+                if (record && (record.from || record.to)) {
+                  showToast(`Đang tìm xe trên tuyến ${record.from || ''} ➔ ${record.to || ''}`);
+                }
+                setActiveTab('market');
+              }}
               onOpenChat={(id, opts) => handleOpenInbox(id, opts)}
             />
           </div>
@@ -1251,10 +1301,26 @@ export default function App() {
         />
       )}
 
+      {isQuickPostTripOpen && (
+        <React.Suspense fallback={null}>
+          <QuickPostTripModal
+            isOpen={isQuickPostTripOpen}
+            onClose={() => setIsQuickPostTripOpen(false)}
+            currentUser={currentUser}
+            onSuccess={(newTrip) => {
+              handlePostTrip(newTrip, currentUser);
+              setActiveTab('cockpit');
+            }}
+            onShowToast={showToast}
+          />
+        </React.Suspense>
+      )}
+
       <BottomNavBar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenInbox={handleOpenInbox}
+        onOpenQuickPostTrip={() => setIsQuickPostTripOpen(true)}
         bookedCount={activeBookedCount}
       />
       <PwaInstallPrompt />

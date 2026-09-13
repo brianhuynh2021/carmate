@@ -20,7 +20,8 @@ import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
 import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail, resolveDriverRealName, resolveFullPlate } from '@carmate/shared';
 import crypto from 'crypto';
 import { generateToken } from '../utils/token.js';
-import { sendBusinessAlert, sendDirectBookingTelegramAlert, sendNewBookingTelegramAlert } from '../utils/telegramAlert.js';
+import { sendBusinessAlert, sendDirectBookingTelegramAlert, sendNewBookingTelegramAlert, sendBookingCancelledTelegramAlert } from '../utils/telegramAlert.js';
+import { dispatchNotification } from '../services/notificationService.js';
 import { sendEmailNotification } from '../utils/emailAlert.js';
 
 /**
@@ -60,7 +61,15 @@ function canAccessBooking(req, booking) {
  */
 export function listBookings(req, res) {
   try {
-    const user = req.user;
+    let user = req.user;
+    const queryPhone = cleanPhoneNumber(req.query?.phone || req.headers?.['x-user-phone'] || '');
+
+    // Nếu chưa có token nhưng có SĐT từ header/query hợp lệ:
+    if (!user && queryPhone) {
+      const dbUser = getUserByPhone(queryPhone);
+      user = dbUser || { phone: queryPhone, role: 'rider' };
+    }
+
     // Nếu chưa đăng nhập: Không bao giờ trả về danh sách booking công khai
     if (!user) {
       return res.status(200).json({
@@ -87,7 +96,7 @@ export function listBookings(req, res) {
         const bPass = cleanPhoneNumber(b.passengerPhone || '');
         return (
           (userPhone && (bContact === userPhone || bCreator === userPhone || bTarget === userPhone || bDriver === userPhone || bPass === userPhone)) ||
-          (user.id && (b.userId === user.id || b.creatorId === user.id || b.driverId === user.id))
+          (user.id && (b.userId === user.id || b.creatorId === user.id || b.driverId === user.id || b.passengerId === user.id))
         );
       });
     }
@@ -590,6 +599,43 @@ export async function cancelBooking(req, res) {
       await updateTrip(trip.id, {
         seats: currentSeats + bookedSeats
       });
+    }
+
+    // 6. Bắn thông báo In-app/Push và Telegram cho Chủ xe
+    try {
+      const driverPhone = trip?.phoneReal || trip?.phone || booking?.driverPhone;
+      const bookedSeats = Number(booking.seats || 1);
+      const passengerPhone = booking.passengerPhone || booking.phone || '0984******';
+      const cleanDigits = String(passengerPhone).replace(/\D/g, '');
+      const maskedPassenger = cleanDigits.length >= 8
+        ? `${cleanDigits.slice(0, 3)}***${cleanDigits.slice(-4)}`
+        : '098***xxxx';
+      const tripDate = booking.date || trip?.date || '';
+      const tripTime = booking.timeSlot || trip?.timeSlot || '';
+
+      if (driverPhone) {
+        dispatchNotification({
+          phone: driverPhone,
+          kind: 'booking_cancelled',
+          title: 'Hành khách hủy đặt chỗ',
+          body: `Khách ${maskedPassenger} vừa hủy ${bookedSeats} ghế chuyến ${tripTime} ngày ${tripDate}. Đã mở lại ${bookedSeats} chỗ trống trên hệ thống.`,
+          data: { bookingId: booking.id || id, tripId: trip?.id, reason }
+        }).catch((e) => console.warn('[Cancel] Không gửi được in-app notification:', e.message));
+      }
+
+      sendBookingCancelledTelegramAlert({
+        targetTelegramId: trip?.telegramId,
+        passengerPhone,
+        seats: bookedSeats,
+        timeSlot: tripTime,
+        date: tripDate,
+        from: booking.from || trip?.from,
+        to: booking.to || trip?.to,
+        reason,
+        req
+      }).catch((e) => console.warn('[Cancel] Không gửi được telegram alert:', e.message));
+    } catch (notifyErr) {
+      console.warn('[Cancel] Lỗi gửi thông báo hủy chỗ:', notifyErr.message);
     }
 
     return res.status(200).json({
