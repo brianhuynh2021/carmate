@@ -13,7 +13,8 @@ import {
   X,
   Sparkles,
   ArrowRight,
-  Send
+  Send,
+  MessageSquare
 } from 'lucide-react';
 import {
   formatVND,
@@ -39,6 +40,8 @@ export default function InstantBookingModal({
   // Bước 2: Review Modal (Chốt cuốc, chọn 1-2 ghế, Read-only lộ trình)
   // Bước 3: Match & Reveal (Đã đặt thành công, mở khoá biển số thật & nút gọi lớn)
   const hasUserPhone = Boolean(currentUser?.phone && isValidVietnamesePhone(currentUser.phone));
+  const hasZalo = currentUser?.authProvider === 'zalo' || currentUser?.hasZalo;
+  const hasTelegram = currentUser?.authProvider === 'telegram' || currentUser?.hasTelegram;
   const [step, setStep] = useState(() => (hasUserPhone ? 2 : 1));
 
   // State Step 1: Xác thực nhanh SĐT
@@ -209,7 +212,7 @@ export default function InstantBookingModal({
         {/* ── BƯỚC 1: XÁC THỰC SỐ ĐIỆN THOẠI ───────────────────────────────── */}
         {step === 1 && (
           <div className="space-y-4 animate-fade-in">
-            <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 text-xs text-blue-900 dark:text-blue-200 space-y-1">
+            <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-500/10 border-2 border-blue-200 dark:border-blue-500/30 text-xs text-blue-900 dark:text-blue-200 space-y-1">
               <div className="flex items-center justify-between">
                 <p className="font-bold flex items-center gap-1.5">
                   <Shield className="w-4 h-4 text-[#0071e3]" />
@@ -301,7 +304,7 @@ export default function InstantBookingModal({
         {step === 2 && (
           <div className="space-y-4 animate-fade-in">
             {/* Thẻ tóm tắt lộ trình Read-only kèm Logo CarMate.vn */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border-2 border-slate-200 dark:border-white/10 space-y-3">
               {/* Header phiếu CarMate.vn */}
               <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/10 text-xs">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
@@ -398,7 +401,7 @@ export default function InstantBookingModal({
             </div>
 
             {/* Thành tiền & Cam kết 0đ cọc */}
-            <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 flex items-center justify-between">
+            <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border-2 border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between">
               <div>
                 <span className="text-xs text-slate-500 dark:text-slate-400 block">
                   Mức phụ xăng ({seats} ghế):
@@ -456,7 +459,7 @@ export default function InstantBookingModal({
             </div>
 
             {/* THẺ MỞ KHOÁ BIỂN SỐ & CHỦ XE */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 space-y-2.5 text-left">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border-2 border-slate-200 dark:border-white/15 space-y-2.5 text-left">
               {/* Header phiếu CarMate.vn */}
               <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/10">
                 <div className="flex items-center gap-1.5">
@@ -501,7 +504,7 @@ export default function InstantBookingModal({
             </div>
 
             {/* DÒNG THÔNG BÁO TRẤN AN */}
-            <p className="text-xs text-slate-600 dark:text-slate-300 italic bg-amber-50 dark:bg-amber-500/10 p-2.5 rounded-xl border border-amber-200 dark:border-amber-500/20">
+            <p className="text-xs text-slate-600 dark:text-slate-300 italic bg-amber-50 dark:bg-amber-500/10 p-2.5 rounded-xl border-2 border-amber-200 dark:border-amber-500/30">
               "Chủ xe đã nhận được thông tin và đang chuẩn bị gọi lại cho bạn trong 1–2 phút để chốt giờ đón."
             </p>
 
@@ -515,16 +518,51 @@ export default function InstantBookingModal({
                 <span>Gọi trực tiếp chủ xe: {displayDriverPhone}</span>
               </a>
 
+              {/* Nút In-app (Gọi / Chat) */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onShowToast?.('Đang mở cuộc gọi trong app...', 'info')}
+                  className="w-full h-11 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 shadow-sm text-emerald-700 dark:text-emerald-300 font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98]"
+                >
+                  <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Gọi trong app</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onShowToast?.('Đang mở chat trong app...', 'info')}
+                  className="w-full h-11 rounded-2xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 shadow-sm text-[#0071e3] dark:text-blue-300 font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98]"
+                >
+                  <MessageSquare className="w-4 h-4 text-[#0071e3] dark:text-blue-400" />
+                  <span>Chat trong app</span>
+                </button>
+              </div>
+
               {/* Nút phụ: Mở nhanh Zalo */}
-              <a
-                href={`https://zalo.me/${cleanCallPhone}`}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full h-10 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 text-[#0071e3] dark:text-blue-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors no-underline cursor-pointer border border-blue-200 dark:border-blue-500/30"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>Nhắn tin trao đổi qua Zalo</span>
-              </a>
+              {hasZalo && (
+                <a
+                  href={`https://zalo.me/${cleanCallPhone}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full h-10 rounded-xl bg-[#0068FF]/10 hover:bg-[#0068FF]/20 text-[#0068FF] dark:text-[#338FFF] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors no-underline cursor-pointer border border-[#0068FF]/20"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Nhắn tin trao đổi qua Zalo</span>
+                </a>
+              )}
+
+              {/* Nút phụ: Mở nhanh Telegram */}
+              {hasTelegram && (
+                <a
+                  href={`https://t.me/+84${cleanCallPhone.slice(1)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full h-10 rounded-xl bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] dark:text-[#38B6FF] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors no-underline cursor-pointer border border-[#229ED9]/20"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Nhắn tin qua Telegram</span>
+                </a>
+              )}
             </div>
 
             {/* Nút Đóng & Chân trang CarMate.vn */}
