@@ -1077,22 +1077,23 @@ export default function CorridorSearchBoard({
             {/* Thanh gạt trang trí chuẩn Bottom Sheet trên Mobile */}
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto -mt-1 mb-2 sm:hidden" />
 
-            {/* Header Bottom Sheet */}
+            {/* ── KHỐI 1: KHỐI TIÊU ĐỀ (TRUNG TÍNH HÓA THƯƠNG HIỆU NHÀ XE) ── */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-2xs">
+                {/* Icon vector đơn sắc màu xám trung tính (#64748B) */}
+                <span className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
                   <Bus className="w-5 h-5" />
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                       {selectedDetailHotline.operator}
                     </h3>
-                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300/50">
-                      {selectedDetailHotline.type === 'limousine' ? 'Limousine VIP' : selectedDetailHotline.type === 'airport_limousine' ? 'Limousine Sân Bay' : 'Xe tuyến cố định'}
+                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10">
+                      Xe tuyến cố định QL13
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 font-mono">
+                  <p className="text-[11px] text-slate-400 font-mono">
                     {selectedDetailHotline.corridor || 'Tuyến QL13'} · {selectedDetailHotline.frequency}
                   </p>
                 </div>
@@ -1106,77 +1107,61 @@ export default function CorridorSearchBoard({
               </button>
             </div>
 
-            {/* 1. Nút gọi tổng đài xe khách to, rõ ràng */}
-            {selectedDetailHotline.hotline ? (
-              <a
-                href={`tel:${String(selectedDetailHotline.hotline).replace(/\s/g, '')}`}
-                onClick={() => {
-                  trackCallBus(selectedDetailHotline.operator, selectedDetailHotline.hotline, {
-                    corridor: corridor.id,
-                    fromHubId,
-                    toHubId
-                  });
-                }}
-                className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white text-sm font-bold shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <Phone className="w-4 h-4" />
-                <span>Gọi tổng đài đặt vé: {selectedDetailHotline.hotline}</span>
-              </a>
-            ) : null}
-
-            {/* 2. Chi tiết tuyến xe khách */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/15 space-y-2.5 text-xs">
+            {/* ── KHỐI 2: KHỐI THÔNG TIN NHÀ XE (MỎ NEO GIÁ ĐẮT - DATA SHEET CHÌM) ── */}
+            <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10 space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Loại phương tiện:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
+                <span className="text-slate-400">Loại xe:</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">
                   {selectedDetailHotline.type === 'limousine' ? 'Xe Limousine VIP' : selectedDetailHotline.type === 'airport_limousine' ? 'Limousine Đưa Đón Sân Bay TSN' : 'Xe Khách Tuyến Cố Định'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Tần suất xuất bến:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
+                <span className="text-slate-400">Tần suất:</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">
                   {selectedDetailHotline.frequency}
                 </span>
               </div>
 
               <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500 shrink-0">Điểm đón QL13:</span>
-                <span className="font-medium text-slate-800 dark:text-slate-200 text-right">
+                <span className="text-slate-400 shrink-0">Điểm đón QL13:</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200 text-right">
                   {selectedDetailHotline.note || selectedDetailHotline.coverage}
                 </span>
               </div>
 
               <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500 shrink-0">Điểm trả tại TP.HCM:</span>
-                <span className="font-medium text-slate-800 dark:text-slate-200 text-right">
-                  Bến xe Miền Đông / Bến xe An Sương / VP Nhà xe
-                  <span className="block text-[10px] text-amber-600 dark:text-amber-400 font-normal mt-0.5">
-                    (Thường không trả sâu vào bệnh viện, cần đi thêm taxi)
+                <span className="text-slate-400 shrink-0">Điểm trả:</span>
+                <div className="text-right">
+                  <span className="font-medium text-slate-700 dark:text-slate-200">
+                    Bến xe Miền Đông / Bến xe An Sương / VP Nhà xe
                   </span>
-                </span>
+                  <p className="text-[10px] text-slate-400 italic mt-0.5">
+                    (Thường không vào bệnh viện, cần đi thêm Grab/taxi)
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/10">
-                <span className="text-slate-500">Giá vé tham khảo:</span>
-                <span className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white">
-                  {selectedDetailHotline.priceRef}
+                <span className="text-slate-400">Giá vé niêm yết:</span>
+                <span className="text-sm font-bold font-mono text-slate-800 dark:text-slate-200">
+                  {selectedDetailHotline.priceRef || '200.000đ – 260.000đ'}
                 </span>
               </div>
 
-              {/* Bảng giá niêm yết chi tiết từng chặng */}
+              {/* Bảng giá niêm yết chi tiết từng chặng (nếu có) */}
               {selectedDetailHotline.fareTable && selectedDetailHotline.fareTable.length > 0 && (
-                <div className="pt-2 border-t border-slate-200/60 dark:border-white/10 space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
+                <div className="pt-2 border-t border-slate-200/60 dark:border-white/10 space-y-1">
+                  <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 block">
                     Biểu phí niêm yết theo chặng:
                   </span>
-                  <div className="space-y-1 rounded-xl bg-slate-100/80 dark:bg-white/[0.04] p-2.5 border border-slate-200/50 dark:border-white/5">
+                  <div className="space-y-1 rounded-xl bg-slate-100/60 dark:bg-white/[0.03] p-2 border border-slate-200/40 dark:border-white/5">
                     {selectedDetailHotline.fareTable.map((f, i) => (
                       <div key={i} className="flex items-center justify-between text-[11px] py-0.5">
                         <span className="text-slate-600 dark:text-slate-300 font-medium truncate pr-2">
                           {f.route}
                         </span>
-                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 shrink-0">
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200 shrink-0">
                           {f.price}
                         </span>
                       </div>
@@ -1184,39 +1169,75 @@ export default function CorridorSearchBoard({
                   </div>
                 </div>
               )}
+
+              {/* Xử lý số điện thoại: Hạ cấp thị giác thành dòng text nhỏ gọn ở cuối bảng */}
+              {selectedDetailHotline.hotline && (
+                <div className="pt-2 border-t border-slate-200/60 dark:border-white/10 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                  <span className="text-slate-400">Tổng đài đặt vé:</span>
+                  <a
+                    href={`tel:${String(selectedDetailHotline.hotline).replace(/\s/g, '')}`}
+                    onClick={() => {
+                      trackCallBus(selectedDetailHotline.operator, selectedDetailHotline.hotline, {
+                        corridor: corridor.id,
+                        fromHubId,
+                        toHubId
+                      });
+                    }}
+                    className="font-mono font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-slate-300 dark:decoration-slate-600 underline-offset-2 transition-colors cursor-pointer"
+                  >
+                    {selectedDetailHotline.hotline}{' '}
+                    <span className="text-[10px] font-sans font-normal text-slate-400">(Chạm để gọi nếu cần đi gấp)</span>
+                  </a>
+                </div>
+              )}
             </div>
 
-            {/* 3. Khung gợi ý CarMate (Soft Comparison - Đối chiếu tự nhiên & Nhã nhặn) */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50/80 via-white to-emerald-50/60 dark:from-blue-950/25 dark:via-[#1c1c1e] dark:to-emerald-950/20 border border-blue-500/25 dark:border-emerald-500/30 space-y-2.5 shadow-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#0071e3]/10 dark:bg-[#0071e3]/20 text-[#0071e3] flex items-center justify-center shrink-0">
-                  <Sparkles className="w-3.5 h-3.5" />
+            {/* ── KHỐI 3: KHỐI CARMATE (THỎI NAM CHÂM CHUYỂN ĐỔI - VISUAL WEIGHT GẤP 3 LẦN) ── */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#fefce8] dark:bg-amber-950/20 border-1.5 border-[#f59e0b] dark:border-amber-500/60 shadow-sm space-y-3 relative overflow-hidden">
+              {/* Header của khung */}
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-amber-200/60 dark:border-amber-800/40">
+                <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
+                  <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 fill-amber-500/20 shrink-0" />
+                  <span>⚡ Gợi ý xe tiện chuyến từ CarMate.vn</span>
                 </div>
-                <p className="text-xs font-bold text-slate-900 dark:text-white">
-                  Gợi ý tiện chuyến từ CarMate.vn
-                </p>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-2xs shrink-0 select-none">
+                  Tiết kiệm tới 95.000đ
+                </span>
               </div>
 
-              <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 pl-8">
-                <div className="flex items-start gap-1.5">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓ Chi phí:</span>
-                  <span>
-                    Chỉ <strong className="text-slate-900 dark:text-white font-mono">{formatVND(carmateSegmentPrice)}</strong> / ghế (tiết kiệm ~65.000đ so với xe khách/limousine)
-                  </span>
+              {/* 3 gạch đầu dòng đánh trúng nỗi đau thực tế */}
+              <div className="space-y-2 text-xs text-slate-700 dark:text-slate-200">
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">✓</span>
+                  <div>
+                    <strong className="text-slate-900 dark:text-white">Giá xe ghép:</strong>{' '}
+                    <span className="font-extrabold font-mono text-emerald-700 dark:text-emerald-400 text-sm">Chỉ {formatVND(carmateSegmentPrice)}</span> / ghế{' '}
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">(Rẻ hơn 35k – 95k so với xe khách/limousine)</span>
+                  </div>
                 </div>
-                <div className="flex items-start gap-1.5">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓ Điểm trả:</span>
-                  <span>
-                    Trả thẳng cổng Cụm BV Chợ Rẫy / ĐH Y Dược / Ung Bướu / Hàng Xanh (không tốn thêm tiền taxi từ bến xe)
-                  </span>
+
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">✓</span>
+                  <div>
+                    <strong className="text-slate-900 dark:text-white">Điểm trả:</strong>{' '}
+                    <span>Chở thẳng cổng <strong>BV Chợ Rẫy / ĐH Y Dược / Ung Bướu / Hàng Xanh</strong></span>{' '}
+                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium block mt-0.5">
+                      (Tiết kiệm thêm 60k – 80k tiền Grab từ bến xe vào viện)
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-start gap-1.5">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓ Uy tín:</span>
-                  <span>Chuyến xe nhà định kỳ · 0đ cọc · Phụ xăng trực tiếp khi lên xe</span>
+
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">✓</span>
+                  <div>
+                    <strong className="text-slate-900 dark:text-white">Chất lượng:</strong>{' '}
+                    <span>Xe ô tô gia đình êm ái, cốp rộng, không khói thuốc · <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong></span>
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-1">
+              {/* Nút bấm hành động chính (Hero CTA duy nhất của popup) */}
+              <div className="pt-1.5 space-y-1 text-center">
                 <button
                   type="button"
                   onClick={() => {
@@ -1229,11 +1250,14 @@ export default function CorridorSearchBoard({
                     setSelectedDetailHotline(null);
                     onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot);
                   }}
-                  className="w-full h-11 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full h-12 sm:h-13 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white text-xs sm:text-sm font-extrabold uppercase tracking-wide shadow-lg shadow-emerald-600/30 hover:shadow-xl hover:shadow-emerald-500/40 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Báo giờ tôi muốn đi · Chỉ {formatVND(carmateSegmentPrice)}</span>
+                  <Sparkles className="w-4 h-4 fill-white shrink-0" />
+                  <span>ĐĂNG GIỜ TÔI MUỐN ĐI · CHỈ {formatVND(carmateSegmentPrice)}</span>
                 </button>
+                <p className="text-[10.5px] text-slate-500 dark:text-slate-400 italic">
+                  (Chủ xe nhận chuyến sẽ liên hệ lại sau 5–10 phút · Hủy tự do)
+                </p>
               </div>
             </div>
           </div>
