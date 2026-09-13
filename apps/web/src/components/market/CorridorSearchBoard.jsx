@@ -211,7 +211,7 @@ export default function CorridorSearchBoard({
   const tariff = useMemo(() => {
     if (!fromHubId || !toHubId) return null;
     try {
-      return getFixedSegmentTariff(fromHubId, toHubId, corridor.dataKey);
+      return getFixedSegmentTariff(fromHubId, toHubId, { corridor: corridor.dataKey });
     } catch {
       return null;
     }
@@ -356,10 +356,44 @@ export default function CorridorSearchBoard({
     setMatrix(null);
   }, [fromHubId, toHubId, chipId, corridorId]);
 
-  // Giá chặng chia sẻ chuẩn CarMate (mặc định 170.000 đ cho chặng Tân Khai - Cụm Chợ Rẫy)
+  // Giá chặng chia sẻ chuẩn CarMate (tính toán động theo cự ly thực tế giữa 2 trạm)
   const carmateSegmentPrice = useMemo(() => {
-    return tariff?.pricePerSeat || 170000;
+    return tariff?.pricePerSeat || 165000;
   }, [tariff]);
+
+  // Phân tích tương quan giá giữa nhà xe đang xem & CarMate (Dynamic Visual Leverage)
+  const busPriceData = useMemo(() => {
+    if (!selectedDetailHotline) return null;
+    const str = selectedDetailHotline.priceRef || '';
+    const numbers = str
+      .replace(/[^\d-–]/g, ' ')
+      .split(/[-–]/)
+      .map((s) => {
+        const clean = s.replace(/\D/g, '');
+        const num = parseInt(clean, 10);
+        if (isNaN(num)) return null;
+        return num < 1000 ? num * 1000 : num;
+      })
+      .filter(Boolean);
+
+    const min = numbers.length > 0 ? Math.min(...numbers) : 200000;
+    const max = numbers.length > 0 ? Math.max(...numbers) : 260000;
+    const isCheaperOrEqual = min <= carmateSegmentPrice;
+    const savingMax = Math.max(0, Math.round((max - carmateSegmentPrice) / 1000));
+    const savingMin = Math.max(0, Math.round((min - carmateSegmentPrice) / 1000));
+    const busWithGrab = min + 70000;
+    const totalSavingVsBus = Math.max(0, Math.round((busWithGrab - carmateSegmentPrice) / 1000));
+
+    return {
+      min,
+      max,
+      isCheaperOrEqual,
+      savingMax,
+      savingMin,
+      busWithGrab,
+      totalSavingVsBus
+    };
+  }, [selectedDetailHotline, carmateSegmentPrice]);
 
   // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang
   const carmateDisplayTrips = useMemo(() => {
@@ -1137,42 +1171,83 @@ export default function CorridorSearchBoard({
               )}
             </div>
 
-            {/* ── KHỐI 3: KHỐI CARMATE SỐNG ĐỘNG (HOVER & MICRO-INTERACTIONS) ── */}
+            {/* ── KHỐI 3: KHỐI CARMATE SỐNG ĐỘNG (HOVER & DYNAMIC VISUAL LEVERAGE) ── */}
             <div className="relative p-4 rounded-2xl border-2 border-amber-300 dark:border-amber-500/50 bg-gradient-to-b from-amber-50/80 via-white to-amber-50/40 dark:from-amber-950/25 dark:via-[#1c1c1e] dark:to-amber-950/15 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 hover:border-amber-400">
-              {/* Header Card với icon tia chớp nảy & badge nhịp thở */}
+              {/* Header Card với icon tia chớp nảy & badge động */}
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
                   <span className="animate-bounce text-amber-600 dark:text-amber-400 text-sm sm:text-base">⚡</span>
                   <span>Gợi ý tiện chuyến từ CarMate.vn</span>
                 </div>
-                <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-full shadow-xs animate-pulse select-none">
-                  Tiết kiệm tới 95k
-                </span>
+                {busPriceData?.isCheaperOrEqual ? (
+                  <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full shadow-xs select-none">
+                    Nâng cấp xe 5-7 chỗ
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-full shadow-xs animate-pulse select-none">
+                    Tiết kiệm tới {busPriceData?.savingMax || 95}k
+                  </span>
+                )}
               </div>
 
-              {/* Lợi ích cốt lõi */}
+              {/* Lợi ích cốt lõi (Render động theo tương quan giá với nhà xe đang xem) */}
               <div className="space-y-2 text-xs text-slate-700 dark:text-slate-200 mb-3.5">
-                <div className="flex items-start gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                  <span>
-                    <strong className="text-slate-900 dark:text-white">Giá ghép: {formatVND(carmateSegmentPrice)}</strong>{' '}
-                    <span className="text-slate-500 dark:text-slate-400">(Rẻ hơn 35k–95k so với xe khách)</span>
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                  <span>
-                    <strong className="text-slate-900 dark:text-white">Đưa đón tận viện:</strong> BV Chợ Rẫy / ĐH Y Dược{' '}
-                    <span className="text-emerald-700 dark:text-emerald-400 font-medium">(Đỡ tốn 70k Grab)</span>
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
-                  <span>
-                    <strong className="text-slate-900 dark:text-white">Xe gia đình:</strong> Êm ái, cốp rộng, không hút thuốc ·{' '}
-                    <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
-                  </span>
-                </div>
+                {busPriceData?.isCheaperOrEqual ? (
+                  <>
+                    <div className="flex items-start gap-2">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                      <span>
+                        <strong className="text-slate-900 dark:text-white">Giá trọn gói: {formatVND(carmateSegmentPrice)}</strong>{' '}
+                        <span className="text-slate-500 dark:text-slate-400">(Không tốn thêm tiền Grab từ bến xe)</span>
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                      <div className="leading-relaxed">
+                        <strong className="text-slate-900 dark:text-white">So sánh chi phí thực tế:</strong>{' '}
+                        <span className="text-slate-600 dark:text-slate-300 block">
+                          Đi xe khách ({Math.round((busPriceData?.min || 140000) / 1000)}k) + Grab vào viện (70k) = <strong>~{Math.round((busPriceData?.busWithGrab || 210000) / 1000)}k</strong>
+                        </span>
+                        <span className="text-emerald-700 dark:text-emerald-400 font-bold block mt-0.5">
+                          ➔ Xe ghép CarMate: {formatVND(carmateSegmentPrice)} đưa thẳng cổng viện{busPriceData?.totalSavingVsBus > 0 ? ` (Tiết kiệm ~${busPriceData.totalSavingVsBus}k)` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                      <span>
+                        <strong className="text-slate-900 dark:text-white">Xe gia đình êm ái:</strong> Không nhồi nhét ghế nhựa, không mùi xe đò ·{' '}
+                        <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-2">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                      <span>
+                        <strong className="text-slate-900 dark:text-white">Giá ghép: {formatVND(carmateSegmentPrice)}</strong>{' '}
+                        <span className="text-slate-500 dark:text-slate-400">
+                          (Rẻ hơn {busPriceData?.savingMin ? `${busPriceData.savingMin}k–` : ''}{busPriceData?.savingMax || 95}k so với xe khách/limousine)
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                      <span>
+                        <strong className="text-slate-900 dark:text-white">Đưa đón tận viện:</strong> BV Chợ Rẫy / ĐH Y Dược{' '}
+                        <span className="text-emerald-700 dark:text-emerald-400 font-medium">(Đỡ tốn 70k Grab)</span>
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">✓</span>
+                      <span>
+                        <strong className="text-slate-900 dark:text-white">Xe gia đình:</strong> Êm ái, cốp rộng, không hút thuốc ·{' '}
+                        <strong className="text-emerald-700 dark:text-emerald-400">0đ cọc</strong>
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Nút bấm chính siêu hút ngón tay */}
