@@ -376,6 +376,24 @@ export default function Header({
                         )}
                       </button>
 
+                      {/* Buồng lái chủ xe & Quản lý chuyến */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('cockpit');
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                      >
+                        <div className="inline-flex items-center gap-2.5">
+                          <Car className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform shrink-0" />
+                          <span>{t('nav.tabPickup')} & Taplo</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                          Cockpit
+                        </span>
+                      </button>
+
                       {/* Lối tắt: Đăng chuyến đón khách */}
                       <button
                         type="button"

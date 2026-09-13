@@ -30,7 +30,11 @@ import {
   LifeBuoy,
   Cigarette,
   DollarSign,
-  UserX
+  UserX,
+  Calendar,
+  Bell,
+  Car,
+  Users
 } from 'lucide-react';
 import {
   formatVND,
@@ -45,13 +49,15 @@ import {
   getVerifiedHotlines,
   UNHAPPY_CASE_CODES,
   getDefaultCorridor,
-  getEndpointHubs
+  getEndpointHubs,
+  describeHub
 } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
 import StationRequestModal from '../modals/StationRequestModal.jsx';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 import StationContactModal from '../modals/StationContactModal.jsx';
 import MutualReviewModal from '../modals/MutualReviewModal.jsx';
+import InstantBookingModal from '../modals/InstantBookingModal.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { useI18n } from '../../i18n/index.jsx';
@@ -61,7 +67,10 @@ export default function StationRiderView({
   initialDestinationHubId = null,
   currentUser,
   onBack,
-  onShowToast
+  onShowToast,
+  onViewBookedTab,
+  onBookingCreated,
+  onAuthSuccess
 }) {
   const { t } = useI18n();
   // Điểm mút đầu A của hành lang — lấy từ CORRIDORS registry thay vì chép tay.
@@ -170,8 +179,22 @@ export default function StationRiderView({
     );
   }, [pickupHubId]);
 
-  // Trạng thái: 'CHECKIN' (R1) | 'BOARDING_PASS' (R2)
-  const [viewStep, setViewStep] = useState('CHECKIN');
+  // Trạng thái: 'SCHEDULE' (Trạm Đón Cố Định theo wireframe) | 'CHECKIN' (R1 Đón tức thì) | 'BOARDING_PASS' (R2)
+  const [viewStep, setViewStep] = useState('SCHEDULE');
+  const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
+  const [intentTimeSlot, setIntentTimeSlot] = useState('04:00 - 06:00');
+  const [customTimeSlot, setCustomTimeSlot] = useState('');
+  const [intentDestination, setIntentDestination] = useState('Cụm BV Chợ Rẫy / Q5');
+  const [customDestination, setCustomDestination] = useState('');
+  const [intentPhone, setIntentPhone] = useState(() => {
+    if (currentUser?.phone) return currentUser.phone;
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('carmate_rider_phone') || '';
+    }
+    return '';
+  });
+  const [isSubmittingIntent, setIsSubmittingIntent] = useState(false);
+  const [liveCorridorTrips, setLiveCorridorTrips] = useState([]);
   const [destinationHubId, setDestinationHubId] = useState(() => {
     if (initialDestinationHubId) return initialDestinationHubId;
     return SAIGON_HUB_IDS.includes(hubId) ? 'hub_ql13_binh_long' : 'hub_ql13_hang_xanh';
@@ -396,6 +419,213 @@ export default function StationRiderView({
       return candidates.filter((c) => c.id !== currentHub.id);
     }
   }, [currentHub.id, direction]);
+
+  // Lấy dữ liệu chuyến xe tiện chuyến trên hành lang QL13 từ máy chủ
+  useEffect(() => {
+    let isMounted = true;
+    api.getTrips({ type: 'driver_offer', routeCategory: 'Tuyến QL13', limit: 30 })
+      .then((res) => {
+        if (!isMounted) return;
+        const list = res?.data?.driverOffers || res?.data?.all || [];
+        setLiveCorridorTrips(list);
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
+  // Ngày mai & thứ trong tuần phục vụ hiển thị lịch trạm cố định
+  const tomorrowInfo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const dayNames = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+    const dayName = dayNames[d.getDay()];
+    const dateFormatted = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return {
+      dayName,
+      dateFormatted,
+      fullLabel: `Sáng mai (${dateFormatted})`,
+      afternoonLabel: `Chiều mai (${dateFormatted})`
+    };
+  }, []);
+
+  // Nhân bản hoá thông tin trạm ảo & tiện ích an toàn
+  const describedHub = useMemo(() => {
+    return describeHub(currentHub) || {
+      id: currentHub.id,
+      name: currentHub.name,
+      shortName: currentHub.shortName || currentHub.name,
+      landmark: currentHub.landmark || currentHub.name,
+      amenities: []
+    };
+  }, [currentHub]);
+
+  // Danh sách chuyến sắp ghé trạm này (theo wireframe & kết hợp live feed)
+  const displayStationTrips = useMemo(() => {
+    if (direction === 'TO_SAIGON') {
+      const staticTrips = [
+        {
+          id: `sched_veloz_${currentHub.id}`,
+          time: '07:00',
+          timeLabel: `07:00  ${tomorrowInfo.fullLabel}`,
+          availableSeats: 1,
+          totalSeats: 4,
+          destinationName: 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
+          destinationHubId: 'hub_ql13_cho_ray',
+          vehicleModel: 'Toyota Veloz (Xe nhà 7 chỗ)',
+          plate: '93A-***.xx',
+          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_cho_ray')?.pricePerSeat || 165000,
+          driverTitle: 'Chủ xe cá nhân'
+        },
+        {
+          id: `sched_xpander_${currentHub.id}`,
+          time: '13:30',
+          timeLabel: `13:30  ${tomorrowInfo.afternoonLabel}`,
+          availableSeats: 2,
+          totalSeats: 4,
+          destinationName: 'Ngã tư Hàng Xanh / BX Miền Đông',
+          destinationHubId: 'hub_ql13_hang_xanh',
+          vehicleModel: 'Mitsubishi Xpander (Xe êm)',
+          plate: '93A-***.xx',
+          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_hang_xanh')?.pricePerSeat || 150000,
+          driverTitle: 'Chủ xe cá nhân'
+        }
+      ];
+
+      const matchingLive = (liveCorridorTrips || [])
+        .filter((t) => t.type === 'driver_offer' && t.direction === 'TO_SAIGON')
+        .slice(0, 2)
+        .map((t) => ({
+          id: t.id,
+          time: t.time || '08:00',
+          timeLabel: `${t.time || '08:00'}  ${tomorrowInfo.fullLabel}`,
+          availableSeats: t.availableSeats || 1,
+          totalSeats: t.capacity || 4,
+          destinationName: t.toLocation || t.to || 'Ngã tư Hàng Xanh',
+          destinationHubId: t.destinationHubId || 'hub_ql13_hang_xanh',
+          vehicleModel: t.carType || 'Xe ô tô gia đình',
+          plate: t.licensePlate ? `${t.licensePlate.slice(0, 3)}***.xx` : '93A-***.xx',
+          price: Number(t.pricePerSeat) || getFixedSegmentTariff(currentHub.id, 'hub_ql13_hang_xanh')?.pricePerSeat || 150000,
+          driverTitle: t.publicName || 'Chủ xe cá nhân'
+        }));
+
+      return [...staticTrips, ...matchingLive];
+    } else {
+      const staticTrips = [
+        {
+          id: `sched_innova_${currentHub.id}`,
+          time: '08:30',
+          timeLabel: `08:30  ${tomorrowInfo.fullLabel}`,
+          availableSeats: 2,
+          totalSeats: 4,
+          destinationName: 'TX. Bình Long (Vòng xoay An Lộc)',
+          destinationHubId: 'hub_ql13_binh_long',
+          vehicleModel: 'Toyota Innova Cross (Xe gia đình)',
+          plate: '51K-***.xx',
+          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_binh_long')?.pricePerSeat || 50000,
+          driverTitle: 'Chủ xe cá nhân'
+        },
+        {
+          id: `sched_stargazer_${currentHub.id}`,
+          time: '15:00',
+          timeLabel: `15:00  ${tomorrowInfo.afternoonLabel}`,
+          availableSeats: 1,
+          totalSeats: 4,
+          destinationName: 'TT. Lộc Ninh / Chợ Lộc Ninh',
+          destinationHubId: 'hub_ql13_cho_loc_ninh',
+          vehicleModel: 'Hyundai Stargazer (Xe êm 7 chỗ)',
+          plate: '61A-***.xx',
+          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_cho_loc_ninh')?.pricePerSeat || 60000,
+          driverTitle: 'Chủ xe cá nhân'
+        }
+      ];
+
+      const matchingLive = (liveCorridorTrips || [])
+        .filter((t) => t.type === 'driver_offer' && t.direction === 'TO_BINH_PHUOC')
+        .slice(0, 2)
+        .map((t) => ({
+          id: t.id,
+          time: t.time || '09:00',
+          timeLabel: `${t.time || '09:00'}  ${tomorrowInfo.fullLabel}`,
+          availableSeats: t.availableSeats || 1,
+          totalSeats: t.capacity || 4,
+          destinationName: t.toLocation || t.to || 'TX. Bình Long',
+          destinationHubId: t.destinationHubId || 'hub_ql13_binh_long',
+          vehicleModel: t.carType || 'Xe ô tô gia đình',
+          plate: t.licensePlate ? `${t.licensePlate.slice(0, 3)}***.xx` : '61A-***.xx',
+          price: Number(t.pricePerSeat) || getFixedSegmentTariff(currentHub.id, 'hub_ql13_binh_long')?.pricePerSeat || 50000,
+          driverTitle: t.publicName || 'Chủ xe cá nhân'
+        }));
+
+      return [...staticTrips, ...matchingLive];
+    }
+  }, [direction, currentHub.id, tomorrowInfo, liveCorridorTrips]);
+
+  // Xử lý giữ chỗ tức thì
+  const handleBookTrip = (tripItem) => {
+    const tripPayload = {
+      id: tripItem.id,
+      type: 'driver_offer',
+      from: currentHub.shortName || currentHub.name,
+      fromLocation: currentHub.landmark || currentHub.name,
+      to: tripItem.destinationName,
+      toLocation: tripItem.destinationName,
+      date: tomorrowInfo.dateFormatted,
+      time: tripItem.time,
+      carType: tripItem.vehicleModel,
+      licensePlate: tripItem.plate,
+      availableSeats: tripItem.availableSeats,
+      pricePerSeat: tripItem.price,
+      initialSeats: 1,
+      publicName: tripItem.driverTitle || 'Chủ xe cá nhân',
+      driverPhone: '0988112233'
+    };
+    setSelectedBookingTrip(tripPayload);
+  };
+
+  // Xử lý gửi nhu cầu chờ (Chưa có giờ ưng ý)
+  const handleSubmitIntent = async (e) => {
+    e?.preventDefault();
+    const clean = cleanPhoneNumber(intentPhone || phone);
+    if (!clean || !isValidVietnamesePhone(clean)) {
+      onShowToast?.('Vui lòng nhập số điện thoại hợp lệ (10 chữ số di động VN)');
+      return;
+    }
+    setIsSubmittingIntent(true);
+    const finalTimeSlot = intentTimeSlot === 'Khác' ? (customTimeSlot.trim() || 'Giờ linh hoạt') : intentTimeSlot;
+    const defaultDest = direction === 'TO_SAIGON' ? 'Cụm BV Chợ Rẫy / Q5' : 'TX. Bình Long';
+    const finalDest = intentDestination === 'Khác' ? (customDestination.trim() || defaultDest) : (intentDestination || defaultDest);
+
+    try {
+      await api.createMovementIntent({
+        role: 'passenger',
+        originHubId: currentHub.id,
+        originName: currentHub.name,
+        destinationName: finalDest,
+        corridor: 'Tuyến QL13',
+        timeSlot: finalTimeSlot,
+        date: tomorrowInfo.dateFormatted,
+        seats: 1,
+        phone: clean,
+        contactName: name && name !== 'Khách đi cùng' ? name : ''
+      });
+      try {
+        localStorage.setItem('carmate_rider_phone', clean);
+      } catch {}
+      setPhone(clean);
+      setIntentPhone(clean);
+      onShowToast?.(`✓ Đã đăng ký nhận xe! CarMate sẽ báo qua SMS/Zalo khi có xe ghé trạm.`);
+    } catch (err) {
+      console.warn('createMovementIntent warning:', err.message);
+      try {
+        localStorage.setItem('carmate_rider_phone', clean);
+      } catch {}
+      setPhone(clean);
+      setIntentPhone(clean);
+      onShowToast?.(`✓ Đã ghi nhận nhu cầu! CarMate sẽ báo qua SMS/Zalo khi có xe ghé đón.`);
+    } finally {
+      setIsSubmittingIntent(false);
+    }
+  };
 
   // Bộ đếm ngược Radar thời gian thực khi xe đang tiếp cận (Live Boarding Pass)
   const [etaSeconds, setEtaSeconds] = useState(195); // 03 : 15 phút
@@ -909,79 +1139,59 @@ export default function StationRiderView({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between select-none p-4 sm:p-6 font-sans">
+    <div className="min-h-screen bg-[#DFE5EC] dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 flex flex-col justify-between select-none p-4 sm:p-6 font-sans transition-colors">
       {/* ── TOP BAR: GIAO DIỆN TỐI ƯU 2 MÀN HÌNH (STANFORD ERGONOMICS) ── */}
-      <header className="flex items-center justify-between border-b border-white/[0.08] pb-3 mb-4 max-w-lg mx-auto w-full">
+      <header className="flex items-center justify-between border-b border-slate-300/70 dark:border-white/[0.08] pb-3 mb-4 max-w-lg mx-auto w-full">
         <div className="flex items-center gap-3">
           {onBack && (
             <button
               type="button"
               onClick={onBack}
-              className="w-10 h-10 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center border border-white/[0.08] transition-all cursor-pointer"
+              className="w-10 h-10 rounded-2xl bg-white dark:bg-[#1a2232] hover:bg-slate-100 dark:hover:bg-white/[0.12] flex items-center justify-center border border-slate-300/70 dark:border-white/[0.08] shadow-xs transition-all cursor-pointer"
             >
-              <ChevronLeft className="w-5 h-5 text-slate-300" />
+              <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-slate-300" />
             </button>
           )}
           <div>
             <div className="flex items-center gap-2">
-              <span className="type-label font-semibold uppercase tracking-wider text-emerald-400">
-                {viewStep === 'CHECKIN' ? 'CARMATE • TRẠM VẬN TẢI ẢO' : 'THẺ THÔNG TIN ĐÓN XE'}
+              <span className="type-label font-bold uppercase tracking-wider text-[#0071e3] dark:text-sky-400">
+                {viewStep === 'BOARDING_PASS' ? 'THẺ THÔNG TIN ĐÓN XE' : 'TRẠM ĐÓN CỐ ĐỊNH'}
               </span>
             </div>
-            {/* Tên trạm đứng riêng một hàng; hai nút phụ xuống hàng dưới.
-                Nhét chung một hàng ngang thì ở 390px nút "Đổi trạm" bị vỡ làm
-                hai dòng chen vào giữa tiêu đề, trông như lỗi dựng trang. */}
-            <h1 className="text-base sm:text-lg font-black text-white flex items-center gap-1.5 mt-0.5 min-w-0">
-              <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+            <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-1.5 mt-0.5 min-w-0">
+              <MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
               <span className="truncate">{currentHub.shortName || currentHub.name}</span>
             </h1>
-            {viewStep === 'CHECKIN' && (
-              <div className="flex items-center gap-2 mt-1.5">
-                <button
-                  type="button"
-                  onClick={() => setShowStationPicker(!showStationPicker)}
-                  className="tap-44 type-caption text-sky-400 hover:text-sky-300 underline cursor-pointer whitespace-nowrap"
-                >
-                  {showStationPicker ? t('station.collapse') : t('station.changeHub')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowStationRequestModal(true)}
-                  className="tap-44 type-caption text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2.5 rounded-lg border border-amber-500/20 transition-all whitespace-nowrap"
-                  title={t('station.suggestHubTitle')}
-                >
-                  <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>{t('station.suggestHub')}</span>
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {viewStep === 'CHECKIN' ? (
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 font-mono">
-            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-            <span>0% SURGE</span>
-          </div>
-        ) : (
+        {viewStep === 'BOARDING_PASS' ? (
           <div className="text-right">
-            <span className="text-base font-black font-mono text-emerald-400 block">
+            <span className="text-base font-black font-mono text-[#0071e3] dark:text-emerald-400 block">
               {formatVND(boardingPass?.fuelSurcharge || estimatedFare)}
             </span>
-            <span className="text-[10px] text-slate-400">{t('station.allInclusive')}</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">{t('station.allInclusive')}</span>
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowStationPicker(!showStationPicker)}
+            className="tap-44 text-xs font-bold text-[#0071e3] dark:text-sky-400 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-xl border border-blue-500/20 transition-all cursor-pointer whitespace-nowrap"
+          >
+            [ {showStationPicker ? 'Đóng trạm' : 'Đổi trạm'} ]
+          </button>
         )}
       </header>
 
       {/* DROPDOWN CHỌN TRẠM ĐÓN DỌC TUYẾN QL13 (TIỆN LỢI THỬ NGHIỆM TRÊN WEB & MOBILE) */}
-      {showStationPicker && viewStep === 'CHECKIN' && (
-        <div className="mb-4 p-3.5 rounded-2xl bg-white/[0.06] border border-white/[0.12] max-w-lg mx-auto w-full animate-fade-in space-y-2 shadow-xl">
-          <div className="flex items-center justify-between type-caption font-bold text-slate-300">
+      {showStationPicker && (
+        <div className="mb-4 p-3.5 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/[0.12] max-w-lg mx-auto w-full animate-fade-in space-y-2 shadow-xl">
+          <div className="flex items-center justify-between type-caption font-bold text-slate-700 dark:text-slate-300">
             <span>{t('station.chooseHub')}</span>
             <button
               type="button"
               onClick={handleAutoDetectGPS}
-              className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+              className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer font-bold"
             >
               <span>{t('station.findByGps')}</span>
             </button>
@@ -993,23 +1203,23 @@ export default function StationRiderView({
               setShowStationPicker(false);
               onShowToast?.(`Đã chuyển sang trạm: ${ql13PickupHubs.find(h => h.id === e.target.value)?.name || e.target.value}`);
             }}
-            className="w-full h-11 px-3 rounded-xl bg-slate-900 border border-white/[0.2] text-white text-xs font-semibold cursor-pointer outline-none focus:border-emerald-400"
+            className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-white/[0.2] text-slate-900 dark:text-white text-xs font-semibold cursor-pointer outline-none focus:border-[#0071e3]"
           >
             {ql13PickupHubs.map((h) => (
-              <option key={h.id} value={h.id} className="bg-slate-900 text-white">
+              <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                 {h.name}
               </option>
             ))}
           </select>
-          <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-xs">
-            <span className="text-[11px] text-slate-400">{t('station.noHubYet')}</span>
+          <div className="pt-2 border-t border-slate-200 dark:border-white/[0.08] flex items-center justify-between text-xs">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('station.noHubYet')}</span>
             <button
               type="button"
               onClick={() => {
                 setShowStationPicker(false);
                 setShowStationRequestModal(true);
               }}
-              className="text-[11px] font-bold font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+              className="text-[11px] font-bold font-mono text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <Lightbulb className="w-3.5 h-3.5" />
               <span>{t('station.suggestNewHub')}</span>
@@ -1018,13 +1228,281 @@ export default function StationRiderView({
         </div>
       )}
 
-      {/* ── NỘI DUNG CHÍNH (ĐÚNG 2 MÀN HÌNH DUY NHẤT: MÀN HÌNH 1 HOẶC MÀN HÌNH 2) ── */}
-      <main className="flex-1 flex flex-col justify-center my-auto max-w-lg mx-auto w-full">
+      {/* ── NỘI DUNG CHÍNH (3 MÀN HÌNH: SCHEDULE | CHECKIN | BOARDING_PASS) ── */}
+      <main className="flex-1 flex flex-col justify-start max-w-lg mx-auto w-full space-y-4 my-2">
+        {/* ========================================================================= */}
+        {/* MÀN HÌNH CHÍNH: TRẠM ĐÓN CỐ ĐỊNH (SCHEDULED STOPS & DEMAND CAPTURE POOL)   */}
+        {/* ========================================================================= */}
+        {viewStep === 'SCHEDULE' && (
+          <div className="space-y-4 animate-fade-in text-left">
+            {/* 1. THÔNG TIN TRẠM & TIỆN ÍCH AN TOÀN (HUMANIZED MEETING POINT) */}
+            <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md transition-all space-y-3">
+              <div>
+                <div className="flex items-center gap-1.5 text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                  <span className="text-red-500">📍</span>
+                  <span className="truncate">{currentHub.name}</span>
+                </div>
+                <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 pl-5">
+                  • {currentHub.id === 'hub_ql13_tan_khai' ? 'TT. Tân Khai, Hớn Quản, Bình Phước' : (currentHub.landmark || 'Mặt tiền Quốc Lộ 13')}
+                </div>
+              </div>
+
+              {/* TIỆN ÍCH TRẠM */}
+              <div className="p-3 rounded-xl bg-[#DFE5EC]/50 dark:bg-white/[0.04] border border-slate-300/60 dark:border-white/[0.06] text-xs">
+                <div className="grid grid-cols-2 gap-2 text-slate-700 dark:text-slate-300 font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <span>🅿️</span>
+                    <span>Có gửi xe máy qua đêm</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span>💡</span>
+                    <span>Đèn sáng 24/7</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span>🏪</span>
+                    <span>Cửa hàng tiện lợi</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span>🚻</span>
+                    <span>Vệ sinh sạch sẽ</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. CHỌN HƯỚNG DI CHUYỂN (DIRECTION TOGGLE) */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDirection('TO_SAIGON')}
+                className={`flex-1 py-2.5 px-3 rounded-2xl text-xs sm:text-sm font-bold border transition-all cursor-pointer text-center ${
+                  direction === 'TO_SAIGON'
+                    ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-xs'
+                    : 'bg-white dark:bg-[#1a2232] text-slate-700 dark:text-slate-300 border-slate-300/70 dark:border-white/10 hover:bg-slate-50'
+                }`}
+              >
+                ➔ Đi TP.HCM (2 xe)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDirection('TO_BINH_PHUOC')}
+                className={`flex-1 py-2.5 px-3 rounded-2xl text-xs sm:text-sm font-bold border transition-all cursor-pointer text-center ${
+                  direction === 'TO_BINH_PHUOC'
+                    ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-xs'
+                    : 'bg-white dark:bg-[#1a2232] text-slate-700 dark:text-slate-300 border-slate-300/70 dark:border-white/10 hover:bg-slate-50'
+                }`}
+              >
+                ➔ Về Bình Long / Lộc Ninh
+              </button>
+            </div>
+
+            {/* 3. LỐI TẮT ĐÓN XE TỨC THÌ (RADAR BRIDGE NẾU KHÁCH ĐÃ ĐỨNG TẠI TRẠM) */}
+            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
+              <div className="flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="font-semibold">Bạn đang đứng tại trạm lúc này?</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewStep('CHECKIN')}
+                className="font-bold underline text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200 cursor-pointer whitespace-nowrap pl-2"
+              >
+                Đón xe ngay ➔
+              </button>
+            </div>
+
+            {/* 4. CHUYẾN SẮP GHÉ TRẠM NÀY */}
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider px-1">
+                <span>CHUYẾN SẮP GHÉ TRẠM NÀY:</span>
+                <span className="font-mono text-slate-500 dark:text-slate-400">({tomorrowInfo.dayName})</span>
+              </div>
+
+              <div className="space-y-3">
+                {displayStationTrips.map((tItem) => (
+                  <div
+                    key={tItem.id}
+                    className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md transition-all space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
+                        {tItem.timeLabel}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-bold font-mono">
+                        Còn {tItem.availableSeats} ghế
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-xs sm:text-sm">
+                      <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                        <span className="text-[#0071e3] font-black">➔</span>
+                        <span>{tItem.destinationName}</span>
+                      </div>
+                      <div className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <span>🚗</span>
+                        <span>{tItem.vehicleModel} • {tItem.plate}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/[0.06]">
+                      <div>
+                        <span className="text-base sm:text-lg font-black font-mono text-[#0071e3] dark:text-emerald-400">
+                          {formatVND(tItem.price)}
+                        </span>
+                        <span className="text-[11px] text-slate-400"> / ghế</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleBookTrip(tItem)}
+                        className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-95 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-xs hover:shadow-md transition-all cursor-pointer"
+                      >
+                        [ GIỮ CHỖ NGAY ]
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 5. PHÂN CÁCH: CHƯA CÓ GIỜ ƯNG Ý? */}
+            <div className="flex items-center gap-3 py-2">
+              <div className="flex-1 h-px bg-slate-300/80 dark:bg-white/10" />
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wider uppercase">
+                CHƯA CÓ GIỜ ƯNG Ý?
+              </span>
+              <div className="flex-1 h-px bg-slate-300/80 dark:bg-white/10" />
+            </div>
+
+            {/* 6. FORM ĐĂNG KÝ NHẬN XE GHÉ TRẠM (DEMAND POOL) */}
+            <form
+              onSubmit={handleSubmitIntent}
+              className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md transition-all space-y-4"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                  <Bell className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>Đăng ký nhận xe ghé trạm này</span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Hệ thống sẽ báo qua Zalo/SMS khi có xe phù hợp
+                </p>
+              </div>
+
+              {/* Khung giờ */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                  Khung giờ bạn cần đi:
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['04:00 - 06:00', '06:00 - 08:00', '11:00 - 13:00', 'Khác'].map((slot) => {
+                    const isSelected = intentTimeSlot === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => setIntentTimeSlot(slot)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-xs'
+                            : 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:bg-slate-200'
+                        }`}
+                      >
+                        [ {slot} ]
+                      </button>
+                    );
+                  })}
+                </div>
+                {intentTimeSlot === 'Khác' && (
+                  <input
+                    type="text"
+                    placeholder="VD: 09:30 sáng hoặc 17:00 chiều"
+                    value={customTimeSlot}
+                    onChange={(e) => setCustomTimeSlot(e.target.value)}
+                    className="w-full mt-2 h-10 px-3 text-xs rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:border-[#0071e3]"
+                  />
+                )}
+              </div>
+
+              {/* Điểm đến */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                  {direction === 'TO_SAIGON' ? 'Điểm đến ở TP.HCM:' : 'Điểm đến ở Bình Phước:'}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(direction === 'TO_SAIGON'
+                    ? ['Cụm BV Chợ Rẫy / Q5', 'Hàng Xanh / BX Miền Đông', 'Sân bay TSN', 'Khác']
+                    : ['TX. Bình Long', 'TT. Lộc Ninh', 'Bù Đốp', 'Khác']
+                  ).map((dest) => {
+                    const isSelected = intentDestination === dest;
+                    return (
+                      <button
+                        key={dest}
+                        type="button"
+                        onClick={() => setIntentDestination(dest)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-xs'
+                            : 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:bg-slate-200'
+                        }`}
+                      >
+                        {dest}
+                      </button>
+                    );
+                  })}
+                </div>
+                {intentDestination === 'Khác' && (
+                  <input
+                    type="text"
+                    placeholder="Nhập địa điểm bạn muốn đến"
+                    value={customDestination}
+                    onChange={(e) => setCustomDestination(e.target.value)}
+                    className="w-full mt-2 h-10 px-3 text-xs rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:border-[#0071e3]"
+                  />
+                )}
+              </div>
+
+              {/* Số điện thoại */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                  Số điện thoại của bạn:
+                </label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  placeholder="0984 xxx xxx"
+                  value={intentPhone}
+                  onChange={(e) => setIntentPhone(e.target.value)}
+                  className="w-full h-12 px-3.5 text-base font-mono font-bold rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300/80 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-[#0071e3] transition-all"
+                />
+              </div>
+
+              {/* Nút Submit to bản */}
+              <button
+                type="submit"
+                disabled={isSubmittingIntent}
+                className="w-full h-14 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white font-black text-sm sm:text-base uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Bell className="w-4 h-4" />
+                <span>{isSubmittingIntent ? 'ĐANG GỬI ĐĂNG KÝ...' : 'BÁO TÔI KHI CÓ XE GHÉ ĐÓN'}</span>
+              </button>
+            </form>
+          </div>
+        )}
+
         {/* ========================================================================= */}
         {/* MÀN HÌNH 1: QUÉT QR & VÀO HÀNG ĐỢI (CHECK-IN SCREEN — 5 ĐẾN 10 GIÂY)      */}
         {/* ========================================================================= */}
         {viewStep === 'CHECKIN' && (
-          <form onSubmit={handleCheckInClick} className="space-y-4 animate-fade-in">
+          <form onSubmit={handleCheckInClick} className="space-y-4 animate-fade-in text-left">
+            <button
+              type="button"
+              onClick={() => setViewStep('SCHEDULE')}
+              className="tap-44 text-xs font-bold text-[#0071e3] dark:text-sky-400 flex items-center gap-1 hover:underline cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Quay lại xem lịch chuyến cố định tại trạm</span>
+            </button>
             {/* CƠ CHẾ KÉO VỀ TRẠM GẦN NHẤT (SNAP-TO-STATION BANNER - ZERO ROADSIDE STOPS) */}
             {nearestHubInfo && (
               <div className="p-3.5 sm:p-4 rounded-3xl bg-gradient-to-br from-sky-950/70 via-slate-900/85 to-slate-950/90 border border-sky-500/30 backdrop-blur-md text-white shadow-xl space-y-2.5">
@@ -2428,8 +2906,30 @@ export default function StationRiderView({
         </Modal>
       )}
 
+      {/* ── MODAL GIỮ CHỖ TỨC THÌ (MATCH & REVEAL) ── */}
+      {selectedBookingTrip && (
+        <InstantBookingModal
+          isOpen={Boolean(selectedBookingTrip)}
+          onClose={() => setSelectedBookingTrip(null)}
+          trip={selectedBookingTrip}
+          originHub={currentHub}
+          destinationHub={getVirtualHubById(selectedBookingTrip.destinationHubId) || { id: 'dest', name: selectedBookingTrip.to }}
+          segmentPrice={selectedBookingTrip.pricePerSeat || 165000}
+          currentUser={currentUser}
+          onAuthSuccess={onAuthSuccess}
+          onBookingSuccess={(booking) => {
+            onBookingCreated?.(booking);
+            setSelectedBookingTrip(null);
+            onShowToast?.(`✓ Giữ chỗ thành công! Mã vé: ${booking.bookingId || booking.id || 'CM-OK'}.`);
+            onViewBookedTab?.('booked', booking);
+          }}
+          onViewBookedTab={onViewBookedTab}
+          onShowToast={onShowToast}
+        />
+      )}
+
       {/* FOOTER BẢO CHỨNG */}
-      <footer className="text-center text-[11px] text-slate-500 pt-4 border-t border-white/[0.06] max-w-lg mx-auto w-full">
+      <footer className="text-center text-[11px] text-slate-500 pt-4 border-t border-slate-300/60 dark:border-white/[0.06] max-w-lg mx-auto w-full">
         {t('station.corridorFooter')}
       </footer>
     </div>

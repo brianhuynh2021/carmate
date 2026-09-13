@@ -57,7 +57,8 @@ export default function CockpitMode({
   initialCorridor = 'Tuyến QL13',
   currentUser = null,
   onBack,
-  onShowToast
+  onShowToast,
+  onOpenQuickPostTrip
 }) {
   const { t } = useI18n();
   // Cấu hình xe chia sẻ (Lấy từ Garage hoặc bộ nhớ máy, không bắt chính chủ)
@@ -1044,6 +1045,7 @@ export default function CockpitMode({
             vehicle={vehicle}
             onSwitchToRadar={() => setActiveCockpitTab('RADAR')}
             onShowToast={onShowToast}
+            onOpenQuickPostTrip={onOpenQuickPostTrip}
             onChangeVehicle={() => {
               setInputPlate(vehicle?.plate || '');
               setInputModel(vehicle?.model || '');
