@@ -943,15 +943,19 @@ export default function CorridorSearchBoard({
               {/* Badge trên cùng theo State 2: ⚡ Ghép xe theo giờ của bạn (Màu cam) */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 dark:bg-amber-400/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold select-none shadow-2xs">
                 <span className="text-amber-600 dark:text-amber-400">⚡</span>
-                <span>Ghép xe theo giờ của bạn</span>
+                <span>{heading === 'a_to_b' ? 'Báo giờ bạn cần về Bình Phước' : 'Ghép xe theo giờ của bạn'}</span>
               </div>
 
               <div className="relative space-y-1.5">
                 <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  Chưa có xe nổ máy đúng phút này{ENABLE_DEPARTURE_CHIPS && isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}
+                  {heading === 'a_to_b'
+                    ? 'Chiều về hiện chưa có xe nổ máy đúng phút này'
+                    : `Chưa có xe nổ máy đúng phút này${ENABLE_DEPARTURE_CHIPS && isFutureSearch ? ` cho ${selectedChip?.dayLabel?.toLowerCase() || 'ngày mai'}` : ''}`}
                 </p>
                 <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Đặt lịch trước điểm đón & khung giờ bạn muốn đi dọc QL13, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.
+                  {heading === 'a_to_b'
+                    ? 'Đặt lịch trước điểm đón & khung giờ bạn cần về, CarMate sẽ kết nối chủ xe tiện chuyến đón bạn về lại Bình Phước.'
+                    : 'Đặt lịch trước điểm đón & khung giờ bạn muốn đi dọc QL13, CarMate sẽ kết nối chủ xe tiện chuyến qua đón.'}
                 </p>
               </div>
               <div className="relative pt-0.5 space-y-2.5">
@@ -962,7 +966,9 @@ export default function CorridorSearchBoard({
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>
-                    ĐẶT LỊCH TRƯỚC · CHỈ TỪ {formatVND(carmateSegmentPrice)}
+                    {heading === 'a_to_b'
+                      ? `BÁO GIỜ BẠN CẦN VỀ · CHỈ TỪ ${formatVND(carmateSegmentPrice)}`
+                      : `ĐẶT LỊCH TRƯỚC · CHỈ TỪ ${formatVND(carmateSegmentPrice)}`}
                   </span>
                 </button>
 
