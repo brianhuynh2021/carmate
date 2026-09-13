@@ -287,6 +287,7 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
         badge: isService ? '🚕' : '🟢',
         tripId: t.id,
         id: t.id,
+        maskedCode: t.maskedCode || (t.id && t.id.startsWith('DRV-') ? t.id.replace('DRV-', 'CX-') : null),
         departureLabel: tripMinutes != null ? formatMinutesToTime(tripMinutes) : t.timeSlot || t.time || '',
         departureMinutes: tripMinutes,
         departureDate: t.date || null,
@@ -298,8 +299,14 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
         // không lộ trọn biển ra màn hình công khai trước khi chốt chuyến.
         plateMasked: maskPlateTail(t.plateMask || t.plate || t.licensePlate),
         fullPlate: t.plate || t.licensePlate || null,
+        carImage: t.carImage || t.image || t.vehicleImage || null,
         phone: t.phoneReal || t.phone || t.contactPhone || null,
-        carPhotoUrl: t.carPhotoUrl || (Array.isArray(t.photos) ? t.photos[0] : null) || null,
+        carPhotoUrl: t.carPhotoUrl || (Array.isArray(t.photos) ? t.photos[0] : null) || (Array.isArray(t.carPhotos) ? (typeof t.carPhotos[0] === 'string' ? t.carPhotos[0] : t.carPhotos[0]?.url) : null) || null,
+        photos: (Array.isArray(t.photos) && t.photos.length > 0)
+          ? t.photos
+          : (Array.isArray(t.carPhotos) && t.carPhotos.length > 0
+              ? t.carPhotos.map(p => (typeof p === 'string' ? p : p?.url)).filter(Boolean)
+              : (t.carPhotoUrl ? [t.carPhotoUrl] : (t.carImage ? [t.carImage] : []))),
         amenities: t.amenities || ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
         fromLocation: t.from || '',
         toLocation: t.to || '',
