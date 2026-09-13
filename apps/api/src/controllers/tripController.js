@@ -440,8 +440,8 @@ export async function createTrip(req, res) {
     // BẤT BIẾN THỜI GIAN (MIT): Giờ khởi hành của chuyến trong ngày hôm nay phải lớn hơn thời gian hiện tại ít nhất 30 phút
     if (body.type === 'driver_offer' && (body.time || body.timeSlot)) {
       const todayIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
-      const isToday = !body.date || body.date === 'Hôm nay' || body.date === todayIso;
-      if (isToday) {
+      const isExplicitToday = body.date === 'Hôm nay' || body.date === todayIso;
+      if (isExplicitToday) {
         const timeRaw = body.time || (body.timeSlot && body.timeSlot.split('-')[0]) || '';
         const timeMatch = String(timeRaw).match(/^(\d{1,2}):(\d{2})/);
         if (timeMatch) {
