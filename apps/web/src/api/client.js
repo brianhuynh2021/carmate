@@ -284,6 +284,22 @@ export const api = {
     return res;
   },
 
+  /**
+   * Gắn số điện thoại đã xác thực OTP vào tài khoản đang đăng nhập.
+   * Dùng cho người vào bằng Telegram/Google — hai kênh này không cấp số điện thoại.
+   * Máy chủ cấp lại token vì token cũ mang phone rỗng.
+   */
+  async verifyPhoneForAccount(phone, otp) {
+    const res = await request('/auth/verify-phone', {
+      method: 'POST',
+      body: JSON.stringify({ phone, otp })
+    });
+    if (res?.token) {
+      setStoredAuthToken(res.token);
+    }
+    return res;
+  },
+
   async getAuthConfig() {
     try {
       const res = await request('/auth/config');

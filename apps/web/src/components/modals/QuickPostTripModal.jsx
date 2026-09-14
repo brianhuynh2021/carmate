@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import {
   X,
@@ -142,6 +142,85 @@ export default function QuickPostTripModal({
 
   const displayPricePerSeat = segmentTariff.pricePerSeat;
 
+  // ── CỔNG SỐ ĐIỆN THOẠI ──
+  // Telegram Login Widget và Google đều KHÔNG cấp số điện thoại, nên tài khoản
+  // vào bằng hai kênh này có phone rỗng. Trước đây Chủ xe điền hết form rồi mới
+  // gặp "vui lòng cập nhật số điện thoại" mà không có chỗ nào nhập — ngõ cụt.
+  // Nay chặn ngay đầu form và cho xác thực OTP tại chỗ.
+  const existingPhone = currentUser?.phone || (() => {
+    try {
+      return localStorage.getItem('carmate_rider_phone') || '';
+    } catch {
+      return '';
+    }
+  })();
+  const hasVerifiedPhone = Boolean(
+    cleanPhoneNumber(existingPhone) && isValidVietnamesePhone(cleanPhoneNumber(existingPhone))
+  );
+
+  const [phoneInput, setPhoneInput] = useState('');
+  const [otpInput, setOtpInput] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [isPhoneBusy, setIsPhoneBusy] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+  const [phoneVerified, setPhoneVerified] = useState(hasVerifiedPhone);
+  const [devOtpHint, setDevOtpHint] = useState('');
+
+  // Đếm ngược trước khi được gửi lại mã
+  useEffect(() => {
+    if (otpCooldown <= 0) return undefined;
+    const timer = setInterval(() => setOtpCooldown((v) => Math.max(0, v - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [otpCooldown]);
+
+  const handleSendOtp = async () => {
+    const clean = cleanPhoneNumber(phoneInput);
+    if (!clean || !isValidVietnamesePhone(clean)) {
+      setPhoneError('Số điện thoại không đúng định dạng nhà mạng Việt Nam.');
+      return;
+    }
+    setPhoneError('');
+    setIsPhoneBusy(true);
+    try {
+      const res = await api.requestOtp(clean);
+      if (!res?.success) throw new Error(res?.error || 'Không gửi được mã xác thực');
+      setOtpSent(true);
+      setOtpCooldown(60);
+      if (res.devOtp) setDevOtpHint(res.devOtp);
+      onShowToast?.('📩 Đã gửi mã xác thực 6 số tới điện thoại của bạn.');
+    } catch (err) {
+      setPhoneError(err.message || 'Không gửi được mã xác thực. Thử lại sau.');
+    } finally {
+      setIsPhoneBusy(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const clean = cleanPhoneNumber(phoneInput);
+    if (!otpInput || otpInput.trim().length < 4) {
+      setPhoneError('Vui lòng nhập mã xác thực 6 số.');
+      return;
+    }
+    setPhoneError('');
+    setIsPhoneBusy(true);
+    try {
+      const res = await api.verifyPhoneForAccount(clean, otpInput.trim());
+      if (!res?.success) throw new Error(res?.error || 'Mã xác thực không đúng');
+      try {
+        localStorage.setItem('carmate_rider_phone', clean);
+      } catch {
+        /* chế độ riêng tư chặn localStorage — không sao, máy chủ đã lưu */
+      }
+      setPhoneVerified(true);
+      onShowToast?.('✅ Đã xác thực số điện thoại. Bạn có thể đăng chuyến ngay!');
+    } catch (err) {
+      setPhoneError(err.message || 'Mã xác thực không đúng hoặc đã hết hạn.');
+    } finally {
+      setIsPhoneBusy(false);
+    }
+  };
+
   // 5. TRẠNG THÁI GỬI DỮ LIỆU & BÁO LỖI
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -166,11 +245,11 @@ export default function QuickPostTripModal({
     e.preventDefault();
     setErrorMessage('');
 
-    const phone = currentUser?.phone || localStorage.getItem('carmate_rider_phone') || '';
+    const phone = existingPhone || phoneInput;
     const clean = cleanPhoneNumber(phone);
 
-    if (!clean || !isValidVietnamesePhone(clean)) {
-      setErrorMessage('Vui lòng cập nhật số điện thoại hợp lệ để khách liên hệ đón rước');
+    if (!phoneVerified || !clean || !isValidVietnamesePhone(clean)) {
+      setErrorMessage('Vui lòng xác thực số điện thoại ở đầu biểu mẫu trước khi đăng chuyến.');
       return;
     }
 
@@ -288,6 +367,107 @@ export default function QuickPostTripModal({
         {/* Nội dung form 4 khối */}
         <form onSubmit={handlePostTripSubmit} className="p-4 sm:p-5 space-y-4 bg-[#DFE5EC]/30 dark:bg-[#0b0f19]/40">
           {/* ================================================================= */}
+          {/* CỔNG XÁC THỰC SỐ ĐIỆN THOẠI (chặn trước khi điền bất cứ thứ gì)    */}
+          {/* ================================================================= */}
+          {!phoneVerified && (
+            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border-2 border-amber-400/70 dark:border-amber-400/40 shadow-xs space-y-3">
+              <div className="flex items-start gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="block text-xs font-bold uppercase font-mono text-amber-800 dark:text-amber-200">
+                    Xác thực số điện thoại
+                  </span>
+                  <p className="text-[11.5px] text-amber-800/90 dark:text-amber-200/80 leading-relaxed mt-0.5">
+                    Khách cần gọi được cho bạn để lên xe, nên cần xác thực số trước khi đăng chuyến.
+                  </p>
+                </div>
+              </div>
+
+              {!otpSent ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(e.target.value)}
+                    placeholder="Số điện thoại (VD: 0984 883 750)"
+                    className="flex-1 min-w-0 h-11 px-3 rounded-xl bg-white dark:bg-[#0f1117] border border-amber-300 dark:border-amber-400/30 text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={isPhoneBusy}
+                    className="h-11 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-950 text-xs font-black uppercase tracking-wide shrink-0 cursor-pointer active:scale-95 transition-all"
+                  >
+                    {isPhoneBusy ? '...' : 'Gửi mã'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpInput}
+                      onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Mã 6 số"
+                      className="flex-1 min-w-0 h-11 px-3 rounded-xl bg-white dark:bg-[#0f1117] border border-amber-300 dark:border-amber-400/30 text-base font-mono font-black tracking-[0.3em] text-center text-slate-900 dark:text-white outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={isPhoneBusy}
+                      className="h-11 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-slate-950 text-xs font-black uppercase tracking-wide shrink-0 cursor-pointer active:scale-95 transition-all"
+                    >
+                      {isPhoneBusy ? '...' : 'Xác thực'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpSent(false);
+                        setOtpInput('');
+                        setDevOtpHint('');
+                      }}
+                      className="text-amber-700 dark:text-amber-300 underline cursor-pointer"
+                    >
+                      Đổi số khác
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={otpCooldown > 0 || isPhoneBusy}
+                      className="text-amber-700 dark:text-amber-300 underline disabled:no-underline disabled:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      {otpCooldown > 0 ? `Gửi lại sau ${otpCooldown}s` : 'Gửi lại mã'}
+                    </button>
+                  </div>
+                  {devOtpHint && (
+                    <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                      Môi trường thử nghiệm — mã: <strong>{devOtpHint}</strong>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {phoneError && (
+                <p className="text-[11.5px] font-medium text-rose-600 dark:text-rose-400">{phoneError}</p>
+              )}
+            </div>
+          )}
+
+          {/* Toàn bộ form bên dưới bị khoá cho tới khi số điện thoại được xác thực */}
+          {/* min-w-0: fieldset mặc định có `min-width: min-content` nên không co lại
+              được theo khung modal, làm nội dung tràn ngang ở khổ điện thoại. */}
+          <fieldset
+            disabled={!phoneVerified}
+            className={`space-y-4 border-0 p-0 m-0 min-w-0 w-full ${
+              !phoneVerified ? 'opacity-40 pointer-events-none select-none' : ''
+            }`}
+          >
+          {/* ================================================================= */}
           {/* KHỐI 1: HƯỚNG DI CHUYỂN                                          */}
           {/* ================================================================= */}
           <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs space-y-2.5">
@@ -334,7 +514,7 @@ export default function QuickPostTripModal({
                 <select
                   value={originHubId}
                   onChange={(e) => setOriginHubId(e.target.value)}
-                  className="flex-1 h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
+                  className="flex-1 min-w-0 h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
                 >
                   {pickupHubs.map((h) => (
                     <option key={h.id} value={h.id}>
@@ -349,7 +529,7 @@ export default function QuickPostTripModal({
                 <select
                   value={destHubId}
                   onChange={(e) => setDestHubId(e.target.value)}
-                  className="flex-1 h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
+                  className="flex-1 min-w-0 h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate"
                 >
                   {dropoffHubs.map((h) => (
                     <option key={h.id} value={h.id}>
@@ -586,11 +766,13 @@ export default function QuickPostTripModal({
             </div>
           )}
 
+          </fieldset>
+
           {/* Nút hành động chính */}
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !phoneVerified}
               className="w-full h-13 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (

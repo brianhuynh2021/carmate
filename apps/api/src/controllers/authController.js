@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { cleanPhoneNumber, isValidVietnamesePhone, normalizePhoneNumber } from '@carmate/shared';
+import { cleanPhoneNumber, isValidVietnamesePhone, normalizePhoneNumber, isLikelyFakePhone } from '@carmate/shared';
 import {
   getUserByPhone,
   getUserById,
@@ -90,6 +90,100 @@ export function requestOtp(req, res) {
       phone: cleaned,
       // Chỉ gửi kèm devOtp ở môi trường phát triển để test thuận tiện 0đ
       ...(isDev ? { devOtp: code } : {})
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * =============================================================================
+ * GẮN SỐ ĐIỆN THOẠI ĐÃ XÁC THỰC VÀO TÀI KHOẢN ĐANG ĐĂNG NHẬP
+ * =============================================================================
+ * Đăng nhập qua Telegram / Google chỉ trả về id và tên — KHÔNG có số điện thoại
+ * (Telegram Login Widget không cấp trường phone). Tài khoản vì thế được tạo với
+ * phone rỗng, và Chủ xe đi tới cuối form đăng chuyến mới gặp thông báo "vui lòng
+ * cập nhật số điện thoại" mà không có chỗ nào để nhập — một ngõ cụt hoàn toàn.
+ *
+ * Endpoint này là lối ra: người dùng nhập số, nhận OTP, xác thực ngay tại chỗ.
+ * Khác với PATCH /auth/profile (cho đổi số mà không cần chứng minh sở hữu), ở
+ * đây số chỉ được gắn sau khi đã qua OTP — vì đó là số khách sẽ gọi để lên xe.
+ */
+export async function verifyPhoneForAccount(req, res) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Vui lòng đăng nhập trước.' });
+    }
+
+    const { phone, otp } = req.body || {};
+    if (!phone || !otp) {
+      return res.status(400).json({ success: false, error: 'Vui lòng nhập đủ số điện thoại và mã OTP.' });
+    }
+
+    const cleaned = normalizePhoneNumber(phone) || cleanPhoneNumber(phone);
+    if (!cleaned || !isValidVietnamesePhone(cleaned)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Số điện thoại không đúng định dạng nhà mạng Việt Nam.'
+      });
+    }
+    if (isLikelyFakePhone(cleaned)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Số điện thoại có dấu hiệu số ảo. Khách cần gọi được cho bạn để lên xe.'
+      });
+    }
+
+    const record = otpMap.get(cleaned);
+    const isDev = process.env.NODE_ENV !== 'production';
+    const isDevPass = isDev && String(otp).trim() === '123456';
+    const isMatch = record && record.code === String(otp).trim() && Date.now() < record.expiresAt;
+
+    if (!isDevPass && !isMatch) {
+      return res.status(400).json({ success: false, error: 'Mã OTP không đúng hoặc đã hết hạn.' });
+    }
+
+    // Số đã thuộc về một tài khoản khác: không cho cướp số, vì mọi liên hệ đón
+    // rước và lịch sử tín nhiệm đều neo vào số điện thoại.
+    const owner = getUserByPhone(cleaned);
+    const me =
+      (req.user.userId && getUserById(req.user.userId)) ||
+      (req.user.id && getUserById(req.user.id)) ||
+      (req.user.phone && getUserByPhone(req.user.phone)) ||
+      (req.user.telegramId && getUserByTelegramId(String(req.user.telegramId)));
+
+    if (!me) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy hồ sơ của bạn.' });
+    }
+    if (owner && owner.id !== me.id) {
+      return res.status(409).json({
+        success: false,
+        error: 'Số điện thoại này đã gắn với một tài khoản khác. Vui lòng đăng nhập bằng số đó hoặc dùng số khác.'
+      });
+    }
+
+    otpMap.delete(cleaned);
+
+    me.phone = cleaned;
+    me.isPhoneVerified = true;
+    me.phoneVerifiedAt = new Date().toISOString();
+    await saveUser(me);
+
+    // Cấp lại token: token cũ mang phone rỗng nên mọi API đối chiếu quyền sở hữu
+    // theo số điện thoại sẽ vẫn coi người này là chưa có số.
+    const token = generateToken({
+      id: me.id,
+      userId: me.id,
+      phone: me.phone,
+      name: me.name,
+      role: me.role || 'passenger'
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã xác thực số điện thoại. Bạn có thể đăng chuyến ngay.',
+      token,
+      user: { ...me, isPhoneVerified: true }
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

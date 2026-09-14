@@ -28,7 +28,9 @@ import {
 } from '../controllers/bookingController.js';
 import { getSupportMessagesHandler, sendSupportMessageHandler } from '../controllers/supportController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
-import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, firebaseLogin, getMe, updateProfile, deleteAccount, requestAccountDeletion, getAuthConfigHandler } from '../controllers/authController.js';
+import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, firebaseLogin, getMe, updateProfile, deleteAccount, requestAccountDeletion, getAuthConfigHandler,
+  verifyPhoneForAccount
+} from '../controllers/authController.js';
 import {
   createMovementIntentHandler,
   getMovementIntentsHandler,
@@ -144,6 +146,8 @@ router.post('/auth/telegram-login', authLimiter, telegramLogin);
 router.post('/auth/zalo-login', zaloLogin);
 router.post('/auth/request-otp', authLimiter, requestOtp);
 router.post('/auth/verify-otp', authLimiter, verifyOtp);
+// Gắn số điện thoại đã xác thực OTP cho tài khoản đăng nhập qua Telegram/Google
+router.post('/auth/verify-phone', requireAuth, authLimiter, verifyPhoneForAccount);
 router.get('/auth/me', requireAuth, getMe);
 router.patch('/auth/profile', requireAuth, updateProfile);
 router.put('/auth/profile', requireAuth, updateProfile);
