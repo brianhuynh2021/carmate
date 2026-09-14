@@ -797,6 +797,11 @@ export const api = {
     return request('/fuel-price');
   },
 
+  /** Tham số công thức định giá đang áp dụng toàn sàn (công khai). */
+  async getTariffParams() {
+    return request('/tariff-params');
+  },
+
   async getAdminFuelPrice() {
     return request('/admin/fuel-price');
   },

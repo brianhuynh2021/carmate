@@ -111,6 +111,7 @@ import {
   requireAdmin,
   createDriverProfileHandler,
   getPublicFuelPriceHandler,
+  getPublicTariffParamsHandler,
   getAdminFuelPriceHandler,
   updateAdminFuelPriceHandler,
   resetAdminFuelPriceHandler,
@@ -273,6 +274,7 @@ router.get('/transit-directory', getTransitDirectoryHandler);
 
 // --- Chỉ Số Nhiên Liệu Hàng Ngày (Daily Petrolimex Fuel Index) ---
 router.get('/fuel-price', getPublicFuelPriceHandler);
+router.get('/tariff-params', getPublicTariffParamsHandler);
 
 // --- Thông Báo Đẩy & Hộp Thư In-App (Kênh đánh thức khách ngoài giờ mở app) ---
 router.get('/notifications/vapid-key', getVapidKeyHandler);

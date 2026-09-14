@@ -107,6 +107,22 @@ check('Tham số vượt biên an toàn bị từ chối', () => {
   assert.ok(errors.length > 0, 'α₀ + span > 1 phải bị chặn');
 });
 
+check('Sửa một tham số không làm reset các tham số khác', () => {
+  // Admin chỉnh định mức rồi lưu: tám ô còn lại phải giữ nguyên. Gộp lên bộ MẶC
+  // ĐỊNH thay vì bộ đang chạy khiến mọi tinh chỉnh trước đó âm thầm quay về gốc.
+  setTariffParams({ ...DEFAULT_TARIFF_PARAMS, limoRatePerKm: 2500 }, null, 'admin-test');
+  const { params } = validateTariffParams({ avgConsumptionLper100km: 10 });
+  assert.equal(params.limoRatePerKm, 2500, 'tham số không gửi lên phải giữ giá trị đang áp dụng');
+  resetTariffParams();
+});
+
+check('Đọc lại từ CSDL thì gộp lên bộ mặc định, không lẫn phiên đang chạy', () => {
+  setTariffParams({ ...DEFAULT_TARIFF_PARAMS, limoRatePerKm: 2500 }, null, 'admin-test');
+  const { params } = validateTariffParams({ avgConsumptionLper100km: 8.2 }, DEFAULT_TARIFF_PARAMS);
+  assert.equal(params.limoRatePerKm, DEFAULT_TARIFF_PARAMS.limoRatePerKm);
+  resetTariffParams();
+});
+
 check('Tham số sai không làm hỏng cấu hình đang chạy', () => {
   const stable = calculateDynamicTariffByDistance(110).pricePerSeat;
   try {

@@ -72,6 +72,9 @@ function intentToSchedule(intent) {
     matchedCount,
     fareEstimated: Number(intent.estimatedPricing?.pricePerSeat || 0) * seats,
     riders: intent.matchedRiders || [],
+    // Mốc gác cổng đã xác nhận, do máy chủ lưu. Không map trường này thì tải lại
+    // trang là nút quay về "chưa xác nhận" — đúng lỗi mà việc nối API định sửa.
+    checkpointConfirmations: intent.checkpointConfirmations || {},
     isRemote: true
   };
 }
@@ -174,7 +177,10 @@ export default function DriverScheduleCardView({
   };
 
   const [activeCheckpoint, setActiveCheckpoint] = useState(() => resolveCheckpointNow());
-  const [checkpointConfirms, setCheckpointConfirms] = useState({});
+
+  /** Mốc này đã được xác nhận chưa — đọc từ dữ liệu máy chủ, không giữ bản sao cục bộ. */
+  const isCheckpointConfirmed = (trip, checkpoint) =>
+    Boolean(trip?.checkpointConfirmations?.[checkpoint]);
 
   // Mốc tự trôi theo đồng hồ, không cần người dùng bấm gì
   useEffect(() => {
@@ -189,7 +195,10 @@ export default function DriverScheduleCardView({
     try {
       const res = await api.confirmIntentCheckpoint(tripId, checkpoint);
       if (!res?.success) throw new Error(res?.error || 'Máy chủ từ chối xác nhận');
-      setCheckpointConfirms((prev) => ({ ...prev, [`${tripId}:${checkpoint}`]: true }));
+      const saved = res.data?.checkpointConfirmations || {};
+      setSchedules((prev) =>
+        prev.map((s) => (s.id === tripId ? { ...s, checkpointConfirmations: saved } : s))
+      );
       onShowToast?.(`✓ ${res.message}`);
     } catch (err) {
       onShowToast?.(`⚠️ Không thể xác nhận: ${err.message || 'Thử lại sau'}`);
@@ -240,8 +249,15 @@ export default function DriverScheduleCardView({
     const target = schedules.find((s) => s.id === tripId);
     if (!target || pendingAction) return;
 
+    // Trần 7 ghế cho khớp với máy chủ (intentController). Chặn ở 4 rồi im lặng
+    // return khiến Chủ xe xe 7 chỗ bấm mãi không lên mà không hiểu vì sao.
     const newSeatsCount = target.totalSeats + delta;
-    if (newSeatsCount < 1 || newSeatsCount > 4) return;
+    if (newSeatsCount < 1 || newSeatsCount > 7) {
+      onShowToast?.(
+        newSeatsCount < 1 ? '⚠️ Phải nhận ít nhất 1 ghế.' : '⚠️ Tối đa 7 ghế mỗi chuyến.'
+      );
+      return;
+    }
 
     setPendingAction(`seats:${tripId}`);
     try {
@@ -599,7 +615,7 @@ export default function DriverScheduleCardView({
                           onClick={() => confirmCheckpoint(trip.id, 'NIGHT_LOCK')}
                           className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-slate-950 font-bold font-mono text-xs shrink-0 cursor-pointer active:scale-95 transition-all"
                         >
-                          {checkpointConfirms[`${trip.id}:NIGHT_LOCK`] ? '✓ Đã chốt sổ 21h' : 'Chốt sổ ngay'}
+                          {isCheckpointConfirmed(trip, 'NIGHT_LOCK') ? '✓ Đã chốt sổ 21h' : 'Chốt sổ ngay'}
                         </button>
                       </div>
                     )}
@@ -614,12 +630,12 @@ export default function DriverScheduleCardView({
                           disabled={pendingAction === `cp:${trip.id}`}
                           onClick={() => confirmCheckpoint(trip.id, 'MORNING_WAKE')}
                           className={`px-3 py-1.5 rounded-xl font-bold font-mono text-xs shrink-0 cursor-pointer active:scale-95 transition-all disabled:opacity-60 ${
-                            checkpointConfirms[`${trip.id}:MORNING_WAKE`]
+                            isCheckpointConfirmed(trip, 'MORNING_WAKE')
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                               : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 animate-pulse'
                           }`}
                         >
-                          {checkpointConfirms[`${trip.id}:MORNING_WAKE`] ? '✓ Đã thức dậy (05:15)' : 'Tôi đã thức dậy'}
+                          {isCheckpointConfirmed(trip, 'MORNING_WAKE') ? '✓ Đã thức dậy (05:15)' : 'Tôi đã thức dậy'}
                         </button>
                       </div>
                     )}
@@ -638,12 +654,12 @@ export default function DriverScheduleCardView({
                           disabled={pendingAction === `cp:${trip.id}`}
                           onClick={() => confirmCheckpoint(trip.id, 'RED_LINE')}
                           className={`w-full px-3 py-2 rounded-xl font-bold font-mono text-xs cursor-pointer active:scale-95 transition-all disabled:opacity-60 ${
-                            checkpointConfirms[`${trip.id}:RED_LINE`]
+                            isCheckpointConfirmed(trip, 'RED_LINE')
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                               : 'bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/20'
                           }`}
                         >
-                          {checkpointConfirms[`${trip.id}:RED_LINE`] ? '✓ Đã xác nhận lăn bánh' : 'Tôi đã lên xe, khởi hành'}
+                          {isCheckpointConfirmed(trip, 'RED_LINE') ? '✓ Đã xác nhận lăn bánh' : 'Tôi đã lên xe, khởi hành'}
                         </button>
                       </div>
                     )}

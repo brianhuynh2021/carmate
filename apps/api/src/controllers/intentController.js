@@ -9,7 +9,8 @@ import {
   getIntents,
   getIntentById,
   updateIntent,
-  getMatchingEpochs
+  getMatchingEpochs,
+  getBookings
 } from '../db/sqliteStore.js';
 
 import {
@@ -219,6 +220,25 @@ export function getMatchingEpochsHandler(req, res) {
  * tác đó thực sự có hiệu lực.
  */
 
+
+/**
+ * Đếm số khách ĐÃ THỰC SỰ được ghép vào một ý định của Chủ xe.
+ *
+ * Không dùng `intent.matchedRiders`: trường đó không có nơi nào ghi (engine khớp
+ * lệnh chỉ đặt matchedTripId/matchedBookingId trên ý định của KHÁCH), nên đếm
+ * theo nó thì luôn ra 0 và mọi rào chắn dựa trên nó đều vô hiệu.
+ */
+function countMatchedRiders(intent) {
+  if (Array.isArray(intent.matchedRiders) && intent.matchedRiders.length > 0) {
+    return intent.matchedRiders.length;
+  }
+  const linkedTripId = intent.matchedTripId || intent.tripId;
+  if (!linkedTripId) return 0;
+  return getBookings().filter(
+    (b) => (b.tripId === linkedTripId || b.targetTripId === linkedTripId) && b.status !== 'cancelled'
+  ).length;
+}
+
 /** Chỉ chủ sở hữu ý định (hoặc quản trị viên) mới được sửa nó. */
 function assertIntentOwnership(intent, req) {
   if (req.user?.role === 'admin') return true;
@@ -263,7 +283,7 @@ export async function updateMovementIntentHandler(req, res) {
       }
       // Không cho hạ số ghế xuống dưới số khách đã ghép: khách đã được xác nhận
       // mà bị đẩy ra vì Chủ xe bấm nhầm là mất chỗ thật.
-      const matchedCount = Array.isArray(intent.matchedRiders) ? intent.matchedRiders.length : 0;
+      const matchedCount = countMatchedRiders(intent);
       if (seatNum < matchedCount) {
         return res.status(409).json({
           success: false,
@@ -315,7 +335,7 @@ export async function cancelMovementIntentHandler(req, res) {
       return res.status(200).json({ success: true, message: 'Lịch trình đã được huỷ trước đó.', data: intent });
     }
 
-    const matchedCount = Array.isArray(intent.matchedRiders) ? intent.matchedRiders.length : 0;
+    const matchedCount = countMatchedRiders(intent);
 
     const updated = await updateIntent(id, {
       status: 'cancelled',

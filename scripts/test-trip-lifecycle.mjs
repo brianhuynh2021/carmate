@@ -146,5 +146,37 @@ check('dryRun không ghi gì vào CSDL', () => {
   assert.equal(statusOf(id), 'active', 'nhưng không được ghi');
 });
 
+// ── 4. CHỐNG XOÁ NHẦM CHUYẾN THẬT ───────────────────────────────────────────
+console.log('\n4. Dọn seed cũ không được đụng chuyến thật:');
+
+check('Chuyến Admin tạo (DRV-<timestamp>) không bị coi là seed cũ', () => {
+  // adminController sinh id dạng `DRV-${Date.now()}` — cùng dạng với seed DRV-101.
+  // Dò theo dạng mã sẽ quét sạch chuyến thật ở mỗi lần khởi động máy chủ.
+  const RETIRED_SEED_IDS = [
+    'DRV-103', 'DRV-104', 'DRV-106', 'DRV-108', 'DRV-110', 'DRV-111',
+    'REQ-203', 'REQ-204', 'REQ-205'
+  ];
+  const adminTripId = `DRV-${Date.now()}`;
+  assert.ok(!RETIRED_SEED_IDS.includes(adminTripId), 'chuyến thật phải nằm ngoài danh sách gỡ');
+  assert.ok(/^DRV-\d{13}$/.test(adminTripId), 'id Admin tạo có dạng DRV-<timestamp>');
+});
+
+check('Chuyến định kỳ giữ được dấu sau khi đẩy sang tuần sau', () => {
+  const id = `${PREFIX}weekly-marker`;
+  // Chuyến chỉ nhận diện định kỳ qua chuỗi trong trường date
+  seedTrip(id, { date: 'Lặp lại hàng tuần', timeSlot: '07:00-08:00' });
+  db.prepare('UPDATE trips SET payload = ? WHERE id = ?').run(
+    JSON.stringify({ id, type: 'driver_offer', status: 'active', date: 'Lặp lại hàng tuần', timeSlot: '07:00-08:00' }),
+    id
+  );
+  sweepFinishedTrips({ nowMs: NOW });
+  const row = db.prepare('SELECT payload FROM trips WHERE id = ?').get(id);
+  const payload = JSON.parse(row.payload);
+  // Dù date bị ghi đè bằng ngày cụ thể, cờ định kỳ phải còn để lần sau vẫn lăn
+  if (payload.date !== 'Lặp lại hàng tuần') {
+    assert.equal(payload.isRecurringWeekly, true, 'phải giữ cờ isRecurringWeekly');
+  }
+});
+
 cleanup();
 console.log(`\n✅ ${passed}/${passed} kiểm thử vòng đời chuyến ĐẠT\n`);

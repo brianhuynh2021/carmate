@@ -540,12 +540,16 @@ export async function initDB() {
     // Chuyến mẫu của tuyến đã gỡ khỏi mockData (ngoài hành lang có trạm ảo thật)
     // phải biến mất khỏi sàn, nếu không chúng nằm lại vĩnh viễn trong SQLite và
     // hiển thị như chuyến thật mà nền tảng không phục vụ được.
+    // CHỈ xoá đúng những mã seed ĐÃ TỪNG có trong mockData và nay đã bị gỡ.
+    // Tuyệt đối không dò theo dạng mã: chuyến thật do Admin tạo cũng mang dạng
+    // `DRV-<timestamp>` (adminController.js), nên một GLOB 'DRV-[0-9]*' sẽ quét
+    // sạch chuyến thật của người dùng ở mỗi lần khởi động máy chủ.
     const liveSeedIds = new Set(allSeeds.map((s) => s.id));
-    const staleSeeds = db
-      .prepare("SELECT id FROM trips WHERE id GLOB 'DRV-[0-9]*' OR id GLOB 'REQ-[0-9]*'")
-      .all()
-      .map((r) => r.id)
-      .filter((id) => !liveSeedIds.has(id));
+    const RETIRED_SEED_IDS = [
+      'DRV-103', 'DRV-104', 'DRV-106', 'DRV-108', 'DRV-110', 'DRV-111',
+      'REQ-203', 'REQ-204', 'REQ-205'
+    ];
+    const staleSeeds = RETIRED_SEED_IDS.filter((id) => !liveSeedIds.has(id));
 
     const deleteTripStmt = db.prepare('DELETE FROM trips WHERE id = ?');
     // Cột targetTripId chỉ có ở một số bản CSDL: dò trước, vì prepare() với cột
@@ -1034,7 +1038,15 @@ export function sweepFinishedTrips({ nowMs = Date.now(), graceHours = TRIP_CLOSE
       const isoDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(
         nextDate.getDate()
       ).padStart(2, '0')}`;
-      const payload = { ...trip, date: isoDate, rolledOverAt: new Date(nowMs).toISOString() };
+      // Giữ lại dấu định kỳ: có chuyến chỉ được nhận diện qua chuỗi "Lặp lại hàng
+      // tuần" nằm trong chính trường date. Ghi đè date bằng ngày cụ thể sẽ xoá
+      // dấu đó, và lần quét sau chuyến bị đóng luôn thay vì tiếp tục lăn.
+      const payload = {
+        ...trip,
+        date: isoDate,
+        isRecurringWeekly: true,
+        rolledOverAt: new Date(nowMs).toISOString()
+      };
       jobs.push({ kind: 'roll', id: trip.id, date: isoDate, payload });
       result.rolled.push(trip.id);
       continue;
@@ -2029,7 +2041,9 @@ export function getTariffParamsConfig() {
     const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('tariff_params');
     if (row && row.value) {
       const parsed = JSON.parse(row.value);
-      const { params, errors } = validateTariffParams(parsed);
+      // Đọc lại từ CSDL: đây là bản ghi ĐẦY ĐỦ, nên gộp lên bộ mặc định để bản
+      // lưu là nguồn sự thật duy nhất, không lẫn tham số của phiên đang chạy.
+      const { params, errors } = validateTariffParams(parsed, DEFAULT_TARIFF_PARAMS);
       if (errors.length === 0) {
         return {
           ...params,
