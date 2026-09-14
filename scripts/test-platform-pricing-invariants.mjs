@@ -13,6 +13,9 @@
  */
 import assert from 'node:assert/strict';
 import {
+  INITIAL_DRIVER_OFFERS,
+  INITIAL_PASSENGER_REQUESTS,
+  getVirtualHubById,
   calculateDynamicTariffByDistance,
   getFixedSegmentTariff,
   getTariffParams,
@@ -115,5 +118,32 @@ check('Tham số sai không làm hỏng cấu hình đang chạy', () => {
 });
 
 resetTariffParams();
+
+// ── 4. DỮ LIỆU MẪU PHẢI SỐNG ĐƯỢC TRONG MA TRẬN ─────────────────────────────
+console.log('\n4. Chuyến mẫu neo đúng trạm ảo và giá khớp công thức:');
+
+const SEEDS = [...INITIAL_DRIVER_OFFERS, ...INITIAL_PASSENGER_REQUESTS];
+
+check('Mọi chuyến mẫu đều có cặp trạm ảo hợp lệ', () => {
+  for (const t of SEEDS) {
+    const o = getVirtualHubById(t.originHubId);
+    const d = getVirtualHubById(t.destinationHubId);
+    assert.ok(o, `${t.id}: trạm đón không hợp lệ (${t.originHubId})`);
+    assert.ok(d, `${t.id}: trạm trả không hợp lệ (${t.destinationHubId})`);
+    assert.notEqual(t.originHubId, t.destinationHubId, `${t.id}: trạm đón trùng trạm trả`);
+  }
+});
+
+check('Không có mã chuyến mẫu nào bị trùng', () => {
+  const ids = SEEDS.map((t) => t.id);
+  assert.equal(new Set(ids).size, ids.length, `Trùng mã: ${ids.filter((v, i) => ids.indexOf(v) !== i)}`);
+});
+
+check('Giá chuyến mẫu của Chủ xe đúng bằng giá công thức', () => {
+  for (const t of INITIAL_DRIVER_OFFERS) {
+    const want = getFixedSegmentTariff(t.originHubId, t.destinationHubId).pricePerSeat;
+    assert.equal(t.basePricePerSeat, want, `${t.id}: giá ${t.basePricePerSeat} ≠ công thức ${want}`);
+  }
+});
 
 console.log(`\n✅ ${passed}/${passed} kiểm thử bất biến định giá ĐẠT\n`);

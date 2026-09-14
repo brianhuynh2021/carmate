@@ -38,7 +38,8 @@
     "test:rescue": "node --env-file-if-exists=.env scripts/test-departure-rescue.mjs",
     "test:assurance": "node --env-file-if-exists=.env scripts/test-assurance-ux.mjs",
     "pentest": "node --env-file-if-exists=.env scripts/pentest-security-audit.js",
-    "test:pricing": "node --env-file-if-exists=.env scripts/test-platform-pricing-invariants.mjs"
+    "test:pricing": "node --env-file-if-exists=.env scripts/test-platform-pricing-invariants.mjs",
+    "migrate:hubs": "node --env-file-if-exists=.env scripts/migrate-trips-to-hubs.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

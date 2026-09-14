@@ -533,15 +533,43 @@ export async function initDB() {
     const allSeeds = [...INITIAL_DRIVER_OFFERS, ...INITIAL_PASSENGER_REQUESTS];
     const updateStmt = db.prepare(`
       UPDATE trips 
-      SET date = ?, timeSlot = ?, payload = ?
+      SET date = ?, timeSlot = ?, price = ?, payload = ?
       WHERE id = ?
     `);
+    // Chuyến mẫu của tuyến đã gỡ khỏi mockData (ngoài hành lang có trạm ảo thật)
+    // phải biến mất khỏi sàn, nếu không chúng nằm lại vĩnh viễn trong SQLite và
+    // hiển thị như chuyến thật mà nền tảng không phục vụ được.
+    const liveSeedIds = new Set(allSeeds.map((s) => s.id));
+    const staleSeeds = db
+      .prepare("SELECT id FROM trips WHERE id GLOB 'DRV-[0-9]*' OR id GLOB 'REQ-[0-9]*'")
+      .all()
+      .map((r) => r.id)
+      .filter((id) => !liveSeedIds.has(id));
+
+    const deleteTripStmt = db.prepare('DELETE FROM trips WHERE id = ?');
+    // Cột targetTripId chỉ có ở một số bản CSDL: dò trước, vì prepare() với cột
+    // không tồn tại ném lỗi ngay chứ không đợi tới lúc chạy.
+    const bookingCols = db.prepare('PRAGMA table_info(bookings)').all().map((c) => c.name);
+    const hasTargetTripId = bookingCols.includes('targetTripId');
+    const deleteBookingStmt = hasTargetTripId
+      ? db.prepare('DELETE FROM bookings WHERE tripId = ? OR targetTripId = ?')
+      : db.prepare('DELETE FROM bookings WHERE tripId = ?');
+
     const syncSeeds = db.transaction(() => {
       for (const s of allSeeds) {
-        updateStmt.run(s.date || 'Hôm nay', s.timeSlot || '07:00-08:00', JSON.stringify(s), s.id);
+        const price = Number(s.basePricePerSeat || s.expectedPrice || 0) || null;
+        updateStmt.run(s.date || 'Hôm nay', s.timeSlot || '07:00-08:00', price, JSON.stringify(s), s.id);
+      }
+      for (const id of staleSeeds) {
+        if (hasTargetTripId) deleteBookingStmt.run(id, id);
+        else deleteBookingStmt.run(id);
+        deleteTripStmt.run(id);
       }
     });
     syncSeeds();
+    if (staleSeeds.length > 0) {
+      console.log(`[SQLite DB] Đã gỡ ${staleSeeds.length} chuyến mẫu của tuyến không còn phục vụ.`);
+    }
   } catch (err) {
     console.warn('[SQLite DB] Bỏ qua đồng bộ seed:', err.message);
   }
