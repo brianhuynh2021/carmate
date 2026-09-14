@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 // Không import dữ liệu mẫu vào đây: sàn chỉ được hiển thị chuyến từ máy chủ.
 // Bỏ hẳn đường import khiến dữ liệu mẫu không thể vô tình quay lại giao diện.
-import { getTomorrowISO, normalizePhoneNumber, setDailyFuelPrice } from '@carmate/shared';
+import { getTomorrowISO, normalizePhoneNumber, setDailyFuelPrice, setTariffParams } from '@carmate/shared';
 import api from '../api/client.js';
 import { trackInitiateBooking } from '../utils/analytics.js';
 import { triggerMacNotification } from '../components/common/AppleMacNotification.jsx';
@@ -13,7 +13,6 @@ export default function useTripsData({
   currentUser,
   updateMyTripsCount,
   setActiveTab,
-  setTicketToShare,
   setSelectedItemForEscrow,
   setCancelRecord,
   setDelayRecord,
@@ -86,11 +85,12 @@ export default function useTripsData({
     async function fetchBackendData() {
       try {
         const phoneParam = currentUser?.phone ? { phone: currentUser.phone } : {};
-        const [tripsRes, bookingsRes, statsRes, fuelRes] = await Promise.allSettled([
+        const [tripsRes, bookingsRes, statsRes, fuelRes, tariffRes] = await Promise.allSettled([
           api.getTrips(),
           api.getBookings(phoneParam),
           api.getStats(),
-          api.getFuelPrice()
+          api.getFuelPrice(),
+          api.getTariffParams()
         ]);
 
         if (!active) return;
@@ -119,6 +119,20 @@ export default function useTripsData({
           const fuel = fuelRes.value.data;
           if (fuel.ron95Price) {
             setDailyFuelPrice(fuel.ron95Price, fuel.updatedAt, fuel.updatedBy, fuel.source);
+          }
+        }
+
+        // Đồng bộ tham số công thức định giá: engine là biến cấp module nên mỗi
+        // tiến trình giữ bản riêng. Không kéo về, giá hiện trên máy Chủ xe sẽ
+        // lệch với giá máy chủ dùng để tạo chuyến.
+        if (tariffRes.status === 'fulfilled' && tariffRes.value?.success && tariffRes.value.data) {
+          try {
+            const cfg = tariffRes.value.data;
+            if (!cfg.isDefault) {
+              setTariffParams(cfg, cfg.updatedAt, cfg.updatedBy || 'admin', 'server');
+            }
+          } catch (tariffErr) {
+            console.warn('[CarMate App] Tariff sync warning:', tariffErr);
           }
         }
       } catch (err) {
@@ -214,7 +228,6 @@ export default function useTripsData({
       else setPassengerRequests((prev) => [newTrip, ...prev]);
       showToast(t?.('toast.postSuccess') || 'Đăng chuyến thành công!');
       setActiveTab?.('market');
-      setTicketToShare?.(newTrip);
 
       try {
         const storageKey = `carmate_my_trip_ids_${authUser.id || authUser.phone}`;
@@ -288,8 +301,7 @@ export default function useTripsData({
       setActiveTab,
       setPendingPostTrip,
       setShowAuthModal,
-      setTicketToShare,
-      showToast,
+        showToast,
       t,
       updateMyTripsCount,
       onSaveProfile

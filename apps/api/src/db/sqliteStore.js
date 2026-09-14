@@ -12,6 +12,7 @@ import {
   cleanPhoneNumber,
   normalizePhoneNumber,
   isTripExpired,
+  getTripEndTimestamp,
   getTomorrowISO,
   DEFAULT_TRUST_RULES,
   sanitizeTimeLabel,
@@ -539,12 +540,16 @@ export async function initDB() {
     // Chuyến mẫu của tuyến đã gỡ khỏi mockData (ngoài hành lang có trạm ảo thật)
     // phải biến mất khỏi sàn, nếu không chúng nằm lại vĩnh viễn trong SQLite và
     // hiển thị như chuyến thật mà nền tảng không phục vụ được.
+    // CHỈ xoá đúng những mã seed ĐÃ TỪNG có trong mockData và nay đã bị gỡ.
+    // Tuyệt đối không dò theo dạng mã: chuyến thật do Admin tạo cũng mang dạng
+    // `DRV-<timestamp>` (adminController.js), nên một GLOB 'DRV-[0-9]*' sẽ quét
+    // sạch chuyến thật của người dùng ở mỗi lần khởi động máy chủ.
     const liveSeedIds = new Set(allSeeds.map((s) => s.id));
-    const staleSeeds = db
-      .prepare("SELECT id FROM trips WHERE id GLOB 'DRV-[0-9]*' OR id GLOB 'REQ-[0-9]*'")
-      .all()
-      .map((r) => r.id)
-      .filter((id) => !liveSeedIds.has(id));
+    const RETIRED_SEED_IDS = [
+      'DRV-103', 'DRV-104', 'DRV-106', 'DRV-108', 'DRV-110', 'DRV-111',
+      'REQ-203', 'REQ-204', 'REQ-205'
+    ];
+    const staleSeeds = RETIRED_SEED_IDS.filter((id) => !liveSeedIds.has(id));
 
     const deleteTripStmt = db.prepare('DELETE FROM trips WHERE id = ?');
     // Cột targetTripId chỉ có ở một số bản CSDL: dò trước, vì prepare() với cột
@@ -949,6 +954,117 @@ export async function updateTrip(id, updates) {
  * Tái đăng 1 chạm (1-Tap Re-publish) chuyến xe sang ngày mới
  * Giúp Chủ xe nhân bản toàn bộ thông tin lộ trình, xe, giá sang ngày mai chỉ trong 1 chạm.
  */
+/**
+ * =============================================================================
+ * ĐÓNG SỔ CHUYẾN ĐÃ CHẠY XONG (TRIP LIFECYCLE SWEEP)
+ * =============================================================================
+ * Trước đây hệ thống thay việc "đóng chuyến" bằng việc "ẩn chuyến": getTrips()
+ * lọc isTripExpired() ở tầng đọc nên giao diện trông sạch, còn trong CSDL mọi
+ * chuyến ở lại `active` vĩnh viễn. Hệ quả không nhìn thấy bằng mắt:
+ *
+ *   - Mọi truy vấn `WHERE status = 'active'` đều đếm cả chuyến đã chạy xong,
+ *     nên xe cứu hộ có thể được điều từ một chuyến của tháng trước.
+ *   - Chuyến định kỳ hàng tuần được isTripExpired() miễn trừ, nên thoát cả bộ
+ *     lọc hiển thị lẫn vòng đời — hiện mãi trên sàn với ngày của tuần trước.
+ *
+ * Hàm này là tác nhân DUY NHẤT đóng sổ chuyến theo thời gian:
+ *   - Quá giờ kết thúc + GRACE_HOURS mà có khách đặt  ➔ completed
+ *   - Quá giờ kết thúc + GRACE_HOURS mà không ai đặt  ➔ expired
+ *   - Chuyến định kỳ hàng tuần                        ➔ đẩy sang tuần sau
+ *
+ * Dung sai 6 tiếng để Chủ xe chạy chuyến chiều vẫn kịp về, và để chuyến khởi
+ * hành lúc nửa đêm không bị đóng ngay khi vừa lăn bánh.
+ */
+export const TRIP_CLOSE_GRACE_HOURS = 6;
+
+/** Một chuyến có phải chuyến lặp hàng tuần không (cùng quy tắc với isTripExpired). */
+function isRecurringTrip(trip) {
+  return Boolean(
+    trip.isRecurringWeekly ||
+      (trip.date && (String(trip.date).includes('hàng tuần') || String(trip.date).includes('Lặp lại')))
+  );
+}
+
+/**
+ * Quét và đóng sổ mọi chuyến đã quá giờ.
+ * @param {object} options
+ * @param {number} options.nowMs - Mốc thời gian coi là "bây giờ" (cho kiểm thử)
+ * @param {number} options.graceHours - Dung sai sau giờ kết thúc
+ * @param {boolean} options.dryRun - Chỉ liệt kê, không ghi
+ * @returns {{completed: string[], expired: string[], rolled: string[]}}
+ */
+export function sweepFinishedTrips({ nowMs = Date.now(), graceHours = TRIP_CLOSE_GRACE_HOURS, dryRun = false } = {}) {
+  const database = getRawDB();
+  const result = { completed: [], expired: [], rolled: [] };
+
+  // Chỉ xét chuyến còn đang mở: đã cancelled/completed/expired thì thôi.
+  // So sánh không phân biệt hoa thường vì dữ liệu cũ có cả 'OPEN' lẫn 'active'
+  // — một chuyến ghi hoa mà lọt lưới sẽ kẹt lại vĩnh viễn, đúng lỗi đang sửa.
+  const rows = database
+    .prepare("SELECT * FROM trips WHERE LOWER(status) IN ('active', 'full', 'open')")
+    .all()
+    .map(rowToTrip)
+    .filter(Boolean);
+
+  if (rows.length === 0) return result;
+
+  const graceMs = Math.max(0, graceHours) * 60 * 60 * 1000;
+  const allBookings = getBookings();
+
+  const updateStmt = database.prepare('UPDATE trips SET status = ?, payload = ? WHERE id = ?');
+  const rollStmt = database.prepare('UPDATE trips SET date = ?, payload = ? WHERE id = ?');
+
+  const apply = database.transaction((jobs) => {
+    for (const job of jobs) {
+      if (job.kind === 'roll') rollStmt.run(job.date, JSON.stringify(job.payload), job.id);
+      else updateStmt.run(job.status, JSON.stringify(job.payload), job.id);
+    }
+  });
+
+  const jobs = [];
+
+  for (const trip of rows) {
+    const endMs = getTripEndTimestamp(trip, new Date(nowMs));
+    if (!Number.isFinite(endMs) || nowMs <= endMs + graceMs) continue;
+
+    // Chuyến định kỳ: đẩy sang tuần sau thay vì đóng, nếu không Chủ xe chạy đều
+    // mỗi tuần sẽ mất chuyến quen và phải đăng lại bằng tay.
+    if (isRecurringTrip(trip)) {
+      const nextDate = new Date(endMs);
+      // Nhảy từng tuần cho tới khi vượt qua hiện tại (chuyến bỏ quên nhiều tuần)
+      while (nextDate.getTime() + graceMs <= nowMs) {
+        nextDate.setDate(nextDate.getDate() + 7);
+      }
+      const isoDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(
+        nextDate.getDate()
+      ).padStart(2, '0')}`;
+      // Giữ lại dấu định kỳ: có chuyến chỉ được nhận diện qua chuỗi "Lặp lại hàng
+      // tuần" nằm trong chính trường date. Ghi đè date bằng ngày cụ thể sẽ xoá
+      // dấu đó, và lần quét sau chuyến bị đóng luôn thay vì tiếp tục lăn.
+      const payload = {
+        ...trip,
+        date: isoDate,
+        isRecurringWeekly: true,
+        rolledOverAt: new Date(nowMs).toISOString()
+      };
+      jobs.push({ kind: 'roll', id: trip.id, date: isoDate, payload });
+      result.rolled.push(trip.id);
+      continue;
+    }
+
+    const hadPassenger = allBookings.some(
+      (b) => (b.tripId === trip.id || b.targetTripId === trip.id) && b.status !== 'cancelled'
+    );
+    const status = hadPassenger ? 'completed' : 'expired';
+    const payload = { ...trip, status, closedAt: new Date(nowMs).toISOString(), closedBy: 'scheduler' };
+    jobs.push({ kind: 'close', id: trip.id, status, payload });
+    result[hadPassenger ? 'completed' : 'expired'].push(trip.id);
+  }
+
+  if (jobs.length > 0 && !dryRun) apply(jobs);
+  return result;
+}
+
 export async function republishTrip(id, updates = {}) {
   const existing = getTripById(id);
   if (!existing) return null;
@@ -1925,7 +2041,9 @@ export function getTariffParamsConfig() {
     const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('tariff_params');
     if (row && row.value) {
       const parsed = JSON.parse(row.value);
-      const { params, errors } = validateTariffParams(parsed);
+      // Đọc lại từ CSDL: đây là bản ghi ĐẦY ĐỦ, nên gộp lên bộ mặc định để bản
+      // lưu là nguồn sự thật duy nhất, không lẫn tham số của phiên đang chạy.
+      const { params, errors } = validateTariffParams(parsed, DEFAULT_TARIFF_PARAMS);
       if (errors.length === 0) {
         return {
           ...params,

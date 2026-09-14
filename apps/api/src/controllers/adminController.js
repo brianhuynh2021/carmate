@@ -820,6 +820,23 @@ function buildTariffPreview(params = null) {
 }
 
 /**
+ * GET /api/tariff-params - Công thức định giá đang áp dụng (Công khai, Zero Auth)
+ *
+ * Engine định giá là biến cấp module nên mỗi tiến trình giữ một bản riêng: máy
+ * chủ và trình duyệt không tự đồng bộ. Thiếu endpoint này, Chủ xe nhìn thấy giá
+ * tính theo tham số MẶC ĐỊNH trong khi máy chủ tạo chuyến bằng tham số Admin đã
+ * chỉnh — hai con số lệch nhau mà không ai biết. Giá xăng đã có kênh tương tự.
+ */
+export function getPublicTariffParamsHandler(req, res) {
+  try {
+    const config = getTariffParamsConfig();
+    return res.status(200).json({ success: true, data: config });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
  * GET /api/admin/tariff-params - Lấy công thức định giá hiện hành + bảng giá xem trước
  */
 export function getAdminTariffParamsHandler(req, res) {

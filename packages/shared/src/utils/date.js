@@ -145,7 +145,7 @@ export const parseTripDate = (dateStr, baseDate = new Date()) => {
 /**
  * Tính toán mốc thời gian kết thúc xuất phát của chuyến xe (Timestamp ms)
  */
-const getTripEndTimestamp = (trip, baseDate = new Date()) => {
+export const getTripEndTimestamp = (trip, baseDate = new Date()) => {
   if (!trip) return 0;
   const tripDate = parseTripDate(trip.date, baseDate);
   const year = tripDate.getFullYear();

@@ -1551,17 +1551,6 @@ export default {
     s007: "Two-way trip review",
     s008: "An equal community · Building safe ride-sharing culture together"
   },
-  ticketShare: {
-    s001: "Creating the card image...",
-    s002: "Download the info card (number stays private)",
-    s003: "One-tap Zalo group message",
-    s004: "See it on the board",
-    s005: "Scan to reserve, no deposit",
-    s006: "Use your camera or Zalo to scan and view the route",
-    s007: "Confirm the trip",
-    s008: "💬 An info card that keeps the route private, with a QR code for safe lookup.",
-    s009: "Trip lookup QR code"
-  },
   zaloReentry: {
     s001: "Seats:",
     s002: "Cost:",
