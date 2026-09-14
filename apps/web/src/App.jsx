@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { SearchX, LayoutGrid, Car, Users, ChevronDown, MapPin, Navigation, Search, X, ArrowRight, ArrowLeft, Clock } from 'lucide-react';
 import { TIME_SLOTS, normalizePhoneNumber, cleanPhoneNumber } from '@carmate/shared';
 import { Segmented } from './components/ui/Chip.jsx';
@@ -38,7 +38,6 @@ import AuthModal from './components/modals/AuthModal.jsx';
 import TermsModal from './components/modals/TermsModal.jsx';
 import AiConciergeModal from './components/agent/AiConciergeModal.jsx';
 import CarPhotosModal from './components/modals/CarPhotosModal.jsx';
-import ZaloReentryModal from './components/modals/ZaloReentryModal.jsx';
 import DriverQuickConfirmModal from './components/modals/DriverQuickConfirmModal.jsx';
 import DeleteAccountModal from './components/modals/DeleteAccountModal.jsx';
 
@@ -236,7 +235,7 @@ export default function App() {
   }, [activeTab, getTabFromUrl, setActiveTab]);
 
   // Magic Link 1-Chạm Chủ xe & Apple Re-entry Card Khách quay lại web
-  const { driverConfirmCode, setDriverConfirmCode, pendingZaloBooking, setPendingZaloBooking } = useZaloReentry({
+  const { driverConfirmCode, setDriverConfirmCode } = useZaloReentry({
     isOpsPortal,
     onNavigateTab: setActiveTab
   });
@@ -339,26 +338,6 @@ export default function App() {
         try {
           document.cookie = `carmate_user_cached=${encodeURIComponent(JSON.stringify(updated))}; path=/; max-age=7776000; SameSite=Lax; secure`;
         } catch {}
-      }
-
-      // Đồng bộ hai tầng sang Persona Memory để Trợ lý và Form nạp tức thì 0ms
-      if (updated.vehicle) {
-        try {
-          const raw = localStorage.getItem('carmate_persona_memory_v1');
-          const mem = raw ? JSON.parse(raw) : { driver: { routes: [] }, passenger: { routes: [] } };
-          mem.driver = mem.driver || { routes: [] };
-          mem.driver.carProfile = {
-            vehicleCapacity: updated.vehicle.capacity || 5,
-            carType: `${updated.vehicle.brand || ''} ${updated.vehicle.model || ''}`.trim() || 'Toyota Vios (Xe 5 chỗ)',
-            carCategory: updated.vehicle.carCategory || 'family_car',
-            carPlate: updated.vehicle.plate || '',
-            carPhotos: updated.vehicle.photos || [],
-            lastUpdated: Date.now()
-          };
-          localStorage.setItem('carmate_persona_memory_v1', JSON.stringify(mem));
-        } catch (e) {
-          console.warn('[ProfileSync] Lỗi lưu personaMemory:', e);
-        }
       }
       return updated;
     } catch (err) {
@@ -471,7 +450,6 @@ export default function App() {
     driverOffers,
     passengerRequests,
     bookedEscrows,
-    setBookedEscrows,
     handleBookingCreated,
     refreshBookings,
     toastMessage,
@@ -482,7 +460,6 @@ export default function App() {
     handleDeleteTrip,
     handleConfirmBooking,
     handleConfirmCancel,
-    handleConfirmedFromZaloReentry,
     handleSendDelay,
     handleCompleteTrip,
     handleSubmitReview
@@ -802,19 +779,62 @@ export default function App() {
     }
   }, [activeTab, handleOpenMovementIntent, setActiveTab]);
 
+  // Token thế hệ cho yêu cầu tải bài đăng: chỉ phản hồi mới nhất được phép mở modal
+  const manageTripRequestRef = useRef(0);
+
   // Quản lý chuyến của chính mình: Mở trực tiếp Modal Quản lý / Chỉnh sửa tại chỗ (Stanford Ergonomics - Zero tab jump)
+  // Lưu ý: Sàn (market) truyền vào "slot" của ma trận khung giờ — đây là bản chiếu công khai
+  // (đã che biển số / ảnh, đổi tên trường: fromLocation, seatsAvailable, vehicleModel...), KHÔNG phải bản ghi chuyến gốc.
+  // Nếu đưa thẳng slot vào EditTripModal thì mọi trường sẽ rơi về giá trị mặc định và bài đăng hiển thị sai loại.
+  // Vì vậy luôn phân giải về bản ghi chuyến thật trước khi mở modal.
   const handleManageMyTrip = useCallback(
     (trip) => {
-      setEditingTrip(trip);
+      if (!trip) return;
+
+      const targetId = trip.tripId || trip.id;
+      if (!targetId) {
+        showToast('Bài đăng này chưa sẵn sàng để chỉnh sửa');
+        return;
+      }
+
+      // Chỉ đối chiếu theo id. KHÔNG dùng maskedCode làm điều kiện khớp:
+      // mã này sinh ngẫu nhiên trong dải CX-100..999 và không UNIQUE trong DB,
+      // nên có thể mở nhầm (và ghi đè) bài đăng của người khác.
+      const allTrips = [...(driverOffers || []), ...(passengerRequests || [])];
+      const match = allTrips.find((t) => String(t.id) === String(targetId));
+
+      if (match) {
+        setEditingTrip(match);
+        return;
+      }
+
+      // Chưa có trong bộ nhớ (VD: sàn trả về chuyến ngoài danh sách đang tải) -> lấy bản ghi gốc từ API.
+      // Dùng token thế hệ để bỏ qua phản hồi cũ khi người dùng bấm nhanh nhiều chuyến.
+      const requestId = ++manageTripRequestRef.current;
+      api
+        .getTrip(targetId)
+        .then((res) => {
+          if (requestId !== manageTripRequestRef.current) return;
+          if (res?.data) {
+            setEditingTrip(res.data);
+          } else {
+            showToast('Không tải được bài đăng, vui lòng thử lại');
+          }
+        })
+        .catch((err) => {
+          if (requestId !== manageTripRequestRef.current) return;
+          console.warn('[ManageMyTrip] Không tìm thấy chuyến xe:', targetId, err.message);
+          showToast('Không tải được bài đăng, vui lòng thử lại');
+        });
     },
-    [setEditingTrip]
+    [driverOffers, passengerRequests, setEditingTrip, showToast]
   );
 
   // Ghép chuyến: Nếu là bài đăng của chính mình thì mở Modal Quản lý tại chỗ thay vì chuyển tab
   const handleInitiateBook = (trip) => {
     if (checkIsMyTrip(trip)) {
       showToast('Đây là bài đăng của bạn. Bạn đang ở chế độ Quản lý chuyến xe.');
-      setEditingTrip(trip);
+      handleManageMyTrip(trip);
       return;
     }
     trackViewTrip(trip.id, `${trip.from} - ${trip.to}`);
@@ -1176,6 +1196,9 @@ export default function App() {
       )}
       {editingTrip && (
         <EditTripModal
+          // Form khởi tạo state từ props, không đồng bộ lại -> cần remount khi đổi bài đăng,
+          // nếu không các ô nhập giữ dữ liệu chuyến cũ trong khi thao tác Lưu/Xóa lại nhắm vào chuyến mới.
+          key={editingTrip.id}
           trip={editingTrip}
           onClose={() => setEditingTrip(null)}
           onSave={handleEditTrip}
@@ -1255,16 +1278,6 @@ export default function App() {
           handleViewTripInMarket(trip);
         }}
       />
-
-      {pendingZaloBooking && (
-        <ZaloReentryModal
-          booking={pendingZaloBooking}
-          onClose={() => setPendingZaloBooking(null)}
-          onConfirmedSchedule={handleConfirmedFromZaloReentry}
-          onCancelBooking={(escrowId) => handleConfirmCancel(escrowId, { reason: 'Khách đổi xe khác' })}
-          onShowToast={showToast}
-        />
-      )}
 
       {driverConfirmCode && (
         <DriverQuickConfirmModal
