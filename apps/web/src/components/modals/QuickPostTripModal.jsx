@@ -370,14 +370,14 @@ export default function QuickPostTripModal({
           {/* CỔNG XÁC THỰC SỐ ĐIỆN THOẠI (chặn trước khi điền bất cứ thứ gì)    */}
           {/* ================================================================= */}
           {!phoneVerified && (
-            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border-2 border-amber-400/70 dark:border-amber-400/40 shadow-xs space-y-3">
+            <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-500/[0.07] border border-amber-300/50 dark:border-amber-400/25 space-y-3">
               <div className="flex items-start gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <ShieldCheck className="w-5 h-5 text-amber-500/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <span className="block text-xs font-bold uppercase font-mono text-amber-800 dark:text-amber-200">
+                  <span className="block text-[13px] font-bold text-slate-900 dark:text-white">
                     Xác thực số điện thoại
                   </span>
-                  <p className="text-[11.5px] text-amber-800/90 dark:text-amber-200/80 leading-relaxed mt-0.5">
+                  <p className="text-[11.5px] text-slate-600 dark:text-slate-400 leading-relaxed mt-0.5">
                     Khách cần gọi được cho bạn để lên xe, nên cần xác thực số trước khi đăng chuyến.
                   </p>
                 </div>
@@ -391,13 +391,13 @@ export default function QuickPostTripModal({
                     value={phoneInput}
                     onChange={(e) => setPhoneInput(e.target.value)}
                     placeholder="Số điện thoại (VD: 0984 883 750)"
-                    className="flex-1 min-w-0 h-11 px-3 rounded-xl bg-white dark:bg-[#0f1117] border border-amber-300 dark:border-amber-400/30 text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                    className="flex-1 min-w-0 h-11 px-3 rounded-xl bg-white dark:bg-[#0f1117] border border-slate-300 dark:border-white/15 text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
                   />
                   <button
                     type="button"
                     onClick={handleSendOtp}
                     disabled={isPhoneBusy}
-                    className="h-11 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-950 text-xs font-black uppercase tracking-wide shrink-0 cursor-pointer active:scale-95 transition-all"
+                    className="h-11 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-60 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all"
                   >
                     {isPhoneBusy ? '...' : 'Gửi mã'}
                   </button>
@@ -412,13 +412,13 @@ export default function QuickPostTripModal({
                       value={otpInput}
                       onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
                       placeholder="Mã 6 số"
-                      className="flex-1 min-w-0 h-11 px-3 rounded-xl bg-white dark:bg-[#0f1117] border border-amber-300 dark:border-amber-400/30 text-base font-mono font-black tracking-[0.3em] text-center text-slate-900 dark:text-white outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="flex-1 min-w-0 h-11 px-3 rounded-xl bg-white dark:bg-[#0f1117] border border-slate-300 dark:border-white/15 text-base font-mono font-black tracking-[0.3em] text-center text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
                     />
                     <button
                       type="button"
                       onClick={handleVerifyOtp}
                       disabled={isPhoneBusy}
-                      className="h-11 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-slate-950 text-xs font-black uppercase tracking-wide shrink-0 cursor-pointer active:scale-95 transition-all"
+                      className="h-11 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-60 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all"
                     >
                       {isPhoneBusy ? '...' : 'Xác thực'}
                     </button>
@@ -431,7 +431,7 @@ export default function QuickPostTripModal({
                         setOtpInput('');
                         setDevOtpHint('');
                       }}
-                      className="text-amber-700 dark:text-amber-300 underline cursor-pointer"
+                      className="text-slate-500 dark:text-slate-400 underline cursor-pointer"
                     >
                       Đổi số khác
                     </button>
@@ -439,7 +439,7 @@ export default function QuickPostTripModal({
                       type="button"
                       onClick={handleSendOtp}
                       disabled={otpCooldown > 0 || isPhoneBusy}
-                      className="text-amber-700 dark:text-amber-300 underline disabled:no-underline disabled:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
+                      className="text-[#0071e3] dark:text-sky-400 underline disabled:no-underline disabled:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
                     >
                       {otpCooldown > 0 ? `Gửi lại sau ${otpCooldown}s` : 'Gửi lại mã'}
                     </button>
