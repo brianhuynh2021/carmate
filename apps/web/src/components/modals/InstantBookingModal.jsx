@@ -34,7 +34,7 @@ import { CarMateBadge } from '../ui/Logo.jsx';
 /**
  * Trả về chuỗi Thứ và Ngày/Tháng theo định dạng chuẩn CarMate (ví dụ: "Thứ 2 (14/09)")
  */
-function formatTripTimeHeader(departureLabel = '04:30', departureDate = null) {
+function formatTripTimeHeader(_departureLabel = '04:30', departureDate = null) {
   let targetDate = new Date();
 
   if (departureDate === 'Ngày mai') {
@@ -78,7 +78,6 @@ export default function InstantBookingModal({
   onShowToast
 }) {
   const hasUserPhone = Boolean(currentUser?.phone && isValidVietnamesePhone(currentUser.phone));
-  const hasZalo = currentUser?.authProvider === 'zalo' || currentUser?.hasZalo;
 
   // Bước 1: Xác thực nhanh SĐT (chỉ khi chưa có SĐT)
   // Bước 3: Match & Reveal (Chốt thành công & mở khoá thông tin chủ xe - BỎ HẲN BƯỚC 2 DƯ THỪA)
@@ -153,28 +152,43 @@ export default function InstantBookingModal({
       setStep(3);
     } catch (err) {
       console.warn('[InstantBookingModal] Lỗi tạo booking:', err.message);
-      // Fallback lưu cục bộ ngay cả khi lỗi mạng để khách không bị mất vé
+      // KHÔNG dựng vé cục bộ khi máy chủ chưa nhận: chỗ ngồi chưa hề được giữ,
+      // mà khách lại thấy màn hình "đã giữ chỗ thành công" cùng số điện thoại Chủ xe.
+      // Mở lại chốt chặn để khách có thể thử lại chuyến này.
       try {
-        const cached = JSON.parse(localStorage.getItem('carmate_cached_bookings') || '[]');
-        const updated = [bookingPayload, ...cached.filter((b) => (b.escrowId || b.id) !== (bookingPayload.escrowId || bookingPayload.id))];
-        localStorage.setItem('carmate_cached_bookings', JSON.stringify(updated.slice(0, 50)));
+        const tripKey = trip.tripId || trip.id;
+        if (tripKey) sessionStorage.removeItem(`carmate_autobooked_${tripKey}`);
       } catch {}
+      hasAutoBookedRef.current = false;
 
-      setConfirmedBooking(bookingPayload);
-      onBookingSuccess?.(bookingPayload);
-      setStep(3);
+      onShowToast?.('Chưa giữ được chỗ do lỗi kết nối. Vui lòng thử lại.');
+      onClose?.();
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Tự động giữ chỗ ngay lập tức khi khách đã có SĐT (1-chạm Stanford Ergonomics)
+  // Tự động giữ chỗ ngay lập tức khi khách đã có SĐT (1-chạm Stanford Ergonomics).
+  //
+  // Chốt chặn phải BỀN VỮNG theo chuyến, không dùng useRef: modal chỉ được render khi
+  // `selectedBookingTrip` khác null, nên mỗi lần đóng rồi mở lại (kể cả khi bấm quay lại)
+  // component unmount và ref reset về false -> mở lại N lần là tạo N vé thật khác nhau.
   useEffect(() => {
-    if (!isOpen || !trip || hasAutoBookedRef.current) return;
-    if (hasUserPhone) {
-      hasAutoBookedRef.current = true;
-      executeBooking(currentUser.phone, currentUser.name);
+    if (!isOpen || !trip || !hasUserPhone) return;
+
+    const tripKey = trip.tripId || trip.id;
+    if (!tripKey) return;
+    const guardKey = `carmate_autobooked_${tripKey}`;
+
+    try {
+      if (sessionStorage.getItem(guardKey)) return;
+      sessionStorage.setItem(guardKey, String(Date.now()));
+    } catch {
+      // Không đọc/ghi được sessionStorage -> lùi về chốt chặn trong phiên render hiện tại
+      if (hasAutoBookedRef.current) return;
     }
+    hasAutoBookedRef.current = true;
+    executeBooking(currentUser.phone, currentUser.name);
   }, [isOpen, trip, hasUserPhone]);
 
   // ── XỬ LÝ BƯỚC 1: XÁC THỰC SĐT (10 GIÂY) ─────────────────────────────
