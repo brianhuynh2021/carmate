@@ -162,7 +162,8 @@ export default function CorridorSearchBoard({
   onViewBookedTab,
   onAuthSuccess,
   onShowToast,
-  onBookingCreated
+  onBookingCreated,
+  onRequireAuth
 }) {
   const { t } = useI18n();
   const corridors = useMemo(() => getActiveCorridors(), []);
@@ -1097,9 +1098,6 @@ export default function CorridorSearchBoard({
                     trip={trip}
                     isEarliest={idx === 0}
                     isMyTrip={isMyTrip}
-                    tripIndex={idx}
-                    originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
-                    destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
                     segmentPrice={carmateSegmentPrice}
                     onSelectTrip={(selectedTrip) => {
                       setSelectedDetailTrip(selectedTrip);
@@ -1284,6 +1282,14 @@ export default function CorridorSearchBoard({
           destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
           segmentPrice={carmateSegmentPrice}
           onConfirmBook={(tripToBook, bookedSeats = 1) => {
+            // Giữ chỗ bắt buộc đăng nhập: vé gắn với một SĐT đã xác thực, và chỉ khi
+            // đó mới mở khoá thông tin liên hệ hai chiều với Chủ xe.
+            if (!currentUser) {
+              setSelectedDetailTrip(null);
+              onShowToast?.('Vui lòng đăng nhập để giữ chỗ chuyến xe');
+              onRequireAuth?.();
+              return;
+            }
             setSelectedDetailTrip(null);
             setSelectedBookingTrip({ ...tripToBook, initialSeats: bookedSeats });
           }}
@@ -1443,6 +1449,7 @@ export default function CorridorSearchBoard({
       {/* ── MODAL GIỮ CHỖ TỨC THÌ (MATCH & REVEAL 3 BƯỚC) ── */}
       {selectedBookingTrip && (
         <InstantBookingModal
+          onRequireAuth={onRequireAuth}
           isOpen={Boolean(selectedBookingTrip)}
           onClose={() => setSelectedBookingTrip(null)}
           onViewBookedTab={(tab, booking) => {

@@ -70,7 +70,8 @@ export default function StationRiderView({
   onShowToast,
   onViewBookedTab,
   onBookingCreated,
-  onAuthSuccess
+  onAuthSuccess,
+  onRequireAuth
 }) {
   const { t } = useI18n();
   // Điểm mút đầu A của hành lang — lấy từ CORRIDORS registry thay vì chép tay.
@@ -2849,6 +2850,7 @@ export default function StationRiderView({
       {/* ── MODAL GIỮ CHỖ TỨC THÌ (MATCH & REVEAL) ── */}
       {selectedBookingTrip && (
         <InstantBookingModal
+          onRequireAuth={onRequireAuth}
           isOpen={Boolean(selectedBookingTrip)}
           onClose={() => setSelectedBookingTrip(null)}
           trip={selectedBookingTrip}
