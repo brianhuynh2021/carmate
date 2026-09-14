@@ -469,7 +469,7 @@ export default function CorridorSearchBoard({
 
   // Giá chặng chia sẻ chuẩn CarMate (tính toán động theo cự ly thực tế giữa 2 trạm)
   const carmateSegmentPrice = useMemo(() => {
-    return tariff?.pricePerSeat || 165000;
+    return tariff?.pricePerSeat ?? null;
   }, [tariff]);
 
   // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang (ORDER BY date ASC, time ASC)

@@ -8,7 +8,6 @@ import {
 import {
   getDailyFuelPrice,
   setDailyFuelPrice,
-  resetDailyFuelPrice,
   calculateDynamicTariffByDistance,
   DEFAULT_DAILY_FUEL_PRICE
 } from '../packages/shared/src/index.js';

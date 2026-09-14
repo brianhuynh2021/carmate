@@ -788,6 +788,31 @@ export const api = {
     return request('/admin/fuel-price/reset', {
       method: 'POST'
     });
+  },
+
+  // ── Công thức định giá: chỉ Quản trị viên được nâng tham số ──
+  async getAdminTariffParams() {
+    return request('/admin/tariff-params');
+  },
+
+  async previewAdminTariffParams(params) {
+    return request('/admin/tariff-params/preview', {
+      method: 'POST',
+      body: JSON.stringify({ params })
+    });
+  },
+
+  async updateAdminTariffParams(data) {
+    return request('/admin/tariff-params', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async resetAdminTariffParams() {
+    return request('/admin/tariff-params/reset', {
+      method: 'POST'
+    });
   }
 };
 
