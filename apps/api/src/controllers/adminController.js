@@ -21,6 +21,9 @@ import {
   getTrustRules,
   saveTrustRules,
   resetTrustRules,
+  getDailyFuelPriceConfig,
+  saveDailyFuelPriceConfig,
+  resetDailyFuelPriceConfig,
   getDeletionRequests,
   processDeletionRequest,
   deleteUserAccount,
@@ -682,6 +685,87 @@ export function resetAdminTrustRulesHandler(req, res) {
       success: true,
       message: 'Đã khôi phục quy tắc tín nhiệm về mặc định',
       data: defaultRules
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * =============================================================================
+ * QUẢN TRỊ GIÁ XĂNG DẦU HÀNG NGÀY (DAILY FUEL PRICE CONTROLLER)
+ * =============================================================================
+ */
+
+/**
+ * GET /api/fuel-price - Lấy giá xăng hiện tại (Công khai, Zero Auth)
+ */
+export function getPublicFuelPriceHandler(req, res) {
+  try {
+    const config = getDailyFuelPriceConfig();
+    return res.status(200).json({
+      success: true,
+      data: config
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/admin/fuel-price - Lấy cấu hình giá xăng dầu (Admin Engine)
+ */
+export function getAdminFuelPriceHandler(req, res) {
+  try {
+    const config = getDailyFuelPriceConfig();
+    return res.status(200).json({
+      success: true,
+      data: config
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * PUT /api/admin/fuel-price - Admin tự cập nhật giá xăng RON 95-III
+ */
+export function updateAdminFuelPriceHandler(req, res) {
+  try {
+    const { ron95Price, note } = req.body || {};
+    if (!ron95Price) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng cung cấp mức giá xăng RON 95 (VNĐ/Lít)'
+      });
+    }
+
+    const saved = saveDailyFuelPriceConfig({
+      ron95Price,
+      updatedBy: req.admin?.phone || 'admin',
+      note
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Đã cập nhật giá xăng RON 95 thành công: ${new Intl.NumberFormat('vi-VN').format(saved.ron95Price)}đ/Lít`,
+      data: saved
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/admin/fuel-price/reset - Khôi phục giá xăng về mức tham chiếu mặc định (24.120đ)
+ */
+export function resetAdminFuelPriceHandler(req, res) {
+  try {
+    const config = resetDailyFuelPriceConfig();
+    return res.status(200).json({
+      success: true,
+      message: 'Đã khôi phục giá xăng RON 95 về mức tham chiếu mặc định (24.120đ)',
+      data: config
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

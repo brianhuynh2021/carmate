@@ -766,6 +766,28 @@ export const api = {
 
   async getSchedulerStatus() {
     return request('/admin/scheduler-status');
+  },
+
+  // ── Chỉ Số Nhiên Liệu Hàng Ngày (Daily Petrolimex Fuel Index) ───────
+  async getFuelPrice() {
+    return request('/fuel-price');
+  },
+
+  async getAdminFuelPrice() {
+    return request('/admin/fuel-price');
+  },
+
+  async updateAdminFuelPrice(data) {
+    return request('/admin/fuel-price', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async resetAdminFuelPrice() {
+    return request('/admin/fuel-price/reset', {
+      method: 'POST'
+    });
   }
 };
 

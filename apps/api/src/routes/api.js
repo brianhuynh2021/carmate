@@ -106,7 +106,11 @@ import {
   clearAdminTestData,
   clearAdminBookings,
   requireAdmin,
-  createDriverProfileHandler
+  createDriverProfileHandler,
+  getPublicFuelPriceHandler,
+  getAdminFuelPriceHandler,
+  updateAdminFuelPriceHandler,
+  resetAdminFuelPriceHandler
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
 
@@ -256,6 +260,9 @@ router.get('/corridor/timeline', corridorTimelineHandler);
 // --- Danh Bạ Nhà Xe Tuyến Cố Định (lưới đỡ khi chưa có chuyến CarMate) ---
 router.get('/transit-directory', getTransitDirectoryHandler);
 
+// --- Chỉ Số Nhiên Liệu Hàng Ngày (Daily Petrolimex Fuel Index) ---
+router.get('/fuel-price', getPublicFuelPriceHandler);
+
 // --- Thông Báo Đẩy & Hộp Thư In-App (Kênh đánh thức khách ngoài giờ mở app) ---
 router.get('/notifications/vapid-key', getVapidKeyHandler);
 router.post('/notifications/subscribe', optionalAuth, subscribePushHandler);
@@ -285,6 +292,9 @@ router.get('/admin/ai-intelligence', requireAdmin, getAdminAiIntelligence);
 router.get('/admin/trust-rules', requireAdmin, getAdminTrustRulesHandler);
 router.put('/admin/trust-rules', requireAdmin, updateAdminTrustRulesHandler);
 router.post('/admin/trust-rules/reset', requireAdmin, resetAdminTrustRulesHandler);
+router.get('/admin/fuel-price', requireAdmin, getAdminFuelPriceHandler);
+router.put('/admin/fuel-price', requireAdmin, updateAdminFuelPriceHandler);
+router.post('/admin/fuel-price/reset', requireAdmin, resetAdminFuelPriceHandler);
 router.get('/admin/deletion-requests', requireAdmin, listDeletionRequestsHandler);
 router.post('/admin/deletion-requests/:id/process', requireAdmin, processDeletionRequestHandler);
 router.delete('/admin/users/:id', requireAdmin, deleteUserAdminHandler);

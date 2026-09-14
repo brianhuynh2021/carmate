@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 // Không import dữ liệu mẫu vào đây: sàn chỉ được hiển thị chuyến từ máy chủ.
 // Bỏ hẳn đường import khiến dữ liệu mẫu không thể vô tình quay lại giao diện.
-import { getTomorrowISO, normalizePhoneNumber } from '@carmate/shared';
+import { getTomorrowISO, normalizePhoneNumber, setDailyFuelPrice } from '@carmate/shared';
 import api from '../api/client.js';
 import { trackInitiateBooking } from '../utils/analytics.js';
 import { triggerMacNotification } from '../components/common/AppleMacNotification.jsx';
@@ -86,10 +86,11 @@ export default function useTripsData({
     async function fetchBackendData() {
       try {
         const phoneParam = currentUser?.phone ? { phone: currentUser.phone } : {};
-        const [tripsRes, bookingsRes, statsRes] = await Promise.allSettled([
+        const [tripsRes, bookingsRes, statsRes, fuelRes] = await Promise.allSettled([
           api.getTrips(),
           api.getBookings(phoneParam),
-          api.getStats()
+          api.getStats(),
+          api.getFuelPrice()
         ]);
 
         if (!active) return;
@@ -112,6 +113,13 @@ export default function useTripsData({
 
         if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
           setPlatformStats(statsRes.value.data);
+        }
+
+        if (fuelRes.status === 'fulfilled' && fuelRes.value?.success && fuelRes.value.data) {
+          const fuel = fuelRes.value.data;
+          if (fuel.ron95Price) {
+            setDailyFuelPrice(fuel.ron95Price, fuel.updatedAt, fuel.updatedBy, fuel.source);
+          }
         }
       } catch (err) {
         console.warn('[CarMate App] API sync warning:', err);

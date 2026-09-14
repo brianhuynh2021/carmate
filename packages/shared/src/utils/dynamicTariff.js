@@ -27,11 +27,13 @@ const WEAR_AND_TEAR_RATIO = 0.10;
 const DRIVER_PAYOUT_RATIO = 0.90;
 
 // Giá xăng RON 95-III tham chiếu mặc định (VNĐ/Lít)
-const DEFAULT_DAILY_FUEL_PRICE = 24120;
+export const DEFAULT_DAILY_FUEL_PRICE = 24120;
 
 // Biến lưu trữ giá xăng trong phiên làm việc
 let currentDailyFuelPrice = DEFAULT_DAILY_FUEL_PRICE;
 let lastFuelUpdatedAt = new Date().toISOString();
+let lastFuelUpdatedBy = 'system';
+let lastFuelSource = 'default';
 
 /**
  * Lấy chỉ số giá xăng RON 95-III hiện tại
@@ -41,20 +43,38 @@ export function getDailyFuelPrice() {
     ron95Price: currentDailyFuelPrice,
     unit: 'VNĐ/Lít',
     fuelType: 'RON 95-III',
-    updatedAt: lastFuelUpdatedAt
+    updatedAt: lastFuelUpdatedAt,
+    updatedBy: lastFuelUpdatedBy,
+    source: lastFuelSource,
+    defaultPrice: DEFAULT_DAILY_FUEL_PRICE,
+    isDefault: currentDailyFuelPrice === DEFAULT_DAILY_FUEL_PRICE
   };
 }
 
 /**
- * Cập nhật giá xăng RON 95-III hàng ngày (từ API hoặc quản trị viên)
+ * Cập nhật giá xăng RON 95-III hàng ngày (từ API hoặc Quản trị viên)
+ * Bất biến MIT: Giới hạn an toàn trong dải [15.000đ, 45.000đ/Lít]
  */
-export function setDailyFuelPrice(newPrice) {
+export function setDailyFuelPrice(newPrice, updatedAt = null, updatedBy = 'system', source = 'admin') {
   const priceNum = Number(newPrice);
-  if (Number.isFinite(priceNum) && priceNum >= 15000 && priceNum <= 45000) {
-    currentDailyFuelPrice = Math.round(priceNum);
-    lastFuelUpdatedAt = new Date().toISOString();
-    return currentDailyFuelPrice;
+  if (!Number.isFinite(priceNum) || priceNum < 15000 || priceNum > 45000) {
+    throw new Error('Giá xăng RON 95 không hợp lệ (phải từ 15.000đ đến 45.000đ/lít)');
   }
+  currentDailyFuelPrice = Math.round(priceNum);
+  lastFuelUpdatedAt = updatedAt || new Date().toISOString();
+  lastFuelUpdatedBy = updatedBy;
+  lastFuelSource = source;
+  return currentDailyFuelPrice;
+}
+
+/**
+ * Khôi phục giá xăng RON 95-III về mức tham chiếu mặc định
+ */
+export function resetDailyFuelPrice() {
+  currentDailyFuelPrice = DEFAULT_DAILY_FUEL_PRICE;
+  lastFuelUpdatedAt = new Date().toISOString();
+  lastFuelUpdatedBy = 'system';
+  lastFuelSource = 'default';
   return currentDailyFuelPrice;
 }
 
@@ -162,6 +182,7 @@ export function calculateDynamicTariffByDistance(distanceKm, options = {}) {
     fuelCost: tripCost.fuelCost,
     botFee: tripCost.botFee,
     directCost: tripCost,
+    tripCost,
     totalTripCost: tripCost.totalDirectCost,
     pMin,
     pMax,
