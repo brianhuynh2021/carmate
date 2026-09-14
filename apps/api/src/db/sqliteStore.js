@@ -19,7 +19,12 @@ import {
   setDailyFuelPrice,
   getDailyFuelPrice,
   resetDailyFuelPrice,
-  DEFAULT_DAILY_FUEL_PRICE
+  DEFAULT_DAILY_FUEL_PRICE,
+  getTariffParams,
+  setTariffParams,
+  resetTariffParams,
+  validateTariffParams,
+  DEFAULT_TARIFF_PARAMS
 } from '@carmate/shared';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -528,15 +533,43 @@ export async function initDB() {
     const allSeeds = [...INITIAL_DRIVER_OFFERS, ...INITIAL_PASSENGER_REQUESTS];
     const updateStmt = db.prepare(`
       UPDATE trips 
-      SET date = ?, timeSlot = ?, payload = ?
+      SET date = ?, timeSlot = ?, price = ?, payload = ?
       WHERE id = ?
     `);
+    // Chuyến mẫu của tuyến đã gỡ khỏi mockData (ngoài hành lang có trạm ảo thật)
+    // phải biến mất khỏi sàn, nếu không chúng nằm lại vĩnh viễn trong SQLite và
+    // hiển thị như chuyến thật mà nền tảng không phục vụ được.
+    const liveSeedIds = new Set(allSeeds.map((s) => s.id));
+    const staleSeeds = db
+      .prepare("SELECT id FROM trips WHERE id GLOB 'DRV-[0-9]*' OR id GLOB 'REQ-[0-9]*'")
+      .all()
+      .map((r) => r.id)
+      .filter((id) => !liveSeedIds.has(id));
+
+    const deleteTripStmt = db.prepare('DELETE FROM trips WHERE id = ?');
+    // Cột targetTripId chỉ có ở một số bản CSDL: dò trước, vì prepare() với cột
+    // không tồn tại ném lỗi ngay chứ không đợi tới lúc chạy.
+    const bookingCols = db.prepare('PRAGMA table_info(bookings)').all().map((c) => c.name);
+    const hasTargetTripId = bookingCols.includes('targetTripId');
+    const deleteBookingStmt = hasTargetTripId
+      ? db.prepare('DELETE FROM bookings WHERE tripId = ? OR targetTripId = ?')
+      : db.prepare('DELETE FROM bookings WHERE tripId = ?');
+
     const syncSeeds = db.transaction(() => {
       for (const s of allSeeds) {
-        updateStmt.run(s.date || 'Hôm nay', s.timeSlot || '07:00-08:00', JSON.stringify(s), s.id);
+        const price = Number(s.basePricePerSeat || s.expectedPrice || 0) || null;
+        updateStmt.run(s.date || 'Hôm nay', s.timeSlot || '07:00-08:00', price, JSON.stringify(s), s.id);
+      }
+      for (const id of staleSeeds) {
+        if (hasTargetTripId) deleteBookingStmt.run(id, id);
+        else deleteBookingStmt.run(id);
+        deleteTripStmt.run(id);
       }
     });
     syncSeeds();
+    if (staleSeeds.length > 0) {
+      console.log(`[SQLite DB] Đã gỡ ${staleSeeds.length} chuyến mẫu của tuyến không còn phục vụ.`);
+    }
   } catch (err) {
     console.warn('[SQLite DB] Bỏ qua đồng bộ seed:', err.message);
   }
@@ -557,6 +590,19 @@ export async function initDB() {
     }
   } catch (err) {
     console.warn('[SQLite DB] Không thể nạp daily_fuel_price ban đầu:', err.message);
+  }
+
+  // Nạp bộ tham số công thức định giá do Quản trị viên cấu hình
+  try {
+    const tariffConfig = getTariffParamsConfig();
+    if (tariffConfig && !tariffConfig.isDefault) {
+      setTariffParams(tariffConfig, tariffConfig.updatedAt, tariffConfig.updatedBy || 'admin', 'sqlite');
+      console.log(
+        `\x1b[33m[Tariff Engine]\x1b[0m Công thức định giá nạp từ cấu hình Quản trị viên (cập nhật ${tariffConfig.updatedAt})`
+      );
+    }
+  } catch (err) {
+    console.warn('[SQLite DB] Không thể nạp tariff_params ban đầu:', err.message);
   }
 
   return db;
@@ -1867,6 +1913,91 @@ export function saveDailyFuelPriceConfig({ ron95Price, updatedBy = 'admin', note
     ...config,
     isDefault: false
   };
+}
+
+/**
+ * Đọc bộ tham số công thức định giá đang lưu trong SQLite.
+ * Không có bản ghi nào thì trả về bộ mặc định của nền tảng.
+ */
+export function getTariffParamsConfig() {
+  const database = getRawDB();
+  try {
+    const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('tariff_params');
+    if (row && row.value) {
+      const parsed = JSON.parse(row.value);
+      const { params, errors } = validateTariffParams(parsed);
+      if (errors.length === 0) {
+        return {
+          ...params,
+          updatedAt: parsed.updatedAt || new Date().toISOString(),
+          updatedBy: parsed.updatedBy || 'admin',
+          note: parsed.note || '',
+          source: 'admin',
+          isDefault: false
+        };
+      }
+      console.warn('[SQLite DB] tariff_params đã lưu không hợp lệ, dùng mặc định:', errors.join(' '));
+    }
+  } catch (e) {
+    console.warn('[SQLite DB] Lỗi đọc tariff_params:', e.message);
+  }
+  const current = getTariffParams();
+  return {
+    ...DEFAULT_TARIFF_PARAMS,
+    updatedAt: current.updatedAt,
+    updatedBy: 'default',
+    note: 'Bộ tham số công thức mặc định của nền tảng',
+    source: 'default',
+    isDefault: true
+  };
+}
+
+/**
+ * Lưu bộ tham số công thức định giá (chỉ Quản trị viên).
+ * Ghi vào SQLite rồi áp ngay vào engine in-memory của @carmate/shared,
+ * để giá mọi chuyến trên sàn đổi theo tức thì.
+ */
+export function saveTariffParamsConfig({ params, updatedBy = 'admin', note = '' }) {
+  const { params: cleanParams, errors } = validateTariffParams(params || {});
+  if (errors.length > 0) {
+    throw new Error(errors.join(' '));
+  }
+  const nowISO = new Date().toISOString();
+  const config = {
+    ...cleanParams,
+    updatedAt: nowISO,
+    updatedBy: String(updatedBy || 'admin').trim(),
+    note: String(note || '').trim(),
+    source: 'admin'
+  };
+
+  const database = getRawDB();
+  database
+    .prepare(
+      `
+    INSERT INTO key_values (key, value) VALUES ('tariff_params', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `
+    )
+    .run(JSON.stringify(config));
+
+  setTariffParams(cleanParams, nowISO, config.updatedBy, 'admin');
+
+  return { ...config, isDefault: false };
+}
+
+/**
+ * Khôi phục công thức định giá về bộ tham số mặc định của nền tảng.
+ */
+export function resetTariffParamsConfig() {
+  const database = getRawDB();
+  try {
+    database.prepare('DELETE FROM key_values WHERE key = ?').run('tariff_params');
+  } catch (e) {
+    console.warn('[SQLite DB] Lỗi xoá tariff_params:', e.message);
+  }
+  resetTariffParams();
+  return getTariffParamsConfig();
 }
 
 /**

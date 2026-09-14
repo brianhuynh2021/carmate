@@ -266,14 +266,10 @@ export default function MovementIntentModal({
 
   // Tính định mức Shapley Value (Bất biến MIT & Zero Surge)
   const tariff = useMemo(() => {
-    try {
-      return getFixedSegmentTariff(originHubId, destHubId);
-    } catch {
-      return { pricePerSeat: 150000, driverPayoutFor2Seats: 270000, distanceKm: 95 };
-    }
+    return getFixedSegmentTariff(originHubId, destHubId);
   }, [originHubId, destHubId]);
 
-  const pricePerSeat = tariff.pricePerSeat || 150000;
+  const pricePerSeat = tariff.pricePerSeat;
   const totalPriceForRider = pricePerSeat * seats;
   const driverPayout = pricePerSeat * seats;
 

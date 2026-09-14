@@ -26,14 +26,47 @@ import {
   Package,
   Box
 } from 'lucide-react';
-import { TIME_SLOTS, formatVND, mapTimeToSlot, isTimeInSlot, VEHICLE_SEAT_CONFIGS, normalizePhotoUrl, parseLocation } from '@carmate/shared';
+import {
+  TIME_SLOTS,
+  formatVND,
+  mapTimeToSlot,
+  isTimeInSlot,
+  VEHICLE_SEAT_CONFIGS,
+  normalizePhotoUrl,
+  VIRTUAL_HUBS,
+  getVirtualHubById,
+  getFixedSegmentTariff,
+  getDefaultCorridor
+} from '@carmate/shared';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
-import LocationSuggestInput from '../ui/LocationSuggestInput.jsx';
 import { getSuggestedWaypoints } from '../../utils/vietnamLocations.js';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import PlateMaskModal from './PlateMaskModal.jsx';
 import { useI18n } from '../../i18n/index.jsx';
+
+const DEFAULT_CORRIDOR = getDefaultCorridor();
+
+/**
+ * Dò một chuyến cũ (lưu điểm đi/đến bằng chữ tự do) về mã trạm ảo.
+ * Ưu tiên mã trạm đã lưu; không có thì so khớp tên trạm với chuỗi người dùng gõ.
+ * Dò không ra trả về chuỗi rỗng để form buộc Chủ xe chọn lại đúng trạm.
+ */
+function resolveHubId(explicitHubId, freeText) {
+  if (explicitHubId && getVirtualHubById(explicitHubId)) return explicitHubId;
+
+  const raw = String(freeText || '').trim().toLowerCase();
+  if (!raw) return '';
+
+  // So khớp tên dài trước để "ngã 4 bình phước" không bị "bình phước" nuốt mất
+  const candidates = [...VIRTUAL_HUBS]
+    .map((h) => ({ hub: h, key: String(h.shortName || h.name || '').toLowerCase() }))
+    .filter((c) => c.key)
+    .sort((a, b) => b.key.length - a.key.length);
+
+  const hit = candidates.find((c) => raw.includes(c.key) || c.key.includes(raw));
+  return hit ? hit.hub.id : '';
+}
 
 export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, onDelete }) {
   const { t } = useI18n();
@@ -43,15 +76,17 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   const [currentStatus, setCurrentStatus] = useState(trip?.status || 'active');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [fromLocation, setFromLocation] = useState(trip?.from || '');
-  const [toLocation, setToLocation] = useState(trip?.to || '');
-  const [pickupSpot, setPickupSpot] = useState(
-    () => trip?.pickupSpot || parseLocation(trip?.from || '').sub || ''
+  // ── TỌA ĐỘ MA TRẬN: trạm đón/trả là lựa chọn từ danh mục trạm ảo, không gõ tay ──
+  // Chuyến cũ lưu điểm đi/đến bằng chữ tự do, nên phải dò ngược về mã trạm một lần
+  // khi mở form. Dò không ra thì để trống và bắt Chủ xe chọn lại cho đúng trạm.
+  const [originHubId, setOriginHubId] = useState(() => resolveHubId(trip?.originHubId, trip?.from));
+  const [destHubId, setDestHubId] = useState(() => resolveHubId(trip?.destinationHubId, trip?.to));
+
+  // Chuyến đã có khách đặt thì tọa độ bị khoá cứng (xem BẤT BIẾN TỌA ĐỘ ở API).
+  const activeBookingCount = Number(
+    trip?.activeBookingCount ?? trip?.bookedSeats ?? trip?.bookingsCount ?? 0
   );
-  const [dropoffSpot, setDropoffSpot] = useState(
-    () => trip?.dropoffSpot || parseLocation(trip?.to || '').sub || ''
-  );
-  const [price, setPrice] = useState(trip?.basePricePerSeat || trip?.expectedPrice || 150000);
+  const isMatrixLocked = activeBookingCount > 0;
   const [vehicleCapacity, setVehicleCapacity] = useState(() => {
     if (trip?.vehicleType === 'truck_light' || trip?.isCargoVehicle || (trip?.carType && /xe tải|tải nhẹ|k200|k250|porter|h150|qkr/i.test(trip?.carType))) {
       return 'truck_light';
@@ -172,21 +207,35 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     }
   };
 
-  // Đảo chiều điểm đi / điểm đến ⇄
-  const handleSwapRoute = () => {
-    const temp = fromLocation;
-    setFromLocation(toLocation);
-    setToLocation(temp);
+  const originHub = useMemo(() => getVirtualHubById(originHubId) || null, [originHubId]);
+  const destHub = useMemo(() => getVirtualHubById(destHubId) || null, [destHubId]);
 
-    const tempSpot = pickupSpot;
-    setPickupSpot(dropoffSpot);
-    setDropoffSpot(tempSpot);
+  // Danh mục trạm ảo của hành lang, dùng cho cả hai ô chọn trạm
+  const corridorHubs = useMemo(() => {
+    return VIRTUAL_HUBS.filter((h) => h.corridor === DEFAULT_CORRIDOR.dataKey);
+  }, []);
+
+  // ── GIÁ LÀ ĐẦU RA CỦA CÔNG THỨC ──
+  // Chủ xe không gõ giá. Chọn xong cặp trạm là giá hiện ra, đúng bằng con số
+  // máy chủ sẽ tính lại khi lưu (cùng một hàm getFixedSegmentTariff).
+  const tariff = useMemo(() => {
+    if (!originHubId || !destHubId || originHubId === destHubId) return null;
+    return getFixedSegmentTariff(originHubId, destHubId);
+  }, [originHubId, destHubId]);
+
+  const price = tariff?.pricePerSeat ?? Number(trip?.basePricePerSeat || trip?.expectedPrice || 0);
+
+  // Đảo chiều trạm đón ⇄ trạm trả
+  const handleSwapRoute = () => {
+    if (isMatrixLocked) return;
+    setOriginHubId(destHubId);
+    setDestHubId(originHubId);
   };
 
   // Tính toán gợi ý mốc đón trả thông minh theo tuyến hiện tại
   const suggestedWaypoints = useMemo(() => {
-    return getSuggestedWaypoints(fromLocation, toLocation);
-  }, [fromLocation, toLocation]);
+    return getSuggestedWaypoints(originHub?.shortName || '', destHub?.shortName || '');
+  }, [originHub, destHub]);
 
   // Thêm nhanh mốc đón trả vào ô ghi chú
   const handleAddWaypoint = (wp) => {
@@ -200,26 +249,16 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
     if (saving) return;
-    if (!fromLocation.trim() || !toLocation.trim()) return;
+    if (!originHub || !destHub || originHubId === destHubId) return;
     setSaving(true);
 
     const slot = TIME_SLOTS.find((s) => s.id === timeSlot) || TIME_SLOTS[2];
-    
-    // Khử triệt để rò rỉ từ khoá xe / số ghế dính vào tên địa danh
-    const VEHICLE_LEAK_REGEX =
-      /(?:\s+|-|,|\/)?\s*(?:xe\s*)?(?:mazda\s*\d*|vios|xpander|innova|veloz|kia\s*\w*|hyundai\s*\w*|honda\s*\w*|toyota\s*\w*|ford\s*\w*|vinfast\s*\w*|carnival|accent|city|cerato|k3|cx-?\d+|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình|\d+\s*chỗ|chỗ).*/gi;
-    let cleanFrom = fromLocation.trim();
-    let cleanTo = toLocation.trim();
-    if (cleanFrom.replace(VEHICLE_LEAK_REGEX, '').trim().length >= 2) {
-      cleanFrom = cleanFrom.replace(VEHICLE_LEAK_REGEX, '').trim();
-    }
-    if (cleanTo.replace(VEHICLE_LEAK_REGEX, '').trim().length >= 2) {
-      cleanTo = cleanTo.replace(VEHICLE_LEAK_REGEX, '').trim();
-    }
 
-    const fromCity = cleanFrom.split(/[,-]/)[0].trim() || cleanFrom;
-    const toCity = cleanTo.split(/[,-]/)[0].trim() || cleanTo;
-    const derivedRoute = `${fromCity} ⇄ ${toCity}`;
+    // Tên hiển thị lấy thẳng từ danh mục trạm ảo, nên không còn khả năng rò rỉ
+    // từ khoá xe / số ghế vào tên địa danh như hồi còn cho gõ chữ tự do.
+    const cleanFrom = originHub.shortName || originHub.name;
+    const cleanTo = destHub.shortName || destHub.name;
+    const derivedRoute = `${cleanFrom} ⇄ ${cleanTo}`;
 
     const isExactTimeValid = exactTime && isTimeInSlot(exactTime.trim(), timeSlot);
     const validExactTime = isExactTimeValid ? exactTime.trim() : undefined;
@@ -234,8 +273,10 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     const updates = {
       from: cleanFrom,
       to: cleanTo,
-      pickupSpot: pickupSpot.trim(),
-      dropoffSpot: dropoffSpot.trim(),
+      originHubId,
+      destinationHubId: destHubId,
+      pickupSpot: originHub.landmark || cleanFrom,
+      dropoffSpot: destHub.landmark || cleanTo,
       route: derivedRoute,
       capacity: isDriver ? (vehicleCapacity === 'truck_light' ? 2 : vehicleCapacity === 'pickup' ? 5 : Number(vehicleCapacity)) : undefined,
       vehicleCapacity: isDriver ? vehicleCapacity : undefined,
@@ -249,7 +290,8 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
       carPhotos: shouldSendPhotos ? validPhotos : undefined,
       hasCarPhotos: shouldSendPhotos ? validPhotos.length > 0 : undefined,
       plateMask: isDriver && plateMask.trim() ? plateMask.trim() : undefined,
-      basePricePerSeat: isDriver ? Number(price) : undefined,
+      // Không gửi giá lên máy chủ: giá là đầu ra của công thức nền tảng,
+      // máy chủ tự tính lại từ cặp trạm (xem BẤT BIẾN GIÁ ở tripController).
       expectedPrice: !isDriver ? Number(price) : undefined,
       availableSeats: isDriver ? Number(seats) : undefined,
       seatsNeeded: !isDriver ? Number(seats) : undefined,
@@ -284,7 +326,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     // Deps đã liệt kê đủ mọi trường mà handleSubmit đọc, nên phím tắt luôn gửi
     // dữ liệu mới nhất. ESLint chỉ đòi thêm vì theo dõi danh tính hàm.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromLocation, toLocation, pickupSpot, dropoffSpot, price, seats, vehicleCapacity, date, timeSlot, waypointNote, notes, saving]);
+  }, [originHubId, destHubId, seats, vehicleCapacity, date, timeSlot, waypointNote, notes, saving]);
 
   const quickDates = ['Hôm nay', 'Ngày mai', 'Thứ 7', 'Chủ nhật'];
   const currentSeatConfig = VEHICLE_SEAT_CONFIGS[vehicleCapacity] || VEHICLE_SEAT_CONFIGS[5];
@@ -416,28 +458,53 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('editTrip.s007')}</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-center">
+          {isMatrixLocked && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-300/60 dark:border-amber-400/25">
+              <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] sm:text-xs font-medium text-amber-800 dark:text-amber-200 leading-relaxed">
+                Chuyến đã có <strong>{activeBookingCount} khách</strong> giữ chỗ theo đúng lộ trình và khung giờ này,
+                nên trạm đón/trả đã được khoá. Muốn đổi lộ trình, vui lòng huỷ chuyến rồi đăng chuyến mới.
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-x-3 gap-y-2 items-start">
             <div>
               <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-2xs" />
-                <span>{t('editTrip.s008')}</span>
+                <span>Trạm đón</span>
                 <span className="text-rose-500 text-xs">*</span>
               </label>
-              <LocationSuggestInput
-                value={fromLocation}
-                onChange={setFromLocation}
-                placeholder={t('editTrip.s033')}
-                icon={MapPin}
-                iconColor="text-emerald-500"
-              />
+              <div className="relative">
+                <MapPin className="w-4 h-4 text-emerald-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  value={originHubId}
+                  onChange={(e) => setOriginHubId(e.target.value)}
+                  disabled={isMatrixLocked}
+                  className="w-full h-11 pl-9 pr-8 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <option value="">— Chọn trạm đón —</option>
+                  {corridorHubs.map((h) => (
+                    <option key={h.id} value={h.id} disabled={h.id === destHubId}>
+                      {h.shortName || h.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {originHub?.landmark && (
+                <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-snug">
+                  {originHub.landmark}
+                </p>
+              )}
             </div>
 
-            <div className="flex justify-center pt-1 sm:pt-4">
+            <div className="flex justify-center sm:pt-7">
               <button
                 type="button"
                 onClick={handleSwapRoute}
-                title={t('editTrip.s034')}
-                className="w-9 h-9 rounded-full border border-black/[0.1] dark:border-white/10 bg-white dark:bg-[#1e293b] text-slate-700 dark:text-slate-200 hover:text-[#0071e3] hover:border-[#0071e3] shadow-xs flex items-center justify-center cursor-pointer active:scale-90 active:rotate-180 transition-all"
+                disabled={isMatrixLocked}
+                title="Đảo chiều trạm đón / trạm trả"
+                className="w-9 h-9 rounded-full border border-black/[0.1] dark:border-white/10 bg-white dark:bg-[#1e293b] text-slate-700 dark:text-slate-200 hover:text-[#0071e3] hover:border-[#0071e3] shadow-xs flex items-center justify-center cursor-pointer active:scale-90 active:rotate-180 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-slate-700 disabled:hover:border-black/[0.1]"
               >
                 <ArrowLeftRight className="w-4 h-4" />
               </button>
@@ -446,54 +513,38 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             <div>
               <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 shadow-2xs" />
-                <span>{t('editTrip.s009')}</span>
+                <span>Trạm trả</span>
                 <span className="text-rose-500 text-xs">*</span>
               </label>
-              <LocationSuggestInput
-                value={toLocation}
-                onChange={setToLocation}
-                placeholder={t('editTrip.s035')}
-                icon={Navigation}
-                iconColor="text-rose-500"
-              />
+              <div className="relative">
+                <Navigation className="w-4 h-4 text-rose-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  value={destHubId}
+                  onChange={(e) => setDestHubId(e.target.value)}
+                  disabled={isMatrixLocked}
+                  className="w-full h-11 pl-9 pr-8 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-2xs appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <option value="">— Chọn trạm trả —</option>
+                  {corridorHubs.map((h) => (
+                    <option key={h.id} value={h.id} disabled={h.id === originHubId}>
+                      {h.shortName || h.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {destHub?.landmark && (
+                <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-snug">
+                  {destHub.landmark}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Điểm đón cụ thể & Điểm trả cụ thể */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
-            <div>
-              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>{t('editTrip.s010')}</span>
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('editTrip.s011')}</span>
-              </label>
-              <input
-                type="text"
-                value={pickupSpot}
-                onChange={(e) => setPickupSpot(e.target.value)}
-                placeholder={t('editTrip.s036')}
-                className="w-full h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Navigation className="w-3.5 h-3.5 text-rose-500" />
-                  <span>{t('editTrip.s012')}</span>
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('editTrip.s011')}</span>
-              </label>
-              <input
-                type="text"
-                value={dropoffSpot}
-                onChange={(e) => setDropoffSpot(e.target.value)}
-                placeholder={t('editTrip.s037')}
-                className="w-full h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-2xs"
-              />
-            </div>
+          <div className="flex items-start gap-2 pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3] shrink-0 mt-0.5" />
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              Đón và trả 100% tại trạm cố định mặt tiền quốc lộ — khách không phải chỉ đường, chủ xe không phải vào hẻm.
+            </p>
           </div>
         </div>
 
@@ -806,26 +857,40 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
 
         {/* ── 3. CHI PHÍ & SỐ CHỖ (TACTILE PILLS & STEPPERS) ── */}
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-4 shadow-2xs">
-          {/* Giá chia sẻ */}
+          {/* ── GIÁ DO NỀN TẢNG TÍNH: hiển thị, không cho sửa ── */}
           <div className="space-y-1.5">
-            <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-[#0071e3]" />
-              <span>Chi phí phụ xăng ({isDriver ? 'chia sẻ' : 'dự kiến'}):</span>
+            <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 shrink-0 text-[#0071e3]" />
+                <span>Phụ xăng mỗi ghế:</span>
+              </span>
+              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                <Lock className="w-3 h-3" />
+                <span>Nền tảng tính</span>
+              </span>
             </label>
-            <div className="relative">
-              <input
-                type="number"
-                step="10000"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-xl text-base font-extrabold tabular bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 shadow-2xs font-mono"
-              />
-              <span className="absolute right-3.5 top-3 text-xs text-slate-600 dark:text-slate-300 font-bold font-mono">đ</span>
+
+            <div className="h-11 px-3.5 rounded-xl bg-white dark:bg-[#151c2e] border border-black/[0.12] dark:border-white/[0.14] flex items-center justify-between shadow-2xs">
+              <span className="text-base font-mono font-extrabold text-slate-900 dark:text-white tabular-nums">
+                {tariff ? formatVND(price) : '—'}
+              </span>
+              {tariff && (
+                <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                  {tariff.distanceKm} km
+                </span>
+              )}
             </div>
-            <p className="text-xs font-mono font-bold text-[#0071e3] dark:text-sky-400">
-              {formatVND(Number(price) || 0)} /người (chia sẻ nhiên liệu)
-            </p>
+
+            {tariff ? (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                Tính theo cự ly {tariff.distanceKm} km, giá xăng {formatVND(tariff.fuelPricePerLiter)}/lít và phí BOT{' '}
+                {formatVND(tariff.botFee)} — rẻ hơn xe dịch vụ khoảng {tariff.savingVsLimoPercent}%.
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                Chọn trạm đón và trạm trả để nền tảng tính mức phụ xăng cho chặng này.
+              </p>
+            )}
           </div>
 
           {/* Số ghế trống */}

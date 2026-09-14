@@ -476,11 +476,9 @@ export default function StationRiderView({
           destinationHubId,
           vehicleModel: t.carType || 'Xe ô tô gia đình',
           plate: t.plateMask || (t.licensePlate ? `${String(t.licensePlate).slice(0, 3)}***.xx` : `${fallbackPlatePrefix}-***.xx`),
-          price:
-            Number(t.basePricePerSeat) ||
-            Number(t.pricePerSeat) ||
-            getFixedSegmentTariff(currentHub.id, destinationHubId)?.pricePerSeat ||
-            150000,
+          // Giá luôn là đầu ra của công thức nền tảng cho đúng cặp trạm này.
+          // Không dùng số mặc định: một con số bịa sẽ hiện y như giá thật.
+          price: getFixedSegmentTariff(currentHub.id, destinationHubId).pricePerSeat,
           driverTitle: t.publicName || 'Chủ xe cá nhân'
         };
       })
@@ -1538,7 +1536,7 @@ export default function StationRiderView({
                       className={`w-full min-h-[58px] p-3.5 rounded-2xl border-2 text-left flex items-center justify-between transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-emerald-500/15 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400 text-white'
-                          : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.07] text-slate-300'
+                          : 'bg-white/[0.06] border-white/[0.14] hover:border-white/[0.28] hover:bg-white/[0.09] text-slate-200'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -1551,7 +1549,7 @@ export default function StationRiderView({
                           <div className="text-sm sm:text-base font-black text-white leading-tight">
                             {dest.title}
                           </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">
+                          <div className="text-[11px] text-slate-300/80 mt-0.5">
                             {dest.subtitle}
                           </div>
                         </div>
@@ -1559,12 +1557,12 @@ export default function StationRiderView({
                       <div className="text-right">
                         <span
                           className={`text-base sm:text-lg font-black font-mono ${
-                            isSelected ? 'text-emerald-400' : 'text-slate-200'
+                            isSelected ? 'text-emerald-400' : 'text-white'
                           }`}
                         >
                           {formatVND(dest.price)}
                         </span>
-                        <span className="text-[10px] text-slate-400 block">{t('station.perPerson')}</span>
+                        <span className="text-[10px] text-slate-300/80 block">{t('station.perPerson')}</span>
                       </div>
                     </button>
                   );
@@ -2856,7 +2854,7 @@ export default function StationRiderView({
           trip={selectedBookingTrip}
           originHub={currentHub}
           destinationHub={getVirtualHubById(selectedBookingTrip.destinationHubId) || { id: 'dest', name: selectedBookingTrip.to }}
-          segmentPrice={selectedBookingTrip.pricePerSeat || 165000}
+          segmentPrice={selectedBookingTrip.pricePerSeat}
           currentUser={currentUser}
           onAuthSuccess={onAuthSuccess}
           onBookingSuccess={(booking) => {

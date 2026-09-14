@@ -93,6 +93,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [fuelPriceInput, setFuelPriceInput] = useState(24120);
   const [fuelNoteInput, setFuelNoteInput] = useState('');
   const [isSavingFuel, setIsSavingFuel] = useState(false);
+
+  // ── CÔNG THỨC ĐỊNH GIÁ: chỉ Quản trị viên được nâng tham số ──
+  const [tariffConfig, setTariffConfig] = useState(null);
+  const [tariffBounds, setTariffBounds] = useState(null);
+  const [tariffForm, setTariffForm] = useState(null);
+  const [tariffPreview, setTariffPreview] = useState([]);
+  const [tariffNote, setTariffNote] = useState('');
+  const [isSavingTariff, setIsSavingTariff] = useState(false);
   const [showAddRuleModal, setShowAddRuleModal] = useState(false);
   const [newRuleForm, setNewRuleForm] = useState({
     id: '',
@@ -267,7 +275,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const loadAllAdminData = async () => {
     setIsLoading(true);
     try {
-      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes, trustRulesRes, delReqRes, fuelRes] = await Promise.allSettled([
+      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes, trustRulesRes, delReqRes, fuelRes, tariffRes] = await Promise.allSettled([
         api.getAdminMetrics(),
         api.getAdminTrips(),
         api.getAdminUsers(),
@@ -276,7 +284,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
         api.getAdminAnalyticsSummary(),
         api.getAdminTrustRules(),
         api.getAdminDeletionRequests(),
-        api.getAdminFuelPrice()
+        api.getAdminFuelPrice(),
+        api.getAdminTariffParams()
       ]);
 
       if (metricsRes.status === 'fulfilled' && metricsRes.value?.success) {
@@ -309,6 +318,20 @@ export default function AdminDashboardView({ onExitAdmin }) {
         setFuelConfig(fuelRes.value.data);
         setFuelPriceInput(fuelRes.value.data.ron95Price || 24120);
         setFuelNoteInput(fuelRes.value.data.note || '');
+      }
+
+      if (tariffRes.status === 'fulfilled' && tariffRes.value?.success && tariffRes.value.data) {
+        const d = tariffRes.value.data;
+        setTariffConfig(d.config);
+        setTariffBounds(d.bounds);
+        setTariffPreview(d.preview || []);
+        setTariffNote(d.config?.note || '');
+        // Chỉ giữ đúng các khoá tham số, bỏ metadata (updatedAt, source...)
+        const formValues = {};
+        Object.keys(d.bounds || {}).forEach((k) => {
+          formValues[k] = d.config?.[k];
+        });
+        setTariffForm(formValues);
       }
     } catch (err) {
       console.warn('[Admin] Lỗi nạp dữ liệu:', err);
@@ -396,6 +419,68 @@ export default function AdminDashboardView({ onExitAdmin }) {
       showNotice(err.message || 'Lỗi kết nối khi cập nhật giá xăng', 'error');
     } finally {
       setIsSavingFuel(false);
+    }
+  };
+
+  /** Xem trước hệ quả của bộ tham số đang gõ, trước khi lưu. */
+  const handlePreviewTariff = async () => {
+    if (!tariffForm) return;
+    try {
+      const res = await api.previewAdminTariffParams(tariffForm);
+      if (res?.success) {
+        setTariffPreview(res.data.preview || []);
+        showNotice('Đã dựng bảng giá xem trước cho bộ tham số mới', 'success');
+      } else {
+        showNotice(res?.error || 'Bộ tham số không hợp lệ', 'error');
+      }
+    } catch (err) {
+      showNotice(err.message || 'Lỗi kết nối khi xem trước công thức', 'error');
+    }
+  };
+
+  /** Áp dụng công thức mới cho toàn sàn. */
+  const handleSaveTariff = async () => {
+    if (!tariffForm) return;
+    setIsSavingTariff(true);
+    try {
+      const res = await api.updateAdminTariffParams({ params: tariffForm, note: tariffNote });
+      if (res?.success) {
+        setTariffConfig(res.data.config);
+        setTariffPreview(res.data.preview || []);
+        showNotice(res.message || 'Đã nâng công thức định giá', 'success');
+      } else {
+        showNotice(res?.error || 'Không thể lưu công thức định giá', 'error');
+      }
+    } catch (err) {
+      showNotice(err.message || 'Lỗi kết nối khi lưu công thức', 'error');
+    } finally {
+      setIsSavingTariff(false);
+    }
+  };
+
+  /** Khôi phục công thức về bộ tham số mặc định của nền tảng. */
+  const handleResetTariff = async () => {
+    setIsSavingTariff(true);
+    try {
+      const res = await api.resetAdminTariffParams();
+      if (res?.success) {
+        const cfg = res.data.config;
+        setTariffConfig(cfg);
+        setTariffPreview(res.data.preview || []);
+        setTariffNote('');
+        const formValues = {};
+        Object.keys(tariffBounds || {}).forEach((k) => {
+          formValues[k] = cfg?.[k];
+        });
+        setTariffForm(formValues);
+        showNotice(res.message || 'Đã khôi phục công thức mặc định', 'success');
+      } else {
+        showNotice(res?.error || 'Không thể khôi phục công thức', 'error');
+      }
+    } catch (err) {
+      showNotice(err.message || 'Lỗi kết nối khi khôi phục công thức', 'error');
+    } finally {
+      setIsSavingTariff(false);
     }
   };
 
@@ -2905,6 +2990,153 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </div>
             </div>
           </div>
+
+          {/* ══ CÔNG THỨC ĐỊNH GIÁ: NƠI DUY NHẤT SỬA ĐƯỢC GIÁ TOÀN SÀN ══ */}
+          {tariffForm && tariffBounds && (
+            <div className="mt-6 p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-5">
+              <div className="flex items-start justify-between flex-wrap gap-3">
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#0071e3]" />
+                    <span>Công Thức Định Giá Toàn Sàn</span>
+                  </h4>
+                  <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-w-2xl">
+                    Chủ xe không được tự đặt giá: giá mỗi ghế là đầu ra của công thức bên dưới, tính từ cặp trạm ảo.
+                    Đây là nơi duy nhất thay đổi được giá của toàn bộ sàn — lưu xong áp dụng ngay lập tức.
+                  </p>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-[10.5px] font-mono font-bold border ${
+                    tariffConfig?.isDefault
+                      ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/40'
+                  }`}
+                >
+                  {tariffConfig?.isDefault ? 'Đang dùng công thức mặc định' : 'Đã tinh chỉnh'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {Object.entries(tariffBounds).map(([key, bound]) => (
+                  <div key={key} className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      {bound.label}
+                    </label>
+                    <input
+                      type="number"
+                      step={bound.step}
+                      min={bound.min}
+                      max={bound.max}
+                      value={tariffForm[key] ?? ''}
+                      onChange={(e) =>
+                        setTariffForm((f) => ({ ...f, [key]: e.target.value }))
+                      }
+                      className="w-full h-10 px-3 rounded-xl text-sm font-mono font-bold bg-slate-50 dark:bg-[#151c2e] border border-slate-200 dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
+                    />
+                    <p className="text-[10px] font-mono text-slate-400">
+                      Cho phép {bound.min} – {bound.max}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  Lý do thay đổi (lưu vào nhật ký)
+                </label>
+                <input
+                  type="text"
+                  value={tariffNote}
+                  onChange={(e) => setTariffNote(e.target.value)}
+                  placeholder="VD: Giá xăng tăng mạnh quý IV, nâng định mức tiêu thụ thực tế"
+                  className="w-full h-10 px-3 rounded-xl text-xs font-medium bg-slate-50 dark:bg-[#151c2e] border border-slate-200 dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
+                />
+              </div>
+
+              {/* Bảng giá xem trước: thấy ngay hệ quả trước khi áp cho toàn sàn */}
+              {tariffPreview.length > 0 && (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-white/10">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 font-mono uppercase text-[10.5px]">
+                      <tr>
+                        <th className="py-2.5 px-3">Chặng</th>
+                        <th className="py-2.5 px-3 text-right">Cự ly</th>
+                        <th className="py-2.5 px-3 text-right">Giá / ghế</th>
+                        <th className="py-2.5 px-3 text-right">Sàn – Trần</th>
+                        <th className="py-2.5 px-3 text-right">Rẻ hơn Limo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200/70 dark:divide-white/[0.06]">
+                      {tariffPreview.map((row) => (
+                        <tr key={row.label} className="text-slate-700 dark:text-slate-200">
+                          <td className="py-2.5 px-3 font-semibold">{row.label}</td>
+                          <td className="py-2.5 px-3 text-right font-mono">{row.distanceKm} km</td>
+                          <td className="py-2.5 px-3 text-right font-mono font-black text-[#0071e3] dark:text-sky-400">
+                            {formatVND(row.pricePerSeat)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-[11px] text-slate-500">
+                            {formatVND(row.pMin)} – {formatVND(row.pMax)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono">
+                            <span
+                              className={
+                                row.breakevenCovered
+                                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                                  : 'text-rose-600 dark:text-rose-400 font-bold'
+                              }
+                            >
+                              {row.savingVsLimoPercent}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={handlePreviewTariff}
+                  disabled={isSavingTariff}
+                  className="w-full sm:w-auto h-11 px-4 text-xs font-semibold cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  Xem trước
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleSaveTariff}
+                  disabled={isSavingTariff}
+                  className="w-full sm:flex-1 h-11 font-bold cursor-pointer shadow-md"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {isSavingTariff ? 'Đang áp dụng...' : 'Áp dụng cho toàn sàn'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={handleResetTariff}
+                  disabled={isSavingTariff}
+                  className="w-full sm:w-auto h-11 px-4 text-xs font-semibold cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                  Đặt lại
+                </Button>
+              </div>
+
+              {tariffConfig?.updatedAt && !tariffConfig.isDefault && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Lần nâng gần nhất: {new Date(tariffConfig.updatedAt).toLocaleString('vi-VN')} bởi{' '}
+                  <span className="font-mono font-bold">{tariffConfig.updatedBy}</span>
+                  {tariffConfig.note ? ` — “${tariffConfig.note}”` : ''}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
