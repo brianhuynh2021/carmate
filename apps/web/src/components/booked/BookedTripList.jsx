@@ -58,7 +58,6 @@ function formatTicketDateTime(timeSlot, rawDate) {
 
 
 function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
-  const { t } = useI18n();
   const isCompleted = status === 'completed';
   const isReassigned = status === 'reassigned' || Boolean(hasSilentFailover);
   const isCancelled = status === 'cancelled' && !isReassigned;

@@ -189,6 +189,10 @@ export default function InstantBookingModal({
     }
     hasAutoBookedRef.current = true;
     executeBooking(currentUser.phone, currentUser.name);
+    // Cố ý bỏ executeBooking và currentUser.* khỏi deps: executeBooking được tạo lại
+    // mỗi lần render, đưa vào deps sẽ khiến effect chạy lại và tạo thêm vé.
+    // Chốt chặn thật nằm ở sessionStorage phía trên.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, trip, hasUserPhone]);
 
   // ── XỬ LÝ BƯỚC 1: XÁC THỰC SĐT (10 GIÂY) ─────────────────────────────
