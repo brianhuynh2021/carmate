@@ -72,6 +72,11 @@ jobs:
 
           npm test
 
+          # Pentest chạy CÙNG step vì cần server đang sống. Bộ này bắn thật vào
+          # sàn (đặt vượt ghế, tiêm trạng thái để moi SĐT, ghi đè vé, dựng xe ma)
+          # và thoát mã lỗi nếu khai thác thành công.
+          npm run pentest
+
       - name: Verify Production Fail-Closed (Security Assurance)
         run: |
           set -u
@@ -181,6 +186,17 @@ jobs:
           for FIELD in '"phone"' '"phoneReal"' '"pinCode"' '"contactName"'; do
             if printf '%s' "$ORDER_BOOK" | grep -q "$FIELD"; then
               echo "::error::PII LEAK — /api/seat-exchange/order-book trả về $FIELD trên production!"
+              exit 1
+            fi
+          done
+
+          echo "Kiểm tra Ma Trận Khung Giờ /api/corridor/time-slots..."
+          # Sàn tuyến công khai (không auth) tuyệt đối không được lộ số điện thoại
+          # thật hay biển số đầy đủ — chỉ plateMasked và userId.
+          SLOTS=$(curl -s "https://carmate.fly.dev/api/corridor/time-slots?from=hub_ql13_tan_khai&to=hub_ql13_cho_ray")
+          for FIELD in '"phone"' '"phoneReal"' '"fullPlate"'; do
+            if printf '%s' "$SLOTS" | grep -q "$FIELD"; then
+              echo "::error::PII LEAK — /api/corridor/time-slots trả về $FIELD trên production!"
               exit 1
             fi
           done

@@ -105,7 +105,12 @@ import {
   clearAdminAiTrajectories,
   clearAdminTestData,
   clearAdminBookings,
-  requireAdmin
+  requireAdmin,
+  createDriverProfileHandler,
+  getPublicFuelPriceHandler,
+  getAdminFuelPriceHandler,
+  updateAdminFuelPriceHandler,
+  resetAdminFuelPriceHandler
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
 
@@ -179,7 +184,9 @@ router.post('/seat-exchange/expire-ttl', requireAdmin, expireSlidingTTLHandler);
 
 // --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
 router.get('/bookings', optionalAuth, listBookings);
-router.post('/bookings', optionalAuth, createBooking);
+// Giữ chỗ BẮT BUỘC đăng nhập: booking gắn với một con người thật (SĐT đã xác thực),
+// và chỉ khi đó mới có cơ sở để mở khoá thông tin liên hệ hai chiều.
+router.post('/bookings', requireAuth, createBooking);
 router.get('/bookings/:id/public-summary', optionalAuth, getBookingPublicSummary);
 router.post('/bookings/:id/driver-confirm', optionalAuth, driverConfirmBooking);
 // Chốt T-40/T-30: chủ xe bấm "Tôi đang đi", và khách tra cứu Chế độ Cứu hộ
@@ -253,6 +260,9 @@ router.get('/corridor/timeline', corridorTimelineHandler);
 // --- Danh Bạ Nhà Xe Tuyến Cố Định (lưới đỡ khi chưa có chuyến CarMate) ---
 router.get('/transit-directory', getTransitDirectoryHandler);
 
+// --- Chỉ Số Nhiên Liệu Hàng Ngày (Daily Petrolimex Fuel Index) ---
+router.get('/fuel-price', getPublicFuelPriceHandler);
+
 // --- Thông Báo Đẩy & Hộp Thư In-App (Kênh đánh thức khách ngoài giờ mở app) ---
 router.get('/notifications/vapid-key', getVapidKeyHandler);
 router.post('/notifications/subscribe', optionalAuth, subscribePushHandler);
@@ -272,6 +282,8 @@ router.patch('/admin/trips/:id/toggle-hide', requireAdmin, toggleHideTripHandler
 router.delete('/admin/trips/:id', requireAdmin, deleteTripAdminHandler);
 router.patch('/admin/trips/:id/convert-car-category', requireAdmin, convertTripCarCategoryHandler);
 router.get('/admin/users', requireAdmin, listAdminUsers);
+// Tạo hồ sơ Chủ xe (và chuyến đầu tiên) thay cho bác tài trong giai đoạn đi mời.
+router.post('/admin/drivers', requireAdmin, createDriverProfileHandler);
 router.patch('/admin/users/:id', requireAdmin, updateUserStatusHandler);
 router.patch('/admin/users/:id/status', requireAdmin, updateUserStatusHandler);
 router.get('/admin/reports', requireAdmin, getAdminReports);
@@ -280,6 +292,9 @@ router.get('/admin/ai-intelligence', requireAdmin, getAdminAiIntelligence);
 router.get('/admin/trust-rules', requireAdmin, getAdminTrustRulesHandler);
 router.put('/admin/trust-rules', requireAdmin, updateAdminTrustRulesHandler);
 router.post('/admin/trust-rules/reset', requireAdmin, resetAdminTrustRulesHandler);
+router.get('/admin/fuel-price', requireAdmin, getAdminFuelPriceHandler);
+router.put('/admin/fuel-price', requireAdmin, updateAdminFuelPriceHandler);
+router.post('/admin/fuel-price/reset', requireAdmin, resetAdminFuelPriceHandler);
 router.get('/admin/deletion-requests', requireAdmin, listDeletionRequestsHandler);
 router.post('/admin/deletion-requests/:id/process', requireAdmin, processDeletionRequestHandler);
 router.delete('/admin/users/:id', requireAdmin, deleteUserAdminHandler);

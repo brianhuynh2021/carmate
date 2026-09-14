@@ -15,7 +15,11 @@ import {
   getTomorrowISO,
   DEFAULT_TRUST_RULES,
   sanitizeTimeLabel,
-  VERIFIED_HOTLINES
+  VERIFIED_HOTLINES,
+  setDailyFuelPrice,
+  getDailyFuelPrice,
+  resetDailyFuelPrice,
+  DEFAULT_DAILY_FUEL_PRICE
 } from '@carmate/shared';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -537,6 +541,24 @@ export async function initDB() {
     console.warn('[SQLite DB] Bỏ qua đồng bộ seed:', err.message);
   }
 
+  // Đồng bộ giá xăng dầu đã lưu trong key_values vào dynamicTariff in-memory engine
+  try {
+    const fuelConfig = getDailyFuelPriceConfig();
+    if (fuelConfig && fuelConfig.ron95Price) {
+      setDailyFuelPrice(
+        fuelConfig.ron95Price,
+        fuelConfig.updatedAt,
+        fuelConfig.updatedBy || 'system',
+        fuelConfig.source || 'sqlite'
+      );
+      console.log(
+        `\x1b[33m[Fuel Engine]\x1b[0m Giá xăng RON 95 nạp thành công: ${new Intl.NumberFormat('vi-VN').format(fuelConfig.ron95Price)}đ/Lít (${fuelConfig.isDefault ? 'Mặc định' : 'Do Admin cấu hình'})`
+      );
+    }
+  } catch (err) {
+    console.warn('[SQLite DB] Không thể nạp daily_fuel_price ban đầu:', err.message);
+  }
+
   return db;
 }
 
@@ -620,7 +642,7 @@ function rowToTrip(row) {
     }
     obj.date = row.date || obj.date;
     obj.basePricePerSeat = row.price || obj.basePricePerSeat;
-    obj.availableSeats = row.seats || obj.availableSeats;
+    obj.availableSeats = row.seats ?? obj.availableSeats;
     obj.carCategory = row.carCategory || obj.carCategory;
     obj.carType = row.carType || obj.carType;
     obj.isHidden = Boolean(row.isHidden);
@@ -690,6 +712,15 @@ export function getTrips(filters = {}) {
   const database = getRawDB();
   let sql = 'SELECT * FROM trips WHERE 1=1';
   const params = [];
+
+  // `status` từng bị nuốt im lặng: caller truyền vào, SQL không đọc, không lỗi
+  // không cảnh báo — nên mọi lời gọi lọc theo status đều nhận cả chuyến đã huỷ
+  // lẫn chuyến đầy mà tưởng đã lọc.
+  // (isHidden đã có nhánh `includeHidden` riêng bên dưới, không thêm ở đây.)
+  if (filters.status) {
+    sql += ' AND status = ?';
+    params.push(filters.status);
+  }
 
   const type = filters.type || 'all';
   if (type === 'drivers') {
@@ -811,7 +842,10 @@ export async function addTrip(tripData) {
     timeSlot: completeTrip.timeSlot,
     date: completeTrip.date,
     price: Number(completeTrip.basePricePerSeat || completeTrip.expectedPrice || 150000),
-    seats: Number(completeTrip.availableSeats || completeTrip.seatsNeeded || 1),
+    // Dùng ?? chứ KHÔNG dùng ||: số ghế 0 (chuyến đã hết chỗ) là giá trị hợp lệ,
+    // với || nó bị coi là falsy và ghi đè thành 1, khiến chuyến đầy vẫn hiện còn ghế
+    // và nhận thêm booking không giới hạn.
+    seats: Number(completeTrip.availableSeats ?? completeTrip.seatsNeeded ?? 1),
     carCategory: completeTrip.carCategory || 'family_car',
     carType: completeTrip.carType || 'Xe 7 chỗ',
     isHidden: completeTrip.isHidden ? 1 : 0,
@@ -1754,6 +1788,104 @@ export function resetTrustRules() {
   const database = getRawDB();
   database.prepare('DELETE FROM key_values WHERE key = ?').run('trust_policy_rules');
   return DEFAULT_TRUST_RULES;
+}
+
+/**
+ * =============================================================================
+ * CHỈ SỐ NHIÊN LIỆU HÀNG NGÀY (DAILY PETROLIMEX FUEL INDEX)
+ * =============================================================================
+ * Quản trị viên cập nhật thủ công mức giá xăng RON 95-III.
+ * Lưu trữ bền vững trong bảng key_values để sống sót qua các lần khởi động lại máy chủ.
+ */
+
+/**
+ * Lấy cấu hình giá xăng dầu hàng ngày đã lưu trong SQLite
+ */
+export function getDailyFuelPriceConfig() {
+  const database = getRawDB();
+  try {
+    const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('daily_fuel_price');
+    if (row && row.value) {
+      const parsed = JSON.parse(row.value);
+      if (parsed && typeof parsed.ron95Price === 'number' && parsed.ron95Price >= 15000 && parsed.ron95Price <= 45000) {
+        return {
+          ...parsed,
+          isDefault: false
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('[SQLite DB] Lỗi đọc daily_fuel_price:', e.message);
+  }
+  const current = getDailyFuelPrice();
+  return {
+    ron95Price: current.ron95Price || DEFAULT_DAILY_FUEL_PRICE,
+    fuelType: 'RON 95-III',
+    unit: 'VNĐ/Lít',
+    updatedAt: current.updatedAt,
+    updatedBy: current.updatedBy || 'default',
+    source: 'default',
+    isDefault: true,
+    note: 'Mức giá tham chiếu mặc định của nền tảng'
+  };
+}
+
+/**
+ * Lưu cấu hình giá xăng dầu hàng ngày (Admin Manual Update)
+ */
+export function saveDailyFuelPriceConfig({ ron95Price, updatedBy = 'admin', note = '' }) {
+  const priceNum = Number(ron95Price);
+  if (!Number.isFinite(priceNum) || priceNum < 15000 || priceNum > 45000) {
+    throw new Error('Giá xăng RON 95 không hợp lệ (phải từ 15.000đ đến 45.000đ/lít)');
+  }
+  const roundedPrice = Math.round(priceNum);
+  const nowISO = new Date().toISOString();
+  const config = {
+    ron95Price: roundedPrice,
+    fuelType: 'RON 95-III',
+    unit: 'VNĐ/Lít',
+    updatedAt: nowISO,
+    updatedBy: String(updatedBy || 'admin').trim(),
+    note: String(note || '').trim(),
+    source: 'admin'
+  };
+
+  const database = getRawDB();
+  database
+    .prepare(
+      `
+    INSERT INTO key_values (key, value) VALUES ('daily_fuel_price', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `
+    )
+    .run(JSON.stringify(config));
+
+  // Cập nhật ngay vào dynamicTariff in-memory engine của @carmate/shared
+  setDailyFuelPrice(roundedPrice, nowISO, config.updatedBy, 'admin');
+
+  return {
+    ...config,
+    isDefault: false
+  };
+}
+
+/**
+ * Khôi phục giá xăng dầu về mức tham chiếu mặc định (24.120đ)
+ */
+export function resetDailyFuelPriceConfig() {
+  const database = getRawDB();
+  database.prepare('DELETE FROM key_values WHERE key = ?').run('daily_fuel_price');
+  resetDailyFuelPrice();
+  return {
+    ron95Price: DEFAULT_DAILY_FUEL_PRICE,
+    fuelType: 'RON 95-III',
+    unit: 'VNĐ/Lít',
+    updatedAt: new Date().toISOString(),
+    updatedBy: 'system',
+    source: 'default',
+    isDefault: true,
+    note: 'Đã khôi phục về mức tham chiếu mặc định'
+  };
 }
 
 /**

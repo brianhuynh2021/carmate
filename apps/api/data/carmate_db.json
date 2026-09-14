@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-09-13T15:04:55.768Z",
+  "lastUpdated": "2026-09-14T04:07:29.281Z",
   "stats": {
     "members": 1,
     "tripsCompleted": 0,
@@ -16,7 +16,6 @@
       "phone": "0984883750",
       "name": "Nguyễn Thành Huỳnh",
       "role": "admin",
-      "avatar": "",
       "trustScore": 99,
       "safeTripsCount": 0,
       "provider": "zalo",
@@ -24,7 +23,7 @@
       "isGplxVerified": 1,
       "isBanned": 0,
       "createdAt": "2026-09-01T08:00:00.000Z",
-      "updatedAt": "2026-09-13T15:04:55.768Z",
+      "updatedAt": "2026-09-14T04:07:29.281Z",
       "email": "huynh.nguyen@carmate.vn"
     }
   ]

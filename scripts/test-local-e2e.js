@@ -11,7 +11,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { recordCallAttempt, isEmergencyPhoneUnlocked, resetEmergencyCallStatus } from '../packages/shared/src/index.js';
+import { recordCallAttempt, isEmergencyPhoneUnlocked, resetEmergencyCallStatus, INITIAL_DRIVER_OFFERS, INITIAL_PASSENGER_REQUESTS } from '../packages/shared/src/index.js';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:5173';
 const DB_PATH = path.resolve(process.cwd(), 'apps/api/data/carmate.sqlite');
@@ -118,6 +118,61 @@ function cleanupTestData() {
   }
 }
 
+/**
+ * Nạp lại chuyến mẫu sau khi bài kiểm thử Admin xoá sạch bảng trips.
+ * Giữ cho bộ kiểm thử chạy được nhiều lần liên tiếp mà không cần xoá CSDL thủ công.
+ */
+function restoreSeedTrips() {
+  if (!fs.existsSync(DB_PATH)) return;
+  try {
+    const db = new Database(DB_PATH);
+    const count = db.prepare('SELECT COUNT(*) AS c FROM trips').get()?.c || 0;
+    if (count > 0) { db.close(); return; }
+
+    const seeds = [...INITIAL_DRIVER_OFFERS, ...INITIAL_PASSENGER_REQUESTS];
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO trips
+        (id, type, status, maskedCode, phoneReal, userId, fromLocation, toLocation,
+         routeCategory, direction, timeSlot, date, price, seats, carCategory, carType,
+         isHidden, isBanned, createdAt, payload)
+      VALUES (@id, @type, @status, @maskedCode, @phoneReal, @userId, @fromLocation, @toLocation,
+              @routeCategory, @direction, @timeSlot, @date, @price, @seats, @carCategory, @carType,
+              @isHidden, @isBanned, @createdAt, @payload)
+    `);
+    const insertAll = db.transaction(() => {
+      for (const t of seeds) {
+        stmt.run({
+          id: t.id,
+          type: t.type,
+          status: t.status || 'active',
+          maskedCode: t.maskedCode || null,
+          phoneReal: t.phoneReal || '',
+          userId: t.userId || null,
+          fromLocation: t.from || '',
+          toLocation: t.to || '',
+          routeCategory: t.routeCategory || null,
+          direction: t.direction || null,
+          timeSlot: t.timeSlot || null,
+          date: t.date || 'Hôm nay',
+          price: Number(t.basePricePerSeat || t.expectedPrice || 0),
+          seats: Number(t.availableSeats ?? t.seatsNeeded ?? 1),
+          carCategory: t.carCategory || null,
+          carType: t.carType || null,
+          isHidden: 0,
+          isBanned: 0,
+          createdAt: t.createdAt || Date.now(),
+          payload: JSON.stringify(t)
+        });
+      }
+    });
+    insertAll();
+    db.close();
+    console.log(`  ♻️  Đã phục hồi ${seeds.length} chuyến mẫu để bộ kiểm thử chạy lại được.`);
+  } catch (err) {
+    console.warn('  ⚠️  Không phục hồi được chuyến mẫu:', err.message);
+  }
+}
+
 async function runTests() {
   console.log(`\n🚀 BẮT ĐẦU KIỂM THỬ NGHIỆP VỤ CỐT LÕI CARMATE (${BASE_URL})\n`);
 
@@ -219,6 +274,154 @@ async function runTests() {
       const filterTrips = filterData.data?.all || [];
       const allMatchRoute = filterTrips.length > 0 && filterTrips.every((t) => t.routeCategory === 'Tuyến QL13');
       assert(allMatchRoute, 'Trips 5: Kết quả lọc chính xác 100% thuộc tuyến QL13');
+
+      // BẤT BIẾN PII: Ma trận khung giờ là endpoint CÔNG KHAI KHÔNG AUTH.
+      // Nó không đi qua sanitizeTripForPublic nên từng để lộ nguyên SĐT thật
+      // (phoneReal) và biển số đầy đủ (fullPlate) — chốt chặn hồi quy tại đây.
+      const slotsRes = await fetch(`${BASE_URL}/api/corridor/time-slots?from=hub_ql13_tan_khai&to=hub_ql13_cho_ray`);
+      const slotsRaw = await slotsRes.text();
+      assert(slotsRes.status === 200, 'Trips 6: Tải ma trận khung giờ hành lang thành công');
+      assert(
+        !slotsRaw.includes('"phoneReal"') && !slotsRaw.includes('"phone"'),
+        'Trips 7: PII Invariant: Ma trận khung giờ công khai không lộ số điện thoại thật'
+      );
+      assert(
+        !slotsRaw.includes('"fullPlate"'),
+        'Trips 8: PII Invariant: Ma trận khung giờ công khai không lộ biển số đầy đủ'
+      );
+
+      // BẤT BIẾN CHUYẾN THẬT: phiên Cockpit hiện lên sàn như một chuyến sắp ghé
+      // trạm, nên telemetry phải gắn với bài đăng có thật. Mặc định cũ
+      // ('TRIP-DEFAULT') cho phép mọi request rỗng dựng ra một xe ma trên sàn.
+      const fakeTelemetry = await fetch(`${BASE_URL}/api/cockpit/telemetry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId: 'TRIP-MY-COCKPIT', lat: 11.53, lng: 106.634 })
+      });
+      assert(
+        fakeTelemetry.status === 400,
+        'Trips 9: Telemetry Buồng lái từ chối mã chuyến không tồn tại (chặn xe ma trên sàn)'
+      );
+
+      const noIdTelemetry = await fetch(`${BASE_URL}/api/cockpit/telemetry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: 11.53, lng: 106.634 })
+      });
+      assert(
+        noIdTelemetry.status === 400,
+        'Trips 10: Telemetry Buồng lái từ chối request thiếu mã chuyến'
+      );
+
+      // BẤT BIẾN GHẾ NGỒI (MIT): tổng ghế đã bán không bao giờ vượt số ghế đăng.
+      // Hai lỗi từng phá vỡ bất biến này:
+      //  1. addTrip/rowToTrip dùng `||` nên availableSeats = 0 bị coi là falsy và
+      //     ghi đè thành 1 -> chuyến đầy vĩnh viễn hiện "còn 1 ghế".
+      //  2. Điều kiện `seatsOnOffer > 0 && requested > seatsOnOffer` tự vô hiệu hoá
+      //     khi hết chỗ -> nhận booking không giới hạn.
+      const seatTripRes = await fetch(`${BASE_URL}/api/trips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'driver_offer', from: 'Tân Khai', to: 'Chợ Rẫy',
+          originHubId: 'hub_ql13_tan_khai', destinationHubId: 'hub_ql13_cho_ray',
+          date: '2026-12-30', time: '05:00', timeSlot: '05:00-07:00',
+          availableSeats: 2, basePricePerSeat: 165000,
+          phoneReal: '0933888111', carType: 'Mazda 2', status: 'active'
+        })
+      });
+      const seatTripId = (await seatTripRes.json())?.data?.id;
+      assert(Boolean(seatTripId), 'Seats 1: Tạo chuyến 2 ghế để kiểm thử bất biến ghế');
+
+      // Giữ chỗ nay BẮT BUỘC đăng nhập, nên khối kiểm thử này cần token riêng.
+      const seatAuthHeaders = async (phone, name) => {
+        await fetch(`${BASE_URL}/api/auth/request-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        const auth = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, otp: '123456', name })
+        }).then((r) => r.json());
+        return { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` };
+      };
+
+      const seatOutcomes = [];
+      for (let i = 1; i <= 3; i += 1) {
+        const hdr = await seatAuthHeaders(`09338882${i}${i}`, `Khách ghế ${i}`);
+        const r = await fetch(`${BASE_URL}/api/bookings`, {
+          method: 'POST',
+          headers: hdr,
+          body: JSON.stringify({
+            tripId: seatTripId, escrowId: `CX-SEAT${i}`,
+            from: 'Tân Khai', to: 'Chợ Rẫy', seats: 1, price: 165000,
+            passengerPhone: `09338882${i}${i}`, passengerName: `Khách ghế ${i}`
+          })
+        });
+        seatOutcomes.push((await r.json())?.success === true);
+      }
+      assert(seatOutcomes[0] && seatOutcomes[1], 'Seats 2: Hai ghế đầu đặt được bình thường');
+      assert(seatOutcomes[2] === false, 'Seats 3: Bất biến ghế: chuyến 2 ghế TỪ CHỐI booking thứ 3');
+
+      const fullTrip = await (await fetch(`${BASE_URL}/api/trips/${seatTripId}`)).json();
+      assert(
+        Number(fullTrip?.data?.availableSeats) === 0,
+        'Seats 4: Chuyến bán hết lưu đúng availableSeats = 0 (số 0 không bị coi là falsy)'
+      );
+
+      // BẤT BIẾN PII: client KHÔNG được tự nâng trạng thái booking. Gửi kèm
+      // status:'confirmed' từng đủ để mở khoá SĐT thật của Chủ xe mà không cần
+      // đăng nhập và không cần Chủ xe đồng ý.
+      const injectHdr = await seatAuthHeaders('0933888777', 'Kiểm thử tiêm trạng thái');
+      const injectRes = await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: injectHdr,
+        body: JSON.stringify({
+          tripId: seatTripId, from: 'Tân Khai', to: 'Chợ Rẫy', seats: 0, price: 0,
+          status: 'confirmed',
+          passengerPhone: '0933888777', passengerName: 'Kiểm thử tiêm trạng thái'
+        })
+      });
+      const injected = (await injectRes.json())?.data || {};
+      assert(
+        injected.status !== 'confirmed',
+        'Seats 5: Máy chủ bỏ qua status do client gửi, booking luôn bắt đầu ở inquiring'
+      );
+      assert(
+        !injected.driverPhoneDirect && String(injected.driverPhone || '').includes('*'),
+        'Seats 6: PII Invariant: booking chưa chốt không được lộ SĐT thật của Chủ xe'
+      );
+
+      // BẤT BIẾN MÃ VÉ: escrowId do máy chủ sinh. Client cũ tự sinh CX-1000..9999
+      // và INSERT OR REPLACE khiến vé trùng mã ghi đè nhau — khách mất vé.
+      const dupPayload = (name, phone) => ({
+        tripId: seatTripId, escrowId: 'CX-TRUNG-MA', from: 'Tân Khai', to: 'Chợ Rẫy',
+        seats: 0, price: 0, passengerPhone: phone, passengerName: name
+      });
+      const dupHdrA = await seatAuthHeaders('0933888555', 'Khách trùng A');
+      const dupHdrB = await seatAuthHeaders('0933888666', 'Khách trùng B');
+      const dupA = await (await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST', headers: dupHdrA,
+        body: JSON.stringify(dupPayload('Khách trùng A', '0933888555'))
+      })).json();
+      const dupB = await (await fetch(`${BASE_URL}/api/bookings`, {
+        method: 'POST', headers: dupHdrB,
+        body: JSON.stringify(dupPayload('Khách trùng B', '0933888666'))
+      })).json();
+      const idA = dupA?.data?.escrowId;
+      const idB = dupB?.data?.escrowId;
+      assert(
+        idA !== 'CX-TRUNG-MA' && idB !== 'CX-TRUNG-MA',
+        'Seats 7: Máy chủ tự sinh mã vé, không dùng escrowId do client gửi'
+      );
+      assert(
+        Boolean(idA) && Boolean(idB) && idA !== idB,
+        'Seats 8: Hai khách gửi trùng mã vẫn nhận hai vé riêng biệt (không ghi đè)'
+      );
+
+      await fetch(`${BASE_URL}/api/trips/${seatTripId}`, { method: 'DELETE' }).catch(() => {});
     } catch (err) {
       assert(false, '4. Trips Listing & PII', err.message);
     }
@@ -580,6 +783,78 @@ async function runTests() {
       });
       assert(adminMetricsRes.status === 200, 'RBAC 2: Quản trị viên truy cập metrics thành công (HTTP 200)');
 
+      // ── TẠO HỘ HỒ SƠ CHỦ XE (giai đoạn đội vận hành đi mời bác tài) ──
+      // Route này tạo ra tài khoản Chủ xe ĐÃ ĐÁNH DẤU XÁC MINH, nên nó phải đóng
+      // chặt với người ngoài: lọt route là lọt cả một danh tính đã xác minh.
+      const driverPhoneAdmin = '0933888314';
+      const denyAnon = await fetch(`${BASE_URL}/api/admin/drivers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Ẩn danh', phone: driverPhoneAdmin, plate: '99X-99999', carType: 'X' })
+      });
+      assert(denyAnon.status === 401, 'Admin Driver 1: Tạo hồ sơ Chủ xe bị chặn khi không có phiên (HTTP 401)');
+
+      const denyUser = await fetch(`${BASE_URL}/api/admin/drivers`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({ name: 'Khách thường', phone: driverPhoneAdmin, plate: '99X-99998', carType: 'X' })
+      });
+      assert(denyUser.status === 403, 'Admin Driver 2: Người dùng thường không tạo được hồ sơ Chủ xe (HTTP 403)');
+
+      const createdDriver = await fetch(`${BASE_URL}/api/admin/drivers`, {
+        method: 'POST',
+        headers: adminHeaders,
+        body: JSON.stringify({
+          name: 'Bác Tài E2E',
+          phone: driverPhoneAdmin,
+          plate: '93A-31415',
+          carType: 'Mazda 2 - Màu Trắng',
+          capacity: 5,
+          from: 'Cây xăng Petrolimex Tân Khai',
+          to: 'Cụm BV Chợ Rẫy',
+          date: '2026-12-28',
+          time: '04:30',
+          availableSeats: 2,
+          basePricePerSeat: 165000
+        })
+      });
+      const driverData = await createdDriver.json();
+      assert(createdDriver.status === 201 && driverData?.success === true, 'Admin Driver 3: Quản trị viên tạo được hồ sơ Chủ xe');
+      assert(
+        driverData?.data?.user?.phone === driverPhoneAdmin && Boolean(driverData?.data?.trip?.id),
+        'Admin Driver 4: Tạo cùng lúc hồ sơ Chủ xe và chuyến xe đầu tiên'
+      );
+
+      // Chuyến do admin tạo phải lên sàn công khai, nhưng KHÔNG kèm PII
+      const adminTripId = driverData?.data?.trip?.id;
+      const publicTrip = await (await fetch(`${BASE_URL}/api/trips/${adminTripId}`)).json();
+      assert(
+        publicTrip?.data?.id === adminTripId,
+        'Admin Driver 5: Chuyến do quản trị viên tạo xuất hiện trên sàn công khai'
+      );
+      assert(
+        !publicTrip?.data?.phoneReal && !String(publicTrip?.data?.licensePlate || '').endsWith('31415'),
+        'Admin Driver 6: PII Invariant: chuyến admin tạo vẫn che SĐT và biển số đầy đủ'
+      );
+
+      // Bác tài đăng nhập bằng chính SĐT đó phải nhận lại hồ sơ và hồ sơ xe
+      await fetch(`${BASE_URL}/api/auth/request-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: driverPhoneAdmin })
+      });
+      const claimed = await (await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: driverPhoneAdmin, otp: '123456' })
+      })).json();
+      assert(
+        claimed?.user?.name === 'Bác Tài E2E' && claimed?.user?.vehicle?.plate === '93A-31415',
+        'Admin Driver 7: Chủ xe đăng nhập bằng SĐT đó nhận lại đúng hồ sơ và hồ sơ xe'
+      );
+
+      await fetch(`${BASE_URL}/api/trips/${adminTripId}`, { method: 'DELETE' }).catch(() => {});
+
       // Admin dọn sạch sự kiện analytics & quỹ đạo AI thành công
       const clearAnalyticsRes = await fetch(`${BASE_URL}/api/admin/analytics`, {
         method: 'DELETE',
@@ -598,6 +873,12 @@ async function runTests() {
         headers: adminHeaders
       });
       assert(clearTestDataRes.status === 200, 'Admin Action: Dọn sạch toàn bộ dữ liệu kiểm thử thành công (HTTP 200)');
+
+      // DELETE /admin/test-data gọi clearAllTrips() nên xoá SẠCH cả chuyến mẫu.
+      // Seed chỉ tự nạp khi bảng trips rỗng lúc khởi động, không nạp lại giữa chừng,
+      // nên nếu không phục hồi ở đây thì mọi lần chạy test kế tiếp đều thấy sàn rỗng
+      // và các bài kiểm thử phía trên fail dây chuyền (bug tồn tại từ trước).
+      restoreSeedTrips();
     } catch (err) {
       assert(false, '12. Admin RBAC', err.message);
     }

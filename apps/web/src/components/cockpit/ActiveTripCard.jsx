@@ -34,9 +34,16 @@ export default function ActiveTripCard({
   if (!trip) return null;
 
   const manifest = Array.isArray(trip.manifest) ? trip.manifest : [];
-  const bookedCount = manifest.length;
+  // Số GHẾ đã bán, không phải số lượt đặt: một khách có thể đặt nhiều ghế.
+  // Máy chủ đã tính sẵn bookedSeatsCount; manifest.length chỉ là số dòng.
+  const bookedCount = Number(
+    trip.bookedSeatsCount ?? manifest.reduce((sum, m) => sum + Number(m.seatsBooked || 1), 0)
+  );
   const availableSeatsCount = Number(trip.availableSeats ?? 0);
-  const totalSeats = Math.max(bookedCount + availableSeatsCount, Number(trip.capacity || 2));
+  // Tổng ghế của CHUYẾN = số đã giữ chỗ + số còn nhận.
+  // Không dùng trip.capacity: đó là sức chứa vật lý của xe (Mazda 2 = 5 chỗ), trong khi chủ xe
+  // có thể chỉ đăng nhận 2 ghế và để phần còn lại cho người nhà.
+  const totalSeats = bookedCount + availableSeatsCount;
   const isFullOrLocked = trip.status === 'full' || availableSeatsCount <= 0;
 
   // Format code
@@ -83,13 +90,16 @@ export default function ActiveTripCard({
   };
 
   // Tạo danh sách ghế cố định
+  // Mỗi ghế đã bán là một dòng: khách đặt 3 ghế chiếm 3 dòng, không phải 1.
   const seatSlots = [];
-  for (let i = 0; i < totalSeats; i++) {
-    if (i < bookedCount) {
-      seatSlots.push({ type: 'booked', data: manifest[i], index: i + 1 });
-    } else {
-      seatSlots.push({ type: 'empty', index: i + 1 });
+  for (const entry of manifest) {
+    const seatsOfEntry = Math.max(1, Number(entry.seatsBooked || 1));
+    for (let k = 0; k < seatsOfEntry; k += 1) {
+      seatSlots.push({ type: 'booked', data: entry, index: seatSlots.length + 1 });
     }
+  }
+  while (seatSlots.length < totalSeats) {
+    seatSlots.push({ type: 'empty', index: seatSlots.length + 1 });
   }
 
   return (

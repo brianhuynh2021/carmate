@@ -193,10 +193,16 @@ export async function createBooking(req, res) {
         const seatsOnOffer = Number(
           targetTrip.availableSeats ?? targetTrip.seats ?? targetTrip.capacity ?? 0
         );
-        if (seatsOnOffer > 0 && requestedSeats > seatsOnOffer) {
+        // requestedSeats === 0 là ghép hàng (không chiếm ghế) nên luôn được đi tiếp.
+        // Với yêu cầu CÓ chiếm ghế thì chuyến hết chỗ phải bị từ chối: điều kiện cũ
+        // `seatsOnOffer > 0 && ...` vô hiệu hoá chính nó khi seatsOnOffer === 0,
+        // nên chuyến 2 ghế vẫn nhận được booking thứ 3.
+        if (requestedSeats > 0 && requestedSeats > seatsOnOffer) {
           return res.status(400).json({
             success: false,
-            error: `Chuyến này chỉ còn ${seatsOnOffer} ghế trống, không thể đặt ${requestedSeats} ghế.`
+            error: seatsOnOffer === 0
+              ? 'Chuyến này đã hết chỗ.'
+              : `Chuyến này chỉ còn ${seatsOnOffer} ghế trống, không thể đặt ${requestedSeats} ghế.`
           });
         }
         body.seats = requestedSeats;
@@ -319,8 +325,20 @@ export async function createBooking(req, res) {
       }
     }
 
-    // Mặc định trạng thái ban đầu là 'inquiring' (Hỏi ghép / Thương lượng ẩn danh)
-    body.status = body.status || 'inquiring';
+    // Mã vé do MÁY CHỦ sinh, không nhận từ client. Client cũ tự sinh CX-1000..9999
+    // (chỉ 9000 giá trị) và addBooking dùng INSERT OR REPLACE với escrowId là khoá
+    // chính — hai khách trùng mã thì vé người sau GHI ĐÈ vé người trước, ghế vẫn
+    // bị trừ hai lần. Nghịch lý ngày sinh: ~50% va chạm sau khoảng 112 vé.
+    body.escrowId = `ESC-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    delete body.id;
+
+    // Trạng thái do MÁY CHỦ quyết, không nhận từ client. Trước đây client gửi kèm
+    // `status: 'confirmed'` là đủ để mở khoá SĐT thật của Chủ xe (xem isInstantConfirmed
+    // bên dưới) — bất kỳ ai cũng moi được số của mọi Chủ xe chỉ bằng một request POST,
+    // không cần đăng nhập và không cần Chủ xe đồng ý.
+    // Mọi booking bắt đầu ở 'inquiring'; chỉ luồng chốt hai chiều (confirmBooking) mới
+    // được nâng lên 'confirmed'.
+    body.status = 'inquiring';
     body.commitmentType = body.commitmentType || 'inquiry_chat';
     body.messages = Array.isArray(body.messages) ? body.messages : [];
 
@@ -338,7 +356,10 @@ export async function createBooking(req, res) {
     // BẤT BIẾN GHẾ NGỒI (MIT): Trừ số ghế khả dụng của chuyến xe trong CSDL
     let remainingSeatsAfterBooking = null;
     if (targetTrip && targetTrip.id) {
-      const currentSeats = Number(targetTrip.availableSeats ?? targetTrip.seats ?? targetTrip.capacity ?? 4);
+      // Đọc lại bản ghi ngay trước khi trừ: targetTrip được nạp từ đầu request và
+      // có thể đã cũ nếu một booking khác vừa chen vào giữa chừng.
+      const freshTrip = getTripById(targetTrip.id) || targetTrip;
+      const currentSeats = Number(freshTrip.availableSeats ?? freshTrip.seats ?? freshTrip.capacity ?? 4);
       const requestedSeats = Number(body.seats || 1);
       const updatedSeats = Math.max(0, currentSeats - requestedSeats);
       remainingSeatsAfterBooking = updatedSeats;
@@ -357,10 +378,10 @@ export async function createBooking(req, res) {
       const driverUser = (targetTrip.userId && getUserById(targetTrip.userId)) ||
                          (targetTrip.phoneReal && getUserByPhone(targetTrip.phoneReal)) ||
                          (body.driverPhone && getUserByPhone(body.driverPhone));
-      booking.fullPlate = resolveFullPlate(targetTrip, '93A - 541.86');
-      booking.driverPhone = targetTrip.phoneReal || targetTrip.phone || '0984.123.456';
+      booking.fullPlate = resolveFullPlate(targetTrip, '');
+      booking.driverPhone = targetTrip.phoneReal || targetTrip.phone || '';
       booking.driverName = resolveDriverRealName(targetTrip, driverUser?.name || targetTrip.driverRealName || targetTrip.authorName || body.driverName || 'Chủ xe');
-      booking.carModel = targetTrip.carType || targetTrip.vehicleModel || 'Toyota Vios 2022';
+      booking.carModel = targetTrip.carType || targetTrip.vehicleModel || '';
       booking.availableSeats = remainingSeatsAfterBooking;
     }
 
@@ -372,8 +393,8 @@ export async function createBooking(req, res) {
       from: body.from,
       to: body.to,
       remainingSeats: remainingSeatsAfterBooking ?? 0,
-      carModel: targetTrip?.carType || body.carModel || 'Toyota Vios 2022',
-      fullPlate: resolveFullPlate(targetTrip, '93A - 541.86'),
+      carModel: targetTrip?.carType || body.carModel || '',
+      fullPlate: resolveFullPlate(targetTrip, ''),
       req
     }).catch(() => {});
 
@@ -437,13 +458,14 @@ export async function createBooking(req, res) {
       req
     }).catch(() => {});
 
-    const isInstantConfirmed = body.status === 'confirmed' || booking.status === 'confirmed';
+    // Chỉ tin trạng thái đã ghi xuống CSDL, không tin trường client gửi lên.
+    const isInstantConfirmed = booking.status === 'confirmed';
     const sanitizedBooking = {
       ...booking,
       phoneReal: maskPhoneNumber(booking.phoneReal || booking.contactPhone || ''),
       contactPhone: maskPhoneNumber(booking.contactPhone || ''),
-      driverPhone: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '0984.123.456') : maskPhoneNumber(booking.driverPhone || ''),
-      driverPhoneDirect: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '0984.123.456') : null,
+      driverPhone: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '') : maskPhoneNumber(booking.driverPhone || ''),
+      driverPhoneDirect: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '') : null,
       passengerPhone: maskPhoneNumber(booking.passengerPhone || '')
     };
 
@@ -592,12 +614,18 @@ export async function cancelBooking(req, res) {
       supportDispatched: Boolean(salvageInfo?.supportDispatched)
     });
 
-    // 5. Nếu chủ xe bị huỷ ghế, phục hồi lại số ghế trống trên chuyến xe
+    // 5. Nếu chủ xe bị huỷ ghế, phục hồi lại số ghế trống trên chuyến xe.
+    // Bản ghi trip dùng `availableSeats`; ghi vào `seats` chỉ tạo ra trường rác và
+    // ghế huỷ không bao giờ quay lại sàn, đồng thời chuyến kẹt status 'full' vĩnh viễn.
     if (trip && trip.id) {
-      const currentSeats = Number(trip.seats || 0);
+      const freshTrip = getTripById(trip.id) || trip;
+      const currentSeats = Number(freshTrip.availableSeats ?? 0);
       const bookedSeats = Number(booking.seats || 1);
+      const restoredSeats = currentSeats + bookedSeats;
       await updateTrip(trip.id, {
-        seats: currentSeats + bookedSeats
+        availableSeats: restoredSeats,
+        // Mở lại chuyến khi đã có chỗ trống, nếu trước đó bị khoá vì hết ghế
+        status: restoredSeats > 0 && freshTrip.status === 'full' ? 'active' : freshTrip.status
       });
     }
 
@@ -1255,16 +1283,9 @@ export async function finalConfirmBookingHandler(req, res) {
     const existingMsgs = Array.isArray(existing.messages) ? existing.messages : [];
     const updatedMsgs = [...existingMsgs, systemMsg];
 
-    // Trừ ghế thật (Hard Lock) trên chuyến xe
-    const targetTripId = existing.tripId || existing.targetTripId;
-    if (targetTripId) {
-      const trip = getTripById(targetTripId);
-      if (trip && typeof trip.availableSeats === 'number') {
-        const seatsBooked = existing.seatsBooked || existing.seats || 1;
-        const remainingSeats = Math.max(0, trip.availableSeats - seatsBooked);
-        await updateTrip(targetTripId, { availableSeats: remainingSeats });
-      }
-    }
+    // KHÔNG trừ ghế ở đây. Ghế đã được giữ ngay khi tạo booking (xem createBooking),
+    // vì chỗ phải được khoá từ lúc khách đặt chứ không phải lúc hai bên chốt.
+    // Trừ thêm lần nữa tại đây từng làm ghế biến mất gấp đôi cho cùng một khách.
 
     const updated = await updateBookingStatus(id, 'confirmed', {
       bothConfirmed: true,

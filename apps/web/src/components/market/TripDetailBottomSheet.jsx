@@ -19,7 +19,7 @@ import { CarMateBadge } from '../ui/Logo.jsx';
 /**
  * Trả về chuỗi Thứ và Ngày/Tháng/Năm theo định dạng Việt Nam (ví dụ: "Thứ 2 (14/09/2026)")
  */
-function formatTripTimeHeader(departureLabel = '04:30', departureDate = null) {
+function formatTripTimeHeader(_departureLabel = '04:30', departureDate = null) {
   let targetDate = new Date();
 
   if (departureDate === 'Ngày mai') {
@@ -63,7 +63,6 @@ export default function TripDetailBottomSheet({
   trip,
   originName = 'Cây xăng Petrolimex Tân Khai (QL13)',
   destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
-  destNote = 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh',
   segmentPrice = 165000,
   isMyTrip = false,
   onManageTrip,
@@ -87,16 +86,10 @@ export default function TripDetailBottomSheet({
     // Tuyệt đối chỉ dùng ảnh xe thực tế (loại bỏ ảnh gia đình/con người)
     list = list.filter((p) => !p.includes('hero_family_ride') && !p.includes('passenger_comfort'));
 
-    // Nếu chuyến chưa có đủ các góc chụp thực tế, trang bị trọn bộ 5 góc xe 7 chỗ gia đình thật (Đầu xe, Thân xe, Đuôi xe, Nội thất ghế da, Khoang cốp)
-    if (list.length < 2) {
-      return [
-        'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1509000000103-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=1200&q=80'
-      ];
-    }
+    // Chỉ hiển thị ảnh THẬT do Chủ xe đăng. Trước đây, chuyến có dưới 2 ảnh sẽ bị
+    // thay bằng 5 ảnh stock Unsplash gắn nhãn "Ảnh xe thực tế" — vừa bịa, vừa vứt
+    // bỏ cả ảnh thật khi Chủ xe mới chỉ đăng được một tấm.
+    // Chủ xe chưa có ảnh thì không hiện ảnh nào.
     return list;
   })();
 
@@ -125,12 +118,12 @@ export default function TripDetailBottomSheet({
   if (!isOpen || !trip || typeof document === 'undefined') return null;
 
   const seatsAvailable = Number(trip.seatsAvailable ?? 1);
-  const totalSeats = Number(trip.totalSeats || trip.capacity || 4);
   const isSoldOut = seatsAvailable <= 0;
   const displayPrice = trip.pricePerSeat || segmentPrice;
   const timeHeader = formatTripTimeHeader(trip.departureLabel, trip.departureDate);
-  const vehicleModel = trip.vehicleModel || 'Xe 7 chỗ gia đình';
-  const maskedPlate = trip.plateMasked || '93A-541.xx';
+  // Không bịa dòng xe / biển số khi Chủ xe chưa khai. Chuỗi rỗng => giao diện ẩn dòng.
+  const vehicleModel = trip.vehicleModel || '';
+  const maskedPlate = trip.plateMasked || '';
 
   // Thông tin chủ xe & danh xưng văn minh CarMate: "Chủ xe: H. (#102)"
   const driverDisplayName = (() => {
@@ -145,20 +138,23 @@ export default function TripDetailBottomSheet({
       .replace(/\(.*\)/g, '')
       .trim();
 
+    // Chưa có tên thì chỉ hiện mã ẩn danh, không gán tên người có thật.
     if (!cleanName || /^CX-\d+/i.test(cleanName) || /^\d+$/.test(cleanName)) {
-      cleanName = 'Huỳnh';
+      return `Chủ xe (${codeSuffix})`;
     }
 
     const initial = cleanName.charAt(0).toUpperCase();
     return `${initial}. (${codeSuffix})`;
   })();
+  // Chủ xe mới khởi điểm 5 sao; số chuyến chỉ hiện khi đã thực sự chạy chuyến nào.
   const driverRating = Number(trip.rating || 5.0).toFixed(1);
-  const driverTrips = Number(trip.completedCount || trip.assurance?.completedTrips || 98);
+  const rawDriverTrips = Number(trip.completedCount ?? trip.assurance?.completedTrips ?? 0);
+  const driverTrips = Number.isFinite(rawDriverTrips) ? rawDriverTrips : 0;
 
   // Tiện ích xe
   const amenitiesText = Array.isArray(trip.amenities) && trip.amenities.length > 0
     ? trip.amenities.join(' · ')
-    : 'Không khói thuốc · Cốp rộng · Xe êm';
+    : '';
 
 
   return createPortal(
@@ -215,7 +211,7 @@ export default function TripDetailBottomSheet({
           <div className="flex items-center justify-between gap-2.5 p-3 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <span className="px-2.5 py-1 rounded-xl bg-slate-950 dark:bg-black text-white font-mono font-bold text-base sm:text-lg shrink-0 shadow-2xs border border-blue-500/20">
-                {trip.departureLabel || '04:30'}
+                {trip.departureLabel || '—'}
               </span>
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-snug">
@@ -330,8 +326,9 @@ export default function TripDetailBottomSheet({
                 {allPhotos.length > 1 && (
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
                     {allPhotos.map((photo, idx) => {
-                      const angleLabels = ['Đầu xe', 'Thân xe', 'Đuôi xe', 'Nội thất', 'Cốp xe'];
-                      const label = angleLabels[idx] || `Góc ${idx + 1}`;
+                      // Không gán tên góc chụp cho ảnh bất kỳ: Chủ xe đăng ảnh nào thì
+                      // đánh số ảnh đó, hệ thống không biết đó là đầu xe hay nội thất.
+                      const label = `Ảnh ${idx + 1}`;
                       return (
                         <button
                           key={idx}
@@ -372,28 +369,42 @@ export default function TripDetailBottomSheet({
               <div className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
                 <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                 <span>{driverRating}</span>
-                <span className="text-slate-400 font-normal">({driverTrips} chuyến)</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 dark:border-white/10">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Dòng xe:</span>
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  {vehicleModel}
+                {/* Chưa chạy chuyến nào thì nói thẳng là Chủ xe mới, không bịa số chuyến */}
+                <span className="text-slate-400 font-normal">
+                  {driverTrips > 0 ? `(${driverTrips} chuyến)` : '(Chủ xe mới)'}
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-white dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/10 shadow-2xs">
-                {maskedPlate}
-              </span>
             </div>
 
-            <div className="pt-1.5 border-t border-slate-200 dark:border-white/10">
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">Tiện nghi: </span>
-                {amenitiesText}
-              </p>
-            </div>
+            {/* Chỉ hiện dòng xe / biển số khi Chủ xe đã khai thật */}
+            {(vehicleModel || maskedPlate) && (
+              <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 dark:border-white/10">
+                {vehicleModel ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Dòng xe:</span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      {vehicleModel}
+                    </span>
+                  </div>
+                ) : (
+                  <span />
+                )}
+                {maskedPlate && (
+                  <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-white dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/10 shadow-2xs">
+                    {maskedPlate}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {amenitiesText && (
+              <div className="pt-1.5 border-t border-slate-200 dark:border-white/10">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Tiện nghi: </span>
+                  {amenitiesText}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* 4. CAM KẾT NỀN TẢNG (AN TÂM 100%) */}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { createTrip, getTrip, listTrips, deleteTripHandler } from '../apps/api/src/controllers/tripController.js';
-import { createIntent, getDB, deleteTrip, initDB, addBooking } from '../apps/api/src/db/sqliteStore.js';
+import { createTrip, getTrip, deleteTripHandler } from '../apps/api/src/controllers/tripController.js';
+import { createIntent, deleteTrip, initDB, addBooking } from '../apps/api/src/db/sqliteStore.js';
 
 function mockRes() {
   const res = {
@@ -151,7 +151,7 @@ async function run() {
 
   // 5. Kiểm tra Hủy chuyến khi có khách đặt (Công trình 4 & Công trình 6)
   console.log('\n── 5. HỦY CHUYẾN CÓ KHÁCH (TIME-DECAY PENALTY & STANDBY BUFFER) ──');
-  const bookingData = await addBooking({
+  const _bookingData = await addBooking({
     tripId: createdTripId,
     passengerName: 'Nguyễn Văn Khách',
     passengerPhone: '0912345678',

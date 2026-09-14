@@ -99,15 +99,6 @@ export default {
     deleteAccount: 'Request account deletion'
   },
 
-  postMenu: {
-    title: 'What is your ride need?',
-    driverTitle: 'Offer empty seats',
-    driverBadge: 'Driver',
-    driverDesc: 'Family vehicle with spare seats, sharing fuel & tolls',
-    passengerTitle: 'Request a ride',
-    passengerBadge: 'Passenger',
-    passengerDesc: 'Rideshare with empty seats, fair cost-sharing'
-  },
 
   hero: {
     eyebrow: 'Direct family rideshare & convenient intercity empty-leg network · 0% fee',

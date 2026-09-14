@@ -33,14 +33,14 @@ import {
   CORRIDOR_1D_POLICY,
   MOTION_SICKNESS_POLICY,
   EMERGENCY_TRANSIT_LIFEBUOYS,
-  evaluateIncidentSanctions,
-  cleanPhoneNumber
+  evaluateIncidentSanctions
 } from '@carmate/shared';
 import { api } from '../../api/client.js';
 import LegalShieldModal from '../modals/LegalShieldModal.jsx';
 import DriverScheduleCardView from './DriverScheduleCardView.jsx';
 import RadarScannerVisualizer from './RadarScannerVisualizer.jsx';
 import ActiveTripCard from './ActiveTripCard.jsx';
+import useActiveDriverTrip from '../../hooks/useActiveDriverTrip.js';
 import MutualReviewModal from '../modals/MutualReviewModal.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
@@ -56,7 +56,7 @@ const QUICK_CAR_MODELS = [
 ];
 
 export default function CockpitMode({
-  tripId = 'TRIP-MY-COCKPIT',
+  tripId: fallbackTripId = 'TRIP-MY-COCKPIT',
   initialCorridor = 'Tuyến QL13',
   currentUser = null,
   onBack,
@@ -145,63 +145,29 @@ export default function CockpitMode({
   const [boardedCount, setBoardedCount] = useState(0);
   const [showLegalShield, setShowLegalShield] = useState(false);
 
-  // Chuyến xe active thật của chủ xe đang mở trên sàn
-  const [activeDriverTrip, setActiveDriverTrip] = useState(null);
-  const [, setIsLoadingActiveTrip] = useState(false);
-
   const driverPhone = (() => {
     try {
-      return currentUser?.phone || localStorage.getItem('carmate_rider_phone') || localStorage.getItem('carmate_driver_phone') || '';
+      return currentUser?.phone || localStorage.getItem('carmate_rider_phone') || '';
     } catch {
       return '';
     }
   })();
 
-  const reloadActiveTrip = useCallback(async () => {
-    setIsLoadingActiveTrip(true);
-    try {
-      const clean = driverPhone ? cleanPhoneNumber(driverPhone) : '';
-      const res = await api.getTrips({ type: 'drivers' });
-      const allDriverTrips = res?.data?.driverOffers || res?.data?.all || [];
-
-      let storedTripId = null;
-      try {
-        const storedIds = JSON.parse(
-          localStorage.getItem(`carmate_my_trip_ids_${clean}`) ||
-          localStorage.getItem('carmate_my_trip_ids') ||
-          '[]'
-        );
-        if (storedIds.length > 0) storedTripId = storedIds[0];
-      } catch {}
-
-      const myActiveTrip = allDriverTrips.find((t) => {
-        if (t.status === 'cancelled' || t.status === 'completed') return false;
-        if (storedTripId && t.id === storedTripId) return true;
-        const pReal = cleanPhoneNumber(t.phoneReal || t.phone || '');
-        if (clean && pReal === clean) return true;
-        return false;
-      });
-
-      if (myActiveTrip) {
-        try {
-          const detailRes = await api.getTrip(myActiveTrip.id);
-          setActiveDriverTrip(detailRes?.data || myActiveTrip);
-        } catch {
-          setActiveDriverTrip(myActiveTrip);
-        }
-      } else {
-        setActiveDriverTrip(null);
-      }
-    } catch (err) {
-      console.warn('[CockpitMode] Load active trip error:', err);
-    } finally {
-      setIsLoadingActiveTrip(false);
-    }
-  }, [driverPhone]);
+  // Chuyến xe active thật của chủ xe đang mở trên sàn
+  const { activeDriverTrip, setActiveDriverTrip, reloadActiveTrip } = useActiveDriverTrip(
+    driverPhone,
+    'CockpitMode'
+  );
 
   useEffect(() => {
     reloadActiveTrip();
   }, [reloadActiveTrip]);
+
+  // Mã chuyến dùng cho telemetry và sổ lệnh phải là MÃ THẬT của bài đăng đang mở.
+  // Trước đây luôn gửi hằng số 'TRIP-MY-COCKPIT' — một id không tồn tại trong bảng
+  // trips — nên phiên Cockpit hiện lên sàn dưới dạng slot FORMING mà không chuyến
+  // nào phân giải được, và bấm "Quản lý chuyến xe" trên chính xe mình luôn báo 404.
+  const tripId = activeDriverTrip?.id || fallbackTripId;
 
   // Chuyển đổi giữa [ 📅 LỊCH TRÌNH CỦA BẠN ] và [ ⚡ BUỒNG LÁI RADAR QL13 ]
   const [activeCockpitTab, setActiveCockpitTab] = useState('SCHEDULE');

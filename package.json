@@ -36,7 +36,8 @@
     "test:rendezvous": "node --env-file-if-exists=.env scripts/test-spacetime-rendezvous.mjs",
     "test:matrix": "node --env-file-if-exists=.env scripts/test-timeslot-matrix.mjs",
     "test:rescue": "node --env-file-if-exists=.env scripts/test-departure-rescue.mjs",
-    "test:assurance": "node --env-file-if-exists=.env scripts/test-assurance-ux.mjs"
+    "test:assurance": "node --env-file-if-exists=.env scripts/test-assurance-ux.mjs",
+    "pentest": "node --env-file-if-exists=.env scripts/pentest-security-audit.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

@@ -18,13 +18,13 @@
  */
 
 // Định mức tiêu thụ nhiên liệu xe 5-7 chỗ hỗn hợp đường dài QL13 (có dừng đèn đỏ & kẹt xe cửa ngõ)
-export const AVG_CONSUMPTION_L_PER_100KM = 8.2;
+const AVG_CONSUMPTION_L_PER_100KM = 8.2;
 
 // Tỷ lệ khấu hao hao mòn lốp, rửa xe, nước suối (10% tiền xăng)
-export const WEAR_AND_TEAR_RATIO = 0.10;
+const WEAR_AND_TEAR_RATIO = 0.10;
 
 // Tỷ lệ thực nhận của Chủ xe sau phí nền tảng (90%)
-export const DRIVER_PAYOUT_RATIO = 0.90;
+const DRIVER_PAYOUT_RATIO = 0.90;
 
 // Giá xăng RON 95-III tham chiếu mặc định (VNĐ/Lít)
 export const DEFAULT_DAILY_FUEL_PRICE = 24120;
@@ -32,6 +32,8 @@ export const DEFAULT_DAILY_FUEL_PRICE = 24120;
 // Biến lưu trữ giá xăng trong phiên làm việc
 let currentDailyFuelPrice = DEFAULT_DAILY_FUEL_PRICE;
 let lastFuelUpdatedAt = new Date().toISOString();
+let lastFuelUpdatedBy = 'system';
+let lastFuelSource = 'default';
 
 /**
  * Lấy chỉ số giá xăng RON 95-III hiện tại
@@ -41,27 +43,45 @@ export function getDailyFuelPrice() {
     ron95Price: currentDailyFuelPrice,
     unit: 'VNĐ/Lít',
     fuelType: 'RON 95-III',
-    updatedAt: lastFuelUpdatedAt
+    updatedAt: lastFuelUpdatedAt,
+    updatedBy: lastFuelUpdatedBy,
+    source: lastFuelSource,
+    defaultPrice: DEFAULT_DAILY_FUEL_PRICE,
+    isDefault: currentDailyFuelPrice === DEFAULT_DAILY_FUEL_PRICE
   };
 }
 
 /**
- * Cập nhật giá xăng RON 95-III hàng ngày (từ API hoặc quản trị viên)
+ * Cập nhật giá xăng RON 95-III hàng ngày (từ API hoặc Quản trị viên)
+ * Bất biến MIT: Giới hạn an toàn trong dải [15.000đ, 45.000đ/Lít]
  */
-export function setDailyFuelPrice(newPrice) {
+export function setDailyFuelPrice(newPrice, updatedAt = null, updatedBy = 'system', source = 'admin') {
   const priceNum = Number(newPrice);
-  if (Number.isFinite(priceNum) && priceNum >= 15000 && priceNum <= 45000) {
-    currentDailyFuelPrice = Math.round(priceNum);
-    lastFuelUpdatedAt = new Date().toISOString();
-    return currentDailyFuelPrice;
+  if (!Number.isFinite(priceNum) || priceNum < 15000 || priceNum > 45000) {
+    throw new Error('Giá xăng RON 95 không hợp lệ (phải từ 15.000đ đến 45.000đ/lít)');
   }
+  currentDailyFuelPrice = Math.round(priceNum);
+  lastFuelUpdatedAt = updatedAt || new Date().toISOString();
+  lastFuelUpdatedBy = updatedBy;
+  lastFuelSource = source;
+  return currentDailyFuelPrice;
+}
+
+/**
+ * Khôi phục giá xăng RON 95-III về mức tham chiếu mặc định
+ */
+export function resetDailyFuelPrice() {
+  currentDailyFuelPrice = DEFAULT_DAILY_FUEL_PRICE;
+  lastFuelUpdatedAt = new Date().toISOString();
+  lastFuelUpdatedBy = 'system';
+  lastFuelSource = 'default';
   return currentDailyFuelPrice;
 }
 
 /**
  * Ước tính phí cầu đường BOT thực tế theo cự ly và hành lang
  */
-export function estimateBotFee(distanceKm, corridor = 'Tuyến QL13') {
+function estimateBotFee(distanceKm, corridor = 'Tuyến QL13') {
   const dist = Math.max(10, distanceKm || 100);
   const isN2 = String(corridor).includes('N2') || String(corridor).includes('Kiên Giang');
 
@@ -82,7 +102,7 @@ export function estimateBotFee(distanceKm, corridor = 'Tuyến QL13') {
 /**
  * Tính tổng chi phí trực tiếp của chuyến xe (Xăng + BOT + Khấu hao nhỏ)
  */
-export function calculateTripDirectCost(distanceKm, corridor = 'Tuyến QL13', fuelPrice = currentDailyFuelPrice) {
+function calculateTripDirectCost(distanceKm, corridor = 'Tuyến QL13', fuelPrice = currentDailyFuelPrice) {
   const dist = Math.max(10, distanceKm || 100);
   const fuelLiters = (dist * AVG_CONSUMPTION_L_PER_100KM) / 100;
   const fuelCost = Math.round(fuelLiters * fuelPrice);
@@ -162,6 +182,7 @@ export function calculateDynamicTariffByDistance(distanceKm, options = {}) {
     fuelCost: tripCost.fuelCost,
     botFee: tripCost.botFee,
     directCost: tripCost,
+    tripCost,
     totalTripCost: tripCost.totalDirectCost,
     pMin,
     pMax,

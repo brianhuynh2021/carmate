@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import {
   X,
@@ -22,12 +22,10 @@ import {
   getFixedSegmentTariff,
   cleanPhoneNumber,
   isValidVietnamesePhone,
-  getPriceGuardrail,
   getDefaultCorridor,
   getEndpointHubs
 } from '@carmate/shared';
 import api from '../../api/client.js';
-import { useI18n } from '../../i18n/index.jsx';
 
 const DEFAULT_CORRIDOR = getDefaultCorridor();
 const SAIGON_HUB_IDS = getEndpointHubs(DEFAULT_CORRIDOR.id, 'a').map((h) => h.id);
@@ -39,7 +37,6 @@ export default function QuickPostTripModal({
   onSuccess,
   onShowToast
 }) {
-  const { t } = useI18n();
 
   // 1. HỒ SƠ XE: Tự động load từ profile / garage / local storage
   const [vehicle, setVehicle] = useState(() => {
@@ -178,7 +175,7 @@ export default function QuickPostTripModal({
     e.preventDefault();
     setErrorMessage('');
 
-    const phone = currentUser?.phone || localStorage.getItem('carmate_driver_phone') || localStorage.getItem('carmate_rider_phone') || '0984568421';
+    const phone = currentUser?.phone || localStorage.getItem('carmate_rider_phone') || '';
     const clean = cleanPhoneNumber(phone);
 
     if (!clean || !isValidVietnamesePhone(clean)) {
@@ -216,13 +213,17 @@ export default function QuickPostTripModal({
         time: finalTime,
         timeSlot: `${finalTime}-${parseInt(finalTime.split(':')[0], 10) + 2}:00`,
         availableSeats: Number(availableSeats),
-        capacity: Number(availableSeats) + 2,
+        // capacity là SỨC CHỨA THẬT của xe (5 hoặc 7 chỗ), không phải số ghế đăng nhận khách.
+        // Lấy từ hồ sơ xe; nếu chưa có thì để server tự suy, tuyệt đối không tự chế từ availableSeats.
+        capacity: currentUser?.vehicle?.capacity ? Number(currentUser.vehicle.capacity) : undefined,
         basePricePerSeat: Number(displayPricePerSeat),
         phoneReal: clean,
         userId: currentUser?.id || `DRV-${clean}`,
-        carType: vehicle?.model || 'Mitsubishi Xpander',
-        licensePlate: vehicle?.plate || '93A - 568.42',
-        plateMask: vehicle?.plate ? vehicle.plate.replace(/\d{2}$/, 'xx') : '93A - 568.xx',
+        // Không gắn biển số / dòng xe bịa vào chuyến đăng lên sàn: khách đặt xong
+        // ra bến tìm một chiếc xe không tồn tại. Thiếu thì để trống.
+        carType: vehicle?.model || '',
+        licensePlate: vehicle?.plate || '',
+        plateMask: vehicle?.plate ? vehicle.plate.replace(/\d{2}$/, 'xx') : '',
         direction: direction === 'TO_SAIGON' ? 'binh_phuoc_to_tphcm' : 'tphcm_to_binh_phuoc',
         routeCategory: 'Tuyến QL13',
         notes: `Đón tại ${originName} · Trả tại ${destName}`,

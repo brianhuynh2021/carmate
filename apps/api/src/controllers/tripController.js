@@ -13,7 +13,6 @@ import {
   isUserDeactivated,
   getBookings,
   getIntents,
-  updateIntent,
   updateBookingStatus,
   applyCancellationPenalty
 } from '../db/sqliteStore.js';

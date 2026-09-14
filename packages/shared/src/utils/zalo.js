@@ -71,7 +71,7 @@ export const isLikelyFakePhone = (phone = '') => {
 /**
  * Xử lý số điện thoại sang định dạng quốc tế (ví dụ: 84988234567 cho WhatsApp / Telegram)
  */
-export const toInternationalPhone = (phone = '') => {
+const toInternationalPhone = (phone = '') => {
   let digits = cleanPhoneNumber(phone);
   if (digits.startsWith('0')) {
     digits = '84' + digits.slice(1);
@@ -96,16 +96,6 @@ export const getZaloChatUrl = (phone = '', text = '') => {
 export const getZaloChatLink = getZaloChatUrl;
 
 /**
- * Tạo liên kết mở trực tiếp cuộc trò chuyện trên WhatsApp
- */
-export const getWhatsAppChatUrl = (phone = '', text = '') => {
-  const intl = toInternationalPhone(phone);
-  if (!intl) return '#';
-  const query = text ? `?text=${encodeURIComponent(text)}` : '';
-  return `https://wa.me/${intl}${query}`;
-};
-
-/**
  * Tạo liên kết mở trực tiếp cuộc trò chuyện trên Telegram
  */
 export const getTelegramChatUrl = (phoneOrUsername = '') => {
@@ -115,52 +105,6 @@ export const getTelegramChatUrl = (phoneOrUsername = '') => {
   }
   const intl = toInternationalPhone(phoneOrUsername);
   return `https://t.me/+${intl}`;
-};
-
-/**
- * Sinh liên kết chia sẻ trực tiếp chuyến đi qua Zalo Web
- * Mở cửa sổ Zalo Web Share chính thức để người dùng chọn Bạn bè hoặc Nhóm Zalo gửi tin
- */
-export const getZaloShareUrl = (trip) => {
-  if (!trip) return 'https://chat.zalo.me/';
-  const url = `https://carmate.vn/t/${trip.id}`;
-  return `https://sp.zalo.me/share_inline?link=${encodeURIComponent(url)}`;
-};
-
-/**
- * Lấy liên kết nhóm Zalo tiện chuyến cộng đồng CarMate
- */
-export const getZaloGroupUrl = () => {
-  return 'https://zalo.me/g/carmate';
-};
-
-/**
- * Sinh liên kết chia sẻ trực tiếp bài đăng lên Facebook
- */
-export const getFacebookShareUrl = (trip) => {
-  if (!trip) return 'https://www.facebook.com/sharer/sharer.php';
-  const url = `https://carmate.vn/t/${trip.id}`;
-  const quote = generateSocialShareText(trip);
-  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(quote)}`;
-};
-
-/**
- * Sinh liên kết chia sẻ trực tiếp chuyến đi lên Telegram
- */
-export const getTelegramShareUrl = (trip) => {
-  if (!trip) return '#';
-  const url = `https://carmate.vn/t/${trip.id}`;
-  const text = generateSocialShareText(trip);
-  return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-};
-
-/**
- * Sinh liên kết chia sẻ trực tiếp chuyến đi lên WhatsApp
- */
-export const getWhatsAppShareUrl = (trip) => {
-  if (!trip) return '#';
-  const text = generateSocialShareText(trip);
-  return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
 };
 
 /**

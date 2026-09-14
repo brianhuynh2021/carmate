@@ -6,7 +6,7 @@
  */
 
 import assert from 'node:assert';
-import { initDB } from '../apps/api/src/db/sqliteStore.js';
+import { initDB, addTrip, deleteTrip } from '../apps/api/src/db/sqliteStore.js';
 import { buildTimeSlotMatrix, buildCorridorTimeline, MATRIX_CONFIG } from '../apps/api/src/services/timeSlotMatrix.js';
 import { telemetryPing, resetAllStationData } from '../apps/api/src/services/stationQueueService.js';
 
@@ -85,8 +85,42 @@ const before = buildTimeSlotMatrix({
 ok(before.counts.forming === 0, 'Chưa có xe nào chạy -> chưa có tầng FORMING');
 
 // Xe đang ở Chơn Thành (s=56.5), cách Bàu Bàng (s=84.5) khoảng 28km
+// Phiên Buồng lái chỉ lên sàn khi gắn với một bài đăng CÓ THẬT: mã chuyến bịa
+// từng dựng ra "xe ma" mà khách không tra cứu hay đặt chỗ được. Vì vậy kiểm thử
+// phải tạo chuyến thật trước, y như luồng của Chủ xe ngoài đời.
+const liveTripId = `DRV-TEST-LIVE-${Date.now()}`;
+const passedTripId = `DRV-TEST-PASSED-${Date.now()}`;
+await addTrip({
+  id: liveTripId,
+  type: 'driver_offer',
+  status: 'active',
+  from: 'Bàu Bàng',
+  to: 'Hàng Xanh',
+  date: 'Hôm nay',
+  timeSlot: '05:00-07:00',
+  availableSeats: 3,
+  capacity: 7,
+  basePricePerSeat: 150000,
+  phoneReal: '0913000001',
+  carType: 'Toyota Innova'
+});
+await addTrip({
+  id: passedTripId,
+  type: 'driver_offer',
+  status: 'active',
+  from: 'Bàu Bàng',
+  to: 'Hàng Xanh',
+  date: 'Hôm nay',
+  timeSlot: '05:00-07:00',
+  availableSeats: 3,
+  capacity: 7,
+  basePricePerSeat: 150000,
+  phoneReal: '0913000002',
+  carType: 'Toyota Vios'
+});
+
 telemetryPing({
-  tripId: 'TRIP-LIVE', driverPhone: '0913000001', driverName: 'Anh Sơn',
+  tripId: liveTripId, driverPhone: '0913000001', driverName: 'Anh Sơn',
   plate: '61A-777.77', vehicleModel: 'Toyota Innova', seatsAvailable: 3,
   lat: 11.4791, lng: 106.6694, speed: 58
 });
@@ -107,7 +141,7 @@ ok(forming.certainty < 1.0, 'Độ chắc chắn thấp hơn chuyến đã có t
 
 // Xe đã VƯỢT QUA trạm thì không được tính
 telemetryPing({
-  tripId: 'TRIP-PASSED', driverPhone: '0913000002', plate: '61A-888.88',
+  tripId: passedTripId, driverPhone: '0913000002', plate: '61A-888.88',
   seatsAvailable: 3, lat: 10.8525, lng: 106.7214, speed: 45 // Ngã 4 Bình Phước, s=132.5
 });
 const afterPass = buildTimeSlotMatrix({
@@ -204,4 +238,7 @@ const badTl = buildCorridorTimeline({ originHubId: 'hub_khong_co', destinationHu
 ok(badTl.success === false, 'Trạm không tồn tại -> báo lỗi, không ném exception');
 
 resetAllStationData();
+// Dọn chuyến dựng riêng cho kiểm thử để sàn không còn dữ liệu thừa
+await deleteTrip(liveTripId);
+await deleteTrip(passedTripId);
 console.log(`\n🎉 TẤT CẢ ${passed} KIỂM THỬ ĐỀU ĐẠT\n`);

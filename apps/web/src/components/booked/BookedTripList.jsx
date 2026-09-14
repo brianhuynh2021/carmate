@@ -29,12 +29,9 @@ import {
 } from 'lucide-react';
 import {
   formatVND,
-  toPublicAlias,
   getUserOnlineStatus,
-  formatCleanDateLabel,
   parseTripDate,
   parseLocation,
-  isEmergencyPhoneUnlocked,
   resolveDriverRealName,
   maskCustomerPlate
 } from '@carmate/shared';
@@ -54,14 +51,13 @@ function formatTicketDateTime(timeSlot, rawDate) {
   const weekday = WEEKDAY_NAMES[d.getDay()] || 'Thứ 2';
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
-  const time = timeSlot || '16:00';
+  const time = timeSlot || '';
   return `${time} · ${weekday} (${day}/${month})`;
 }
 
 
 
 function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
-  const { t } = useI18n();
   const isCompleted = status === 'completed';
   const isReassigned = status === 'reassigned' || Boolean(hasSilentFailover);
   const isCancelled = status === 'cancelled' && !isReassigned;
@@ -210,7 +206,6 @@ export default function BookedTripList({
   }, [currentUser]);
 
   const [copiedId, setCopiedId] = useState(null);
-  const [copiedPhoneId, setCopiedPhoneId] = useState(null);
 
 
   // Trạng thái Cursor Ambient: Quản lý danh sách thu gọn & mở rộng (Accordion)
@@ -606,9 +601,9 @@ export default function BookedTripList({
             const fromParsed = parseLocation(record.from);
             const toParsed = parseLocation(record.to);
 
-            const hostName = resolveDriverRealName(target, record.driverName || record.contactName || 'Nguyễn Thành Huỳnh');
-            const carModel = record.vehicleModel || record.carModel || target.carModel || target.vehicleModel || 'Mitsubishi Xpander';
-            const maskedPlate = maskCustomerPlate(target, '93A – 568.XX');
+            const hostName = resolveDriverRealName(target, record.driverName || record.contactName || '');
+            const carModel = record.vehicleModel || record.carModel || target.carModel || target.vehicleModel || '';
+            const maskedPlate = maskCustomerPlate(target, '');
             const vehicleInfo = `${carModel} (${maskedPlate})`;
 
             const pickupStation = record.from || record.fromLocation || target.from || target.fromLocation || 'Cây xăng Petrolimex Tân Khai QL13';
@@ -616,7 +611,12 @@ export default function BookedTripList({
 
             const rawDriverPhone = record.driverPhone || record.phoneReal || record.contactPhone || target.phoneReal || target.phone || '';
             const cleanCallPhone = String(rawDriverPhone).replace(/\D/g, '');
-            const callPhone = cleanCallPhone || '0984883750';
+            // Chỉ gọi được khi có số ĐẦY ĐỦ, hợp lệ.
+            // - KHÔNG fallback sang số quản trị viên khi vé thiếu SĐT.
+            // - Số đang bị che ('098***3750') sau khi bỏ ký tự lạ còn '0983750' — bảy chữ số
+            //   vẫn "truthy" nên trước đây tạo ra link tel: tới một số rác.
+            const isCallablePhone = /^0\d{9}$/.test(cleanCallPhone);
+            const callPhone = isCallablePhone ? cleanCallPhone : '';
 
             const needsRescueWatch = !isCompleted && !isCancelled;
 
@@ -639,7 +639,7 @@ export default function BookedTripList({
                     <div className="flex items-center justify-between gap-2.5 flex-wrap">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-sm sm:text-base text-[#0071e3] tracking-tight bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/40 px-3 py-1 rounded-xl">
-                          #{String(record.escrowId || record.id || 'CX-2257').replace(/^#/, '')}
+                          #{String(record.escrowId || record.id || '').replace(/^#/, '')}
                         </span>
                         <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">·</span>
                         <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold hidden sm:inline">
@@ -741,23 +741,32 @@ export default function BookedTripList({
 
                     {/* Cụm nút hành động nhanh (Quick Actions) */}
                     <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
-                      <a
-                        href={`tel:${callPhone}`}
-                        className="flex-1 min-w-[130px] h-11 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                      >
-                        <PhoneCall className="w-4 h-4 shrink-0" />
-                        <span>Gọi chủ xe</span>
-                      </a>
+                      {callPhone ? (
+                        <>
+                          <a
+                            href={`tel:${callPhone}`}
+                            className="flex-1 min-w-[130px] h-11 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                          >
+                            <PhoneCall className="w-4 h-4 shrink-0" />
+                            <span>Gọi chủ xe</span>
+                          </a>
 
-                      <a
-                        href={`https://zalo.me/${callPhone}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-1 min-w-[130px] h-11 px-3 rounded-2xl bg-[#0068ff] hover:bg-[#0058db] active:scale-[0.98] text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                      >
-                        <MessageCircle className="w-4 h-4 shrink-0" />
-                        <span>Nhắn Zalo</span>
-                      </a>
+                          <a
+                            href={`https://zalo.me/${callPhone}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 min-w-[130px] h-11 px-3 rounded-2xl bg-[#0068ff] hover:bg-[#0058db] active:scale-[0.98] text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                          >
+                            <MessageCircle className="w-4 h-4 shrink-0" />
+                            <span>Nhắn Zalo</span>
+                          </a>
+                        </>
+                      ) : (
+                        <div className="flex-1 min-w-[130px] h-11 px-3 rounded-2xl bg-slate-100 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/10 text-slate-500 dark:text-slate-400 font-semibold text-xs inline-flex items-center justify-center gap-1.5">
+                          <PhoneCall className="w-4 h-4 shrink-0" />
+                          <span>Số liên hệ mở khi chốt chuyến</span>
+                        </div>
+                      )}
 
                       <button
                         type="button"
@@ -859,7 +868,7 @@ export default function BookedTripList({
               >
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <span className="font-mono font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-300">
-                    #{String(record.escrowId || record.id || 'CX-2257').replace(/^#/, '')}
+                    #{String(record.escrowId || record.id || '').replace(/^#/, '')}
                   </span>
 
                   <div>

@@ -99,15 +99,6 @@ export default {
     deleteAccount: 'Yêu cầu xoá tài khoản'
   },
 
-  postMenu: {
-    title: 'Bạn muốn đăng nhu cầu nào?',
-    driverTitle: 'Đăng xe trống',
-    driverBadge: 'Chủ xe',
-    driverDesc: 'Xe gia đình còn ghế trống, san sẻ bớt tiền xăng & cầu đường',
-    passengerTitle: 'Tôi cần tìm xe',
-    passengerBadge: 'Người tìm xe',
-    passengerDesc: 'Ghép ghế tiện chuyến tiết kiệm chi phí, đón trả tiện đường'
-  },
 
   hero: {
     eyebrow: 'Bảng tin kết nối chuyến đi trực tiếp toàn quốc',

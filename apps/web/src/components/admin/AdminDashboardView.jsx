@@ -29,13 +29,19 @@ import {
   Plus,
   RotateCcw,
   Sliders,
-  Save
+  Save,
+  Fuel
 } from 'lucide-react';
 import api from '../../api/client.js';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 import Modal from '../ui/Modal.jsx';
-import { formatVND, DEFAULT_TRUST_RULES } from '@carmate/shared';
+import {
+  formatVND,
+  DEFAULT_TRUST_RULES,
+  calculateDynamicTariffByDistance,
+  DEFAULT_DAILY_FUEL_PRICE
+} from '@carmate/shared';
 
 const ADMIN_TOKEN_KEY = 'carmate_admin_token';
 
@@ -59,11 +65,34 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [metrics, setMetrics] = useState(null);
   const [trips, setTrips] = useState([]);
   const [users, setUsers] = useState([]);
+
+  // Form tạo hộ hồ sơ Chủ xe trong giai đoạn đội vận hành đi mời bác tài
+  const EMPTY_DRIVER_FORM = {
+    name: '',
+    phone: '',
+    plate: '',
+    carType: '',
+    capacity: 5,
+    // Chuyến đầu tiên (để trống thì chỉ tạo hồ sơ)
+    from: '',
+    to: '',
+    date: '',
+    time: '',
+    availableSeats: 2,
+    basePricePerSeat: ''
+  };
+  const [driverForm, setDriverForm] = useState(EMPTY_DRIVER_FORM);
+  const [isCreatingDriver, setIsCreatingDriver] = useState(false);
+  const [showDriverForm, setShowDriverForm] = useState(false);
   const [reports, setReports] = useState(null);
   const [aiIntelligence, setAiIntelligence] = useState(null);
   const [analyticsSummary, setAnalyticsSummary] = useState(null);
   const [trustRules, setTrustRules] = useState([]);
   const [isSavingRules, setIsSavingRules] = useState(false);
+  const [fuelConfig, setFuelConfig] = useState(null);
+  const [fuelPriceInput, setFuelPriceInput] = useState(24120);
+  const [fuelNoteInput, setFuelNoteInput] = useState('');
+  const [isSavingFuel, setIsSavingFuel] = useState(false);
   const [showAddRuleModal, setShowAddRuleModal] = useState(false);
   const [newRuleForm, setNewRuleForm] = useState({
     id: '',
@@ -174,11 +203,71 @@ export default function AdminDashboardView({ onExitAdmin }) {
     setAuthNotice('');
   };
 
+  // Tạo hộ hồ sơ Chủ xe (kèm chuyến đầu tiên nếu đã có lịch chạy)
+  const handleCreateDriver = async (e) => {
+    e?.preventDefault();
+    if (isCreatingDriver) return;
+
+    const f = driverForm;
+    if (!f.name.trim() || !f.phone.trim() || !f.plate.trim() || !f.carType.trim()) {
+      showNotice('Vui lòng nhập đủ Tên, SĐT, Biển số và Dòng xe', 'error');
+      return;
+    }
+
+    // Chuyến xe là tuỳ chọn, nhưng đã nhập thì phải nhập đủ
+    const tripFields = [f.from, f.to, f.date, f.time];
+    const filledTripFields = tripFields.filter((v) => String(v || '').trim()).length;
+    if (filledTripFields > 0 && filledTripFields < tripFields.length) {
+      showNotice('Đăng chuyến cần đủ: điểm đón, điểm trả, ngày và giờ khởi hành', 'error');
+      return;
+    }
+    if (filledTripFields === tripFields.length && !(Number(f.basePricePerSeat) > 0)) {
+      showNotice('Vui lòng nhập mức phụ xăng cho chuyến xe', 'error');
+      return;
+    }
+
+    setIsCreatingDriver(true);
+    try {
+      const payload = {
+        name: f.name.trim(),
+        phone: f.phone.trim(),
+        plate: f.plate.trim(),
+        carType: f.carType.trim(),
+        capacity: Number(f.capacity) || 5
+      };
+      if (filledTripFields === tripFields.length) {
+        Object.assign(payload, {
+          from: f.from.trim(),
+          to: f.to.trim(),
+          date: f.date,
+          time: f.time,
+          availableSeats: Number(f.availableSeats) || 1,
+          basePricePerSeat: Number(f.basePricePerSeat),
+          routeCategory: 'Tuyến QL13'
+        });
+      }
+
+      const res = await api.adminCreateDriver(payload);
+      if (res?.success) {
+        showNotice(res.message || 'Đã tạo hồ sơ Chủ xe');
+        setDriverForm(EMPTY_DRIVER_FORM);
+        setShowDriverForm(false);
+        await loadAllAdminData();
+      } else {
+        showNotice(res?.error || 'Không tạo được hồ sơ Chủ xe', 'error');
+      }
+    } catch (err) {
+      showNotice(err.message || 'Không tạo được hồ sơ Chủ xe', 'error');
+    } finally {
+      setIsCreatingDriver(false);
+    }
+  };
+
   // 2. Nạp toàn bộ dữ liệu quản trị
   const loadAllAdminData = async () => {
     setIsLoading(true);
     try {
-      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes, trustRulesRes, delReqRes] = await Promise.allSettled([
+      const [metricsRes, tripsRes, usersRes, reportsRes, aiRes, analyticsRes, trustRulesRes, delReqRes, fuelRes] = await Promise.allSettled([
         api.getAdminMetrics(),
         api.getAdminTrips(),
         api.getAdminUsers(),
@@ -186,7 +275,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
         api.getAdminAiIntelligence(),
         api.getAdminAnalyticsSummary(),
         api.getAdminTrustRules(),
-        api.getAdminDeletionRequests()
+        api.getAdminDeletionRequests(),
+        api.getAdminFuelPrice()
       ]);
 
       if (metricsRes.status === 'fulfilled' && metricsRes.value?.success) {
@@ -214,6 +304,11 @@ export default function AdminDashboardView({ onExitAdmin }) {
       }
       if (delReqRes.status === 'fulfilled' && delReqRes.value?.success) {
         setDeletionRequests(delReqRes.value.data || []);
+      }
+      if (fuelRes.status === 'fulfilled' && fuelRes.value?.success && fuelRes.value.data) {
+        setFuelConfig(fuelRes.value.data);
+        setFuelPriceInput(fuelRes.value.data.ron95Price || 24120);
+        setFuelNoteInput(fuelRes.value.data.note || '');
       }
     } catch (err) {
       console.warn('[Admin] Lỗi nạp dữ liệu:', err);
@@ -275,6 +370,51 @@ export default function AdminDashboardView({ onExitAdmin }) {
       }
     } catch (err) {
       showNotice('Lỗi: ' + err.message, 'error');
+    }
+  };
+
+  const handleSaveFuelPrice = async () => {
+    const priceNum = Number(fuelPriceInput);
+    if (!Number.isFinite(priceNum) || priceNum < 15000 || priceNum > 45000) {
+      showNotice('Giá xăng RON 95 phải nằm trong khoảng từ 15.000đ đến 45.000đ/Lít', 'error');
+      return;
+    }
+
+    setIsSavingFuel(true);
+    try {
+      const res = await api.updateAdminFuelPrice({
+        ron95Price: priceNum,
+        note: fuelNoteInput
+      });
+      if (res?.success && res.data) {
+        setFuelConfig(res.data);
+        showNotice(res.message || 'Đã cập nhật giá xăng RON 95 thành công', 'success');
+      } else {
+        showNotice(res?.error || 'Không thể cập nhật giá xăng', 'error');
+      }
+    } catch (err) {
+      showNotice(err.message || 'Lỗi kết nối khi cập nhật giá xăng', 'error');
+    } finally {
+      setIsSavingFuel(false);
+    }
+  };
+
+  const handleResetFuelPrice = async () => {
+    setIsSavingFuel(true);
+    try {
+      const res = await api.resetAdminFuelPrice();
+      if (res?.success && res.data) {
+        setFuelConfig(res.data);
+        setFuelPriceInput(res.data.ron95Price || 24120);
+        setFuelNoteInput('');
+        showNotice(res.message || 'Đã khôi phục giá xăng về mức tham chiếu mặc định (24.120đ)', 'success');
+      } else {
+        showNotice(res?.error || 'Không thể khôi phục giá xăng', 'error');
+      }
+    } catch (err) {
+      showNotice(err.message || 'Lỗi kết nối khi khôi phục giá xăng', 'error');
+    } finally {
+      setIsSavingFuel(false);
     }
   };
 
@@ -925,6 +1065,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
               <span>Quy Tắc Tín Nhiệm ({trustRules.length})</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('fuel')}
+              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === 'fuel'
+                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Fuel className="w-3.5 h-3.5 text-amber-500" />
+              <span>Giá Xăng Dầu ({fuelConfig?.ron95Price ? formatVND(fuelConfig.ron95Price) : '24.120đ'})</span>
+            </button>
           </div>
         </div>
 
@@ -1050,6 +1202,182 @@ export default function AdminDashboardView({ onExitAdmin }) {
       {/* ── TAB 2: THÀNH VIÊN & XÁC MINH ── */}
       {activeTab === 'users' && (
         <div className="space-y-4">
+          {/* ── TẠO HỘ HỒ SƠ CHỦ XE (GIAI ĐOẠN ĐI MỜI BÁC TÀI) ── */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-emerald-200/80 dark:border-emerald-900/50 shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <Car className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">Tạo Hồ Sơ Chủ Xe</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Nhập hộ khi đi mời bác tài. Bác tài chưa cần cài ứng dụng — đăng nhập bằng chính
+                    số điện thoại này là nhận lại đủ hồ sơ và các chuyến đã đăng.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDriverForm((v) => !v)}
+                className="px-3 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer active:scale-95 transition-all"
+              >
+                {showDriverForm ? 'Đóng' : '+ Thêm Chủ xe'}
+              </button>
+            </div>
+
+            {showDriverForm && (
+              <form onSubmit={handleCreateDriver} className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Tên Chủ xe *</span>
+                    <input
+                      type="text"
+                      value={driverForm.name}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, name: e.target.value }))}
+                      placeholder="VD: Nguyễn Văn Tài"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Số điện thoại *</span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={driverForm.phone}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, phone: e.target.value }))}
+                      placeholder="VD: 0912 345 678"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Biển số xe *</span>
+                    <input
+                      type="text"
+                      value={driverForm.plate}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, plate: e.target.value.toUpperCase() }))}
+                      placeholder="VD: 93A-38715"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Dòng xe *</span>
+                    <input
+                      type="text"
+                      value={driverForm.carType}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, carType: e.target.value }))}
+                      placeholder="VD: Mazda 2 - Màu Trắng"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Sức chứa xe</span>
+                    <select
+                      value={driverForm.capacity}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, capacity: e.target.value }))}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white cursor-pointer"
+                    >
+                      <option value={5}>Xe 5 chỗ</option>
+                      <option value={7}>Xe 7 chỗ</option>
+                      <option value="pickup">Xe bán tải</option>
+                      <option value="truck_light">Xe tải nhẹ</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200 dark:border-white/10 space-y-2.5">
+                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                    Chuyến xe đầu tiên
+                    <span className="font-normal text-slate-400"> — để trống nếu bác tài chưa chốt lịch chạy</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Điểm đón</span>
+                      <input
+                        type="text"
+                        value={driverForm.from}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, from: e.target.value }))}
+                        placeholder="VD: Cây xăng Petrolimex Tân Khai"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Điểm trả</span>
+                      <input
+                        type="text"
+                        value={driverForm.to}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, to: e.target.value }))}
+                        placeholder="VD: Cụm BV Chợ Rẫy"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Ngày khởi hành</span>
+                      <input
+                        type="date"
+                        value={driverForm.date}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, date: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Giờ khởi hành</span>
+                      <input
+                        type="time"
+                        value={driverForm.time}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, time: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Số ghế nhận khách</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="6"
+                        value={driverForm.availableSeats}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, availableSeats: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Phụ xăng / ghế (đ)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={driverForm.basePricePerSeat}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, basePricePerSeat: e.target.value }))}
+                        placeholder="VD: 165000"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={isCreatingDriver}
+                    className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold cursor-pointer active:scale-95 transition-all"
+                  >
+                    {isCreatingDriver ? 'Đang tạo...' : 'Tạo hồ sơ Chủ xe'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDriverForm(EMPTY_DRIVER_FORM);
+                      setShowDriverForm(false);
+                    }}
+                    className="h-10 px-4 rounded-xl border border-slate-300 dark:border-white/10 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer active:scale-95 transition-all"
+                  >
+                    Huỷ
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
           {/* KHU VỰC YÊU CẦU XÓA TÀI KHOẢN (ĐỐI SOÁT & PHÊ DUYỆT BỞI ADMIN) */}
           {deletionRequests.some((r) => r.status === 'pending') && (
             <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-rose-200/80 dark:border-rose-900/50 shadow-xs space-y-3">
@@ -2210,6 +2538,371 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 7: QUẢN LÝ BIỂU PHÍ XĂNG DẦU & BẤT BIẾN LĂN BÁNH (FUEL & INVARIANTS) ── */}
+      {activeTab === 'fuel' && (
+        <div className="space-y-6">
+          {/* Header & Quick Action Bar */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold">
+                <Fuel className="w-3.5 h-3.5" />
+                <span>Bất Biến Chi Phí Xăng Dầu (MIT Invariants)</span>
+              </div>
+              <h3 className="text-xl font-bold font-display text-slate-900 dark:text-white">
+                Biểu Phí Xăng Dầu & Tham Chiếu Lăn Bánh
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+                Quản trị viên cập nhật mốc giá xăng RON 95-III sau mỗi kỳ điều hành giá của Liên Bộ Công Thương - Tài chính. Giá mới tự động lưu vào hệ thống và áp dụng tức thì cho mọi thuật toán định giá chia sẻ chi phí, Nash Equilibrium và kiểm tra trần giá.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFuelPrice}
+                disabled={isSavingFuel}
+                className="h-10 px-3.5 font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4 mr-1.5" />
+                Khôi phục chuẩn ({formatVND(DEFAULT_DAILY_FUEL_PRICE)})
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveFuelPrice}
+                disabled={isSavingFuel}
+                className="h-10 px-4 font-bold shadow-md cursor-pointer bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white"
+              >
+                <Save className="w-4 h-4 mr-1.5" />
+                {isSavingFuel ? 'Đang lưu...' : 'Lưu & Áp Dụng Ngay'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Top 4 Metrics Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Giá RON 95-III Hệ Thống</span>
+                <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <Fuel className="w-4 h-4" />
+                </span>
+              </div>
+              <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+                {fuelConfig?.ron95Price ? formatVND(fuelConfig.ron95Price) : `${formatVND(DEFAULT_DAILY_FUEL_PRICE)}`}
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px]">
+                <span className={`px-2 py-0.5 rounded-full font-bold ${fuelConfig?.isDefault ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'}`}>
+                  {fuelConfig?.isDefault ? 'Mặc định tham chiếu' : 'Đã tinh chỉnh'}
+                </span>
+                <span className="text-slate-400 truncate">
+                  {fuelConfig?.updatedAt ? new Date(fuelConfig.updatedAt).toLocaleDateString('vi-VN') : 'Gốc'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Tiêu Hao Tiêu Chuẩn</span>
+                <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <Car className="w-4 h-4" />
+                </span>
+              </div>
+              <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+                8.2 <span className="text-sm font-normal text-slate-400">L/100km</span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Đo đạc thực tế đường hỗn hợp (Sedan/Crossover 5 - 7 chỗ).
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Khấu Hao Hao Mòn</span>
+                <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                  <TrendingUp className="w-4 h-4" />
+                </span>
+              </div>
+              <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+                +10% <span className="text-sm font-normal text-slate-400">/ chi phí xăng</span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Lốp xe, dầu nhớt, rửa xe, hao mòn cơ khí định kỳ.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Biên Độ An Toàn (Invariant)</span>
+                <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <ShieldCheck className="w-4 h-4" />
+                </span>
+              </div>
+              <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+                15k - 45k <span className="text-sm font-normal text-slate-400">đ/Lít</span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Chặn cứng trong mã nguồn để triệt tiêu lỗi nhập liệu phi lý.
+              </p>
+            </div>
+          </div>
+
+          {/* Main Control Panel: Left (Adjustment) & Right (Live Simulator) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Điều chỉnh giá xăng */}
+            <div className="lg:col-span-5 space-y-5">
+              <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-5">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-amber-500" />
+                    <span>Điều Chỉnh Mức Giá Mới</span>
+                  </h4>
+                  <span className="text-[11px] font-mono font-semibold text-slate-400">
+                    Đơn vị: VNĐ / Lít
+                  </span>
+                </div>
+
+                {/* Input with large font */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    Giá xăng RON 95-III áp dụng:
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="10"
+                      min="15000"
+                      max="45000"
+                      value={fuelPriceInput}
+                      onChange={(e) => setFuelPriceInput(Number(e.target.value) || 0)}
+                      className="w-full h-14 pl-4 pr-16 rounded-2xl bg-slate-50 dark:bg-[#151c2e] border border-slate-300/80 dark:border-white/10 text-2xl font-black font-mono text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/30"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 font-mono pointer-events-none">
+                      đ/Lít
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Hiển thị định dạng:</span>
+                    <span className="font-mono font-black text-amber-600 dark:text-amber-400">
+                      {formatVND(fuelPriceInput || 0)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Step delta adjustment buttons */}
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    Tăng / Giảm nhanh:
+                  </span>
+                  <div className="grid grid-cols-6 gap-1.5">
+                    {[
+                      { delta: -1000, label: '-1k' },
+                      { delta: -500, label: '-500' },
+                      { delta: -200, label: '-200' },
+                      { delta: 200, label: '+200' },
+                      { delta: 500, label: '+500' },
+                      { delta: 1000, label: '+1k' }
+                    ].map((step, sIdx) => (
+                      <button
+                        key={sIdx}
+                        type="button"
+                        onClick={() => {
+                          const nextVal = Math.max(15000, Math.min(45000, Number(fuelPriceInput || 24120) + step.delta));
+                          setFuelPriceInput(nextVal);
+                        }}
+                        className={`h-8 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer border ${
+                          step.delta > 0
+                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800/40'
+                            : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800/40'
+                        }`}
+                      >
+                        {step.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preset Chips (Stanford Ergonomics) */}
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    Chọn nhanh các mốc tham chiếu phổ biến:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[21500, 22000, 22500, 23000, 23500, 24000, 24120, 24500, 25000, 25500, 26000].map((preset) => {
+                      const isSelected = Number(fuelPriceInput) === preset;
+                      return (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setFuelPriceInput(preset)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-amber-500 text-white shadow-xs'
+                              : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {preset.toLocaleString('vi-VN')}đ
+                          {preset === DEFAULT_DAILY_FUEL_PRICE && ' (Gốc)'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Ghi chú kỳ điều hành */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    Ghi chú / Nguồn văn bản (Tùy chọn):
+                  </label>
+                  <input
+                    type="text"
+                    value={fuelNoteInput}
+                    onChange={(e) => setFuelNoteInput(e.target.value)}
+                    placeholder="VD: Kỳ điều hành 15h00 Thứ Năm 10/09/2026 - Petrolimex / Bộ Công Thương"
+                    className="w-full h-10 px-3.5 rounded-xl bg-slate-50 dark:bg-[#151c2e] border border-slate-300/80 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/30"
+                  />
+                  {fuelConfig?.note && (
+                    <p className="text-[11px] text-slate-400 italic">
+                      Ghi chú hiện tại: &ldquo;{fuelConfig.note}&rdquo;
+                    </p>
+                  )}
+                </div>
+
+                {/* Submit Action Buttons */}
+                <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleSaveFuelPrice}
+                    disabled={isSavingFuel}
+                    className="w-full sm:flex-1 h-11 font-bold cursor-pointer bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white shadow-md"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isSavingFuel ? 'Đang lưu...' : 'Lưu Thay Đổi'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={handleResetFuelPrice}
+                    disabled={isSavingFuel}
+                    className="w-full sm:w-auto h-11 px-4 text-xs font-semibold cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                    Đặt lại
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Live Simulator (Invariants & Tariff Projection) */}
+            <div className="lg:col-span-7 space-y-5">
+              <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-indigo-500" />
+                      <span>Mô Phỏng Trực Tiếp (Live Dynamic Tariff Invariants)</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Xem trước tác động cước phí chia sẻ tức thì khi đổi giá xăng sang{' '}
+                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                        {formatVND(fuelPriceInput || DEFAULT_DAILY_FUEL_PRICE)}
+                      </span>
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10.5px] font-mono font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+                    Nash Equilibrium Model
+                  </span>
+                </div>
+
+                {/* Table simulation */}
+                <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-white/10">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 font-mono uppercase text-[10.5px]">
+                      <tr>
+                        <th className="py-2.5 px-3">Tuyến / Cự Ly</th>
+                        <th className="py-2.5 px-3">Xăng (Lít) & Phí</th>
+                        <th className="py-2.5 px-3">Vé Cầu Đường (BOT)</th>
+                        <th className="py-2.5 px-3">Tổng Chi Phí</th>
+                        <th className="py-2.5 px-3 font-bold text-slate-900 dark:text-white text-right">
+                          Giá Vé Gợi Ý (P*)
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+                      {[
+                        { name: 'Bình Long ➔ Sài Gòn', dist: 110, corridor: 'Tuyến QL13' },
+                        { name: 'Chơn Thành ➔ Sài Gòn', dist: 70, corridor: 'Tuyến QL13' },
+                        { name: 'Bàu Bàng ➔ Sài Gòn', dist: 50, corridor: 'Tuyến QL13' },
+                        { name: 'Thủ Dầu Một ➔ Sài Gòn', dist: 30, corridor: 'Tuyến QL13' }
+                      ].map((route, rIdx) => {
+                        const tariff = calculateDynamicTariffByDistance(route.dist, {
+                          fuelPrice: Number(fuelPriceInput) || 24120,
+                          corridor: route.corridor,
+                          label: route.name
+                        });
+                        const tripCost = tariff.tripCost || tariff.directCost || {};
+
+                        return (
+                          <tr key={rIdx} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="py-3 px-3">
+                              <div className="font-bold text-slate-900 dark:text-white">{route.name}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">{route.dist} km</div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                {tripCost.fuelLiters || 0} L
+                              </div>
+                              <div className="text-[11px] text-slate-400 font-mono">
+                                {formatVND(tripCost.fuelCost || 0)}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-mono text-slate-700 dark:text-slate-300">
+                                {formatVND(tripCost.botFee || 0)}
+                              </div>
+                              <div className="text-[10px] text-slate-400">Trạm QL13</div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-mono font-bold text-slate-900 dark:text-white">
+                                {formatVND(tripCost.totalDirectCost || 0)}
+                              </div>
+                              <div className="text-[10.5px] text-slate-400 font-mono">
+                                Đã gồm 10% hao mòn
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <div className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                                {formatVND(tariff.pricePerSeat || 0)}
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                Tiết kiệm {tariff.savingVsLimoPercent || 25}% vs Limousine
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Explanation Footnote */}
+                <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                    <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Tuân Thủ Pháp Lý Về Chia Sẻ Chi Phí (Nghị Định 10/2020/NĐ-CP)</span>
+                  </div>
+                  <p className="text-[11.5px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    CarMate là nền tảng đi ghép văn minh phi thương mại giữa Chủ xe và Người đi cùng. Giá gợi ý P* được thuật toán toán học bảo đảm nằm trong khoảng hòa vốn chi phí trực tiếp và tuyệt đối không vượt quá chi phí lăn bánh thực tế của toàn bộ hành trình.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

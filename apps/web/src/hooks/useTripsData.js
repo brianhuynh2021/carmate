@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 // Không import dữ liệu mẫu vào đây: sàn chỉ được hiển thị chuyến từ máy chủ.
 // Bỏ hẳn đường import khiến dữ liệu mẫu không thể vô tình quay lại giao diện.
-import { getTomorrowISO, normalizePhoneNumber } from '@carmate/shared';
+import { getTomorrowISO, normalizePhoneNumber, setDailyFuelPrice } from '@carmate/shared';
 import api from '../api/client.js';
-import { trackInitiateBooking, trackDriverConfirm } from '../utils/analytics.js';
+import { trackInitiateBooking } from '../utils/analytics.js';
 import { triggerMacNotification } from '../components/common/AppleMacNotification.jsx';
 
 /**
@@ -86,10 +86,11 @@ export default function useTripsData({
     async function fetchBackendData() {
       try {
         const phoneParam = currentUser?.phone ? { phone: currentUser.phone } : {};
-        const [tripsRes, bookingsRes, statsRes] = await Promise.allSettled([
+        const [tripsRes, bookingsRes, statsRes, fuelRes] = await Promise.allSettled([
           api.getTrips(),
           api.getBookings(phoneParam),
-          api.getStats()
+          api.getStats(),
+          api.getFuelPrice()
         ]);
 
         if (!active) return;
@@ -113,6 +114,13 @@ export default function useTripsData({
         if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
           setPlatformStats(statsRes.value.data);
         }
+
+        if (fuelRes.status === 'fulfilled' && fuelRes.value?.success && fuelRes.value.data) {
+          const fuel = fuelRes.value.data;
+          if (fuel.ron95Price) {
+            setDailyFuelPrice(fuel.ron95Price, fuel.updatedAt, fuel.updatedBy, fuel.source);
+          }
+        }
       } catch (err) {
         console.warn('[CarMate App] API sync warning:', err);
       }
@@ -122,6 +130,10 @@ export default function useTripsData({
     return () => {
       active = false;
     };
+    // Cố ý chỉ chạy MỘT LẦN khi mount: đây là cú nạp dữ liệu khởi động.
+    // Thêm currentUser.phone / syncBookingsCache vào deps sẽ khiến effect chạy lại
+    // mỗi lần các giá trị đó đổi tham chiếu -> gọi API lặp vô hạn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Tái đăng 1 chạm (1-Tap Re-publish) chuyến cũ cho ngày mai
@@ -286,9 +298,21 @@ export default function useTripsData({
 
   const handleEditTrip = useCallback(
     async (tripId, updates) => {
+      // Giữ lại giá trị cũ của đúng các trường sắp đổi, để hoàn tác nếu máy chủ từ chối
+      const previousById = {};
+      const rememberPrevious = (list) => {
+        const found = (list || []).find((t) => t.id === tripId);
+        if (!found) return;
+        previousById[tripId] = Object.keys(updates).reduce((acc, key) => {
+          acc[key] = found[key];
+          return acc;
+        }, {});
+      };
+      rememberPrevious(driverOffers);
+      rememberPrevious(passengerRequests);
+
       setDriverOffers((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
       setPassengerRequests((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
-      showToast('Đã lưu thay đổi thông tin chuyến xe!');
 
       // Nếu Chủ xe sửa thông tin xe hoặc ảnh, tự động đồng bộ vào Garage cá nhân
       if (onSaveProfile && currentUser && (updates.carType || updates.carPhotos || updates.capacity || updates.plateMask)) {
@@ -323,11 +347,17 @@ export default function useTripsData({
 
       try {
         await api.updateTrip(tripId, updates);
+        showToast('Đã lưu thay đổi thông tin chuyến xe!');
       } catch (err) {
         console.warn('Lỗi cập nhật chuyến đi lên backend:', err);
+        // Máy chủ không nhận thay đổi (mất mạng / không đủ quyền). Hoàn tác thay đổi lạc quan
+        // để màn hình không hiển thị dữ liệu mà chuyến xe thực tế không hề có.
+        setDriverOffers((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...previousById[tripId] } : t)));
+        setPassengerRequests((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...previousById[tripId] } : t)));
+        showToast('Chưa lưu được lên máy chủ, thay đổi đã được hoàn tác. Vui lòng thử lại.');
       }
     },
-    [showToast, onSaveProfile, currentUser]
+    [showToast, onSaveProfile, currentUser, driverOffers, passengerRequests]
   );
 
   const handleToggleTripStatus = useCallback(
@@ -353,6 +383,12 @@ export default function useTripsData({
 
   const handleDeleteTrip = useCallback(
     async (tripId) => {
+      // Giữ bản sao để khôi phục nếu máy chủ không xóa được: một chuyến chỉ biến mất
+      // khỏi máy người đăng nhưng vẫn hiển thị trên sàn là tình huống nguy hiểm nhất
+      // (khách vẫn đặt chỗ vào chuyến mà chủ xe tin rằng đã hủy).
+      const removedDriverTrip = (driverOffers || []).find((t) => t.id === tripId);
+      const removedPassengerTrip = (passengerRequests || []).find((t) => t.id === tripId);
+
       setDriverOffers((prev) => prev.filter((t) => t.id !== tripId));
       setPassengerRequests((prev) => prev.filter((t) => t.id !== tripId));
       try {
@@ -365,15 +401,32 @@ export default function useTripsData({
         localStorage.removeItem('carmate_my_trip_ids');
         updateMyTripsCount?.(currentUser);
       } catch {}
-      showToast('Đã xóa bài đăng chuyến đi thành công.');
-
       try {
         await api.deleteTrip(tripId);
+        showToast('Đã xóa bài đăng chuyến đi thành công.');
       } catch (err) {
         console.warn('Lỗi xóa chuyến đi:', err);
+        // Khôi phục lại bài đăng và danh sách id cục bộ: chuyến vẫn còn trên máy chủ
+        if (removedDriverTrip) {
+          setDriverOffers((prev) => (prev.some((t) => t.id === tripId) ? prev : [removedDriverTrip, ...prev]));
+        }
+        if (removedPassengerTrip) {
+          setPassengerRequests((prev) => (prev.some((t) => t.id === tripId) ? prev : [removedPassengerTrip, ...prev]));
+        }
+        try {
+          const storageKey = currentUser
+            ? `carmate_my_trip_ids_${currentUser.id || currentUser.phone}`
+            : 'carmate_guest_trip_ids';
+          const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          if (!stored.includes(tripId)) {
+            localStorage.setItem(storageKey, JSON.stringify([...stored, tripId]));
+          }
+          updateMyTripsCount?.(currentUser);
+        } catch {}
+        showToast('Chưa xóa được bài đăng trên máy chủ. Chuyến xe vẫn đang hiển thị, vui lòng thử lại.');
       }
     },
-    [currentUser, showToast, updateMyTripsCount]
+    [currentUser, showToast, updateMyTripsCount, driverOffers, passengerRequests]
   );
 
   const handleConfirmBooking = useCallback(
@@ -415,21 +468,6 @@ export default function useTripsData({
       }
     },
     [setCancelRecord, showToast, t]
-  );
-
-  const handleConfirmedFromZaloReentry = useCallback(
-    (booking) => {
-      setBookedEscrows((prev) =>
-        prev.map((e) =>
-          e.escrowId === booking.escrowId || e.id === booking.escrowId
-            ? { ...e, bothConfirmed: true, status: 'zalo_active' }
-            : e
-        )
-      );
-      setActiveTab?.('booked');
-      trackDriverConfirm(booking.escrowId || booking.id, booking.tripId);
-    },
-    [setActiveTab]
   );
 
   const handleSendDelay = useCallback(
@@ -597,7 +635,6 @@ export default function useTripsData({
     handleDeleteTrip,
     handleConfirmBooking,
     handleConfirmCancel,
-    handleConfirmedFromZaloReentry,
     handleSendDelay,
     handleCompleteTrip,
     handleSubmitReview
