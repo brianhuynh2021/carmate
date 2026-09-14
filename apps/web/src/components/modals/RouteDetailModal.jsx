@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   MapPin,
-  Share2,
   SlidersHorizontal,
   ArrowRight,
   User,
@@ -35,7 +34,6 @@ export default function RouteDetailModal({
   onClose,
   onManage,
   onBook,
-  onShare,
   onViewCarPhotos
 }) {
   const { t } = useI18n();
@@ -138,40 +136,9 @@ export default function RouteDetailModal({
               </span>
               <span className="text-xs text-[#86868b] dark:text-slate-400">{t('routeDetail.s001')}</span>
             </div>
-
-            {/* Nút chia sẻ trên Mobile */}
-            {onShare && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onShare(trip);
-                }}
-                title={t('routeDetail.s010')}
-                className="sm:hidden h-9 px-3 rounded-xl font-semibold text-xs text-[#0071e3] dark:text-blue-400 bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/25 shadow-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98]"
-              >
-                <Share2 className="w-3.5 h-3.5 shrink-0" />
-                <span>{t('routeDetail.s002')}</span>
-              </button>
-            )}
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Nút chia sẻ trên Desktop */}
-            {onShare && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onShare(trip);
-                }}
-                title={t('routeDetail.s010')}
-                className="hidden sm:inline-flex h-10 px-3.5 rounded-xl font-semibold text-xs text-[#0071e3] dark:text-blue-400 bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/25 shadow-xs items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] shrink-0"
-              >
-                <Share2 className="w-3.5 h-3.5 shrink-0" />
-                <span>{t('routeDetail.s002')}</span>
-              </button>
-            )}
 
             {isOwner ? (
               <button

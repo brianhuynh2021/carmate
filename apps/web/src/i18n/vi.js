@@ -1548,17 +1548,6 @@ export default {
     s007: "Đánh Giá Chuyến Đi 2 Chiều",
     s008: "Cộng đồng bình đẳng · Cùng xây dựng văn hoá đi chung xe an minh"
   },
-  ticketShare: {
-    s001: "Đang tạo ảnh thẻ...",
-    s002: "Tải Thẻ Thông Tin (Bảo mật SĐT)",
-    s003: "Tin Nhắn Zalo Rải Nhóm 1-Chạm",
-    s004: "Xem trên Bảng tin",
-    s005: "Quét mã giữ chỗ 0đ",
-    s006: "Dùng Camera hoặc Zalo quét để xem lộ trình",
-    s007: "Chốt chuyến",
-    s008: "💬 Thẻ thông tin bảo mật lộ trình & mã QR tra cứu an toàn.",
-    s009: "Mã QR tra cứu chuyến đi"
-  },
   zaloReentry: {
     s001: "Số ghế:",
     s002: "Chi phí:",

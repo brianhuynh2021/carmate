@@ -13,7 +13,6 @@ export default function useTripsData({
   currentUser,
   updateMyTripsCount,
   setActiveTab,
-  setTicketToShare,
   setSelectedItemForEscrow,
   setCancelRecord,
   setDelayRecord,
@@ -229,7 +228,6 @@ export default function useTripsData({
       else setPassengerRequests((prev) => [newTrip, ...prev]);
       showToast(t?.('toast.postSuccess') || 'Đăng chuyến thành công!');
       setActiveTab?.('market');
-      setTicketToShare?.(newTrip);
 
       try {
         const storageKey = `carmate_my_trip_ids_${authUser.id || authUser.phone}`;
@@ -303,8 +301,7 @@ export default function useTripsData({
       setActiveTab,
       setPendingPostTrip,
       setShowAuthModal,
-      setTicketToShare,
-      showToast,
+        showToast,
       t,
       updateMyTripsCount,
       onSaveProfile
