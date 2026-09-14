@@ -222,7 +222,7 @@ export function getRiderPass(intentId) {
  * 4. CHỦ XE CẬP NHẬT TELEMETRY (PING 3S) & RADAR CẢNH BÁO TIẾP CẬN 3.5KM
  */
 export function telemetryPing({
-  tripId = 'TRIP-DEFAULT',
+  tripId,
   driverPhone = '0912345678',
   driverName = 'Chủ xe CarMate',
   plate = '93A-123.45',

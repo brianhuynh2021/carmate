@@ -56,7 +56,7 @@ const QUICK_CAR_MODELS = [
 ];
 
 export default function CockpitMode({
-  tripId = 'TRIP-MY-COCKPIT',
+  tripId: fallbackTripId = 'TRIP-MY-COCKPIT',
   initialCorridor = 'Tuyến QL13',
   currentUser = null,
   onBack,
@@ -162,6 +162,12 @@ export default function CockpitMode({
   useEffect(() => {
     reloadActiveTrip();
   }, [reloadActiveTrip]);
+
+  // Mã chuyến dùng cho telemetry và sổ lệnh phải là MÃ THẬT của bài đăng đang mở.
+  // Trước đây luôn gửi hằng số 'TRIP-MY-COCKPIT' — một id không tồn tại trong bảng
+  // trips — nên phiên Cockpit hiện lên sàn dưới dạng slot FORMING mà không chuyến
+  // nào phân giải được, và bấm "Quản lý chuyến xe" trên chính xe mình luôn báo 404.
+  const tripId = activeDriverTrip?.id || fallbackTripId;
 
   // Chuyển đổi giữa [ 📅 LỊCH TRÌNH CỦA BẠN ] và [ ⚡ BUỒNG LÁI RADAR QL13 ]
   const [activeCockpitTab, setActiveCockpitTab] = useState('SCHEDULE');

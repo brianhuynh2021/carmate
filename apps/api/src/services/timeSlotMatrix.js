@@ -33,7 +33,7 @@ import {
   parseTimeToMinutes,
   formatMinutesToTime
 } from '@carmate/shared';
-import { getTrips, getUserByPhone } from '../db/sqliteStore.js';
+import { getTrips, getUserByPhone, getTripById } from '../db/sqliteStore.js';
 import { getActiveCockpitSessions, getStationQueue } from './stationQueueService.js';
 
 export const MATRIX_CONFIG = Object.freeze({
@@ -354,6 +354,11 @@ function collectFormingTrips({ originHubId, seatsNeeded, nowMs, backupCount = 0 
 
   for (const session of sessions) {
     if (session.isBanned) continue;
+    // Phiên telemetry phải gắn với một bài đăng THẬT. Mặc định cũ là hằng số
+    // 'TRIP-DEFAULT' (và client từng gửi 'TRIP-MY-COCKPIT') — những id không tồn
+    // tại trong bảng trips, khiến slot hiện trên sàn như chuyến thật nhưng không
+    // tra cứu, đặt chỗ hay quản lý được. Sàn chỉ nhận phiên có chuyến tra ra.
+    if (!session.tripId || !getTripById(session.tripId)) continue;
     if (Number(session.seatsAvailable || 0) < seatsNeeded) continue;
     if (session.lat == null || session.lng == null) continue;
 
