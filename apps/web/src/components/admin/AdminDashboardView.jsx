@@ -59,6 +59,25 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [metrics, setMetrics] = useState(null);
   const [trips, setTrips] = useState([]);
   const [users, setUsers] = useState([]);
+
+  // Form tạo hộ hồ sơ Chủ xe trong giai đoạn đội vận hành đi mời bác tài
+  const EMPTY_DRIVER_FORM = {
+    name: '',
+    phone: '',
+    plate: '',
+    carType: '',
+    capacity: 5,
+    // Chuyến đầu tiên (để trống thì chỉ tạo hồ sơ)
+    from: '',
+    to: '',
+    date: '',
+    time: '',
+    availableSeats: 2,
+    basePricePerSeat: ''
+  };
+  const [driverForm, setDriverForm] = useState(EMPTY_DRIVER_FORM);
+  const [isCreatingDriver, setIsCreatingDriver] = useState(false);
+  const [showDriverForm, setShowDriverForm] = useState(false);
   const [reports, setReports] = useState(null);
   const [aiIntelligence, setAiIntelligence] = useState(null);
   const [analyticsSummary, setAnalyticsSummary] = useState(null);
@@ -172,6 +191,66 @@ export default function AdminDashboardView({ onExitAdmin }) {
     setMfaSessionId('');
     setRequireMfa(false);
     setAuthNotice('');
+  };
+
+  // Tạo hộ hồ sơ Chủ xe (kèm chuyến đầu tiên nếu đã có lịch chạy)
+  const handleCreateDriver = async (e) => {
+    e?.preventDefault();
+    if (isCreatingDriver) return;
+
+    const f = driverForm;
+    if (!f.name.trim() || !f.phone.trim() || !f.plate.trim() || !f.carType.trim()) {
+      showNotice('Vui lòng nhập đủ Tên, SĐT, Biển số và Dòng xe', 'error');
+      return;
+    }
+
+    // Chuyến xe là tuỳ chọn, nhưng đã nhập thì phải nhập đủ
+    const tripFields = [f.from, f.to, f.date, f.time];
+    const filledTripFields = tripFields.filter((v) => String(v || '').trim()).length;
+    if (filledTripFields > 0 && filledTripFields < tripFields.length) {
+      showNotice('Đăng chuyến cần đủ: điểm đón, điểm trả, ngày và giờ khởi hành', 'error');
+      return;
+    }
+    if (filledTripFields === tripFields.length && !(Number(f.basePricePerSeat) > 0)) {
+      showNotice('Vui lòng nhập mức phụ xăng cho chuyến xe', 'error');
+      return;
+    }
+
+    setIsCreatingDriver(true);
+    try {
+      const payload = {
+        name: f.name.trim(),
+        phone: f.phone.trim(),
+        plate: f.plate.trim(),
+        carType: f.carType.trim(),
+        capacity: Number(f.capacity) || 5
+      };
+      if (filledTripFields === tripFields.length) {
+        Object.assign(payload, {
+          from: f.from.trim(),
+          to: f.to.trim(),
+          date: f.date,
+          time: f.time,
+          availableSeats: Number(f.availableSeats) || 1,
+          basePricePerSeat: Number(f.basePricePerSeat),
+          routeCategory: 'Tuyến QL13'
+        });
+      }
+
+      const res = await api.adminCreateDriver(payload);
+      if (res?.success) {
+        showNotice(res.message || 'Đã tạo hồ sơ Chủ xe');
+        setDriverForm(EMPTY_DRIVER_FORM);
+        setShowDriverForm(false);
+        await loadAllAdminData();
+      } else {
+        showNotice(res?.error || 'Không tạo được hồ sơ Chủ xe', 'error');
+      }
+    } catch (err) {
+      showNotice(err.message || 'Không tạo được hồ sơ Chủ xe', 'error');
+    } finally {
+      setIsCreatingDriver(false);
+    }
   };
 
   // 2. Nạp toàn bộ dữ liệu quản trị
@@ -1050,6 +1129,182 @@ export default function AdminDashboardView({ onExitAdmin }) {
       {/* ── TAB 2: THÀNH VIÊN & XÁC MINH ── */}
       {activeTab === 'users' && (
         <div className="space-y-4">
+          {/* ── TẠO HỘ HỒ SƠ CHỦ XE (GIAI ĐOẠN ĐI MỜI BÁC TÀI) ── */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-emerald-200/80 dark:border-emerald-900/50 shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <Car className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">Tạo Hồ Sơ Chủ Xe</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Nhập hộ khi đi mời bác tài. Bác tài chưa cần cài ứng dụng — đăng nhập bằng chính
+                    số điện thoại này là nhận lại đủ hồ sơ và các chuyến đã đăng.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDriverForm((v) => !v)}
+                className="px-3 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer active:scale-95 transition-all"
+              >
+                {showDriverForm ? 'Đóng' : '+ Thêm Chủ xe'}
+              </button>
+            </div>
+
+            {showDriverForm && (
+              <form onSubmit={handleCreateDriver} className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Tên Chủ xe *</span>
+                    <input
+                      type="text"
+                      value={driverForm.name}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, name: e.target.value }))}
+                      placeholder="VD: Nguyễn Văn Tài"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Số điện thoại *</span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={driverForm.phone}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, phone: e.target.value }))}
+                      placeholder="VD: 0912 345 678"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Biển số xe *</span>
+                    <input
+                      type="text"
+                      value={driverForm.plate}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, plate: e.target.value.toUpperCase() }))}
+                      placeholder="VD: 93A-38715"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Dòng xe *</span>
+                    <input
+                      type="text"
+                      value={driverForm.carType}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, carType: e.target.value }))}
+                      placeholder="VD: Mazda 2 - Màu Trắng"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Sức chứa xe</span>
+                    <select
+                      value={driverForm.capacity}
+                      onChange={(e) => setDriverForm((f) => ({ ...f, capacity: e.target.value }))}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white cursor-pointer"
+                    >
+                      <option value={5}>Xe 5 chỗ</option>
+                      <option value={7}>Xe 7 chỗ</option>
+                      <option value="pickup">Xe bán tải</option>
+                      <option value="truck_light">Xe tải nhẹ</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200 dark:border-white/10 space-y-2.5">
+                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                    Chuyến xe đầu tiên
+                    <span className="font-normal text-slate-400"> — để trống nếu bác tài chưa chốt lịch chạy</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Điểm đón</span>
+                      <input
+                        type="text"
+                        value={driverForm.from}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, from: e.target.value }))}
+                        placeholder="VD: Cây xăng Petrolimex Tân Khai"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Điểm trả</span>
+                      <input
+                        type="text"
+                        value={driverForm.to}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, to: e.target.value }))}
+                        placeholder="VD: Cụm BV Chợ Rẫy"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Ngày khởi hành</span>
+                      <input
+                        type="date"
+                        value={driverForm.date}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, date: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Giờ khởi hành</span>
+                      <input
+                        type="time"
+                        value={driverForm.time}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, time: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Số ghế nhận khách</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="6"
+                        value={driverForm.availableSeats}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, availableSeats: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Phụ xăng / ghế (đ)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={driverForm.basePricePerSeat}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, basePricePerSeat: e.target.value }))}
+                        placeholder="VD: 165000"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-[#0f1117] text-sm font-mono text-slate-900 dark:text-white"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={isCreatingDriver}
+                    className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold cursor-pointer active:scale-95 transition-all"
+                  >
+                    {isCreatingDriver ? 'Đang tạo...' : 'Tạo hồ sơ Chủ xe'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDriverForm(EMPTY_DRIVER_FORM);
+                      setShowDriverForm(false);
+                    }}
+                    className="h-10 px-4 rounded-xl border border-slate-300 dark:border-white/10 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer active:scale-95 transition-all"
+                  >
+                    Huỷ
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
           {/* KHU VỰC YÊU CẦU XÓA TÀI KHOẢN (ĐỐI SOÁT & PHÊ DUYỆT BỞI ADMIN) */}
           {deletionRequests.some((r) => r.status === 'pending') && (
             <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-rose-200/80 dark:border-rose-900/50 shadow-xs space-y-3">

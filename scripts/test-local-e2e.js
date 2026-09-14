@@ -783,6 +783,78 @@ async function runTests() {
       });
       assert(adminMetricsRes.status === 200, 'RBAC 2: Quản trị viên truy cập metrics thành công (HTTP 200)');
 
+      // ── TẠO HỘ HỒ SƠ CHỦ XE (giai đoạn đội vận hành đi mời bác tài) ──
+      // Route này tạo ra tài khoản Chủ xe ĐÃ ĐÁNH DẤU XÁC MINH, nên nó phải đóng
+      // chặt với người ngoài: lọt route là lọt cả một danh tính đã xác minh.
+      const driverPhoneAdmin = '0933888314';
+      const denyAnon = await fetch(`${BASE_URL}/api/admin/drivers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Ẩn danh', phone: driverPhoneAdmin, plate: '99X-99999', carType: 'X' })
+      });
+      assert(denyAnon.status === 401, 'Admin Driver 1: Tạo hồ sơ Chủ xe bị chặn khi không có phiên (HTTP 401)');
+
+      const denyUser = await fetch(`${BASE_URL}/api/admin/drivers`, {
+        method: 'POST',
+        headers: passengerHeaders,
+        body: JSON.stringify({ name: 'Khách thường', phone: driverPhoneAdmin, plate: '99X-99998', carType: 'X' })
+      });
+      assert(denyUser.status === 403, 'Admin Driver 2: Người dùng thường không tạo được hồ sơ Chủ xe (HTTP 403)');
+
+      const createdDriver = await fetch(`${BASE_URL}/api/admin/drivers`, {
+        method: 'POST',
+        headers: adminHeaders,
+        body: JSON.stringify({
+          name: 'Bác Tài E2E',
+          phone: driverPhoneAdmin,
+          plate: '93A-31415',
+          carType: 'Mazda 2 - Màu Trắng',
+          capacity: 5,
+          from: 'Cây xăng Petrolimex Tân Khai',
+          to: 'Cụm BV Chợ Rẫy',
+          date: '2026-12-28',
+          time: '04:30',
+          availableSeats: 2,
+          basePricePerSeat: 165000
+        })
+      });
+      const driverData = await createdDriver.json();
+      assert(createdDriver.status === 201 && driverData?.success === true, 'Admin Driver 3: Quản trị viên tạo được hồ sơ Chủ xe');
+      assert(
+        driverData?.data?.user?.phone === driverPhoneAdmin && Boolean(driverData?.data?.trip?.id),
+        'Admin Driver 4: Tạo cùng lúc hồ sơ Chủ xe và chuyến xe đầu tiên'
+      );
+
+      // Chuyến do admin tạo phải lên sàn công khai, nhưng KHÔNG kèm PII
+      const adminTripId = driverData?.data?.trip?.id;
+      const publicTrip = await (await fetch(`${BASE_URL}/api/trips/${adminTripId}`)).json();
+      assert(
+        publicTrip?.data?.id === adminTripId,
+        'Admin Driver 5: Chuyến do quản trị viên tạo xuất hiện trên sàn công khai'
+      );
+      assert(
+        !publicTrip?.data?.phoneReal && !String(publicTrip?.data?.licensePlate || '').endsWith('31415'),
+        'Admin Driver 6: PII Invariant: chuyến admin tạo vẫn che SĐT và biển số đầy đủ'
+      );
+
+      // Bác tài đăng nhập bằng chính SĐT đó phải nhận lại hồ sơ và hồ sơ xe
+      await fetch(`${BASE_URL}/api/auth/request-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: driverPhoneAdmin })
+      });
+      const claimed = await (await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: driverPhoneAdmin, otp: '123456' })
+      })).json();
+      assert(
+        claimed?.user?.name === 'Bác Tài E2E' && claimed?.user?.vehicle?.plate === '93A-31415',
+        'Admin Driver 7: Chủ xe đăng nhập bằng SĐT đó nhận lại đúng hồ sơ và hồ sơ xe'
+      );
+
+      await fetch(`${BASE_URL}/api/trips/${adminTripId}`, { method: 'DELETE' }).catch(() => {});
+
       // Admin dọn sạch sự kiện analytics & quỹ đạo AI thành công
       const clearAnalyticsRes = await fetch(`${BASE_URL}/api/admin/analytics`, {
         method: 'DELETE',
