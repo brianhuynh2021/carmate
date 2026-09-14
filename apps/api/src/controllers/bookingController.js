@@ -378,10 +378,10 @@ export async function createBooking(req, res) {
       const driverUser = (targetTrip.userId && getUserById(targetTrip.userId)) ||
                          (targetTrip.phoneReal && getUserByPhone(targetTrip.phoneReal)) ||
                          (body.driverPhone && getUserByPhone(body.driverPhone));
-      booking.fullPlate = resolveFullPlate(targetTrip, '93A - 541.86');
-      booking.driverPhone = targetTrip.phoneReal || targetTrip.phone || '0984.123.456';
+      booking.fullPlate = resolveFullPlate(targetTrip, '');
+      booking.driverPhone = targetTrip.phoneReal || targetTrip.phone || '';
       booking.driverName = resolveDriverRealName(targetTrip, driverUser?.name || targetTrip.driverRealName || targetTrip.authorName || body.driverName || 'Chủ xe');
-      booking.carModel = targetTrip.carType || targetTrip.vehicleModel || 'Toyota Vios 2022';
+      booking.carModel = targetTrip.carType || targetTrip.vehicleModel || '';
       booking.availableSeats = remainingSeatsAfterBooking;
     }
 
@@ -393,8 +393,8 @@ export async function createBooking(req, res) {
       from: body.from,
       to: body.to,
       remainingSeats: remainingSeatsAfterBooking ?? 0,
-      carModel: targetTrip?.carType || body.carModel || 'Toyota Vios 2022',
-      fullPlate: resolveFullPlate(targetTrip, '93A - 541.86'),
+      carModel: targetTrip?.carType || body.carModel || '',
+      fullPlate: resolveFullPlate(targetTrip, ''),
       req
     }).catch(() => {});
 
@@ -464,8 +464,8 @@ export async function createBooking(req, res) {
       ...booking,
       phoneReal: maskPhoneNumber(booking.phoneReal || booking.contactPhone || ''),
       contactPhone: maskPhoneNumber(booking.contactPhone || ''),
-      driverPhone: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '0984.123.456') : maskPhoneNumber(booking.driverPhone || ''),
-      driverPhoneDirect: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '0984.123.456') : null,
+      driverPhone: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '') : maskPhoneNumber(booking.driverPhone || ''),
+      driverPhoneDirect: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '') : null,
       passengerPhone: maskPhoneNumber(booking.passengerPhone || '')
     };
 

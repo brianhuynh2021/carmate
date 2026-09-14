@@ -333,11 +333,27 @@ async function runTests() {
       const seatTripId = (await seatTripRes.json())?.data?.id;
       assert(Boolean(seatTripId), 'Seats 1: Tạo chuyến 2 ghế để kiểm thử bất biến ghế');
 
-      const seatOutcomes = [];
-      for (let i = 1; i <= 3; i += 1) {
-        const r = await fetch(`${BASE_URL}/api/bookings`, {
+      // Giữ chỗ nay BẮT BUỘC đăng nhập, nên khối kiểm thử này cần token riêng.
+      const seatAuthHeaders = async (phone, name) => {
+        await fetch(`${BASE_URL}/api/auth/request-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        const auth = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, otp: '123456', name })
+        }).then((r) => r.json());
+        return { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` };
+      };
+
+      const seatOutcomes = [];
+      for (let i = 1; i <= 3; i += 1) {
+        const hdr = await seatAuthHeaders(`09338882${i}${i}`, `Khách ghế ${i}`);
+        const r = await fetch(`${BASE_URL}/api/bookings`, {
+          method: 'POST',
+          headers: hdr,
           body: JSON.stringify({
             tripId: seatTripId, escrowId: `CX-SEAT${i}`,
             from: 'Tân Khai', to: 'Chợ Rẫy', seats: 1, price: 165000,
@@ -358,9 +374,10 @@ async function runTests() {
       // BẤT BIẾN PII: client KHÔNG được tự nâng trạng thái booking. Gửi kèm
       // status:'confirmed' từng đủ để mở khoá SĐT thật của Chủ xe mà không cần
       // đăng nhập và không cần Chủ xe đồng ý.
+      const injectHdr = await seatAuthHeaders('0933888777', 'Kiểm thử tiêm trạng thái');
       const injectRes = await fetch(`${BASE_URL}/api/bookings`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: injectHdr,
         body: JSON.stringify({
           tripId: seatTripId, from: 'Tân Khai', to: 'Chợ Rẫy', seats: 0, price: 0,
           status: 'confirmed',
@@ -383,12 +400,14 @@ async function runTests() {
         tripId: seatTripId, escrowId: 'CX-TRUNG-MA', from: 'Tân Khai', to: 'Chợ Rẫy',
         seats: 0, price: 0, passengerPhone: phone, passengerName: name
       });
+      const dupHdrA = await seatAuthHeaders('0933888555', 'Khách trùng A');
+      const dupHdrB = await seatAuthHeaders('0933888666', 'Khách trùng B');
       const dupA = await (await fetch(`${BASE_URL}/api/bookings`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: dupHdrA,
         body: JSON.stringify(dupPayload('Khách trùng A', '0933888555'))
       })).json();
       const dupB = await (await fetch(`${BASE_URL}/api/bookings`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: dupHdrB,
         body: JSON.stringify(dupPayload('Khách trùng B', '0933888666'))
       })).json();
       const idA = dupA?.data?.escrowId;
