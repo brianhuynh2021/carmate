@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ChevronRight,
   ArrowRight,
-  Edit2,
   Plus,
   Minus,
   RotateCcw,
@@ -134,22 +133,14 @@ export default function QuickPostTripModal({
 
   // 4. KHỐI 3: SỐ GHẾ TRỐNG & CHI PHÍ CHIA SẺ
   const [availableSeats, setAvailableSeats] = useState(2);
-  const [isCustomPrice, setIsCustomPrice] = useState(false);
-  const [customPriceInput, setCustomPriceInput] = useState('');
 
-  // Định mức Geodesic Haversine Segment Tariff tự động
-  const baseTariff = useMemo(() => {
-    try {
-      const t = getFixedSegmentTariff(originHubId, destHubId);
-      return t.pricePerSeat || 165000;
-    } catch {
-      return 165000;
-    }
+  // Định mức Geodesic Haversine Segment Tariff tự động.
+  // Giá là ĐẦU RA của công thức nền tảng cho cặp trạm này — Chủ xe không tự đặt giá.
+  const segmentTariff = useMemo(() => {
+    return getFixedSegmentTariff(originHubId, destHubId);
   }, [originHubId, destHubId]);
 
-  const displayPricePerSeat = isCustomPrice && Number(customPriceInput) > 0
-    ? Number(customPriceInput)
-    : baseTariff;
+  const displayPricePerSeat = segmentTariff.pricePerSeat;
 
   // 5. TRẠNG THÁI GỬI DỮ LIỆU & BÁO LỖI
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -509,43 +500,13 @@ export default function QuickPostTripModal({
 
               {/* Mức phụ xăng */}
               <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Chi phí đề xuất:</span>
-                {isCustomPrice ? (
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      value={customPriceInput}
-                      onChange={(e) => setCustomPriceInput(e.target.value)}
-                      placeholder={String(baseTariff)}
-                      step={5000}
-                      className="w-24 h-8 px-2 rounded-lg bg-white dark:bg-slate-800 border border-emerald-500 text-xs font-mono font-bold text-slate-900 dark:text-white outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomPrice(false)}
-                      className="text-[11px] text-slate-400 hover:text-white px-1"
-                    >
-                      ✓
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
-                      {formatVND(displayPricePerSeat)} / ghế
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCustomPriceInput(String(baseTariff));
-                        setIsCustomPrice(true);
-                      }}
-                      className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
-                      title="Chỉnh sửa chi phí phụ xăng"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Phụ xăng ({segmentTariff.distanceKm} km):
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  {formatVND(displayPricePerSeat)} / ghế
+                  <ShieldCheck className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                </span>
               </div>
             </div>
           </div>

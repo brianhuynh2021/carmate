@@ -110,7 +110,11 @@ import {
   getPublicFuelPriceHandler,
   getAdminFuelPriceHandler,
   updateAdminFuelPriceHandler,
-  resetAdminFuelPriceHandler
+  resetAdminFuelPriceHandler,
+  getAdminTariffParamsHandler,
+  previewAdminTariffParamsHandler,
+  updateAdminTariffParamsHandler,
+  resetAdminTariffParamsHandler
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
 
@@ -295,6 +299,12 @@ router.post('/admin/trust-rules/reset', requireAdmin, resetAdminTrustRulesHandle
 router.get('/admin/fuel-price', requireAdmin, getAdminFuelPriceHandler);
 router.put('/admin/fuel-price', requireAdmin, updateAdminFuelPriceHandler);
 router.post('/admin/fuel-price/reset', requireAdmin, resetAdminFuelPriceHandler);
+
+// --- Công thức định giá: chỉ Quản trị viên được nâng tham số, áp dụng ngay toàn sàn ---
+router.get('/admin/tariff-params', requireAdmin, getAdminTariffParamsHandler);
+router.post('/admin/tariff-params/preview', requireAdmin, previewAdminTariffParamsHandler);
+router.put('/admin/tariff-params', requireAdmin, updateAdminTariffParamsHandler);
+router.post('/admin/tariff-params/reset', requireAdmin, resetAdminTariffParamsHandler);
 router.get('/admin/deletion-requests', requireAdmin, listDeletionRequestsHandler);
 router.post('/admin/deletion-requests/:id/process', requireAdmin, processDeletionRequestHandler);
 router.delete('/admin/users/:id', requireAdmin, deleteUserAdminHandler);

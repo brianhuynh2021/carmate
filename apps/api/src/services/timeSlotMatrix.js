@@ -312,6 +312,10 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
         amenities: t.amenities || ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
         fromLocation: t.from || '',
         toLocation: t.to || '',
+        // Mã trạm THẬT của chuyến (không phải trạm khách đang tìm): client cần
+        // nó để tính đúng giá từng chuyến thay vì dùng chung giá của tuyến tìm.
+        originHubId: t.originHubId || null,
+        destinationHubId: t.destinationHubId || null,
         plateType,
         isServiceVehicle: isService,
         charterPrice: t.charterPrice || null,

@@ -7,12 +7,14 @@ CarMate tuân thủ triệt để 4 trụ cột triết lý kỹ thuật và thi
 - Mọi trạng thái hệ thống phải thỏa mãn điều kiện bất biến (Invariants). State machine không bao giờ được rơi vào trạng thái lấp lửng hay mâu thuẫn (VD: xe 5 chỗ không bao giờ vượt quá 4 ghế khách, 7 chỗ không quá 6 ghế).
 - Idempotent: Các thao tác cập nhật, huỷ, xoá đều có thể gọi lặp lại an toàn mà không làm hỏng dữ liệu.
 - Định giá phụ xăng dựa trên công thức toán học cự ly Geodesic Haversine × 1.28 và dữ liệu trạm thu phí BOT chính xác, cục bộ 100%, không phụ thuộc vào LLM ảo giác.
+- Giá vé là ĐẦU RA của công thức, không phải con số Chủ xe tự gõ: chọn xong cặp trạm ảo là giá xác định. Chỉ Quản trị viên mới đổi được giá toàn sàn, và chỉ bằng cách nâng tham số công thức (Trang Admin ➔ Công thức định giá). Đây là điều kiện để cơ chế ghép chuyến không bị thao túng (strategy-proofness).
+- Trạm đón/trả và khe giờ là TỌA ĐỘ trong ma trận thời gian - không gian, không phải thuộc tính tự do của bài đăng. Khi chuyến đã có khách đặt, tọa độ bị khoá cứng: muốn đổi phải huỷ chuyến (chịu chế tài) rồi đăng chuyến mới.
 
 ## 2. Tư duy Stanford (Stanford Ergonomics - Công thái học & Tải nhận thức = 0)
 
 - Tối ưu hóa trải nghiệm sao cho người dùng và quản trị viên không phải suy nghĩ hoặc gõ phím thừa (Cognitive Load → 0).
 - Các thao tác nhạy cảm hoặc nguy hiểm (Xoá bài, Khóa tài khoản, Huỷ chuyến) luôn hiển thị đầy đủ ngữ cảnh (mã chuyến, người liên quan, lộ trình, giá tiền) trước khi xác nhận, ngăn chặn 100% việc bấm nhầm.
-- Hỗ trợ thao tác 1-chạm (One-tap action) cho các luồng thường xuyên (Preset chip giá, chọn mẫu chuyến, đảo chiều khứ hồi, tái sử dụng ảnh xe thật).
+- Hỗ trợ thao tác 1-chạm (One-tap action) cho các luồng thường xuyên (chọn trạm đón/trả từ danh mục trạm ảo, chọn mẫu chuyến, đảo chiều khứ hồi, tái sử dụng ảnh xe thật).
 
 ## 3. Tư duy Cursor (Cursor Ambient Intelligence & Zero Blocking)
 

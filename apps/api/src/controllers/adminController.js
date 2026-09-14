@@ -24,6 +24,9 @@ import {
   getDailyFuelPriceConfig,
   saveDailyFuelPriceConfig,
   resetDailyFuelPriceConfig,
+  getTariffParamsConfig,
+  saveTariffParamsConfig,
+  resetTariffParamsConfig,
   getDeletionRequests,
   processDeletionRequest,
   deleteUserAccount,
@@ -47,7 +50,12 @@ import {
   cleanPhoneNumber,
   isValidVietnamesePhone,
   sanitizeVehicleCapacityAndSeats,
-  toPublicAlias
+  toPublicAlias,
+  calculateDynamicTariffByDistance,
+  getFixedSegmentTariff,
+  validateTariffParams,
+  TARIFF_PARAM_BOUNDS,
+  DEFAULT_TARIFF_PARAMS
 } from '@carmate/shared';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -773,6 +781,134 @@ export function resetAdminFuelPriceHandler(req, res) {
 }
 
 /**
+ * =============================================================================
+ * QUẢN TRỊ CÔNG THỨC ĐỊNH GIÁ (PRICING FORMULA CONTROLLER)
+ * =============================================================================
+ * Giá vé trên sàn là ĐẦU RA của công thức, không phải con số Chủ xe tự gõ.
+ * Chỉ Quản trị viên mới được nâng/sửa tham số công thức tại đây, và thay đổi
+ * áp dụng ngay cho mọi chặng của toàn sàn.
+ */
+
+/** Dựng bảng giá xem trước cho một bộ tham số, giúp Admin thấy hệ quả trước khi lưu. */
+function buildTariffPreview(params = null) {
+  const samples = [
+    { distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },
+    { distanceKm: 110, label: 'Bình Long ➔ Hàng Xanh' },
+    { distanceKm: 90, label: 'Tân Khai ➔ Hàng Xanh' },
+    { distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
+    { distanceKm: 55, label: 'Bàu Bàng ➔ Hàng Xanh' },
+    { distanceKm: 35, label: 'Sở Sao ➔ Hàng Xanh' },
+    { distanceKm: 20, label: 'VSIP 1 ➔ Hàng Xanh' }
+  ];
+
+  return samples.map((s) => {
+    const t = calculateDynamicTariffByDistance(s.distanceKm, {
+      label: s.label,
+      ...(params ? { params } : {})
+    });
+    return {
+      label: s.label,
+      distanceKm: s.distanceKm,
+      pricePerSeat: t.pricePerSeat,
+      pMin: t.pMin,
+      pMax: t.pMax,
+      driverPayoutPerSeat: t.driverPayoutPerSeat,
+      savingVsLimoPercent: t.savingVsLimoPercent,
+      breakevenCovered: t.breakevenCovered
+    };
+  });
+}
+
+/**
+ * GET /api/admin/tariff-params - Lấy công thức định giá hiện hành + bảng giá xem trước
+ */
+export function getAdminTariffParamsHandler(req, res) {
+  try {
+    const config = getTariffParamsConfig();
+    return res.status(200).json({
+      success: true,
+      data: {
+        config,
+        bounds: TARIFF_PARAM_BOUNDS,
+        defaults: DEFAULT_TARIFF_PARAMS,
+        fuelPrice: getDailyFuelPriceConfig(),
+        preview: buildTariffPreview()
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/admin/tariff-params/preview - Xem trước hệ quả của bộ tham số mới (không lưu)
+ */
+export function previewAdminTariffParamsHandler(req, res) {
+  try {
+    const { params } = req.body || {};
+    const { params: clean, errors } = validateTariffParams(params || {});
+    if (errors.length > 0) {
+      return res.status(400).json({ success: false, error: errors.join(' ') });
+    }
+    return res.status(200).json({
+      success: true,
+      data: {
+        params: clean,
+        preview: buildTariffPreview(clean),
+        current: buildTariffPreview()
+      }
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * PUT /api/admin/tariff-params - Nâng công thức định giá (áp dụng ngay toàn sàn)
+ */
+export function updateAdminTariffParamsHandler(req, res) {
+  try {
+    const { params, note } = req.body || {};
+    if (!params || typeof params !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng cung cấp bộ tham số công thức định giá.'
+      });
+    }
+
+    const saved = saveTariffParamsConfig({
+      params,
+      updatedBy: req.admin?.phone || 'admin',
+      note
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã nâng công thức định giá. Giá mọi chặng trên sàn được tính lại ngay lập tức.',
+      data: { config: saved, preview: buildTariffPreview() }
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /api/admin/tariff-params/reset - Khôi phục công thức về bộ tham số mặc định
+ */
+export function resetAdminTariffParamsHandler(req, res) {
+  try {
+    const config = resetTariffParamsConfig();
+    return res.status(200).json({
+      success: true,
+      message: 'Đã khôi phục công thức định giá về bộ tham số mặc định của nền tảng.',
+      data: { config, preview: buildTariffPreview() }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
  * GET /api/admin/deletion-requests - Lấy danh sách các yêu cầu xóa tài khoản
  */
 export function listDeletionRequestsHandler(req, res) {
@@ -1032,12 +1168,18 @@ export async function createDriverProfileHandler(req, res) {
     if (wantsTrip) {
       const requestedSeats = Number(body.availableSeats ?? 2);
       const { seats } = sanitizeVehicleCapacityAndSeats(capacity, requestedSeats);
-      const price = Number(body.basePricePerSeat ?? 0);
+
+      // Giá là đầu ra của công thức nền tảng, kể cả khi Admin tạo hộ chuyến:
+      // có cặp trạm thì tính thẳng, không có thì mới nhận số Admin nhập tay.
+      let price = Number(body.basePricePerSeat ?? 0);
+      if (body.originHubId && body.destinationHubId) {
+        price = getFixedSegmentTariff(body.originHubId, body.destinationHubId).pricePerSeat;
+      }
 
       if (!Number.isFinite(price) || price <= 0) {
         return res.status(400).json({
           success: false,
-          error: 'Vui lòng nhập mức phụ xăng hợp lệ cho chuyến xe.',
+          error: 'Vui lòng chọn cặp trạm ảo hoặc nhập mức phụ xăng hợp lệ cho chuyến xe.',
           data: { user: { id: user.id, phone: user.phone, name: user.name } }
         });
       }

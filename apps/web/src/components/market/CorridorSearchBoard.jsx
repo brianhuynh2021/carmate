@@ -469,7 +469,7 @@ export default function CorridorSearchBoard({
 
   // Giá chặng chia sẻ chuẩn CarMate (tính toán động theo cự ly thực tế giữa 2 trạm)
   const carmateSegmentPrice = useMemo(() => {
-    return tariff?.pricePerSeat || 165000;
+    return tariff?.pricePerSeat ?? null;
   }, [tariff]);
 
   // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang (ORDER BY date ASC, time ASC)
@@ -500,15 +500,22 @@ export default function CorridorSearchBoard({
 
       return [...real]
         .sort((a, b) => getTripSortWeight(a) - getTripSortWeight(b))
-        .map((t) => ({
-          ...t,
-          // Giá phân đoạn tính chính xác theo điểm đón/trả của khách trên hành lang
-          pricePerSeat: carmateSegmentPrice || t.pricePerSeat || 170000
-        }));
+        .map((t) => {
+          // Giá của TỪNG chuyến, tính từ chính cặp trạm mà chuyến đó chạy.
+          // Trước đây mọi thẻ dùng chung giá của tuyến khách đang tìm, nên một
+          // chuyến trả ở Sân bay TSN vẫn hiện giá chặng đi Chợ Rẫy.
+          const originId = t.originHubId || fromHubId;
+          const destId = t.destinationHubId || t.destHubId || toHubId;
+          const own =
+            originId && destId && originId !== destId
+              ? getFixedSegmentTariff(originId, destId)?.pricePerSeat
+              : null;
+          return { ...t, pricePerSeat: own ?? t.pricePerSeat ?? carmateSegmentPrice ?? null };
+        });
     }
     // Tuyệt đối KHÔNG hiển thị xe ảo khi chưa có chuyến thật
     return [];
-  }, [matrix, carmateSegmentPrice]);
+  }, [matrix, carmateSegmentPrice, fromHubId, toHubId]);
 
   // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
   // Tuyến ít xe: hiện ô gom nhu cầu (một trang "lịch chạy toàn tuyến" chỉ có

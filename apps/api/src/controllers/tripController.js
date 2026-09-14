@@ -17,7 +17,7 @@ import {
   applyCancellationPenalty
 } from '../db/sqliteStore.js';
 import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
-import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail } from '@carmate/shared';
+import { cleanPhoneNumber, normalizePhoneNumber, sanitizeVehicleCapacityAndSeats, computeTrustScore, toPublicAlias, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail, getFixedSegmentTariff, getVirtualHubById } from '@carmate/shared';
 import { sendBusinessAlert, sendSmartMatchTelegramAlert } from '../utils/telegramAlert.js';
 
 /**
@@ -349,6 +349,17 @@ export async function createTrip(req, res) {
       }
     }
 
+    // BẤT BIẾN GIÁ NỀN TẢNG: chuyến Chủ xe đăng bằng cặp trạm ảo thì giá là ĐẦU RA
+    // của công thức, không nhận con số client gửi lên. Áp ngay tại cửa tạo chuyến
+    // để không ai lách được bằng cách đăng mới thay vì sửa.
+    if (body.type !== 'passenger_request' && body.originHubId && body.destinationHubId) {
+      const tariff = getFixedSegmentTariff(body.originHubId, body.destinationHubId);
+      body.basePricePerSeat = tariff.pricePerSeat;
+      body.distanceKm = tariff.distanceKm;
+      delete body.pricePerSeat;
+      delete body.suggestedContribution;
+    }
+
     // Đảm bảo mức giá luôn được chuẩn hoá, tránh trường hợp bị render 0đ
     if (!body.basePricePerSeat && body.suggestedContribution) {
       body.basePricePerSeat = Number(body.suggestedContribution);
@@ -619,10 +630,125 @@ export async function updateStatus(req, res) {
 /**
  * PUT /api/trips/:id - Cập nhật thông tin chuyến đi
  */
+/**
+ * =============================================================================
+ * BẤT BIẾN TỌA ĐỘ MA TRẬN (TIME-SPACE MATRIX INVARIANT)
+ * =============================================================================
+ * CarMate không phải sàn rao vặt: mỗi chuyến là MỘT Ô trong ma trận thời gian -
+ * không gian, định vị bằng (trạm đón, trạm trả, khe giờ). Ba thứ này là TỌA ĐỘ,
+ * không phải thuộc tính Chủ xe tự sửa:
+ *
+ *  - Trạm đón/trả quyết định cọc số km trên hành lang (Frenet [s, d]), nên
+ *    quyết định luôn cự ly, cước phân đoạn và phân phối ETA của tầng FORMING.
+ *  - Giá vé là ĐẦU RA của công thức getFixedSegmentTariff(trạm, trạm), không
+ *    phải con số Chủ xe gõ vào. Cho sửa giá là phá strategy-proofness của cơ chế.
+ *
+ * Muốn đổi tọa độ ➔ rút khỏi ô cũ (huỷ chuyến, chịu chế tài Time-Decay) rồi
+ * đăng chuyến mới. Đây chính là lý do hàm này từ chối, thay vì lặng lẽ ghi đè.
+ */
+const MATRIX_COORDINATE_FIELDS = Object.freeze([
+  { key: 'originHubId', label: 'trạm đón' },
+  { key: 'destinationHubId', label: 'trạm trả' },
+  { key: 'from', label: 'điểm đi' },
+  { key: 'to', label: 'điểm đến' },
+  { key: 'pickupSpot', label: 'điểm đón cụ thể' },
+  { key: 'dropoffSpot', label: 'điểm trả cụ thể' },
+  { key: 'date', label: 'ngày khởi hành' },
+  { key: 'timeSlot', label: 'khe giờ khởi hành' },
+  { key: 'time', label: 'giờ khởi hành' }
+]);
+
+/** Hai giá trị có thực sự khác nhau không (bỏ qua khác biệt hoa thường / khoảng trắng). */
+function isMeaningfulChange(before, after) {
+  if (after === undefined) return false;
+  const a = String(before ?? '').trim().toLowerCase();
+  const b = String(after ?? '').trim().toLowerCase();
+  return a !== b;
+}
+
+/**
+ * Áp bất biến tọa độ + bất biến giá lên một yêu cầu cập nhật chuyến.
+ * Trả về { error } nếu phải từ chối, hoặc { updates } đã được làm sạch.
+ */
+function enforceTripInvariants(existingTrip, rawUpdates) {
+  const updates = { ...rawUpdates };
+
+  const allBookings = getBookings();
+  const activeBookings = allBookings.filter(
+    (b) => (b.tripId === existingTrip.id || b.targetTripId === existingTrip.id) && b.status !== 'cancelled'
+  );
+  const hasPassengers = activeBookings.length > 0;
+
+  // 1. TỌA ĐỘ MA TRẬN: khoá cứng khi chuyến đã có khách đặt.
+  if (hasPassengers) {
+    const changed = MATRIX_COORDINATE_FIELDS.filter((f) => isMeaningfulChange(existingTrip[f.key], updates[f.key]));
+    if (changed.length > 0) {
+      return {
+        error: {
+          status: 409,
+          body: {
+            success: false,
+            code: 'MATRIX_COORDINATE_LOCKED',
+            error:
+              `Chuyến đã có ${activeBookings.length} khách đặt chỗ nên không thể đổi ` +
+              `${changed.map((f) => f.label).join(', ')}. ` +
+              'Khách đã trả tiền theo đúng lộ trình và khung giờ này. ' +
+              'Nếu bắt buộc phải đổi, vui lòng huỷ chuyến (có áp dụng chế tài huỷ) rồi đăng chuyến mới.',
+            lockedFields: changed.map((f) => f.key),
+            activeBookings: activeBookings.length
+          }
+        }
+      };
+    }
+  }
+
+  // 2. GIÁ VÉ: luôn là đầu ra của công thức, không bao giờ nhận từ client.
+  //    Kể cả chuyến chưa có khách — Chủ xe không có quyền tự ra giá.
+  const originHubId = updates.originHubId || existingTrip.originHubId;
+  const destinationHubId = updates.destinationHubId || existingTrip.destinationHubId;
+
+  const clientSentPrice =
+    updates.basePricePerSeat !== undefined ||
+    updates.pricePerSeat !== undefined ||
+    updates.expectedPrice !== undefined;
+
+  if (originHubId && destinationHubId) {
+    const tariff = getFixedSegmentTariff(originHubId, destinationHubId);
+    updates.basePricePerSeat = tariff.pricePerSeat;
+    updates.pricePerSeat = tariff.pricePerSeat;
+    updates.distanceKm = tariff.distanceKm;
+    delete updates.expectedPrice;
+
+    const originHub = getVirtualHubById(originHubId);
+    const destHub = getVirtualHubById(destinationHubId);
+    if (originHub) updates.from = originHub.shortName || originHub.name;
+    if (destHub) updates.to = destHub.shortName || destHub.name;
+  } else if (clientSentPrice) {
+    // Chuyến cũ chưa gắn mã trạm: không có cơ sở tính lại, nên giữ nguyên giá cũ
+    // thay vì tin con số client gửi lên.
+    delete updates.basePricePerSeat;
+    delete updates.pricePerSeat;
+    delete updates.expectedPrice;
+  }
+
+  return { updates, hasPassengers, activeBookings: activeBookings.length };
+}
+
 export async function updateTripHandler(req, res) {
   try {
     const { id } = req.params;
-    const updates = req.body || {};
+    let updates = req.body || {};
+
+    const tripBeforeUpdate = getTripById(id);
+    if (!tripBeforeUpdate) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến xe cần cập nhật' });
+    }
+
+    const guard = enforceTripInvariants(tripBeforeUpdate, updates);
+    if (guard.error) {
+      return res.status(guard.error.status).json(guard.error.body);
+    }
+    updates = guard.updates;
 
     if (updates.capacity || updates.vehicleSeats || updates.availableSeats !== undefined || updates.vehicleType || updates.hasCargoBed) {
       const existingTrip = getTripById(id);
