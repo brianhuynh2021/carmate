@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import {
   X,
@@ -22,12 +22,10 @@ import {
   getFixedSegmentTariff,
   cleanPhoneNumber,
   isValidVietnamesePhone,
-  getPriceGuardrail,
   getDefaultCorridor,
   getEndpointHubs
 } from '@carmate/shared';
 import api from '../../api/client.js';
-import { useI18n } from '../../i18n/index.jsx';
 
 const DEFAULT_CORRIDOR = getDefaultCorridor();
 const SAIGON_HUB_IDS = getEndpointHubs(DEFAULT_CORRIDOR.id, 'a').map((h) => h.id);
@@ -39,7 +37,6 @@ export default function QuickPostTripModal({
   onSuccess,
   onShowToast
 }) {
-  const { t } = useI18n();
 
   // 1. HỒ SƠ XE: Tự động load từ profile / garage / local storage
   const [vehicle, setVehicle] = useState(() => {
@@ -178,7 +175,7 @@ export default function QuickPostTripModal({
     e.preventDefault();
     setErrorMessage('');
 
-    const phone = currentUser?.phone || localStorage.getItem('carmate_driver_phone') || localStorage.getItem('carmate_rider_phone') || '0984568421';
+    const phone = currentUser?.phone || localStorage.getItem('carmate_rider_phone') || '0984568421';
     const clean = cleanPhoneNumber(phone);
 
     if (!clean || !isValidVietnamesePhone(clean)) {
@@ -216,7 +213,9 @@ export default function QuickPostTripModal({
         time: finalTime,
         timeSlot: `${finalTime}-${parseInt(finalTime.split(':')[0], 10) + 2}:00`,
         availableSeats: Number(availableSeats),
-        capacity: Number(availableSeats) + 2,
+        // capacity là SỨC CHỨA THẬT của xe (5 hoặc 7 chỗ), không phải số ghế đăng nhận khách.
+        // Lấy từ hồ sơ xe; nếu chưa có thì để server tự suy, tuyệt đối không tự chế từ availableSeats.
+        capacity: currentUser?.vehicle?.capacity ? Number(currentUser.vehicle.capacity) : undefined,
         basePricePerSeat: Number(displayPricePerSeat),
         phoneReal: clean,
         userId: currentUser?.id || `DRV-${clean}`,

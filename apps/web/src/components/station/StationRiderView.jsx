@@ -50,7 +50,7 @@ import {
   UNHAPPY_CASE_CODES,
   getDefaultCorridor,
   getEndpointHubs,
-  describeHub
+  formatCleanDateLabel
 } from '@carmate/shared';
 import { api, setStoredAuthToken } from '../../api/client.js';
 import StationRequestModal from '../modals/StationRequestModal.jsx';
@@ -448,117 +448,43 @@ export default function StationRiderView({
     };
   }, []);
 
-  // Nhân bản hoá thông tin trạm ảo & tiện ích an toàn
-  const describedHub = useMemo(() => {
-    return describeHub(currentHub) || {
-      id: currentHub.id,
-      name: currentHub.name,
-      shortName: currentHub.shortName || currentHub.name,
-      landmark: currentHub.landmark || currentHub.name,
-      amenities: []
-    };
-  }, [currentHub]);
-
-  // Danh sách chuyến sắp ghé trạm này (theo wireframe & kết hợp live feed)
+  // Danh sách chuyến sắp ghé trạm này — LẤY TỪ CHUYẾN THẬT TRÊN SÀN.
+  // Trước đây khối này ghép 2 chuyến hardcode (Veloz 07:00 / Xpander 13:30) vào đầu danh sách
+  // và ép mọi nhãn ngày thành "Sáng mai / Chiều mai", khiến chuyến thật hiển thị sai ngày
+  // và người dùng thấy những chuyến không hề tồn tại.
   const displayStationTrips = useMemo(() => {
-    if (direction === 'TO_SAIGON') {
-      const staticTrips = [
-        {
-          id: `sched_veloz_${currentHub.id}`,
-          time: '07:00',
-          timeLabel: `07:00  ${tomorrowInfo.fullLabel}`,
-          availableSeats: 1,
-          totalSeats: 4,
-          destinationName: 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
-          destinationHubId: 'hub_ql13_cho_ray',
-          vehicleModel: 'Toyota Veloz (Xe nhà 7 chỗ)',
-          plate: '93A-***.xx',
-          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_cho_ray')?.pricePerSeat || 165000,
-          driverTitle: 'Chủ xe cá nhân'
-        },
-        {
-          id: `sched_xpander_${currentHub.id}`,
-          time: '13:30',
-          timeLabel: `13:30  ${tomorrowInfo.afternoonLabel}`,
-          availableSeats: 2,
-          totalSeats: 4,
-          destinationName: 'Ngã tư Hàng Xanh / BX Miền Đông',
-          destinationHubId: 'hub_ql13_hang_xanh',
-          vehicleModel: 'Mitsubishi Xpander (Xe êm)',
-          plate: '93A-***.xx',
-          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_hang_xanh')?.pricePerSeat || 150000,
-          driverTitle: 'Chủ xe cá nhân'
-        }
-      ];
+    const wantedDirection = direction === 'TO_SAIGON' ? 'TO_SAIGON' : 'TO_BINH_PHUOC';
+    const fallbackHubId = direction === 'TO_SAIGON' ? 'hub_ql13_hang_xanh' : 'hub_ql13_binh_long';
+    const fallbackPlatePrefix = direction === 'TO_SAIGON' ? '93A' : '61A';
 
-      const matchingLive = (liveCorridorTrips || [])
-        .filter((t) => t.type === 'driver_offer' && t.direction === 'TO_SAIGON')
-        .slice(0, 2)
-        .map((t) => ({
+    return (liveCorridorTrips || [])
+      .filter((t) => t.type === 'driver_offer' && t.direction === wantedDirection)
+      .filter((t) => t.status !== 'cancelled' && t.status !== 'completed')
+      .map((t) => {
+        const destinationHubId = t.destinationHubId || fallbackHubId;
+        const departTime = t.time || (t.timeSlot ? String(t.timeSlot).split('-')[0] : '') || '08:00';
+        return {
           id: t.id,
-          time: t.time || '08:00',
-          timeLabel: `${t.time || '08:00'}  ${tomorrowInfo.fullLabel}`,
-          availableSeats: t.availableSeats || 1,
-          totalSeats: t.capacity || 4,
-          destinationName: t.toLocation || t.to || 'Ngã tư Hàng Xanh',
-          destinationHubId: t.destinationHubId || 'hub_ql13_hang_xanh',
+          time: departTime,
+          // Nhãn ngày tính từ chính ngày của chuyến, không mặc định là ngày mai
+          timeLabel: `${departTime}  ${formatCleanDateLabel(t.date)}`,
+          date: t.date,
+          availableSeats: Number(t.availableSeats ?? 1),
+          totalSeats: Number(t.capacity || t.availableSeats || 4),
+          destinationName: t.toLocation || t.to || 'Điểm trả khách',
+          destinationHubId,
           vehicleModel: t.carType || 'Xe ô tô gia đình',
-          plate: t.licensePlate ? `${t.licensePlate.slice(0, 3)}***.xx` : '93A-***.xx',
-          price: Number(t.pricePerSeat) || getFixedSegmentTariff(currentHub.id, 'hub_ql13_hang_xanh')?.pricePerSeat || 150000,
+          plate: t.plateMask || (t.licensePlate ? `${String(t.licensePlate).slice(0, 3)}***.xx` : `${fallbackPlatePrefix}-***.xx`),
+          price:
+            Number(t.basePricePerSeat) ||
+            Number(t.pricePerSeat) ||
+            getFixedSegmentTariff(currentHub.id, destinationHubId)?.pricePerSeat ||
+            150000,
           driverTitle: t.publicName || 'Chủ xe cá nhân'
-        }));
-
-      return [...staticTrips, ...matchingLive];
-    } else {
-      const staticTrips = [
-        {
-          id: `sched_innova_${currentHub.id}`,
-          time: '08:30',
-          timeLabel: `08:30  ${tomorrowInfo.fullLabel}`,
-          availableSeats: 2,
-          totalSeats: 4,
-          destinationName: 'TX. Bình Long (Vòng xoay An Lộc)',
-          destinationHubId: 'hub_ql13_binh_long',
-          vehicleModel: 'Toyota Innova Cross (Xe gia đình)',
-          plate: '51K-***.xx',
-          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_binh_long')?.pricePerSeat || 50000,
-          driverTitle: 'Chủ xe cá nhân'
-        },
-        {
-          id: `sched_stargazer_${currentHub.id}`,
-          time: '15:00',
-          timeLabel: `15:00  ${tomorrowInfo.afternoonLabel}`,
-          availableSeats: 1,
-          totalSeats: 4,
-          destinationName: 'TT. Lộc Ninh / Chợ Lộc Ninh',
-          destinationHubId: 'hub_ql13_cho_loc_ninh',
-          vehicleModel: 'Hyundai Stargazer (Xe êm 7 chỗ)',
-          plate: '61A-***.xx',
-          price: getFixedSegmentTariff(currentHub.id, 'hub_ql13_cho_loc_ninh')?.pricePerSeat || 60000,
-          driverTitle: 'Chủ xe cá nhân'
-        }
-      ];
-
-      const matchingLive = (liveCorridorTrips || [])
-        .filter((t) => t.type === 'driver_offer' && t.direction === 'TO_BINH_PHUOC')
-        .slice(0, 2)
-        .map((t) => ({
-          id: t.id,
-          time: t.time || '09:00',
-          timeLabel: `${t.time || '09:00'}  ${tomorrowInfo.fullLabel}`,
-          availableSeats: t.availableSeats || 1,
-          totalSeats: t.capacity || 4,
-          destinationName: t.toLocation || t.to || 'TX. Bình Long',
-          destinationHubId: t.destinationHubId || 'hub_ql13_binh_long',
-          vehicleModel: t.carType || 'Xe ô tô gia đình',
-          plate: t.licensePlate ? `${t.licensePlate.slice(0, 3)}***.xx` : '61A-***.xx',
-          price: Number(t.pricePerSeat) || getFixedSegmentTariff(currentHub.id, 'hub_ql13_binh_long')?.pricePerSeat || 50000,
-          driverTitle: t.publicName || 'Chủ xe cá nhân'
-        }));
-
-      return [...staticTrips, ...matchingLive];
-    }
-  }, [direction, currentHub.id, tomorrowInfo, liveCorridorTrips]);
+        };
+      })
+      .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.time).localeCompare(String(b.time)));
+  }, [direction, currentHub.id, liveCorridorTrips]);
 
   // Xử lý giữ chỗ tức thì
   const handleBookTrip = (tripItem) => {
@@ -569,7 +495,8 @@ export default function StationRiderView({
       fromLocation: currentHub.landmark || currentHub.name,
       to: tripItem.destinationName,
       toLocation: tripItem.destinationName,
-      date: tomorrowInfo.dateFormatted,
+      // Ngày của chính chuyến được chọn, không mặc định là ngày mai
+      date: tripItem.date || tomorrowInfo.dateFormatted,
       time: tripItem.time,
       carType: tripItem.vehicleModel,
       licensePlate: tripItem.plate,
@@ -1315,10 +1242,23 @@ export default function StationRiderView({
             <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider px-1">
                 <span>CHUYẾN SẮP GHÉ TRẠM NÀY:</span>
-                <span className="font-mono text-slate-500 dark:text-slate-400">({tomorrowInfo.dayName})</span>
+                {/* Mỗi thẻ đã ghi rõ ngày của chuyến đó, không gắn một ngày chung cho cả danh sách */}
+                <span className="font-mono text-slate-500 dark:text-slate-400">
+                  {displayStationTrips.length > 0 ? `${displayStationTrips.length} chuyến` : ''}
+                </span>
               </div>
 
               <div className="space-y-3">
+                {displayStationTrips.length === 0 && (
+                  <div className="p-4 rounded-2xl border border-dashed border-slate-300/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] text-center space-y-1">
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                      Chưa có chuyến nào ghé trạm này
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Đăng ký nhận thông báo bên dưới để biết ngay khi có xe phù hợp
+                    </p>
+                  </div>
+                )}
                 {displayStationTrips.map((tItem) => (
                   <div
                     key={tItem.id}

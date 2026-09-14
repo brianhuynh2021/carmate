@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Edit3,
   Clock,
@@ -113,6 +113,11 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   });
   const [editingMaskIndex, setEditingMaskIndex] = useState(null);
 
+  // Bài đăng gốc vốn có ảnh hay không, và người dùng có chủ động thêm/bớt ảnh trong phiên này không.
+  // Dùng để không gửi carPhotos rỗng (xóa sạch ảnh trên máy chủ) khi form chỉ đơn giản là không đọc được ảnh cũ.
+  const hadOriginalPhotos = useRef(Array.isArray(trip?.carPhotos) && trip.carPhotos.length > 0).current;
+  const photosTouchedRef = useRef(false);
+
   const handlePhotoUpload = async (file) => {
     if (!file) return;
     if (carPhotos.length >= 5) return;
@@ -121,6 +126,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
       const slotId = nextIndex === 0 ? 'front' : nextIndex === 1 ? 'back' : 'side';
       const slotLabel = nextIndex === 0 ? 'Góc Trước' : nextIndex === 1 ? 'Góc Sau' : `Góc ${nextIndex + 1}`;
       const result = await processCarPhotoUpload(file, slotId);
+      photosTouchedRef.current = true;
       setCarPhotos((prev) => [
         ...prev,
         {
@@ -139,6 +145,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   };
 
   const handleRemovePhoto = (slotIndex) => {
+    photosTouchedRef.current = true;
     setCarPhotos((prev) => prev.filter((_, idx) => idx !== slotIndex));
   };
 
@@ -219,6 +226,11 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
     const timeSlotLabel = validExactTime ? `${validExactTime} (${slot.short})` : slot.short;
 
     const validPhotos = (carPhotos || []).filter(Boolean);
+    // Chỉ gửi carPhotos khi có ảnh thật, khi bài đăng vốn không có ảnh, hoặc khi người dùng
+    // chủ động thêm/bớt ảnh. Nếu bài đăng gốc CÓ ảnh mà form đọc ra rỗng (dữ liệu ảnh cũ
+    // không phân giải được), gửi mảng rỗng sẽ xóa sạch ảnh thật trên máy chủ.
+    const shouldSendPhotos =
+      isDriver && (validPhotos.length > 0 || !hadOriginalPhotos || photosTouchedRef.current);
     const updates = {
       from: cleanFrom,
       to: cleanTo,
@@ -230,12 +242,12 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
       vehicleType: isDriver ? (vehicleCapacity === 'truck_light' ? 'truck_light' : vehicleCapacity === 'pickup' ? 'pickup' : (vehicleCapacity === 7 ? 'mpv_suv' : 'sedan_cuv')) : undefined,
       hasCargoBed: isDriver ? (vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup' || Boolean(trip?.hasCargoBed)) : undefined,
       isCargoVehicle: isDriver ? Boolean(vehicleCapacity === 'truck_light') : undefined,
-      cargoBedCapacityKg: isDriver && vehicleCapacity === 'truck_light' ? 2500 : (vehicleCapacity === 'pickup' ? 800 : undefined),
+      cargoBedCapacityKg: isDriver ? (vehicleCapacity === 'truck_light' ? 2500 : vehicleCapacity === 'pickup' ? 800 : undefined) : undefined,
       acceptsParcel: isDriver ? Boolean(acceptsParcel || vehicleCapacity === 'truck_light' || vehicleCapacity === 'pickup') : undefined,
       cargoNotes: isDriver && cargoNotes.trim() ? cargoNotes.trim() : undefined,
       carType: isDriver ? carType.trim() : undefined,
-      carPhotos: isDriver ? validPhotos : undefined,
-      hasCarPhotos: isDriver && validPhotos.length > 0,
+      carPhotos: shouldSendPhotos ? validPhotos : undefined,
+      hasCarPhotos: shouldSendPhotos ? validPhotos.length > 0 : undefined,
       plateMask: isDriver && plateMask.trim() ? plateMask.trim() : undefined,
       basePricePerSeat: isDriver ? Number(price) : undefined,
       expectedPrice: !isDriver ? Number(price) : undefined,

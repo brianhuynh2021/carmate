@@ -1282,7 +1282,6 @@ export default function CorridorSearchBoard({
           }}
           originName={fromHub?.name || matrix?.origin?.landmark || matrix?.origin?.name || 'Cây xăng Petrolimex Tân Khai (QL13)'}
           destName={toHub?.name || matrix?.destination?.landmark || matrix?.destination?.name || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược'}
-          destNote={toHub?.landmark || matrix?.destination?.landmark || 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh'}
           segmentPrice={carmateSegmentPrice}
           onConfirmBook={(tripToBook, bookedSeats = 1) => {
             setSelectedDetailTrip(null);
@@ -1307,7 +1306,7 @@ export default function CorridorSearchBoard({
             {/* ── KHỐI TIÊU ĐỀ POPUP: NHÀ XE & ĐÓNG ── */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="w-10 h-10 rounded-xl bg-[#0B3B7A] dark:bg-blue-800 text-white flex items-center justify-center shrink-0">
+                <span className="w-10 h-10 rounded-xl bg-[#0071e3] dark:bg-[#0071e3] text-white flex items-center justify-center shrink-0">
                   <Bus className="w-5 h-5 text-white" />
                 </span>
                 <div className="min-w-0">
@@ -1332,27 +1331,27 @@ export default function CorridorSearchBoard({
             {/* ── KHỐI 1: BẢNG THÔNG TIN CHUYẾN XE (HOVER VIỀN & ĐỔ BÓNG NHẸ) ── */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#0B3B7A] dark:text-blue-300">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Thông tin chuyến xe
                 </span>
               </div>
               <div className="p-3.5 sm:p-4 bg-white dark:bg-white/[0.03] border border-blue-100 dark:border-white/10 hover:border-blue-200/80 dark:hover:border-white/20 hover:shadow-xs rounded-2xl transition-all duration-200 cursor-default group/bus shadow-2xs">
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start justify-between gap-3">
-                    <span className="font-semibold text-[#0B3B7A] dark:text-blue-300 shrink-0">Điểm trả:</span>
+                    <span className="font-semibold text-slate-500 dark:text-slate-400 shrink-0">Điểm trả:</span>
                     <span className="font-semibold text-slate-900 dark:text-white text-right">
                       {getBusDropoff(selectedDetailHotline)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-white/5">
-                    <span className="font-semibold text-[#0B3B7A] dark:text-blue-300 shrink-0">Giá vé:</span>
+                    <span className="font-semibold text-slate-500 dark:text-slate-400 shrink-0">Giá vé:</span>
                     <span className="font-mono font-bold text-slate-900 dark:text-white text-right">
                       {selectedDetailHotline.priceRef || '200.000đ – 260.000đ'} / vé
                     </span>
                   </div>
                   {selectedDetailHotline.hotline && (
                     <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-white/5">
-                      <span className="font-semibold text-[#0B3B7A] dark:text-blue-300 shrink-0">Liên hệ:</span>
+                      <span className="font-semibold text-slate-500 dark:text-slate-400 shrink-0">Liên hệ:</span>
                       <a
                         href={`tel:${selectedDetailHotline.hotline.replace(/\s+/g, '')}`}
                         onClick={() => {
@@ -1364,10 +1363,10 @@ export default function CorridorSearchBoard({
                           });
                           onShowToast?.('Chúc bạn chuyến đi thuận lợi! Lần tới cần xe đón tận nhà, nhớ mở CarMate nhé.');
                         }}
-                        className="inline-flex items-center gap-1.5 font-mono font-bold text-[#0B5CBA] dark:text-blue-400 hover:underline tracking-wide transition-colors"
+                        className="inline-flex items-center gap-1.5 font-mono font-bold text-[#0071e3] dark:text-blue-400 hover:underline tracking-wide transition-colors"
                         title={`Bấm gọi ngay: ${selectedDetailHotline.hotline}`}
                       >
-                        <Phone className="w-3.5 h-3.5 text-[#0B5CBA] dark:text-blue-400 shrink-0" />
+                        <Phone className="w-3.5 h-3.5 text-[#0071e3] dark:text-blue-400 shrink-0" />
                         <span>{selectedDetailHotline.hotline}</span>
                       </a>
                     </div>
@@ -1384,16 +1383,16 @@ export default function CorridorSearchBoard({
               return (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#0B3B7A] dark:text-blue-300">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       Gợi ý cùng hành lang
                     </span>
-                    <span className="text-[10.5px] font-semibold text-white bg-[#18532c] px-2.5 py-0.5 rounded-full shadow-2xs">
+                    <span className="text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/60 dark:border-emerald-700/40 px-2.5 py-0.5 rounded-full">
                       Tiết kiệm thời gian
                     </span>
                   </div>
-                  <div className="p-3.5 sm:p-4 bg-[#f0f6ff]/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/60 rounded-2xl space-y-3 shadow-2xs">
+                  <div className="p-3.5 sm:p-4 bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-white/10 rounded-2xl space-y-3 shadow-2xs">
                     <div className="flex items-start gap-2.5">
-                      <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0 mt-0.5 text-[#0071e3] dark:text-blue-400">
+                      <div className="w-6 h-6 rounded-lg bg-blue-100/70 dark:bg-blue-900/40 flex items-center justify-center shrink-0 mt-0.5 text-[#0071e3] dark:text-blue-400">
                         <Sparkles className="w-3.5 h-3.5" />
                       </div>
                       <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-200">
@@ -1419,12 +1418,15 @@ export default function CorridorSearchBoard({
                         });
                         setSelectedDetailHotline(null);
                         if (hasRealTrips && firstRealTrip) {
-                          setSelectedBookingTrip(firstRealTrip);
+                          // Nút này là "khám phá", không phải "đặt chỗ": mở thẻ chi tiết để khách
+                          // tự chọn chuyến. Trước đây nó mở thẳng modal giữ chỗ cho chuyến đầu
+                          // danh sách — chuyến mà khách chưa hề chọn.
+                          setSelectedDetailTrip(firstRealTrip);
                         } else {
                           onOpenIntentModal?.(role, fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot);
                         }
                       }}
-                      className="w-full py-2.5 px-4 bg-[#0B5CBA] hover:bg-[#094b98] active:scale-[0.99] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2.5 px-4 bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <span>Khám phá các chuyến xe ghép hôm nay</span>
                       <span>→</span>

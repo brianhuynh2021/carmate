@@ -36,7 +36,10 @@ export default function ActiveTripCard({
   const manifest = Array.isArray(trip.manifest) ? trip.manifest : [];
   const bookedCount = manifest.length;
   const availableSeatsCount = Number(trip.availableSeats ?? 0);
-  const totalSeats = Math.max(bookedCount + availableSeatsCount, Number(trip.capacity || 2));
+  // Tổng ghế của CHUYẾN = số đã giữ chỗ + số còn nhận.
+  // Không dùng trip.capacity: đó là sức chứa vật lý của xe (Mazda 2 = 5 chỗ), trong khi chủ xe
+  // có thể chỉ đăng nhận 2 ghế và để phần còn lại cho người nhà.
+  const totalSeats = bookedCount + availableSeatsCount;
   const isFullOrLocked = trip.status === 'full' || availableSeatsCount <= 0;
 
   // Format code
