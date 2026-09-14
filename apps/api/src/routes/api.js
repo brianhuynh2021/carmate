@@ -179,7 +179,9 @@ router.post('/seat-exchange/expire-ttl', requireAdmin, expireSlidingTTLHandler);
 
 // --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
 router.get('/bookings', optionalAuth, listBookings);
-router.post('/bookings', optionalAuth, createBooking);
+// Giữ chỗ BẮT BUỘC đăng nhập: booking gắn với một con người thật (SĐT đã xác thực),
+// và chỉ khi đó mới có cơ sở để mở khoá thông tin liên hệ hai chiều.
+router.post('/bookings', requireAuth, createBooking);
 router.get('/bookings/:id/public-summary', optionalAuth, getBookingPublicSummary);
 router.post('/bookings/:id/driver-confirm', optionalAuth, driverConfirmBooking);
 // Chốt T-40/T-30: chủ xe bấm "Tôi đang đi", và khách tra cứu Chế độ Cứu hộ

@@ -36,22 +36,6 @@ function formatShortTime(departureLabel = '04:30', departureDate = null) {
 /**
  * Helper rút gọn trạm đón/trả hiển thị gãy gọn trên màn hình hẹp
  */
-function cleanStationName(raw, fallback = '') {
-  const text = String(raw || fallback).trim();
-  if (!text) return fallback;
-  if (/tân khai/i.test(text)) return 'Tân Khai';
-  if (/bù đốp/i.test(text)) return 'Bù Đốp';
-  if (/lộc ninh/i.test(text)) return 'Lộc Ninh';
-  if (/bình long/i.test(text)) return 'Bình Long';
-  if (/chơn thành/i.test(text)) return 'Chơn Thành';
-  if (/bàu bàng/i.test(text)) return 'Bàu Bàng';
-  if (/chợ rẫy/i.test(text)) return 'BV Chợ Rẫy (TP.HCM)';
-  if (/hàng xanh/i.test(text)) return 'Hàng Xanh';
-  if (/tân sơn nhất|tsn/i.test(text)) return 'Sân bay TSN';
-  if (/bến xe miền đông|bình triệu/i.test(text)) return 'Bình Triệu / BX';
-  return text.split('/')[0].replace(/\(.*?\)/g, '').trim();
-}
-
 /**
  * THẺ CHUYẾN XE RÚT GỌN (COMPACT TRIP CARD ~85px)
  *
@@ -66,12 +50,9 @@ function cleanStationName(raw, fallback = '') {
  */
 export default function CorridorTripCard({
   trip,
-  originName = 'Tân Khai (QL13)',
-  destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
   segmentPrice = 165000,
   isEarliest = false,
   isMyTrip = false,
-  tripIndex = 0,
   onSelectTrip,
   onBookNow,
   onManageTrip
@@ -89,23 +70,11 @@ export default function CorridorTripCard({
   const vehicleTypeLabel = is7Seater ? 'Xe nhà 7 chỗ' : 'Xe nhà 5 chỗ';
 
   // Lấy USP thực chiến cho từng chuyến xe (Tufte Data-Ink)
-  const uspLabel = (() => {
-    if (trip.usp) return trip.usp;
-    if (isEarliest || tripIndex === 0) {
-      if (/chợ rẫy|bệnh viện|đại học y dược|y dược|bv\b/i.test(destName || '')) {
-        return 'Trả tận cổng viện';
-      }
-      const fromClean = cleanStationName(originName, 'Tân Khai');
-      return `Đón trạm ${fromClean}`;
-    }
-    if (tripIndex === 1) {
-      const rawCode = trip.maskedCode || trip.driver?.maskedCode || trip.driverCode || trip.id || '';
-      const numMatch = String(rawCode).match(/\d+/);
-      const codeSuffix = numMatch ? `#${numMatch[0]}` : '#102';
-      return `Chủ xe H. (${codeSuffix})`;
-    }
-    return 'Không nhồi nhét';
-  })();
+  // Đặc điểm chuyến chỉ hiện khi Chủ xe thực sự khai. Trước đây nó được sinh theo
+  // VỊ TRÍ trong danh sách: chuyến đầu được hứa "Trả tận cổng viện", chuyến thứ hai
+  // bị gán tên "Chủ xe H. (#102)", còn lại hứa "Không nhồi nhét" — cam kết dịch vụ
+  // bịa, đổi thứ tự sắp xếp là đổi luôn "đặc điểm" của xe.
+  const uspLabel = trip.usp || '';
 
   const handleClick = () => {
     if (isSoldOut) return;
@@ -138,7 +107,7 @@ export default function CorridorTripCard({
         {/* ── Cột 1: Giờ (Khóa cứng 58px vừa khít) ── */}
         <div className="w-[58px] shrink-0 flex flex-col items-start">
           <span className="text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
-            {trip.departureLabel || '04:30'}
+            {trip.departureLabel || '—'}
           </span>
           {isMyTrip ? (
             <span className="px-1.5 py-0.5 text-[8.5px] font-bold text-emerald-900 dark:text-emerald-100 bg-emerald-400 dark:bg-emerald-500 rounded-full mt-0.5 leading-none shadow-2xs whitespace-nowrap">
@@ -160,9 +129,13 @@ export default function CorridorTripCard({
           <div className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight flex items-center gap-1.5">
             <span>{vehicleTypeLabel}</span>
           </div>
-          <div className="text-[11.5px] font-medium text-slate-600 dark:text-slate-400 truncate mt-0.5 leading-tight">
-            {uspLabel}
-          </div>
+          {/* Thay cho "đặc điểm" bịa: hiện điểm trả thật của chuyến, hoặc đặc điểm
+              do chính Chủ xe khai. Không có gì thật thì không hiện dòng nào. */}
+          {(uspLabel || trip.toLocation) && (
+            <div className="text-[11.5px] font-medium text-slate-600 dark:text-slate-400 truncate mt-0.5 leading-tight">
+              {uspLabel || `Trả tại ${trip.toLocation}`}
+            </div>
+          )}
         </div>
 
         {/* ── Cột 3: Giá & Nút (Cố định bên phải - shrink-0 flex items-center gap-2) ── */}
