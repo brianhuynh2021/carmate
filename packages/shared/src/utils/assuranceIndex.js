@@ -24,7 +24,7 @@ export const ASSURANCE_LEVELS = Object.freeze({
   FORMING: 'FORMING'
 });
 
-export const ASSURANCE_THRESHOLDS = Object.freeze({
+const ASSURANCE_THRESHOLDS = Object.freeze({
   GUARANTEED_MIN: 0.95,
   COMMUNITY_MIN: 0.7,
   // Chủ xe phải đạt tối thiểu mức uy tín này mới được xét "Chuyến đảm bảo"
@@ -108,7 +108,7 @@ export function computeAssurance({
   };
 }
 
-export function getAssuranceLabel(level) {
+function getAssuranceLabel(level) {
   switch (level) {
     case ASSURANCE_LEVELS.GUARANTEED:
       return 'Chuyến đảm bảo';
@@ -119,7 +119,7 @@ export function getAssuranceLabel(level) {
   }
 }
 
-export function getAssuranceBadge(level) {
+function getAssuranceBadge(level) {
   switch (level) {
     case ASSURANCE_LEVELS.GUARANTEED:
       return '🟢';

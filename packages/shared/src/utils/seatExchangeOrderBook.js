@@ -21,7 +21,7 @@
 
 import { parseTimeToMinutes, formatMinutesToTime } from './asymmetricMoralHazard.js';
 
-export const minutesToTimeString = formatMinutesToTime;
+const minutesToTimeString = formatMinutesToTime;
 
 /**
  * Tạo khoảng thời gian [t - delta, t + delta]
@@ -36,7 +36,7 @@ export function buildInterval(centerMinutes, deltaMinutes = 10) {
  * Kiểm tra giao thoa giữa 2 khoảng thời gian [s1, e1] và [s2, e2]
  * Trả về khoảng giao thoa nếu có, hoặc null nếu rỗng
  */
-export function checkIntervalIntersection(intervalA, intervalB) {
+function checkIntervalIntersection(intervalA, intervalB) {
   if (!intervalA || !intervalB || intervalA.length < 2 || intervalB.length < 2) {
     return null;
   }
@@ -52,7 +52,7 @@ export function checkIntervalIntersection(intervalA, intervalB) {
 /**
  * Tính thời điểm đón tối ưu (Rendezvous Time) tại điểm giữa khoảng giao thoa
  */
-export function calculateRendezvousTime(intervalA, intervalB) {
+function calculateRendezvousTime(intervalA, intervalB) {
   const intersection = checkIntervalIntersection(intervalA, intervalB);
   if (!intersection) return null;
   return Math.round((intersection[0] + intersection[1]) / 2);
@@ -142,9 +142,6 @@ export function calculateUnifiedOrderTTL({
     userNotice
   };
 }
-
-// Export alias tương thích
-export const calculateOrderTTL = calculateUnifiedOrderTTL;
 
 /**
  * 3. MÁY CHỦ KHỚP LỆNH LIÊN TỤC (CONTINUOUS DOUBLE AUCTION - CDA MATCHING ENGINE)
@@ -316,55 +313,10 @@ export function matchOrderContinuous(incomingOrder, orderBook = []) {
 }
 
 /**
- * 4. THUẬT TOÁN QUÉT HẾT HẠN THEO CỬA SỔ TRƯỢT (EVALUATE SLIDING TTL EXPIRATIONS)
- * Quét các lệnh OPEN trên sàn. Lệnh nào quá TTL sẽ tự động chuyển sang EXPIRED.
- */
-export function evaluateOrderBookExpirations(orderBook = [], { currentTimestamp = Date.now() } = {}) {
-  const expiredOrders = [];
-  const activeOrders = [];
-
-  for (const order of orderBook) {
-    if (order.status !== 'OPEN' && order.status !== 'PARTIALLY_FILLED') {
-      activeOrders.push(order);
-      continue;
-    }
-
-    const orderTTL = order.ttlTimestamp || calculateOrderTTL({
-      orderCreatedAt: order.createdAt || currentTimestamp,
-      targetPickupMinutes: order.targetTimeMinutes ?? parseTimeToMinutes(order.targetTime),
-      pickupDate: order.date
-    }).ttlTimestamp;
-
-    if (currentTimestamp >= orderTTL) {
-      // Đã chạm hoặc vượt mốc TTL -> Hết hạn
-      const notification = buildOrderExpiredNotification({
-        order,
-        cutoffTimeStr: order.ttlTimeString || minutesToTimeString(Math.floor((orderTTL % (24 * 3600 * 1000)) / (60 * 1000)))
-      });
-
-      expiredOrders.push({
-        ...order,
-        status: 'EXPIRED',
-        expiredAt: currentTimestamp,
-        notification
-      });
-    } else {
-      activeOrders.push(order);
-    }
-  }
-
-  return {
-    expiredOrders,
-    activeOrders,
-    totalExpired: expiredOrders.length
-  };
-}
-
-/**
  * 5. MẪU SỰ KIỆN EVENT-DRIVEN NOTIFICATIONS
  */
 
-export function buildOrderMatchedNotification({
+function buildOrderMatchedNotification({
   role = 'passenger',
   vehicleModel = 'Xpander',
   plate = '93A-541.86',

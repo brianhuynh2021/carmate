@@ -18,16 +18,16 @@
  */
 
 // Định mức tiêu thụ nhiên liệu xe 5-7 chỗ hỗn hợp đường dài QL13 (có dừng đèn đỏ & kẹt xe cửa ngõ)
-export const AVG_CONSUMPTION_L_PER_100KM = 8.2;
+const AVG_CONSUMPTION_L_PER_100KM = 8.2;
 
 // Tỷ lệ khấu hao hao mòn lốp, rửa xe, nước suối (10% tiền xăng)
-export const WEAR_AND_TEAR_RATIO = 0.10;
+const WEAR_AND_TEAR_RATIO = 0.10;
 
 // Tỷ lệ thực nhận của Chủ xe sau phí nền tảng (90%)
-export const DRIVER_PAYOUT_RATIO = 0.90;
+const DRIVER_PAYOUT_RATIO = 0.90;
 
 // Giá xăng RON 95-III tham chiếu mặc định (VNĐ/Lít)
-export const DEFAULT_DAILY_FUEL_PRICE = 24120;
+const DEFAULT_DAILY_FUEL_PRICE = 24120;
 
 // Biến lưu trữ giá xăng trong phiên làm việc
 let currentDailyFuelPrice = DEFAULT_DAILY_FUEL_PRICE;
@@ -61,7 +61,7 @@ export function setDailyFuelPrice(newPrice) {
 /**
  * Ước tính phí cầu đường BOT thực tế theo cự ly và hành lang
  */
-export function estimateBotFee(distanceKm, corridor = 'Tuyến QL13') {
+function estimateBotFee(distanceKm, corridor = 'Tuyến QL13') {
   const dist = Math.max(10, distanceKm || 100);
   const isN2 = String(corridor).includes('N2') || String(corridor).includes('Kiên Giang');
 
@@ -82,7 +82,7 @@ export function estimateBotFee(distanceKm, corridor = 'Tuyến QL13') {
 /**
  * Tính tổng chi phí trực tiếp của chuyến xe (Xăng + BOT + Khấu hao nhỏ)
  */
-export function calculateTripDirectCost(distanceKm, corridor = 'Tuyến QL13', fuelPrice = currentDailyFuelPrice) {
+function calculateTripDirectCost(distanceKm, corridor = 'Tuyến QL13', fuelPrice = currentDailyFuelPrice) {
   const dist = Math.max(10, distanceKm || 100);
   const fuelLiters = (dist * AVG_CONSUMPTION_L_PER_100KM) / 100;
   const fuelCost = Math.round(fuelLiters * fuelPrice);

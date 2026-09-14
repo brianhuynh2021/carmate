@@ -9,7 +9,7 @@
  * - Tự động cảnh báo và gợi ý hành khách di chuyển chặng ngắn ra trạm tập trung lớn.
  */
 
-export const HUB_LIQUIDITY_MAP = {
+const HUB_LIQUIDITY_MAP = {
   // ── VÙNG NHÁNH ĐẦU NGUỒN (THANH KHOẢN MỎNG - THIN) ──
   hub_ql13_budop: {
     status: 'THIN',

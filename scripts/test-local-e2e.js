@@ -219,6 +219,21 @@ async function runTests() {
       const filterTrips = filterData.data?.all || [];
       const allMatchRoute = filterTrips.length > 0 && filterTrips.every((t) => t.routeCategory === 'Tuyến QL13');
       assert(allMatchRoute, 'Trips 5: Kết quả lọc chính xác 100% thuộc tuyến QL13');
+
+      // BẤT BIẾN PII: Ma trận khung giờ là endpoint CÔNG KHAI KHÔNG AUTH.
+      // Nó không đi qua sanitizeTripForPublic nên từng để lộ nguyên SĐT thật
+      // (phoneReal) và biển số đầy đủ (fullPlate) — chốt chặn hồi quy tại đây.
+      const slotsRes = await fetch(`${BASE_URL}/api/corridor/time-slots?from=hub_ql13_tan_khai&to=hub_ql13_cho_ray`);
+      const slotsRaw = await slotsRes.text();
+      assert(slotsRes.status === 200, 'Trips 6: Tải ma trận khung giờ hành lang thành công');
+      assert(
+        !slotsRaw.includes('"phoneReal"') && !slotsRaw.includes('"phone"'),
+        'Trips 7: PII Invariant: Ma trận khung giờ công khai không lộ số điện thoại thật'
+      );
+      assert(
+        !slotsRaw.includes('"fullPlate"'),
+        'Trips 8: PII Invariant: Ma trận khung giờ công khai không lộ biển số đầy đủ'
+      );
     } catch (err) {
       assert(false, '4. Trips Listing & PII', err.message);
     }

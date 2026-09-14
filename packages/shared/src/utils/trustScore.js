@@ -8,7 +8,7 @@ import { DEFAULT_TRUST_RULES, TRUST_TIERS } from '../constants/trustRules.js';
  * @param {number} score 
  * @returns {object} Thông tin tier (label, badgeColor, description)
  */
-export function getTrustLevel(score) {
+function getTrustLevel(score) {
   const normalized = Math.max(0, Math.min(100, Math.round(score || 0)));
   const tier = TRUST_TIERS.find((t) => normalized >= t.min && normalized <= t.max);
   return tier || TRUST_TIERS[0];

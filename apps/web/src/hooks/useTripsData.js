@@ -122,6 +122,10 @@ export default function useTripsData({
     return () => {
       active = false;
     };
+    // Cố ý chỉ chạy MỘT LẦN khi mount: đây là cú nạp dữ liệu khởi động.
+    // Thêm currentUser.phone / syncBookingsCache vào deps sẽ khiến effect chạy lại
+    // mỗi lần các giá trị đó đổi tham chiếu -> gọi API lặp vô hạn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Tái đăng 1 chạm (1-Tap Re-publish) chuyến cũ cho ngày mai
