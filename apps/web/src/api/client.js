@@ -413,6 +413,18 @@ export const api = {
     return request('/admin/users');
   },
 
+  /**
+   * Tạo hộ hồ sơ Chủ xe (và chuyến đầu tiên) trong giai đoạn đội vận hành đi mời
+   * bác tài. Bác tài chưa cần cài ứng dụng; khi đăng nhập bằng chính số điện thoại
+   * này qua OTP thì nhận lại nguyên hồ sơ và các chuyến đã đăng.
+   */
+  async adminCreateDriver(payload) {
+    return request('/admin/drivers', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
   async updateUserStatus(id, updates) {
     return request(`/admin/users/${id}`, {
       method: 'PATCH',

@@ -105,7 +105,8 @@ import {
   clearAdminAiTrajectories,
   clearAdminTestData,
   clearAdminBookings,
-  requireAdmin
+  requireAdmin,
+  createDriverProfileHandler
 } from '../controllers/adminController.js';
 import { authLimiter, postTripLimiter } from '../middlewares/security.js';
 
@@ -274,6 +275,8 @@ router.patch('/admin/trips/:id/toggle-hide', requireAdmin, toggleHideTripHandler
 router.delete('/admin/trips/:id', requireAdmin, deleteTripAdminHandler);
 router.patch('/admin/trips/:id/convert-car-category', requireAdmin, convertTripCarCategoryHandler);
 router.get('/admin/users', requireAdmin, listAdminUsers);
+// Tạo hồ sơ Chủ xe (và chuyến đầu tiên) thay cho bác tài trong giai đoạn đi mời.
+router.post('/admin/drivers', requireAdmin, createDriverProfileHandler);
 router.patch('/admin/users/:id', requireAdmin, updateUserStatusHandler);
 router.patch('/admin/users/:id/status', requireAdmin, updateUserStatusHandler);
 router.get('/admin/reports', requireAdmin, getAdminReports);
