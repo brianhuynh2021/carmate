@@ -191,7 +191,26 @@ export default function App() {
         const targetPath = getPathForTab(activeTab);
         const currentPath = window.location.pathname;
         const currentHash = window.location.hash;
-        const search = window.location.search;
+
+        // Dọn các tham số kỹ thuật khỏi thanh địa chỉ trước khi ghi lại URL.
+        // '_r' do ErrorBoundary gắn vào để phá cache sau sự cố; nó không mang ý
+        // nghĩa gì với người dùng nhưng vì URL luôn được dựng lại kèm search cũ
+        // nên nó bám vĩnh viễn và đi theo mọi liên kết được chia sẻ.
+        let search = window.location.search;
+        try {
+          const params = new URLSearchParams(search);
+          let cleaned = false;
+          for (const key of ['_r', '_rsc']) {
+            if (params.has(key)) {
+              params.delete(key);
+              cleaned = true;
+            }
+          }
+          if (cleaned) {
+            const rest = params.toString();
+            search = rest ? `?${rest}` : '';
+          }
+        } catch {}
 
         if (activeTab === 'admin') {
           if (isOpsPortal) {
@@ -838,7 +857,15 @@ export default function App() {
       return;
     }
     trackViewTrip(trip.id, `${trip.from} - ${trip.to}`);
-    // BẤT BIẾN STANFORD: Triệt tiêu rào cản đăng nhập. Khách đặt chỗ trước trực tiếp bằng SĐT (0đ cọc)
+
+    // Giữ chỗ bắt buộc đăng nhập. Vé phải gắn với một SĐT đã xác thực thì mới có
+    // cơ sở mở khoá liên hệ hai chiều, và Chủ xe mới biết ai đang lên xe mình.
+    if (!currentUser) {
+      setPendingPostTrip(null);
+      showToast('Vui lòng đăng nhập để giữ chỗ chuyến xe');
+      setShowAuthModal(true);
+      return;
+    }
     setSelectedItemForEscrow(trip);
   };
 
@@ -1003,6 +1030,7 @@ export default function App() {
           hubId={stationHubId}
           initialDestinationHubId={stationDestinationHubId}
           currentUser={currentUser}
+          onRequireAuth={() => setShowAuthModal(true)}
           onBack={() => setActiveTab('market')}
           onShowToast={showToast}
           onViewBookedTab={(tab, booking) => {
@@ -1050,6 +1078,7 @@ export default function App() {
           <div className={`${container} py-5 sm:py-8`}>
             <CorridorSearchBoard
               currentUser={currentUser}
+              onRequireAuth={() => setShowAuthModal(true)}
               checkIsMyTrip={checkIsMyTrip}
               onManageTrip={handleManageMyTrip}
               onOpenCockpit={() => setActiveTab('cockpit')}

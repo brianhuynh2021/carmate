@@ -25,7 +25,12 @@ export default class ErrorBoundary extends React.Component {
             reg.unregister().catch(() => {});
           }
         }).finally(() => {
-          window.location.href = window.location.origin + window.location.pathname + '?_r=' + Date.now();
+          // Tải lại bằng reload() thay vì gắn ?_r=<timestamp> vào URL.
+          // Param đó chỉ để phá cache nhưng không bao giờ được dọn, nên nó bám lại
+          // trên thanh địa chỉ, đi theo mọi liên kết người dùng chia sẻ và lộ ra rằng
+          // ứng dụng vừa gặp sự cố. Huỷ đăng ký service worker ở trên đã đủ để lấy
+          // bản mới; reload(true-style) qua location.reload() không cần đổi URL.
+          window.location.reload();
         });
         return;
       }
