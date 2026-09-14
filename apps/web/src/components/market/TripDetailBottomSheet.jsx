@@ -19,7 +19,7 @@ import { CarMateBadge } from '../ui/Logo.jsx';
 /**
  * Trả về chuỗi Thứ và Ngày/Tháng/Năm theo định dạng Việt Nam (ví dụ: "Thứ 2 (14/09/2026)")
  */
-function formatTripTimeHeader(departureLabel = '04:30', departureDate = null) {
+function formatTripTimeHeader(_departureLabel = '04:30', departureDate = null) {
   let targetDate = new Date();
 
   if (departureDate === 'Ngày mai') {
@@ -63,7 +63,6 @@ export default function TripDetailBottomSheet({
   trip,
   originName = 'Cây xăng Petrolimex Tân Khai (QL13)',
   destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
-  destNote = 'Cụm BV: Chợ Rẫy, Ung Bướu, ĐHYD / Hàng Xanh',
   segmentPrice = 165000,
   isMyTrip = false,
   onManageTrip,
@@ -125,7 +124,6 @@ export default function TripDetailBottomSheet({
   if (!isOpen || !trip || typeof document === 'undefined') return null;
 
   const seatsAvailable = Number(trip.seatsAvailable ?? 1);
-  const totalSeats = Number(trip.totalSeats || trip.capacity || 4);
   const isSoldOut = seatsAvailable <= 0;
   const displayPrice = trip.pricePerSeat || segmentPrice;
   const timeHeader = formatTripTimeHeader(trip.departureLabel, trip.departureDate);
