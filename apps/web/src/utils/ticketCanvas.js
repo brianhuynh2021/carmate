@@ -683,11 +683,6 @@ export function drawRealQRCode(ctx, x, y, size, qrPayload) {
   ctx.restore();
 }
 
-/** Giữ hàm tương thích ngược */
-export function drawStylizedQRCode(ctx, x, y, size, seedStr = '') {
-  drawRealQRCode(ctx, x, y, size, seedStr);
-}
-
 /**
  * Tải ảnh vé về máy thiết bị (Chuẩn 4:5)
  */

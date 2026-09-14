@@ -29,12 +29,9 @@ import {
 } from 'lucide-react';
 import {
   formatVND,
-  toPublicAlias,
   getUserOnlineStatus,
-  formatCleanDateLabel,
   parseTripDate,
   parseLocation,
-  isEmergencyPhoneUnlocked,
   resolveDriverRealName,
   maskCustomerPlate
 } from '@carmate/shared';
@@ -210,7 +207,6 @@ export default function BookedTripList({
   }, [currentUser]);
 
   const [copiedId, setCopiedId] = useState(null);
-  const [copiedPhoneId, setCopiedPhoneId] = useState(null);
 
 
   // Trạng thái Cursor Ambient: Quản lý danh sách thu gọn & mở rộng (Accordion)

@@ -51,7 +51,7 @@ export function trackEvent(eventName, properties = {}) {
   // 2. Nội bộ SQLite Event Store (0 chi phí, luôn hoạt động)
   if (typeof fetch !== 'undefined') {
     try {
-      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('carmate_token') : null;
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('carmate_auth_token') : null;
       fetch('/api/analytics/event', {
         method: 'POST',
         headers: {
@@ -71,26 +71,11 @@ export function trackEvent(eventName, properties = {}) {
   }
 }
 
-/**
- * Định danh người dùng khi đăng nhập
- */
-export function identifyUser(userId, traits = {}) {
-  if (!userId) return;
-  if (isPosthogInitialized && typeof window !== 'undefined' && window.posthog) {
-    try {
-      window.posthog.identify(userId, traits);
-    } catch {
-      // Silent fail
-    }
-  }
-}
-
 // Shortcut helpers
 export const trackPageView = (pageName) => trackEvent('page_view', { page: pageName });
 export const trackSearchRoute = (route, meta = {}) => trackEvent('search_route', { route, ...meta });
 export const trackViewTrip = (tripId, route) => trackEvent('view_trip', { tripId, route });
 export const trackInitiateBooking = (tripId, seats) => trackEvent('initiate_booking', { tripId, seats });
-export const trackOpenZalo = (tripId, role, route) => trackEvent('open_zalo', { tripId, role, route });
 export const trackDriverConfirm = (bookingId, tripId) => trackEvent('driver_confirm', { bookingId, tripId });
 export const trackViewBusDetail = (operator, meta = {}) => trackEvent('click_view_bus_detail', { operator, ...meta });
 export const trackCallBus = (operator, hotline, meta = {}) => trackEvent('click_call_bus', { operator, hotline, ...meta });
