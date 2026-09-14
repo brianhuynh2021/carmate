@@ -468,7 +468,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-x-3 gap-y-2 items-start">
             <div>
               <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-2xs" />
@@ -498,7 +498,7 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
               )}
             </div>
 
-            <div className="flex justify-center pt-1 sm:pt-7">
+            <div className="flex justify-center sm:pt-7">
               <button
                 type="button"
                 onClick={handleSwapRoute}
@@ -859,12 +859,12 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-4 shadow-2xs">
           {/* ── GIÁ DO NỀN TẢNG TÍNH: hiển thị, không cho sửa ── */}
           <div className="space-y-1.5">
-            <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white flex items-center justify-between gap-1.5">
+            <label className="block text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-[#0071e3]" />
-                <span>Chi phí phụ xăng mỗi ghế:</span>
+                <DollarSign className="w-3.5 h-3.5 shrink-0 text-[#0071e3]" />
+                <span>Phụ xăng mỗi ghế:</span>
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] font-bold text-slate-500 dark:text-slate-400">
                 <Lock className="w-3 h-3" />
                 <span>Nền tảng tính</span>
               </span>

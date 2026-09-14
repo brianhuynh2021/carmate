@@ -1234,7 +1234,7 @@ export default {
     s004: "The post will be removed from search across the platform and cannot be restored.",
     s005: "Keep the trip",
     s006: "Route",
-    s007: "Type to get station & province suggestions",
+    s007: "Fixed pickup stations",
     s013: "Convenient stops along the route:",
     s014: "Suggest stops automatically",
     s015: "Suggested for this route:",

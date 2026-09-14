@@ -1231,7 +1231,7 @@ export default {
     s004: "Bài đăng sẽ được gỡ khỏi danh sách tìm kiếm trên toàn hệ thống và không thể hoàn tác.",
     s005: "Giữ lại chuyến",
     s006: "Lộ trình di chuyển",
-    s007: "Gõ để gợi ý bến xe & tỉnh thành",
+    s007: "Đón trả tại trạm cố định",
     s013: "Trục đường tiện đón trả dọc tuyến:",
     s014: "Tự động gợi ý mốc",
     s015: "Gợi ý theo tuyến:",
