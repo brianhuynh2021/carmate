@@ -298,9 +298,11 @@ function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsN
         // Biển số che 2 số cuối: đủ để khách nhận ra xe giữa dòng QL13, nhưng
         // không lộ trọn biển ra màn hình công khai trước khi chốt chuyến.
         plateMasked: maskPlateTail(t.plateMask || t.plate || t.licensePlate),
-        fullPlate: t.plate || t.licensePlate || null,
         carImage: t.carImage || t.image || t.vehicleImage || null,
-        phone: t.phoneReal || t.phone || t.contactPhone || null,
+        // Sàn công khai không auth: KHÔNG phát số điện thoại thật và biển số đầy đủ
+        // (Nghị định 13/2023). Khách nhận số Chủ xe qua bản ghi booking sau khi giữ chỗ.
+        // userId để client nhận ra bài đăng của chính mình mà không cần lộ số.
+        userId: t.userId || null,
         carPhotoUrl: t.carPhotoUrl || (Array.isArray(t.photos) ? t.photos[0] : null) || (Array.isArray(t.carPhotos) ? (typeof t.carPhotos[0] === 'string' ? t.carPhotos[0] : t.carPhotos[0]?.url) : null) || null,
         photos: (Array.isArray(t.photos) && t.photos.length > 0)
           ? t.photos
@@ -403,8 +405,7 @@ function collectFormingTrips({ originHubId, seatsNeeded, nowMs, backupCount = 0 
       driverName: session.driverName || (isService ? 'Chủ xe dịch vụ' : 'Chủ xe'),
       vehicleModel: session.vehicleModel || '',
       plateMasked: maskPlateTail(session.plate),
-      fullPlate: session.plate || null,
-      phone: session.driverPhone || null,
+      userId: session.userId || null,
       amenities: ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
       plateType,
       isServiceVehicle: isService,

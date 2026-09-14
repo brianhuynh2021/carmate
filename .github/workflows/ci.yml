@@ -185,6 +185,17 @@ jobs:
             fi
           done
 
+          echo "Kiểm tra Ma Trận Khung Giờ /api/corridor/time-slots..."
+          # Sàn tuyến công khai (không auth) tuyệt đối không được lộ số điện thoại
+          # thật hay biển số đầy đủ — chỉ plateMasked và userId.
+          SLOTS=$(curl -s "https://carmate.fly.dev/api/corridor/time-slots?from=hub_ql13_tan_khai&to=hub_ql13_cho_ray")
+          for FIELD in '"phone"' '"phoneReal"' '"fullPlate"'; do
+            if printf '%s' "$SLOTS" | grep -q "$FIELD"; then
+              echo "::error::PII LEAK — /api/corridor/time-slots trả về $FIELD trên production!"
+              exit 1
+            fi
+          done
+
           echo "Kiểm tra AI concierge /api/agent/chat..."
           if curl -s -X POST https://carmate.fly.dev/api/agent/chat \
                -H 'Content-Type: application/json' \
