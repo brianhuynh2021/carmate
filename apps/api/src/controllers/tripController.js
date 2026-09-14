@@ -712,7 +712,12 @@ function enforceTripInvariants(existingTrip, rawUpdates) {
     updates.pricePerSeat !== undefined ||
     updates.expectedPrice !== undefined;
 
-  if (originHubId && destinationHubId) {
+  // Bài TÌM XE của khách không phải là hàng bán: expectedPrice là mức khách mong
+  // muốn trả, không phải giá nền tảng ấn định. Áp cước chủ xe lên đó là ghi đè
+  // nguyện vọng của khách — đường tạo chuyến đã loại trừ, đường sửa phải giống.
+  const isDriverOffer = (updates.type || existingTrip.type) !== 'passenger_request';
+
+  if (isDriverOffer && originHubId && destinationHubId) {
     const tariff = getFixedSegmentTariff(originHubId, destinationHubId);
     updates.basePricePerSeat = tariff.pricePerSeat;
     updates.pricePerSeat = tariff.pricePerSeat;
@@ -723,7 +728,7 @@ function enforceTripInvariants(existingTrip, rawUpdates) {
     const destHub = getVirtualHubById(destinationHubId);
     if (originHub) updates.from = originHub.shortName || originHub.name;
     if (destHub) updates.to = destHub.shortName || destHub.name;
-  } else if (clientSentPrice) {
+  } else if (isDriverOffer && clientSentPrice) {
     // Chuyến cũ chưa gắn mã trạm: không có cơ sở tính lại, nên giữ nguyên giá cũ
     // thay vì tin con số client gửi lên.
     delete updates.basePricePerSeat;

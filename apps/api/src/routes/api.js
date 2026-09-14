@@ -28,10 +28,15 @@ import {
 } from '../controllers/bookingController.js';
 import { getSupportMessagesHandler, sendSupportMessageHandler } from '../controllers/supportController.js';
 import { getHealth, getBenchmarks, getStats, getTrustProfile, getPublicTrustRulesHandler } from '../controllers/miscController.js';
-import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, firebaseLogin, getMe, updateProfile, deleteAccount, requestAccountDeletion, getAuthConfigHandler } from '../controllers/authController.js';
+import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, firebaseLogin, getMe, updateProfile, deleteAccount, requestAccountDeletion, getAuthConfigHandler,
+  verifyPhoneForAccount
+} from '../controllers/authController.js';
 import {
   createMovementIntentHandler,
   getMovementIntentsHandler,
+  updateMovementIntentHandler,
+  cancelMovementIntentHandler,
+  confirmIntentCheckpointHandler,
   runBatchMatchHandler,
   getMatchingEpochsHandler
 } from '../controllers/intentController.js';
@@ -108,6 +113,7 @@ import {
   requireAdmin,
   createDriverProfileHandler,
   getPublicFuelPriceHandler,
+  getPublicTariffParamsHandler,
   getAdminFuelPriceHandler,
   updateAdminFuelPriceHandler,
   resetAdminFuelPriceHandler,
@@ -140,6 +146,8 @@ router.post('/auth/telegram-login', authLimiter, telegramLogin);
 router.post('/auth/zalo-login', zaloLogin);
 router.post('/auth/request-otp', authLimiter, requestOtp);
 router.post('/auth/verify-otp', authLimiter, verifyOtp);
+// Gắn số điện thoại đã xác thực OTP cho tài khoản đăng nhập qua Telegram/Google
+router.post('/auth/verify-phone', requireAuth, authLimiter, verifyPhoneForAccount);
 router.get('/auth/me', requireAuth, getMe);
 router.patch('/auth/profile', requireAuth, updateProfile);
 router.put('/auth/profile', requireAuth, updateProfile);
@@ -174,6 +182,10 @@ router.get('/intents', optionalAuth, getMovementIntentsHandler);
 router.post('/intents', optionalAuth, createMovementIntentHandler);
 router.post('/intents/match', optionalAuth, runBatchMatchHandler);
 router.get('/intents/epochs', optionalAuth, getMatchingEpochsHandler);
+// Sửa / huỷ lịch trình: bốn thao tác "3 giây" của Taplo Chủ xe nay có hiệu lực thật
+router.patch('/intents/:id', requireAuth, updateMovementIntentHandler);
+router.delete('/intents/:id', requireAuth, cancelMovementIntentHandler);
+router.post('/intents/:id/checkpoint', requireAuth, confirmIntentCheckpointHandler);
 
 // --- Sàn Giao Dịch Ghế Trống (Seat Exchange - LOB, CDA 24/7 Spot Market & Dynamic Sliding TTL) ---
 // Đặt lệnh: chống spam bằng postTripLimiter; optionalAuth cho phép khách vãng lai
@@ -266,6 +278,7 @@ router.get('/transit-directory', getTransitDirectoryHandler);
 
 // --- Chỉ Số Nhiên Liệu Hàng Ngày (Daily Petrolimex Fuel Index) ---
 router.get('/fuel-price', getPublicFuelPriceHandler);
+router.get('/tariff-params', getPublicTariffParamsHandler);
 
 // --- Thông Báo Đẩy & Hộp Thư In-App (Kênh đánh thức khách ngoài giờ mở app) ---
 router.get('/notifications/vapid-key', getVapidKeyHandler);

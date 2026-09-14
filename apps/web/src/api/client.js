@@ -284,6 +284,22 @@ export const api = {
     return res;
   },
 
+  /**
+   * Gắn số điện thoại đã xác thực OTP vào tài khoản đang đăng nhập.
+   * Dùng cho người vào bằng Telegram/Google — hai kênh này không cấp số điện thoại.
+   * Máy chủ cấp lại token vì token cũ mang phone rỗng.
+   */
+  async verifyPhoneForAccount(phone, otp) {
+    const res = await request('/auth/verify-phone', {
+      method: 'POST',
+      body: JSON.stringify({ phone, otp })
+    });
+    if (res?.token) {
+      setStoredAuthToken(res.token);
+    }
+    return res;
+  },
+
   async getAuthConfig() {
     try {
       const res = await request('/auth/config');
@@ -631,6 +647,30 @@ export const api = {
     });
   },
 
+  /** Sửa lịch trình đang chờ: dời giờ hoặc đổi số ghế. */
+  async updateMovementIntent(id, updates) {
+    return request(`/intents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+  },
+
+  /** Chủ xe xác nhận một mốc gác cổng (NIGHT_LOCK / MORNING_WAKE / RED_LINE). */
+  async confirmIntentCheckpoint(id, checkpoint) {
+    return request(`/intents/${id}/checkpoint`, {
+      method: 'POST',
+      body: JSON.stringify({ checkpoint })
+    });
+  },
+
+  /** Huỷ lịch trình (chờ hoặc đã ghép khách). */
+  async cancelMovementIntent(id, reason = '') {
+    return request(`/intents/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason })
+    });
+  },
+
   async getMovementIntents(params = {}) {
     const query = new URLSearchParams();
     Object.entries(params).forEach(([key, val]) => {
@@ -771,6 +811,11 @@ export const api = {
   // ── Chỉ Số Nhiên Liệu Hàng Ngày (Daily Petrolimex Fuel Index) ───────
   async getFuelPrice() {
     return request('/fuel-price');
+  },
+
+  /** Tham số công thức định giá đang áp dụng toàn sàn (công khai). */
+  async getTariffParams() {
+    return request('/tariff-params');
   },
 
   async getAdminFuelPrice() {

@@ -72,6 +72,9 @@ function intentToSchedule(intent) {
     matchedCount,
     fareEstimated: Number(intent.estimatedPricing?.pricePerSeat || 0) * seats,
     riders: intent.matchedRiders || [],
+    // Mốc gác cổng đã xác nhận, do máy chủ lưu. Không map trường này thì tải lại
+    // trang là nút quay về "chưa xác nhận" — đúng lỗi mà việc nối API định sửa.
+    checkpointConfirmations: intent.checkpointConfirmations || {},
     isRemote: true
   };
 }
@@ -162,121 +165,158 @@ export default function DriverScheduleCardView({
   const [newSeats, setNewSeats] = useState(2);
   const [isRecurringCommute, setIsRecurringCommute] = useState(true);
 
-  // 3-TIER CHECKPOINTS STATE (QUY TRÌNH GÁC CỔNG 3 MỐC)
-  const [activeCheckpoint, setActiveCheckpoint] = useState('MORNING_WAKE');
-  const [nightConfirmed, setNightConfirmed] = useState(true);
-  const [morningAwakeConfirmed, setMorningAwakeConfirmed] = useState(false);
-
-  // Cập nhật lạc quan trên giao diện. Máy chủ mới là nơi lưu thật, nên các thao
-  // tác thay đổi lịch đều gọi API rồi nạp lại danh sách từ máy chủ.
-  const updateSchedulesState = (newScheds) => {
-    setSchedules(newScheds);
+  // ── GÁC CỔNG 3 MỐC ──
+  // Trước đây mốc hiện tại là một useState cứng ('MORNING_WAKE') và chỉ đổi được
+  // bằng ba nút chỉ hiện ở môi trường dev, nên trên production Chủ xe vĩnh viễn
+  // chỉ thấy đúng một mốc. Nay mốc được suy ra từ ĐỒNG HỒ THẬT và tự trôi theo giờ.
+  const resolveCheckpointNow = (now = new Date()) => {
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    if (minutes >= 21 * 60 || minutes < 5 * 60 + 15) return 'NIGHT_LOCK'; // 21:00 → 05:15
+    if (minutes < 5 * 60 + 30) return 'MORNING_WAKE'; // 05:15 → 05:30
+    return 'RED_LINE'; // 05:30 trở đi
   };
 
-  // Chỉ cập nhật hiển thị lạc quan; máy chủ mới là nơi trừ điểm thật
-  // (xem applyCancellationPenalty trong sqliteStore).
-  const updateTrustScoreState = (newScore) => {
-    setTrustScore(Math.max(0, Math.min(100, newScore)));
-  };
+  const [activeCheckpoint, setActiveCheckpoint] = useState(() => resolveCheckpointNow());
 
-  // 1. THAO TÁC 3 GIÂY: DỜI GIỜ (+15P HOẶC +30P)
-  const handleDelayTrip = (tripId, minutesToAdd) => {
-    setSchedules((prev) =>
-      prev.map((t) => {
-        if (t.id !== tripId) return t;
+  /** Mốc này đã được xác nhận chưa — đọc từ dữ liệu máy chủ, không giữ bản sao cục bộ. */
+  const isCheckpointConfirmed = (trip, checkpoint) =>
+    Boolean(trip?.checkpointConfirmations?.[checkpoint]);
 
-        // Tính giờ mới
-        const [hh, mm] = t.timeDisplay.split(':').map(Number);
-        let totalMinutes = hh * 60 + mm + minutesToAdd;
-        const newH = Math.floor(totalMinutes / 60) % 24;
-        const newM = totalMinutes % 60;
-        const formattedTime = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+  // Mốc tự trôi theo đồng hồ, không cần người dùng bấm gì
+  useEffect(() => {
+    const timer = setInterval(() => setActiveCheckpoint(resolveCheckpointNow()), 30 * 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-        return {
-          ...t,
-          timeDisplay: formattedTime
-        };
-      })
-    );
-
-    // Gửi thông báo đến người đi cùng
-    onShowToast?.(
-      `⏱️ Đã dời giờ sang ${minutesToAdd === 15 ? '+15p' : '+30p'}. Đã gửi tin nhắn xác nhận tới người đi cùng!`
-    );
-  };
-
-  // 2. THAO TÁC 3 GIÂY: ĐỔI GHẾ (GIẢM HOẶC TĂNG GHẾ)
-  const handleChangeSeats = (tripId, delta) => {
-    const target = schedules.find((s) => s.id === tripId);
-    if (!target) return;
-
-    const newSeatsCount = target.totalSeats + delta;
-    if (newSeatsCount < 1 || newSeatsCount > 4) return;
-
-    if (delta < 0 && target.matchedCount > newSeatsCount) {
-      // BẤT BIẾN FIFO (GALE-SHAPLEY): Giữ người đặt trước, đẩy người thứ 2 lên ưu tiên #1 của Trạm
-      const preservedRider = target.riders[0];
-      const releasedRider = target.riders[1];
-
-      const updated = schedules.map((t) => {
-        if (t.id !== tripId) return t;
-        return {
-          ...t,
-          totalSeats: newSeatsCount,
-          matchedCount: newSeatsCount,
-          fareEstimated: newSeatsCount * 110000,
-          riders: [preservedRider]
-        };
-      });
-
-      updateSchedulesState(updated);
-      onShowToast?.(
-        `💺 Đã giảm còn 1 ghế. Giữ chỗ cho bạn ${preservedRider.name}. Bạn ${releasedRider?.name} được chuyển ưu tiên #1 trạm đón!`
+  /** Gửi xác nhận một mốc lên máy chủ để khách thực sự nhìn thấy. */
+  const confirmCheckpoint = async (tripId, checkpoint) => {
+    if (!tripId || pendingAction) return;
+    setPendingAction(`cp:${tripId}`);
+    try {
+      const res = await api.confirmIntentCheckpoint(tripId, checkpoint);
+      if (!res?.success) throw new Error(res?.error || 'Máy chủ từ chối xác nhận');
+      const saved = res.data?.checkpointConfirmations || {};
+      setSchedules((prev) =>
+        prev.map((s) => (s.id === tripId ? { ...s, checkpointConfirmations: saved } : s))
       );
-    } else {
-      // Tăng số ghế
-      const updated = schedules.map((t) => {
-        if (t.id !== tripId) return t;
-        return {
-          ...t,
-          totalSeats: newSeatsCount,
-          fareEstimated: Math.max(t.matchedCount, newSeatsCount) * 110000
-        };
-      });
-      updateSchedulesState(updated);
-      onShowToast?.(`💺 Đã cập nhật số ghế thành ${newSeatsCount} ghế.`);
+      onShowToast?.(`✓ ${res.message}`);
+    } catch (err) {
+      onShowToast?.(`⚠️ Không thể xác nhận: ${err.message || 'Thử lại sau'}`);
+    } finally {
+      setPendingAction(null);
     }
   };
 
-  // 3. THAO TÁC 3 GIÂY: HUỶ LỊCH TRÌNH CHỜ (THẺ 2 - KHÔNG RÀO CẢN)
-  const handleQuickCancelWaitingTrip = (tripId) => {
-    const next = schedules.filter((s) => s.id !== tripId);
-    updateSchedulesState(next);
-    onShowToast?.('✓ Đã huỷ lịch trình chờ thành công.');
+  // Khoá thao tác đang gửi lên máy chủ, tránh bấm hai lần thành hai lệnh.
+  const [pendingAction, setPendingAction] = useState(null);
+
+  // ── BỐN THAO TÁC 3 GIÂY ──
+  // Trước đây cả bốn chỉ setState rồi hiện toast kiểu "Đã gửi tin nhắn tới người
+  // đi cùng" mà KHÔNG gọi máy chủ: Chủ xe tin là khách đã được báo, khách không
+  // nhận được gì, tải lại trang là mất sạch. Nay mỗi thao tác đều đi qua API và
+  // chỉ cập nhật giao diện sau khi máy chủ xác nhận.
+
+  // 1. DỜI GIỜ (+15P HOẶC +30P)
+  const handleDelayTrip = async (tripId, minutesToAdd) => {
+    const target = schedules.find((s) => s.id === tripId);
+    if (!target || pendingAction) return;
+
+    const [hh, mm] = String(target.timeDisplay || '').split(':').map(Number);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) {
+      onShowToast?.('⚠️ Không đọc được giờ hiện tại của lịch trình.');
+      return;
+    }
+    const totalMinutes = hh * 60 + mm + minutesToAdd;
+    const newTime = `${String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0')}:${String(
+      totalMinutes % 60
+    ).padStart(2, '0')}`;
+
+    setPendingAction(`delay:${tripId}`);
+    try {
+      const res = await api.updateMovementIntent(tripId, { timeSlot: newTime });
+      if (!res?.success) throw new Error(res?.error || 'Máy chủ từ chối thay đổi');
+      setSchedules((prev) => prev.map((t) => (t.id === tripId ? { ...t, timeDisplay: newTime } : t)));
+      onShowToast?.(`⏱️ Đã dời giờ sang ${newTime}. ${res.message || ''}`.trim());
+    } catch (err) {
+      onShowToast?.(`⚠️ Không thể dời giờ: ${err.message || 'Thử lại sau'}`);
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  // 4. XÁC NHẬN HUỶ CHUYẾN ĐÃ KHỚP (THẺ 1 - CHẾ TÀI LEO THANG OSTROM)
-  const handleConfirmCancelMatchedTrip = () => {
-    if (!cancelingTrip) return;
+  // 2. ĐỔI GHẾ (GIẢM HOẶC TĂNG)
+  const handleChangeSeats = async (tripId, delta) => {
+    const target = schedules.find((s) => s.id === tripId);
+    if (!target || pendingAction) return;
 
-    // Giả lập huỷ sát giờ (<15 phút) -> Trừ 20 điểm
-    const penaltyPoints = 20;
-    const newScore = (trustScore ?? 98) - penaltyPoints;
-    updateTrustScoreState(newScore);
+    // Trần 7 ghế cho khớp với máy chủ (intentController). Chặn ở 4 rồi im lặng
+    // return khiến Chủ xe xe 7 chỗ bấm mãi không lên mà không hiểu vì sao.
+    const newSeatsCount = target.totalSeats + delta;
+    if (newSeatsCount < 1 || newSeatsCount > 7) {
+      onShowToast?.(
+        newSeatsCount < 1 ? '⚠️ Phải nhận ít nhất 1 ghế.' : '⚠️ Tối đa 7 ghế mỗi chuyến.'
+      );
+      return;
+    }
 
-    // Cập nhật trạng thái chuyến
-    const updated = schedules.map((s) => {
-      if (s.id === cancelingTrip.id) {
-        return { ...s, status: 'CANCELLED' };
+    setPendingAction(`seats:${tripId}`);
+    try {
+      const res = await api.updateMovementIntent(tripId, { seats: newSeatsCount });
+      if (!res?.success) throw new Error(res?.error || 'Máy chủ từ chối thay đổi');
+      setSchedules((prev) =>
+        prev.map((t) => (t.id === tripId ? { ...t, totalSeats: newSeatsCount } : t))
+      );
+      onShowToast?.(`💺 Đã cập nhật số ghế thành ${newSeatsCount} ghế.`);
+    } catch (err) {
+      // Máy chủ chặn khi hạ ghế xuống dưới số khách đã ghép — nói thẳng lý do
+      onShowToast?.(`⚠️ ${err.message || 'Không thể đổi số ghế'}`);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  // 3. HUỶ LỊCH TRÌNH CHỜ (chưa ghép ai — không rào cản)
+  const handleQuickCancelWaitingTrip = async (tripId) => {
+    if (pendingAction) return;
+    setPendingAction(`cancel:${tripId}`);
+    try {
+      const res = await api.cancelMovementIntent(tripId, 'Chủ xe huỷ lịch chờ');
+      if (!res?.success) throw new Error(res?.error || 'Máy chủ từ chối huỷ');
+      setSchedules((prev) => prev.filter((s) => s.id !== tripId));
+      onShowToast?.('✓ Đã huỷ lịch trình chờ thành công.');
+    } catch (err) {
+      onShowToast?.(`⚠️ Không thể huỷ: ${err.message || 'Thử lại sau'}`);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  // 4. HUỶ CHUYẾN ĐÃ KHỚP (chế tài do máy chủ quyết, không trừ điểm ở client)
+  const handleConfirmCancelMatchedTrip = async () => {
+    if (!cancelingTrip || pendingAction) return;
+    setPendingAction(`cancel:${cancelingTrip.id}`);
+    try {
+      const res = await api.cancelMovementIntent(cancelingTrip.id, 'Chủ xe huỷ chuyến đã ghép');
+      if (!res?.success) throw new Error(res?.error || 'Máy chủ từ chối huỷ');
+
+      setSchedules((prev) => prev.map((s) => (s.id === cancelingTrip.id ? { ...s, status: 'CANCELLED' } : s)));
+      onShowToast?.(`⚠️ ${res.message || 'Đã huỷ chuyến.'}`);
+      setCancelingTrip(null);
+
+      // Điểm tín nhiệm do máy chủ chấm; đọc lại thay vì tự trừ ở trình duyệt
+      try {
+        const profile = await api.getTrustProfile();
+        if (profile?.success && typeof profile.data?.score === 'number') {
+          setTrustScore(profile.data.score);
+        }
+      } catch {
+        /* không lấy được điểm mới thì giữ nguyên hiển thị cũ */
       }
-      return s;
-    });
-    updateSchedulesState(updated);
-
-    onShowToast?.(
-      `⚠️ Đã huỷ chuyến. Điểm tín nhiệm giảm còn ${newScore}đ. Đã gửi SMS xin lỗi & điều phối cứu hộ cho khách.`
-    );
-    setCancelingTrip(null);
+    } catch (err) {
+      onShowToast?.(`⚠️ Không thể huỷ chuyến: ${err.message || 'Thử lại sau'}`);
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   // 5. THÊM Ý ĐỊNH CHUYẾN MỚI
@@ -559,35 +599,9 @@ export default function DriverScheduleCardView({
                         <Clock className="w-3.5 h-3.5 text-amber-400" />
                         <span>Gác cổng 3 mốc: {activeCheckpoint === 'NIGHT_LOCK' ? '21:00 Đêm (Khóa sổ)' : activeCheckpoint === 'MORNING_WAKE' ? '05:15 Sáng (Báo thức)' : '05:30 Sáng (Lằn ranh đỏ)'}</span>
                       </span>
-                      {/* Selector mô phỏng 3 mốc (chỉ hiện ở dev) */}
-                      {import.meta.env.DEV && (
-                        <div className="flex items-center gap-1 text-[10px] font-mono">
-                          <button
-                            type="button"
-                            onClick={() => setActiveCheckpoint('NIGHT_LOCK')}
-                            className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'NIGHT_LOCK' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                            title={t('driverSchedule.cp1Title')}
-                          >
-                            {t('driverSchedule.night21')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setActiveCheckpoint('MORNING_WAKE')}
-                            className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'MORNING_WAKE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                            title={t('driverSchedule.cp2Title')}
-                          >
-                            {t('driverSchedule.morning0515')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setActiveCheckpoint('RED_LINE')}
-                            className={`px-2 py-0.5 rounded cursor-pointer transition-all ${activeCheckpoint === 'RED_LINE' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white/[0.05] text-slate-400'}`}
-                            title={t('driverSchedule.cp3Title')}
-                          >
-                            {t('driverSchedule.redline0530')}
-                          </button>
-                        </div>
-                      )}
+                      <span className="text-[10px] font-mono text-amber-400/80">
+                        {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
 
                     {activeCheckpoint === 'NIGHT_LOCK' && (
@@ -597,13 +611,11 @@ export default function DriverScheduleCardView({
                         </p>
                         <button
                           type="button"
-                          onClick={() => {
-                            setNightConfirmed(true);
-                            onShowToast?.('✓ Đã chốt sổ ban đêm! Khách nhận được thông báo an tâm.');
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold font-mono text-xs shrink-0 cursor-pointer active:scale-95 transition-all"
+                          disabled={pendingAction === `cp:${trip.id}`}
+                          onClick={() => confirmCheckpoint(trip.id, 'NIGHT_LOCK')}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-slate-950 font-bold font-mono text-xs shrink-0 cursor-pointer active:scale-95 transition-all"
                         >
-                          {nightConfirmed ? '✓ Đã chốt sổ 21h' : 'Chốt sổ ngay'}
+                          {isCheckpointConfirmed(trip, 'NIGHT_LOCK') ? '✓ Đã chốt sổ 21h' : 'Chốt sổ ngay'}
                         </button>
                       </div>
                     )}
@@ -615,17 +627,15 @@ export default function DriverScheduleCardView({
                         </p>
                         <button
                           type="button"
-                          onClick={() => {
-                            setMorningAwakeConfirmed(true);
-                            onShowToast?.('⏰ Đã xác nhận thức dậy! Đường ống mở sẵn sàng đón khách lúc 06:15.');
-                          }}
-                          className={`px-3 py-1.5 rounded-xl font-bold font-mono text-xs shrink-0 cursor-pointer active:scale-95 transition-all ${
-                            morningAwakeConfirmed
+                          disabled={pendingAction === `cp:${trip.id}`}
+                          onClick={() => confirmCheckpoint(trip.id, 'MORNING_WAKE')}
+                          className={`px-3 py-1.5 rounded-xl font-bold font-mono text-xs shrink-0 cursor-pointer active:scale-95 transition-all disabled:opacity-60 ${
+                            isCheckpointConfirmed(trip, 'MORNING_WAKE')
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                               : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 animate-pulse'
                           }`}
                         >
-                          {morningAwakeConfirmed ? '✓ Đã thức dậy (05:15)' : 'Tôi đã thức dậy'}
+                          {isCheckpointConfirmed(trip, 'MORNING_WAKE') ? '✓ Đã thức dậy (05:15)' : 'Tôi đã thức dậy'}
                         </button>
                       </div>
                     )}
@@ -639,6 +649,18 @@ export default function DriverScheduleCardView({
                         <p className="text-[11px] text-slate-300 leading-relaxed">
                           {t('driverSchedule.failsafe1')} <strong>{t('driverSchedule.failsafe2')}</strong> {t('driverSchedule.failsafe3')}
                         </p>
+                        <button
+                          type="button"
+                          disabled={pendingAction === `cp:${trip.id}`}
+                          onClick={() => confirmCheckpoint(trip.id, 'RED_LINE')}
+                          className={`w-full px-3 py-2 rounded-xl font-bold font-mono text-xs cursor-pointer active:scale-95 transition-all disabled:opacity-60 ${
+                            isCheckpointConfirmed(trip, 'RED_LINE')
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/20'
+                          }`}
+                        >
+                          {isCheckpointConfirmed(trip, 'RED_LINE') ? '✓ Đã xác nhận lăn bánh' : 'Tôi đã lên xe, khởi hành'}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -712,16 +734,26 @@ export default function DriverScheduleCardView({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => {
-                          // Chuyển đổi nhanh các mốc giờ chiều
+                        disabled={pendingAction === `time:${trip.id}`}
+                        onClick={async () => {
+                          if (pendingAction) return;
+                          // Xoay vòng các mốc giờ chiều thường dùng
                           const nextTimes = ['17:00', '17:30', '18:00', '18:30'];
                           const curIdx = nextTimes.indexOf(trip.timeDisplay);
                           const newT = nextTimes[(curIdx + 1) % nextTimes.length];
-                          const updated = schedules.map((s) =>
-                            s.id === trip.id ? { ...s, timeDisplay: newT } : s
-                          );
-                          updateSchedulesState(updated);
-                          onShowToast?.(`Đã đổi giờ thành ${newT}`);
+                          setPendingAction(`time:${trip.id}`);
+                          try {
+                            const res = await api.updateMovementIntent(trip.id, { timeSlot: newT });
+                            if (!res?.success) throw new Error(res?.error || 'Máy chủ từ chối thay đổi');
+                            setSchedules((prev) =>
+                              prev.map((s) => (s.id === trip.id ? { ...s, timeDisplay: newT } : s))
+                            );
+                            onShowToast?.(`Đã đổi giờ thành ${newT}`);
+                          } catch (err) {
+                            onShowToast?.(`⚠️ Không thể đổi giờ: ${err.message || 'Thử lại sau'}`);
+                          } finally {
+                            setPendingAction(null);
+                          }
                         }}
                         className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.12] active:scale-95 text-xs font-mono font-bold text-slate-700 dark:text-slate-200 border border-slate-300/70 dark:border-white/[0.08] transition-all cursor-pointer flex items-center gap-1.5"
                       >

@@ -98,8 +98,11 @@ export function getTariffParams() {
  * Kiểm định một bộ tham số công thức trước khi cho phép áp dụng.
  * Trả về { params, errors }: errors rỗng nghĩa là hợp lệ.
  */
-export function validateTariffParams(input = {}) {
-  const params = { ...DEFAULT_TARIFF_PARAMS };
+export function validateTariffParams(input = {}, base = currentTariffParams) {
+  // Gộp lên bộ tham số ĐANG ÁP DỤNG, không phải bộ mặc định: Admin sửa một ô rồi
+  // lưu thì tám ô còn lại phải giữ nguyên. Gộp lên mặc định khiến mọi tinh chỉnh
+  // trước đó âm thầm quay về giá trị gốc của nền tảng.
+  const params = { ...DEFAULT_TARIFF_PARAMS, ...(base || {}) };
   const errors = [];
 
   for (const [key, bound] of Object.entries(TARIFF_PARAM_BOUNDS)) {

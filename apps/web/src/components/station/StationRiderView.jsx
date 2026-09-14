@@ -934,8 +934,12 @@ export default function StationRiderView({
         }
         cleanUser = `user_${cleanPhone.slice(-4)}`;
       } else {
-        cleanUser = inputVal.replace(/^@/, '');
-        cleanPhone = '0988' + Math.floor(100000 + Math.random() * 900000);
+        // KHÔNG bịa số điện thoại. Trước đây nhánh này sinh '0988' + 6 số ngẫu
+        // nhiên rồi ghi thẳng vào hồ sơ: Chủ xe gọi vào một số không tồn tại,
+        // hoặc tệ hơn là số của người vô can. Giữ chỗ phải có số thật để gọi.
+        setAuthError('Vui lòng nhập số điện thoại thật để Chủ xe liên hệ đón bạn.');
+        setAuthLoading(false);
+        return;
       }
 
       const seed = cleanPhone || cleanUser;

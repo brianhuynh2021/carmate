@@ -30,7 +30,6 @@ import TrustProfileModal from './components/modals/TrustProfileModal.jsx';
 import PolicyModal from './components/modals/PolicyModal.jsx';
 import CancelModal from './components/modals/CancelModal.jsx';
 import DelayModal from './components/modals/DelayModal.jsx';
-import TicketShareModal from './components/modals/TicketShareModal.jsx';
 import MutualReviewModal from './components/modals/MutualReviewModal.jsx';
 import RouteDetailModal from './components/modals/RouteDetailModal.jsx';
 import EditTripModal from './components/modals/EditTripModal.jsx';
@@ -316,8 +315,6 @@ export default function App() {
     setCancelRecord,
     delayRecord,
     setDelayRecord,
-    ticketToShare,
-    setTicketToShare,
     reviewRecord,
     setReviewRecord,
     selectedTripForRoute,
@@ -486,7 +483,6 @@ export default function App() {
     currentUser,
     updateMyTripsCount,
     setActiveTab,
-    setTicketToShare,
     setSelectedItemForEscrow,
     setCancelRecord,
     setDelayRecord,
@@ -1213,16 +1209,6 @@ export default function App() {
           }}
         />
       )}
-      {ticketToShare && (
-        <TicketShareModal
-          trip={ticketToShare}
-          onClose={() => setTicketToShare(null)}
-          onShowToast={showToast}
-          onViewInMarket={handleViewTripInMarket}
-          onSelectTrip={setSelectedTripForRoute}
-          onConnectMatch={handleInitiateBook}
-        />
-      )}
       {editingTrip && (
         <EditTripModal
           // Form khởi tạo state từ props, không đồng bộ lại -> cần remount khi đổi bài đăng,
@@ -1259,7 +1245,6 @@ export default function App() {
           trip={selectedTripForRoute}
           isOwner={checkIsMyTrip(selectedTripForRoute)}
           onClose={() => setSelectedTripForRoute(null)}
-          onShare={setTicketToShare}
           onViewCarPhotos={setSelectedTripForPhotos}
           onManage={(item) => {
             setSelectedTripForRoute(null);

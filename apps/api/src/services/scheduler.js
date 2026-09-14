@@ -10,7 +10,7 @@
  * Đây là "recourse trigger" trong mô hình Stochastic VRP with Recourse: hành
  * động khắc phục chỉ có giá trị nếu có thứ gì đó đánh thức nó.
  *
- * Bốn nhịp quét, mỗi nhịp một chu kỳ riêng theo tính cấp bách:
+ * Tám nhịp quét, mỗi nhịp một chu kỳ riêng theo tính cấp bách:
  *
  *   T30_TICK      60s   Hội tụ không-thời gian, bắn báo trước 30 phút
  *   HANDSHAKE     60s   Nhắc lần 2 / thu hồi chỗ khi khách im lặng
@@ -18,6 +18,7 @@
  *   LATENESS      90s   Radar trễ hẹn -> hoán đổi chuyến Shadow
  *   MICRO_BATCH  180s   Phiên gom khớp lệnh (đúng cửa sổ 3 phút đã khai báo)
  *   RADAR_SWEEP  300s   4 chốt đêm T-8h/T-6h/T-1.5h/T-45m
+ *   TRIP_LIFECYCLE 15m  Đóng sổ chuyến đã chạy xong, đẩy chuyến định kỳ sang tuần sau
  *   HOUSEKEEPING  1h    Dọn nhật ký thông báo cũ
  *
  * NGUYÊN TẮC AN TOÀN: mỗi nhịp được bọc try/catch riêng và dùng khoá chống
@@ -48,7 +49,7 @@ import {
   pruneOldNotifications
 } from './notificationService.js';
 import { evaluateRadarSweepCheckpoint, RADAR_CHECKPOINTS } from '@carmate/shared';
-import { getBookings, getUserByPhone } from '../db/sqliteStore.js';
+import { getBookings, getUserByPhone, sweepFinishedTrips } from '../db/sqliteStore.js';
 
 export const SCHEDULER_INTERVALS = Object.freeze({
   T30_TICK_MS: 60 * 1000,
@@ -57,6 +58,7 @@ export const SCHEDULER_INTERVALS = Object.freeze({
   DEPARTURE_MS: 60 * 1000,
   MICRO_BATCH_MS: 3 * 60 * 1000,
   RADAR_SWEEP_MS: 5 * 60 * 1000,
+  TRIP_LIFECYCLE_MS: 15 * 60 * 1000,
   HOUSEKEEPING_MS: 60 * 60 * 1000
 });
 
@@ -77,7 +79,9 @@ const stats = {
     batchEpochs: 0,
     radarAlerts: 0,
     readyAsks: 0,
-    rescueActivations: 0
+    rescueActivations: 0,
+    tripsClosed: 0,
+    tripsRolled: 0
   }
 };
 
@@ -506,7 +510,29 @@ function resolveCheckpointForClock(date) {
   return hit ? hit.cp : null;
 }
 
-/** NHỊP 6 — DỌN DẸP: nhật ký thông báo cũ hơn 30 ngày. */
+/**
+ * NHỊP 7 — ĐÓNG SỔ CHUYẾN ĐÃ CHẠY XONG.
+ *
+ * Đây là tác nhân duy nhất đưa một chuyến ra khỏi trạng thái đang mở. Trước khi
+ * có nhịp này, mọi vòng quét đều dừng ở mốc T+2 phút (departureWatchdog.js) nên
+ * chuyến ở lại `active` vĩnh viễn trong CSDL: xe cứu hộ có thể được điều từ một
+ * chuyến của tháng trước, và chuyến định kỳ thì hiện mãi trên sàn.
+ */
+async function tickTripLifecycle() {
+  const { completed, expired, rolled } = sweepFinishedTrips();
+  const total = completed.length + expired.length + rolled.length;
+  if (total === 0) return;
+
+  stats.actions.tripsClosed += completed.length + expired.length;
+  stats.actions.tripsRolled += rolled.length;
+
+  console.log(
+    `[Scheduler:tripLifecycle] Đóng sổ ${completed.length} chuyến đã chở khách, ` +
+      `${expired.length} chuyến không ai đặt, đẩy ${rolled.length} chuyến định kỳ sang tuần sau.`
+  );
+}
+
+/** NHỊP 8 — DỌN DẸP: nhật ký thông báo cũ hơn 30 ngày. */
 async function tickHousekeeping() {
   const removed = pruneOldNotifications(30);
   if (removed > 0) console.log(`[Scheduler:housekeeping] Đã dọn ${removed} thông báo cũ.`);
@@ -532,6 +558,7 @@ export function startScheduler({ enabled = true } = {}) {
     ['departure', SCHEDULER_INTERVALS.DEPARTURE_MS, tickDeparture],
     ['microBatch', SCHEDULER_INTERVALS.MICRO_BATCH_MS, tickMicroBatch],
     ['radarSweep', SCHEDULER_INTERVALS.RADAR_SWEEP_MS, tickRadarSweep],
+    ['tripLifecycle', SCHEDULER_INTERVALS.TRIP_LIFECYCLE_MS, tickTripLifecycle],
     ['housekeeping', SCHEDULER_INTERVALS.HOUSEKEEPING_MS, tickHousekeeping]
   ];
 

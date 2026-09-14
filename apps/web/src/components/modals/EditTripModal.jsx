@@ -83,8 +83,12 @@ export default function EditTripModal({ trip, onClose, onSave, onToggleStatus, o
   const [destHubId, setDestHubId] = useState(() => resolveHubId(trip?.destinationHubId, trip?.to));
 
   // Chuyến đã có khách đặt thì tọa độ bị khoá cứng (xem BẤT BIẾN TỌA ĐỘ ở API).
+  // Máy chủ trả về `bookedSeatsCount` (tripController) và kèm mảng `bookings`;
+  // đọc sai tên trường thì khoá không bao giờ hiện, Chủ xe sửa xong mới ăn 409.
   const activeBookingCount = Number(
-    trip?.activeBookingCount ?? trip?.bookedSeats ?? trip?.bookingsCount ?? 0
+    trip?.bookedSeatsCount ??
+      (Array.isArray(trip?.bookings) ? trip.bookings.length : 0) ??
+      0
   );
   const isMatrixLocked = activeBookingCount > 0;
   const [vehicleCapacity, setVehicleCapacity] = useState(() => {
