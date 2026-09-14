@@ -503,7 +503,10 @@ export default function StationRiderView({
       pricePerSeat: tripItem.price,
       initialSeats: 1,
       publicName: tripItem.driverTitle || 'Chủ xe cá nhân',
-      driverPhone: '0988112233'
+      // KHÔNG bịa số Chủ xe. Máy chủ chỉ mở khoá số thật sau khi vé được chốt
+      // hai chiều (bookingController.isInstantConfirmed); điền số giả vào đây
+      // khiến khách bấm gọi và đổ chuông vào máy một người hoàn toàn vô can.
+      driverPhone: tripItem.driverPhone || ''
     };
     setSelectedBookingTrip(tripPayload);
   };
@@ -710,8 +713,17 @@ export default function StationRiderView({
   const executeCheckIn = useCallback(
     async (verifiedPhone, verifiedName) => {
       setIsSubmitting(true);
-      const finalPhone = verifiedPhone || phone || '0988112233';
+      const finalPhone = cleanPhoneNumber(verifiedPhone || phone || '');
       const finalName = verifiedName || name || 'Khách đi cùng';
+
+      // Vào hàng đợi mà không có số thật thì Chủ xe không gọi được khi tới trạm:
+      // khách đứng chờ một chuyến sẽ không bao giờ liên lạc được với họ.
+      if (!finalPhone || !isValidVietnamesePhone(finalPhone)) {
+        setIsSubmitting(false);
+        onShowToast?.('⚠️ Vui lòng nhập số điện thoại thật để Chủ xe gọi bạn khi tới trạm.');
+        setShowAuthModal(true);
+        return;
+      }
 
       // Lưu chìa khóa danh tính ngầm vào máy để các lần sau không cần nhập lại
       try {
@@ -978,8 +990,15 @@ export default function StationRiderView({
       }
     } catch {
       // Fallback khi offline
-      const fallbackPhone = authTelegramInput.replace(/\D/g, '') || '0988112233';
+      const fallbackPhone = cleanPhoneNumber(authTelegramInput.replace(/\D/g, ''));
       const fallbackName = authNameInput.trim() || 'Khách đi cùng';
+      // Mất mạng không phải lý do để bịa số: thà báo lỗi còn hơn đưa Chủ xe một
+      // số không gọi được rồi để khách đứng chờ ngoài quốc lộ.
+      if (!fallbackPhone || !isValidVietnamesePhone(fallbackPhone)) {
+        setAuthError('Mất kết nối máy chủ. Vui lòng nhập số điện thoại thật và thử lại.');
+        setAuthLoading(false);
+        return;
+      }
       setPhone(fallbackPhone);
       setName(fallbackName);
       try {
