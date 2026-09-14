@@ -32,6 +32,9 @@ import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, firebaseL
 import {
   createMovementIntentHandler,
   getMovementIntentsHandler,
+  updateMovementIntentHandler,
+  cancelMovementIntentHandler,
+  confirmIntentCheckpointHandler,
   runBatchMatchHandler,
   getMatchingEpochsHandler
 } from '../controllers/intentController.js';
@@ -174,6 +177,10 @@ router.get('/intents', optionalAuth, getMovementIntentsHandler);
 router.post('/intents', optionalAuth, createMovementIntentHandler);
 router.post('/intents/match', optionalAuth, runBatchMatchHandler);
 router.get('/intents/epochs', optionalAuth, getMatchingEpochsHandler);
+// Sửa / huỷ lịch trình: bốn thao tác "3 giây" của Taplo Chủ xe nay có hiệu lực thật
+router.patch('/intents/:id', requireAuth, updateMovementIntentHandler);
+router.delete('/intents/:id', requireAuth, cancelMovementIntentHandler);
+router.post('/intents/:id/checkpoint', requireAuth, confirmIntentCheckpointHandler);
 
 // --- Sàn Giao Dịch Ghế Trống (Seat Exchange - LOB, CDA 24/7 Spot Market & Dynamic Sliding TTL) ---
 // Đặt lệnh: chống spam bằng postTripLimiter; optionalAuth cho phép khách vãng lai

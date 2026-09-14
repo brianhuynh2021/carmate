@@ -631,6 +631,30 @@ export const api = {
     });
   },
 
+  /** Sửa lịch trình đang chờ: dời giờ hoặc đổi số ghế. */
+  async updateMovementIntent(id, updates) {
+    return request(`/intents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+  },
+
+  /** Chủ xe xác nhận một mốc gác cổng (NIGHT_LOCK / MORNING_WAKE / RED_LINE). */
+  async confirmIntentCheckpoint(id, checkpoint) {
+    return request(`/intents/${id}/checkpoint`, {
+      method: 'POST',
+      body: JSON.stringify({ checkpoint })
+    });
+  },
+
+  /** Huỷ lịch trình (chờ hoặc đã ghép khách). */
+  async cancelMovementIntent(id, reason = '') {
+    return request(`/intents/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason })
+    });
+  },
+
   async getMovementIntents(params = {}) {
     const query = new URLSearchParams();
     Object.entries(params).forEach(([key, val]) => {
