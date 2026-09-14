@@ -9,7 +9,7 @@ export const formatVND = (num) => {
  * Chuyển đổi an toàn chuỗi giá trị tham chiếu sang số nguyên (VND)
  * VD: '220.000đ - 250.000đ' -> 235.000, '180.000đ' -> 180.000
  */
-export function parsePriceNumber(val, fallback = 0) {
+function parsePriceNumber(val, fallback = 0) {
   if (typeof val === 'number') return Number.isFinite(val) ? val : fallback;
   if (!val || typeof val !== 'string') return fallback;
   const nums = val.match(/\d[\d.]*/g);
@@ -239,19 +239,3 @@ export const calculatePricing = (item, seats = 1) => {
     discountPercent: 0
   };
 };
-
-/**
- * Cấu hình cam kết tùy chọn của nền tảng:
- * - Cọc 50.000đ/ghế (hủy trước 8 tiếng hoàn 100%)
- * - Hoặc cam kết 100% giá trị chuyến
- * Nền tảng chỉ kết nối; mọi thỏa thuận chi tiết do hai bên tự trao đổi.
- */
-export const getDepositConfig = (item, seatsCount = 1) => {
-  const depositPerSeat = 50000;
-  return {
-    depositPerSeat,
-    depositAmount: depositPerSeat * seatsCount,
-    depositLabel: '50k / ghế'
-  };
-};
-

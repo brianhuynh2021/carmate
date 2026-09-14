@@ -107,7 +107,7 @@ export function normalizePhotoUrl(photo) {
   return trimmed;
 }
 
-export const KNOWN_DRIVER_NAMES = {
+const KNOWN_DRIVER_NAMES = {
   // SĐT định danh tài xế/chủ xe thực tế
   '0984883750': 'Nguyễn Thành Huỳnh',
   '0900000013': 'Anh Hùng',
@@ -206,7 +206,7 @@ export function resolveDriverRealName(tripOrBooking, fallbackName = '') {
   return fallbackName || 'Chủ xe';
 }
 
-export const KNOWN_PLATES = {
+const KNOWN_PLATES = {
   // SĐT chủ xe
   '0984883750': '93A - 568.89',
   '0900000019': '93A - 541.86', // CX-101
@@ -244,7 +244,7 @@ export const KNOWN_PLATES = {
 /**
  * Chuẩn hóa biển số xe thành format chuẩn Việt Nam: "93A - 541.86" (93 - 3 số . 2 số)
  */
-export function formatVietnamesePlate(rawPlate) {
+function formatVietnamesePlate(rawPlate) {
   if (!rawPlate || typeof rawPlate !== 'string') return '93A - 541.86';
   const clean = rawPlate.replace(/\s+/g, '').toUpperCase();
   const m = clean.match(/^([0-9]{2}[A-Z]{1,2})[-–.]?([0-9]{3})[.]?([0-9]{2})$/);

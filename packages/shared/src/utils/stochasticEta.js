@@ -22,7 +22,6 @@
  * =============================================================================
  */
 
-import { QL13_CORRIDOR_POLYLINE } from './stanfordFrenet.js';
 
 /**
  * Hồ sơ vận tốc hành trình theo từng phân đoạn hành lang QL13.
@@ -34,7 +33,7 @@ import { QL13_CORRIDOR_POLYLINE } from './stanfordFrenet.js';
  *
  * Dải s tính theo cọc số km của QL13_CORRIDOR_POLYLINE (0 = Lộc Ninh, 142.5 = TSN).
  */
-export const SEGMENT_SPEED_PROFILE = Object.freeze([
+const SEGMENT_SPEED_PROFILE = Object.freeze([
   // Lộc Ninh -> Bình Long: tỉnh lộ thoáng, ít giao cắt
   { fromS: 0, toS: 24.5, vKmh: 58, cv: 0.14, name: 'Lộc Ninh - Bình Long' },
   // Bình Long -> Tân Khai: qua thị xã, nhiều đèn và chợ
@@ -56,7 +55,7 @@ export const SEGMENT_SPEED_PROFILE = Object.freeze([
 ]);
 
 /** Hệ số nhân vận tốc theo khung giờ (giờ cao điểm chạy chậm hơn hồ sơ nền). */
-export const PEAK_HOUR_FACTORS = Object.freeze([
+const PEAK_HOUR_FACTORS = Object.freeze([
   { fromHour: 6, toHour: 9, factor: 0.78, cvBoost: 0.10, label: 'Cao điểm sáng' },
   { fromHour: 11, toHour: 13, factor: 0.92, cvBoost: 0.03, label: 'Trưa' },
   { fromHour: 16, toHour: 19, factor: 0.72, cvBoost: 0.12, label: 'Cao điểm chiều' },
@@ -313,22 +312,4 @@ export function probabilityOfLateness(distribution, committedAtMs, toleranceSeco
     expectedDelaySeconds,
     willBeLate: expectedDelaySeconds > toleranceSeconds
   };
-}
-
-/**
- * Cọc số km của trạm — tiện ích gói lại để service không phải import chéo.
- */
-export function getHubS(hubId) {
-  const node = QL13_CORRIDOR_POLYLINE.find((n) => n.id === hubId);
-  return node ? node.s : null;
-}
-
-/** Định dạng ETA cho giao diện: "khoảng 28 phút (tin cậy 80%: 34 phút)". */
-export function formatEtaForDisplay(distribution, locale = 'vi') {
-  if (!distribution?.valid) return locale === 'vi' ? 'Chưa xác định' : 'Unknown';
-  const muMin = Math.round(distribution.muSeconds / 60);
-  const p80Min = Math.round((etaQuantileSeconds(distribution, 0.8) || 0) / 60);
-  return locale === 'vi'
-    ? `khoảng ${muMin} phút (an toàn: ${p80Min} phút)`
-    : `about ${muMin} min (safe: ${p80Min} min)`;
 }

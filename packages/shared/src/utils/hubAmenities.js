@@ -15,7 +15,7 @@
  */
 
 /** Các tiện ích quan trọng với người đứng đợi xe ven quốc lộ. */
-export const AMENITY_TYPES = Object.freeze({
+const AMENITY_TYPES = Object.freeze({
   SHELTER: { id: 'SHELTER', icon: '🏠', label: 'Có mái che' },
   LIGHTING: { id: 'LIGHTING', icon: '💡', label: 'Đèn sáng ban đêm' },
   RESTROOM: { id: 'RESTROOM', icon: '🚻', label: 'Có nhà vệ sinh' },
@@ -67,7 +67,7 @@ export function getHubAmenities(hub) {
 }
 
 /** Câu mô tả an toàn ngắn gọn cho trạm. */
-export function getHubSafetyNote(hub) {
+function getHubSafetyNote(hub) {
   if (!hub) return '';
   if (hub.safetyNote) return hub.safetyNote;
   return CATEGORY_SAFETY_NOTE[hub.category] || 'Đứng phía trong lề đường, tránh xa lòng đường.';

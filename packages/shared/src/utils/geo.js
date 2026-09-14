@@ -18,16 +18,8 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   return Math.round(R * c * 10) / 10;
 }
 
-export function formatDistance(km) {
-  if (km == null) return '';
-  if (km < 1) {
-    return `${Math.round(km * 1000)}m`;
-  }
-  return `${km.toFixed(1)} km`;
-}
-
 // Danh mục hành lang tuyến và các điểm mốc vàng (Cây xăng, Ngã tư, Bến xe, Cổng chào)
-export const ROUTE_CORRIDORS = {
+const ROUTE_CORRIDORS = {
   'Tuyến QL13': {
     name: 'Bình Phước ⇄ Sài Gòn (QL13)',
     highway: 'Quốc Lộ 13',
@@ -392,7 +384,7 @@ export const ROUTE_CORRIDORS = {
   }
 };
 
-export const PROVINCE_COORDINATES = {
+const PROVINCE_COORDINATES = {
   'hà nội': { name: 'Hà Nội', lat: 21.0285, lng: 105.8542 },
   'hải phòng': { name: 'Hải Phòng', lat: 20.8449, lng: 106.6881 },
   'quảng ninh': { name: 'Quảng Ninh', lat: 20.9505, lng: 107.0734 },
@@ -479,78 +471,6 @@ export function getRouteCorridor(routeCategory) {
   return ROUTE_CORRIDORS[routeCategory] || null;
 }
 
-// Tìm trạm đón / điểm trên tuyến gần vị trí người dùng nhất
-export function findNearestWaypoint(userLat, userLng, routeCategoryOrTrip) {
-  if (!userLat || !userLng) return null;
-
-  const trip = typeof routeCategoryOrTrip === 'object' && routeCategoryOrTrip !== null ? routeCategoryOrTrip : null;
-  const routeCategory = trip ? trip.routeCategory : routeCategoryOrTrip;
-
-  const corridor = getRouteCorridor(routeCategory);
-  if (corridor && corridor.waypoints) {
-    let nearest = null;
-    let minDistance = Infinity;
-
-    corridor.waypoints.forEach((wp) => {
-      const dist = calculateDistanceKm(userLat, userLng, wp.lat, wp.lng);
-      if (dist != null && dist < minDistance) {
-        minDistance = dist;
-        nearest = wp;
-      }
-    });
-
-    if (nearest) {
-      return {
-        waypoint: nearest,
-        distanceKm: minDistance,
-        formattedDistance: formatDistance(minDistance),
-        isWalkable: minDistance <= 1.0,
-        isSuperClose: minDistance <= 2.5,
-        isConvenient: minDistance <= 7.0
-      };
-    }
-  }
-
-  // Nếu là tuyến tự do toàn quốc (không có corridor định sẵn), tính khoảng cách tới điểm đi hoặc điểm đến
-  if (trip && (trip.from || trip.to)) {
-    const fromCoords = findLocationCoords(trip.from);
-    const toCoords = findLocationCoords(trip.to);
-    const candidates = [];
-    if (fromCoords)
-      candidates.push({
-        name: `Điểm đón (${trip.from})`,
-        sub: 'Khu vực xuất phát',
-        lat: fromCoords.lat,
-        lng: fromCoords.lng
-      });
-    if (toCoords)
-      candidates.push({ name: `Điểm trả (${trip.to})`, sub: 'Khu vực đích đến', lat: toCoords.lat, lng: toCoords.lng });
-
-    let nearest = null;
-    let minDistance = Infinity;
-    candidates.forEach((wp) => {
-      const dist = calculateDistanceKm(userLat, userLng, wp.lat, wp.lng);
-      if (dist != null && dist < minDistance) {
-        minDistance = dist;
-        nearest = wp;
-      }
-    });
-
-    if (nearest) {
-      return {
-        waypoint: nearest,
-        distanceKm: minDistance,
-        formattedDistance: formatDistance(minDistance),
-        isWalkable: minDistance <= 1.0,
-        isSuperClose: minDistance <= 2.5,
-        isConvenient: minDistance <= 10.0
-      };
-    }
-  }
-
-  return null;
-}
-
 /**
  * Kiểm tra xem chuỗi có phải link Google Maps hay không
  * Hỗ trợ các định dạng:
@@ -564,20 +484,6 @@ export function isGoogleMapsUrl(str) {
   return /^(https?:\/\/)?(www\.)?(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(
     str.trim()
   );
-}
-
-/**
- * Trả về URL Google Maps chuẩn xác:
- * - Nếu đã là link Google Maps: giữ nguyên (đảm bảo tiền tố https://)
- * - Nếu là địa chỉ / cột mốc: trả về link tìm kiếm Google Maps chính thức
- */
-export function getGoogleMapsUrl(locationOrUrl) {
-  if (!locationOrUrl || typeof locationOrUrl !== 'string') return 'https://www.google.com/maps';
-  const trimmed = locationOrUrl.trim();
-  if (isGoogleMapsUrl(trimmed)) {
-    return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
-  }
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed)}`;
 }
 
 /**

@@ -77,13 +77,8 @@ export function getActiveCorridors() {
   return CORRIDORS.filter((c) => c.status === 'live');
 }
 
-export function getCorridorById(id) {
+function getCorridorById(id) {
   return CORRIDORS.find((c) => c.id === id) || null;
-}
-
-/** Tra hành lang theo trường `corridor` của hub (chuỗi trong dữ liệu trạm). */
-export function getCorridorByDataKey(dataKey) {
-  return CORRIDORS.find((c) => c.dataKey === dataKey) || null;
 }
 
 export function getDefaultCorridor() {
@@ -91,7 +86,7 @@ export function getDefaultCorridor() {
 }
 
 /** Toàn bộ trạm ảo thuộc một hành lang. */
-export function getCorridorHubs(corridorId) {
+function getCorridorHubs(corridorId) {
   const c = getCorridorById(corridorId);
   if (!c) return [];
   return VIRTUAL_HUBS.filter((h) => h.corridor === c.dataKey);
@@ -143,23 +138,6 @@ export function getEndpointHubs(corridorId, endpointKey, heading = null) {
   }
 
   return result;
-}
-
-/**
- * Nhãn hiển thị của một chiều đi.
- * @param {string} corridorId
- * @param {'a_to_b'|'b_to_a'} heading
- */
-export function getHeadingLabel(corridorId, heading) {
-  const c = getCorridorById(corridorId);
-  if (!c) return { from: '', to: '', short: '', full: '' };
-  const [from, to] = heading === 'b_to_a' ? [c.endpoints.b, c.endpoints.a] : [c.endpoints.a, c.endpoints.b];
-  return {
-    from: from.label,
-    to: to.label,
-    short: `Về ${to.label}`,
-    full: `${from.label} ➔ ${to.label}`
-  };
 }
 
 /** Chiều ngược lại. */

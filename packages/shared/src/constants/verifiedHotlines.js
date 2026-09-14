@@ -188,8 +188,3 @@ export function getVerifiedHotlines(corridor = 'Tuyến QL13', limit = 8) {
     (h) => h.verified && h.hotline && h.type !== 'public_bus' && (!h.corridor || h.corridor === corridor)
   ).slice(0, limit);
 }
-
-/** Hành lang này đã có số nào gọi được chưa? */
-export function hasAnyVerifiedHotline(corridor = 'Tuyến QL13') {
-  return getVerifiedHotlines(corridor).length > 0;
-}
