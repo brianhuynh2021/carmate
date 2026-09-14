@@ -620,7 +620,7 @@ function rowToTrip(row) {
     }
     obj.date = row.date || obj.date;
     obj.basePricePerSeat = row.price || obj.basePricePerSeat;
-    obj.availableSeats = row.seats || obj.availableSeats;
+    obj.availableSeats = row.seats ?? obj.availableSeats;
     obj.carCategory = row.carCategory || obj.carCategory;
     obj.carType = row.carType || obj.carType;
     obj.isHidden = Boolean(row.isHidden);
@@ -690,6 +690,15 @@ export function getTrips(filters = {}) {
   const database = getRawDB();
   let sql = 'SELECT * FROM trips WHERE 1=1';
   const params = [];
+
+  // `status` từng bị nuốt im lặng: caller truyền vào, SQL không đọc, không lỗi
+  // không cảnh báo — nên mọi lời gọi lọc theo status đều nhận cả chuyến đã huỷ
+  // lẫn chuyến đầy mà tưởng đã lọc.
+  // (isHidden đã có nhánh `includeHidden` riêng bên dưới, không thêm ở đây.)
+  if (filters.status) {
+    sql += ' AND status = ?';
+    params.push(filters.status);
+  }
 
   const type = filters.type || 'all';
   if (type === 'drivers') {
@@ -811,7 +820,10 @@ export async function addTrip(tripData) {
     timeSlot: completeTrip.timeSlot,
     date: completeTrip.date,
     price: Number(completeTrip.basePricePerSeat || completeTrip.expectedPrice || 150000),
-    seats: Number(completeTrip.availableSeats || completeTrip.seatsNeeded || 1),
+    // Dùng ?? chứ KHÔNG dùng ||: số ghế 0 (chuyến đã hết chỗ) là giá trị hợp lệ,
+    // với || nó bị coi là falsy và ghi đè thành 1, khiến chuyến đầy vẫn hiện còn ghế
+    // và nhận thêm booking không giới hạn.
+    seats: Number(completeTrip.availableSeats ?? completeTrip.seatsNeeded ?? 1),
     carCategory: completeTrip.carCategory || 'family_car',
     carType: completeTrip.carType || 'Xe 7 chỗ',
     isHidden: completeTrip.isHidden ? 1 : 0,

@@ -72,6 +72,11 @@ jobs:
 
           npm test
 
+          # Pentest chạy CÙNG step vì cần server đang sống. Bộ này bắn thật vào
+          # sàn (đặt vượt ghế, tiêm trạng thái để moi SĐT, ghi đè vé, dựng xe ma)
+          # và thoát mã lỗi nếu khai thác thành công.
+          npm run pentest
+
       - name: Verify Production Fail-Closed (Security Assurance)
         run: |
           set -u

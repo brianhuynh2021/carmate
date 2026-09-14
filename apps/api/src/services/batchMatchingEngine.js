@@ -369,8 +369,14 @@ export async function runBatchMatchingEpoch({
   const passengerIntents = allIntents.filter((i) => i.role === 'passenger');
 
   // Lấy thêm các chuyến xe đang active trên sàn để gia tăng mật độ ghép
-  const activeTrips = getTrips({ status: 'active', isHidden: 0 });
-  const activeDriverOffers = activeTrips.filter((t) => t.type === 'driver' && Number(t.seats || 0) > 0);
+  // getTrips KHÔNG hỗ trợ lọc status/isHidden trong SQL (tham số bị nuốt im lặng),
+  // nên lọc tại đây. Trước đây khối này so `t.type === 'driver'` trong khi DB lưu
+  // 'driver_offer', và đọc `t.seats` trong khi trường thật là `availableSeats`
+  // -> danh sách LUÔN rỗng và cỗ máy ghép lệnh chạy mù suốt.
+  const activeTrips = getTrips({ type: 'drivers', includeHidden: false });
+  const activeDriverOffers = activeTrips.filter(
+    (t) => t.type === 'driver_offer' && t.status === 'active' && Number(t.availableSeats || 0) > 0
+  );
 
   // Gộp danh sách chủ xe từ cả 2 nguồn (Ý định mới + Chuyến xe đang mở)
   const combinedDriverPool = [

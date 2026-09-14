@@ -18,7 +18,8 @@ import {
   updateUser,
   reportTripIncidentDb,
   getTripIncidents,
-  permabanUser
+  permabanUser,
+  getTripById
 } from '../db/sqliteStore.js';
 import { generateToken } from '../utils/token.js';
 import {
@@ -123,6 +124,16 @@ export function getRiderPassHandler(req, res) {
 
 export function cockpitTelemetryHandler(req, res) {
   try {
+    // tripId phải là mã bài đăng THẬT: phiên Cockpit sẽ hiện lên sàn tuyến như một
+    // chuyến sắp ghé trạm, nên không được phép dựng từ id bịa. Mặc định cũ
+    // ('TRIP-DEFAULT') cho phép mọi request rỗng tạo ra một xe ma trên sàn.
+    const { tripId } = req.body || {};
+    if (!tripId || !getTripById(tripId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Thiếu mã chuyến hợp lệ. Hãy đăng chuyến trước khi mở Buồng lái.'
+      });
+    }
     const result = telemetryPing(req.body || {});
     return res.json(result);
   } catch (err) {
