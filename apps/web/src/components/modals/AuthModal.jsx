@@ -309,7 +309,13 @@ export default function AuthModal({
 
   // Đăng nhập nhanh kiểm thử offline / dev
   const handleDevPhoneLogin = async () => {
-    const normalized = normalizePhoneNumber(phone) || '0984883750';
+    // Không điền số mặc định: bỏ trống rồi bấm là đăng nhập bằng số của người
+    // khác, và số đó theo vào localStorage rồi hiện sẵn ở mọi ô nhập sau đó.
+    const normalized = normalizePhoneNumber(phone);
+    if (!normalized || !isValidVietnamesePhone(normalized)) {
+      setError('Vui lòng nhập số điện thoại thật trước khi đăng nhập nhanh.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -358,29 +364,6 @@ export default function AuthModal({
     };
   }, []);
 
-  /**
-   * Telegram Login Widget và Google đều KHÔNG cấp số điện thoại — chỉ trả id,
-   * tên, ảnh. Vào app với phone rỗng thì người dùng sẽ đâm vào ngõ cụt ở MỌI
-   * luồng cần liên hệ (đăng chuyến, giữ chỗ), vì khách phải gọi được cho nhau
-   * mới lên xe. Nên chặn ngay tại cửa đăng nhập thay vì vá ở từng biểu mẫu.
-   *
-   * @returns {boolean} true nếu đã chuyển sang bước xác thực số (chưa cho vào)
-   */
-  const requirePhoneBeforeEntry = (user, providerLabel) => {
-    const clean = cleanPhoneNumber(user?.phone || '');
-    if (clean && isValidVietnamesePhone(clean)) return false;
-
-    setAuthMethod('phone');
-    setPhoneStep('input');
-    setShowTelegramForm(false);
-    setShowGoogleForm(false);
-    setName(user?.name || user?.first_name || '');
-    setError(
-      `${providerLabel} không cung cấp số điện thoại. Vui lòng xác thực số của bạn để khách liên hệ đón rước.`
-    );
-    return true;
-  };
-
   // Xử lý xác thực Telegram chính thức (Nhận payload user từ Telegram Widget)
   const handleTelegramAuth = async (user) => {
     if (!user || !user.id) {
@@ -394,7 +377,6 @@ export default function AuthModal({
     try {
       const res = await api.telegramLogin(user);
       if (res?.success && res?.user) {
-        if (requirePhoneBeforeEntry(res.user, 'Telegram')) return;
         onSuccess?.(res.user, res.tripIds || []);
         onClose();
       } else {
@@ -484,7 +466,6 @@ export default function AuthModal({
       });
 
       if (res?.success && res?.user) {
-        if (requirePhoneBeforeEntry(res.user, 'Telegram')) return;
         onSuccess?.(res.user, res.tripIds || []);
         onClose();
       } else {
@@ -513,7 +494,6 @@ export default function AuthModal({
       });
 
       if (res?.success && res?.user) {
-        if (requirePhoneBeforeEntry(res.user, 'Google')) return;
         onSuccess?.(res.user, res.tripIds || []);
         onClose();
       } else {
@@ -608,7 +588,6 @@ export default function AuthModal({
       });
 
       if (res?.success && res?.user) {
-        if (requirePhoneBeforeEntry(res.user, 'Google')) return;
         onSuccess?.(res.user, res.tripIds || []);
         onClose();
       } else {
