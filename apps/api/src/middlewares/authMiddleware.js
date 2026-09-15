@@ -69,12 +69,9 @@ export function requireTripOwnership(req, res, next) {
   }
 
   // Nếu người dùng không phải chủ sở hữu bài đăng
-  const userPhone = req.user ? cleanPhoneNumber(req.user.phone) : null;
-  const tripPhone = cleanPhoneNumber(trip.phoneReal || trip.phone || '');
-  const isOwnerByPhone = userPhone && tripPhone && userPhone === tripPhone;
   const isOwnerById = req.user && trip.userId && req.user.userId === trip.userId;
 
-  if (!isOwnerByPhone && !isOwnerById) {
+  if (!isOwnerById) {
     return res.status(403).json({
       success: false,
       error: 'Từ chối quyền truy cập: Bạn không có quyền chỉnh sửa hoặc xóa bài đăng của người khác'

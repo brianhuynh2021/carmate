@@ -33,6 +33,7 @@ import { requestOtp, verifyOtp, zaloLogin, googleLogin, telegramLogin, firebaseL
 } from '../controllers/authController.js';
 import {
   createMovementIntentHandler,
+  previewDriverConnectionsHandler,
   getMovementIntentsHandler,
   updateMovementIntentHandler,
   cancelMovementIntentHandler,
@@ -62,7 +63,10 @@ import {
   riderReportCultureViolationHandler,
   riderCancelGraceHandler,
   riderGetRadarRiskHandler,
-  resetStationDataHandler
+  resetStationDataHandler,
+  riderAcceptOfferHandler,
+  riderCancelIntentHandler,
+  cockpitDropoffHandler
 } from '../controllers/stationQueueController.js';
 import {
   createStationRequestHandler,
@@ -111,7 +115,6 @@ import {
   clearAdminTestData,
   clearAdminBookings,
   requireAdmin,
-  createDriverProfileHandler,
   getPublicFuelPriceHandler,
   getPublicTariffParamsHandler,
   getAdminFuelPriceHandler,
@@ -122,9 +125,35 @@ import {
   updateAdminTariffParamsHandler,
   resetAdminTariffParamsHandler
 } from '../controllers/adminController.js';
-import { authLimiter, postTripLimiter } from '../middlewares/security.js';
+import { authLimiter, postTripLimiter, createRateLimiter } from '../middlewares/security.js';
+import {
+  listOperatorsHandler, getOperatorHandler, listMyOperatorsHandler, updateOwnedOperatorHandler,
+  createOperatorClaimHandler, createOperatorReportHandler, getOperatorReportStatusHandler,
+  adminListOperatorsHandler, adminGetOperatorHandler, adminCreateOperatorHandler, adminUpdateOperatorHandler,
+  adminListClaimsHandler, adminReviewClaimHandler, adminListReportsHandler, adminReviewReportHandler
+} from '../controllers/operatorController.js';
+import { createAssistedOperatorTrip } from '../controllers/assistedOperatorTripController.js';
 
 const router = Router();
+const operatorWriteLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 12 });
+const reportLookupLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 30 });
+
+router.get('/operators', listOperatorsHandler);
+router.get('/operators/mine', requireAuth, listMyOperatorsHandler);
+router.get('/operators/:id', getOperatorHandler);
+router.patch('/operators/:id', requireAuth, operatorWriteLimiter, updateOwnedOperatorHandler);
+router.post('/operators/:id/claims', requireAuth, operatorWriteLimiter, createOperatorClaimHandler);
+router.post('/operators/:id/reports', operatorWriteLimiter, createOperatorReportHandler);
+router.post('/operator-reports/status', reportLookupLimiter, getOperatorReportStatusHandler);
+router.get('/admin/operators', requireAdmin, adminListOperatorsHandler);
+router.get('/admin/operators/:id', requireAdmin, adminGetOperatorHandler);
+router.post('/admin/operators', requireAdmin, adminCreateOperatorHandler);
+router.patch('/admin/operators/:id', requireAdmin, adminUpdateOperatorHandler);
+router.post('/admin/operators/:id/trips', requireAdmin, createAssistedOperatorTrip);
+router.get('/admin/operator-claims', requireAdmin, adminListClaimsHandler);
+router.patch('/admin/operator-claims/:id', requireAdmin, adminReviewClaimHandler);
+router.get('/admin/operator-reports', requireAdmin, adminListReportsHandler);
+router.patch('/admin/operator-reports/:id', requireAdmin, adminReviewReportHandler);
 
 import { suggestLocationsHandler } from '../controllers/locationController.js';
 import { agentChatHandler } from '../controllers/agentController.js';
@@ -167,20 +196,21 @@ router.get('/locations/suggest', suggestLocationsHandler);
 // --- Trips (với Post Limiter chống spam và bảo vệ quyền sở hữu Anti-IDOR & PII) ---
 router.get('/trips', optionalAuth, listTrips);
 router.get('/trips/:id', optionalAuth, getTrip);
-router.post('/trips', optionalAuth, postTripLimiter, createTrip);
-router.put('/trips/:id', optionalAuth, requireTripOwnership, updateTripHandler);
-router.delete('/trips/:id', optionalAuth, requireTripOwnership, deleteTripHandler);
-router.patch('/trips/:id/status', optionalAuth, requireTripOwnership, updateStatus);
-router.post('/trips/:id/republish', optionalAuth, requireTripOwnership, postTripLimiter, republishTripHandler);
+router.post('/trips', requireAuth, postTripLimiter, createTrip);
+router.put('/trips/:id', requireAuth, requireTripOwnership, updateTripHandler);
+router.delete('/trips/:id', requireAuth, requireTripOwnership, deleteTripHandler);
+router.patch('/trips/:id/status', requireAuth, requireTripOwnership, updateStatus);
+router.post('/trips/:id/republish', requireAuth, requireTripOwnership, postTripLimiter, republishTripHandler);
 
 // --- Smart Matching Radar & Social Suggestions ---
+router.post('/connections/driver-preview', optionalAuth, postTripLimiter, previewDriverConnectionsHandler);
 router.get('/matches', optionalAuth, getMatches);
 router.get('/matches/social-suggestions', optionalAuth, getSocialSuggestions);
 
 // --- Autonomous Zero-Search Matching Engine (Level 3 - MIT & Nobel) ---
 router.get('/intents', optionalAuth, getMovementIntentsHandler);
-router.post('/intents', optionalAuth, createMovementIntentHandler);
-router.post('/intents/match', optionalAuth, runBatchMatchHandler);
+router.post('/intents', requireAuth, createMovementIntentHandler);
+router.post('/intents/match', requireAuth, runBatchMatchHandler);
 router.get('/intents/epochs', optionalAuth, getMatchingEpochsHandler);
 // Sửa / huỷ lịch trình: bốn thao tác "3 giây" của Taplo Chủ xe nay có hiệu lực thật
 router.patch('/intents/:id', requireAuth, updateMovementIntentHandler);
@@ -190,7 +220,7 @@ router.post('/intents/:id/checkpoint', requireAuth, confirmIntentCheckpointHandl
 // --- Sàn Giao Dịch Ghế Trống (Seat Exchange - LOB, CDA 24/7 Spot Market & Dynamic Sliding TTL) ---
 // Đặt lệnh: chống spam bằng postTripLimiter; optionalAuth cho phép khách vãng lai
 // đặt lệnh, nhưng khi ĐÃ đăng nhập thì SĐT trong token luôn thắng SĐT gửi từ body.
-router.post('/seat-exchange/order', optionalAuth, postTripLimiter, placeOrderHandler);
+router.post('/seat-exchange/order', requireAuth, postTripLimiter, placeOrderHandler);
 // Sổ lệnh công khai: mọi lệnh trả ra đều đi qua lớp chắn PII (Nghị định 13/2023).
 router.get('/seat-exchange/order-book', optionalAuth, getOrderBookHandler);
 // Lịch sử lệnh cá nhân: BẮT BUỘC đăng nhập (chống dò quét bằng số điện thoại).
@@ -199,70 +229,73 @@ router.get('/seat-exchange/my-orders', requireAuth, getMyOrdersHandler);
 router.post('/seat-exchange/expire-ttl', requireAdmin, expireSlidingTTLHandler);
 
 // --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
-router.get('/bookings', optionalAuth, listBookings);
+router.get('/bookings', requireAuth, listBookings);
 // Giữ chỗ BẮT BUỘC đăng nhập: booking gắn với một con người thật (SĐT đã xác thực),
 // và chỉ khi đó mới có cơ sở để mở khoá thông tin liên hệ hai chiều.
 router.post('/bookings', requireAuth, createBooking);
 router.get('/bookings/:id/public-summary', optionalAuth, getBookingPublicSummary);
-router.post('/bookings/:id/driver-confirm', optionalAuth, driverConfirmBooking);
+router.post('/bookings/:id/driver-confirm', requireAuth, driverConfirmBooking);
 // Chốt T-40/T-30: chủ xe bấm "Tôi đang đi", và khách tra cứu Chế độ Cứu hộ
-router.post('/bookings/:id/driver-ready', optionalAuth, driverReadyHandler);
-router.get('/bookings/:id/rescue-status', optionalAuth, rescueStatusHandler);
-router.post('/bookings/:id/messages', optionalAuth, addBookingMessageHandler);
-router.post('/bookings/:id/pre-confirm', optionalAuth, preConfirmBookingHandler);
-router.post('/bookings/:id/final-confirm', optionalAuth, finalConfirmBookingHandler);
-router.post('/bookings/:id/delay', optionalAuth, requireBookingParty, reportDelay);
-router.post('/bookings/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
-router.post('/bookings/:id/complete', optionalAuth, requireBookingParty, completeBooking);
-router.post('/bookings/:id/review', optionalAuth, requireBookingParty, submitReview);
+router.post('/bookings/:id/driver-ready', requireAuth, driverReadyHandler);
+router.get('/bookings/:id/rescue-status', requireAuth, rescueStatusHandler);
+router.post('/bookings/:id/messages', requireAuth, addBookingMessageHandler);
+router.post('/bookings/:id/pre-confirm', requireAuth, preConfirmBookingHandler);
+router.post('/bookings/:id/final-confirm', requireAuth, finalConfirmBookingHandler);
+router.post('/bookings/:id/delay', requireAuth, requireBookingParty, reportDelay);
+router.post('/bookings/:id/cancel', requireAuth, requireBookingParty, cancelBooking);
+router.post('/bookings/:id/complete', requireAuth, requireBookingParty, completeBooking);
+router.post('/bookings/:id/review', requireAuth, requireBookingParty, submitReview);
 
 // --- Báo cáo vi phạm an toàn (chỉ hai bên trong chuyến mới được tố giác) ---
-router.post('/bookings/:id/report-vehicle-mismatch', optionalAuth, requireBookingParty, reportVehicleMismatchHandler);
-router.post('/bookings/:id/report-unreachable-phone', optionalAuth, requireBookingParty, reportUnreachablePhoneHandler);
+router.post('/bookings/:id/report-vehicle-mismatch', requireAuth, requireBookingParty, reportVehicleMismatchHandler);
+router.post('/bookings/:id/report-unreachable-phone', requireAuth, requireBookingParty, reportUnreachablePhoneHandler);
 // Gỡ khoá tài khoản là THAO TÁC CHẾ TÀI, chỉ Quản trị viên được làm.
 // Trước đây dùng optionalAuth: bất kỳ ai biết mã booking đều gọi ẩn danh để gỡ
 // ban cho CẢ HAI bên, vô hiệu hoá toàn bộ hệ thống kỷ luật (kể cả Grim Trigger).
 router.post('/bookings/:id/reset-ban', requireAdmin, resetBanHandler);
-router.post('/bookings/:id/dispute', optionalAuth, disputeBookingHandler);
+router.post('/bookings/:id/dispute', requireAuth, disputeBookingHandler);
 
-router.get('/escrows', optionalAuth, listBookings);
-router.post('/escrows', optionalAuth, createBooking);
+router.get('/escrows', requireAuth, listBookings);
+router.post('/escrows', requireAuth, createBooking);
 router.get('/escrows/:id/public-summary', optionalAuth, getBookingPublicSummary);
-router.post('/escrows/:id/driver-confirm', optionalAuth, driverConfirmBooking);
-router.post('/escrows/:id/messages', optionalAuth, addBookingMessageHandler);
-router.post('/escrows/:id/pre-confirm', optionalAuth, preConfirmBookingHandler);
-router.post('/escrows/:id/final-confirm', optionalAuth, finalConfirmBookingHandler);
-router.post('/escrows/:id/delay', optionalAuth, requireBookingParty, reportDelay);
-router.post('/escrows/:id/cancel', optionalAuth, requireBookingParty, cancelBooking);
-router.post('/escrows/:id/complete', optionalAuth, requireBookingParty, completeBooking);
-router.post('/escrows/:id/review', optionalAuth, requireBookingParty, submitReview);
-router.post('/escrows/:id/report-vehicle-mismatch', optionalAuth, requireBookingParty, reportVehicleMismatchHandler);
-router.post('/escrows/:id/report-unreachable-phone', optionalAuth, requireBookingParty, reportUnreachablePhoneHandler);
+router.post('/escrows/:id/driver-confirm', requireAuth, driverConfirmBooking);
+router.post('/escrows/:id/messages', requireAuth, addBookingMessageHandler);
+router.post('/escrows/:id/pre-confirm', requireAuth, preConfirmBookingHandler);
+router.post('/escrows/:id/final-confirm', requireAuth, finalConfirmBookingHandler);
+router.post('/escrows/:id/delay', requireAuth, requireBookingParty, reportDelay);
+router.post('/escrows/:id/cancel', requireAuth, requireBookingParty, cancelBooking);
+router.post('/escrows/:id/complete', requireAuth, requireBookingParty, completeBooking);
+router.post('/escrows/:id/review', requireAuth, requireBookingParty, submitReview);
+router.post('/escrows/:id/report-vehicle-mismatch', requireAuth, requireBookingParty, reportVehicleMismatchHandler);
+router.post('/escrows/:id/report-unreachable-phone', requireAuth, requireBookingParty, reportUnreachablePhoneHandler);
 router.post('/escrows/:id/reset-ban', requireAdmin, resetBanHandler);
-router.post('/escrows/:id/dispute', optionalAuth, disputeBookingHandler);
+router.post('/escrows/:id/dispute', requireAuth, disputeBookingHandler);
 
 // --- Kênh Hỗ Trợ & Kháng Nghị Trực Tiếp Platform CSKH CarMate ---
 router.get('/support/messages', optionalAuth, getSupportMessagesHandler);
 router.post('/support/messages', optionalAuth, sendSupportMessageHandler);
 
 // --- Station Curbside Queue & Cockpit Mode Live Dispatch ---
-router.post('/station/:hubId/checkin', riderCheckInHandler);
+router.post('/station/riders/:intentId/accept', requireAuth, riderAcceptOfferHandler);
+router.post('/station/riders/:intentId/cancel', requireAuth, riderCancelIntentHandler);
+router.post('/cockpit/dropoff', requireAuth, cockpitDropoffHandler);
+router.post('/station/:hubId/checkin', requireAuth, riderCheckInHandler);
 router.get('/station/:hubId/status', getStationQueueHandler);
-router.get('/station/rider/radar-risk', riderGetRadarRiskHandler);
-router.post('/station/rider/report-culture-violation', riderReportCultureViolationHandler);
-router.post('/station/rider/cancel-grace', riderCancelGraceHandler);
-router.post('/station/rider/on-the-way', riderOnTheWayHandler);
-router.get('/station/rider/:intentId', getRiderPassHandler);
-router.post('/cockpit/telemetry', cockpitTelemetryHandler);
-router.post('/cockpit/accept-offer', cockpitAcceptOfferHandler);
-router.post('/cockpit/reject-offer', cockpitRejectOfferHandler);
-router.post('/cockpit/verify-pin', cockpitVerifyPinHandler);
-router.post('/cockpit/register-vehicle', cockpitRegisterVehicleHandler);
-router.get('/cockpit/vehicle-status', cockpitVehicleStatusHandler);
-router.post('/cockpit/approve-vehicle', cockpitApproveVehicleHandler);
-router.post('/cockpit/report-incident', cockpitReportIncidentHandler);
-router.get('/cockpit/incidents', cockpitGetIncidentsHandler);
-router.delete('/station/reset', resetStationDataHandler);
+router.get('/station/rider/radar-risk', requireAuth, riderGetRadarRiskHandler);
+router.post('/station/rider/report-culture-violation', requireAuth, riderReportCultureViolationHandler);
+router.post('/station/rider/cancel-grace', requireAuth, riderCancelGraceHandler);
+router.post('/station/rider/on-the-way', requireAuth, riderOnTheWayHandler);
+router.get('/station/rider/:intentId', requireAuth, getRiderPassHandler);
+router.post('/cockpit/telemetry', requireAuth, cockpitTelemetryHandler);
+router.post('/cockpit/accept-offer', requireAuth, cockpitAcceptOfferHandler);
+router.post('/cockpit/reject-offer', requireAuth, cockpitRejectOfferHandler);
+router.post('/cockpit/verify-pin', requireAuth, cockpitVerifyPinHandler);
+router.post('/cockpit/register-vehicle', requireAuth, cockpitRegisterVehicleHandler);
+router.get('/cockpit/vehicle-status', requireAuth, cockpitVehicleStatusHandler);
+router.post('/cockpit/approve-vehicle', requireAdmin, cockpitApproveVehicleHandler);
+router.post('/cockpit/report-incident', requireAuth, cockpitReportIncidentHandler);
+router.get('/cockpit/incidents', requireAuth, cockpitGetIncidentsHandler);
+router.delete('/station/reset', requireAdmin, resetStationDataHandler);
 
 // --- Station Requests Pool (Gom đề xuất mở trạm ảo mới - Hard Whitelist & Zero Roadside Stops) ---
 router.post('/station-requests', optionalAuth, createStationRequestHandler);
@@ -300,7 +333,7 @@ router.delete('/admin/trips/:id', requireAdmin, deleteTripAdminHandler);
 router.patch('/admin/trips/:id/convert-car-category', requireAdmin, convertTripCarCategoryHandler);
 router.get('/admin/users', requireAdmin, listAdminUsers);
 // Tạo hồ sơ Chủ xe (và chuyến đầu tiên) thay cho bác tài trong giai đoạn đi mời.
-router.post('/admin/drivers', requireAdmin, createDriverProfileHandler);
+router.post('/admin/drivers', requireAdmin, (_req, res) => res.status(410).json({ success: false, error: 'Dùng Hồ sơ nhà xe để nhập thông tin có nguồn và nhận quyền quản lý. Luồng tạo tài khoản hộ đã ngừng.' }));
 router.patch('/admin/users/:id', requireAdmin, updateUserStatusHandler);
 router.patch('/admin/users/:id/status', requireAdmin, updateUserStatusHandler);
 router.get('/admin/reports', requireAdmin, getAdminReports);

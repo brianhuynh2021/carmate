@@ -93,13 +93,13 @@ export default function PwaInstallPrompt() {
           {isMac ? <Laptop className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+          <p className="type-body-strong text-slate-900 dark:text-white flex items-center gap-2">
             {title}
-            <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200">
+            <span className="type-footnote px-1.5 py-0.5 rounded bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200">
               {tag}
             </span>
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{desc}</p>
+          <p className="type-caption text-slate-500 dark:text-slate-400 mt-0.5">{desc}</p>
           {deferredPrompt && (
             <Button size="xs" icon={Download} className="mt-2.5" onClick={handleInstall}>
               {t('pwa.install')}
@@ -110,7 +110,7 @@ export default function PwaInstallPrompt() {
           type="button"
           onClick={handleDismiss}
           aria-label={t('pwa.dismiss')}
-          className="w-11 h-11 -mr-1 -mt-1 rounded-full inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 cursor-pointer"
+          className="type-button w-11 h-11 -mr-1 -mt-1 rounded-full inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>

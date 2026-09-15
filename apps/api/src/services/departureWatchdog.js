@@ -11,7 +11,7 @@
  *
  *   T-40  Hỏi chủ xe: "Bạn đã sẵn sàng đón khách chưa?" (một chạm)
  *   T-30  Chưa trả lời -> nhắc lần 2, đồng thời soi tín hiệu GPS
- *   T-20  Vẫn im lặng -> BẬT CHẾ ĐỘ CỨU HỘ cho khách + trừ điểm chủ xe
+ *   T-20  Vẫn im lặng -> cảnh báo và thông tin phương án cần xác nhận
  *
  * Vì sao chốt cuối đặt ở T-20 chứ không phải T-5: khách phải còn đủ thời gian
  * thực tế để gọi một chuyến xe khách Thành Công (tần suất 30 phút/chuyến) và ra
@@ -31,7 +31,7 @@ import {
   updateBookingStatus,
   getTripById
 } from '../db/sqliteStore.js';
-import { FIXED_CORRIDOR_COACH_SCHEDULES } from '@carmate/shared';
+import { FIXED_CORRIDOR_COACH_SCHEDULES, getTravelWindow } from '@carmate/shared';
 
 export const WATCHDOG_CONFIG = Object.freeze({
   // Các mốc tính bằng phút trước giờ khởi hành
@@ -62,22 +62,14 @@ const ACTIVE_BOOKING_STATUSES = new Set([
  * bừa rồi bắn cảnh báo cứu hộ vào mặt khách giữa đêm.
  */
 export function resolveDepartureMs(booking, trip = null) {
+  if (booking?.committedTerms?.pickupStartAt) {
+    const value = Date.parse(booking.committedTerms.pickupStartAt);
+    return Number.isFinite(value) ? value : null;
+  }
   const date = booking?.date || trip?.date;
-  if (!date) return null;
-
-  const timeSlot = String(booking?.timeSlot || trip?.timeSlot || trip?.time || '');
-  const hourMatch = timeSlot.match(/(\d{1,2}):(\d{2})/);
-  if (!hourMatch) return null;
-
-  const hours = parseInt(hourMatch[1], 10);
-  const minutes = parseInt(hourMatch[2], 10);
-  if (hours > 23 || minutes > 59) return null;
-
-  const departure = new Date(date);
-  if (isNaN(departure.getTime())) return null;
-
-  departure.setHours(hours, minutes, 0, 0);
-  return departure.getTime();
+  const timeSlot = booking?.timeSlot || trip?.timeSlot || trip?.time;
+  if (!date || !timeSlot || !String(timeSlot).match(/\d{1,2}:\d{2}/)) return null;
+  return getTravelWindow({ date, timeSlot })?.start ?? null;
 }
 
 /** Đang ở đúng cửa sổ quanh một mốc (phút trước giờ chạy) hay không. */
@@ -99,7 +91,7 @@ function isAtMark(minutesUntilDeparture, markMinutes) {
  */
 export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSessions = [] } = {}) {
   const actions = [];
-  const bookings = getBookings().filter((b) => ACTIVE_BOOKING_STATUSES.has(b.status));
+  const bookings = getBookings().filter((b) => ACTIVE_BOOKING_STATUSES.has(b.status) && b.bothConfirmed === true && b.needStatus !== 'closed');
   if (bookings.length === 0) return actions;
 
   for (const booking of bookings) {
@@ -115,19 +107,17 @@ export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSession
     const driverPhone = booking.driverPhone || booking.phoneReal;
     if (!driverPhone) continue;
 
-    const session = activeSessions.find((s) => s.driverPhone === driverPhone);
+    const session = activeSessions.find((s) => s.tripId === booking.tripId && s.driverPhone === driverPhone);
     const heartbeatMinutesAgo = session?.lastPing
       ? (nowMs - session.lastPing) / 60000
       : Infinity;
 
     // Chủ xe được coi là "đã sẵn sàng" khi bấm nút xác nhận, HOẶC khi xe đang
     // thực sự lăn bánh và gửi tín hiệu đều — hành động thật đáng tin hơn nút bấm.
-    const isDriving = session != null && heartbeatMinutesAgo <= 5 && (session.speed ?? 0) > 10;
-    const hasConfirmed =
+      const hasConfirmed =
       booking.driverConfirmed === true ||
       booking.readyConfirmedAt != null ||
-      booking.status === 'driver_confirmed' ||
-      isDriving;
+      booking.status === 'driver_confirmed';
 
     const base = {
       booking,
@@ -188,7 +178,7 @@ export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSession
  */
 export function pickRelevantLifebuoys(booking, trip = null, limit = 3) {
   const departureMs = resolveDepartureMs(booking, trip);
-  const all = [...FIXED_CORRIDOR_COACH_SCHEDULES];
+  const all = FIXED_CORRIDOR_COACH_SCHEDULES.map((bus) => ({ ...bus, availability: 'unconfirmed', requiresOperatorConfirmation: true }));
 
   if (departureMs == null) return all.slice(0, limit);
 
@@ -256,14 +246,9 @@ export async function activateRescueMode({ bookingId, reason, lifebuoys, nowMs =
     isCancelled: false
   });
 
-  // Trừ điểm tín nhiệm chủ xe theo thang có sẵn (penalty_late = -10)
-  const driverPhone = booking.driverPhone || booking.phoneReal;
-  let penalty = null;
-  if (driverPhone) {
-    penalty = await applyLatePenalty(driverPhone, bookingId, nowMs);
-  }
+  // Missing readiness/GPS is a risk signal, not evidence of misconduct.
+  return { success: true, booking: updated, penalty: null };
 
-  return { success: true, booking: updated, penalty };
 }
 
 /**

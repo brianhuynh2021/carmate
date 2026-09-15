@@ -41,10 +41,10 @@ export function LanguageToggle({ className = '' } = {}) {
       onClick={() => setLang(next)}
       title={label}
       aria-label={label}
-      className={`relative tap-area-44 h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 ${className}`}
+      className={`type-button-sm relative tap-area-44 h-8.5 sm:h-9 px-2.5 rounded-full inline-flex items-center gap-1.5 bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 active:scale-[0.98] transition-all cursor-pointer select-none shrink-0 ${className}`}
     >
       <Globe className="w-3.5 h-3.5 text-[#0071e3]" />
-      <span className="font-mono text-xs font-bold uppercase">{lang === 'vi' ? 'EN' : 'VI'}</span>
+      <span className="type-caption uppercase">{lang === 'vi' ? 'EN' : 'VI'}</span>
     </button>
   );
 }
@@ -144,18 +144,18 @@ export default function Header({
           <button
             type="button"
             onClick={() => setActiveTab('market')}
-            className="flex items-center gap-2 cursor-pointer select-none text-left group"
+            className="type-button-sm flex items-center gap-2 cursor-pointer select-none text-left group"
             aria-label="CarMate.vn Home"
           >
             <LogoMark className="w-7 h-7 sm:w-8 sm:h-8 group-hover:scale-105 transition-transform" />
-            <span className="font-display font-black text-lg sm:text-xl tracking-tight leading-none text-[#1d1d1f] dark:text-white">
+            <span className="type-title font-display text-[#1d1d1f] dark:text-white">
               Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
-              <span className="text-[#0071e3] font-mono text-sm sm:text-base font-bold ml-0.5">.vn</span>
+              <span className="type-body-strong text-[#0071e3] ml-0.5">.vn</span>
             </span>
           </button>
 
           {/* Badge cam kết bảo chứng toàn cục theo tư duy MIT Invariants */}
-          <span className="hidden lg:inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-500/20 shadow-2xs">
+          <span className="type-footnote hidden lg:inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-500/20 shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span>0% Phí sàn · 0đ Cọc</span>
           </span>
@@ -173,7 +173,7 @@ export default function Header({
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 aria-current={active ? 'page' : undefined}
-                className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none flex items-center gap-1.5 ${
+                className={`type-button-sm relative px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer select-none flex items-center gap-1.5 ${
                   active
                     ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-md hover:scale-[1.02]'
                     : 'text-[#515154] dark:text-slate-400 hover:text-[#1d1d1f] dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:scale-[1.02]'
@@ -183,7 +183,7 @@ export default function Header({
                 <span>{tab.label}</span>
                 {tab.badge > 0 && (
                   <span
-                    className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                    className={`type-footnote ml-1 px-1.5 py-0.2 rounded-full ${
                       active ? 'bg-[#0071e3] text-white' : 'bg-black/[0.08] text-[#515154]'
                     }`}
                   >
@@ -201,9 +201,9 @@ export default function Header({
             thông tin. Dùng xanh mint đồng bộ với nút nổi trên thanh dưới. */}
         <button
           type="button"
-          onClick={() => setActiveTab('cockpit')}
+          onClick={() => onRequestPostTrip?.('driver')}
           aria-current={activeTab === 'cockpit' ? 'page' : undefined}
-          className={`hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-xs font-bold border transition-all duration-200 cursor-pointer select-none shrink-0 ${
+          className={`type-button-sm hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border transition-all duration-200 cursor-pointer select-none shrink-0 ${
             activeTab === 'cockpit'
               ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/25'
               : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/25 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
@@ -226,11 +226,11 @@ export default function Header({
             onClick={onOpenAi}
             title={isMac ? 'Trợ lý CarMate (Phím tắt: ⌘K)' : 'Trợ lý CarMate (Phím tắt: Ctrl+K)'}
             aria-label={t('header2.s004')}
-            className="relative tap-area-44 inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full text-xs font-semibold bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
+            className="type-button-sm relative tap-area-44 inline-flex items-center justify-center gap-1.5 h-8.5 w-8.5 sm:h-9 sm:w-auto px-0 sm:px-3 rounded-full bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] cursor-pointer select-none outline-none focus:outline-none transition-all shadow-xs active:scale-[0.98] group shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#0071e3] group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline font-medium">{t('nav.assistant') || t('nav.aiAssistant') || 'Trợ lý'}</span>
-            <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-md bg-black/[0.05] text-[#515154] border border-black/[0.06] ml-0.5">
+            <kbd className="type-footnote hidden lg:inline-flex items-center px-1.5 py-0.5 font-mono rounded-md bg-black/[0.05] text-[#515154] border border-black/[0.06] ml-0.5">
               {isMac ? '⌘K' : 'Ctrl K'}
             </kbd>
           </button>
@@ -243,7 +243,7 @@ export default function Header({
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="true"
-                className="relative tap-area-44 h-8.5 sm:h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
+                className="type-button-sm relative tap-area-44 h-8.5 sm:h-9 pl-2 pr-2.5 sm:pr-3 rounded-full inline-flex items-center gap-1.5 bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:bg-[#f5f5f7] dark:hover:bg-slate-700 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               >
                 <span className="relative flex items-center justify-center shrink-0">
                   {currentUser.avatar ? (
@@ -294,17 +294,17 @@ export default function Header({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-xs sm:text-sm font-bold text-[#1d1d1f] dark:text-white truncate">
+                          <p className="type-caption text-[#1d1d1f] dark:text-white truncate">
                             {currentUser.name}
                           </p>
                           {isAdminUser(currentUser) && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                            <span className="type-footnote inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
                               <ShieldCheck className="w-2.5 h-2.5" />
                               {t('userMenu.adminBadge')}
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-[#86868b] font-mono truncate mt-0.5">
+                        <p className="type-caption text-[#86868b] truncate mt-0.5">
                           {currentUser.phone || t('userMenu.verifiedIdentity')}
                         </p>
                       </div>
@@ -319,18 +319,18 @@ export default function Header({
                           onOpenProfile?.();
                           setIsUserMenuOpen(false);
                         }}
-                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                        className="type-button-sm w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
                       >
                         <div className="inline-flex items-center gap-2.5">
                           <User className="w-4 h-4 text-[#0071e3] group-hover:scale-110 transition-transform shrink-0" />
                           <span>{t('userMenu.profileGarage')}</span>
                         </div>
                         {currentUser?.vehicle?.brand ? (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                          <span className="type-footnote px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
                             {currentUser.vehicle.brand}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-[#86868b] font-normal">{t('userMenu.noVehicle')}</span>
+                          <span className="type-footnote text-[#86868b]">{t('userMenu.noVehicle')}</span>
                         )}
                       </button>
 
@@ -341,14 +341,14 @@ export default function Header({
                           setActiveTab('booked');
                           setIsUserMenuOpen(false);
                         }}
-                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                        className="type-button-sm w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
                       >
                         <div className="inline-flex items-center gap-2.5">
                           <Clock className="w-4 h-4 text-[#0071e3] group-hover:scale-110 transition-transform shrink-0" />
                           <span>{t('userMenu.myTrips')}</span>
                         </div>
                         {bookedCount > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#0071e3] text-white tabular">
+                          <span className="type-footnote px-2 py-0.5 rounded-full bg-[#0071e3] text-white tabular">
                             {bookedCount}
                           </span>
                         )}
@@ -361,14 +361,14 @@ export default function Header({
                           onOpenInbox?.();
                           setIsUserMenuOpen(false);
                         }}
-                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                        className="type-button-sm w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
                       >
                         <div className="inline-flex items-center gap-2.5">
                           <Inbox className="w-4 h-4 text-[#0071e3] group-hover:scale-110 transition-transform shrink-0" />
                           <span>{t('header2.s001')}</span>
                         </div>
                         {inboxCount > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500 text-white tabular">
+                          <span className="type-footnote px-2 py-0.5 rounded-full bg-rose-500 text-white tabular">
                             {inboxCount}
                           </span>
                         )}
@@ -381,13 +381,13 @@ export default function Header({
                           setActiveTab('cockpit');
                           setIsUserMenuOpen(false);
                         }}
-                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                        className="type-button-sm w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
                       >
                         <div className="inline-flex items-center gap-2.5">
                           <Car className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform shrink-0" />
-                          <span>{t('nav.tabPickup')} & Taplo</span>
+                          <span>Quản lý xe đang chạy</span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                        <span className="type-footnote px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
                           {t('userMenu.driverShortcutBadge')}
                         </span>
                       </button>
@@ -399,13 +399,13 @@ export default function Header({
                           onRequestPostTrip?.('driver');
                           setIsUserMenuOpen(false);
                         }}
-                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer group active:scale-[0.99]"
+                        className="type-button-sm w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer group active:scale-[0.99]"
                       >
                         <div className="inline-flex items-center gap-2.5">
                           <Sparkles className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform shrink-0" />
                           <span>{t('userMenu.postTripShortcut')}</span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/40">
+                        <span className="type-footnote px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/40">
                           {t('userMenu.driverShortcutBadge')}
                         </span>
                       </button>
@@ -421,13 +421,13 @@ export default function Header({
                             setActiveTab('admin');
                             setIsUserMenuOpen(false);
                           }}
-                          className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer group active:scale-[0.99]"
+                          className="type-button-sm w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer group active:scale-[0.99]"
                         >
                           <div className="inline-flex items-center gap-2.5">
                             <ShieldCheck className="w-4 h-4 text-rose-600 group-hover:scale-110 transition-transform shrink-0" />
                             <span>{t('userMenu.adminPortal')}</span>
                           </div>
-                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200/60 dark:border-rose-800/40">
+                          <span className="type-footnote text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200/60 dark:border-rose-800/40">
                             Admin
                           </span>
                         </button>
@@ -438,7 +438,7 @@ export default function Header({
                     <div className="my-1.5 border-t border-black/[0.05] dark:border-white/[0.06]" />
                     <div className="space-y-0.5">
                       {/* Chuyển đổi ngôn ngữ */}
-                      <div className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-1.5 rounded-xl flex items-center justify-between text-xs text-[#1d1d1f] dark:text-slate-200">
+                      <div className="type-caption w-full min-h-[42px] sm:min-h-[38px] px-3 py-1.5 rounded-xl flex items-center justify-between text-[#1d1d1f] dark:text-slate-200">
                         <div className="inline-flex items-center gap-2.5 font-semibold">
                           <Globe className="w-4 h-4 text-[#0071e3] shrink-0" />
                           <span>{t('userMenu.language')}</span>
@@ -447,7 +447,7 @@ export default function Header({
                           <button
                             type="button"
                             onClick={() => setLang('vi')}
-                            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                            className={`type-button-sm px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                               lang === 'vi' ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
                             }`}
                           >
@@ -456,7 +456,7 @@ export default function Header({
                           <button
                             type="button"
                             onClick={() => setLang('en')}
-                            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                            className={`type-button-sm px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                               lang === 'en' ? 'bg-white dark:bg-slate-800 text-[#0071e3] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
                             }`}
                           >
@@ -472,7 +472,7 @@ export default function Header({
                           setShowPolicyModal?.(true);
                           setIsUserMenuOpen(false);
                         }}
-                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center gap-2.5 text-xs font-semibold text-[#515154] dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer active:scale-[0.99]"
+                        className="type-button-sm w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center gap-2.5 text-[#515154] dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer active:scale-[0.99]"
                       >
                         <HelpCircle className="w-4 h-4 text-slate-400 shrink-0" />
                         <span>{t('userMenu.safetyPolicy')}</span>
@@ -484,13 +484,13 @@ export default function Header({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setIsUserMenuOpen(false)}
-                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-xs font-semibold text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
+                        className="type-badge w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center justify-between text-[#1d1d1f] dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer group active:scale-[0.99]"
                       >
                         <div className="inline-flex items-center gap-2.5">
                           <MessageCircle className="w-4 h-4 text-[#229ED9] group-hover:scale-110 transition-transform shrink-0" />
                           <span>{t('userMenu.support')}</span>
                         </div>
-                        <span className="text-[10.5px] font-bold text-[#229ED9] bg-[#229ED9]/10 px-2 py-0.5 rounded-md">
+                        <span className="type-footnote text-[#229ED9] bg-[#229ED9]/10 px-2 py-0.5 rounded-md">
                           Telegram
                         </span>
                       </a>
@@ -505,7 +505,7 @@ export default function Header({
                           setIsUserMenuOpen(false);
                           onLogout?.();
                         }}
-                        className="w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center gap-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer active:scale-[0.99]"
+                        className="type-button-sm w-full min-h-[42px] sm:min-h-[38px] px-3 py-2 rounded-xl inline-flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer active:scale-[0.99]"
                       >
                         <LogOut className="w-4 h-4 text-slate-400 shrink-0" />
                         <span>{t('userMenu.logout')}</span>
@@ -519,7 +519,7 @@ export default function Header({
             <button
               type="button"
               onClick={onOpenAuth}
-              className="relative tap-area-44 h-8.5 sm:h-9 px-2.5 sm:px-3.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all shrink-0"
+              className="type-button-sm relative tap-area-44 h-8.5 sm:h-9 px-2.5 sm:px-3.5 rounded-full inline-flex items-center gap-1.5 bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] border border-black/[0.08] hover:border-black/[0.16] shadow-xs cursor-pointer active:scale-[0.98] transition-all shrink-0"
             >
               <User className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
               <span className="hidden sm:inline">{t('nav.signInOrRegister')}</span>
@@ -536,7 +536,7 @@ export default function Header({
               aria-haspopup="true"
               title={t('header2.s005')}
               aria-label={t('header2.s006')}
-              className={`relative tap-area-44 inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full text-xs font-semibold border cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0 ${
+              className={`type-button-sm relative tap-area-44 inline-flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-full border cursor-pointer transition-all shadow-xs active:scale-[0.98] shrink-0 ${
                 isNotificationCenterOpen
                   ? 'bg-[#0071e3]/10 dark:bg-[#0071e3]/20 border-[#0071e3]/30 text-[#0071e3]'
                   : 'bg-white dark:bg-slate-800 hover:bg-[#f5f5f7] dark:hover:bg-slate-700 text-[#1d1d1f] dark:text-white border-black/[0.08] dark:border-white/[0.08]'
@@ -544,7 +544,7 @@ export default function Header({
             >
               <Bell className={`w-4 h-4 transition-transform ${isNotificationCenterOpen ? 'rotate-12 text-[#0071e3]' : 'text-slate-700 dark:text-slate-200'}`} />
               {inboxCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center shadow-xs animate-pulse">
+                <span className="type-footnote absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-xs animate-pulse">
                   {inboxCount > 9 ? '9+' : inboxCount}
                 </span>
               )}

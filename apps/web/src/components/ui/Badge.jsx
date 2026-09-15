@@ -12,7 +12,7 @@ const TONES = {
 export default function Badge({ tone = 'neutral', icon: Icon, children, className = '' }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[12px] font-medium whitespace-nowrap tracking-tight ${TONES[tone] || TONES.neutral} ${className}`}
+      className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full type-badge whitespace-nowrap ${TONES[tone] || TONES.neutral} ${className}`}
     >
       {Icon && <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={2.2} />}
       <span>{children}</span>
@@ -22,7 +22,7 @@ export default function Badge({ tone = 'neutral', icon: Icon, children, classNam
 
 /** Avatar chữ cái đầu chuẩn Apple Profile Avatar */
 export function Avatar({ label = '', tone = 'primary', size = 'md', className = '' }) {
-  const dims = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm';
+  const dims = size === 'sm' ? 'w-8 h-8 type-badge' : size === 'lg' ? 'w-12 h-12 type-heading' : 'w-10 h-10 type-body-strong';
   const tones = {
     primary: 'bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20',
     warning: 'bg-[#ff9500]/10 text-[#b25e00]',
@@ -39,7 +39,7 @@ export function Avatar({ label = '', tone = 'primary', size = 'md', className = 
     .toUpperCase();
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full font-semibold shrink-0 select-none shadow-sm ${dims} ${tones[tone] || tones.primary} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full shrink-0 select-none shadow-sm ${dims} ${tones[tone] || tones.primary} ${className}`}
     >
       {initials || '?'}
     </span>

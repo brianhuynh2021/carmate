@@ -18,10 +18,10 @@ const VARIANTS = {
 
 // Chiều cao và bo góc chuẩn Apple Human Interface Guidelines (rounded-xl)
 const SIZES = {
-  xs: 'h-8 px-3 text-xs gap-1.5 rounded-xl',
-  sm: 'h-10 px-4 text-sm gap-1.5 rounded-xl',
-  md: 'h-11 px-5 text-sm gap-2 rounded-xl',
-  lg: 'h-12 px-6 text-[15px] gap-2 rounded-xl'
+  xs: 'h-8 px-3 type-button-sm gap-1.5 rounded-xl',
+  sm: 'h-10 px-4 type-button gap-1.5 rounded-xl',
+  md: 'h-11 px-5 type-button gap-2 rounded-xl',
+  lg: 'h-12 px-6 type-button gap-2 rounded-xl'
 };
 
 const ICON_SIZES = { xs: 'w-3.5 h-3.5', sm: 'w-4 h-4', md: 'w-[18px] h-[18px]', lg: 'w-5 h-5' };
@@ -43,7 +43,7 @@ export default function Button({
   const displayClass = hasDisplayOverride ? '' : 'inline-flex';
   return (
     <Component
-      className={`${displayClass} items-center justify-center font-semibold whitespace-nowrap select-none cursor-pointer transition-all duration-150 active:scale-[0.98] touch-manipulation disabled:cursor-not-allowed disabled:opacity-60 tracking-tight ${VARIANTS[variant] || VARIANTS.primary} ${SIZES[size] || SIZES.md} ${fullWidth ? 'w-full' : ''} ${className}`}
+      className={`${displayClass} items-center justify-center whitespace-nowrap select-none cursor-pointer transition-all duration-150 active:scale-[0.98] touch-manipulation disabled:cursor-not-allowed disabled:opacity-60 ${VARIANTS[variant] || VARIANTS.primary} ${SIZES[size] || SIZES.md} ${fullWidth ? 'w-full' : ''} ${className}`}
       {...props}
     >
       {Icon && <Icon className={`${ICON_SIZES[size] || ICON_SIZES.md} shrink-0`} strokeWidth={2.2} />}

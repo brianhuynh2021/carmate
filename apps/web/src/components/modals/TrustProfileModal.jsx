@@ -80,7 +80,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
             </Button>
             {onBook && (
               isOwner ? (
-                <span className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200">
+                <span className="type-badge px-3 py-1.5 rounded-lg text-amber-800 bg-amber-50 border border-amber-200">
                   {t('trustProfile.s002')}
                 </span>
               ) : (
@@ -99,7 +99,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
         </div>
       }
     >
-      <div className="space-y-5 text-sm">
+      <div className="space-y-5">
         {/* Passport Card — Phong cách Thẻ Căn Cước Số / Google Wallet */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0c4a6e] via-[#075985] to-[#0e1e36] text-white p-5 sm:p-6 shadow-lg border border-white/10">
           <div
@@ -121,42 +121,42 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
                 </span>
               )}
               <div>
-                <h4 className="font-display text-lg sm:text-xl font-bold tracking-tight flex items-center gap-1.5">
+                <h4 className="type-heading flex items-center gap-1.5">
                   <span>{name}</span>
                   <BadgeCheck className="w-4 h-4 text-amber-300 shrink-0" />
                 </h4>
-                <p className="text-xs text-sky-100 mt-0.5 font-medium">Thành viên CarMate · Đồng hương {hometown}</p>
+                <p className="type-caption text-sky-100 mt-0.5">Thành viên CarMate · Đồng hương {hometown}</p>
               </div>
             </div>
 
             <div className="text-right shrink-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-200">{t('trustProfile.s003')}</p>
-              <p className="font-display text-3xl font-extrabold tabular tracking-tight leading-none mt-1">
+              <p className="type-caption uppercase text-sky-200">{t('trustProfile.s003')}</p>
+              <p className="type-metric tabular mt-1">
                 {karmaScore}
-                <span className="text-xs font-medium text-sky-200">/100</span>
+                <span className="type-caption text-sky-200">/100</span>
               </p>
             </div>
           </div>
 
           <dl className="relative mt-5 pt-4 border-t border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <dt className="text-[11px] text-blue-200">{t('trustProfile.s004')}</dt>
-              <dd className="text-xs font-semibold mt-0.5 tabular">{driverTrips} chuyến an toàn</dd>
+              <dt className="type-caption text-blue-200">{t('trustProfile.s004')}</dt>
+              <dd className="type-caption mt-0.5 tabular">{driverTrips} chuyến an toàn</dd>
             </div>
             <div>
-              <dt className="text-[11px] text-blue-200">{t('trustProfile.s005')}</dt>
-              <dd className="text-xs font-semibold mt-0.5 tabular">{passengerTrips} chuyến đúng hẹn</dd>
+              <dt className="type-caption text-blue-200">{t('trustProfile.s005')}</dt>
+              <dd className="type-caption mt-0.5 tabular">{passengerTrips} chuyến đúng hẹn</dd>
             </div>
             <div>
-              <dt className="text-[11px] text-blue-200">{t('trustProfile.s006')}</dt>
-              <dd className="text-xs font-semibold mt-0.5 tabular inline-flex items-center gap-1">
+              <dt className="type-caption text-blue-200">{t('trustProfile.s006')}</dt>
+              <dd className="type-caption mt-0.5 tabular inline-flex items-center gap-1">
                 <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
                 <span>{rating} / 5</span>
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] text-blue-200">{t('trustProfile.s007')}</dt>
-              <dd className="text-xs font-semibold mt-0.5 text-emerald-300">
+              <dt className="type-caption text-blue-200">{t('trustProfile.s007')}</dt>
+              <dd className="type-caption mt-0.5 text-emerald-300">
                 {hasWarnings ? 'Có cảnh báo' : 'Văn minh 100%'}
               </dd>
             </div>
@@ -165,30 +165,30 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
 
         {/* Cảnh báo an toàn nếu có */}
         {hasWarnings ? (
-          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-2.5 text-xs text-rose-900 dark:text-rose-200">
+          <div className="type-caption p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-2.5 text-rose-900 dark:text-rose-200">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold">{t('trustProfile.s008')}</p>
+              <p className="type-body-strong">{t('trustProfile.s008')}</p>
               <ul className="list-disc list-inside mt-1 space-y-0.5 text-rose-800 dark:text-rose-300">
                 {safetyWarnings.map((w, idx) => (
-                  <li key={idx}>{w.reason || w}</li>
+                  <li className="type-body" key={idx}>{w.reason || w}</li>
                 ))}
               </ul>
             </div>
           </div>
         ) : (
-          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/40 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300">
+          <div className="type-caption p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/40 flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
             <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{t('trustProfile.s009')}</span>
           </div>
         )}
 
         {/* Bộ chuyển Tab 3 vai trò */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 text-xs font-semibold">
+        <div className="type-caption flex border-b border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => setActiveTab('driver')}
-            className={`pb-2.5 px-3.5 border-b-2 inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`type-button pb-2.5 px-3.5 border-b-2 inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
               activeTab === 'driver'
                 ? 'border-primary-600 text-primary-600 dark:text-primary-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -200,7 +200,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           <button
             type="button"
             onClick={() => setActiveTab('passenger')}
-            className={`pb-2.5 px-3.5 border-b-2 inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`type-button pb-2.5 px-3.5 border-b-2 inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
               activeTab === 'passenger'
                 ? 'border-primary-600 text-primary-600 dark:text-primary-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -212,7 +212,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           <button
             type="button"
             onClick={() => setActiveTab('verify')}
-            className={`pb-2.5 px-3.5 border-b-2 inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`type-button pb-2.5 px-3.5 border-b-2 inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
               activeTab === 'verify'
                 ? 'border-primary-600 text-primary-600 dark:text-primary-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -228,24 +228,24 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('trustProfile.s011')}</p>
-                <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">{carModel}</p>
+                <p className="type-caption text-slate-500 dark:text-slate-400">{t('trustProfile.s011')}</p>
+                <p className="type-caption text-slate-900 dark:text-white mt-0.5">{carModel}</p>
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('trustProfile.s012')}</p>
-                <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 tabular">{plate}</p>
+                <p className="type-caption text-slate-500 dark:text-slate-400">{t('trustProfile.s012')}</p>
+                <p className="type-caption text-slate-900 dark:text-white mt-0.5 tabular">{plate}</p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <p className="type-caption text-slate-700 dark:text-slate-300">
                 {t('trustProfile.s013')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {['Lái xe an toàn', 'Xe sạch êm không mùi', 'Đúng giờ', 'Không khói thuốc', 'Thân thiện'].map((t) => (
                   <span
                     key={t}
-                    className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[11px] font-medium border border-blue-200 dark:border-blue-900"
+                    className="type-badge px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
                   >
                     ✓ {t}
                   </span>
@@ -254,13 +254,13 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-900 dark:text-white">{t('trustProfile.s014')}</span>
-                <span className="text-amber-500 font-bold inline-flex items-center gap-0.5">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-900 dark:text-white">{t('trustProfile.s014')}</span>
+                <span className="type-body-strong text-amber-500 inline-flex items-center gap-0.5">
                   5.0 <Star className="w-3 h-3 fill-amber-400" />
                 </span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 italic">
+              <p className="type-caption text-slate-600 dark:text-slate-300 italic">
                 "Bác Tuấn lái xe rất cẩn thận, đón đúng giờ tại cổng chào, xe gia đình sạch sẽ không một chút mùi khói
                 thuốc."
               </p>
@@ -273,24 +273,24 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('trustProfile.s015')}</p>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{t('trustProfile.s016')}</p>
+                <p className="type-caption text-slate-500 dark:text-slate-400">{t('trustProfile.s015')}</p>
+                <p className="type-caption text-emerald-600 dark:text-emerald-400 mt-0.5">{t('trustProfile.s016')}</p>
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('trustProfile.s017')}</p>
-                <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 inline-flex items-center gap-1">
+                <p className="type-caption text-slate-500 dark:text-slate-400">{t('trustProfile.s017')}</p>
+                <p className="type-caption text-slate-900 dark:text-white mt-0.5 inline-flex items-center gap-1">
                   <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {t('trustProfile.s018')}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('trustProfile.s019')}</p>
+              <p className="type-caption text-slate-700 dark:text-slate-300">{t('trustProfile.s019')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {['Đúng giờ điểm hẹn', 'Lịch sự văn minh', 'Giữ vệ sinh xe', 'Gửi tiền xăng sòng phẳng'].map((t) => (
                   <span
                     key={t}
-                    className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-medium border border-emerald-200 dark:border-emerald-900"
+                    className="type-badge px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
                   >
                     ✓ {t}
                   </span>
@@ -299,13 +299,13 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-900 dark:text-white">{t('trustProfile.s020')}</span>
-                <span className="text-amber-500 font-bold inline-flex items-center gap-0.5">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-900 dark:text-white">{t('trustProfile.s020')}</span>
+                <span className="type-body-strong text-amber-500 inline-flex items-center gap-0.5">
                   5.0 <Star className="w-3 h-3 fill-amber-400" />
                 </span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 italic">
+              <p className="type-caption text-slate-600 dark:text-slate-300 italic">
                 "Anh Tuấn đi cùng xe tôi về Bến xe Miền Đông, đứng chờ đúng điểm hẹn, lên xe chào hỏi văn minh, gửi tiền
                 xăng sòng phẳng."
               </p>
@@ -320,35 +320,35 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
               {verifications.map((v, i) => (
                 <li
                   key={i}
-                  className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-start gap-2.5"
+                  className="type-body p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-start gap-2.5"
                 >
                   <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 inline-flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-900 dark:text-white leading-snug">{v.label}</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{v.desc}</p>
+                    <p className="type-caption text-slate-900 dark:text-white">{v.label}</p>
+                    <p className="type-caption text-slate-500 dark:text-slate-400 mt-0.5">{v.desc}</p>
                   </div>
                 </li>
               ))}
             </ul>
 
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800">
-              <p className="text-xs font-semibold text-slate-900 dark:text-white mb-2">
+              <p className="type-caption text-slate-900 dark:text-white mb-2">
                 {t('trustProfile.s021')}
               </p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-lg bg-white dark:bg-[#151c2e] border border-slate-200/50 dark:border-white/[0.08]">
                   <CigaretteOff className="w-4 h-4 text-rose-500 mx-auto mb-1" />
-                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{t('trustProfile.s022')}</p>
+                  <p className="type-caption text-slate-700 dark:text-slate-300">{t('trustProfile.s022')}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-white dark:bg-[#151c2e] border border-slate-200/50 dark:border-white/[0.08]">
                   <Users className="w-4 h-4 text-primary-600 dark:text-primary-400 mx-auto mb-1" />
-                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{t('trustProfile.s023')}</p>
+                  <p className="type-caption text-slate-700 dark:text-slate-300">{t('trustProfile.s023')}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-white dark:bg-[#151c2e] border border-slate-200/50 dark:border-white/[0.08]">
                   <Heart className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
-                  <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{t('trustProfile.s024')}</p>
+                  <p className="type-caption text-slate-700 dark:text-slate-300">{t('trustProfile.s024')}</p>
                 </div>
               </div>
             </div>

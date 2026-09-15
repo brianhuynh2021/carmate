@@ -106,20 +106,20 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
             icon={CheckCircle2}
             onClick={handleSubmit}
             variant="primary"
-            className="font-semibold shadow-xs"
+            className="shadow-xs"
           >
             {isSubmitting ? 'Đang ghi nhận...' : 'Gửi đánh giá cộng đồng'}
           </Button>
         </div>
       }
     >
-      <div className="space-y-5 text-sm">
+      <div className="space-y-5">
         {/* Bộ chuyển đổi vai trò người đánh giá */}
         <div className="p-1 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center gap-1">
           <button
             type="button"
             onClick={() => handleRoleChange('driver')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`type-button flex-1 py-2 px-3 rounded-lg transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer ${
               reviewerRole === 'driver'
                 ? 'bg-white dark:bg-slate-900 text-primary-600 dark:text-primary-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -131,7 +131,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
           <button
             type="button"
             onClick={() => handleRoleChange('passenger')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`type-button flex-1 py-2 px-3 rounded-lg transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer ${
               reviewerRole === 'passenger'
                 ? 'bg-white dark:bg-slate-900 text-primary-600 dark:text-primary-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -144,10 +144,10 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Thông tin đối tác cần đánh giá */}
         <div className="text-center space-y-2 py-1">
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="type-caption text-slate-500 dark:text-slate-400">
             Bạn đang đánh giá {isDriverReviewing ? 'hành khách' : 'chủ xe'}:
           </p>
-          <h4 className="text-lg font-bold text-slate-900 dark:text-white">{targetName}</h4>
+          <h4 className="type-heading text-slate-900 dark:text-white">{targetName}</h4>
 
           {/* Chấm sao tương tác */}
           <div className="flex items-center justify-center gap-2 pt-1">
@@ -160,7 +160,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
                   onMouseEnter={() => setHoverRating(s)}
                   onMouseLeave={() => setHoverRating(0)}
                   onClick={() => setRating(s)}
-                  className="p-1 cursor-pointer transition-transform hover:scale-115 active:scale-95"
+                  className="type-button p-1 cursor-pointer transition-transform hover:scale-115 active:scale-95"
                   title={`${s} sao`}
                 >
                   <Star
@@ -172,7 +172,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
               );
             })}
           </div>
-          <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+          <p className="type-caption text-amber-600 dark:text-amber-400">
             {rating === 5 && '🌟 Tuyệt vời · Rất hài lòng'}
             {rating === 4 && '👍 Tốt · Đồng hành vui vẻ'}
             {rating === 3 && '👌 Bình thường · Cần cải thiện một chút'}
@@ -183,13 +183,13 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Cảnh báo bảo vệ cộng đồng nếu chấm sao thấp hoặc chọn cảnh báo */}
         {(isLowRating || hasWarningTag) && (
-          <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+          <div className="type-caption p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 flex items-start gap-2.5 text-amber-900 dark:text-amber-200">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <p className="font-bold">
+              <p className="type-body-strong">
                 {isDriverReviewing ? 'Gắn cờ bảo vệ các chủ xe khác:' : 'Góp ý kiểm duyệt chủ xe:'}
               </p>
-              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
+              <p className="type-body text-amber-800 dark:text-amber-300">
                 Đánh giá này sẽ lưu vào lịch sử tín nhiệm để các thành viên khác cảnh giác, đảm bảo cộng đồng không bị
                 tái diễn tình trạng leo cây hoặc trễ hẹn.
               </p>
@@ -199,7 +199,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Thẻ tiêu chí tích cực */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('review2.s004')}</p>
+          <p className="type-caption text-slate-700 dark:text-slate-300">{t('review2.s004')}</p>
           <div className="flex flex-wrap gap-1.5">
             {positiveTags.map((tag) => {
               const active = selectedTags.includes(tag);
@@ -208,7 +208,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
                   key={tag}
                   type="button"
                   onClick={() => handleToggleTag(tag)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`type-button px-3 py-1.5 rounded-full transition-all cursor-pointer ${
                     active
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-xs'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-transparent'
@@ -223,7 +223,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Thẻ tiêu chí cảnh báo / góp ý */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">{t('review2.s005')}</p>
+          <p className="type-caption text-rose-700 dark:text-rose-400">{t('review2.s005')}</p>
           <div className="flex flex-wrap gap-1.5">
             {warningTags.map((tag) => {
               const active = selectedTags.includes(tag);
@@ -232,7 +232,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
                   key={tag}
                   type="button"
                   onClick={() => handleToggleTag(tag)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`type-button px-3 py-1.5 rounded-full transition-all cursor-pointer ${
                     active
                       ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-xs'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-transparent'
@@ -247,7 +247,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
 
         {/* Nhận xét cụ thể */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <label className="type-label text-slate-700 dark:text-slate-300">
             {t('review2.s006')}
           </label>
           <textarea
@@ -259,7 +259,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
                 ? 'Ví dụ: Bạn Nam đón đúng giờ, lên xe chào hỏi vui vẻ...'
                 : 'Ví dụ: Chủ xe lái rất an toàn, xe thơm mát...'
             }
-            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="type-input w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
       </div>

@@ -17,8 +17,7 @@ export default function useTripsData({
   setCancelRecord,
   setDelayRecord,
   setReviewRecord,
-  setPendingPostTrip,
-  setShowAuthModal,
+  onRequireAuth,
   onSaveProfile,
   t
 }) {
@@ -206,171 +205,68 @@ export default function useTripsData({
   );
 
   // Đăng chuyến mới
-  const handlePostTrip = useCallback(
-    async (newTrip, authUser = currentUser) => {
-      if (!authUser) {
-        setPendingPostTrip?.(newTrip);
-        setShowAuthModal?.(true);
-        showToast('Vui lòng xác thực SĐT hoặc Zalo để hoàn tất đăng chuyến');
-        return;
-      }
+  // Cache a server-confirmed trip; this function never creates a second copy.
+  const recordPostedTrip = useCallback((trip, owner = currentUser) => {
+    if (!trip?.id) return;
+    const update = (prev) => [trip, ...prev.filter((item) => item.id !== trip.id)];
+    if (trip.type === 'driver_offer') setDriverOffers(update);
+    else setPassengerRequests(update);
+    try {
+      const key = `carmate_my_trip_ids_${owner?.id || owner?.phone}`;
+      const previous = JSON.parse(localStorage.getItem(key) || '[]');
+      localStorage.setItem(key, JSON.stringify([...new Set([trip.id, ...previous])]));
+    } catch {}
+    updateMyTripsCount?.(owner);
+  }, [currentUser, updateMyTripsCount]);
 
-      newTrip.userId = authUser.id;
-      if (authUser.phone && !newTrip.phoneReal) newTrip.phoneReal = authUser.phone;
-      if (
-        authUser.name &&
-        (!newTrip.publicName || newTrip.publicName.startsWith('Chủ xe #') || newTrip.publicName.startsWith('Khách #'))
-      ) {
-        newTrip.publicName = authUser.name;
-      }
-
-      if (newTrip.type === 'driver_offer') setDriverOffers((prev) => [newTrip, ...prev]);
-      else setPassengerRequests((prev) => [newTrip, ...prev]);
-      showToast(t?.('toast.postSuccess') || 'Đăng chuyến thành công!');
-      setActiveTab?.('market');
-
+  const handlePostTrip = useCallback(async (newTrip, authUser = currentUser) => {
+    const publish = async (user) => {
+      const payload = { ...newTrip, userId: user.id, phoneReal: newTrip.phoneReal || user.phone };
       try {
-        const storageKey = `carmate_my_trip_ids_${authUser.id || authUser.phone}`;
-        const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        const updated = [newTrip.id, ...stored.filter((id) => id !== newTrip.id)];
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-        updateMyTripsCount?.(authUser);
-      } catch {}
-
-      // Tự động đồng bộ thông tin xe vào Garage / Hồ sơ cá nhân của Chủ xe (Stanford Ergonomics - Zero extra step)
-      if (newTrip.type === 'driver_offer' && onSaveProfile && authUser && (newTrip.carType || (newTrip.carPhotos && newTrip.carPhotos.length > 0))) {
-        try {
-          const rawCar = (newTrip.carType || '').trim();
-          const cleanCar = rawCar.replace(/\s*\(.*?\)/, '').trim();
-          const words = cleanCar ? cleanCar.split(/\s+/) : [];
-          const brand = words[0] || authUser.vehicle?.brand || '';
-          const model = words.slice(1).join(' ') || authUser.vehicle?.model || cleanCar;
-          const photos = Array.isArray(newTrip.carPhotos) && newTrip.carPhotos.length > 0
-            ? newTrip.carPhotos
-            : (authUser.vehicle?.photos || []);
-
-          const existingPlate = authUser.vehicle?.plate || '';
-          const tripPlate = newTrip.plate || newTrip.licensePlate || newTrip.plateMask || '';
-          const plate = (existingPlate && !existingPlate.includes('*')) ? existingPlate : (tripPlate || existingPlate);
-
-          const vehicleUpdate = {
-            ...(authUser.vehicle || {}),
-            brand: brand || authUser.vehicle?.brand || '',
-            model: model || authUser.vehicle?.model || '',
-            capacity: Number(newTrip.capacity || authUser.vehicle?.capacity || 5),
-            carCategory: newTrip.carCategory || authUser.vehicle?.carCategory || 'family_car',
-            plate,
-            photos,
-            hasVerifiedPhotos: photos.length >= 1,
-            perks: Array.isArray(newTrip.perks) && newTrip.perks.length > 0
-              ? newTrip.perks
-              : (authUser.vehicle?.perks || [])
-          };
-          onSaveProfile({ vehicle: vehicleUpdate }).catch((err) => {
-            console.warn('[useTripsData] Auto-sync garage warning:', err);
-          });
-        } catch (err) {
-          console.warn('[useTripsData] Auto vehicle profile sync error:', err);
-        }
-      }
-
-      try {
-        const res = await api.createTrip(newTrip);
-        if (res?.success && res?.data) {
-          if (newTrip.type === 'driver_offer') {
-            setDriverOffers((prev) => [res.data, ...prev.filter((i) => i.id !== newTrip.id)]);
-          } else {
-            setPassengerRequests((prev) => [res.data, ...prev.filter((i) => i.id !== newTrip.id)]);
-          }
-          if (res.data.id !== newTrip.id) {
-            try {
-              const storageKey = `carmate_my_trip_ids_${authUser.id || authUser.phone}`;
-              const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-              const updated = [res.data.id, ...stored.filter((id) => id !== newTrip.id)];
-              localStorage.setItem(storageKey, JSON.stringify(updated));
-              updateMyTripsCount?.(authUser);
-            } catch {}
-          }
-        }
+        const res = await api.createTrip(payload);
+        if (!res?.success || !res?.data?.id) throw new Error(res?.error || 'Chuyến chưa được đăng.');
+        recordPostedTrip(res.data, user);
+        showToast('Đã đăng chuyến thành công.');
+        setActiveTab?.('market');
+        return res.data;
       } catch (err) {
-        console.warn('Backend sync failed, saved locally:', err);
+        showToast(err.message || 'Không thể đăng chuyến. Vui lòng thử lại.');
+        return null;
       }
-    },
-    [
-      currentUser,
-      setActiveTab,
-      setPendingPostTrip,
-      setShowAuthModal,
-        showToast,
-      t,
-      updateMyTripsCount,
-      onSaveProfile
-    ]
-  );
+    };
+    if (!authUser) {
+      onRequireAuth?.({
+        title: 'Đăng nhập để đăng chuyến',
+        subtitle: 'Thông tin chuyến được giữ nguyên để bạn tiếp tục.',
+        onSuccess: publish
+      });
+      return null;
+    }
+    return publish(authUser);
+  }, [currentUser, onRequireAuth, recordPostedTrip, showToast, setActiveTab]);
 
-  const handleEditTrip = useCallback(
-    async (tripId, updates) => {
-      // Giữ lại giá trị cũ của đúng các trường sắp đổi, để hoàn tác nếu máy chủ từ chối
-      const previousById = {};
-      const rememberPrevious = (list) => {
-        const found = (list || []).find((t) => t.id === tripId);
-        if (!found) return;
-        previousById[tripId] = Object.keys(updates).reduce((acc, key) => {
-          acc[key] = found[key];
-          return acc;
-        }, {});
-      };
-      rememberPrevious(driverOffers);
-      rememberPrevious(passengerRequests);
-
-      setDriverOffers((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
-      setPassengerRequests((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...updates } : t)));
-
-      // Nếu Chủ xe sửa thông tin xe hoặc ảnh, tự động đồng bộ vào Garage cá nhân
-      if (onSaveProfile && currentUser && (updates.carType || updates.carPhotos || updates.capacity || updates.plateMask)) {
-        try {
-          const rawCar = (updates.carType || '').trim();
-          const cleanCar = rawCar.replace(/\s*\(.*?\)/, '').trim();
-          const words = cleanCar ? cleanCar.split(/\s+/) : [];
-          const brand = words[0] || currentUser.vehicle?.brand || '';
-          const model = words.slice(1).join(' ') || currentUser.vehicle?.model || cleanCar;
-          const photos = Array.isArray(updates.carPhotos) && updates.carPhotos.length > 0
-            ? updates.carPhotos
-            : (currentUser.vehicle?.photos || []);
-
-          const existingPlate = currentUser.vehicle?.plate || '';
-          const editPlate = updates.plate || updates.licensePlate || updates.plateMask || '';
-          const plate = (existingPlate && !existingPlate.includes('*')) ? existingPlate : (editPlate || existingPlate);
-
-          const vehicleUpdate = {
-            ...(currentUser.vehicle || {}),
-            brand: brand || currentUser.vehicle?.brand || '',
-            model: model || currentUser.vehicle?.model || '',
-            capacity: Number(updates.capacity || currentUser.vehicle?.capacity || 5),
-            plate,
-            photos,
-            hasVerifiedPhotos: photos.length >= 1
-          };
-          onSaveProfile({ vehicle: vehicleUpdate }).catch(() => {});
-        } catch (err) {
-          console.warn('[useTripsData] Edit sync garage error:', err);
-        }
-      }
-
+  const handleEditTrip = useCallback(async (tripId, updates) => {
+    const response = await api.updateTrip(tripId, updates);
+    if (!response?.success || !response.data) throw new Error(response?.error || 'Chưa lưu được thay đổi.');
+    const saved = response.data;
+    setDriverOffers((prev) => prev.map((trip) => trip.id === tripId ? saved : trip));
+    setPassengerRequests((prev) => prev.map((trip) => trip.id === tripId ? saved : trip));
+    // A trip edit must succeed before optional garage details are synchronized.
+    if (onSaveProfile && currentUser && (updates.carType || updates.carPhotos || updates.capacity || updates.licensePlate)) {
+      const words = String(saved.carType || '').trim().split(/\s+/);
       try {
-        await api.updateTrip(tripId, updates);
-        showToast('Đã lưu thay đổi thông tin chuyến xe!');
-      } catch (err) {
-        console.warn('Lỗi cập nhật chuyến đi lên backend:', err);
-        // Máy chủ không nhận thay đổi (mất mạng / không đủ quyền). Hoàn tác thay đổi lạc quan
-        // để màn hình không hiển thị dữ liệu mà chuyến xe thực tế không hề có.
-        setDriverOffers((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...previousById[tripId] } : t)));
-        setPassengerRequests((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...previousById[tripId] } : t)));
-        showToast('Chưa lưu được lên máy chủ, thay đổi đã được hoàn tác. Vui lòng thử lại.');
-      }
-    },
-    [showToast, onSaveProfile, currentUser, driverOffers, passengerRequests]
-  );
+        await onSaveProfile({ vehicle: { ...(currentUser.vehicle || {}),
+          brand: words[0] || currentUser.vehicle?.brand || '',
+          model: words.slice(1).join(' ') || currentUser.vehicle?.model || '',
+          capacity: saved.capacity,
+          plate: saved.licensePlate || currentUser.vehicle?.plate || '',
+          photos: saved.carPhotos || currentUser.vehicle?.photos || []
+        } });
+      } catch { showToast('Chuyến đã lưu; thông tin xe trong hồ sơ chưa đồng bộ.'); }
+    }
+    showToast('Đã lưu thay đổi thông tin chuyến xe.');
+    return saved;
+  }, [showToast, onSaveProfile, currentUser]);
 
   const handleToggleTripStatus = useCallback(
     async (tripId, newStatus) => {
@@ -436,6 +332,7 @@ export default function useTripsData({
           updateMyTripsCount?.(currentUser);
         } catch {}
         showToast('Chưa xóa được bài đăng trên máy chủ. Chuyến xe vẫn đang hiển thị, vui lòng thử lại.');
+        throw err;
       }
     },
     [currentUser, showToast, updateMyTripsCount, driverOffers, passengerRequests]
@@ -642,6 +539,7 @@ export default function useTripsData({
     showToast,
     handleRePublishTrip,
     handlePostTrip,
+    recordPostedTrip,
     handleEditTrip,
     handleToggleTripStatus,
     handleDeleteTrip,

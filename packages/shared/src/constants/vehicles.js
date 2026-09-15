@@ -157,6 +157,11 @@ export function getRecommendedCargoPrice(cargoTypeId, distanceKm = 120) {
  * @returns {{ capacity: number, seats: number, vehicleType: string, hasCargoBed: boolean, isCargoVehicle: boolean }}
  */
 export function sanitizeVehicleCapacityAndSeats(capacity, requestedSeats) {
+  const numericCapacity = Number(capacity);
+  if (Number.isInteger(numericCapacity) && numericCapacity >= 2 && numericCapacity <= 55 && ![5, 7].includes(numericCapacity)) {
+    const requested = Number(requestedSeats ?? numericCapacity - 1);
+    return { capacity: numericCapacity, vehicleCapacity: numericCapacity, seats: Math.max(0, Math.min(numericCapacity - 1, Math.floor(requested || 0))), vehicleType: numericCapacity > 7 ? 'service_vehicle' : 'family_vehicle', hasCargoBed: false, isCargoVehicle: false };
+  }
   const capStr = String(capacity || '').toLowerCase();
   let capKey = 5;
   if (capStr === 'truck_light' || capStr.includes('xe tải') || capStr.includes('tải nhẹ') || capStr.includes('k200') || capStr.includes('k250') || capStr.includes('porter') || capStr.includes('h150') || capStr.includes('qkr')) {
@@ -178,7 +183,8 @@ export function sanitizeVehicleCapacityAndSeats(capacity, requestedSeats) {
   } else {
     seats = config.recommendedSeats;
   }
-  if (seats < 1) seats = 1;
+  seats = Math.floor(seats);
+  if (seats < 0) seats = 0;
   if (seats > config.maxPassengerSeats) seats = config.maxPassengerSeats;
   return {
     capacity: config.capacity,

@@ -14,114 +14,60 @@ import {
 } from '../db/sqliteStore.js';
 
 import {
-  runBatchMatchingEpoch,
-  calculateShapleyFairPrice,
-  getCorridorDistanceKm
+  runBatchMatchingEpoch
 } from '../services/batchMatchingEngine.js';
 
-import { cleanPhoneNumber, isValidVietnamesePhone, maskPhoneNumber } from '@carmate/shared';
-import { sendBusinessAlert } from '../utils/telegramAlert.js';
+import { evaluateConnection } from '../services/connectionMatching.js';
+import { cancelAppointment } from '../services/bookingCommitment.js';
+import { cleanPhoneNumber, isValidVietnamesePhone, maskPhoneNumber, normalizeConnectionTerms, normalizeTravelDate, requestDeadline } from '@carmate/shared';
+
 
 /**
  * POST /api/intents - Khai báo ý định di chuyển (Chủ xe hoặc Khách)
  */
 export async function createMovementIntentHandler(req, res) {
+  if (!req.user?.id) return res.status(401).json({ success: false, error: 'Đăng nhập để lưu nhu cầu và nhận phản hồi.' });
   try {
-    const {
-      role = 'passenger', // 'driver' | 'passenger'
-      originHubId = '',
-      originName = '',
-      destinationHubId = '',
-      destinationName = '',
-      corridor = 'Tuyến QL13',
-      date = '',
-      timeSlot = '',
-      seats = 1,
-      isRecurring = false,
-      recurringDays = [],
-      isDoorstep = false,
-      doorstepAddress = '',
-      doorstepLat = null,
-      doorstepLng = null,
-      phone = '',
-      contactName = ''
-    } = req.body || {};
-
-    const clean = cleanPhoneNumber(phone || req.user?.phone || '');
-    if (!clean || !isValidVietnamesePhone(clean)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Số điện thoại không hợp lệ (cần đủ 10 số di động Việt Nam)'
-      });
+    const body = req.body || {};
+    const now = Date.now();
+    const role = body.role === 'driver' ? 'driver' : 'passenger';
+    const phone = cleanPhoneNumber(body.phone || req.user.phone || '');
+    if (!isValidVietnamesePhone(phone)) throw new Error('Cần số điện thoại liên lạc hợp lệ.');
+    const originName = String(body.originName || '').trim();
+    const destinationName = String(body.destinationName || '').trim();
+    if (!originName || !destinationName || (body.originHubId && body.originHubId === body.destinationHubId)) {
+      throw new Error('Chọn điểm đi và điểm đến khác nhau.');
     }
-
-    if (!originName || !destinationName) {
-      return res.status(400).json({
-        success: false,
-        error: 'Vui lòng chọn điểm đi và điểm đến hợp lệ'
-      });
-    }
-
-    // Tính toán ước tính giá Shapley minh bạch ngay khi khai báo ý định
-    const distKm = getCorridorDistanceKm(originHubId || originName, destinationHubId || destinationName, corridor);
-    const pricingEstimate = calculateShapleyFairPrice({
-      distanceKm: distKm,
-      corridor,
-      numPassengers: Number(seats) || 1,
-      isDoorstep: Boolean(isDoorstep)
-    });
-
+    const seats = Number(body.seats ?? 1);
+    if (!Number.isInteger(seats) || seats < 1 || seats > 54) throw new Error('Số người phải từ 1 đến 54.');
+    const date = normalizeTravelDate(body.date, now);
+    if (!date) throw new Error('Ngày đi không hợp lệ.');
+    const timeSlot = body.timeSlot || body.departureTime || 'all';
+    const expiresAt = requestDeadline({ ...body, date, timeSlot }, now);
+    const terms = normalizeConnectionTerms(body);
+    const existing = getIntents({ userId: req.user.id, role, status: 'pending' }).find(i =>
+      i.userId === req.user.id && i.originHubId === body.originHubId && i.destinationHubId === body.destinationHubId &&
+      i.date === date && i.timeSlot === timeSlot && Number(i.seats) === seats && i.pickupMode === terms.pickupMode && i.publicContactConsent === terms.publicContactConsent && Number(i.expiresAt) === expiresAt && i.doorstepAddress === (terms.pickupMode !== 'station' ? String(body.doorstepAddress || '').slice(0,500) : '') && Number(i.expiresAt) > now);
+    if (existing) return res.status(200).json({ success: true, data: existing, reused: true });
     const intent = await createIntent({
-      userId: req.user?.id || `USR-${clean}`,
-      role: role === 'driver' ? 'driver' : 'passenger',
-      originHubId,
-      originName,
-      destinationHubId,
-      destinationName,
-      corridor,
-      date,
-      timeSlot,
-      seats: Number(seats) || 1,
-      isRecurring: Boolean(isRecurring),
-      recurringDays: Array.isArray(recurringDays) ? recurringDays : [],
-      isDoorstep: Boolean(isDoorstep),
-      doorstepAddress,
-      doorstepLat,
-      doorstepLng,
-      phone: clean,
-      contactName: contactName || req.user?.name || (role === 'driver' ? 'Chủ xe' : 'Khách đi cùng'),
-      estimatedPricing: pricingEstimate
+      userId: req.user.id, role, originHubId: body.originHubId || '', originName,
+      destinationHubId: body.destinationHubId || '', destinationName,
+      corridor: body.corridor || 'Tuyến QL13', date, timeSlot, seats,
+      ...terms,
+      isDoorstep: terms.pickupMode === 'doorstep',
+      doorstepAddress: terms.pickupMode !== 'station' ? String(body.doorstepAddress || '').slice(0,500) : '',
+      doorstepLat: body.doorstepLat ?? null, doorstepLng: body.doorstepLng ?? null,
+      phone, contactName: String(body.contactName || req.user.name || 'Khách').slice(0,100),
+      originalRequestedAt: now, originalDeadlineAt: expiresAt, expiresAt,
+      status: 'pending', needStatus: 'open', publishDemandConsent: true, estimatedPricing: null,
+      maxPrice: body.maxPrice == null || body.maxPrice === '' ? null : Math.max(0, Number(body.maxPrice) || 0),
+      matchingPreference: ['balanced','earliest','lowest_price'].includes(body.matchingPreference) ? body.matchingPreference : 'balanced'
     });
-
-    // ⚡️ Bắn cảnh báo khẩn cấp về Telegram của Founder để khớp lệnh thủ công siêu tốc (Wizard of Oz Engine)
-    if (role === 'passenger') {
-      const priceText = pricingEstimate?.finalPricePerSeat
-        ? `${Number(pricingEstimate.finalPricePerSeat).toLocaleString('vi-VN')} đ`
-        : '165.000 đ';
-      sendBusinessAlert({
-        title: '🚨 YÊU CẦU XE TIỆN CHUYẾN MỚI (QL13)',
-        details: {
-          'Khách hàng': `${contactName || 'Người đi cùng'} (${clean})`,
-          'Lộ trình': `${originName} ➔ ${destinationName}`,
-          'Thời gian': `${date} (${timeSlot})`,
-          'Số chỗ': `${seats} ghế`,
-          'Ước tính giá': priceText,
-          '⚡️ ĐIỀU PHỐI': 'Bốc máy kiểm tra lịch xe nhà / gọi chủ xe quen trong 5 phút!'
-        },
-        req
-      }).catch((alertErr) => {
-        console.warn('[IntentController] Failed to dispatch Telegram business alert:', alertErr?.message);
-      });
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: 'Khai báo ý định thành công. Hệ thống đang tự động gom phiên khớp lệnh.',
-      data: intent,
-      estimatedPricing: pricingEstimate
-    });
+    await runBatchMatchingEpoch({ date }).catch(err => console.warn('[Matching]', err.message));
+    return res.status(201).json({ success: true, data: getIntentById(intent.id) || intent, estimatedPricing: null,
+      message: 'Đã lưu nhu cầu. Bạn sẽ thấy phản hồi khi có xe phù hợp; chưa có cuộc hẹn được xác nhận.' });
   } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
+    return res.status(400).json({ success: false, error: err.message });
   }
 }
 
@@ -152,7 +98,8 @@ export function getMovementIntentsHandler(req, res) {
     // `?mine=1`: chỉ trả ý định của chính người đang đăng nhập. Trước đây giao
     // diện phải tải TOÀN BỘ ý định rồi tự lọc theo số điện thoại ở phía client —
     // cách đó chỉ chạy được vì máy chủ lộ số thật của tất cả mọi người.
-    const scoped = mine ? intents.filter(isOwner) : intents;
+    const now = Date.now();
+    const scoped = mine ? intents.filter(isOwner) : intents.filter(i => i.status === 'pending' && i.needStatus !== 'closed' && Number(i.expiresAt || i.originalDeadlineAt || 0) > now && i.publishDemandConsent === true);
 
     // LỚP CHẮN PII (Nghị định 13/2023): sàn công khai chỉ được thấy bí danh và
     // số đã che. Số thật, tên thật chỉ hiện với chính chủ hoặc Quản trị viên.
@@ -162,11 +109,18 @@ export function getMovementIntentsHandler(req, res) {
       const safe = { ...intent };
       safe.phoneMasked = maskPhoneNumber(intent.phone || '');
       safe.publicName = intent.role === 'driver' ? `Chủ xe CX-${tail}` : `Người đi cùng KX-${tail}`;
+      safe.publicContactPhone = intent.publicContactConsent === true ? intent.phone : null;
       delete safe.phone;
       delete safe.phoneReal;
       delete safe.contactName;
       delete safe.userId;
       delete safe.matchedBookingId;
+      delete safe.doorstepAddress;
+      delete safe.doorstepLat;
+      delete safe.doorstepLng;
+      delete safe.pickupNotes;
+      delete safe.contactEmail;
+      delete safe.telegramId;
       return safe;
     });
 
@@ -278,8 +232,8 @@ export async function updateMovementIntentHandler(req, res) {
 
     if (seats !== undefined) {
       const seatNum = Number(seats);
-      if (!Number.isFinite(seatNum) || seatNum < 1 || seatNum > 7) {
-        return res.status(400).json({ success: false, error: 'Số ghế phải từ 1 đến 7.' });
+      if (!Number.isInteger(seatNum) || seatNum < 1 || seatNum > 54) {
+        return res.status(400).json({ success: false, error: 'Số ghế phải từ 1 đến 54.' });
       }
       // Không cho hạ số ghế xuống dưới số khách đã ghép: khách đã được xác nhận
       // mà bị đẩy ra vì Chủ xe bấm nhầm là mất chỗ thật.
@@ -299,12 +253,18 @@ export async function updateMovementIntentHandler(req, res) {
       return res.status(400).json({ success: false, error: 'Không có thay đổi nào được gửi lên.' });
     }
 
+    if (['matched','proposed'].includes(intent.status)) return res.status(409).json({ success: false, error: 'Xử lý cuộc hẹn đang mở trước khi đổi nhu cầu.' });
+    if (updates.date || updates.timeSlot || req.body?.expiresAt) {
+      updates.date = normalizeTravelDate(updates.date || intent.date);
+      updates.expiresAt = requestDeadline({ ...intent, ...updates, expiresAt: req.body?.expiresAt });
+      updates.originalDeadlineAt = updates.expiresAt;
+    }
     updates.updatedAt = new Date().toISOString();
     const updated = await updateIntent(id, updates);
 
     return res.status(200).json({
       success: true,
-      message: 'Đã cập nhật lịch trình. Người đi cùng đã ghép sẽ nhận được thông báo.',
+      message: 'Đã cập nhật nhu cầu tìm xe.',
       data: updated
     });
   } catch (err) {
@@ -336,9 +296,13 @@ export async function cancelMovementIntentHandler(req, res) {
     }
 
     const matchedCount = countMatchedRiders(intent);
+    for (const booking of getBookings().filter(b => b.requestId === id && b.needStatus !== 'closed' && !['cancelled','completed','expired'].includes(b.status))) {
+      cancelAppointment({ bookingId: booking.escrowId || booking.id, user: req.user, reason: String(reason || 'Không đi nữa') });
+    }
 
     const updated = await updateIntent(id, {
       status: 'cancelled',
+      needStatus: 'closed',
       cancelledAt: new Date().toISOString(),
       cancellationReason: String(reason || '').trim() || 'Chủ xe huỷ lịch trình',
       hadMatchedRiders: matchedCount
@@ -348,7 +312,7 @@ export async function cancelMovementIntentHandler(req, res) {
       success: true,
       message:
         matchedCount > 0
-          ? `Đã huỷ lịch trình. ${matchedCount} khách đã ghép sẽ được thông báo và điều phối chuyến khác.`
+          ? 'Đã hủy yêu cầu và cập nhật các cuộc hẹn liên quan.'
           : 'Đã huỷ lịch trình chờ.',
       data: updated,
       matchedRiders: matchedCount
@@ -409,4 +373,19 @@ export async function confirmIntentCheckpointHandler(req, res) {
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
+}
+
+export function previewDriverConnectionsHandler(req, res) {
+  try {
+    const now = Date.now();
+    const draft = req.body || {};
+    const trip = { ...draft, id: 'preview-only', status: 'active', userId: req.user?.id || null,
+      originHubId: draft.originHubId, destinationHubId: draft.destinationHubId || draft.destHubId,
+      availableSeats: Number(draft.availableSeats || draft.seats || 1), bookingSeatCapacity: Number(draft.availableSeats || draft.seats || 1) };
+    const data = getIntents({ role: 'passenger', status: 'pending' }).filter(i => i.needStatus !== 'closed' && Number(i.expiresAt || i.originalDeadlineAt) > now && i.publishDemandConsent === true)
+      .map(i => ({ intent: i, match: evaluateConnection(trip, i, { nowMs: now, bookings: [] }) }))
+      .filter(row => row.match).sort((a,b) => a.match.score-b.match.score)
+      .map(({intent,match}) => ({ id: intent.id, originName: intent.originName, destinationName: intent.destinationName, date: intent.date, timeSlot: intent.timeSlot, seats: intent.seats, matchingReason: match.reason }));
+    return res.json({ success: true, data, count: data.length, updatedAt: now });
+  } catch (err) { return res.status(400).json({ success: false, error: err.message }); }
 }

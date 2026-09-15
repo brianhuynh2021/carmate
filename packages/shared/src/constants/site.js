@@ -5,8 +5,8 @@ export const SITE_INFO = {
   domain: 'carmate.vn',
   url: 'https://carmate.vn',
   legalName: {
-    vi: 'Nền tảng kết nối đi chung xe CarMate',
-    en: 'CarMate Ridesharing Platform'
+    vi: 'Nền tảng kết nối hành trình CarMate',
+    en: 'CarMate Journey Connection Platform'
   },
   address: {
     vi: 'Tầng 5, Toà nhà Innovation Hub, 12 Nguyễn Văn Bảo, Phường 4, Quận Gò Vấp, TP. Hồ Chí Minh',

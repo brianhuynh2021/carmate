@@ -13,9 +13,9 @@
  * Tám nhịp quét, mỗi nhịp một chu kỳ riêng theo tính cấp bách:
  *
  *   T30_TICK      60s   Hội tụ không-thời gian, bắn báo trước 30 phút
- *   HANDSHAKE     60s   Nhắc lần 2 / thu hồi chỗ khi khách im lặng
+ *   HANDSHAKE     60s   Nhắc xác nhận đang ra điểm đón
  *   DEPARTURE     60s   Canh T-40/T-30/T-20 theo giờ khởi hành THẬT của chuyến
- *   LATENESS      90s   Radar trễ hẹn -> hoán đổi chuyến Shadow
+ *   LATENESS      90s   Báo nguy cơ trễ và đề xuất phương án cần xác nhận
  *   MICRO_BATCH  180s   Phiên gom khớp lệnh (đúng cửa sổ 3 phút đã khai báo)
  *   RADAR_SWEEP  300s   4 chốt đêm T-8h/T-6h/T-1.5h/T-45m
  *   TRIP_LIFECYCLE 15m  Đóng sổ chuyến đã chạy xong, đẩy chuyến định kỳ sang tuần sau
@@ -49,7 +49,7 @@ import {
   pruneOldNotifications
 } from './notificationService.js';
 import { evaluateRadarSweepCheckpoint, RADAR_CHECKPOINTS } from '@carmate/shared';
-import { getBookings, getUserByPhone, sweepFinishedTrips } from '../db/sqliteStore.js';
+import { getBookings, getUserByPhone, sweepFinishedTrips, updateBookingStatus, getIntentById, updateIntent } from '../db/sqliteStore.js';
 
 export const SCHEDULER_INTERVALS = Object.freeze({
   T30_TICK_MS: 60 * 1000,
@@ -150,7 +150,7 @@ async function tickT30() {
       phone: rider.phone,
       kind: NOTIFICATION_KINDS.T30_APPROACH,
       title: `Xe sắp tới ${rider.hubShortName || rider.hubName}`,
-      body: `Xe ${session.plate} còn khoảng 30 phút nữa tới trạm. Vui lòng ra trạm trước ${arriveLabel} và bấm xác nhận trong ứng dụng.`,
+      body: `Cuộc hẹn với xe ${session.plate || ''} tại ${rider.hubShortName || rider.hubName} đang đến gần. Khoảng giờ đã chốt kết thúc lúc ${arriveLabel}. Hãy cập nhật khi bạn đang đến điểm đón.`,
       data: {
         intentId: rider.intentId,
         hubId: trig.hubId,
@@ -201,7 +201,7 @@ async function tickHandshake() {
       phone: rider.phone,
       kind: NOTIFICATION_KINDS.CHECKIN_REMINDER,
       title: 'Bạn đã ra trạm chưa?',
-      body: `Xe sắp tới ${rider.hubShortName || rider.hubName}. Bấm "Tôi đang ra trạm" để giữ chỗ, nếu không chỗ sẽ được nhường cho khách khác.`,
+      body: `Xe sắp tới ${rider.hubShortName || rider.hubName}. Bấm "Tôi đang ra trạm" để chủ xe biết. Cuộc hẹn đã xác nhận vẫn được giữ.`,
       data: { intentId: rider.intentId, hubId, requiresHandshake: true },
       dedupeKey: `REMIND:${rider.intentId}:${rider.t30NotifiedAt}`
     });
@@ -229,83 +229,16 @@ async function tickHandshake() {
  * kết và hoán đổi. Mốc giờ hứa với khách giữ nguyên.
  */
 async function tickLateness() {
-  const atRisk = evaluateLatenessRisk(Date.now());
-  if (atRisk.length === 0) return;
-
-  for (const item of atRisk) {
-    const { rider, hubId, session, lateness, committedAt } = item;
-
-    const candidate = findShadowCandidate({
-      hubId,
-      seatsNeeded: rider.seatsNeeded,
-      committedAtMs: committedAt,
-      excludeTripId: session.tripId
-    });
-
-    if (!candidate) {
-      // Không có xe hỗ trợ: báo sớm cho khách còn kịp chủ động,
-      // thà biết trước 20 phút còn hơn đứng đợi trong vô vọng.
-      await sendNotification({
-        phone: rider.phone,
-        kind: NOTIFICATION_KINDS.TRIP_AT_RISK,
-        title: 'Xe có thể tới trễ',
-        body: `Xe ${session.plate} đang gặp chậm trễ trên đường (dự kiến trễ ~${Math.round(lateness.expectedDelaySeconds / 60)} phút). Hệ thống đang tìm xe hỗ trợ cho bạn.`,
-        data: { intentId: rider.intentId, hubId, tripId: session.tripId, delayMinutes: Math.round(lateness.expectedDelaySeconds / 60) },
-        dedupeKey: `ATRISK:${rider.intentId}:${Math.floor(Date.now() / (10 * 60 * 1000))}`
-      });
-      stats.actions.radarAlerts += 1;
-      continue;
-    }
-
-    const swap = applyShadowSwap({
-      intentId: rider.intentId,
-      newTripId: candidate.session.tripId,
-      newEtaMs: candidate.distribution.etaMs
-    });
-
-    if (!swap.success) continue;
-    stats.actions.shadowSwaps += 1;
-
-    const newEtaLabel = formatClock(candidate.distribution.etaMs);
-
-    // Khách chỉ thấy MỘT sự thật: xe mới, giờ cũ. Không kể lể về sự cố.
+  for (const { rider, hubId, session, lateness, committedAt } of evaluateLatenessRisk(Date.now())) {
+    const candidate = findShadowCandidate({ intentId: rider.intentId, hubId, seatsNeeded: rider.seatsNeeded, committedAtMs: committedAt, excludeTripId: session.tripId });
+    const proposal = candidate ? applyShadowSwap({ intentId: rider.intentId, newTripId: candidate.session.tripId, newEtaMs: candidate.distribution.etaMs }) : null;
     await sendNotification({
-      phone: rider.phone,
-      kind: NOTIFICATION_KINDS.SHADOW_SWAP,
-      title: 'Đã chuyển sang xe hỗ trợ',
-      body: `Xe ${candidate.session.plate} (${candidate.session.vehicleModel}) sẽ đón bạn tại ${rider.hubShortName || rider.hubName} lúc ${newEtaLabel}, đúng giờ đã hẹn.`,
-      data: {
-        intentId: rider.intentId,
-        hubId,
-        newTripId: candidate.session.tripId,
-        plate: candidate.session.plate,
-        vehicleModel: candidate.session.vehicleModel,
-        driverName: candidate.session.driverName,
-        etaMs: candidate.distribution.etaMs,
-        timeLabel: newEtaLabel
-      },
-      dedupeKey: `SWAP:${rider.intentId}:${candidate.session.tripId}`
+      phone: rider.phone, kind: NOTIFICATION_KINDS.TRIP_AT_RISK, title: 'Xe có thể tới trễ',
+      body: `Dự báo hiện tại trễ khoảng ${Math.max(0, Math.round(lateness.expectedDelaySeconds / 60))} phút. ${proposal?.success ? 'Có xe khác có thể phù hợp; cần bạn và chủ xe mới xác nhận trước khi đổi.' : 'Chưa có xe thay thế được xác nhận.'} Cuộc hẹn hiện tại chưa bị đổi.`,
+      data: { intentId: rider.intentId, hubId, tripId: session.tripId, delayMinutes: Math.round(lateness.expectedDelaySeconds / 60), recoveryProposal: rider.recoveryProposal || null },
+      dedupeKey: `ATRISK:${rider.intentId}:${Math.floor(Date.now() / (10 * 60 * 1000))}`
     });
-
-    // Xe hỗ trợ nhận lệnh đón
-    await sendNotification({
-      phone: candidate.session.driverPhone,
-      kind: NOTIFICATION_KINDS.RIDER_READY,
-      title: 'Có khách cần đón tại trạm',
-      body: `${rider.name} (${rider.seatsNeeded} chỗ) tại ${rider.hubShortName || rider.hubName}, dự kiến ${newEtaLabel}.`,
-      data: { intentId: rider.intentId, hubId, tripId: candidate.session.tripId },
-      dedupeKey: `SWAPDRV:${rider.intentId}:${candidate.session.tripId}`
-    });
-
-    // Xe chính được giải phóng khỏi cam kết, cứ việc chạy thẳng
-    await sendNotification({
-      phone: session.driverPhone,
-      kind: NOTIFICATION_KINDS.SHADOW_SWAP,
-      title: 'Đã bàn giao khách cho xe hỗ trợ',
-      body: `Do tình hình giao thông, khách tại ${rider.hubShortName || rider.hubName} đã được chuyển sang xe khác. Bạn không cần dừng đón, điểm tín nhiệm không bị ảnh hưởng.`,
-      data: { intentId: rider.intentId, hubId, tripId: session.tripId, released: true },
-      dedupeKey: `SWAPREL:${rider.intentId}:${session.tripId}`
-    });
+    stats.actions.radarAlerts += 1;
   }
 }
 
@@ -320,6 +253,7 @@ async function tickLateness() {
  * Công và ra kịp mặt đường, thay vì ra trạm đứng đợi rồi mới biết mình bị bỏ rơi.
  */
 async function tickDeparture() {
+  await expireUnansweredInquiries();
   const sessions = getActiveCockpitSessions();
   const actions = evaluateDepartureCheckpoints({ nowMs: Date.now(), activeSessions: sessions });
   if (actions.length === 0) return;
@@ -373,7 +307,7 @@ async function tickDeparture() {
         phone: passengerPhone,
         kind: NOTIFICATION_KINDS.TRIP_AT_RISK,
         title: 'Chuyến đi có thể bị gián đoạn',
-        body: `Hệ thống chưa kết nối được với chủ xe cho chuyến ${depLabel}. Bạn vẫn còn ${item.minutesUntil} phút — CarMate đã chuẩn bị sẵn phương án: ${busLine}`,
+        body: `Chưa có xác nhận sẵn sàng cho cuộc hẹn ${depLabel}. ${busLine ? `Thông tin để kiểm tra thêm: ${busLine}.` : 'Chưa có phương án khác được xác nhận.'} Cuộc hẹn hiện tại vẫn còn hiệu lực; không coi thông tin dự phòng là xe đã nhận đón.`,
         data: {
           bookingId: booking.escrowId,
           rescueMode: true,
@@ -397,7 +331,7 @@ async function tickDeparture() {
 
       console.warn(
         `[Scheduler:departure] Bật cứu hộ cho ${booking.escrowId} (${item.reason}), ` +
-          `chủ xe ${driverPhone} bị ghi nhận trễ hẹn.`
+          `cần xác nhận lại khả năng đón.`
       );
     }
   }
@@ -426,11 +360,9 @@ async function tickMicroBatch() {
  * những khoảnh khắc mà trước đây hoàn toàn không có gì chạy vì khách đang ngủ.
  */
 async function tickRadarSweep() {
-  // 'driver_confirmed' PHẢI nằm trong danh sách: driverConfirmBooking ghi đúng
-  // trạng thái này, thiếu nó thì chủ xe vừa bấm xác nhận xong là chuyến rơi khỏi
-  // radar ngay lập tức — đúng những chuyến đang khoẻ lại mất giám sát.
   const bookings = getBookings().filter((b) =>
-    ['zalo_active', 'confirmed', 'pre_confirmed', 'driver_confirmed', 'reassigned'].includes(b.status)
+    b.bothConfirmed === true && b.needStatus !== 'closed' &&
+    ['zalo_active', 'confirmed', 'driver_confirmed'].includes(b.status)
   );
   if (bookings.length === 0) return;
 
@@ -445,24 +377,20 @@ async function tickRadarSweep() {
     if (!driverPhone) continue;
 
     const driver = getUserByPhone(String(driverPhone).replace(/\D/g, ''));
-    const session = sessions.find((s) => s.driverPhone === driverPhone);
+    const session = sessions.find((s) => s.tripId === booking.tripId && s.driverPhone === driverPhone);
     const lastHeartbeatMinutesAgo = session?.lastPing
       ? Math.round((Date.now() - session.lastPing) / 60000)
       : 999;
 
     const evaluation = evaluateRadarSweepCheckpoint({
       checkpoint,
-      driverConfirmed: booking.driverConfirmed === true || booking.status === 'confirmed',
+      driverConfirmed: booking.driverConfirmed === true,
       lastHeartbeatMinutesAgo,
       isStationary: (session?.speed ?? 0) < 3,
       distanceToStationKm: 0,
       trustScore: Number(driver?.trustScore ?? 100),
-      // evaluateRadarSweepCheckpoint đọc `availableSeats`/`seats`, còn phiên cockpit
-      // lưu `seatsAvailable`. Không ánh xạ thì requiresShadowSwap vĩnh viễn false
-      // và chốt T-6h không bao giờ báo cho ai.
-      candidateShadowTrips: sessions
-        .filter((s) => s.seatsAvailable > 0 && s.driverPhone !== driverPhone)
-        .map((s) => ({ ...s, availableSeats: s.seatsAvailable, seats: s.seatsAvailable }))
+      // Nearby seats alone do not establish route, timing, or acceptance.
+      candidateShadowTrips: []
     });
 
     if (evaluation.action === 'NONE') continue;
@@ -472,19 +400,19 @@ async function tickRadarSweep() {
       await sendNotification({
         phone: driverPhone,
         kind: NOTIFICATION_KINDS.DRIVER_CONFIRM_REQUEST,
-        title: 'Xác nhận chuyến ngày mai',
-        body: evaluation.message,
+        title: 'Cập nhật tình trạng sẵn sàng',
+        body: 'Bạn đã sẵn sàng thực hiện cuộc hẹn đón đã chốt chưa? Hãy cập nhật để khách biết tình trạng hiện tại.',
         data: { bookingId: booking.escrowId, checkpoint },
         dedupeKey: `RADAR:${booking.escrowId}:${checkpoint}`
       });
-    } else if (evaluation.requiresShadowSwap && evaluation.shadowTrip) {
+    } else if (['ALERT_PASSENGER_OPTION', 'TRIGGER_WAKEUP_PULSE', 'UNFREEZE_PASSENGER_FALLBACK', 'SWAP_SHADOW_FLEET'].includes(evaluation.action)) {
       await sendNotification({
         phone: booking.passengerPhone,
-        kind: NOTIFICATION_KINDS.SHADOW_SWAP,
-        title: 'Đã sắp xếp xe hỗ trợ',
-        body: `Chuyến của bạn đã được chuyển sang xe ${evaluation.shadowTrip.plate || 'hỗ trợ'} để đảm bảo đúng giờ hẹn.`,
-        data: { bookingId: booking.escrowId, checkpoint, newTripId: evaluation.shadowTrip.tripId },
-        dedupeKey: `RADARSWAP:${booking.escrowId}:${checkpoint}`
+        kind: NOTIFICATION_KINDS.TRIP_AT_RISK,
+        title: 'Cần kiểm tra lại khả năng đón',
+        body: 'Chưa có đủ cập nhật về khả năng đón của xe. Hãy kiểm tra với chủ xe; cuộc hẹn hiện tại vẫn còn hiệu lực. Chưa có xe thay thế được hai bên xác nhận.',
+        data: { bookingId: booking.escrowId, checkpoint, needsReview: true, supportDispatched: false },
+        dedupeKey: `RADARRISK:${booking.escrowId}:${checkpoint}`
       });
     }
   }
@@ -629,4 +557,30 @@ export async function runTickNow(name) {
 
   await guard(name, fn);
   return { success: true, name, tick: stats.ticks[name] };
+}
+
+export async function expireUnansweredInquiries(now = Date.now()) {
+  for (const booking of getBookings()) {
+    if (booking.bothConfirmed || booking.needStatus === 'closed' || !['inquiring','pre_confirmed'].includes(booking.status)) continue;
+    const expiry = booking.status === 'pre_confirmed' ? new Date(booking.preConfirmedExpiresAt).getTime() : Number(booking.inquiryExpiresAt);
+    if (!Number.isFinite(expiry) || expiry > now || (!booking.inquiryExpiresAt && booking.status !== 'pre_confirmed')) continue;
+    const deadline = new Date(booking.originalDeadlineAt).getTime();
+    const remainOpen = Number.isFinite(deadline) && deadline > now;
+    const intent = booking.requestId ? getIntentById(booking.requestId) : null;
+    // A linked intent owns the retry. Direct inquiries retain their one recovery
+    // record instead; neither path starts a second actionable chain.
+    const directRecovery = remainOpen && !intent;
+    await updateBookingStatus(booking.escrowId || booking.id, directRecovery ? 'inquiring' : 'expired', {
+      needStatus: directRecovery ? 'open' : 'closed', proposalTerms: null, proposalVersion: null,
+      proposalDriverId: null, proposalDriverPhone: null, preConfirmedBy: null, preConfirmedExpiresAt: null,
+      inquiryExpiresAt: null, needsReplacement: directRecovery, seatReserved: false,
+      supportDispatched: false, expiredAt: now,
+      declinedTripIds: [...new Set([...(booking.declinedTripIds || []), booking.tripId].filter(Boolean))]
+    });
+    if (intent) await updateIntent(intent.id, {
+      status: remainOpen ? 'pending' : 'expired', needStatus: remainOpen ? 'open' : 'closed',
+      matchedTripId: null, matchedBookingId: null,
+      declinedTripIds: [...new Set([...(intent.declinedTripIds || []), booking.tripId].filter(Boolean))]
+    });
+  }
 }

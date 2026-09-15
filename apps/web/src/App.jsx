@@ -22,7 +22,7 @@ const CockpitMode = React.lazy(() => import('./components/cockpit/CockpitMode.js
 const StationRiderView = React.lazy(() => import('./components/station/StationRiderView.jsx'));
 const InboxModal = React.lazy(() => import('./components/modals/InboxModal.jsx'));
 const UserProfileModal = React.lazy(() => import('./components/profile/UserProfileModal.jsx'));
-const EscrowBookingModal = React.lazy(() => import('./components/modals/EscrowBookingModal.jsx'));
+import InstantBookingModal from './components/modals/InstantBookingModal.jsx';
 const QuickPostTripModal = React.lazy(() => import('./components/modals/QuickPostTripModal.jsx'));
 
 // Modals
@@ -331,11 +331,9 @@ export default function App() {
     setShowAiModal,
     showDeleteAccountModal,
     setShowDeleteAccountModal,
-    pendingBookingTrip,
-    setPendingBookingTrip,
-    pendingPostTrip,
-    setPendingPostTrip,
-    openAuthWithContext
+    openAuthWithContext,
+    takeAuthContinuation,
+    cancelAuth
   } = useAppModals();
 
   // State Hồ sơ & Garage của tôi (Apple Portal Modal)
@@ -470,7 +468,7 @@ export default function App() {
     refreshBookings,
     toastMessage,
     showToast,
-    handlePostTrip,
+    recordPostedTrip,
     handleEditTrip,
     handleToggleTripStatus,
     handleDeleteTrip,
@@ -487,8 +485,7 @@ export default function App() {
     setCancelRecord,
     setDelayRecord,
     setReviewRecord,
-    setPendingPostTrip,
-    setShowAuthModal,
+    onRequireAuth: openAuthWithContext,
     onSaveProfile: handleSaveProfile,
     t
   });
@@ -766,14 +763,16 @@ export default function App() {
   const [movementIntentDestHub, setMovementIntentDestHub] = useState(null);
   const [movementIntentDate, setMovementIntentDate] = useState(null);
   const [movementIntentTimeSlot, setMovementIntentTimeSlot] = useState(null);
+  const [movementIntentSeats, setMovementIntentSeats] = useState(1);
 
-  const handleOpenMovementIntent = useCallback((targetRole = 'passenger', hubId = null, destHubId = null, initialDate = null, initialTimeSlot = null) => {
+  const handleOpenMovementIntent = useCallback((targetRole = 'passenger', hubId = null, destHubId = null, initialDate = null, initialTimeSlot = null, initialSeats = 1) => {
     const validRole = targetRole === 'driver' ? 'driver' : 'passenger';
     setMovementIntentRole(validRole);
     setMovementIntentOriginHub(hubId || null);
     setMovementIntentDestHub(destHubId || null);
     setMovementIntentDate(initialDate || null);
     setMovementIntentTimeSlot(initialTimeSlot || null);
+    setMovementIntentSeats(initialSeats);
     setMovementIntentModalOpen(true);
   }, []);
 
@@ -854,18 +853,12 @@ export default function App() {
     }
     trackViewTrip(trip.id, `${trip.from} - ${trip.to}`);
 
-    // Giữ chỗ bắt buộc đăng nhập. Vé phải gắn với một SĐT đã xác thực thì mới có
-    // cơ sở mở khoá liên hệ hai chiều, và Chủ xe mới biết ai đang lên xe mình.
-    if (!currentUser) {
-      setPendingPostTrip(null);
-      showToast('Vui lòng đăng nhập để giữ chỗ chuyến xe');
-      setShowAuthModal(true);
-      return;
-    }
     setSelectedItemForEscrow(trip);
   };
 
   const handleAuthSuccess = (user, tripIds = []) => {
+    const continueAction = takeAuthContinuation();
+    setShowAuthModal(false);
     setCurrentUser(user);
     try {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
@@ -892,20 +885,17 @@ export default function App() {
     }
     setAuthModalConfig({
       title: 'Đăng Nhập CarMate',
-      subtitle: 'Đồng bộ bài đăng · Tiết kiệm chi phí · An toàn & bảo mật',
+      subtitle: 'Quản lý chuyến và nhận phản hồi cho nhu cầu của bạn.',
       contextNotice: null,
       pendingTab: null
     });
 
-    if (pendingPostTrip) {
-      const tripToPost = { ...pendingPostTrip };
-      setPendingPostTrip(null);
-      handlePostTrip(tripToPost, user);
-    }
-
-    if (pendingBookingTrip) {
-      setSelectedItemForEscrow(pendingBookingTrip);
-      setPendingBookingTrip(null);
+    if (continueAction) {
+      try {
+        Promise.resolve(continueAction(user)).catch((err) => showToast(err.message || 'Không thể tiếp tục thao tác. Vui lòng thử lại.'));
+      } catch (err) {
+        showToast(err.message || 'Không thể tiếp tục thao tác. Vui lòng thử lại.');
+      }
     }
   };
 
@@ -984,12 +974,24 @@ export default function App() {
   }).length;
   const container = 'max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8';
 
+  const authDialog = showAuthModal ? (
+    <AuthModal
+      onClose={cancelAuth}
+      onSuccess={handleAuthSuccess}
+      initialPhone={currentUser?.phone || ''}
+      title={authModalConfig.title}
+      subtitle={authModalConfig.subtitle}
+      contextNotice={authModalConfig.contextNotice}
+    />
+  ) : null;
+
   // CHẾ ĐỘ TAPLO Ô TÔ (COCKPIT HUD TOÀN MÀN HÌNH CHO CHỦ XE)
   if (activeTab === 'cockpit') {
     return (
       <>
         <CockpitMode
-          tripId={`TRIP-${currentUser?.id || currentUser?.phone || 'TAPLO'}`}
+          onRequireAuth={openAuthWithContext}
+          onOpenBookings={() => { try { sessionStorage.setItem('carmate_booked_subtab', 'active'); } catch { /* optional preference */ } setActiveTab('booked'); }}
           initialCorridor={activeCorridor || 'Tuyến QL13'}
           currentUser={currentUser}
           onBack={() => setActiveTab('market')}
@@ -1002,8 +1004,9 @@ export default function App() {
               isOpen={isQuickPostTripOpen}
               onClose={() => setIsQuickPostTripOpen(false)}
               currentUser={currentUser}
-              onSuccess={(newTrip) => {
-                handlePostTrip(newTrip, currentUser);
+              onRequireAuth={openAuthWithContext}
+              onSuccess={(newTrip, owner) => {
+                recordPostedTrip(newTrip, owner);
                 try {
                   sessionStorage.setItem('carmate_booked_subtab', 'driver');
                 } catch {}
@@ -1013,6 +1016,7 @@ export default function App() {
             />
           </React.Suspense>
         )}
+        {authDialog}
         <Toast message={toastMessage} />
       </>
     );
@@ -1026,7 +1030,7 @@ export default function App() {
           hubId={stationHubId}
           initialDestinationHubId={stationDestinationHubId}
           currentUser={currentUser}
-          onRequireAuth={() => setShowAuthModal(true)}
+          onRequireAuth={openAuthWithContext}
           onBack={() => setActiveTab('market')}
           onShowToast={showToast}
           onViewBookedTab={(tab, booking) => {
@@ -1036,6 +1040,7 @@ export default function App() {
           onBookingCreated={handleBookingCreated}
           onAuthSuccess={handleAuthSuccess}
         />
+        {authDialog}
         <Toast message={toastMessage} />
       </>
     );
@@ -1074,7 +1079,7 @@ export default function App() {
           <div className={`${container} py-5 sm:py-8`}>
             <CorridorSearchBoard
               currentUser={currentUser}
-              onRequireAuth={() => setShowAuthModal(true)}
+              onRequireAuth={openAuthWithContext}
               checkIsMyTrip={checkIsMyTrip}
               onManageTrip={handleManageMyTrip}
               onOpenCockpit={() => setActiveTab('cockpit')}
@@ -1083,8 +1088,8 @@ export default function App() {
                 setStationDestinationHubId(destHub || null);
                 setActiveTab('station');
               }}
-              onOpenIntentModal={(targetRole, hubId, destHubId, targetDate, targetTimeSlot) => {
-                handleOpenMovementIntent(targetRole, hubId, destHubId, targetDate, targetTimeSlot);
+              onOpenIntentModal={(targetRole, hubId, destHubId, targetDate, targetTimeSlot, targetSeats) => {
+                handleOpenMovementIntent(targetRole, hubId, destHubId, targetDate, targetTimeSlot, targetSeats);
               }}
               onViewBookedTab={(tab, booking) => {
                 if (booking) {
@@ -1126,7 +1131,7 @@ export default function App() {
         {activeTab === 'admin' && (
           <React.Suspense
             fallback={
-              <div className="min-h-[50vh] flex flex-col items-center justify-center gap-2 text-slate-400 text-xs font-medium">
+              <div className="type-caption min-h-[50vh] flex flex-col items-center justify-center gap-2 text-slate-400">
                 <span className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                 <span>{t('appRoot.s001')}</span>
               </div>
@@ -1178,23 +1183,18 @@ export default function App() {
         />
       )}
       {selectedItemForEscrow && (
-        <EscrowBookingModal
-          item={selectedItemForEscrow}
-          isOwner={checkIsMyTrip(selectedItemForEscrow)}
+        <InstantBookingModal
+          isOpen
+          trip={selectedItemForEscrow}
           currentUser={currentUser}
+          onRequireAuth={openAuthWithContext}
           onClose={() => setSelectedItemForEscrow(null)}
-          onConfirmBooking={handleConfirmBooking}
-          onAuthSuccess={handleAuthSuccess}
-          onViewTrustProfile={setSelectedDriverForTrust}
-          onOpenInbox={(bookingId, opts) => {
-            setSelectedItemForEscrow(null);
-            handleOpenInbox(bookingId, opts);
-          }}
+          onBookingSuccess={(booking) => handleConfirmBooking(booking, { keepModalOpen: true })}
           onViewBookedTab={() => {
             setSelectedItemForEscrow(null);
+            try { sessionStorage.setItem('carmate_booked_subtab', 'active'); } catch { /* optional preference */ }
             setActiveTab('booked');
           }}
-          onAutoPostDemand={handlePostTrip}
           onShowToast={showToast}
         />
       )}
@@ -1263,16 +1263,7 @@ export default function App() {
           onClose={() => setSelectedTripForPhotos(null)}
         />
       )}
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={handleAuthSuccess}
-          initialPhone={currentUser?.phone || ''}
-          title={authModalConfig.title}
-          subtitle={authModalConfig.subtitle}
-          contextNotice={authModalConfig.contextNotice}
-        />
-      )}
+
 
       {showProfileModal && (
         <UserProfileModal
@@ -1318,11 +1309,13 @@ export default function App() {
         <MovementIntentModal
           isOpen={movementIntentModalOpen}
           onClose={() => setMovementIntentModalOpen(false)}
+          onRequireAuth={openAuthWithContext}
           initialRole={movementIntentRole}
           initialOriginHubId={movementIntentOriginHub}
           initialDestHubId={movementIntentDestHub}
           initialDate={movementIntentDate}
           initialTimeSlot={movementIntentTimeSlot}
+          initialSeats={movementIntentSeats}
           currentUser={currentUser}
           onSuccess={() => {
             setActiveTab('booked');
@@ -1337,8 +1330,9 @@ export default function App() {
             isOpen={isQuickPostTripOpen}
             onClose={() => setIsQuickPostTripOpen(false)}
             currentUser={currentUser}
-            onSuccess={(newTrip) => {
-              handlePostTrip(newTrip, currentUser);
+            onRequireAuth={openAuthWithContext}
+            onSuccess={(newTrip, owner) => {
+              recordPostedTrip(newTrip, owner);
               try {
                 sessionStorage.setItem('carmate_booked_subtab', 'driver');
               } catch {}
@@ -1358,6 +1352,7 @@ export default function App() {
       />
       <PwaInstallPrompt />
       <AppleMacNotification onOpenInbox={handleOpenInbox} onSelectBooking={handleOpenInbox} />
+      {authDialog}
       <Toast message={toastMessage} />
     </div>
   );

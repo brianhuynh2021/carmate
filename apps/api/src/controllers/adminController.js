@@ -40,19 +40,10 @@ import {
   clearAllTripIncidents,
   clearAllMatchingEpochs,
   clearAllSeatExchangeOrders,
-  clearNonAdminUsers,
-  saveUser,
-  getUserByPhone,
-  addTrip,
-  getTrips
+  clearNonAdminUsers
 } from '../db/sqliteStore.js';
 import {
-  cleanPhoneNumber,
-  isValidVietnamesePhone,
-  sanitizeVehicleCapacityAndSeats,
-  toPublicAlias,
   calculateDynamicTariffByDistance,
-  getFixedSegmentTariff,
   validateTariffParams,
   TARIFF_PARAM_BOUNDS,
   DEFAULT_TARIFF_PARAMS
@@ -252,7 +243,7 @@ export async function adminAuth(req, res) {
       pendingMfaSessions.delete(mfaSessionId);
       failedAttemptsMap.delete(clientIp);
 
-      const adminToken = jwt.sign({ role: 'super_admin', sessionType: 'admin_portal', issuedAt: now }, JWT_SECRET, {
+      const adminToken = jwt.sign({ role: 'super_admin', sessionType: 'admin_portal', sessionId: crypto.randomUUID(), issuedAt: now }, JWT_SECRET, {
         expiresIn: '2h'
       });
 
@@ -309,7 +300,7 @@ export async function adminAuth(req, res) {
     const inputDirectMfa = typeof mfaCode === 'string' ? mfaCode.trim() : '';
     const staticMfa = process.env.CARMATE_ADMIN_MFA_CODE || '';
     if (inputDirectMfa && (inputDirectMfa === staticMfa || (!isProduction && inputDirectMfa === '123456'))) {
-      const adminToken = jwt.sign({ role: 'super_admin', sessionType: 'admin_portal', issuedAt: now }, JWT_SECRET, {
+      const adminToken = jwt.sign({ role: 'super_admin', sessionType: 'admin_portal', sessionId: crypto.randomUUID(), issuedAt: now }, JWT_SECRET, {
         expiresIn: '2h'
       });
       return res.status(200).json({
@@ -1113,166 +1104,6 @@ export function _clearPendingMfaSessions() {
  * rồi nhập hộ. Bác tài chưa cần cài ứng dụng; khi nào họ đăng nhập bằng chính số
  * điện thoại này qua OTP thì nhận lại nguyên hồ sơ và các chuyến đã đăng.
  */
-export async function createDriverProfileHandler(req, res) {
-  try {
-    const body = req.body || {};
-
-    // ── 1. Hồ sơ Chủ xe ────────────────────────────────────────────────
-    const name = String(body.name || '').trim();
-    const phone = cleanPhoneNumber(body.phone || '');
-    const plate = String(body.plate || body.licensePlate || '').trim();
-    const carType = String(body.carType || body.vehicleModel || '').trim();
-
-    if (!name) {
-      return res.status(400).json({ success: false, error: 'Vui lòng nhập tên Chủ xe.' });
-    }
-    if (!isValidVietnamesePhone(phone)) {
-      return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ (10 số, đầu 03/05/07/08/09).' });
-    }
-    if (!plate) {
-      return res.status(400).json({ success: false, error: 'Vui lòng nhập biển số xe.' });
-    }
-    if (!carType) {
-      return res.status(400).json({ success: false, error: 'Vui lòng nhập dòng xe.' });
-    }
-
-    const existing = getUserByPhone(phone);
-    if (existing && existing.isBanned) {
-      return res.status(400).json({ success: false, error: 'Số điện thoại này đang bị khoá trên hệ thống.' });
-    }
-
-    // Sức chứa xe chuẩn hoá theo quy chuẩn ghế (5/7 chỗ, bán tải, xe tải nhẹ)
-    const { capacity, vehicleType, hasCargoBed, isCargoVehicle } = sanitizeVehicleCapacityAndSeats(
-      body.capacity || body.vehicleCapacity || 5,
-      body.availableSeats
-    );
-
-    const now = new Date().toISOString();
-    const user = {
-      ...(existing || {}),
-      id: existing?.id || `USR-${phone}`,
-      phone,
-      name,
-      role: 'driver',
-      // Admin gặp trực tiếp và đối chiếu giấy tờ tận nơi nên đánh dấu đã xác minh.
-      // Cờ createdByAdmin giữ lại dấu vết ai là người nhập hộ.
-      isCccdVerified: 1,
-      isGplxVerified: 1,
-      isDriverVerified: true,
-      createdByAdmin: true,
-      createdByAdminAt: existing?.createdByAdminAt || now,
-      isBanned: 0,
-      trustScore: existing?.trustScore ?? 80,
-      vehicle: {
-        ...(existing?.vehicle || {}),
-        plate,
-        brand: carType.split(/\s+/)[0] || '',
-        model: carType,
-        capacity,
-        color: String(body.color || '').trim() || existing?.vehicle?.color || '',
-        photos: Array.isArray(existing?.vehicle?.photos) ? existing.vehicle.photos : [],
-        status: 'VERIFIED'
-      },
-      createdAt: existing?.createdAt || now,
-      updatedAt: now
-    };
-    await saveUser(user);
-
-    // ── 2. Chuyến xe đầu tiên (tuỳ chọn) ───────────────────────────────
-    let createdTrip = null;
-    const wantsTrip = Boolean(body.from && body.to && body.date && body.time);
-
-    if (wantsTrip) {
-      const requestedSeats = Number(body.availableSeats ?? 2);
-      const { seats } = sanitizeVehicleCapacityAndSeats(capacity, requestedSeats);
-
-      // Giá là đầu ra của công thức nền tảng, kể cả khi Admin tạo hộ chuyến:
-      // có cặp trạm thì tính thẳng, không có thì mới nhận số Admin nhập tay.
-      let price = Number(body.basePricePerSeat ?? 0);
-      if (body.originHubId && body.destinationHubId) {
-        price = getFixedSegmentTariff(body.originHubId, body.destinationHubId).pricePerSeat;
-      }
-
-      if (!Number.isFinite(price) || price <= 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Vui lòng chọn cặp trạm ảo hoặc nhập mức phụ xăng hợp lệ cho chuyến xe.',
-          data: { user: { id: user.id, phone: user.phone, name: user.name } }
-        });
-      }
-
-      // Chặn trùng khung giờ: một Chủ xe không thể chạy hai chuyến cùng lúc.
-      const sameDayTrips = getTrips({ type: 'drivers', includeHidden: true }).filter(
-        (t) =>
-          cleanPhoneNumber(t.phoneReal || t.phone || '') === phone &&
-          String(t.date) === String(body.date) &&
-          t.status !== 'cancelled' &&
-          t.status !== 'completed'
-      );
-      const clash = sameDayTrips.find((t) => String(t.time || '').slice(0, 5) === String(body.time).slice(0, 5));
-      if (clash) {
-        return res.status(400).json({
-          success: false,
-          error: `Chủ xe đã có chuyến (#${clash.id}) khởi hành lúc ${clash.time} cùng ngày.`,
-          data: { user: { id: user.id, phone: user.phone, name: user.name } }
-        });
-      }
-
-      const tripId = `DRV-${Date.now()}`;
-      const startHour = parseInt(String(body.time).split(':')[0], 10);
-      const tripPayload = {
-        id: tripId,
-        type: 'driver_offer',
-        status: 'active',
-        maskedCode: `CX-${Math.floor(100 + Math.random() * 900)}`,
-        from: String(body.from).trim(),
-        to: String(body.to).trim(),
-        originHubId: body.originHubId || null,
-        destinationHubId: body.destinationHubId || null,
-        date: String(body.date).trim(),
-        time: String(body.time).trim(),
-        timeSlot: body.timeSlot || `${String(body.time).trim()}-${String(startHour + 2).padStart(2, '0')}:00`,
-        availableSeats: seats,
-        capacity,
-        vehicleType,
-        hasCargoBed,
-        isCargoVehicle,
-        basePricePerSeat: price,
-        phoneReal: phone,
-        userId: user.id,
-        publicName: toPublicAlias(name) || name,
-        carType,
-        licensePlate: plate,
-        plateMask: plate.replace(/\d{2}$/, 'xx'),
-        routeCategory: body.routeCategory || 'Tuyến QL13',
-        direction: body.direction || null,
-        notes: String(body.notes || '').trim(),
-        createdByAdmin: true,
-        isHidden: 0,
-        isBanned: 0,
-        createdAt: Date.now()
-      };
-      createdTrip = await addTrip(tripPayload);
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: createdTrip
-        ? 'Đã tạo hồ sơ Chủ xe và đăng chuyến lên sàn.'
-        : 'Đã tạo hồ sơ Chủ xe.',
-      data: {
-        user: {
-          id: user.id,
-          phone: user.phone,
-          name: user.name,
-          vehicle: user.vehicle,
-          isExisting: Boolean(existing)
-        },
-        trip: createdTrip || null
-      }
-    });
-  } catch (err) {
-    console.error('[createDriverProfileHandler] error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+export async function createDriverProfileHandler(_req, res) {
+  return res.status(410).json({ success: false, error: 'Dùng Hồ sơ nhà xe để nhập thông tin có nguồn. Không tạo tài khoản và đánh dấu xác minh hộ.' });
 }

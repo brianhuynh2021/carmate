@@ -48,12 +48,12 @@ export default class ErrorBoundary extends React.Component {
             <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 inline-flex items-center justify-center">
               <AlertTriangle className="w-7 h-7" />
             </div>
-            <h2 className="text-xl font-bold font-display text-slate-900 dark:text-white">Đã xảy ra sự cố hiển thị</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            <h2 className="type-title font-display text-slate-900 dark:text-white">Đã xảy ra sự cố hiển thị</h2>
+            <p className="type-body text-slate-600 dark:text-slate-400">
               Hệ thống đã tự động ghi nhận nhật ký để khắc phục. Vui lòng bấm tải lại để tiếp tục sử dụng.
             </p>
             {this.state.error && (
-              <pre className="text-left text-[11px] p-3 rounded-lg bg-slate-100 dark:bg-slate-900 text-rose-600 overflow-auto max-h-48 font-mono">
+              <pre className="type-footnote text-left p-3 rounded-lg bg-slate-100 dark:bg-slate-900 text-rose-600 overflow-auto max-h-48 font-mono">
                 {this.state.error?.message || String(this.state.error)}
                 {this.state.error?.stack ? `\n\n${this.state.error.stack}` : ''}
               </pre>
@@ -62,7 +62,7 @@ export default class ErrorBoundary extends React.Component {
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="w-full h-11 px-5 rounded-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold text-sm inline-flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
+                className="type-button w-full h-11 px-5 rounded-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white inline-flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Tải lại ứng dụng</span>

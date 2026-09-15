@@ -1,35 +1,25 @@
-# CarMate Engineering & Design Philosophy
+# CarMate — Nguyên tắc triển khai
 
-CarMate tuân thủ triệt để 4 trụ cột triết lý kỹ thuật và thiết kế:
+Hợp đồng sản phẩm hiện hành nằm trong `AGENTS.md` và `docs/CONNECTION_FLOW.md`. Những giả định của mô hình chia sẻ chi phí trước đây không được ghi đè hướng kết nối hiện tại.
 
-## 1. Tư duy MIT (MIT Invariants - Bất biến Toán học & Logic)
+## Dữ liệu và toán học
 
-- Mọi trạng thái hệ thống phải thỏa mãn điều kiện bất biến (Invariants). State machine không bao giờ được rơi vào trạng thái lấp lửng hay mâu thuẫn (VD: xe 5 chỗ không bao giờ vượt quá 4 ghế khách, 7 chỗ không quá 6 ghế).
-- Idempotent: Các thao tác cập nhật, huỷ, xoá đều có thể gọi lặp lại an toàn mà không làm hỏng dữ liệu.
-- Định giá phụ xăng dựa trên công thức toán học cự ly Geodesic Haversine × 1.28 và dữ liệu trạm thu phí BOT chính xác, cục bộ 100%, không phụ thuộc vào LLM ảo giác.
-- Giá vé là ĐẦU RA của công thức, không phải con số Chủ xe tự gõ: chọn xong cặp trạm ảo là giá xác định. Chỉ Quản trị viên mới đổi được giá toàn sàn, và chỉ bằng cách nâng tham số công thức (Trang Admin ➔ Công thức định giá). Đây là điều kiện để cơ chế ghép chuyến không bị thao túng (strategy-proofness).
-- Trạm đón/trả và khe giờ là TỌA ĐỘ trong ma trận thời gian - không gian, không phải thuộc tính tự do của bài đăng. Khi chuyến đã có khách đặt, tọa độ bị khoá cứng: muốn đổi phải huỷ chuyến (chịu chế tài) rồi đăng chuyến mới.
+- Chiếu hành trình vào hành lang và thời gian để tìm giao nhau khả thi; kiểm tra hướng đi, cửa sổ đón, sức chứa từng đoạn và điều kiện đi vòng trước khi xếp hạng.
+- Giá do chủ xe niêm yết hoặc để “Liên hệ”. Công thức chi phí cũ chỉ là tham khảo, không đặt giá hay chứng minh cơ chế không thể bị thao túng.
+- Chỉ chốt khi hai bên xác nhận cùng phiên bản điểm, giờ, xe, số người và tổng giá. Bảo vệ cuộc hẹn đã chốt khi chèn khách mới.
+- Hủy, xác nhận và nhả ghế phải an toàn khi gọi lặp lại; giữ thời gian yêu cầu và hạn ban đầu khi tìm thay thế.
+- Xếp hạng ứng viên hiện tại không chứng minh rằng lúc nào cũng có xe, không kẹt xe hoặc phương án tương lai luôn tệ hơn.
 
-## 2. Tư duy Stanford (Stanford Ergonomics - Công thái học & Tải nhận thức = 0)
+## Trải nghiệm
 
-- Tối ưu hóa trải nghiệm sao cho người dùng và quản trị viên không phải suy nghĩ hoặc gõ phím thừa (Cognitive Load → 0).
-- Các thao tác nhạy cảm hoặc nguy hiểm (Xoá bài, Khóa tài khoản, Huỷ chuyến) luôn hiển thị đầy đủ ngữ cảnh (mã chuyến, người liên quan, lộ trình, giá tiền) trước khi xác nhận, ngăn chặn 100% việc bấm nhầm.
-- Hỗ trợ thao tác 1-chạm (One-tap action) cho các luồng thường xuyên (chọn trạm đón/trả từ danh mục trạm ảo, chọn mẫu chuyến, đảo chiều khứ hồi, tái sử dụng ảnh xe thật).
+- Cho xem và nhập trước khi đăng nhập. Đăng nhập để xuất bản, lưu cuộc hẹn và theo dõi phản hồi; giữ nguyên bản nháp.
+- Tìm kiếm không tự đăng nhu cầu. Chỉ công khai liên hệ khi người sở hữu đồng ý.
+- Trạm là mốc, hỗ trợ đón tại trạm, tận nơi hoặc kết hợp sau khi hai bên thống nhất.
+- Không dữ liệu thì nói rõ; lỗi mạng không được chuyển thành khách, xe, giá, PIN hay trạng thái giả.
+- Hành động hủy phải nêu cuộc hẹn bị ảnh hưởng. Dùng thông báo và hộp thoại trong ứng dụng, không dùng `window.alert`, `window.confirm`, `window.prompt`.
 
-## 3. Tư duy Cursor (Cursor Ambient Intelligence & Zero Blocking)
+## Giao diện
 
-- Trí tuệ bản địa (Edge AI / Zero-LLM) xử lý trực tiếp trên máy client trong dưới 1ms, không chờ đợi round-trip máy chủ khi gợi ý thói quen hay phân tích NLP.
-- Tuyệt đối KHÔNG sử dụng các lệnh blocking thô sơ của trình duyệt (`window.alert`, `window.confirm`, `window.prompt`). Mọi phản hồi đều là Reactive, Non-blocking, mượt mà.
-- Phản hồi trạng thái (Feedback Loop) tức thì thông qua Toast notification hoặc In-place notice thay vì popup hệ thống gián đoạn trải nghiệm.
-
-## 4. Thị giác Apple (Apple Human Interface Guidelines & Liquid Aesthetics)
-
-- Thiết kế squircle bo góc mềm mại (`rounded-2xl`, `rounded-3xl`), kính mờ bán trong suốt (`backdrop-blur-md`, `bg-white/80` và `dark:bg-[#1c1c1e]/80`).
-- Typography phân tầng rõ ràng (Inter / SF Pro Display), số liệu font Mono hiển thị chuẩn xác.
-- Tone màu biểu tượng có chủ đích: `danger` (rose/red) cho hành động huỷ/xoá, `warning` (amber/orange) cho trễ hẹn/lưu ý, `success` (emerald/green) cho xác thực/thành công, `primary` (Apple Blue `#0071e3`) cho hành động chính.
-- Tất cả các Modal đều phải dùng React Portal (`z-[9999]`) gắn vào `document.body` để triệt tiêu vĩnh viễn lỗi đè lớp (CSS Stacking Context).
-
-## 5. Chuẩn mực Danh xưng Bản địa (Terminology Standard)
-
-- Luôn luôn dùng **"Chủ xe"** và **"Người đi cùng"** / **"Khách đi cùng"**.
-- Tuyệt đối **KHÔNG dùng "Bác tài"** hay **"Tài xế"** để bảo toàn bản chất đi ghép xe tiện chuyến / chia sẻ chi phí lăn bánh văn minh, không phải dịch vụ taxi thương mại.
+- Giữ màu chính `#0071e3`, bo góc và bố cục sáng/tối hiện hành; phân tầng chữ và trạng thái rõ ràng.
+- Hộp thoại dùng portal, thứ tự lớp bảo đảm biểu mẫu vẫn còn khi mở đăng nhập.
+- Gọi vai trò là “Chủ xe” và “Khách”; cách gọi không thay thế việc đánh giá hoạt động thực tế.

@@ -65,26 +65,27 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
       <div className="p-4 flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+          <p className="text-amber-900 dark:text-amber-200 type-body-strong">
             Chuyến đi có thể bị gián đoạn
           </p>
-          <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/80">
-            {reasonLabel}. Đừng lo — bạn vẫn còn thời gian, CarMate đã chuẩn bị sẵn phương án dưới đây.
+          <p className="mt-1 text-amber-800/90 dark:text-amber-200/80 type-caption">
+            {reasonLabel}. Hãy liên hệ chủ xe để kiểm tra. Những lựa chọn dưới đây cần được hỏi lại giờ và khả năng nhận khách.
           </p>
         </div>
         <button
           type="button"
           onClick={() => setDismissed(true)}
           aria-label="Ẩn cảnh báo"
-          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-amber-700/70 dark:text-amber-300/70 hover:bg-amber-500/15 transition-colors cursor-pointer"
+          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-amber-700/70 dark:text-amber-300/70 hover:bg-amber-500/15 transition-colors cursor-pointer type-button"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
+      {lifebuoys.length === 0 && <p className="px-4 pb-4 text-amber-800 dark:text-amber-200 type-body">Chưa có phương án thay thế trong dữ liệu hiện có.</p>}
       {lifebuoys.length > 0 && (
         <div className="px-4 pb-4 space-y-2">
-          <p className="text-[10px] font-mono uppercase tracking-wide text-amber-700/80 dark:text-amber-300/70 flex items-center gap-1.5">
+          <p className="text-amber-700/80 dark:text-amber-300/70 flex items-center gap-1.5 tabular type-caption">
             <Bus className="w-3 h-3" />
             Phương án đi tiếp trên QL13
           </p>
@@ -94,18 +95,18 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
               key={bus.id}
               className="p-3 rounded-xl bg-white dark:bg-slate-900/60 border border-amber-300/50 dark:border-amber-500/20"
             >
-              <div className="flex items-center justify-between gap-2 min-w-0">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+              <div className="flex items-center justify-between gap-2 min-w-0 type-body">
+                <p className="text-slate-900 dark:text-white truncate type-body-strong">
                   {bus.operator}
                 </p>
                 {bus.ticketPrice ? (
-                  <span className="text-xs font-mono font-bold text-amber-700 dark:text-amber-400 shrink-0">
+                  <span className="text-amber-700 dark:text-amber-400 shrink-0 tabular type-body-strong">
                     {formatVND(bus.ticketPrice)}
                   </span>
                 ) : null}
               </div>
 
-              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              <p className="mt-0.5 text-slate-500 dark:text-slate-400 tabular type-body">
                 {bus.pickupTime} · {bus.frequency}
               </p>
 
@@ -116,7 +117,7 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
                 <a
                   href={`tel:${String(bus.hotline).replace(/\s/g, '')}`}
                   onClick={() => onShowToast?.(`Đang gọi ${bus.operator}…`)}
-                  className="mt-2 w-full h-10 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer"
+                  className="mt-2 w-full h-10 rounded-lg bg-amber-500 hover:bg-amber-400 text-white flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer type-button"
                 >
                   <Phone className="w-3.5 h-3.5" />
                   Gọi đặt vé ngay: {bus.hotline}
@@ -124,15 +125,15 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
               ) : (
                 <div className="mt-2 p-2.5 rounded-lg bg-amber-100/70 dark:bg-amber-500/10 flex items-start gap-2">
                   <MapPin className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-amber-900 dark:text-amber-200/90 leading-relaxed">
-                    {bus.guidance || `Ra ${bus.departureStation} và vẫy xe hướng Sài Gòn.`}
+                  <p className="text-amber-900 dark:text-amber-200/90 type-body">
+                    {bus.guidance || `Liên hệ nhà xe để xác nhận điểm đón ${bus.departureStation || 'phù hợp'} trước khi đến.`}
                   </p>
                 </div>
               )}
             </div>
           ))}
 
-          <p className="text-[10px] text-amber-700/70 dark:text-amber-300/60 leading-relaxed pt-1">
+          <p className="text-amber-700/70 dark:text-amber-300/60 pt-1 type-caption">
             Chuyến của bạn vẫn chưa bị huỷ. Nếu chủ xe xác nhận kịp, cảnh báo này sẽ tự tắt.
           </p>
         </div>

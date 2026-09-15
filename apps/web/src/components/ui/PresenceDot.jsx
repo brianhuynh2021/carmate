@@ -31,7 +31,7 @@ export default function PresenceDot({
   if (showLabel) {
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-tight leading-none whitespace-nowrap shrink-0 transition-all select-none border shadow-2xs ${
+        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full type-badge whitespace-nowrap shrink-0 transition-all select-none border shadow-2xs ${
           isOnline
             ? 'bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/25 dark:border-emerald-500/35'
             : 'bg-slate-100/90 dark:bg-white/[0.05] text-slate-500 dark:text-slate-400 border-slate-200/90 dark:border-white/[0.08]'
@@ -48,7 +48,7 @@ export default function PresenceDot({
             }`}
           />
         </span>
-        <span className="leading-none">{displayLabel}</span>
+        <span>{displayLabel}</span>
       </span>
     );
   }

@@ -43,14 +43,14 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
       <section className="md:hidden mt-8 px-4 pb-28 pt-2">
         <div className="rounded-3xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] p-5 shadow-xs text-center space-y-4">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-xs font-semibold">
+            <div className="type-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0071e3]/10 text-[#0071e3]">
               <MessageCircle className="w-3.5 h-3.5" />
               <span>{lang === 'en' ? 'Support' : 'Hỗ trợ bạn'}</span>
             </div>
-            <h3 className="text-sm font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+            <h3 className="type-heading text-[#1d1d1f] dark:text-white">
               {lang === 'en' ? 'Need help with your trip?' : 'Bạn cần hỗ trợ về chuyến đi?'}
             </h3>
-            <p className="text-xs text-[#86868b] leading-relaxed max-w-xs mx-auto">
+            <p className="type-caption text-[#86868b] max-w-xs mx-auto">
               {lang === 'en'
                 ? 'CarMate is always ready to assist drivers and passengers directly.'
                 : 'CarMate luôn sẵn sàng đồng hành cùng bạn và chủ xe qua kênh trao đổi trực tiếp.'}
@@ -63,7 +63,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full h-11 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+              className="type-badge w-full h-11 px-3 rounded-2xl bg-[#229ED9]/10 hover:bg-[#229ED9]/15 active:scale-[0.98] border border-[#229ED9]/20 text-[#229ED9] inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <TelegramIcon className="w-4 h-4" />
               <span>{lang === 'en' ? 'Telegram Support' : 'Hỗ trợ Telegram'}</span>
@@ -71,12 +71,12 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
           </div>
 
           {/* Quy chế, Chính sách, Ngôn ngữ & Bản quyền */}
-          <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[11px] text-[#86868b] flex-wrap gap-2">
+          <div className="type-footnote pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[#86868b] flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onOpenTerms}
-                className="relative tap-area-44 hover:text-[#0071e3] transition-colors cursor-pointer"
+                className="type-button relative tap-area-44 hover:text-[#0071e3] transition-colors cursor-pointer"
               >
                 {lang === 'en' ? 'Terms & Policies' : 'Quy chế & Điều khoản'}
               </button>
@@ -84,7 +84,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               <button
                 type="button"
                 onClick={onOpenPolicy}
-                className="relative tap-area-44 hover:text-[#0071e3] transition-colors cursor-pointer"
+                className="type-button relative tap-area-44 hover:text-[#0071e3] transition-colors cursor-pointer"
               >
                 {lang === 'en' ? 'Safety Policy' : 'Chính sách an toàn'}
               </button>
@@ -107,15 +107,15 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <LogoMark className="w-6 h-6" />
-              <span className="font-display font-black text-sm tracking-tight text-[#1d1d1f] dark:text-white">
+              <span className="type-body-strong font-display text-[#1d1d1f] dark:text-white">
                 Car<span className="bg-gradient-to-r from-[#0099ff] to-[#f59e0b] bg-clip-text text-transparent">Mate</span>
-                <span className="text-[#0071e3] font-mono text-xs font-bold ml-0.5">.vn</span>
+                <span className="type-caption text-[#0071e3] ml-0.5">.vn</span>
               </span>
             </div>
             <span className="text-black/[0.15]">·</span>
-            <div className="flex items-center gap-2 text-xs text-[#515154]">
+            <div className="type-caption flex items-center gap-2 text-[#515154]">
               <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0" />
-              <span className="text-[12px] font-medium text-[#515154]">
+              <span className="type-caption text-[#515154]">
                 {lang === 'en' ? 'Direct rideshare · 0% fee' : 'Tiện chuyến cùng đường · 0đ Phí trung gian'}
               </span>
             </div>
@@ -129,7 +129,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#229ED9]/50 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="type-caption h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-[#229ED9]/50 text-slate-900 dark:text-white inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <TelegramIcon className="w-3.5 h-3.5 text-[#229ED9]" />
               <span>{lang === 'en' ? 'Telegram Support' : 'Hỗ Trợ Telegram'}</span>
@@ -140,7 +140,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
               href={SITE_INFO.facebook}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="type-caption h-8.5 px-3.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <FacebookIcon className="w-3.5 h-3.5 text-[#1877F2]" />
               <span>Fanpage</span>
@@ -149,7 +149,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
         </div>
 
         {/* ── TẦNG 2: NAVIGATION TINH GỌN (CHUẨN APPLE) ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs pt-1">
+        <div className="type-caption flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
           {/* Main Links */}
           <nav className="flex items-center gap-x-6 gap-y-2 flex-wrap">
             {footerLinks.map((l) => (
@@ -157,7 +157,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
                 key={l.key}
                 type="button"
                 onClick={l.action}
-                className="text-[#515154] hover:text-[#0071e3] font-medium transition-colors cursor-pointer"
+                className="type-button text-[#515154] hover:text-[#0071e3] transition-colors cursor-pointer"
               >
                 {l.label}
               </button>
@@ -171,12 +171,12 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
         </div>
 
         {/* ── TẦNG 3: LEGAL & COPYRIGHT ── */}
-        <div className="pt-2 border-t border-black/[0.04] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11.5px] text-[#86868b]">
+        <div className="type-caption pt-2 border-t border-black/[0.04] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[#86868b]">
           <p className="leading-relaxed">
             {SITE_INFO.legalName[lang]} ·{' '}
             {lang === 'en'
-              ? 'Voluntary fuel cost-sharing platform, 0% platform fee.'
-              : 'Nền tảng chia sẻ chi phí nhiên liệu tự nguyện, 0% chiết khấu.'}
+              ? 'Free trip listings, search and connections.'
+              : 'Miễn phí đăng tin, tìm chuyến và kết nối.'}
           </p>
           <div className="flex items-center gap-3 shrink-0">
             <span>© {year} CarMate.vn</span>

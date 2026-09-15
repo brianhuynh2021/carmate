@@ -1,353 +1,96 @@
-# 🚗 CarMate — Nền Tảng Đi Chung Xe Tiện Chuyến & Đồng Hương
+# CarMate — Tìm chuyến phù hợp, kết nối trực tiếp
 
-> **Website chính thức:** [https://carmate.vn](https://carmate.vn)  
-> **Kiến trúc Monorepo:** `@carmate/shared` • `@carmate/web` • `@carmate/api`  
-> **Triết lý sản phẩm:** Tối giản & Tinh gọn (Lean 0đ) • Tối ưu hiệu năng tải trang (JS tải ban đầu ~166KB gzipped, tách chunk theo màn hình) • Bảo mật cao cấp (Fail-closed, OWASP Top 10) • Thấu cảm sâu sắc văn hoá kết nối bản địa.
+[CarMate.vn](https://carmate.vn) · Monorepo `@carmate/shared`, `@carmate/web`, `@carmate/api`
 
----
+CarMate giúp khách và chủ xe tìm thấy nhau trên cùng hành lang theo hướng đi, thời gian và số chỗ. Trạm là mốc tra cứu; đón tại trạm, tận nơi hoặc kết hợp theo điều kiện của chủ xe và xác nhận của hai bên.
 
-## 🌟 1. Mô Hình Hoạt Động & Cơ Chế Kết Nối Trực Tiếp (0% Chiết Khấu Sàn)
+**Đăng chuyến, tìm kiếm và kết nối miễn phí.** Chủ xe niêm yết giá hoặc để “Liên hệ”. Hai bên trực tiếp quyết định và xử lý tiền chuyến đi. CarMate không áp bảng cước, giữ cọc, thu hoa hồng hoặc phân chia tiền.
 
-CarMate được tạo ra để kết nối những người **CÙNG ĐƯỜNG, TIỆN TUYẾN**: Chủ xe có ghế trống (dù là đi làm hàng tuần, về thăm gia đình dòng họ, đi công tác hay việc riêng) chia sẻ chỗ cho Người đi cùng cùng hướng để san sẻ chi phí xăng xe và vé cầu đường văn minh, tiết kiệm. (Nếu có duyên cùng quê hay gần nhà thì càng vui và ấm áp hơn, nhưng cốt lõi là **tiện đường đi chung**).
+Luồng mới đang được tích hợp trên `dev`. Mô tả trong repo không đồng nghĩa bản production đã cập nhật hoặc việc đón ngoài thực địa đã được kiểm chứng.
 
-### Cơ chế Kết Nối Trực Tiếp (Sáng Kiến Đi Chung Xe CarMate + Zalo Organic KYC):
+## Luồng sản phẩm
 
-1. **Không thu phí cọc sàn:** Người đi cùng không cần nạp tiền hay trả phí trung gian qua sàn (loại bỏ tâm lý e ngại lừa đảo và không rủi ro pháp lý cho Founder).
-2. **Cam kết qua Zalo trong 30 phút:** Sau khi bấm ghép chuyến, hai bên có 30 phút để nhắn tin Zalo cho nhau chốt điểm đón. Profile Zalo thật (avatar, số điện thoại, quê quán) là bộ lọc danh tính tự nhiên tốt nhất. Quá 30 phút không nhắn, hệ thống tự động nhả ghế.
-3. **Thanh toán trực tiếp:** Tiền cước xăng dầu & vé cầu đường trả bằng tiền mặt hoặc chuyển khoản trực tiếp cho Chủ xe khi bước lên xe.
-4. **Vé hành trình thông minh (Boarding Pass):** Tự động tạo thẻ vé ảnh sang trọng kèm link rút gọn để Chủ xe 1-chạm chia sẻ vào các Group Zalo / Facebook đồng hương (QL13, QL51...) kéo khách tự nhiên.
+### Khách
 
----
+- Tìm và xem chuyến trước khi đăng nhập.
+- Liên hệ trực tiếp nếu chủ xe đã đồng ý công khai số; bấm gọi chưa phải được nhận đón.
+- Chủ động đăng nhu cầu khi muốn chủ xe tìm thấy mình. Tìm kiếm riêng tư không tự tạo nhu cầu công khai.
+- Đăng nhập tại lúc đăng nhu cầu hoặc gửi yêu cầu trong CarMate; giữ nguyên nội dung đã nhập.
+- Nếu ghi nhận cuộc hẹn trong nền tảng, hai bên xác nhận cùng điểm, giờ, số người và giá trước khi giữ chỗ.
 
-## ⚡ 2. Hệ Thống Khớp Lệnh Tự Động Cấp Độ 3 & Các Nền Tảng Khoa Học Toán Học
+### Chủ xe
 
-CarMate tích hợp **Bộ điều phối tự động Cấp độ 3 (Autonomous Level 3 Engine)**, vận hành theo mô hình toán học và công thái học hiện đại:
+- Nhập hành trình, giờ, số chỗ, giá/“Liên hệ”, cách đón và xe thật.
+- Xem trước chuyến và các nhu cầu đang tìm xe có thể phù hợp, không lộ thông tin riêng của khách.
+- Nếu không có nhu cầu, hiển thị đúng kết quả trống. Lỗi tải dữ liệu không được coi là không có khách.
+- Nhập số liên hệ và đồng ý công khai, đăng nhập rồi xuất bản đúng một lần.
+- Desktop và mobile cùng một luồng đăng chuyến. Chế độ quản lý xe đang chạy có lối riêng cho chủ xe quay lại.
 
-### 📱 Luồng Trải Nghiệm Khép Kín (End-to-End Experience):
-1. **Người đi cùng (Kiosk Trạm Ảo 2 Màn Hình):**
-   - Quét mã QR Mica tại cây xăng Petrolimex/TTHC ➔ Mở ngay giao diện đặt vé trong 5 giây, không cần cài app, không cần đăng ký tài khoản trước (**Unified Auth / Upsert Flow**).
-   - Chọn điểm đến 1-chạm (Hàng Xanh, Sân bay TSN, Ngã 4 Bình Phước), nhập SĐT là nhận ngay **Vé Đón Xe Điện Tử (Live Boarding Pass)** kèm **Mã PIN 4 số**.
-   - Màn hình tự động giữ sáng liên tục ngoài trời nắng (**Screen Wake Lock API**), hiển thị radar đếm ngược thời gian và biển số xe thật.
-2. **Chủ xe (Chế Độ Taplo / Cockpit Mode):**
-   - Đặt điện thoại lên giá đỡ, xe lăn bánh $50-90\text{ km/h}$ trên Quốc Lộ 13.
-   - Cảm biến gia tốc phần cứng `DeviceMotionEvent` xác thực xe chuyển động thật (chặn 100% Fake GPS).
-   - Radar động học phát hiện trạm trước $210\text{s}$ (3.5 – 4.6 km) $\implies$ Báo âm thanh và HUD 30s để Chủ xe bấm `[ ĐỒNG Ý ĐÓN ]` 1-chạm.
-3. **Bắt Tay 2 Chiều & Bẫy Động Học:**
-   - Xe tấp lề sân trạm 60s (`DWELLING`). Khách lên xe đọc mã PIN 4 số $\implies$ Chủ xe nhập PIN để xác nhận đón và ví nhận tiền phụ xăng (+90%).
-   - Nếu Chủ xe phóng vù qua trạm $> 300\text{m}$ tốc độ cao mà không dừng: **Hệ thống khóa vĩnh viễn tài khoản (Fly-By Ghosting Penalty)** và tự động hoàn khách về vị trí số 1 hàng đợi.
+Chi tiết: [Luồng kết nối](docs/CONNECTION_FLOW.md) · [Quy trình vận hành](docs/OPERATIONAL_WORKFLOW.md).
 
-### 📐 7 Công Trình Khoa Học & Mô Hình Toán Học Đỉnh Cao Đã Tích Hợp:
-1. **Stanford Frenet Frame 1D Transformation (Werling & Thrun — Đội xe tự hành Stanford / DARPA):** Chiếu toạ độ 2D GPS lên tim đường cong 1D Quốc Lộ 13 $(s, d)$ với dung sai lề an toàn $|d| \le 85\text{m}$.
-2. **Kinematic Wave Dynamic Trigger Window (GS. Carlos Daganzo — UC Berkeley):** Ngưỡng radar co giãn $d_{\text{trigger}} = \max(3.0\text{km}, \frac{v}{3.6} \times 210\text{s})$, đảm bảo $210\text{s}$ phản xạ an toàn.
-3. **MIT Linear Interval Scheduling (MIT EECS):** Kiểm tra khả thi gối đầu đa chặng $O(1)$ lọt trong hành trình xe di chuyển.
-4. **Nash Bargaining Solution & Daily Fuel Indexation:** Cận sàn bù $100\%$ Xăng (RON 95 Petrolimex $24.120\text{đ/L}$) + BOT ($70.000\text{đ}$) cho 2 ghế; Cận trần rẻ hơn Limousine $\ge 25\%$; Cam kết `noSurge: true` không tăng giá giờ cao điểm/mưa gió.
-5. **Nghiên Cứu An Toàn VTTI & NHTSA:** Triệt tiêu hoàn toàn nhu cầu gọi điện/nhắn tin khi đang lái xe (giảm nguy cơ tai nạn gấp $6.1 - 23.2\text{ lần}$).
-6. **Curbside Window 45–60s (GS. Susan Shaheen — UC Berkeley TSRC):** Chuẩn hoá điểm hẹn mặt tiền, giảm $80\%$ thời gian dừng chờ so với đón trả trong hẻm.
-7. **Hub-and-Spoke Topology & Last-Mile Integration:** Tuyến thưa Bù Đốp nối về trạm đầu tuyến Lộc Ninh; Trạm trả Hàng Xanh ghép nối chặng cuối GrabBike/xe buýt về tận nhà.
+## Toán học phục vụ tìm chuyến
 
-> 📊 **Kiểm thử tự động:** Toàn bộ logic đã được bảo chứng bằng **139/139 bài test tự động Cấp độ 3** (`scripts/test-level3-engine.mjs`) đạt tỷ lệ **100% PASS**.
+Lõi hiện có gồm chiếu vị trí lên hành lang, dự báo thời gian tới trạm, giao khoảng thời gian, đánh giá tương thích và sức chứa trên từng đoạn. Các mô-đun này giúp tạo ứng viên phù hợp; chúng không tự chứng minh luôn có xe hoặc thay thế sự đồng ý của hai bên.
 
-### 📘 Sổ Tay Vận Hành Thực Địa Tuyến QL13 (Tân Khai ⇄ Hàng Xanh):
-Quy chuẩn vận hành 4 nhịp thực tế ngoài đời và mạng lưới an toàn 3 tầng bảo vệ (**Silent Fallback N+1**, **In-Transit VietQR P2P**, **Quy tắc 10 giây Trả khách Hàng Xanh chống phạt nguội camera CSGT**, và **Khóa kép No-Show Dwell-Time 5 phút**) được ghi chép đầy đủ tại:  
-👉 **[`docs/OPERATIONAL_WORKFLOW.md`](docs/OPERATIONAL_WORKFLOW.md)**.
+Công thức chi phí, Shapley/Nash và bảng giá trong các mô-đun cũ chỉ là phần nghiên cứu/ước tính cần tách khỏi giá chủ xe. Kết quả xếp hạng là đề xuất trên dữ liệu hiện có, không phải bằng chứng tối ưu toàn cục.
 
-### 🧠 Luồng trợ lý & hiểu ý định bản địa
+Xem [Kiến trúc và phạm vi mô hình](ARCHITECTURE.md). Luồng trợ lý có tài liệu riêng tại [NATIVE_INTENT_FLOW.md](docs/NATIVE_INTENT_FLOW.md); trợ lý không cần thiết để dùng các luồng tìm/đăng chuyến.
 
-Trợ lý dùng Gemini function calling khi có khoá hợp lệ; khi thiếu khoá hoặc lỗi API, hệ thống chuyển sang Native Intent Engine xác định. Luồng, bất biến dữ liệu và biên giới quyền riêng tư được ghi nhận tại:
-👉 **[`docs/NATIVE_INTENT_FLOW.md`](docs/NATIVE_INTENT_FLOW.md)**.
-
----
-
-## 🏛️ 3. Cấu Trúc Mã Nguồn Monorepo
+## Cấu trúc
 
 ```text
-carmate/
-├── package.json                    # Workspace ["apps/*", "packages/*"], yêu cầu Node >= 22
-├── fly.toml                        # Cấu hình triển khai Fly.io (region Singapore)
-├── Dockerfile                      # Build 2 stage: build web -> chạy server Node
-├── .github/workflows/ci.yml        # CI: lint, build, toàn bộ test suite và pentest mỗi lần push
-├── ARCHITECTURE.md                 # Tài liệu kiến trúc & nền tảng toán học
-├── docs/
-│   ├── NATIVE_INTENT_FLOW.md        # Luồng Gemini / native intent và các bất biến dữ liệu
-│   └── OPERATIONAL_WORKFLOW.md      # Sổ tay vận hành thực địa QL13 & Fail-Safe playbook
-│
-├── scripts/
-│   ├── test-local-e2e.js           # Bộ E2E (API, phân quyền, PII, XSS, AI agent)
-│   ├── backup-db.js                # Sao lưu SQLite an toàn khi server đang chạy
-│   ├── restore-db.js               # Khôi phục từ bản sao lưu
-│   └── setup-backup-cron.sh        # Cài lịch sao lưu tự động hằng ngày
-│
-├── packages/
-│   └── shared/                     # @carmate/shared — dùng chung Web & API
-│       └── src/
-│           ├── constants/          # routes, timeSlots, policies, mockData, site
-│           └── utils/              # pricing, zalo, geo, date, vietnameseText, intentEngine
-│
-└── apps/
-    ├── web/                        # @carmate/web (React 19 + Vite + Tailwind)
-    │   └── src/
-    │       ├── App.jsx             # Điều phối state & tab
-    │       ├── api/client.js       # Lớp gọi API, tự đính kèm JWT
-    │       ├── i18n/               # Song ngữ Việt / Anh
-    │       ├── utils/              # ticketCanvas, nlpTripParser, vietnamLocations
-    │       └── components/
-    │           ├── market/         # FilterBar, TripCard, RouteBenchmarkBar, Hero
-    │           ├── post/           # PostTripForm, SmartTripComposer, MyTripsView
-    │           ├── radar/          # MatchRadarView — ghép 2 chiều
-    │           ├── booked/         # BookedTripList — nút Zalo & Gọi ngay
-    │           ├── admin/          # AdminDashboardView
-│           ├── agent/          # AiConciergeModal — giao diện trợ lý
-    │           ├── modals/         # Auth, Ticket, Review, Policy, Cancel...
-    │           ├── profile/        # TrustProfileView
-    │           ├── common/         # Header, Footer, BottomNav, ErrorBoundary
-    │           └── ui/             # Button, Modal, Field, Badge, Chip...
-    │
-    └── api/                        # @carmate/api (Express 5 + SQLite)
-        ├── data/                   # carmate.sqlite + backups (không commit)
-        └── src/
-            ├── index.js            # Máy chủ hợp nhất: phục vụ cả web lẫn /api
-            ├── routes/api.js       # Khai báo toàn bộ endpoint
-            ├── controllers/        # trip, booking, auth, admin, match, agent...
-            ├── middlewares/        # security (rate limit, CORS, XSS), authMiddleware
-            ├── db/sqliteStore.js   # Truy cập SQLite (WAL, prepared statement)
-            ├── agent/              # Gemini tool calling + native intent fallback
-            └── utils/token.js      # Ký & xác thực JWT
+apps/web/src/
+  App.jsx                       Điều hướng và xác thực theo hành động
+  api/client.js                 API client
+  components/market/            Tìm chuyến theo hành lang
+  components/intent/            Đăng nhu cầu chủ động
+  components/modals/            Xem trước, đăng chuyến, đăng nhập, cuộc hẹn
+  components/station/           Tra cứu và xử lý nhu cầu theo trạm
+  hooks/                        State và đồng bộ dữ liệu
+apps/api/src/
+  routes/api.js                 Quyền truy cập endpoint
+  controllers/                  Trip, intent, booking, auth
+  services/connectionMatching.js Đánh giá ứng viên
+  services/bookingCommitment.js  Cam kết hai bên và sức chứa theo đoạn
+  db/sqliteStore.js             SQLite
+packages/shared/src/            Hành lang, trạm, mô hình thời gian và tiện ích chung
+scripts/                        Kiểm thử, sao lưu và công cụ vận hành
 ```
 
----
+## Chạy cục bộ
 
-## 💻 4. Khởi Chạy Dưới Máy Local
-
-**Yêu cầu: Node.js >= 22** (`better-sqlite3` sẽ lỗi trên Node 20).
-
-Máy chủ hợp nhất phục vụ **cả web lẫn API trên một cổng duy nhất** — không cần chạy hai tiến trình:
+Yêu cầu Node.js từ phiên bản 22 theo `package.json`. Dùng bản dữ liệu phát triển riêng.
 
 ```bash
-npm install     # chỉ lần đầu
+npm install
 npm run dev
 ```
 
-- 🌐 **Web:** [http://localhost:5173](http://localhost:5173)
-- 🔌 **API:** [http://localhost:5173/api](http://localhost:5173/api)
-- 🩺 **Health:** [http://localhost:5173/api/health](http://localhost:5173/api/health)
-
-Ở chế độ dev, Vite chạy dưới dạng middleware nên sửa code là giao diện tự cập nhật ngay. Nhấn `Ctrl + C` để dừng.
-
-### Các lệnh khác
+Máy chủ hợp nhất phục vụ web và API; xem địa chỉ/cổng thực tế trong thông báo khởi động. Không ghi khóa bí mật vào biến `VITE_*` vì chúng được đưa vào mã phía trình duyệt. Xác thực Google, Telegram và Firebase cần cấu hình phù hợp; giao diện không cung cấp tài khoản giả để bỏ qua bước này.
 
 ```bash
-node scripts/test-level3-engine.mjs   # Kiểm thử Cấp độ 3 (Frenet, Kinematics, Nash, Whitelist, Ghosting Penalty)
-npm run test:intent                  # Kiểm thử Native Intent Engine và các bất biến NLP
-npm test                             # Toàn bộ suite: E2E, engine nghiệp vụ và intent
-npm run build                        # build web ra apps/web/dist
-npm run backup                       # sao lưu database ngay
-npm run backup:setup                 # cài lịch sao lưu tự động 02:00 hằng ngày
-npm run restore                      # liệt kê các bản sao lưu
+npm run build
+npm run lint
+node scripts/test-driver-activation.mjs
 ```
 
-### Biến môi trường
+`test-driver-activation.mjs` kiểm tra dữ liệu xem trước không mang thông tin liên hệ, giá do chủ xe chọn, sức chứa, thời gian và callback tiếp tục sau đăng nhập. Các suite API và nghiệp vụ khác nằm trong `scripts/`; một số cần máy chủ hoặc cơ sở dữ liệu riêng. Không chạy chúng trên dữ liệu người dùng thật.
 
-Ở môi trường dev, chưa cấu hình gì vẫn chạy được: JWT secret được sinh ngẫu nhiên mỗi phiên và mã admin tạm là `admin123`.
+## Kiểm tra luồng mới
 
-Ở **production, thiếu biến bắt buộc thì server từ chối khởi động** — đây là cơ chế fail-closed có chủ đích:
+- Khách tìm được kết quả thật hoặc thấy trạng thái trống rõ ràng; liên hệ công khai không bị khóa bởi đăng nhập.
+- Khách/chủ xe nhập trước đăng nhập; đóng xác thực giữ draft; đăng nhập thành công tiếp tục một lần.
+- Chủ xe chỉ thấy số nhu cầu thật trong bản xem trước; API lỗi không hiện số 0 giả.
+- Giá `null` hiển thị “Liên hệ”; giá chủ xe không bị công thức cũ ghi đè.
+- Cuộc hẹn chỉ giữ chỗ sau xác nhận đúng phiên bản, có kiểm tra sức chứa của đoạn đi.
+- Hủy lặp lại không nhả chỗ nhiều lần; tìm lại giữ thời hạn ban đầu; xe mới cần xác nhận mới.
 
-| Biến                     | Bắt buộc      | Ý nghĩa                                                     |
-| ------------------------ | ------------- | ----------------------------------------------------------- |
-| `JWT_SECRET`             | ✅ production | Khoá ký phiên đăng nhập                                     |
-| `CARMATE_ADMIN_PASSCODE` | ✅ production | Mã vào cổng quản trị                                        |
-| `ALLOWED_ORIGINS`        |               | Danh sách domain được gọi API, ngăn cách bằng dấu phẩy      |
-| `TRUST_PROXY`            |               | Đặt `true` khi có proxy/CDN đứng trước                      |
-| `CARMATE_ADMIN_MFA_CODE` |               | Bật xác thực 2 lớp cho cổng quản trị                        |
-| `GEMINI_API_KEY`         |               | Bật Gemini function calling; thiếu/lỗi API sẽ dùng Native Intent Engine xác định |
-| `DISABLE_VITE_DEV`       |               | Đặt `true` để bỏ Vite middleware, phục vụ bản dist đã build |
+Kiểm thử mã, kiểm tra trình duyệt, thử cấu hình đăng nhập và đo vận hành thật là các lớp kiểm chứng riêng. Không dùng số lượng test đạt để công bố tỷ lệ đón thành công.
 
-> ⚠️ Không đặt khoá bí mật vào `apps/web/.env`. Vite nhúng mọi biến `VITE_*` thẳng vào bundle công khai — khoá API phải nằm ở `apps/api/.env`.
+## Dữ liệu, triển khai và Git
 
-### Chạy bằng Devbox (tuỳ chọn)
+Luồng hồ sơ tham khảo, nhập hộ, nhận quyền quản lý và báo sai/gỡ thông tin được mô tả tại [docs/OPERATOR_PROFILES.md](docs/OPERATOR_PROFILES.md). Danh bạ cũ được chuyển thành bản nháp chờ rà soát; hồ sơ tham khảo không tạo nguồn ghế hay tài khoản đại diện tự động.
 
-```bash
-brew install devbox    # hoặc: curl -fsSL https://get.jetpack.io/devbox | bash
-devbox run dev
-```
+SQLite cần lưu trữ bền vững và quy trình sao lưu/khôi phục đã kiểm tra. Repo có `scripts/backup-db.js`, `scripts/restore-db.js`, `Dockerfile` và `fly.toml`; xem cấu hình đích trước khi chạy công cụ vận hành. Không ghi dữ liệu production hoặc nội dung riêng của người dùng vào test, log mẫu hay tài liệu.
 
----
-
-## 🧪 5. Kiểm Thử
-
-### Tự động
-
-```bash
-# 1. Bộ kiểm thử Level 3 Autonomous Engine:
-node scripts/test-level3-engine.mjs
-
-# 2. Bộ kiểm thử Native Intent Engine:
-npm run test:intent
-
-# 3. Toàn bộ suite tích hợp:
-npm run dev     # cửa sổ 1: chạy server
-npm test        # cửa sổ 2: E2E, engine nghiệp vụ và intent
-```
-
-Bộ kiểm thử bao trùm API, phân quyền (chống IDOR), che giấu thông tin cá nhân, chống XSS lưu trữ, cổng quản trị, native intent và trợ lý Gemini. CI cũng chạy đúng bộ này mỗi lần push.
-
-### Thủ công trên trình duyệt
-
-Mở **`http://localhost:5173`**:
-
-1. **Lọc tuyến 1 chạm** — bấm các chip `Tất cả`, `QL13`, `QL51`, `QL20`, `CT Long Thành`; danh sách lọc tức thì.
-
-2. **Xuất vé hành trình** — bấm biểu tượng chia sẻ trên thẻ chuyến; thẻ vé hiện ra kèm nút sao chép nội dung đăng Zalo / Facebook.
-
-3. **Ghép chuyến** — bấm **"Ghép Chuyến"**. Chưa đăng nhập thì cửa sổ xác thực hiện ra trước: nhập số điện thoại, rồi nhập mã OTP. Ở môi trường dev, mã `123456` luôn hợp lệ và mã thật cũng được trả kèm trong phản hồi API để tiện thử.
-
-   > Bước đăng nhập này là có chủ đích: số điện thoại thật của Chủ xe chỉ hiện ra sau khi xác thực, nhằm bảo vệ dữ liệu cá nhân.
-
-4. **Chuyến đã ghép** — mở tab **"Chuyến Đã Ghép"**: có đồng hồ đếm ngược 30 phút và số điện thoại thật. Nút **"Nhắn Zalo"** mở `https://zalo.me/[sdt]`, nút **"Gọi Ngay"** mở trình gọi điện.
-
-5. **Đăng chuyến** — mở tab **"Đăng Chuyến"**, chọn nhanh ngày đi, tích **"Lặp lại hàng tuần"** rồi đăng. Chuyến xuất hiện ngay trên sàn kèm thẻ vé để chia sẻ.
-
-6. **Cổng quản trị** — vào `http://localhost:5173/#admin` (hoặc `?portal=ops`), đăng nhập bằng `CARMATE_ADMIN_PASSCODE` (dev mặc định `admin123`) để xem số liệu, quản lý chuyến và thành viên. Khi triển khai thật, cổng này cũng tự bật trên subdomain `ops.` hoặc `admin.`.
-
----
-
-## 💾 6. Sao Lưu & Khôi Phục Dữ Liệu (Bắt Buộc Trước Khi Go-Live)
-
-Dữ liệu nằm trong SQLite tại `apps/api/data/carmate.sqlite`. Container bị xoá hoặc cấu hình volume sai là **mất toàn bộ chuyến đi và thành viên**. Hãy bật sao lưu trước khi có người dùng thật.
-
-```bash
-npm run backup          # tạo 1 bản sao lưu ngay
-npm run backup:setup    # cài lịch tự động 02:00 hằng ngày
-npm run restore         # liệt kê các bản sao lưu hiện có
-```
-
-**Sao lưu an toàn khi server đang chạy.** Script dùng SQLite Online Backup API, không phải `cp` — copy file thường trong lúc có giao dịch đang ghi sẽ tạo bản sao hỏng hoặc thiếu phần dữ liệu còn nằm trong WAL. Mỗi bản đều được `integrity_check` rồi mới nén gzip; bản lỗi bị xoá ngay thay vì âm thầm lưu lại.
-
-Mặc định giữ 14 bản gần nhất trong `apps/api/data/backups/` (đã thêm vào `.gitignore`).
-
-```bash
-node scripts/backup-db.js --out /mnt/backup --keep 30
-```
-
-### Khôi phục
-
-```bash
-# 1. DỪNG server trước — ghi đè khi đang chạy sẽ hỏng dữ liệu
-# 2. Khôi phục bản mới nhất
-npm run restore -- --latest
-# 3. Khởi động lại server
-```
-
-DB hiện tại luôn được giữ lại thành `carmate.sqlite.before-restore-<timestamp>` để quay lui nếu cần.
-
-> **Kiểm chứng định kỳ:** một bản sao lưu chưa từng khôi phục thử thì chưa phải là bản sao lưu. Nên chạy thử `--latest` trên máy local mỗi vài tháng.
-
-### Lưu ý triển khai
-
-- Volume Docker `carmate-data` phải trỏ đúng `/app/apps/api/data`, nếu không dữ liệu sẽ mất sau mỗi lần redeploy.
-- Backup nằm **cùng volume** với DB. Với dữ liệu thật, hãy đồng bộ thêm ra nơi khác (S3, Google Drive, máy khác) — cùng ổ đĩa thì hỏng ổ là mất cả hai.
-- Yêu cầu **Node >= 22** (`better-sqlite3` sẽ segfault trên Node 20).
-
----
-
-## ☁️ 7. Triển Khai Production (Fly.io + Cloudflare)
-
-### Vì sao Fly.io
-
-Backend dùng `better-sqlite3` (native C++) và ghi SQLite xuống ổ đĩa, nên **không chạy được trên nền tảng serverless/edge** — Cloudflare Workers, Vercel Functions và tương tự đều không có Node.js đầy đủ lẫn ổ đĩa ghi được. Fly.io chạy thẳng Docker, có volume bền và region **Singapore (`sin`)** — độ trễ tới Việt Nam khoảng 30ms.
-
-Cloudflare vẫn được dùng, nhưng đúng vai trò của nó: DNS + CDN + SSL miễn phí đặt trước Fly.
-
-```
-Người dùng VN → Cloudflare (DNS/CDN/SSL) → Fly.io Singapore (app + SQLite)
-```
-
-### Bước 1: Cài flyctl và đăng nhập
-
-```bash
-brew install flyctl     # hoặc: curl -L https://fly.io/install.sh | sh
-fly auth signup         # hoặc: fly auth login
-```
-
-### Bước 2: Tạo app và volume
-
-Repo đã có sẵn [`fly.toml`](fly.toml), nên **không chạy `fly launch`** (lệnh đó sẽ ghi đè cấu hình).
-
-```bash
-fly apps create carmate                              # đổi tên nếu đã có người dùng
-fly volumes create carmate_data --region sin --size 1 # 1GB, đủ cho giai đoạn đầu
-```
-
-### Bước 3: Đặt biến bí mật
-
-Server **từ chối khởi động** nếu thiếu — đây là cơ chế fail-closed có chủ đích, không phải lỗi.
-
-```bash
-fly secrets set \
-  JWT_SECRET="$(openssl rand -hex 32)" \
-  CARMATE_ADMIN_PASSCODE="<mật-khẩu-mạnh-của-bạn>"
-```
-
-Tuỳ chọn — bật xác thực 2 lớp cho cổng admin, và AI Concierge:
-
-```bash
-fly secrets set CARMATE_ADMIN_MFA_CODE="<mã-mfa>"
-fly secrets set GEMINI_API_KEY="<khoá-gemini>"
-```
-
-### Bước 4: Triển khai
-
-```bash
-fly deploy
-fly logs          # theo dõi khởi động
-fly status        # kiểm tra máy và volume
-```
-
-Kiểm tra nhanh:
-
-```bash
-curl https://carmate.fly.dev/api/health
-```
-
-### Bước 5: Trỏ tên miền `carmate.vn`
-
-```bash
-fly certs add carmate.vn
-fly certs add www.carmate.vn
-fly ips list        # lấy IPv4 (A) và IPv6 (AAAA)
-```
-
-Tại Cloudflare (hoặc PA Việt Nam):
-
-1. Thêm bản ghi **A** `@` → IPv4 vừa lấy, và **AAAA** `@` → IPv6
-2. Thêm **CNAME** `www` → `carmate.vn`
-3. Nếu dùng Cloudflare proxy (mây cam), đặt SSL/TLS mode là **Full (strict)**
-
-Cuối cùng, cập nhật `ALLOWED_ORIGINS` trong `fly.toml` cho khớp domain thật rồi `fly deploy` lại.
-
-### Những điểm dễ sai
-
-| Vấn đề                                               | Hậu quả                                                                                                    |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Quên tạo volume, hoặc mount sai `/app/apps/api/data` | **Mất toàn bộ dữ liệu sau mỗi lần deploy**                                                                 |
-| Chạy nhiều hơn 1 máy                                 | Hai tiến trình ghi cùng file SQLite → **hỏng dữ liệu**. `fly.toml` đã ghim 1 máy, đừng `fly scale count 2` |
-| Quên `TRUST_PROXY=true`                              | Rate limiter thấy mọi request đến từ cùng một IP → chặn nhầm người dùng thật                               |
-| Chạy `fly launch` khi đã có `fly.toml`               | Ghi đè cấu hình volume và region                                                                           |
-
-### Vận hành
-
-```bash
-fly ssh console                                    # vào máy
-fly ssh console -C "node scripts/backup-db.js"     # sao lưu thủ công
-fly logs                                           # xem log
-fly status                                         # trạng thái máy
-```
-
-**Sao lưu:** backup nằm trên cùng volume với DB, nên chỉ cứu được khi xoá nhầm dữ liệu — không cứu được khi mất volume. Khi đã có người dùng thật, kéo bản sao về máy của bạn:
-
-```bash
-fly ssh sftp get /app/apps/api/data/backups/<tên-file>.gz
-```
-
-**Chi phí ước tính:** ~$2-3/tháng (`shared-cpu-1x` 512MB + volume 1GB).
-
-**Trần chịu tải:** SQLite một máy phục vụ tốt tới vài nghìn người dùng/ngày. Vượt mốc đó mới cần tính tới Postgres.
+Phát triển trên `dev`. Không commit/push thẳng `main`; chỉ merge hoặc triển khai khi người dùng yêu cầu. Quy chuẩn giao diện và bất biến dữ liệu tại [AGENTS.md](AGENTS.md).
