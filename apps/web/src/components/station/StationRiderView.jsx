@@ -42,6 +42,7 @@ import {
   getFixedSegmentTariff,
   isValidVietnamesePhone,
   cleanPhoneNumber,
+  normalizePhoneNumber,
   findNearestVirtualHub,
   calculateDistanceKm,
   FIXED_CORRIDOR_COACH_SCHEDULES,
@@ -503,10 +504,9 @@ export default function StationRiderView({
       pricePerSeat: tripItem.price,
       initialSeats: 1,
       publicName: tripItem.driverTitle || 'Chủ xe cá nhân',
-      // KHÔNG bịa số Chủ xe. Máy chủ chỉ mở khoá số thật sau khi vé được chốt
-      // hai chiều (bookingController.isInstantConfirmed); điền số giả vào đây
-      // khiến khách bấm gọi và đổ chuông vào máy một người hoàn toàn vô can.
-      driverPhone: tripItem.driverPhone || ''
+      // Không truyền số Chủ xe: máy chủ chỉ mở khoá số thật sau khi vé chốt hai
+      // chiều (bookingController.isInstantConfirmed), và InstantBookingModal đọc
+      // trip.phone/phoneReal chứ không đọc trường này.
     };
     setSelectedBookingTrip(tripPayload);
   };
@@ -713,7 +713,9 @@ export default function StationRiderView({
   const executeCheckIn = useCallback(
     async (verifiedPhone, verifiedName) => {
       setIsSubmitting(true);
-      const finalPhone = cleanPhoneNumber(verifiedPhone || phone || '');
+      // normalizePhoneNumber quy +84/84 về dạng 0xxxxxxxxx, cleanPhoneNumber thì
+      // không: '+84984883750' sẽ lưu thành '84984883750' và lệch với mọi nơi khác.
+      const finalPhone = normalizePhoneNumber(verifiedPhone || phone || '') || '';
       const finalName = verifiedName || name || 'Khách đi cùng';
 
       // Vào hàng đợi mà không có số thật thì Chủ xe không gọi được khi tới trạm:
@@ -889,8 +891,10 @@ export default function StationRiderView({
   // GỬI MÃ XÁC THỰC OTP QUA SMS
   const handleRequestOtp = async (e) => {
     e?.preventDefault();
-    const clean = cleanPhoneNumber(authPhoneInput);
-    if (!clean || clean.length < 9) {
+    // Phải dùng ĐÚNG bộ kiểm của executeCheckIn. Nới lỏng ở đây thì số 9 chữ số
+    // lọt qua, modal đóng, rồi guard đá ngược lại một modal trắng không kèm lỗi.
+    const clean = normalizePhoneNumber(authPhoneInput) || cleanPhoneNumber(authPhoneInput);
+    if (!clean || !isValidVietnamesePhone(clean)) {
       setAuthError('Vui lòng nhập số điện thoại hợp lệ (10 chữ số)');
       return;
     }
@@ -990,7 +994,7 @@ export default function StationRiderView({
       }
     } catch {
       // Fallback khi offline
-      const fallbackPhone = cleanPhoneNumber(authTelegramInput.replace(/\D/g, ''));
+      const fallbackPhone = normalizePhoneNumber(authTelegramInput) || '';
       const fallbackName = authNameInput.trim() || 'Khách đi cùng';
       // Mất mạng không phải lý do để bịa số: thà báo lỗi còn hơn đưa Chủ xe một
       // số không gọi được rồi để khách đứng chờ ngoài quốc lộ.
