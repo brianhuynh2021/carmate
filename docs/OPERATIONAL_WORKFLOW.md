@@ -5,6 +5,8 @@
 > **Áp dụng:** Môi trường Production & Kiểm thử Toàn diện trên nhánh `dev`  
 > **Tuân thủ 4 trụ cột kỹ thuật:** MIT Invariants • Stanford Ergonomics • Cursor Ambient Intelligence • Apple Liquid Aesthetics.
 
+> **Phân biệt luồng:** `Silent Fallback N+1` trong tài liệu này là luồng điều phối xe hỗ trợ; nó độc lập với luồng Gemini / Native Intent Engine, được mô tả tại [NATIVE_INTENT_FLOW.md](NATIVE_INTENT_FLOW.md).
+
 ---
 
 ## MỤC LỤC
@@ -32,7 +34,7 @@ Hành lang Quốc Lộ 13 dài ~85km nối liền các huyện công nghiệp t�
 Mỗi sáng sớm từ **05:30 đến 07:00**, hàng nghìn xe ô tô gia đình (Mitsubishi Xpander, Toyota Vios, Hyundai Accent...) của các công chức, kỹ sư, chuyên gia di chuyển về TP.HCM để kịp giờ làm lúc 8h–8h30. Đa số các xe này còn trống từ 2 đến 4 ghế.
 
 ### Thách Thức Cốt Lõi:
-1. **Áp lực giờ làm việc:** Hành khách ở Bình Phước dậy từ 05:00 sáng để chuẩn bị đón xe đi Sài Gòn. Nếu chuyến xe bị trễ 15–20 phút hoặc bị bùng sát giờ, toàn bộ ngày làm việc của họ sẽ bị phá hỏng.
+1. **Áp lực giờ làm việc:** Người đi cùng ở Bình Phước dậy từ 05:00 sáng để chuẩn bị đón xe đi Sài Gòn. Nếu chuyến xe bị trễ 15–20 phút hoặc bị bùng sát giờ, toàn bộ ngày làm việc của họ sẽ bị phá hỏng.
 2. **Áp lực giao thông & CSGT:** Nút giao Hàng Xanh (Bình Thạnh) là điểm nghẽn giao thông cực lớn với mật độ camera phạt nguội dừng đỗ và lực lượng CSGT dày đặc. Ô tô không thể dừng lâu để loay hoay quét QR hay đếm tiền thối.
 3. **Chi phí tin nhắn SMS:** Việc gửi SMS brandname liên tục gây hao tổn ngân sách cho nền tảng phi lợi nhuận/phi trung gian. Nền tảng cần cơ chế xác thực không tốn tiền SMS (In-app Reactive & WebOTP).
 
@@ -124,7 +126,7 @@ graph TD
 ### Trường hợp 1: Khách Vắng Mặt Tại Trạm Đón (No-Show)
 * **Nguy cơ:** Chủ xe đến trạm, khách không ra, chủ xe phải chờ muộn giờ làm; hoặc chủ xe không ghé trạm nhưng báo oan là khách vắng mặt để cướp tiền/tránh phạt.
 * **Cơ chế Khóa Kép (Dual-Lock Verification):**
-  1. **Bất biến Dwell-Time $\ge 5\text{ phút}$:** Nút `[ Báo Khách Vắng Mặt ]` trên Taplo bị khóa mờ trong 5 phút đầu tiên kể từ khi xe vào trạm. Chủ xe bắt buộc phải dừng đỗ tối thiểu 5 phút để hành khách kịp bước ra từ quầy cây xăng.
+  1. **Bất biến Dwell-Time $\ge 5\text{ phút}$:** Nút `[ Báo Khách Vắng Mặt ]` trên Taplo bị khóa mờ trong 5 phút đầu tiên kể từ khi xe vào trạm. Chủ xe bắt buộc phải dừng đỗ tối thiểu 5 phút để Người đi cùng kịp bước ra từ quầy cây xăng.
   2. **Đối chiếu Geofence 2 chiều:**
      - Nếu GPS của khách cách trạm $> 500\text{m}$: Hệ thống xác thực khách bỏ chuyến không lý do $\implies$ Trừ **-30 điểm tín nhiệm** của khách, giải phóng chủ xe tiếp tục lộ trình mà không bị phạt.
      - Nếu GPS của khách cách trạm $\le 80\text{m}$ (cả hai đều đang ở trong trạm): Hệ thống **chặn đứng thao tác phạt**, hiển thị thông báo: *"Khách đang ở trong trạm! Vui lòng bật đèn xi-nhan và nhìn quanh để tìm nhau."*
@@ -161,8 +163,8 @@ Tại sao tuyệt đối không thông báo xe dự phòng lúc vừa khớp chu
 1. **Hiệu ứng "Gieo rắc mối nghi ngờ" (Doubt Seeding):**  
    Nếu vừa ghép xe lúc 21:00 mà app đã báo: *"Đã ghép xe Xpander, đồng thời chuẩn bị sẵn xe Vios dự phòng lúc 06:30 đề phòng xe chính bùng"*, não bộ khách hàng lập tức diễn giải: *"Ủa, cái app này xe hay bùng lắm hay sao mà phải xếp xe dự phòng?"*. Sự an tâm bị phá vỡ ngay lập tức.
 2. **Kích hoạt tâm lý "Huỷ sớm cho lành":**  
-   Hành khách sẽ lo lắng cả đêm, ngủ không ngon giấc, và có xu hướng tự huỷ chuyến lúc 22:00 để book xe khách giường nằm cho chắc cú. Việc thông báo dự phòng vô tình trở thành nguyên nhân gây ra đứt gãy mạng lưới.
-3. **Triết lý CarMate:** Dự phòng phải **hoạt động hoàn toàn trong bóng tối (Zero-LLM / Silent Fallback)**. Chỉ khi nào xe chính thực sự đứt gãy, hệ thống mới nhẹ nhàng chuyển giao sang xe hỗ trợ mà không để khách phải trải qua 1 giây hoang mang nào.
+   Người đi cùng sẽ lo lắng cả đêm, ngủ không ngon giấc, và có xu hướng tự huỷ chuyến lúc 22:00 để book xe khách giường nằm cho chắc cú. Việc thông báo dự phòng vô tình trở thành nguyên nhân gây ra đứt gãy mạng lưới.
+3. **Triết lý CarMate:** Xe dự phòng phải **hoạt động hoàn toàn trong bóng tối (Silent Fallback)**. Đây là luồng điều phối xe, không phải thuật ngữ cho luồng LLM hay Native Intent Engine. Chỉ khi xe chính thực sự đứt gãy, hệ thống mới nhẹ nhàng chuyển giao sang xe hỗ trợ mà không để Khách đi cùng phải trải qua 1 giây hoang mang nào.
 
 ---
 
@@ -206,4 +208,4 @@ Khi Chủ xe bấm `[ 8842 ]` để đón khách trên màn hình CockpitMode, t
 
 ### B. Chuẩn Mực Danh Xưng Tuyệt Đối:
 * Luôn luôn gọi là: **"Chủ xe"** và **"Người đi cùng"** / **"Khách đi cùng"**.
-* **TUYỆT ĐỐI KHÔNG DÙNG "Bác tài" hay "Tài xế"** để giữ trọn vẹn bản chất đi ghép xe cá nhân văn minh, chia sẻ chi phí lăn bánh, không phải dịch vụ taxi thương mại.
+* Chỉ dùng **"Chủ xe"** và **"Người đi cùng"** / **"Khách đi cùng"** để giữ trọn vẹn bản chất đi ghép xe cá nhân văn minh, chia sẻ chi phí lăn bánh, không phải dịch vụ taxi thương mại.

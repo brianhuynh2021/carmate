@@ -5,7 +5,15 @@
 
 import { GoogleGenAI, Type } from '@google/genai';
 import { getTrips, getAllUsers } from '../db/sqliteStore.js';
-import { ROUTE_BENCHMARKS, formatVND, cleanPhoneNumber } from '@carmate/shared';
+import {
+  ROUTE_BENCHMARKS,
+  formatVND,
+  cleanPhoneNumber,
+  INTENTS,
+  normalizeSearchQuery,
+  parseUserMessage,
+  suggestBenchmarkRoute
+} from '@carmate/shared';
 
 // Khai báo 5 Công Cụ (Function Calling Declarations)
 export const toolDeclarations = [
@@ -101,15 +109,16 @@ export function executeSearchTrips(args = {}) {
 
   let filtered = allTrips;
   if (args.from) {
-    const fromKw = args.from.toLowerCase();
+    const fromKw = normalizeSearchQuery(args.from);
     filtered = filtered.filter(
-      (t) => (t.from || '').toLowerCase().includes(fromKw) || (t.routeCategory || '').toLowerCase().includes(fromKw)
+      (t) =>
+        normalizeSearchQuery(t.from).includes(fromKw) || normalizeSearchQuery(t.routeCategory).includes(fromKw)
     );
   }
   if (args.to) {
-    const toKw = args.to.toLowerCase();
+    const toKw = normalizeSearchQuery(args.to);
     filtered = filtered.filter(
-      (t) => (t.to || '').toLowerCase().includes(toKw) || (t.routeCategory || '').toLowerCase().includes(toKw)
+      (t) => normalizeSearchQuery(t.to).includes(toKw) || normalizeSearchQuery(t.routeCategory).includes(toKw)
     );
   }
   if (args.requiresFamilyCar) {
@@ -397,18 +406,14 @@ export function runStanfordInnerLoop({ to = '', seatsRequested = 1, rawTrips = [
 
 // ── BỘ SUY LUẬN HEURISTIC CỤC BỘ (ZERO-DOWNTIME STANFORD INNER LOOP) ──
 function runLocalHeuristicAgent(userPrompt) {
-  const prompt = userPrompt.toLowerCase();
+  const prompt = String(userPrompt || '').toLowerCase();
+  const native = parseUserMessage(userPrompt);
   const reasoningSteps = [];
 
-  reasoningSteps.push('[PLAN] Tiếp nhận & Phân tích ngữ cảnh nhu cầu di chuyển của bạn.');
+  reasoningSteps.push('[PLAN] Tiếp nhận & Phân tích ý định bản địa của bạn.');
 
   // 1. Nhánh kiểm tra hồ sơ uy tín & an toàn
-  if (
-    prompt.includes('uy tín') ||
-    prompt.includes('tín nhiệm') ||
-    prompt.includes('trust') ||
-    prompt.includes('an toàn')
-  ) {
+  if (native.intent === INTENTS.CHECK_TRUST) {
     reasoningSteps.push('[ACT] Rà soát hồ sơ an toàn và đánh giá 2 chiều trong cộng đồng.');
     let identifier = 'Tuấn';
     if (prompt.includes('tuấn')) identifier = 'Tuấn';
@@ -434,23 +439,15 @@ function runLocalHeuristicAgent(userPrompt) {
         `CarMate khuyến khích bạn kết nối trực tiếp qua Zalo để hẹn giờ đón thuận tiện nhất!`,
       reasoningSteps,
       suggestedTrips: [],
-      engine: 'local-heuristic-agent'
+      engine: 'native-intent-engine-v1'
     };
   }
 
   // 2. Nhánh tra cứu bảng giá định mức & chi phí xăng / cầu đường
-  if (
-    prompt.includes('giá') ||
-    prompt.includes('xăng') ||
-    prompt.includes('vé') ||
-    prompt.includes('cầu đường') ||
-    prompt.includes('bao nhiêu')
-  ) {
+  if (native.intent === INTENTS.ASK_PRICE) {
     reasoningSteps.push('[ACT] Tra cứu bảng định mức tiền xăng & vé trạm thu phí cầu đường.');
-    let routeName = 'QL13';
-    if (prompt.includes('14') || prompt.includes('ql14')) routeName = 'QL14';
-    if (prompt.includes('1a') || prompt.includes('ql1a')) routeName = 'QL1A';
-    if (prompt.includes('hải phòng') || prompt.includes('hà nội')) routeName = 'Hà Nội';
+    const benchmark = suggestBenchmarkRoute(userPrompt);
+    const routeName = benchmark?.key || native.slots.fromMatch || native.slots.toMatch || 'QL13';
 
     reasoningSteps.push(`[VERIFY] Đo cự ly và chi phí vận hành xe thực tế trên tuyến ${routeName}.`);
     const benchRes = executeGetRouteBenchmarks({ routeName });
@@ -470,59 +467,37 @@ function runLocalHeuristicAgent(userPrompt) {
         `💡 *Lưu ý: CarMate hoàn toàn miễn phí 0% phí sàn, người đi gửi trực tiếp chủ xe tiền xăng xe khi lên xe.*`,
       reasoningSteps,
       suggestedTrips: [],
-      engine: 'local-heuristic-agent'
+      engine: 'native-intent-engine-v1'
     };
   }
 
   // 3. Nhánh tìm chuyến xe: Kích hoạt đầy đủ Stanford Inner Loop (Verify -> Reflect -> Replan)
-  let from = '';
-  let to = '';
-  let seatsRequested = 1;
-  const seatMatch = prompt.match(/(\d+)\s*(ghế|chỗ|người)/i);
-  if (seatMatch) {
-    seatsRequested = parseInt(seatMatch[1], 10) || 1;
-  }
+  let from = native.slots.fromMatch || '';
+  let to = native.slots.toMatch || '';
+  const seatsRequested = native.slots.seats;
 
-  // Tự động nhận diện cú pháp tự nhiên: từ X đi/đến/về Y
-  const naturalRouteMatch = prompt.match(/từ\s+([^,]+?)\s+(?:đi|đến|về|sang)\s+([^,?.!]+)/i);
-  if (naturalRouteMatch) {
+  // Giữ lại cú pháp tuyến tự do khi địa danh chưa nằm trong danh mục hub/tỉnh.
+  const naturalRouteMatch = String(userPrompt || '').match(/từ\s+([^,]+?)\s+(?:đi|đến|về|sang)\s+([^,?.!]+)/i);
+  if (!from && !to && naturalRouteMatch) {
     from = naturalRouteMatch[1].trim();
     to = naturalRouteMatch[2].trim();
-  }
-
-  if (!from && !to) {
-    if (prompt.includes('hà nội') || prompt.includes('hn')) from = 'Hà Nội';
-    if (prompt.includes('hải phòng') || prompt.includes('hp')) to = 'Hải Phòng';
-    if (
-      prompt.includes('bình phước') ||
-      prompt.includes('đồng xoài') ||
-      prompt.includes('chơn thành') ||
-      prompt.includes('bù đốp') ||
-      prompt.includes('lộc ninh')
-    ) {
-      if (
-        prompt.includes('về sài gòn') ||
-        prompt.includes('đi sài gòn') ||
-        prompt.includes('đi tp') ||
-        prompt.includes('về tp') ||
-        prompt.includes('hàng xanh')
-      ) {
-        from = 'Bình Phước';
-        to = 'Sài Gòn';
-      } else {
-        from = 'Sài Gòn';
-        to = 'Bình Phước';
-      }
-    }
   }
 
   reasoningSteps.push(
     `[ACT] Tra cứu các chuyến xe khởi hành từ "${from || 'toàn quốc'}" đến "${to || 'toàn quốc'}" cho ${seatsRequested} người.`
   );
-  const searchRes = executeSearchTrips({ from, to });
+  const searchRes = executeSearchTrips({
+    from,
+    to,
+    timeSlot: native.slots.timeSlot,
+    maxPrice: native.slots.maxPrice,
+    requiresFamilyCar: native.slots.requiresFamilyCar,
+    noSmoking: native.slots.noSmoking
+  });
 
   // Lấy benchmark của tuyến để phục vụ bước [REFLECT]
-  const benchRes = executeGetRouteBenchmarks({ routeName: from || to || 'QL13' });
+  const benchmarkHint = suggestBenchmarkRoute(userPrompt);
+  const benchRes = executeGetRouteBenchmarks({ routeName: benchmarkHint?.key || from || to || 'QL13' });
   const benchmark = benchRes.matches?.[0] || null;
 
   // Kích hoạt Stanford Inner Loop
@@ -568,7 +543,7 @@ function runLocalHeuristicAgent(userPrompt) {
     reasoningSteps,
     suggestedTrips: finalTrips,
     requestedRoute: from && to ? `${from} ➔ ${to}` : '',
-    engine: 'local-heuristic-agent'
+    engine: 'native-intent-engine-v1'
   };
 }
 

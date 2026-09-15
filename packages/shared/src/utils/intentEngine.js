@@ -17,6 +17,7 @@
  */
 
 import { VIRTUAL_HUBS, ROUTE_BENCHMARKS } from '../constants/routes.js';
+import { mapTimeToSlot } from '../constants/timeSlots.js';
 import { PROVINCE_COORDINATES } from './geo.js';
 import { expandColloquial, tokenize, similarity, findBestSpan, normalizeForMatch } from './vietnameseText.js';
 
@@ -185,6 +186,10 @@ function isTrustworthyPlaceMatch(spanText, aliasText) {
 // chúng khi nói: "đi Bù Đốp" chứ không ai nói "đi Chợ Tân Tiến (Bù Đốp)".
 const HUB_TYPE_PREFIX = /^(?:nga\s*\d+|nga\s*(?:ba|tu)|kcn|tthc|cho|cau|cong\s*chao|vong\s*xoay|cua\s*khau|cay\s*xang(?:\s+petrolimex)?|tp\.?|tx\.?|huyen|thi\s*xa|cum\s*bv|bv|bx|vincom|aeon\s*mall)\s+/i;
 
+function stripHubTypePrefix(value) {
+  return normalizeForMatch(value).replace(HUB_TYPE_PREFIX, '').trim();
+}
+
 /**
  * Sinh tập bí danh cho một hub từ dữ liệu tên có sẵn.
  *
@@ -208,7 +213,7 @@ function buildHubAliases(hub) {
     // nếu không "đi Lộc Ninh" sẽ khớp nhầm sang Cửa khẩu Hoa Lư.
     for (const m of seed.matchAll(/\(([^)]+)\)/g)) {
       const inner = m[1].trim();
-      if (inner) regional.add(inner.replace(HUB_TYPE_PREFIX, '').trim());
+      if (inner) regional.add(stripHubTypePrefix(inner));
     }
 
     // Phần trước ngoặc, và các biến thể ngăn bởi "/", đều là tên gọi chính thức.
@@ -217,7 +222,7 @@ function buildHubAliases(hub) {
       const clean = part.trim();
       if (!clean) continue;
       primary.add(clean);
-      const stripped = clean.replace(HUB_TYPE_PREFIX, '').trim();
+      const stripped = stripHubTypePrefix(clean);
       if (stripped) primary.add(stripped);
     }
   }
@@ -318,9 +323,15 @@ function selectAliasEntries(normalizedText) {
   const { byToken } = placeIndexCache;
 
   const tokens = normalizedText.split(' ').filter(Boolean);
+  // Khi câu đã có một token đặc trưng ("xoai", "budop"...), các từ rất
+  // phổ biến như "xe", "gia", "di" chỉ kéo theo hàng trăm hub không liên
+  // quan. Với câu chỉ gồm tên ngắn toàn từ yếu ("Bình Long") vẫn giữ chúng
+  // để không làm mất địa danh hợp lệ.
+  const hasSpecificToken = tokens.some((token) => token.length >= 3 && !WEAK_PLACE_TOKENS.has(token));
   const selected = new Set();
 
   for (const token of tokens) {
+    if (hasSpecificToken && WEAK_PLACE_TOKENS.has(token)) continue;
     for (const entry of byToken.get(token) || []) selected.add(entry);
     if (token.length >= 5) {
       for (const entry of byToken.get(token.slice(0, 4)) || []) selected.add(entry);
@@ -328,6 +339,19 @@ function selectAliasEntries(normalizedText) {
   }
 
   return [...selected];
+}
+
+/** Tìm một alias đã khớp trọn từ để bỏ qua quét fuzzy tốn kém. */
+function findExactTokenSequence(tokens, aliasTokens) {
+  if (aliasTokens.length === 0 || aliasTokens.length > tokens.length) return -1;
+
+  outer: for (let start = 0; start <= tokens.length - aliasTokens.length; start++) {
+    for (let offset = 0; offset < aliasTokens.length; offset++) {
+      if (tokens[start + offset] !== aliasTokens[offset]) continue outer;
+    }
+    return start;
+  }
+  return -1;
 }
 
 /** Đếm số lần xuất hiện cụm từ khoá trong câu đã chuẩn hoá. */
@@ -431,7 +455,16 @@ export function extractRoute(rawText) {
     const cand = entry.candidate;
     const threshold = cand.kind === 'province' ? PROVINCE_MATCH_THRESHOLD : HUB_MATCH_THRESHOLD;
 
-    const span = findBestSpan(text, entry.normalized, { threshold, tokens: sentenceTokens });
+    const exactStart = findExactTokenSequence(sentenceTokens, entry.tokens);
+    const span =
+      exactStart >= 0
+        ? {
+            span: entry.normalized,
+            score: 0.95,
+            startIndex: exactStart,
+            endIndex: exactStart + entry.tokens.length
+          }
+        : findBestSpan(text, entry.normalized, { threshold, tokens: sentenceTokens });
     if (!span) continue;
     if (span.span.replace(/\s/g, '').length < 3) continue;
     // Xét chất lượng bằng chứng, không chỉ điểm số: loại các cụm toàn từ đệm
@@ -499,6 +532,11 @@ export function extractRoute(rawText) {
   return {
     from: fromEntry?.name || null,
     to: toEntry?.name || null,
+    // Giữ cụm người dùng đã gõ để lớp tìm kiếm đối chiếu với dữ liệu chuyến.
+    // Tên hiển thị của hub thường dài hơn (ví dụ "Chợ Tân Tiến (Bù Đốp)")
+    // nên không phù hợp để dùng làm từ khoá lọc tuyệt đối.
+    fromMatch: fromEntry?.span || null,
+    toMatch: toEntry?.span || null,
     fromHub: fromEntry
       ? { id: fromEntry.id, name: fromEntry.name, corridor: fromEntry.corridor, kind: fromEntry.kind }
       : null,
@@ -536,11 +574,29 @@ export function extractTime(rawText, now = new Date()) {
     const day = Number(slashDate[1]);
     const month = Number(slashDate[2]);
     if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
-      const year = slashDate[3] ? Number(slashDate[3].length === 2 ? `20${slashDate[3]}` : slashDate[3]) : now.getFullYear();
-      absoluteDate = new Date(year, month - 1, day);
-      // Ngày đã qua trong năm nay -> hiểu là năm sau.
-      if (!slashDate[3] && absoluteDate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-        absoluteDate = new Date(year + 1, month - 1, day);
+      const requestedYear = slashDate[3]
+        ? Number(slashDate[3].length === 2 ? `20${slashDate[3]}` : slashDate[3])
+        : null;
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const createValidCalendarDate = (year) => {
+        const candidate = new Date(year, month - 1, day);
+        return candidate.getFullYear() === year && candidate.getMonth() === month - 1 && candidate.getDate() === day
+          ? candidate
+          : null;
+      };
+
+      if (requestedYear !== null) {
+        absoluteDate = createValidCalendarDate(requestedYear);
+      } else {
+        // Ngày không nêu năm nghĩa là lần xuất hiện hợp lệ gần nhất trong tương lai.
+        // Vòng lặp cũng xử lý 29/02 khi năm hiện tại hoặc năm sau không nhuận.
+        for (let year = now.getFullYear(); year <= now.getFullYear() + 4; year++) {
+          const candidate = createValidCalendarDate(year);
+          if (candidate && candidate >= todayStart) {
+            absoluteDate = candidate;
+            break;
+          }
+        }
       }
     }
   }
@@ -565,10 +621,8 @@ export function extractTime(rawText, now = new Date()) {
   // 4. Buổi trong ngày -> khung giờ
   let timeSlot = null;
   if (explicitHour !== null) {
-    // Ánh xạ giờ cụ thể vào khung 2 tiếng của hệ thống (khung bắt đầu ở giờ chẵn).
-    const normalizedStart = explicitHour % 2 === 0 ? explicitHour : explicitHour - 1;
-    const pad = (n) => String(n).padStart(2, '0');
-    timeSlot = `${pad(normalizedStart)}:00-${pad(normalizedStart + 2)}:00`;
+    // Luôn trả đúng ID trong TIME_SLOTS; không tự ghép khoảng giờ không tồn tại.
+    timeSlot = mapTimeToSlot(`${String(explicitHour).padStart(2, '0')}:${String(explicitMinute).padStart(2, '0')}`);
   } else {
     // Ưu tiên cụm dài hơn ("sang som" trước "sang").
     const sorted = DAYPART_TO_SLOT.flatMap((d) => d.keys.map((k) => ({ key: k, slot: d.slot }))).sort(
@@ -695,6 +749,8 @@ export function parseUserMessage(rawText, { now = new Date() } = {}) {
   const slots = {
     from: route.from,
     to: route.to,
+    fromMatch: route.fromMatch,
+    toMatch: route.toMatch,
     fromHub: route.fromHub,
     toHub: route.toHub,
     date: time.date,

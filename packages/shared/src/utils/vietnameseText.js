@@ -301,6 +301,24 @@ function shareEnoughCharacters(a, b) {
 }
 
 /**
+ * Nhận diện đúng một phép đảo hai ký tự kề nhau. Đây là lỗi gõ điện thoại
+ * phổ biến, nhưng hẹp hơn nhiều so với việc hạ ngưỡng fuzzy cho mọi chuỗi.
+ */
+function isSingleAdjacentTransposition(a, b) {
+  if (a.length !== b.length || a.length < 2) return false;
+
+  const mismatches = [];
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) mismatches.push(i);
+    if (mismatches.length > 2) return false;
+  }
+
+  if (mismatches.length !== 2 || mismatches[1] !== mismatches[0] + 1) return false;
+  const [first, second] = mismatches;
+  return a[first] === b[second] && a[second] === b[first];
+}
+
+/**
  * Điểm tương đồng lai giữa hai chuỗi (0..1), tối ưu riêng cho địa danh Việt Nam.
  *
  * Trọng số theo thứ tự ưu tiên thực tế:
@@ -361,6 +379,10 @@ export function similarity(a, b, { preNormalized = false } = {}) {
   // Levenshtein/Dice chắc chắn cho điểm thấp. Kiểm tra này O(n) và loại bỏ
   // phần lớn cặp không liên quan trước khi chạy quy hoạch động O(n·m).
   if (!shareEnoughCharacters(s, t)) return 0;
+
+  // Một phép đảo hai ký tự kề trong toàn bộ địa danh vẫn là bằng chứng mạnh.
+  // Chỉ chạy sau cửa ải ký tự rẻ để không làm chậm vòng lặp dò hàng trăm hub.
+  if (isSingleAdjacentTransposition(s, t)) return 0.9;
 
   const maxLen = Math.max(s.length, t.length);
   const dist = damerauLevenshtein(s, t, Math.ceil(maxLen * 0.5));

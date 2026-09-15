@@ -157,6 +157,7 @@ for (const [text, fromPattern, toPattern] of routeCases) {
 
 check('Nhận địa danh 1 từ đứng riêng: "đi Hàng Xanh"', /Hàng Xanh/i.test(extractRoute('đi Hàng Xanh').to || ''));
 check('Nhận tỉnh/thành: "đi sg"', /HCM|Sài Gòn/i.test(extractRoute('có xe nào đi sg không').to || extractRoute('có xe nào đi sg không').from || ''));
+check('Nhận lỗi đảo ký tự "hnag xanh"', /Hàng Xanh/i.test(extractRoute('đi hnag xanh').to || ''));
 
 // Mọi địa danh trả về PHẢI là hub/tỉnh có thật trong hệ thống.
 const sampleRoute = extractRoute('từ Chơn Thành xuống Bàu Bàng');
@@ -181,7 +182,9 @@ check('"chiều" -> khung giờ chiều', extractTime('đi chiều nay', NOW).ti
 check('"sáng sớm" ưu tiên hơn "sáng"', extractTime('đi sáng sớm mai', NOW).timeSlot === '05:00-07:00');
 check('Giờ cụ thể "7h" -> giờ 7', extractTime('đi 7h sáng', NOW).explicitHour === 7);
 check('"5 giờ chiều" quy đổi thành 17h', extractTime('đi 5 giờ chiều', NOW).explicitHour === 17);
+check('Giờ cụ thể luôn trả về TIME_SLOTS hợp lệ', extractTime('đi 10h', NOW).timeSlot === '09:00-11:00');
 check('Giờ không hợp lệ bị loại bỏ', extractTime('đi 99h', NOW).explicitHour === null);
+check('Ngày lịch không hợp lệ bị loại', extractTime('đi 31/02', NOW).date === null);
 check('Câu không có thời gian -> null', extractTime('tìm xe đi Hàng Xanh', NOW).date === null);
 
 // ════════════════════════════════════════════════════════════════════
