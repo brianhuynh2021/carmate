@@ -230,7 +230,7 @@ async function startServer() {
     // Tắt được qua DISABLE_SCHEDULER=true cho môi trường kiểm thử và CI.
     startScheduler({ enabled: process.env.DISABLE_SCHEDULER !== 'true' });
 
-    server.listen(PORT, () => {
+    server.listen(PORT, process.env.HOST || undefined, () => {
       console.log(`\n\x1b[1m\x1b[36m╔══════════════════════════════════════════════════════════╗\x1b[0m`);
       console.log(`\x1b[1m\x1b[36m║             🚗 CarMate.vn Unified Server                 ║\x1b[0m`);
       console.log(`\x1b[1m\x1b[36m║      Khởi động DUY NHẤT 1 CỔNG: http://localhost:${PORT}    ║\x1b[0m`);

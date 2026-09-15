@@ -6,6 +6,8 @@ import {
   driverAcceptOffer,
   driverRejectOffer,
   driverVerifyPin,
+  riderAcceptStationOffer,
+  driverCompleteDropoff,
   cancelRiderIntent,
   getActiveCockpitSessions,
   resetAllStationData
@@ -21,7 +23,7 @@ import {
   permabanUser,
   getTripById
 } from '../db/sqliteStore.js';
-import { generateToken } from '../utils/token.js';
+import { ownsTrip } from '../services/bookingCommitment.js';
 import {
   cleanPhoneNumber,
   evaluateIncidentSanctions,
@@ -34,67 +36,12 @@ import {
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 export async function riderCheckInHandler(req, res) {
+  if (!req.user) return res.status(401).json({ success: false, error: 'Vui lòng đăng nhập để lưu nhu cầu.' });
   try {
-    const { hubId } = req.params;
-    const { destinationHubId, seatsNeeded, phone, name, clientLat, clientLng } = req.body || {};
-
-    const result = riderCheckIn({
-      hubId,
-      destinationHubId,
-      seatsNeeded,
-      phone,
-      name,
-      clientLat,
-      clientLng
-    });
-
-    // Unified Auth / Upsert: Tự động khởi tạo hoặc nạp tài khoản định danh ngầm (0.05s)
-    if (phone) {
-      try {
-        const cleaned = cleanPhoneNumber(phone);
-        if (cleaned) {
-          let userRecord = getUserByPhone(cleaned);
-          const displayName = (name && name.trim() && name.trim() !== 'Khách đi cùng')
-            ? name.trim()
-            : (userRecord?.name || `Khách ${cleaned.slice(-4)}`);
-
-          if (!userRecord) {
-            userRecord = {
-              id: 'USR-' + cleaned,
-              phone: cleaned,
-              name: displayName,
-              avatar: '',
-              role: 'rider',
-              trustScore: 98,
-              safeTripsCount: 0,
-              provider: 'station_quick_checkin'
-            };
-            await saveUser(userRecord);
-          } else if (name && name.trim() && name.trim() !== 'Khách đi cùng' && (!userRecord.name || userRecord.name.startsWith('Khách ') || userRecord.name.startsWith('Thành viên '))) {
-            userRecord.name = name.trim();
-            await saveUser(userRecord);
-          }
-
-          const token = generateToken({
-            userId: userRecord.id,
-            phone: userRecord.phone,
-            role: userRecord.role || 'rider',
-            name: userRecord.name
-          });
-
-          result.token = token;
-          result.user = userRecord;
-        }
-      } catch (authErr) {
-        console.warn('[riderCheckInHandler] Unified auth upsert warning:', authErr.message);
-      }
-    }
-
-    return res.status(201).json(result);
-  } catch (err) {
-    console.error('[riderCheckInHandler] error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    const result = riderCheckIn({ ...(req.body || {}), hubId: req.params.hubId,
+      userId: req.user.id, phone: req.user.phone || req.body?.phone || '', name: req.user.name || req.body?.name || '' });
+    return res.status(result.success ? 201 : 400).json(result);
+  } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 }
 
 export function getStationQueueHandler(req, res) {
@@ -108,77 +55,48 @@ export function getStationQueueHandler(req, res) {
   }
 }
 
-export function getRiderPassHandler(req, res) {
+export async function getRiderPassHandler(req, res) {
   try {
-    const { intentId } = req.params;
-    const result = getRiderPass(intentId);
-    if (!result.success) {
-      return res.status(404).json(result);
-    }
+    const result = getRiderPass(req.params.intentId);
+    if (!result.success) return res.status(404).json(result);
+    const own = ownsRider(req.user, result.intent);
+    const driver = ownsTrip(req.user, getTripById(result.intent.matchedTripId || result.intent.proposedTripId));
+    if (!own && !driver) return res.status(403).json({ success: false, error: 'Bạn không thuộc cuộc hẹn này.' });
+    if (!own) { result.intent = { ...result.intent }; delete result.intent.pin; }
     return res.json(result);
-  } catch (err) {
-    console.error('[getRiderPassHandler] error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+  } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 }
 
-export function cockpitTelemetryHandler(req, res) {
+export async function cockpitTelemetryHandler(req, res) {
   try {
-    // tripId phải là mã bài đăng THẬT: phiên Cockpit sẽ hiện lên sàn tuyến như một
-    // chuyến sắp ghé trạm, nên không được phép dựng từ id bịa. Mặc định cũ
-    // ('TRIP-DEFAULT') cho phép mọi request rỗng tạo ra một xe ma trên sàn.
-    const { tripId } = req.body || {};
-    if (!tripId || !getTripById(tripId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Thiếu mã chuyến hợp lệ. Hãy đăng chuyến trước khi mở Buồng lái.'
-      });
-    }
-    const result = telemetryPing(req.body || {});
-    return res.json(result);
-  } catch (err) {
-    console.error('[cockpitTelemetryHandler] error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    const trip = getTripById(req.body?.tripId);
+    if (!trip || !ownsTrip(req.user, trip)) return res.status(403).json({ success: false, error: 'Chỉ chủ chuyến xe được cập nhật vị trí.' });
+    const result = telemetryPing({ ...(req.body || {}), tripId: trip.id,
+      driverPhone: trip.phoneReal || trip.phone || req.user.phone || '', driverName: req.user.name || trip.authorName || '',
+      plate: trip.licensePlate || trip.plate || '', vehicleModel: trip.vehicleModel || trip.carModel || '',
+      destinationHubId: trip.destinationHubId, corridor: trip.routeCategory || trip.corridor || 'Tuyến QL13',
+      seatsAvailable: trip.availableSeats });
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 }
 
-export function cockpitAcceptOfferHandler(req, res) {
+export async function cockpitAcceptOfferHandler(req, res) {
   try {
-    const { tripId, intentId } = req.body || {};
-    const result = driverAcceptOffer({ tripId, intentId });
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.json(result);
-  } catch (err) {
-    console.error('[cockpitAcceptOfferHandler] error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    if (!ownsTrip(req.user, getTripById(req.body?.tripId))) return res.status(403).json({ success: false, error: 'Bạn không sở hữu chuyến xe này.' });
+    const result = driverAcceptOffer({ ...(req.body || {}), user: req.user });
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
 }
 
-export function cockpitRejectOfferHandler(req, res) {
-  try {
-    const { tripId, intentId } = req.body || {};
-    const result = driverRejectOffer({ tripId, intentId });
-    return res.json(result);
-  } catch (err) {
-    console.error('[cockpitRejectOfferHandler] error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+export async function cockpitRejectOfferHandler(req, res) {
+  if (!ownsTrip(req.user, getTripById(req.body?.tripId))) return res.status(403).json({ success: false, error: 'Bạn không sở hữu chuyến xe này.' });
+  return res.json(driverRejectOffer(req.body || {}));
 }
 
-export function cockpitVerifyPinHandler(req, res) {
-  try {
-    const { tripId, intentId, pin } = req.body || {};
-    const result = driverVerifyPin({ tripId, intentId, pin });
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.json(result);
-  } catch (err) {
-    console.error('[cockpitVerifyPinHandler] error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+export async function cockpitVerifyPinHandler(req, res) {
+  if (!ownsTrip(req.user, getTripById(req.body?.tripId))) return res.status(403).json({ success: false, error: 'Bạn không sở hữu chuyến xe này.' });
+  const result = driverVerifyPin({ ...(req.body || {}), user: req.user });
+  return res.status(result.success ? 200 : 400).json(result);
 }
 
 export function resetStationDataHandler(req, res) {
@@ -563,62 +481,10 @@ export async function riderReportCultureViolationHandler(req, res) {
  * 12. NGƯỜI ĐI CÙNG HỦY CHUYẾN MIỄN PHẠT DO CHỦ XE TRỄ QUÁ 5 PHÚT
  */
 export async function riderCancelGraceHandler(req, res) {
-  try {
-    const {
-      bookingId,
-      intentId,
-      tripId,
-      riderPhone,
-      driverPhone,
-      delayMinutes = 5,
-      note = 'Chủ xe trễ hẹn quá 5 phút tại trạm'
-    } = req.body || {};
-
-    const sanctions = evaluateIncidentSanctions(UNHAPPY_CASE_CODES.DRIVER_LATE_CANCELLATION, { delayMinutes });
-
-    // Trừ điểm chủ xe vì trễ hẹn
-    if (driverPhone) {
-      const cleanDriver = cleanPhoneNumber(driverPhone);
-      const driverUser = getUserByPhone(cleanDriver);
-      if (driverUser) {
-        const currentScore = Number(driverUser.trustScore ?? 100);
-        const newScore = Math.max(0, currentScore - (sanctions.driverPenalty || 15));
-        await updateUser(driverUser.id || cleanDriver, { trustScore: newScore });
-      }
-    }
-
-    // Hủy vé nếu có intentId
-    if (intentId) {
-      cancelRiderIntent(intentId, 'DRIVER_LATE_GRACE_CANCEL');
-    }
-
-    const incidentRecord = await reportTripIncidentDb({
-      bookingId,
-      tripId,
-      incidentType: UNHAPPY_CASE_CODES.DRIVER_LATE_CANCELLATION,
-      reporterRole: 'Người đi cùng',
-      reporterPhone: riderPhone,
-      driverPhone,
-      sanctionAction: sanctions.action,
-      driverPenalty: sanctions.driverPenalty || 15,
-      riderPenalty: 0,
-      fareExempt: true,
-      note,
-      sanctions
-    });
-
-    return res.json({
-      success: true,
-      sanctions,
-      incident: incidentRecord,
-      fare: 0,
-      lifebuoys: FIXED_CORRIDOR_COACH_SCHEDULES,
-      message: sanctions.message
-    });
-  } catch (err) {
-    console.error('[riderCancelGraceHandler] error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+  const result = getRiderPass(req.body?.intentId);
+  if (!result.success || !ownsRider(req.user, result.intent)) return res.status(403).json({ success: false, error: 'Bạn không sở hữu nhu cầu này.' });
+  const cancelled = cancelRiderIntent(req.body.intentId, req.body?.note || 'Khách cần đổi xe', { user: req.user, keepNeed: req.body?.action !== 'stop' });
+  return res.status(cancelled.success ? 200 : 400).json({ ...cancelled, message: cancelled.success ? 'Đã ghi nhận. Nhu cầu và hạn giờ ban đầu được giữ lại khi tìm xe khác.' : cancelled.error, sanctions: { riderPenalty: 0, driverPenalty: 0 } });
 }
 
 /**
@@ -678,3 +544,23 @@ export async function riderGetRadarRiskHandler(req, res) {
   }
 }
 
+
+function ownsRider(user, rider) {
+  return Boolean(user && rider && (rider.userId ? user.id === rider.userId : (user.phone && cleanPhoneNumber(user.phone) === rider.phone)));
+}
+export function riderAcceptOfferHandler(req, res) {
+  const intentId = req.params.intentId || req.body?.intentId;
+  const pass = getRiderPass(intentId);
+  if (!pass.success || !ownsRider(req.user, pass.intent)) return res.status(403).json({ success: false, error: 'Bạn không sở hữu nhu cầu này.' });
+  const result = riderAcceptStationOffer({ intentId, proposalVersion: req.body?.proposalVersion, user: req.user });
+  return res.status(result.success ? 200 : 400).json(result);
+}
+export function riderCancelIntentHandler(req, res) {
+  const result = cancelRiderIntent(req.params.intentId || req.body?.intentId, req.body?.reason || 'Khách hủy', { user: req.user, keepNeed: req.body?.action === 'find_another' });
+  return res.status(result.success ? 200 : 400).json(result);
+}
+export function cockpitDropoffHandler(req, res) {
+  if (!ownsTrip(req.user, getTripById(req.body?.tripId))) return res.status(403).json({ success: false, error: 'Bạn không sở hữu chuyến xe này.' });
+  const result = driverCompleteDropoff({ ...(req.body || {}), user: req.user });
+  return res.status(result.success ? 200 : 400).json(result);
+}

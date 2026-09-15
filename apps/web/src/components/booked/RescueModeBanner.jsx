@@ -69,7 +69,7 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
             Chuyến đi có thể bị gián đoạn
           </p>
           <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/80">
-            {reasonLabel}. Đừng lo — bạn vẫn còn thời gian, CarMate đã chuẩn bị sẵn phương án dưới đây.
+            {reasonLabel}. Hãy liên hệ chủ xe để kiểm tra. Những lựa chọn dưới đây cần được hỏi lại giờ và khả năng nhận khách.
           </p>
         </div>
         <button
@@ -82,6 +82,7 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
         </button>
       </div>
 
+      {lifebuoys.length === 0 && <p className="px-4 pb-4 text-sm text-amber-800 dark:text-amber-200">Chưa có phương án thay thế trong dữ liệu hiện có.</p>}
       {lifebuoys.length > 0 && (
         <div className="px-4 pb-4 space-y-2">
           <p className="text-[10px] font-mono uppercase tracking-wide text-amber-700/80 dark:text-amber-300/70 flex items-center gap-1.5">
@@ -125,7 +126,7 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
                 <div className="mt-2 p-2.5 rounded-lg bg-amber-100/70 dark:bg-amber-500/10 flex items-start gap-2">
                   <MapPin className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
                   <p className="text-[11px] text-amber-900 dark:text-amber-200/90 leading-relaxed">
-                    {bus.guidance || `Ra ${bus.departureStation} và vẫy xe hướng Sài Gòn.`}
+                    {bus.guidance || `Liên hệ nhà xe để xác nhận điểm đón ${bus.departureStation || 'phù hợp'} trước khi đến.`}
                   </p>
                 </div>
               )}

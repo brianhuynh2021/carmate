@@ -1,706 +1,95 @@
-/**
- * =============================================================================
- * MA TRẬN KHE THỜI GIAN (TIME-SLOTTED CORRIDOR MATRIX)
- * =============================================================================
- * Tâm lý khách liên tỉnh khác hẳn khách Grab: họ cần BIẾT CHẮC khung giờ để sắp
- * xếp công việc cả ngày, không thể ngồi nhìn màn hình quay đều chờ tài xế bấm
- * nhận. Vì vậy màn hình kết quả không bao giờ được để trống — kể cả khi không có
- * chuyến nào đúng giờ khách muốn.
- *
- * Ba tầng kết quả, trả về ngay lập tức trong một lần gọi:
- *
- *   🟢 CONFIRMED  Chuyến đã có thật, còn ghế — đặt là đi, chắc chắn 100%
- *   🔵 FORMING    Có xe đang chạy trên hành lang phía trên trạm đón, ETA tính
- *                 bằng phân phối ngẫu nhiên — đặt chỗ ưu tiên, hệ thống tự khoá
- *   ⚪ SHADOW     Khe dự phòng suy ra từ mật độ lịch sử — ghi nhận nhu cầu để
- *                 engine gom khớp lệnh dựng chuyến mới
- *
- * Cửa sổ quét mặc định ±30 phút quanh giờ khách muốn (theo Stiglic et al. 2015:
- * nới lỏng thời gian quanh điểm hẹn là đòn bẩy mạnh nhất để tăng tỷ lệ ghép).
- * =============================================================================
- */
-
-import {
-  getVirtualHubById,
-  describeHub,
-  computeAssurance,
-  getAssurancePromise,
-  getFixedSegmentTariff,
-  projectToCorridorFrenet,
-  getStationStationKm,
-  computeEtaDistribution,
-  etaQuantileSeconds,
-  parseTimeToMinutes,
-  formatMinutesToTime
-} from '@carmate/shared';
-import { getTrips, getUserByPhone, getTripById } from '../db/sqliteStore.js';
+import { getVirtualHubById, describeHub, normalizeTravelDate, getTravelWindow, normalizeConnectionTerms, projectToCorridorFrenet, getStationStationKm, computeEtaDistribution, etaQuantileSeconds } from '@carmate/shared';
+import { getTrips, getBookings } from '../db/sqliteStore.js';
 import { getActiveCockpitSessions, getStationQueue } from './stationQueueService.js';
+import { evaluateConnection, connectionSegment } from './connectionMatching.js';
+import { getTripAvailableSeatsForSegment } from './bookingCommitment.js';
+import { getTripOperatorAttribution } from './operatorProfiles.js';
 
-export const MATRIX_CONFIG = Object.freeze({
-  // Cửa sổ lân cận quanh giờ khách muốn (phút)
-  NEIGHBOR_WINDOW_MINUTES: 30,
-  // Bề rộng mỗi khe hiển thị (phút)
-  SLOT_WIDTH_MINUTES: 30,
-  // Số khe dự phòng tối đa sinh thêm khi thiếu kết quả thật
-  MAX_SHADOW_SLOTS: 3,
-  // Ngưỡng p80 để coi một xe đang chạy là "sẽ tới trạm trong tầm với"
-  MAX_FORMING_P80_MINUTES: 120
-});
+export const MATRIX_CONFIG = Object.freeze({ NEIGHBOR_WINDOW_MINUTES: 30, SLOT_WIDTH_MINUTES:30, MAX_SHADOW_SLOTS:0, MAX_FORMING_P80_MINUTES:120 });
+export const TIMELINE_CONFIG = Object.freeze({MIN_TRIPS_FOR_TIMELINE:3, PERIODS:[
+  {id:'early',label:'Sáng sớm',fromHour:0,toHour:6}, {id:'morning',label:'Buổi sáng',fromHour:6,toHour:12},
+  {id:'afternoon',label:'Buổi chiều',fromHour:12,toHour:18}, {id:'evening',label:'Buổi tối',fromHour:18,toHour:24}
+]});
+const clock = ms => new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ms));
+const maskPlate = value => String(value||'').replace(/[0-9]{2}$/,'xx');
 
-/**
- * Che hai ký tự cuối biển số: "93A-285.41" -> "93A-285.xx".
- * Giữ đủ phần đầu để khách nhận diện xe từ xa trên quốc lộ, nhưng không phơi
- * trọn biển số ra danh sách công khai khi chưa chốt chuyến.
- */
-function maskPlateTail(plate) {
-  const raw = String(plate || '').trim();
-  if (!raw) return null;
-  if (raw.includes('xx') || raw.includes('XX')) return raw; // đã che sẵn
-  return raw.replace(/[0-9]{2}$/, 'xx');
-}
-
-/** Nhận diện biển vàng dịch vụ (sê-ri E, F hoặc cờ dịch vụ) vs biển trắng gia đình */
-function detectPlateType(plate, item = {}) {
-  if (item.plateType === 'yellow' || item.plateType === 'white') return item.plateType;
-  if (item.isServiceVehicle === true) return 'yellow';
-  const str = String(plate || '').toUpperCase();
-  if (/[0-9]{2}[EFG]/.test(str.replace(/[\s.-]/g, ''))) return 'yellow';
-  return 'white';
-}
-
-/** Lấy mốc phút trong ngày từ chuỗi "HH:MM" hoặc khe "HH:MM-HH:MM". */
-function slotStartMinutes(timeSlot) {
-  if (!timeSlot || timeSlot === 'all') return null;
-  const head = String(timeSlot).split('-')[0].trim();
-  // parseTimeToMinutes mặc định trả 06:15 cho chuỗi không đọc được, nên phải tự
-  // kiểm định dạng HH:MM trước. Thiếu bước này thì nhãn chữ tự do ("sáng sớm")
-  // sẽ bị hiển thị thành giờ khởi hành "06:15" y như thật.
-  if (!/^\d{1,2}:\d{2}$/.test(head)) return null;
-  const parsed = parseTimeToMinutes(head);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-/** Khoảng cách vòng tròn giữa 2 mốc phút trong ngày (xử lý qua nửa đêm). */
-function circularDistanceMinutes(a, b) {
-  const raw = Math.abs(a - b);
-  return Math.min(raw, 1440 - raw);
-}
-
-/**
- * Từ điển địa danh → cọc số km trên hành lang QL13.
- *
- * Chuyến xe lưu điểm đi/đến bằng chữ người dùng tự gõ ("Bù Đốp (Cây xăng
- * Petrolimex 17, QL13)", "Sài Gòn (Ngã tư Hàng Xanh)"), không phải mã trạm. Dò
- * theo tên trạm đầy đủ gần như không bao giờ khớp, nên phải dò theo địa danh.
- *
- * Xếp từ dài đến ngắn khi tra, để "ngã 4 bình phước" không bị "bình phước" nuốt mất.
- */
-const CORRIDOR_PLACE_GAZETTEER = Object.freeze([
-  { s: -20, names: ['bù đốp', 'bu dop'] },
-  { s: 0, names: ['lộc ninh', 'loc ninh'] },
-  { s: 24.5, names: ['bình long', 'binh long', 'an lộc', 'an loc'] },
-  { s: 44.5, names: ['tân khai', 'tan khai', 'hớn quản', 'hon quan'] },
-  { s: 51.5, names: ['minh hưng', 'minh hung'] },
-  { s: 56.5, names: ['chơn thành', 'chon thanh'] },
-  { s: 70, names: ['đồng xoài', 'dong xoai'] },
-  { s: 84.5, names: ['bàu bàng', 'bau bang', 'mỹ phước', 'my phuoc'] },
-  { s: 107, names: ['sở sao', 'so sao', 'đại nam', 'dai nam', 'thủ dầu một', 'thu dau mot'] },
-  { s: 122, names: ['vsip', 'aeon', 'canary'] },
-  { s: 126, names: ['lái thiêu', 'lai thieu', 'thuận an', 'thuan an'] },
-  { s: 132.5, names: ['ngã 4 bình phước', 'nga 4 binh phuoc', 'ngã tư bình phước'] },
-  { s: 134.5, names: ['vạn phúc', 'van phuc'] },
-  { s: 137.5, names: ['bình triệu', 'binh trieu', 'miền đông', 'mien dong', 'thủ đức', 'thu duc'] },
-  { s: 139.5, names: ['hàng xanh', 'hang xanh', 'bình thạnh', 'binh thanh'] },
-  { s: 142.5, names: ['tân sơn nhất', 'tan son nhat', 'tsn', 'tân bình', 'tan binh', 'phạm văn đồng'] },
-  // "Sài Gòn" chung chung: quy về Hàng Xanh, cửa ngõ QL13 vào thành phố
-  { s: 139.5, names: ['sài gòn', 'sai gon', 'tp.hcm', 'tphcm', 'quận 1', 'quan 1', 'cống quỳnh'] }
-]);
-
-/** Dò một chuỗi địa danh tự do về cọc số km, ưu tiên tên dài (cụ thể) nhất. */
-function matchPlaceToCorridorKm(raw) {
-  const text = String(raw || '').toLowerCase();
-  if (!text) return null;
-
-  let bestS = null;
-  let bestLen = 0;
-  for (const entry of CORRIDOR_PLACE_GAZETTEER) {
-    for (const name of entry.names) {
-      if (name.length > bestLen && text.includes(name)) {
-        bestLen = name.length;
-        bestS = entry.s;
-      }
-    }
-  }
-  return bestS;
-}
-
-/**
- * Chuyến có thực sự phục vụ được chặng khách cần không?
- *
- * Bản ghi chuyến chỉ lưu `from`/`to` dạng chữ tự do ("Bù Đốp (Cây xăng
- * Petrolimex 17, QL13)"), không có mã trạm. Không đối chiếu gì thì một chuyến
- * Lộc Ninh → Tân Sơn Nhất vẫn hiện ra như "🟢 chắc chắn 100%" cho người tìm
- * chặng Bàu Bàng → Hàng Xanh — sai lệch nguy hiểm vì nó đứng ở tầng đáng tin nhất.
- *
- * Cách đối chiếu: quy cả hai đầu chuyến về cọc số s bằng từ điển địa danh, kiểm
- * tra CHIỀU ĐI khớp nhau trước, rồi mới xét chặng khách có nằm gọn trong chặng xe.
- */
-function tripServesSegment(trip, originS, destS) {
-  if (originS == null || destS == null) return true;
-
-  const fromS = matchPlaceToCorridorKm(trip.from || trip.fromLocation);
-  const toS = matchPlaceToCorridorKm(trip.to || trip.toLocation);
-
-  // Không nhận ra đầu nào trên hành lang này (ví dụ chuyến Vũng Tàu, Phan Thiết):
-  // KHÔNG được hiển thị ở tầng "🟢 chắc chắn 100%". Thà thiếu một kết quả còn hơn
-  // mời khách lên nhầm chuyến — tầng SHADOW vẫn luôn lấp chỗ trống phía dưới.
-  if (fromS == null && toS == null) return false;
-
-  // Dung sai 8km: đầu chuyến ghi tên một địa danh gần trạm chứ không đúng trạm
-  const TOLERANCE_KM = 8;
-
-  // CHIỀU ĐI phải khớp trước tiên. Xét theo min/max là bỏ qua chiều: một chuyến
-  // Bù Đốp → Sài Gòn sẽ hiện ra cho người tìm chặng Sài Gòn → Bàu Bàng, tức là
-  // mời khách lên một chiếc xe chạy ngược hướng họ cần đi.
-  const rideSouthbound = destS > originS;
-
-  if (fromS != null && toS != null) {
-    if (fromS === toS) return false;
-    const tripSouthbound = toS > fromS;
-    if (tripSouthbound !== rideSouthbound) return false;
-
-    // Cùng chiều rồi thì chặng khách phải nằm gọn trong chặng xe
-    const tripMin = Math.min(fromS, toS);
-    const tripMax = Math.max(fromS, toS);
-    return (
-      Math.min(originS, destS) >= tripMin - TOLERANCE_KM &&
-      Math.max(originS, destS) <= tripMax + TOLERANCE_KM
-    );
-  }
-
-  // Chỉ dò được điểm xuất phát: khách phải lên xe ở phía sau điểm đó theo đúng chiều
-  if (fromS != null) {
-    return rideSouthbound ? originS >= fromS - TOLERANCE_KM : originS <= fromS + TOLERANCE_KM;
-  }
-  // Chỉ dò được điểm đến: khách phải xuống trước điểm đó theo đúng chiều
-  return rideSouthbound ? destS <= toS + TOLERANCE_KM : destS >= toS - TOLERANCE_KM;
-}
-
-/**
- * TẦNG 1 — CHUYẾN ĐÃ CÓ THẬT (🟢 CONFIRMED)
- * Đọc từ sàn chuyến đang mở, lọc theo hành lang, chặng và cửa sổ thời gian.
- */
-/**
- * Đọc lịch sử thật của chủ xe để dựng chỉ số an tâm.
- * Không có hồ sơ thì trả về null — KHÔNG bịa ra "100% đúng giờ" cho người lạ.
- */
-function loadDriverHistory(trip) {
-  const phone = trip?.phoneReal || trip?.driverPhone;
-  if (!phone) return null;
-  const user = getUserByPhone(String(phone).replace(/\D/g, ''));
-  if (!user) return null;
+function publicSlot(trip,match,request,bookings,live=null) {
+  const terms=normalizeConnectionTerms(trip);
+  const departureLabel=clock(Date.parse(match.pickupStartAt));
+  const [h,m]=departureLabel.split(':').map(Number);
+  const publicPhone=trip.publicContactConsent===true ? (trip.phoneReal||trip.phone||null) : null;
+  const photos=(trip.carPhotos||trip.photos||[]).map(p=>typeof p==='string'?p:p?.url).filter(Boolean);
   return {
-    trustScore: Number(user.trustScore ?? 100),
-    completedTrips: Number(user.completedTrips ?? trip.completedCount ?? 0),
-    lateReports: Number(user.lateReports ?? 0)
+    ...getTripOperatorAttribution(trip),
+    id:trip.id,tripId:trip.id,tier:live?'FORMING':'CONFIRMED',availabilityStatus:live?'moving':'listed',
+    departureLabel,departureMinutes:h*60+m,departureDate:request.date,pickupStartAt:match.pickupStartAt,pickupEndAt:match.pickupEndAt,
+    seatsAvailable:getTripAvailableSeatsForSegment(trip,request,bookings),totalSeats:Number(trip.capacity||0),
+    driverName:trip.publicContactName||trip.publicName||'Chủ xe',vehicleModel:trip.carType||'',
+    plateMasked:maskPlate(trip.licensePlate||trip.plateMask),plateType:trip.plateType||null,isServiceVehicle:trip.isServiceVehicle===true,
+    publicContactPhone:publicPhone,publicContactName:publicPhone?(trip.publicContactName||'Chủ xe'):null,
+    publicContactConsent:trip.publicContactConsent===true,maskedCode:trip.maskedCode||null,userId:trip.userId||null,
+    photos,carPhotoUrl:photos[0]||null,carImage:photos[0]||null,amenities:trip.amenities||[],
+    fromLocation:trip.from||'',toLocation:trip.to||'',originHubId:trip.originHubId,destinationHubId:trip.destinationHubId,
+    requestedOriginHubId:request.originHubId,requestedDestinationHubId:request.destinationHubId,
+    ...terms,pricePerSeat:terms.basePricePerSeat,totalPrice:match.totalPrice,totalPriceUnknown:terms.pricingMode==='contact',
+    lastUpdatedAt:live?.lastPingAt||trip.updatedAt||trip.createdAt||null,etaUpdatedAt:live?.lastPingAt||null,
+    certainty:null,assurance:{level:'UNCONFIRMED',label:'Cần xác nhận',score:null,canPromiseTime:false},
+    promise:live?'Dự kiến qua điểm đón; chờ hai bên xác nhận.':'Chủ xe đã đăng lịch; chờ hai bên xác nhận.',
+    note:match.reason,action:'REQUEST_PICKUP',actionLabel:'Gửi yêu cầu đón',requiresPickupAgreement:match.requiresPickupAgreement,
+    rankingScore:match.score,platformFee:0,bookingConfirmed:false
   };
 }
 
-function getDayOffset(dateStr, nowMs) {
-  if (!dateStr || dateStr === 'Hôm nay') return 0;
-  if (dateStr === 'Ngày mai') return 1;
-  const target = new Date(dateStr);
-  if (!isNaN(target.getTime())) {
-    const today = new Date(nowMs);
-    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(today);
-    const targetStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(target);
-    if (targetStr === todayStr) return 0;
-    const diffMs = target.getTime() - today.getTime();
-    return Math.max(0, Math.round(diffMs / 86400000));
+export function buildTimeSlotMatrix({originHubId,destinationHubId,date=null,timeSlot='all',seatsNeeded=1,corridor='Tuyến QL13',matchingPreference='balanced',nowMs=Date.now()}={}) {
+  const origin=getVirtualHubById(originHubId),destination=getVirtualHubById(destinationHubId);
+  if(!origin||!destination||originHubId===destinationHubId) return {success:false,error:'Chọn hai điểm đi và đến khác nhau.'};
+  const seats=Number(seatsNeeded);
+  if(!Number.isInteger(seats)||seats<1||seats>54) return {success:false,error:'Số người phải từ 1 đến 54.'};
+  const request={originHubId,destinationHubId,date:normalizeTravelDate(date,nowMs),timeSlot:timeSlot||'all',seats,matchingPreference};
+  const window=getTravelWindow(request,nowMs);
+  if(!window) return {success:false,error:'Ngày hoặc khung giờ không hợp lệ.'};
+  const bookings=getBookings();
+  const trips=getTrips({type:'drivers',includeHidden:false,includeExpired:true}).filter(t=>!t.isHidden&&!t.isBanned&&['active','full'].includes(t.status||'active'));
+  const slots=new Map();
+  for(const trip of trips) {
+    const match=evaluateConnection(trip,request,{nowMs,bookings});
+    if(match) slots.set(trip.id,publicSlot(trip,match,request,bookings));
   }
-  return 0;
+  // Only recent telemetry tied to a real published trip can add an en-route result.
+  if(request.date===normalizeTravelDate(null,nowMs)) for(const live of getActiveCockpitSessions()) {
+    const ping=Number(live.lastPing||live.lastPingAt||live.updatedAt||live.lastTelemetryAt||0);
+    if(live.isBanned||!ping||nowMs-ping>120000||ping>nowMs+10000) continue;
+    const trip=trips.find(t=>t.id===live.tripId);
+    if(!trip||!connectionSegment(trip,request)) continue;
+    const current=projectToCorridorFrenet(live.lat,live.lng,live.corridor);
+    const pickup=getStationStationKm(originHubId),dropoff=getStationStationKm(destinationHubId);
+    if(!current.isOnCorridor||pickup==null||dropoff==null) continue;
+    const direction=Math.sign(dropoff-pickup);
+    if((pickup-current.s)*direction<0) continue;
+    const eta=computeEtaDistribution({currentS:Math.min(current.s,pickup),targetS:Math.max(current.s,pickup),currentSpeedKmh:live.speed,nowMs});
+    if(!eta.valid) continue;
+    const etaStart=nowMs+Math.max(0,eta.muSeconds)*1000;
+    const etaEnd=nowMs+etaQuantileSeconds(eta,0.8)*1000;
+    if(etaEnd<window.start||etaStart>window.end||etaEnd-nowMs>MATRIX_CONFIG.MAX_FORMING_P80_MINUTES*60000) continue;
+    if(getTripAvailableSeatsForSegment(trip,request,bookings)<seats) continue;
+    const terms=normalizeConnectionTerms(trip);
+    const match={pickupStartAt:new Date(Math.max(window.start,etaStart)).toISOString(),pickupEndAt:new Date(Math.min(window.end,etaEnd)).toISOString(),
+      totalPrice:terms.basePricePerSeat==null?null:terms.basePricePerSeat*seats,requiresPickupAgreement:terms.pickupMode!=='station',
+      score:(etaStart-nowMs)/60000+(terms.basePricePerSeat==null?50:terms.basePricePerSeat*seats/10000),reason:'Xe đang di chuyển; giờ qua điểm đón là dự kiến từ cập nhật vị trí gần nhất.'};
+    slots.set(trip.id,publicSlot(trip,match,request,bookings,{...live,lastPingAt:ping}));
+  }
+  const all=[...slots.values()].sort((a,b)=>a.rankingScore-b.rankingScore||String(a.tripId).localeCompare(String(b.tripId)));
+  const queue=getStationQueue(originHubId);
+  return {success:true,origin:describeHub(origin),destination:describeHub(destination),corridor,date:request.date,seatsNeeded:seats,
+    desiredTimeLabel:timeSlot&&timeSlot!=='all'?timeSlot:null,windowMinutes:0,tariff:null,backupCount:0,
+    station:{waitingCount:queue.waitingCount||0,estimatedWaitMinutes:null},slots:all,
+    counts:{confirmed:all.filter(s=>s.tier==='CONFIRMED').length,forming:all.filter(s=>s.tier==='FORMING').length,shadow:0,total:all.length},
+    isEmpty:all.length===0,updatedAt:nowMs,rankingExplanation:'Các phương án hiện có được xếp theo thời gian và tổng giá; hai bên vẫn cần xác nhận.'};
 }
 
-function collectConfirmedTrips({ corridor, desiredMinutes, windowMinutes, seatsNeeded, originS, destS, backupCount = 0, nowMs = Date.now() }) {
-  const trips = getTrips({ type: 'drivers', includeHidden: false });
-
-  // Tính phút hiện tại trong ngày theo múi giờ Việt Nam (UTC+7)
-  const now = new Date(nowMs);
-  const vnTimeParts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  }).formatToParts(now);
-  const curH = Number(vnTimeParts.find((p) => p.type === 'hour')?.value || 0);
-  const curM = Number(vnTimeParts.find((p) => p.type === 'minute')?.value || 0);
-  const currentMinutesVN = curH * 60 + curM;
-
-  // Bản ghi chuyến dùng `availableSeats` (số ghế còn trống thực tế), còn `capacity`
-  // là sức chứa tổng của xe. Tra nhầm sang `seats` sẽ ra undefined và lọc rớt sạch
-  // mọi chuyến thật — im lặng và rất khó phát hiện.
-  const seatsOf = (t) => Number(t.availableSeats ?? t.seats ?? t.capacity ?? 0);
-
-  return trips
-    .filter((t) => {
-      if (seatsOf(t) < seatsNeeded) return false;
-      if (t.status && t.status !== 'active') return false;
-      if (!tripServesSegment(t, originS, destS)) return false;
-      if (corridor && t.routeCategory && !String(t.routeCategory).includes(corridor.replace('Tuyến ', ''))) {
-        // Không khớp hành lang thì bỏ, nhưng chuyến thiếu routeCategory vẫn giữ
-        // để không đánh rơi dữ liệu cũ chưa gắn nhãn tuyến.
-        if (t.routeCategory) return false;
-      }
-
-      const tripMinutes = slotStartMinutes(t.timeSlot || t.time);
-
-      // Khi duyệt tất cả chuyến sẵn có (desiredMinutes == null):
-      // Lọc bỏ các chuyến xe trong quá khứ của ngày hôm nay (dung sai 15 phút).
-      if (desiredMinutes == null) {
-        const isToday = !t.date || t.date === 'Hôm nay';
-        if (isToday && tripMinutes != null && tripMinutes < currentMinutesVN - 15) {
-          return false;
-        }
-        return true;
-      }
-
-      if (tripMinutes == null) return true;
-      return circularDistanceMinutes(tripMinutes, desiredMinutes) <= windowMinutes;
-    })
-    .map((t) => {
-      const tripMinutes = slotStartMinutes(t.timeSlot || t.time);
-      const history = loadDriverHistory(t);
-      const assurance = computeAssurance({
-        baseCertainty: 1,
-        trustScore: history?.trustScore ?? Number(t.rating ? t.rating * 20 : 90),
-        completedTrips: history?.completedTrips ?? Number(t.completedCount || 0),
-        lateReports: history?.lateReports ?? 0,
-        backupCount
-      });
-      const label = tripMinutes != null ? formatMinutesToTime(tripMinutes) : t.timeSlot || t.time || '';
-      const plateType = detectPlateType(t.plateMask || t.plate || t.licensePlate, t);
-      const isService = plateType === 'yellow' || Boolean(t.isServiceVehicle);
-      return {
-        tier: 'CONFIRMED',
-        assurance,
-        promise: getAssurancePromise(assurance, label),
-        badge: isService ? '🚕' : '🟢',
-        tripId: t.id,
-        id: t.id,
-        maskedCode: t.maskedCode || (t.id && t.id.startsWith('DRV-') ? t.id.replace('DRV-', 'CX-') : null),
-        departureLabel: tripMinutes != null ? formatMinutesToTime(tripMinutes) : t.timeSlot || t.time || '',
-        departureMinutes: tripMinutes,
-        departureDate: t.date || null,
-        seatsAvailable: seatsOf(t),
-        totalSeats: Number(t.capacity || t.seats || 4),
-        driverName: t.publicName || t.authorName || t.driverName || (isService ? 'Chủ xe dịch vụ' : 'Chủ xe'),
-        vehicleModel: t.carType || t.carCategory || '',
-        // Biển số che 2 số cuối: đủ để khách nhận ra xe giữa dòng QL13, nhưng
-        // không lộ trọn biển ra màn hình công khai trước khi chốt chuyến.
-        plateMasked: maskPlateTail(t.plateMask || t.plate || t.licensePlate),
-        carImage: t.carImage || t.image || t.vehicleImage || null,
-        // Sàn công khai không auth: KHÔNG phát số điện thoại thật và biển số đầy đủ
-        // (Nghị định 13/2023). Khách nhận số Chủ xe qua bản ghi booking sau khi giữ chỗ.
-        // userId để client nhận ra bài đăng của chính mình mà không cần lộ số.
-        userId: t.userId || null,
-        carPhotoUrl: t.carPhotoUrl || (Array.isArray(t.photos) ? t.photos[0] : null) || (Array.isArray(t.carPhotos) ? (typeof t.carPhotos[0] === 'string' ? t.carPhotos[0] : t.carPhotos[0]?.url) : null) || null,
-        photos: (Array.isArray(t.photos) && t.photos.length > 0)
-          ? t.photos
-          : (Array.isArray(t.carPhotos) && t.carPhotos.length > 0
-              ? t.carPhotos.map(p => (typeof p === 'string' ? p : p?.url)).filter(Boolean)
-              : (t.carPhotoUrl ? [t.carPhotoUrl] : (t.carImage ? [t.carImage] : []))),
-        amenities: t.amenities || ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
-        fromLocation: t.from || '',
-        toLocation: t.to || '',
-        // Mã trạm THẬT của chuyến (không phải trạm khách đang tìm): client cần
-        // nó để tính đúng giá từng chuyến thay vì dùng chung giá của tuyến tìm.
-        originHubId: t.originHubId || null,
-        destinationHubId: t.destinationHubId || null,
-        plateType,
-        isServiceVehicle: isService,
-        charterPrice: t.charterPrice || null,
-        serviceNote: t.serviceNote || (isService ? 'Xe dịch vụ tiện chuyến chiều về · Nhận đón tận ngõ' : null),
-        pricePerSeat: t.basePricePerSeat || t.pricePerSeat || t.price || null,
-        certainty: 1.0,
-        action: 'CONFIRM_NOW',
-        actionLabel: isService ? 'Giữ chỗ xe dịch vụ' : 'Xác nhận đi ngay',
-        note: isService ? 'Xe dịch vụ tiện chuyến chiều về' : 'Đã chắc chắn 100%'
-      };
-    })
-    .sort((a, b) => {
-      const dateA = getDayOffset(a.departureDate, nowMs);
-      const dateB = getDayOffset(b.departureDate, nowMs);
-      if (dateA !== dateB) return dateA - dateB;
-      if (desiredMinutes == null) {
-        const ma = a.departureMinutes ?? 9999;
-        const mb = b.departureMinutes ?? 9999;
-        return ma - mb;
-      }
-      const da = a.departureMinutes == null ? 999 : circularDistanceMinutes(a.departureMinutes, desiredMinutes);
-      const db = b.departureMinutes == null ? 999 : circularDistanceMinutes(b.departureMinutes, desiredMinutes);
-      return da - db;
-    });
-}
-
-/**
- * TẦNG 2 — XE ĐANG CHẠY TRÊN HÀNH LANG (🔵 FORMING)
- *
- * Đây là tầng mà nhà xe truyền thống không thể có: hệ thống nhìn thấy xe đang
- * lăn bánh ở đâu trên trục 1D và tính bằng phân phối ngẫu nhiên xem nó sẽ tới
- * trạm đón lúc mấy giờ. Không phải lời hứa suông "chút nữa tới".
- */
-function collectFormingTrips({ originHubId, seatsNeeded, nowMs, backupCount = 0 }) {
-  const hubS = getStationStationKm(originHubId);
-  if (hubS == null) return [];
-
-  const sessions = getActiveCockpitSessions();
-  const out = [];
-
-  for (const session of sessions) {
-    if (session.isBanned) continue;
-    // Phiên telemetry phải gắn với một bài đăng THẬT. Mặc định cũ là hằng số
-    // 'TRIP-DEFAULT' (và client từng gửi 'TRIP-MY-COCKPIT') — những id không tồn
-    // tại trong bảng trips, khiến slot hiện trên sàn như chuyến thật nhưng không
-    // tra cứu, đặt chỗ hay quản lý được. Sàn chỉ nhận phiên có chuyến tra ra.
-    if (!session.tripId || !getTripById(session.tripId)) continue;
-    if (Number(session.seatsAvailable || 0) < seatsNeeded) continue;
-    if (session.lat == null || session.lng == null) continue;
-
-    const frenet = projectToCorridorFrenet(session.lat, session.lng, session.corridor);
-    if (!frenet.isOnCorridor) continue;
-    // Xe phải còn ở TRƯỚC trạm đón mới có chuyện sắp ghé qua
-    if (frenet.s >= hubS) continue;
-
-    const distribution = computeEtaDistribution({
-      currentS: frenet.s,
-      targetS: hubS,
-      currentSpeedKmh: session.speed,
-      nowMs
-    });
-    if (!distribution.valid) continue;
-
-    const p80Seconds = etaQuantileSeconds(distribution, 0.8);
-    if (p80Seconds == null || p80Seconds > MATRIX_CONFIG.MAX_FORMING_P80_MINUTES * 60) continue;
-
-    const arriveMs = nowMs + p80Seconds * 1000;
-    const arriveDate = new Date(arriveMs);
-
-    const assurance = computeAssurance({
-      // Xe đang lăn bánh thật nhưng chưa chốt lệnh: nền thấp hơn chuyến đã xác nhận
-      baseCertainty: 0.8,
-      trustScore: 90,
-      completedTrips: 0,
-      lateReports: 0,
-      backupCount
-    });
-
-    const plateType = detectPlateType(session.plate, session);
-    const isService = plateType === 'yellow' || Boolean(session.isServiceVehicle);
-
-    out.push({
-      tier: 'FORMING',
-      badge: isService ? '🚕' : '🔵',
-      assurance,
-      tripId: session.tripId,
-      id: session.tripId,
-      departureLabel: `${String(arriveDate.getHours()).padStart(2, '0')}:${String(arriveDate.getMinutes()).padStart(2, '0')}`,
-      departureMinutes: arriveDate.getHours() * 60 + arriveDate.getMinutes(),
-      departureDate: arriveDate.toISOString().slice(0, 10),
-      etaMs: arriveMs,
-      // Bất định còn lại, để giao diện nói thật với khách thay vì giả vờ chắc chắn
-      etaSigmaMinutes: Math.round(distribution.sigmaSeconds / 60),
-      seatsAvailable: Number(session.seatsAvailable || 0),
-      totalSeats: Number(session.capacity || 4),
-      driverName: session.driverName || (isService ? 'Chủ xe dịch vụ' : 'Chủ xe'),
-      vehicleModel: session.vehicleModel || '',
-      plateMasked: maskPlateTail(session.plate),
-      userId: session.userId || null,
-      amenities: ['Không khói thuốc', 'Cốp rộng', 'Xe êm'],
-      plateType,
-      isServiceVehicle: isService,
-      charterPrice: session.charterPrice || null,
-      serviceNote: session.serviceNote || (isService ? 'Xe dịch vụ tiện chuyến chiều về' : null),
-      distanceKm: distribution.distanceKm,
-      fromLabel: frenet.closestNode?.name || '',
-      certainty: 0.8,
-      action: 'RESERVE_PRIORITY',
-      actionLabel: isService ? 'Giữ chỗ xe dịch vụ' : 'Đặt chỗ ưu tiên',
-      note: isService
-        ? `Xe dịch vụ đang cách ${distribution.distanceKm}km, đón tận ngõ`
-        : `Đang cách ${distribution.distanceKm}km, hệ thống tự khoá chỗ khi xe tới gần`
-    });
-  }
-
-  return out.sort((a, b) => a.etaMs - b.etaMs);
-}
-
-/**
- * TẦNG 3 — KHE DỰ PHÒNG (⚪ SHADOW)
- *
- * Khi hai tầng trên không lấp đủ, sinh các khe kế tiếp để màn hình không bao giờ
- * trống. Đặt chỗ ở đây là một Ý ĐỊNH: nó chảy vào engine gom khớp lệnh, và chính
- * mật độ ý định này là thứ kéo chủ xe mở chuyến mới.
- */
-function buildShadowSlots({ desiredMinutes, existingSlots, nowMs }) {
-  const out = [];
-  const now = new Date(nowMs);
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const base = desiredMinutes != null ? desiredMinutes : nowMinutes;
-
-  const taken = new Set(
-    existingSlots
-      .map((s) => s.departureMinutes)
-      .filter((m) => m != null)
-      .map((m) => Math.floor(m / MATRIX_CONFIG.SLOT_WIDTH_MINUTES))
-  );
-
-  for (let i = 1; out.length < MATRIX_CONFIG.MAX_SHADOW_SLOTS && i <= 6; i++) {
-    const slotMinutes = (base + i * MATRIX_CONFIG.SLOT_WIDTH_MINUTES) % 1440;
-    const bucket = Math.floor(slotMinutes / MATRIX_CONFIG.SLOT_WIDTH_MINUTES);
-    if (taken.has(bucket)) continue;
-    taken.add(bucket);
-
-    out.push({
-      tier: 'SHADOW',
-      badge: '⚪',
-      assurance: computeAssurance({ baseCertainty: 0.35, trustScore: 0, backupCount: 0 }),
-      tripId: null,
-      departureLabel: formatMinutesToTime(slotMinutes),
-      departureMinutes: slotMinutes,
-      seatsAvailable: null,
-      certainty: 0.35,
-      action: 'CREATE_INTENT',
-      actionLabel: 'Đăng ký khung giờ này',
-      note: 'Chuyến dự phòng — hệ thống gom nhu cầu và ghép xe cho khung này'
-    });
-  }
-
-  return out;
-}
-
-/**
- * ĐIỂM VÀO CHÍNH — DỰNG MA TRẬN KẾT QUẢ.
- *
- * @param {object} params
- * @param {string} params.originHubId - Trạm đón
- * @param {string} params.destinationHubId - Trạm trả
- * @param {string} [params.timeSlot] - Khung giờ khách muốn ("08:00" hoặc "07:00-09:00")
- * @param {number} [params.seatsNeeded] - Số ghế cần
- * @param {string} [params.corridor] - Hành lang
- * @returns {object} Ma trận 3 tầng + thông tin giá
- */
-export function buildTimeSlotMatrix({
-  originHubId,
-  destinationHubId,
-  timeSlot = null,
-  seatsNeeded = 1,
-  corridor = 'Tuyến QL13',
-  nowMs = Date.now()
-} = {}) {
-  const originHub = getVirtualHubById(originHubId);
-  const destHub = getVirtualHubById(destinationHubId);
-
-  if (!originHub || !destHub) {
-    return {
-      success: false,
-      error: 'Trạm đón hoặc trạm trả không hợp lệ'
-    };
-  }
-
-  const cleanSeats = Math.max(1, Math.min(4, Number(seatsNeeded) || 1));
-  const desiredMinutes = slotStartMinutes(timeSlot);
-  const windowMinutes = MATRIX_CONFIG.NEIGHBOR_WINDOW_MINUTES;
-
-  const originS = getStationStationKm(originHub.id);
-  const destS = getStationStationKm(destHub.id);
-
-  // Đếm xe dự phòng THẬT trên hành lang: số xe đang lăn bánh còn đủ ghế. Đây là
-  // điều kiện bắt buộc để một khe được gắn nhãn "Chuyến đảm bảo" — không có xe
-  // đỡ phía sau thì không được phép hứa chắc với khách.
-  const backupCount = getActiveCockpitSessions().filter(
-    (s) => !s.isBanned && Number(s.seatsAvailable || 0) >= cleanSeats
-  ).length;
-
-  const confirmed = collectConfirmedTrips({
-    corridor,
-    desiredMinutes,
-    windowMinutes,
-    seatsNeeded: cleanSeats,
-    originS,
-    destS,
-    backupCount,
-    nowMs
-  });
-
-  const forming = collectFormingTrips({
-    originHubId: originHub.id,
-    seatsNeeded: cleanSeats,
-    nowMs,
-    // Xe dự phòng cho một khe FORMING là các xe KHÁC, trừ chính nó ra
-    backupCount: Math.max(0, backupCount - 1)
-  });
-
-  const realSlots = [...confirmed, ...forming];
-  const shadow = buildShadowSlots({ desiredMinutes, existingSlots: realSlots, nowMs });
-
-  // Giá tính sẵn để giao diện không phải gọi thêm lượt nào
-  let tariff = null;
-  try {
-    tariff = getFixedSegmentTariff(originHub.id, destHub.id, corridor);
-  } catch {
-    tariff = null;
-  }
-
-  const queue = getStationQueue(originHub.id);
-
-  return {
-    success: true,
-    // Trả về mô tả "nhân bản hoá": mốc nhận diện, tiện ích, lời dặn an toàn —
-    // thứ khách thật sự cần khi phải đứng đợi ven quốc lộ lúc 4 giờ sáng.
-    origin: describeHub(originHub),
-    destination: describeHub(destHub),
-    corridor,
-    seatsNeeded: cleanSeats,
-    desiredTimeLabel: desiredMinutes != null ? formatMinutesToTime(desiredMinutes) : null,
-    windowMinutes,
-    tariff: tariff
-      ? { pricePerSeat: tariff.pricePerSeat, distanceKm: tariff.distanceKm, total: tariff.pricePerSeat * cleanSeats }
-      : null,
-    station: {
-      waitingCount: queue.waitingCount,
-      estimatedWaitMinutes: queue.estimatedWaitMinutes
-    },
-    backupCount,
-    slots: [...confirmed, ...forming, ...shadow],
-    counts: {
-      confirmed: confirmed.length,
-      forming: forming.length,
-      shadow: shadow.length,
-      total: confirmed.length + forming.length + shadow.length
-    },
-    // Màn hình không bao giờ được trống — bất biến của toàn bộ thiết kế này
-    isEmpty: false
-  };
-}
-
-/**
- * =============================================================================
- * LỊCH CHẠY TOÀN TUYẾN (CORRIDOR TIMELINE)
- * =============================================================================
- * Trả về MỌI chuyến trong ngày trên một chặng, nhóm theo buổi — không lọc theo
- * khung giờ khách chọn.
- *
- * Vì sao cần: khách chọn một khung hẹp mà không thấy xe sẽ không muốn bấm back
- * ra đổi từng giờ để dò. Họ cần nhìn toàn cảnh một lần: hôm nay và ngày mai
- * trên tuyến này có những chuyến nào.
- *
- * NGƯỠNG HIỂN THỊ: màn này chỉ có giá trị khi tuyến đã có đủ xe. Bày ra một
- * trang "lịch chạy toàn tuyến" mà chỉ có 2-3 dòng thì phơi bày sự trống trải,
- * phản tác dụng hơn hẳn một ô gom nhu cầu. Nên hàm trả về cờ `isDense` để giao
- * diện tự quyết định, thay vì hard-code ở tầng UI.
- */
-export const TIMELINE_CONFIG = Object.freeze({
-  // Dưới ngưỡng này thì chưa đáng mở màn lịch chạy — hiện form gom nhu cầu
-  MIN_TRIPS_FOR_TIMELINE: 5,
-  // Nhóm hiển thị theo buổi, khớp với DEPARTURE_WINDOWS của chip khởi hành
-  PERIODS: [
-    { id: 'early_morning', label: 'Sáng sớm', fromHour: 4, toHour: 8 },
-    { id: 'morning', label: 'Buổi sáng', fromHour: 8, toHour: 11 },
-    { id: 'noon', label: 'Buổi trưa', fromHour: 11, toHour: 14 },
-    { id: 'afternoon', label: 'Buổi chiều', fromHour: 14, toHour: 18 },
-    { id: 'evening', label: 'Buổi tối', fromHour: 18, toHour: 22 },
-    { id: 'late_night', label: 'Đêm khuya', fromHour: 22, toHour: 28 }
-  ]
-});
-
-/**
- * Dựng lịch chạy toàn tuyến cho một chặng.
- *
- * @param {object} params - Giống buildTimeSlotMatrix nhưng KHÔNG có timeSlot
- * @returns {object} { success, periods, totalTrips, isDense, origin, destination }
- */
-export function buildCorridorTimeline({
-  originHubId,
-  destinationHubId,
-  seatsNeeded = 1,
-  corridor = 'Tuyến QL13',
-  nowMs = Date.now()
-} = {}) {
-  const originHub = getVirtualHubById(originHubId);
-  const destHub = getVirtualHubById(destinationHubId);
-  if (!originHub || !destHub) {
-    return { success: false, error: 'Trạm đón hoặc trạm trả không hợp lệ' };
-  }
-
-  const cleanSeats = Math.max(1, Math.min(4, Number(seatsNeeded) || 1));
-  const originS = getStationStationKm(originHub.id);
-  const destS = getStationStationKm(destHub.id);
-
-  const backupCount = getActiveCockpitSessions().filter(
-    (s) => !s.isBanned && Number(s.seatsAvailable || 0) >= cleanSeats
-  ).length;
-
-  // desiredMinutes = null nghĩa là KHÔNG lọc theo giờ: lấy hết trong ngày
-  const confirmed = collectConfirmedTrips({
-    corridor,
-    desiredMinutes: null,
-    windowMinutes: 0,
-    seatsNeeded: cleanSeats,
-    originS,
-    destS,
-    backupCount
-  });
-
-  const forming = collectFormingTrips({
-    originHubId: originHub.id,
-    seatsNeeded: cleanSeats,
-    nowMs,
-    backupCount: Math.max(0, backupCount - 1)
-  });
-
-  const all = [...confirmed, ...forming].sort(
-    (a, b) => (a.departureMinutes ?? 9999) - (b.departureMinutes ?? 9999)
-  );
-
-  // Nhóm theo buổi; buổi nào không có chuyến vẫn giữ lại để khách thấy rõ
-  // khoảng trống và biết nên đăng nhu cầu vào đâu.
-  const periods = TIMELINE_CONFIG.PERIODS.map((p) => {
-    const trips = all.filter((t) => {
-      const m = t.departureMinutes;
-      if (m == null) return false;
-      const startM = p.fromHour * 60;
-      const endM = p.toHour * 60;
-      // Buổi đêm vắt qua nửa đêm (22h-4h)
-      return p.toHour > 24 ? m >= startM || m < endM - 1440 : m >= startM && m < endM;
-    });
-    return {
-      id: p.id,
-      label: p.label,
-      hint: `${p.fromHour % 24}h-${p.toHour % 24}h`,
-      fromHour: p.fromHour,
-      trips,
-      count: trips.length
-    };
-  });
-
-  let tariff = null;
-  try {
-    tariff = getFixedSegmentTariff(originHub.id, destHub.id, corridor);
-  } catch {
-    tariff = null;
-  }
-
-  return {
-    success: true,
-    origin: describeHub(originHub),
-    destination: describeHub(destHub),
-    corridor,
-    seatsNeeded: cleanSeats,
-    periods,
-    totalTrips: all.length,
-    // Cờ quyết định giao diện hiện màn lịch hay ô gom nhu cầu
-    isDense: all.length >= TIMELINE_CONFIG.MIN_TRIPS_FOR_TIMELINE,
-    minTripsForTimeline: TIMELINE_CONFIG.MIN_TRIPS_FOR_TIMELINE,
-    tariff: tariff ? { pricePerSeat: tariff.pricePerSeat, distanceKm: tariff.distanceKm } : null
-  };
+export function buildCorridorTimeline(options={}) {
+  const matrix=buildTimeSlotMatrix({...options,timeSlot:'all'});
+  if(!matrix.success)return matrix;
+  const periods=TIMELINE_CONFIG.PERIODS.map(p=>({...p,hint:`${p.fromHour}h–${p.toHour}h`,trips:matrix.slots.filter(s=>s.departureMinutes>=p.fromHour*60&&s.departureMinutes<p.toHour*60)})).map(p=>({...p,count:p.trips.length}));
+  return {...matrix,periods,totalTrips:matrix.slots.length,isDense:matrix.slots.length>=3,minTripsForTimeline:3};
 }

@@ -1,40 +1,41 @@
 # CarMate Engineering & Design Guidelines
 
-CarMate tuân thủ triệt để 4 trụ cột triết lý kỹ thuật và thiết kế:
+## 1. Hợp đồng sản phẩm
 
-## 1. Tư duy MIT (MIT Invariants - Bất biến Toán học & Logic)
+- CarMate kết nối khách và chủ xe theo hành trình, hướng đi và khoảng thời gian. Đăng tin, tìm kiếm và kết nối miễn phí; không giữ tiền, thu hoa hồng hoặc tự chia tiền chuyến đi.
+- Chủ xe được niêm yết giá (`pricingMode: listed`) hoặc chọn “Liên hệ” (`contact`, giá `null`). Không áp giá sàn/trần, biểu cước bắt buộc hoặc tỷ lệ chủ xe nhận 90%.
+- Trạm là mốc tìm kiếm. Hỗ trợ `station`, `doorstep`, `hybrid`; điểm đón cuối cùng và thay đổi điều kiện do hai bên xác nhận.
+- Khách xem và liên hệ số đã được chủ tin đồng ý công khai mà không cần đăng nhập. Chỉ chủ động đăng nhu cầu/gửi yêu cầu mới tạo dữ liệu tương ứng; không biến lượt tìm thành nguồn cầu.
+- Cho nhập và xem giá trị trước đăng nhập. Đăng nhập tại thao tác xuất bản/ghi nhận có quyền sở hữu; giữ bản nháp và tiếp tục hành động đúng một lần.
+- Đề xuất ghép không phải cam kết nhận đón. Không tự chuyển xe hoặc sửa cuộc hẹn đã được hai bên chốt.
+- Dùng “Chủ xe” và “Khách” trong giao diện. Tên gọi hay việc miễn phí không tự xác lập phân loại pháp lý cho hoạt động thực tế.
+- Chi tiết tại [docs/CONNECTION_FLOW.md](docs/CONNECTION_FLOW.md).
+- Hồ sơ nhà xe tham khảo là thực thể riêng, không phải tài khoản, chuyến đang nhận khách hoặc ghế trống. Công khai cần nguồn, căn cứ liên hệ và mốc rà soát; danh bạ cũ vào bản nháp chờ kiểm tra.
+- Quyền quản lý hồ sơ phải được duyệt theo tài khoản thực và bằng chứng qua kênh đã biết. Không dùng trùng số điện thoại, Google/Telegram hoặc cờ `verified` cũ làm bằng chứng quyền đại diện.
+- Nhập hộ chuyến cần người quản lý đã được duyệt và sự đồng ý cho chính chuyến đó; không tạo tài khoản hay giấy tờ xác minh hộ. Báo sai/gỡ thông tin có tiến độ và mã tra cứu riêng. Chi tiết tại [docs/OPERATOR_PROFILES.md](docs/OPERATOR_PROFILES.md).
 
-- Mọi trạng thái hệ thống phải thỏa mãn điều kiện bất biến (Invariants). State machine không bao giờ được rơi vào trạng thái lấp lửng hay mâu thuẫn (VD: xe 5 chỗ không bao giờ vượt quá 4 ghế khách, 7 chỗ không quá 6 ghế).
-- Idempotent: Các thao tác cập nhật, huỷ, xoá đều có thể gọi lặp lại an toàn mà không làm hỏng dữ liệu.
-- Định giá phụ xăng dựa trên công thức toán học cự ly Geodesic Haversine × 1.28 và dữ liệu trạm thu phí cầu đường chính xác, cục bộ 100%, không phụ thuộc vào LLM ảo giác.
-- **Quy chuẩn Màu nền Toàn Hệ Thống (MIT Transit Glare-Shield Canvas `#DFE5EC`):** Toàn bộ ứng dụng (tất cả các Tab: `market`, `intent`, `station`, `cockpit`, `booked`, `admin`, và các Modal / BottomSheet) bắt buộc 100% sử dụng nền **`#DFE5EC`** (dark mode `bg-[#0b0f19]`). Các thẻ nội dung con (Cards) bên trong luôn là màu trắng tinh khiết `#FFFFFF` (dark mode `dark:bg-[#1a2232]`), viền trung tính `border border-slate-300/70` (dark mode `dark:border-white/10`), đổ bóng nhẹ (`shadow-xs hover:shadow-md`). Tuyệt đối KHÔNG dùng nền trắng tinh (`bg-white`) đè lên thẻ con trắng (`bg-white`) gây lỗi quang học "chìm trong màu trắng" dưới nắng mặt trời.
+## 2. Bất biến toán học và dữ liệu
 
-## 2. Tư duy Stanford (Stanford Ergonomics - Công thái học & Tải nhận thức = 0)
+- Giữ lõi chiếu hành lang, giao khoảng thời gian, ETA và sức chứa theo đoạn. Tổng khách trên mỗi đoạn không vượt chỗ nhận khách và sức chứa xe trừ ghế người lái.
+- Idempotent: cập nhật, chốt, hủy, nhả ghế không được nhân đôi tác dụng khi gọi lặp lại. Phiên xác nhận phải khớp cùng phiên bản điều kiện.
+- Khi mở lại nhu cầu còn hiệu lực, giữ thời điểm yêu cầu và hạn ban đầu. Không tự kéo dài `x` để làm đẹp kết quả.
+- Chỉ hiển thị xe, khách, số lượng, giờ và trạng thái từ dữ liệu thật. Không dùng fallback giả, lời hứa chưa chứng minh hoặc coi lỗi mạng là không có dữ liệu.
+- Công thức Haversine/chi phí lăn bánh còn lưu là ước tính tham khảo của mô hình cũ; không được ghi đè giá chủ xe hay điều kiện hiện hành.
+- Xác thực từ máy chủ; bảo vệ quyền sở hữu và thông tin liên hệ. Không tạo danh tính/token giả trong giao diện.
 
-- Tối ưu hóa trải nghiệm sao cho người dùng và quản trị viên không phải suy nghĩ hoặc gõ phím thừa (Cognitive Load → 0).
-- Các thao tác nhạy cảm hoặc nguy hiểm (Xoá bài, Khóa tài khoản, Huỷ chuyến) luôn hiển thị đầy đủ ngữ cảnh (mã chuyến, người liên quan, lộ trình, giá tiền) trước khi xác nhận, ngăn chặn 100% việc bấm nhầm.
-- Hỗ trợ thao tác 1-chạm (One-tap action) cho các luồng thường xuyên (Preset chip giá, chọn mẫu chuyến, đảo chiều khứ hồi, tái sử dụng ảnh xe thật).
+## 3. Trải nghiệm và hiển thị
 
-## 3. Tư duy Cursor (Cursor Ambient Intelligence & Zero Blocking)
+- Giảm nhập lại; dùng lựa chọn nhanh, đảo chiều và tái sử dụng thông tin thật đã có.
+- Thao tác hủy/xóa/đổi điều kiện phải cho thấy chuyến, người liên quan và tác động trước khi xác nhận.
+- Không dùng `window.alert`, `window.confirm`, `window.prompt`. Dùng thông báo không chặn và phản hồi tại chỗ.
+- Nền toàn hệ thống `#DFE5EC`; dark mode `#0b0f19`. Thẻ trắng `#FFFFFF`, dark `#1a2232`, viền `border-slate-300/70` / `dark:border-white/10`, bóng nhẹ.
+- Bo góc `rounded-2xl` / `rounded-3xl`, typography rõ, vùng chạm dễ thao tác. Màu chính `#0071e3`; đỏ cho lỗi/hủy, cam cho chờ/cảnh báo, xanh lá cho trạng thái đã được xác nhận.
+- Modal dùng React Portal vào `document.body`, lớp thông thường `z-[9999]`; xác thực nằm trên biểu mẫu đang nhập. Đóng xác thực không làm mất bản nháp.
+- Giữ thuật ngữ kỹ thuật và tên nghiên cứu ngoài luồng thao tác phổ thông trừ khi chúng giúp người dùng quyết định.
 
-- Trí tuệ bản địa (Edge AI / Zero-LLM) xử lý trực tiếp trên máy client trong dưới 1ms, không chờ đợi round-trip máy chủ khi gợi ý thói quen hay phân tích NLP.
-- Tuyệt đối KHÔNG sử dụng các lệnh blocking thô sơ của trình duyệt (`window.alert`, `window.confirm`, `window.prompt`). Mọi phản hồi đều là Reactive, Non-blocking, mượt mà.
-- Phản hồi trạng thái (Feedback Loop) tức thì thông qua Toast notification hoặc In-place notice thay vì popup hệ thống gián đoạn trải nghiệm.
+## 4. Kỷ luật Git và kiểm chứng
 
-## 4. Thị giác Apple (Apple Human Interface Guidelines & Liquid Aesthetics)
-
-- Thiết kế squircle bo góc mềm mại (`rounded-2xl`, `rounded-3xl`), kính mờ bán trong suốt (`backdrop-blur-md`, `bg-white/80` và `dark:bg-[#1c1c1e]/80`).
-- Typography phân tầng rõ ràng (Inter / SF Pro Display), số liệu font Mono hiển thị chuẩn xác.
-- Tone màu biểu tượng có chủ đích: `danger` (rose/red) cho hành động huỷ/xoá, `warning` (amber/orange) cho trễ hẹn/lưu ý, `success` (emerald/green) cho xác thực/thành công, `primary` (Apple Blue `#0071e3`) cho hành động chính.
-- Tất cả các Modal đều phải dùng React Portal (`z-[9999]`) gắn vào `document.body` để triệt tiêu vĩnh viễn lỗi đè lớp (CSS Stacking Context).
-
-## 5. Chuẩn mực Danh xưng Bản địa (Terminology Standard)
-
-- Luôn luôn dùng **"Chủ xe"** và **"Người đi cùng"** / **"Khách đi cùng"**.
-- Tuyệt đối **KHÔNG dùng "Bác tài"** hay **"Tài xế"** để bảo toàn bản chất đi ghép xe tiện chuyến / chia sẻ chi phí lăn bánh văn minh, không phải dịch vụ taxi thương mại.
-
-## 6. Kỷ luật Git & Quy trình Phát triển (Git Workflow Discipline)
-
-- **Tuyệt đối KHÔNG commit hoặc push thẳng lên nhánh `main`**.
-- Mọi công việc (tính năng mới, sửa lỗi, tối ưu giao diện) 100% phải được thực hiện và kiểm thử trên nhánh **`dev`**.
-- Chỉ thực hiện merge từ `dev` vào `main` khi có sự xác nhận/yêu cầu trực tiếp từ người dùng.
+- Không commit hoặc push thẳng lên `main`.
+- Phát triển và kiểm thử trên nhánh `dev`; chỉ merge sang `main` khi người dùng yêu cầu trực tiếp.
+- Kiểm thử phù hợp với thay đổi; phân biệt bài kiểm thử thuần, API với dữ liệu cô lập, trình duyệt và vận hành thật.
+- Không tuyên bố kiểm thử mã chứng minh luôn có xe, xác suất ngoài thực địa hoặc tính hợp pháp của mọi hoạt động.

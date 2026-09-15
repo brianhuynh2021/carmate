@@ -31,7 +31,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = path.resolve(__dirname, '../../data');
+const DATA_DIR = path.resolve(process.env.CARMATE_DATA_DIR || path.resolve(__dirname, '../../data'));
 const DB_PATH = path.join(DATA_DIR, 'carmate.sqlite');
 const LEGACY_JSON_FILE = path.join(DATA_DIR, 'carmate_db.json');
 
@@ -383,16 +383,14 @@ export async function initDB() {
   // một người thật. Dữ liệu mẫu vi phạm bất biến này — khách bấm đặt chỗ sẽ gọi
   // vào số không có người nhận, phá vỡ niềm tin ngay lần dùng đầu tiên.
   //
-  // Vì vậy seed bị KHOÁ mặc định ở production (fail-safe default, cùng nguyên lý
-  // với JWT_SECRET và CARMATE_ADMIN_PASSCODE). Muốn nạp dữ liệu mẫu lên
-  // production phải chủ động đặt SEED_DEMO_DATA=true — không thể xảy ra do vô ý.
+  // Dữ liệu mẫu bị tắt mặc định ở mọi môi trường. Chỉ nạp khi chủ động
+  // đặt SEED_DEMO_DATA=true để bản xem thử không vô tình tạo nguồn xe.
   const tripCount = db.prepare('SELECT COUNT(*) as count FROM trips').get().count;
-  const isProductionEnv = process.env.NODE_ENV === 'production';
-  const demoSeedAllowed = process.env.SEED_DEMO_DATA === 'true' || (!isProductionEnv && process.env.SEED_DEMO_DATA !== 'false');
+  const demoSeedAllowed = process.env.SEED_DEMO_DATA === 'true';
 
   if (tripCount === 0 && !demoSeedAllowed) {
     console.log(
-      '[SQLite DB] Sàn khởi tạo trống (production): bỏ qua dữ liệu mẫu để không hiển thị chuyến ảo.'
+      '[SQLite DB] Sàn khởi tạo trống: bỏ qua dữ liệu mẫu để không hiển thị chuyến ảo.'
     );
     console.log('[SQLite DB] Đặt SEED_DEMO_DATA=true nếu thực sự cần nạp dữ liệu mẫu.');
   }
@@ -829,7 +827,7 @@ export function getTripById(id) {
 export async function addTrip(tripData) {
   const database = getRawDB();
   const cleanPhone = cleanPhoneNumber(tripData.phoneReal || tripData.phone || '');
-  const id = tripData.id || `${tripData.type === 'passenger_request' ? 'REQ' : 'DRV'}-${Date.now()}`;
+  const id = tripData.id || `${tripData.type === 'passenger_request' ? 'REQ' : 'DRV'}-${crypto.randomUUID()}`;
   const maskedCode =
     tripData.maskedCode ||
     `${tripData.type === 'passenger_request' ? 'HK' : 'CX'}-${Math.floor(100 + Math.random() * 900)}`;
@@ -1024,6 +1022,8 @@ export function sweepFinishedTrips({ nowMs = Date.now(), graceHours = TRIP_CLOSE
   const jobs = [];
 
   for (const trip of rows) {
+    // A schedule timeout cannot complete a live passenger commitment.
+    if (allBookings.some(b => b.tripId === trip.id && (b.bothConfirmed || b.seatReserved) && !['cancelled','completed','expired'].includes(b.status))) continue;
     const endMs = getTripEndTimestamp(trip, new Date(nowMs));
     if (!Number.isFinite(endMs) || nowMs <= endMs + graceMs) continue;
 
@@ -2502,7 +2502,7 @@ export async function updateIntent(id, updates = {}) {
       .prepare(
         `
       UPDATE intents 
-      SET status = ?, matchedTripId = ?, matchedBookingId = ?, payload = ?
+      SET status = ?, matchedTripId = ?, matchedBookingId = ?, date = ?, timeSlot = ?, seats = ?, payload = ?
       WHERE id = ?
     `
       )
@@ -2510,6 +2510,9 @@ export async function updateIntent(id, updates = {}) {
         full.status || 'pending',
         full.matchedTripId || null,
         full.matchedBookingId || null,
+        full.date || '',
+        full.timeSlot || 'all',
+        Number(full.seats || 1),
         JSON.stringify(full),
         id
       );
@@ -2534,7 +2537,7 @@ export async function deleteIntent(id) {
  */
 export async function createMatchingEpoch(epochData) {
   const database = getRawDB();
-  const id = epochData.id || `EP-${Date.now()}`;
+  const id = epochData.id || `EP-${crypto.randomUUID()}`;
   const now = Date.now();
 
   database

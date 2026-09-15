@@ -154,7 +154,7 @@ export async function schedulerRunTickHandler(req, res) {
  */
 export function timeSlotMatrixHandler(req, res) {
   try {
-    const { from, to, timeSlot = null, seats = 1, corridor } = req.query || {};
+    const { from, to, date = null, timeSlot = null, seats = 1, corridor, matchingPreference = 'balanced' } = req.query || {};
     if (!from || !to) {
       return res.status(400).json({ success: false, error: 'Thiếu trạm đón (from) hoặc trạm trả (to)' });
     }
@@ -163,6 +163,8 @@ export function timeSlotMatrixHandler(req, res) {
       originHubId: from,
       destinationHubId: to,
       timeSlot,
+      date,
+      matchingPreference,
       seatsNeeded: Number(seats) || 1,
       corridor: corridor || 'Tuyến QL13'
     });

@@ -84,6 +84,27 @@ async function request(endpoint, options = {}) {
 }
 
 export const api = {
+  async listOperators(params = {}) {
+    return request(`/operators?${new URLSearchParams(params)}`);
+  },
+  async getOperator(id) { return request(`/operators/${encodeURIComponent(id)}`); },
+  async getMyOperators() { return request('/operators/mine'); },
+  async updateOperator(id, body) { return request(`/operators/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }); },
+  async claimOperator(id, body) { return request(`/operators/${encodeURIComponent(id)}/claims`, { method: 'POST', body: JSON.stringify(body) }); },
+  async reportOperator(id, body) { return request(`/operators/${encodeURIComponent(id)}/reports`, { method: 'POST', body: JSON.stringify(body) }); },
+  async getOperatorReportStatus(body) { return request('/operator-reports/status', { method: 'POST', body: JSON.stringify(body) }); },
+  async adminListOperators(params = {}) { return request(`/admin/operators?${new URLSearchParams(params)}`); },
+  async adminGetOperator(id) { return request(`/admin/operators/${encodeURIComponent(id)}`); },
+  async adminCreateOperator(body) { return request('/admin/operators', { method: 'POST', body: JSON.stringify(body) }); },
+  async adminUpdateOperator(id, body) { return request(`/admin/operators/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }); },
+  async adminListOperatorClaims(params = {}) { return request(`/admin/operator-claims?${new URLSearchParams(params)}`); },
+  async adminReviewOperatorClaim(id, body) { return request(`/admin/operator-claims/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }); },
+  async adminListOperatorReports(params = {}) { return request(`/admin/operator-reports?${new URLSearchParams(params)}`); },
+  async adminReviewOperatorReport(id, body) { return request(`/admin/operator-reports/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }); },
+  async adminCreateOperatorTrip(id, body) { return request(`/admin/operators/${encodeURIComponent(id)}/trips`, { method: 'POST', body: JSON.stringify(body) }); },
+  async previewDriverDemand(draft) {
+    return request('/connections/driver-preview', { method: 'POST', body: JSON.stringify(draft) });
+  },
   // Health & Stats
   async getHealth() {
     return request('/health');
@@ -594,6 +615,10 @@ export const api = {
     });
   },
 
+  async cockpitDropoff(payload) {
+    return request('/cockpit/dropoff', { method: 'POST', body: JSON.stringify(payload) });
+  },
+
   async cockpitRegisterVehicle(payload) {
     return request('/cockpit/register-vehicle', {
       method: 'POST',
@@ -739,8 +764,10 @@ export const api = {
   },
 
   // ── Ma Trận Khe Thời Gian ────────────────────────────────────────────
-  async getTimeSlotMatrix({ from, to, timeSlot = null, seats = 1, corridor = null } = {}) {
+  async getTimeSlotMatrix({ from, to, date = null, timeSlot = null, seats = 1, corridor = null, matchingPreference = 'balanced' } = {}) {
     const query = new URLSearchParams({ from, to, seats: String(seats) });
+    if (date) query.append('date', date);
+    query.append('matchingPreference', matchingPreference);
     if (timeSlot && timeSlot !== 'all') query.append('timeSlot', timeSlot);
     if (corridor) query.append('corridor', corridor);
     return request(`/corridor/time-slots?${query.toString()}`);
@@ -750,6 +777,13 @@ export const api = {
     const q = new URLSearchParams({ from, to, seats: String(seats) });
     if (corridor) q.append('corridor', corridor);
     return request(`/corridor/timeline?${q.toString()}`);
+  },
+
+  async riderAcceptStationOffer({ intentId, proposalVersion }) {
+    return request(`/station/riders/${encodeURIComponent(intentId)}/accept`, { method: 'POST', body: JSON.stringify({ proposalVersion }) });
+  },
+  async cancelStationRequest({ intentId, reason, action = 'stop' }) {
+    return request(`/station/riders/${encodeURIComponent(intentId)}/cancel`, { method: 'POST', body: JSON.stringify({ reason, action }) });
   },
 
   // ── Bắt Tay T-30 ─────────────────────────────────────────────────────

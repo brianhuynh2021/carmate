@@ -175,8 +175,8 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
           <p className="leading-relaxed">
             {SITE_INFO.legalName[lang]} ·{' '}
             {lang === 'en'
-              ? 'Voluntary fuel cost-sharing platform, 0% platform fee.'
-              : 'Nền tảng chia sẻ chi phí nhiên liệu tự nguyện, 0% chiết khấu.'}
+              ? 'Free trip listings, search and connections.'
+              : 'Miễn phí đăng tin, tìm chuyến và kết nối.'}
           </p>
           <div className="flex items-center gap-3 shrink-0">
             <span>© {year} CarMate.vn</span>

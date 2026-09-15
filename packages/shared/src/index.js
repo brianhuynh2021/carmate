@@ -28,3 +28,4 @@ export * from './utils/hubAmenities.js';
 export * from './constants/verifiedHotlines.js';
 export * from './utils/vietnameseText.js';
 export * from './utils/intentEngine.js';
+export * from './utils/connectionFlow.js';

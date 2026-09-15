@@ -66,14 +66,14 @@ function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
   const steps = [
     {
       id: 1,
-      label: 'Khớp xe',
-      desc: 'Chi phí xăng & phí cầu đường',
+      label: 'Yêu cầu',
+      desc: 'Đã gửi trên CarMate',
       state: 'completed'
     },
     {
       id: 2,
       label: isDelayed ? `Trễ +${delayedMinutes || 15}p` : isReassigned ? 'Xe hỗ trợ' : 'Trao đổi',
-      desc: isReassigned ? 'Đang điều phối tiếp quản' : isCancelled ? 'Đã dừng kết nối' : 'Điểm đón & hành lý',
+      desc: isReassigned ? 'Cần xác nhận lại phương án' : isCancelled ? 'Đã dừng kết nối' : 'Điểm đón & hành lý',
       state: isCompleted ? 'completed' : isReassigned ? 'active' : isCancelled ? 'cancelled' : isDelayed ? 'delayed' : 'active'
     },
     {
@@ -84,9 +84,9 @@ function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
     },
     {
       id: 4,
-      label: 'Tín nhiệm',
-      desc: isCompleted ? 'Đã ghi nhận' : 'Đánh giá 2 chiều',
-      state: isCompleted ? 'completed' : 'pending'
+      label: 'Đánh giá',
+      desc: 'Phản hồi sau chuyến đi',
+      state: 'pending'
     }
   ];
 
@@ -156,6 +156,15 @@ function TripProgressStepper({ status, delayedMinutes, hasSilentFailover }) {
       </div>
     </div>
   );
+}
+
+function recordAmount(record) {
+  const value = record.committedTerms?.totalPrice ?? (record.pricingMode === 'contact' ? null : record.fullTripAmount ?? record.totalDeal ?? record.price);
+  return value == null || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);
+}
+function amountLabel(record) {
+  const amount = recordAmount(record);
+  return amount === null ? 'Chưa chốt giá' : formatVND(amount);
 }
 
 export default function BookedTripList({
@@ -289,13 +298,13 @@ export default function BookedTripList({
   };
 
   const handleCopyForFamily = (record) => {
-    const totalAmount = record.fullTripAmount || record.totalDeal || record.price || 0;
+    const totalAmount = recordAmount(record);
     const dateFormatted = formatTicketDateTime(
       record.timeSlot,
       record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
     );
     const hostName = resolveDriverRealName(record.targetItem || record.targetTrip || record, record.contactName || 'Chủ xe');
-    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: #${String(record.escrowId || '').replace(/^#/, '')}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${dateFormatted}\n• Chủ xe: ${hostName}\n• Đóng góp nhiên liệu: ${formatVND(totalAmount)} (${record.seats || 1} ghế · Trả trực tiếp khi lên xe)\n• Theo dõi lộ trình: https://carmate.vn`;
+    const text = `[CARMATE] THÔNG TIN CHUYẾN ĐI TIỆN ĐƯỜNG (GỬI NGƯỜI THÂN)\n• Mã chuyến: #${String(record.escrowId || '').replace(/^#/, '')}\n• Lộ trình: ${record.from} ➔ ${record.to}\n• Thời gian: ${dateFormatted}\n• Chủ xe: ${hostName}\n• Giá chuyến đi: ${totalAmount === null ? 'Chưa chốt giá' : formatVND(totalAmount)} (${record.seats || 1} người · Hai bên tự chốt thanh toán)\n• Theo dõi lộ trình: https://carmate.vn`;
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -318,13 +327,13 @@ export default function BookedTripList({
   };
 
   const handleSendSMS = (record) => {
-    const totalAmount = record.fullTripAmount || record.totalDeal || record.price || 0;
+    const totalAmount = recordAmount(record);
     const dateFormatted = formatTicketDateTime(
       record.timeSlot,
       record.targetItem?.date || record.date || record.tripDate || record.targetTrip?.date || record.createdAt
     );
     const hostName = resolveDriverRealName(record.targetItem || record.targetTrip || record, record.contactName || 'Chủ xe');
-    const text = `Thong tin chuyen di CarMate #${String(record.escrowId || '').replace(/^#/, '')}: ${record.from} ve ${record.to}, thoi gian ${dateFormatted}, chu xe ${hostName}, gia ${formatVND(totalAmount)}. Xem tai carmate.vn`;
+    const text = `Thong tin chuyen di CarMate #${String(record.escrowId || '').replace(/^#/, '')}: ${record.from} ve ${record.to}, thoi gian ${dateFormatted}, chu xe ${hostName}, gia ${totalAmount === null ? 'Chưa chốt giá' : formatVND(totalAmount)}. Xem tai carmate.vn`;
     window.open(`sms:?body=${encodeURIComponent(text)}`, '_self');
   };
 
@@ -334,7 +343,7 @@ export default function BookedTripList({
       <SectionHeader
         icon={Clock}
         title={t('booked.title') || 'Chuyến của tôi'}
-        description="Quản lý chuyến xe Chủ xe & Ví vé điện tử hành khách · 0đ phí sàn"
+        description="Yêu cầu, lịch đón và lịch sử · Kết nối miễn phí"
         action={
           <Badge tone="success" icon={ShieldCheck} className="h-7 px-2.5 font-medium">
             {t('booked2.s003')}
@@ -422,6 +431,8 @@ export default function BookedTripList({
       {activeTab === 'driver' && (
         <div className="pt-1 animate-fade-in">
           <DriverScheduleCardView
+            currentUser={currentUser}
+            onOpenBookings={() => setActiveTab('active')}
             vehicle={driverVehicle}
             onSwitchToRadar={onOpenCockpit}
             onShowToast={onShowToast}
@@ -583,7 +594,6 @@ export default function BookedTripList({
         <div className="space-y-4">
           {paginatedList.map((record) => {
             const target = record.targetItem || record.targetTrip || record;
-            const totalCost = record.fullTripAmount || record.totalDeal || record.price || 0;
             const hasSilentFailover =
               record.status === 'reassigned' ||
               Boolean(record.salvageInfo?.supportDispatched) ||
@@ -606,8 +616,8 @@ export default function BookedTripList({
             const maskedPlate = maskCustomerPlate(target, '');
             const vehicleInfo = `${carModel} (${maskedPlate})`;
 
-            const pickupStation = record.from || record.fromLocation || target.from || target.fromLocation || 'Cây xăng Petrolimex Tân Khai QL13';
-            const dropoffStation = record.to || record.toLocation || target.to || target.toLocation || 'Cụm BV Chợ Rẫy / BV Đại học Y Dược';
+            const pickupStation = record.committedTerms?.pickupPoint || record.pickupPoint || record.from || record.fromLocation || target.from || target.fromLocation || 'Chưa rõ điểm đón';
+            const dropoffStation = record.committedTerms?.dropoffPoint || record.dropoffPoint || record.to || record.toLocation || target.to || target.toLocation || 'Chưa rõ điểm đến';
 
             const rawDriverPhone = record.driverPhone || record.phoneReal || record.contactPhone || target.phoneReal || target.phone || '';
             const cleanCallPhone = String(rawDriverPhone).replace(/\D/g, '');
@@ -649,7 +659,9 @@ export default function BookedTripList({
 
                       {/* Badge trạng thái */}
                       <div>
-                        {isDelayed ? (
+                        {record.needsReplacement || ['inquiring', 'pre_confirmed', 'expired'].includes(record.status) ? (
+                          <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-200">{record.needsReplacement ? 'Đang tìm xe thay thế' : record.status === 'pre_confirmed' ? 'Chờ bên còn lại xác nhận' : 'Chưa có lịch đón đã chốt'}</span>
+                        ) : isDelayed ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 border border-amber-300/60">
                             <Timer className="w-3.5 h-3.5 text-amber-500" />
                             <span>Báo trễ +{record.delayedMinutes || 15}p</span>
@@ -662,7 +674,7 @@ export default function BookedTripList({
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span>Đã giữ chỗ</span>
+                            <span>{record.status === 'confirmed' ? 'Đã xác nhận đón' : 'Cần xem trạng thái'}</span>
                           </span>
                         )}
                       </div>
@@ -681,7 +693,7 @@ export default function BookedTripList({
                         <div className="flex items-start gap-2.5">
                           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0 ring-4 ring-emerald-100 dark:ring-emerald-950/80" />
                           <div className="min-w-0">
-                            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Trạm đón</p>
+                            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Điểm đón</p>
                             <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-[13.5px] leading-snug">
                               {pickupStation}
                             </p>
@@ -693,7 +705,7 @@ export default function BookedTripList({
                         <div className="flex items-start gap-2.5">
                           <div className="w-2.5 h-2.5 rounded-full border-2 border-[#0071e3] bg-white dark:bg-slate-900 mt-1 shrink-0 ring-4 ring-blue-100 dark:ring-blue-950/80" />
                           <div className="min-w-0">
-                            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Trạm trả</p>
+                            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Điểm đến</p>
                             <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-[13.5px] leading-snug">
                               {dropoffStation}
                             </p>
@@ -731,14 +743,16 @@ export default function BookedTripList({
                     {/* Chi phí & Cam kết 0đ cọc */}
                     <div className="flex items-baseline gap-2 flex-wrap text-xs pt-0.5">
                       <span className="text-base sm:text-lg font-bold text-[#1d1d1f] dark:text-white font-mono">
-                        {formatVND(totalCost)}
+                        {amountLabel(record)}
                       </span>
                       <span className="text-slate-600 dark:text-slate-300 font-medium">·</span>
                       <span className="text-emerald-700 dark:text-emerald-300 font-semibold text-xs sm:text-[12.5px]">
-                        Trả trực tiếp khi lên xe (0đ cọc)
+                        Hai bên tự chốt thanh toán
                       </span>
                     </div>
 
+                    <button type="button" onClick={() => onOpenChat?.(record.escrowId || record.id)} className="w-full p-3 rounded-xl bg-[#0071e3] text-white font-semibold text-sm">{record.needsReplacement ? 'Xem phương án thay thế và trao đổi' : 'Xem trao đổi và xác nhận phương án'}</button>
+                    {record.needsReplacement && <p className="text-sm text-amber-800 dark:text-amber-200">Chưa có xe thay thế đã chốt. Nhu cầu ban đầu được giữ; hai bên cần xác nhận phương án mới trước khi đón.</p>}
                     {/* Cụm nút hành động nhanh (Quick Actions) */}
                     <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
                       {callPhone ? (
@@ -764,7 +778,7 @@ export default function BookedTripList({
                       ) : (
                         <div className="flex-1 min-w-[130px] h-11 px-3 rounded-2xl bg-slate-100 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/10 text-slate-500 dark:text-slate-400 font-semibold text-xs inline-flex items-center justify-center gap-1.5">
                           <PhoneCall className="w-4 h-4 shrink-0" />
-                          <span>Số liên hệ mở khi chốt chuyến</span>
+                          <span>Chưa có số liên hệ được chia sẻ</span>
                         </div>
                       )}
 
@@ -784,13 +798,14 @@ export default function BookedTripList({
                         onClick={() => toggleExpand(record.escrowId || record.id)}
                         className="inline-flex items-center gap-1 font-semibold text-slate-500 hover:text-[#0071e3] transition-colors cursor-pointer"
                       >
-                        <span>{isExpanded ? 'Thu gọn chi tiết' : 'Chi tiết hành trình & bảo đảm'}</span>
+                        <span>{isExpanded ? 'Thu gọn chi tiết' : 'Chi tiết yêu cầu và lịch đón'}</span>
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-[#0071e3]' : ''}`} />
                       </button>
 
                       <button
                         type="button"
                         onClick={() => onComplete?.(record.escrowId, record)}
+                        disabled={record.needsReplacement || !['confirmed', 'delayed', 'boarded', 'in_progress'].includes(record.status)}
                         className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
@@ -802,7 +817,7 @@ export default function BookedTripList({
                   {/* Khối chi tiết mở rộng nếu bấm xem thêm */}
                   {isExpanded && (
                     <div className="border-t border-slate-100 dark:border-white/5 bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 space-y-3.5 text-xs">
-                      <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} hasSilentFailover={hasSilentFailover} />
+                      {!record.needsReplacement && ['confirmed', 'delayed', 'completed', 'cancelled'].includes(record.status) && <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} hasSilentFailover={hasSilentFailover} />}
 
                       <div className="flex items-center justify-between pt-2 flex-wrap gap-2">
                         <div className="flex items-center gap-2">
@@ -893,7 +908,7 @@ export default function BookedTripList({
                 <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
                   <span className="font-semibold text-slate-800 dark:text-slate-200">{ticketDateLabel}</span>
                   <span>·</span>
-                  <span className="font-bold text-slate-900 dark:text-white font-mono">{formatVND(totalCost)}</span>
+                  <span className="font-bold text-slate-900 dark:text-white font-mono">{amountLabel(record)}</span>
                   <span>·</span>
                   <span>{record.seats || 1} ghế</span>
                 </div>

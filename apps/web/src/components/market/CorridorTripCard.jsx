@@ -1,11 +1,13 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
-import { formatVND } from '@carmate/shared';
+import { priceLabel, pickupLabel, freshnessLabel } from './tripPresentation.js';
 
 /**
  * Helper format buổi và ngày ngắn gọn cho card rút gọn
  */
-function formatShortTime(departureLabel = '04:30', departureDate = null) {
+function formatShortTime(departureLabel = '', departureDate = null) {
+  if (!departureDate) return 'Chưa rõ ngày';
+  if (!departureLabel) return departureDate;
   let hour = 4;
   if (departureLabel && departureLabel.includes(':')) {
     const [h] = departureLabel.split(':').map(Number);
@@ -50,7 +52,6 @@ function formatShortTime(departureLabel = '04:30', departureDate = null) {
  */
 export default function CorridorTripCard({
   trip,
-  segmentPrice = 165000,
   isEarliest = false,
   isMyTrip = false,
   onSelectTrip,
@@ -59,15 +60,11 @@ export default function CorridorTripCard({
 }) {
   if (!trip) return null;
 
-  const seatsAvailable = Number(trip.seatsAvailable ?? 1);
-  const isSoldOut = seatsAvailable <= 0;
-  const displayPrice = trip.pricePerSeat || segmentPrice;
+  const seatsAvailable = trip.seatsAvailable == null ? null : Number(trip.seatsAvailable);
+  const isSoldOut = seatsAvailable !== null && seatsAvailable <= 0;
   const timeSubLabel = formatShortTime(trip.departureLabel, trip.departureDate);
 
-  // Phân loại xe
-  const totalSeats = Number(trip.totalSeats || trip.capacity || 4);
-  const is7Seater = totalSeats >= 6 || /7 chỗ|xpander|innova|veloz|fortuner|carnival/i.test(trip.vehicleModel || '');
-  const vehicleTypeLabel = is7Seater ? 'Xe nhà 7 chỗ' : 'Xe nhà 5 chỗ';
+  const vehicleTypeLabel = trip.vehicleModel || trip.carType || 'Chưa rõ loại xe';
 
   // Lấy USP thực chiến cho từng chuyến xe (Tufte Data-Ink)
   // Đặc điểm chuyến chỉ hiện khi Chủ xe thực sự khai. Trước đây nó được sinh theo
@@ -126,6 +123,7 @@ export default function CorridorTripCard({
 
         {/* ── Cột 2: Thông tin xe (Nới rộng ml-2.5 mr-1 bung trọn vẹn 100% chữ) ── */}
         <div className="flex-1 min-w-0 ml-2.5 mr-1">
+          {trip.operatorName && <p className="mb-1 truncate text-xs font-semibold text-[#0071e3] dark:text-blue-300">{trip.operatorName}</p>}
           <div className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight flex items-center gap-1.5">
             <span>{vehicleTypeLabel}</span>
           </div>
@@ -142,7 +140,7 @@ export default function CorridorTripCard({
         <div className="shrink-0 flex items-center gap-2">
           <div className="text-right">
             <div className="text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
-              {formatVND(displayPrice)}
+              {priceLabel(trip)}
             </div>
             <div className="text-[10px] mt-0.5">
               {isSoldOut ? (
@@ -153,7 +151,7 @@ export default function CorridorTripCard({
                 </span>
               ) : (
                 <span className="text-slate-500 dark:text-slate-400 font-medium">
-                  Còn {seatsAvailable} chỗ
+                  {seatsAvailable === null ? 'Hỏi số chỗ' : `Còn ${seatsAvailable} chỗ`}
                 </span>
               )}
             </div>
@@ -190,6 +188,7 @@ export default function CorridorTripCard({
           )}
         </div>
       </div>
+      <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">{pickupLabel(trip.pickupMode)} · {freshnessLabel(trip)}</p>
     </div>
   );
 }

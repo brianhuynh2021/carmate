@@ -5,23 +5,19 @@ import {
   getTripById,
   addBooking,
   updateBookingStatus,
-  updateTrip,
   getUserById,
   getUserByPhone,
   saveUser,
   updateUserStatus,
   saveSupportMessage,
   resolveDisputeAndUnban,
-  isUserDeactivated,
-  getOrCreateUserForPenalty,
-  applyCancellationPenalty
+  getOrCreateUserForPenalty
 } from '../db/sqliteStore.js';
+import { getBookingRole, getTripAvailableSeatsForSegment, proposeAppointment, confirmAppointment, cancelAppointment, completeAppointment } from '../services/bookingCommitment.js';
 import { findStandbyBufferOffer } from '../services/batchMatchingEngine.js';
-import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isValidVietnamesePhone, isLikelyFakePhone, getPriceGuardrail, resolveDriverRealName, resolveFullPlate } from '@carmate/shared';
+import { cleanPhoneNumber, normalizePhoneNumber, detectPiiLeak, maskPhoneNumber, isLikelyFakePhone, getTravelWindow, resolveDriverRealName, resolveFullPlate } from '@carmate/shared';
 import crypto from 'crypto';
-import { generateToken } from '../utils/token.js';
-import { sendBusinessAlert, sendDirectBookingTelegramAlert, sendNewBookingTelegramAlert, sendBookingCancelledTelegramAlert } from '../utils/telegramAlert.js';
-import { dispatchNotification } from '../services/notificationService.js';
+import { sendBusinessAlert, sendDirectBookingTelegramAlert, sendNewBookingTelegramAlert } from '../utils/telegramAlert.js';
 import { sendEmailNotification } from '../utils/emailAlert.js';
 
 /**
@@ -62,14 +58,6 @@ function canAccessBooking(req, booking) {
 export function listBookings(req, res) {
   try {
     let user = req.user;
-    const queryPhone = cleanPhoneNumber(req.query?.phone || req.headers?.['x-user-phone'] || '');
-
-    // Nếu chưa có token nhưng có SĐT từ header/query hợp lệ:
-    if (!user && queryPhone) {
-      const dbUser = getUserByPhone(queryPhone);
-      user = dbUser || { phone: queryPhone, role: 'rider' };
-    }
-
     // Nếu chưa đăng nhập: Không bao giờ trả về danh sách booking công khai
     if (!user) {
       return res.status(200).json({
@@ -86,19 +74,8 @@ export function listBookings(req, res) {
     if (user.role === 'admin' || user.role === 'super_admin') {
       userBookings = allBookings;
     } else {
-      // Người dùng thông thường: Chỉ xem các booking của bản thân
-      const userPhone = cleanPhoneNumber(user.phone || '');
-      userBookings = allBookings.filter((b) => {
-        const bContact = cleanPhoneNumber(b.contactPhone || '');
-        const bCreator = cleanPhoneNumber(b.userPhone || b.creatorPhone || '');
-        const bTarget = cleanPhoneNumber(b.targetPhone || '');
-        const bDriver = cleanPhoneNumber(b.driverPhone || '');
-        const bPass = cleanPhoneNumber(b.passengerPhone || '');
-        return (
-          (userPhone && (bContact === userPhone || bCreator === userPhone || bTarget === userPhone || bDriver === userPhone || bPass === userPhone)) ||
-          (user.id && (b.userId === user.id || b.creatorId === user.id || b.driverId === user.id || b.passengerId === user.id))
-        );
-      });
+      // Only the current passenger and the explicitly proposed/current owner.
+      userBookings = allBookings.filter((booking) => getBookingRole(user, booking));
     }
 
     const now = Date.now();
@@ -107,22 +84,13 @@ export function listBookings(req, res) {
       if (b.status === 'pre_confirmed' && b.preConfirmedExpiresAt) {
         const expiresTime = new Date(b.preConfirmedExpiresAt).getTime();
         if (now > expiresTime) {
-          b.status = 'expired';
-          updateBookingStatus(b.escrowId || b.id, 'expired', { status: 'expired' });
+          b.status = 'inquiring';
+          b.proposalTerms = null;
+          b.proposalVersion = null;
+          updateBookingStatus(b.escrowId || b.id, 'inquiring', { proposalTerms: null, proposalVersion: null, needStatus: 'open' });
         }
       }
 
-      // 2. BẤT BIẾN ZERO PII: Chỉ mở SĐT thật nếu chuyến đã được chốt chính thức (confirmed)
-      const isConfirmed = b.status === 'confirmed' || b.bothConfirmed === true;
-      if (!isConfirmed && user?.role !== 'admin' && user?.role !== 'super_admin') {
-        return {
-          ...b,
-          phoneReal: maskPhoneNumber(b.phoneReal || b.contactPhone || ''),
-          contactPhone: maskPhoneNumber(b.contactPhone || ''),
-          driverPhone: maskPhoneNumber(b.driverPhone || ''),
-          passengerPhone: maskPhoneNumber(b.passengerPhone || '')
-        };
-      }
       return b;
     });
 
@@ -141,7 +109,9 @@ export function listBookings(req, res) {
  */
 export async function createBooking(req, res) {
   try {
-    const body = req.body;
+    if (!req.user) return res.status(401).json({ success: false, error: 'Vui lòng đăng nhập để lưu nhu cầu và nhận cập nhật.' });
+    const body = { ...req.body };
+    for (const field of ['bothConfirmed', 'committedTerms', 'proposalTerms', 'proposalVersion', 'seatReserved', 'seatReleasedAt', 'accessToken', 'driverConfirmed', 'readyConfirmedAt', 'supportDispatched', 'salvageInfo', 'rescueMode', 'creatorId', 'creatorPhone', 'passengerId', 'driverId', 'proposalDriverId', 'proposalDriverPhone', 'preConfirmedBy', 'preConfirmedExpiresAt', 'commitmentHistory']) delete body[field];
 
     if (!body.from || !body.to) {
       return res.status(400).json({
@@ -154,13 +124,23 @@ export async function createBooking(req, res) {
     if (req.user) {
       body.userId = req.user.id || body.userId;
       body.userPhone = req.user.phone || body.userPhone;
+      body.creatorId = req.user.id;
+      body.creatorPhone = req.user.phone || '';
     }
 
     // Nếu có tripId, truy vấn SĐT thật của chuyến xe từ DB
     const targetTripId = body.tripId || body.targetTripId || body.targetId || (body.targetItem && body.targetItem.id);
     let targetTrip = null;
+    if (!targetTripId) return res.status(400).json({ success: false, error: 'Cần chọn một chuyến xe thật để gửi đề nghị.' });
     if (targetTripId) {
       targetTrip = getTripById(targetTripId);
+      if (!targetTrip) return res.status(404).json({ success: false, error: 'Chuyến xe không còn tồn tại.' });
+      if (targetTrip.type !== 'driver_offer' || !['active','full'].includes(targetTrip.status || 'active') || targetTrip.isHidden || targetTrip.isBanned) return res.status(409).json({ success: false, error: 'Chuyến xe không còn nhận yêu cầu.' });
+      const tripWindow = getTravelWindow(targetTrip);
+      if (!tripWindow || tripWindow.end <= Date.now()) return res.status(409).json({ success: false, error: 'Khoảng giờ của chuyến xe đã hết.' });
+      body.tripId = targetTrip.id;
+      body.originHubId = body.originHubId || body.hubId || targetTrip.originHubId;
+      body.destinationHubId = body.destinationHubId || targetTrip.destinationHubId;
       if (targetTrip) {
         // BẤT BIẾN MIT: Chặn tự đặt/gửi yêu cầu cho chuyến của chính mình
         const reqUserId = req.user?.id || req.user?.userId || body.userId;
@@ -183,16 +163,14 @@ export async function createBooking(req, res) {
         // seats = 0 là HỢP LỆ với ghép hàng / chở xe máy: món hàng đi cùng chuyến
         // nhưng không chiếm ghế người ngồi nào.
         const requestedSeats = Number(body.seats ?? body.seatsNeeded ?? 1);
-        if (!Number.isFinite(requestedSeats) || requestedSeats < 0) {
+        if (!Number.isInteger(requestedSeats) || requestedSeats < 1) {
           return res.status(400).json({
             success: false,
-            error: 'Số ghế phải là số không âm.'
+            error: 'Số người phải là số nguyên dương.'
           });
         }
 
-        const seatsOnOffer = Number(
-          targetTrip.availableSeats ?? targetTrip.seats ?? targetTrip.capacity ?? 0
-        );
+        const seatsOnOffer = getTripAvailableSeatsForSegment(targetTrip, body);
         // requestedSeats === 0 là ghép hàng (không chiếm ghế) nên luôn được đi tiếp.
         // Với yêu cầu CÓ chiếm ghế thì chuyến hết chỗ phải bị từ chối: điều kiện cũ
         // `seatsOnOffer > 0 && ...` vô hiệu hoá chính nó khi seatsOnOffer === 0,
@@ -248,82 +226,26 @@ export async function createBooking(req, res) {
     body.passengerName = body.passengerName || body.userName || body.contactName || req.user?.name || 'Người đi cùng';
     body.driverName = body.driverName || 'Chủ xe';
 
-    // UNIFIED AUTH / UPSERT FLOW: Khách giữ chỗ trước bằng SĐT không cần tài khoản hay mật khẩu từ trước
-    let guestUserRecord = null;
-    let guestToken = null;
-    if (!req.user && body.passengerPhone) {
-      const cleaned = cleanPhoneNumber(body.passengerPhone);
-      if (isValidVietnamesePhone(cleaned)) {
-        try {
-          guestUserRecord = getUserByPhone(cleaned);
-          const rawName = body.passengerName;
-          const displayName =
-            rawName && rawName.trim() && rawName.trim() !== 'Người đi cùng' && rawName.trim() !== 'Khách đi cùng'
-              ? rawName.trim()
-              : (guestUserRecord?.name || `Khách ${cleaned.slice(-4)}`);
-
-          if (!guestUserRecord) {
-            guestUserRecord = {
-              id: 'USR-' + cleaned,
-              phone: cleaned,
-              name: displayName,
-              avatar: '',
-              role: 'rider',
-              trustScore: 98,
-              safeTripsCount: 0,
-              provider: 'quick_advance_booking'
-            };
-            await saveUser(guestUserRecord);
-          } else if (
-            rawName &&
-            rawName.trim() &&
-            rawName.trim() !== 'Người đi cùng' &&
-            rawName.trim() !== 'Khách đi cùng' &&
-            (!guestUserRecord.name ||
-              guestUserRecord.name.startsWith('Khách ') ||
-              guestUserRecord.name.startsWith('Người ') ||
-              guestUserRecord.name.startsWith('Thành viên '))
-          ) {
-            guestUserRecord.name = rawName.trim();
-            await saveUser(guestUserRecord);
-          }
-
-          guestToken = generateToken({
-            userId: guestUserRecord.id,
-            phone: guestUserRecord.phone,
-            role: guestUserRecord.role || 'rider',
-            name: guestUserRecord.name
-          });
-
-          body.userId = guestUserRecord.id;
-          body.passengerId = guestUserRecord.id;
-          body.passengerPhone = guestUserRecord.phone;
-          body.passengerName = guestUserRecord.name;
-        } catch (authErr) {
-          console.warn('[createBooking] Unified auth upsert warning:', authErr.message);
-        }
-      }
+    // Giá do chủ xe niêm yết hoặc hai bên thống nhất, không có khung phụ xăng.
+    const rawPrice = body.totalDeal ?? body.price ??
+      (targetTrip?.pricingMode === 'listed' && targetTrip.basePricePerSeat != null
+        ? Number(targetTrip.basePricePerSeat) * Number(body.seats ?? 1) : null);
+    body.totalDeal = rawPrice == null || rawPrice === '' ? null : Number(rawPrice);
+    if (body.totalDeal != null && (!Number.isFinite(body.totalDeal) || body.totalDeal < 0)) {
+      return res.status(400).json({ success: false, error: 'Tổng giá phải là số không âm hoặc để Liên hệ.' });
     }
-
-    // BẤT BIẾN MIT: Kiểm tra tính hợp lệ của chi phí thoả thuận (Price Guardrail)
-    const dealPrice = Number(body.totalDeal || body.price || 0);
-    const seatsCount = Math.max(1, Number(body.seats || 1));
-    const perSeatPrice = Math.round(dealPrice / seatsCount);
-    if (dealPrice > 0) {
-      const guardrail = getPriceGuardrail(body.from, body.to, perSeatPrice);
-      if (perSeatPrice < 15000 && (guardrail?.distanceKm || 0) > 30) {
-        return res.status(400).json({
-          success: false,
-          error: 'Mức phụ xăng đề xuất quá thấp (tối thiểu 15.000đ cho chuyến liên tỉnh).'
-        });
-      }
-      if (guardrail?.maxSafePrice && perSeatPrice > guardrail.maxSafePrice * 3) {
-        return res.status(400).json({
-          success: false,
-          error: 'Mức phụ xăng vượt quá khung chia sẻ tối đa cho phép.'
-        });
-      }
+    const parent = body.requestId && getBookings().find((b) => b.requestId === body.requestId && getBookingRole(req.user, b) === 'passenger');
+    body.requestId = parent?.requestId || crypto.randomUUID();
+    body.originalRequestedAt = parent?.originalRequestedAt || Date.now();
+    body.originalDeadlineAt = parent?.originalDeadlineAt || (body.pickupEndAt ? new Date(body.pickupEndAt).getTime() : getTravelWindow(body)?.end ?? null);
+    body.inquiryExpiresAt = Math.min(Date.now() + 5 * 60000, body.originalDeadlineAt || Infinity);
+    if (!Number.isFinite(body.originalDeadlineAt) || body.originalDeadlineAt <= Date.now()) {
+      return res.status(400).json({ success: false, error: 'Hạn giờ không hợp lệ.' });
     }
+    body.needStatus = 'open';
+    body.needsReplacement = false;
+    body.seatReserved = false;
+    body.bothConfirmed = false;
 
     // Mã vé do MÁY CHỦ sinh, không nhận từ client. Client cũ tự sinh CX-1000..9999
     // (chỉ 9000 giá trị) và addBooking dùng INSERT OR REPLACE với escrowId là khoá
@@ -339,6 +261,7 @@ export async function createBooking(req, res) {
     // Mọi booking bắt đầu ở 'inquiring'; chỉ luồng chốt hai chiều (confirmBooking) mới
     // được nâng lên 'confirmed'.
     body.status = 'inquiring';
+    body.createdAt = Date.now();
     body.commitmentType = body.commitmentType || 'inquiry_chat';
     body.messages = Array.isArray(body.messages) ? body.messages : [];
 
@@ -353,23 +276,9 @@ export async function createBooking(req, res) {
       });
     }
 
-    // BẤT BIẾN GHẾ NGỒI (MIT): Trừ số ghế khả dụng của chuyến xe trong CSDL
-    let remainingSeatsAfterBooking = null;
-    if (targetTrip && targetTrip.id) {
-      // Đọc lại bản ghi ngay trước khi trừ: targetTrip được nạp từ đầu request và
-      // có thể đã cũ nếu một booking khác vừa chen vào giữa chừng.
-      const freshTrip = getTripById(targetTrip.id) || targetTrip;
-      const currentSeats = Number(freshTrip.availableSeats ?? freshTrip.seats ?? freshTrip.capacity ?? 4);
-      const requestedSeats = Number(body.seats || 1);
-      const updatedSeats = Math.max(0, currentSeats - requestedSeats);
-      remainingSeatsAfterBooking = updatedSeats;
-      await updateTrip(targetTrip.id, {
-        availableSeats: updatedSeats,
-        status: updatedSeats === 0 ? 'full' : (targetTrip.status || 'active')
-      });
-      targetTrip.availableSeats = updatedSeats;
-      if (updatedSeats === 0) targetTrip.status = 'full';
-    }
+    // Một yêu cầu đang trao đổi chưa chiếm ghế. Giữ ghế nguyên tử khi bên
+    // còn lại xác nhận đúng phiên bản điểm–giờ–giá trong confirmAppointment.
+    const remainingSeatsAfterBooking = targetTrip ? getTripAvailableSeatsForSegment(targetTrip, body) : null;
 
     const booking = await addBooking(body);
 
@@ -431,7 +340,7 @@ export async function createBooking(req, res) {
           </div>
           <p style="color: #475569; font-size: 13px;">Mở CarMate vào mục <strong>Hộp thư</strong> để trao đổi điểm đón cụ thể và bấm nút <strong>[Chốt chuyến 15 phút]</strong>.</p>
           <p style="font-size: 11px; color: #94a3b8; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
-            🛡️ Số điện thoại thật của 2 bên được bảo mật 100% và chỉ tự động hiển thị sau khi 2 bên cùng chốt chuyến.
+            Hai bên có thể liên hệ trực tiếp; xác nhận trên CarMate để lưu đúng điểm, giờ và tổng giá đã chốt.
           </p>
         </div>
       `;
@@ -458,27 +367,11 @@ export async function createBooking(req, res) {
       req
     }).catch(() => {});
 
-    // Chỉ tin trạng thái đã ghi xuống CSDL, không tin trường client gửi lên.
-    const isInstantConfirmed = booking.status === 'confirmed';
-    const sanitizedBooking = {
-      ...booking,
-      phoneReal: maskPhoneNumber(booking.phoneReal || booking.contactPhone || ''),
-      contactPhone: maskPhoneNumber(booking.contactPhone || ''),
-      driverPhone: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '') : maskPhoneNumber(booking.driverPhone || ''),
-      driverPhoneDirect: isInstantConfirmed ? (booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || '') : null,
-      passengerPhone: maskPhoneNumber(booking.passengerPhone || '')
-    };
-
+    // Both authenticated participants can contact one another before deciding.
     const responsePayload = {
-      success: true,
-      message: 'Đã gửi yêu cầu ghép chuyến thành công',
-      data: sanitizedBooking
+      success: true, message: 'Đã lưu yêu cầu. Chuyến chỉ được chốt khi hai bên xác nhận cùng điều kiện.',
+      data: { ...booking, driverPhoneDirect: booking.driverPhone || targetTrip?.phoneReal || targetTrip?.phone || null }
     };
-
-    if (guestToken && guestUserRecord) {
-      responsePayload.token = guestToken;
-      responsePayload.user = guestUserRecord;
-    }
 
     return res.status(201).json(responsePayload);
   } catch (err) {
@@ -491,27 +384,16 @@ export async function createBooking(req, res) {
  */
 export async function reportDelay(req, res) {
   try {
-    const { id } = req.params;
-    const { minutes = 15, note } = req.body;
-
-    const updated = await updateBookingStatus(id, 'delayed', {
-      delayedMinutes: minutes,
-      delayNote: note || `Dự kiến trễ khoảng +${minutes} phút do kẹt xe hoặc chuẩn bị`,
-      delayedAt: new Date().toISOString()
-    });
-
-    if (!updated) {
-      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: `Đã gửi thông báo trễ +${minutes} phút`,
-      data: updated
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    const existing = getBookingById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, error: 'Không tìm thấy cuộc hẹn.' });
+    if (!getBookingRole(req.user, existing)) return res.status(403).json({ success: false, error: 'Bạn không thuộc cuộc hẹn này.' });
+    const minutes = Number(req.body?.minutes);
+    if (!Number.isFinite(minutes) || minutes < 0) return res.status(400).json({ success: false, error: 'Số phút trễ không hợp lệ.' });
+    const updated = await updateBookingStatus(req.params.id, existing.status, {
+      delayedMinutes: minutes, delayNote: String(req.body?.note || ''), delayedAt: new Date().toISOString(),
+      journeyRisk: minutes > 0 ? 'late' : null, estimatedPickupAt: req.body?.estimatedPickupAt || null });
+    return res.json({ success: true, message: 'Đã cập nhật dự báo trễ. Giờ hẹn đã chốt không tự thay đổi.', data: updated });
+  } catch (err) { return res.status(err.status || 500).json({ success: false, error: err.message }); }
 }
 
 /**
@@ -519,163 +401,26 @@ export async function reportDelay(req, res) {
  */
 export async function cancelBooking(req, res) {
   try {
-    const { id } = req.params;
-    const { reason = 'Thay đổi lịch trình đột xuất', phone = '' } = req.body || {};
-
-    const booking = getBookingById(id);
-    if (!booking) {
-      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
-    }
-
-    // 1. Xác định thời điểm khởi hành của chuyến xe để đo lường delta t
-    let departureTimeMs = null;
-    let trip = null;
-    if (booking.tripId) {
-      trip = getTripById(booking.tripId);
-    }
-
-    const tripDate = booking.date || trip?.date;
-    const tripTimeSlot = booking.timeSlot || trip?.timeSlot || '';
-
-    if (tripDate) {
-      const hourMatch = String(tripTimeSlot).match(/(\d{1,2}):(\d{2})/);
-      const departureDate = new Date(tripDate);
-      if (hourMatch) {
-        departureDate.setHours(parseInt(hourMatch[1], 10), parseInt(hourMatch[2], 10), 0, 0);
-      } else {
-        departureDate.setHours(12, 0, 0, 0);
-      }
-      departureTimeMs = departureDate.getTime();
-    }
-
-    const nowMs = Date.now();
-    let deltaMinutes = 180; // Mặc định > 2 tiếng nếu không xác định được giờ cụ thể
-    if (departureTimeMs && !isNaN(departureTimeMs)) {
-      deltaMinutes = (departureTimeMs - nowMs) / (60 * 1000);
-    }
-
-    const cancellingPhone = phone || booking.passengerPhone || trip?.phoneReal || '';
-    const isDriverCancelling =
-      req.body?.cancellingRole === 'driver' ||
-      cancellingPhone === trip?.phoneReal ||
-      cancellingPhone === booking?.driverPhone;
-
-    // 2. Tính toán thang phạt dốc thời gian & Grim Trigger (30 ngày tước quyền nếu chủ xe bùng sát giờ)
-    const penaltyResult = await applyCancellationPenalty(
-      booking,
-      cancellingPhone,
-      deltaMinutes,
-      isDriverCancelling ? 'driver' : 'passenger'
-    );
-
-    // 3. KÍCH HOẠT ĐIỀU PHỐI XE HỖ TRỢ / CHUYỂN LÀN VÔ HÌNH (SILENT FALLBACK N+1)
-    // Tuyệt đối không để khách bị bùng chuyến nếu còn xe trên hành lang
-    let salvageInfo = null;
-
-    // Kích hoạt nếu chủ xe huỷ trước giờ chạy hoặc trong vòng 90 phút
-    if (isDriverCancelling || deltaMinutes < 90) {
-      const db = getDB();
-      const allActiveTrips = (db.trips || []).filter((t) => t.status === 'active' && !t.isHidden);
-      const standbyCandidate = findStandbyBufferOffer(
-        { ...booking, corridor: trip?.routeCategory || 'Tuyến QL13', direction: trip?.direction },
-        allActiveTrips.filter((t) => t.id !== booking.tripId)
-      );
-
-      if (standbyCandidate) {
-        const supportVehicleModel = standbyCandidate.carModel || standbyCandidate.vehicleModel || 'Toyota Vios (Đen)';
-        const supportPlate = standbyCandidate.licensePlate || standbyCandidate.plate || '61A - 892.41';
-        const supportTime = standbyCandidate.timeSlot || standbyCandidate.time || '06:25';
-        const supportDriver = standbyCandidate.authorName || standbyCandidate.driverName || 'Anh Hải (Chủ xe)';
-
-        salvageInfo = {
-          salvaged: true,
-          supportDispatched: true,
-          standbyTripId: standbyCandidate.id,
-          supportTripId: standbyCandidate.id,
-          supportDriverName: supportDriver,
-          supportVehicleModel,
-          supportPlate,
-          supportPickupTime: supportTime,
-          supportPhone: standbyCandidate.phoneReal || standbyCandidate.phone,
-          note: `CarMate điều phối xe hỗ trợ: Xe ${supportVehicleModel} (${supportPlate}) sẽ đón bạn lúc ${supportTime} tại trạm đón.`
-        };
+    const updated = cancelAppointment({ bookingId: req.params.id, user: req.user,
+      reason: req.body?.reason || 'Thay đổi nhu cầu', keepNeed: req.body?.action === 'find_another' });
+    if (updated.needsReplacement) {
+      const trip = getTripById(updated.tripId);
+      const candidate = findStandbyBufferOffer({ ...updated, corridor: trip?.routeCategory, direction: trip?.direction },
+        (getDB().trips || []).filter((t) => t.id !== updated.tripId && t.status === 'active' && !t.isHidden));
+      if (candidate) {
+        updated.recoveryCandidates = [{ tripId: candidate.id, status: 'candidate', requiresBothConfirmations: true,
+          driverName: candidate.authorName || candidate.driverName || null,
+          vehicleModel: candidate.carModel || candidate.vehicleModel || null,
+          plate: candidate.licensePlate || candidate.plate || null,
+          timeSlot: candidate.timeSlot || candidate.time || null,
+          basePricePerSeat: candidate.basePricePerSeat ?? null }];
+        await updateBookingStatus(req.params.id, updated.status, { recoveryCandidates: updated.recoveryCandidates });
       }
     }
-
-    // 4. Cập nhật booking vào database
-    // Nếu có xe hỗ trợ thay thế -> chuyển sang 'reassigned' (vé của khách vẫn giữ hiệu lực)
-    const newStatus = salvageInfo?.supportDispatched ? 'reassigned' : 'cancelled';
-    const updated = await updateBookingStatus(id, newStatus, {
-      cancelReason: reason,
-      cancelledAt: new Date().toISOString(),
-      penaltyTier: penaltyResult.penaltyTier,
-      penaltyPoints: penaltyResult.penaltyPoints,
-      salvageInfo,
-      supportDispatched: Boolean(salvageInfo?.supportDispatched)
-    });
-
-    // 5. Nếu chủ xe bị huỷ ghế, phục hồi lại số ghế trống trên chuyến xe.
-    // Bản ghi trip dùng `availableSeats`; ghi vào `seats` chỉ tạo ra trường rác và
-    // ghế huỷ không bao giờ quay lại sàn, đồng thời chuyến kẹt status 'full' vĩnh viễn.
-    if (trip && trip.id) {
-      const freshTrip = getTripById(trip.id) || trip;
-      const currentSeats = Number(freshTrip.availableSeats ?? 0);
-      const bookedSeats = Number(booking.seats || 1);
-      const restoredSeats = currentSeats + bookedSeats;
-      await updateTrip(trip.id, {
-        availableSeats: restoredSeats,
-        // Mở lại chuyến khi đã có chỗ trống, nếu trước đó bị khoá vì hết ghế
-        status: restoredSeats > 0 && freshTrip.status === 'full' ? 'active' : freshTrip.status
-      });
-    }
-
-    // 6. Bắn thông báo In-app/Push và Telegram cho Chủ xe
-    try {
-      const driverPhone = trip?.phoneReal || trip?.phone || booking?.driverPhone;
-      const bookedSeats = Number(booking.seats || 1);
-      const passengerPhone = booking.passengerPhone || booking.phone || '0984******';
-      const cleanDigits = String(passengerPhone).replace(/\D/g, '');
-      const maskedPassenger = cleanDigits.length >= 8
-        ? `${cleanDigits.slice(0, 3)}***${cleanDigits.slice(-4)}`
-        : '098***xxxx';
-      const tripDate = booking.date || trip?.date || '';
-      const tripTime = booking.timeSlot || trip?.timeSlot || '';
-
-      if (driverPhone) {
-        dispatchNotification({
-          phone: driverPhone,
-          kind: 'booking_cancelled',
-          title: 'Hành khách hủy đặt chỗ',
-          body: `Khách ${maskedPassenger} vừa hủy ${bookedSeats} ghế chuyến ${tripTime} ngày ${tripDate}. Đã mở lại ${bookedSeats} chỗ trống trên hệ thống.`,
-          data: { bookingId: booking.id || id, tripId: trip?.id, reason }
-        }).catch((e) => console.warn('[Cancel] Không gửi được in-app notification:', e.message));
-      }
-
-      sendBookingCancelledTelegramAlert({
-        targetTelegramId: trip?.telegramId,
-        passengerPhone,
-        seats: bookedSeats,
-        timeSlot: tripTime,
-        date: tripDate,
-        from: booking.from || trip?.from,
-        to: booking.to || trip?.to,
-        reason,
-        req
-      }).catch((e) => console.warn('[Cancel] Không gửi được telegram alert:', e.message));
-    } catch (notifyErr) {
-      console.warn('[Cancel] Lỗi gửi thông báo hủy chỗ:', notifyErr.message);
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: penaltyResult.message,
-      penalty: penaltyResult,
-      salvageInfo,
-      data: updated
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    return res.json({ success: true, message: updated.needsReplacement
+      ? 'Nhu cầu và hạn giờ ban đầu được giữ lại. Xe thay thế cần hai bên xác nhận.'
+      : 'Đã kết thúc nhu cầu và dừng tìm xe.', data: updated, salvageInfo: null });
+  } catch (err) { return res.status(err.status || 500).json({ success: false, error: err.message }); }
 }
 
 /**
@@ -683,26 +428,9 @@ export async function cancelBooking(req, res) {
  */
 export async function completeBooking(req, res) {
   try {
-    const { id } = req.params;
-    const { rating = 5, review = '', reviewerRole = 'passenger', tags = [] } = req.body || {};
-
-    const updated = await updateBookingStatus(id, 'completed', {
-      completedAt: new Date().toISOString(),
-      feedback: { rating, review, reviewerRole, tags }
-    });
-
-    if (!updated) {
-      return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Chuyến đi hoàn tất an toàn. Cảm ơn bạn đã đi chung văn minh!',
-      data: updated
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    const updated = completeAppointment({ bookingId: req.params.id, user: req.user });
+    return res.json({ success: true, message: 'Đã ghi nhận hoàn tất. Xe tiếp tục hành trình và có thể nhận khách trên đoạn còn lại.', data: updated });
+  } catch (err) { return res.status(err.status || 500).json({ success: false, error: err.message }); }
 }
 
 /**
@@ -827,40 +555,15 @@ export function getBookingPublicSummary(req, res) {
  */
 export async function driverConfirmBooking(req, res) {
   try {
-    const { id } = req.params;
-    const { driverNote = '' } = req.body || {};
-
-    const existing = getBookingById(id);
-    if (!existing) {
-      return res.status(404).json({
-        success: false,
-        error: 'Không tìm thấy thông tin chuyến đi để xác nhận'
-      });
-    }
-
-    // Chống IDOR: chỉ chủ xe cầm Magic Link hợp lệ (token) hoặc thành viên chuyến/Admin
-    // mới được xác nhận đón. Trước đây bất kỳ ai đoán được escrowId đều xác nhận hộ được.
-    if (!canAccessBooking(req, existing)) {
-      return res.status(403).json({
-        success: false,
-        error: 'Liên kết xác nhận không hợp lệ hoặc bạn không có quyền thao tác chuyến đi này'
-      });
-    }
-
-    const updated = await updateBookingStatus(id, 'driver_confirmed', {
-      driverConfirmed: true,
-      driverConfirmedAt: new Date().toISOString(),
-      driverNote: driverNote || 'Chủ xe đã bấm nhận đón qua Magic Link Zalo'
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Chủ xe đã xác nhận đón thành công! Hệ thống đã ghi nhận lịch hẹn.',
-      data: updated
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    const existing = getBookingById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, error: 'Không tìm thấy cuộc hẹn.' });
+    if (getBookingRole(req.user, existing) !== 'driver') return res.status(403).json({ success: false, error: 'Chỉ chủ xe của cuộc hẹn được xác nhận sẵn sàng.' });
+    if (!existing.bothConfirmed || existing.needStatus === 'closed') return res.status(409).json({ success: false, error: 'Hai bên cần chốt cuộc hẹn trước khi báo sẵn sàng.' });
+    const updated = await updateBookingStatus(req.params.id, existing.status, {
+      driverConfirmed: true, readyConfirmedAt: new Date().toISOString(), driverNote: String(req.body?.driverNote || ''),
+      rescueMode: false, rescueActivatedAt: null });
+    return res.json({ success: true, message: 'Đã báo sẵn sàng. Giờ hẹn đã chốt được giữ nguyên.', data: updated });
+  } catch (err) { return res.status(err.status || 500).json({ success: false, error: err.message }); }
 }
 
 /**
@@ -869,297 +572,16 @@ export async function driverConfirmBooking(req, res) {
  */
 export async function addBookingMessageHandler(req, res) {
   try {
-    const { id } = req.params;
-    const { senderRole = 'passenger', senderName = '' } = req.body || {};
-    const text = (req.body?.text || req.body?.message || '').trim();
-
-    if (!text) {
-      return res.status(400).json({
-        success: false,
-        error: 'Nội dung tin nhắn không được để trống'
-      });
-    }
-
-    const booking = getBookingById(id);
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        error: 'Không tìm thấy thông tin cuộc trò chuyện'
-      });
-    }
-
-    const isConfirmed = booking.status === 'confirmed' || booking.bothConfirmed === true;
-    const isPreConfirmed = booking.status === 'pre_confirmed';
-    const isDealCommitted = isConfirmed || isPreConfirmed;
-
-    // 1. Xác định danh tính người gửi (User ID hoặc Số điện thoại)
-    let senderUser = null;
-    let senderKey = null;
-    if (req.user) {
-      senderKey = req.user.id || req.user.phone;
-      senderUser = getUserById(req.user.id) || getUserByPhone(req.user.phone) || req.user;
-    }
-    if (!senderUser) {
-      const senderPhone = senderRole === 'driver'
-        ? (booking.driverPhone || booking.phoneReal || booking.contactPhone)
-        : (booking.passengerPhone || booking.userPhone || booking.contactPhone);
-      const senderId = senderRole === 'driver' ? booking.driverId : booking.userId;
-      senderKey = senderId || senderPhone;
-      if (senderId) senderUser = getUserById(senderId);
-      if (!senderUser && senderPhone) senderUser = getUserByPhone(senderPhone);
-    }
-
-    // 2. Kiểm tra nếu tài khoản hoặc phiên đã bị cấm (Banned Check)
-    if (senderUser && isUserDeactivated(senderUser)) {
-      return res.status(403).json({
-        success: false,
-        isBanned: true,
-        isDeactivated: true,
-        error: '⛔ TÀI KHOẢN ĐÃ BỊ VÔ HIỆU HÓA VĨNH VIỄN: Thời hạn ân hạn khiếu nại (3 ngày) đã kết thúc. Bạn không thể sử dụng hệ thống nữa.'
-      });
-    }
-
-    if (senderUser?.isBanned || booking.isBanned) {
-      return res.status(403).json({
-        success: false,
-        isBanned: true,
-        deactivateAt: senderUser?.deactivateAt,
-        error: '⛔ Tài khoản của bạn đang bị tạm khóa đăng bài/đặt chuyến do vi phạm quy chế. Bạn có 3 ngày ân hạn để mở Kênh CSKH khiếu nại trước khi tài khoản bị vô hiệu hóa hoàn toàn.'
-      });
-    }
-
-    // 3. THUẬT TOÁN AI PII & CHẾ TÀI BẬC THANG (3-Strike Progressive Sanction)
-    // Khi chuyến đi đã được một bên đề xuất chốt / giữ chỗ 15p (pre_confirmed) hoặc đã chốt chính thức (confirmed),
-    // hai bên hoàn toàn được phép trao đổi số điện thoại, Zalo, địa chỉ đón chi tiết mà không bị chặn hay phạt.
-    if (!isDealCommitted) {
-      const piiCheck = detectPiiLeak(text);
-      if (piiCheck.hasLeak) {
-        const currentStrikes = Number(senderUser?.piiStrikes || booking?.piiStrikes?.[senderRole] || 0);
-        const newStrikes = currentStrikes + 1;
-        const bookingStrikes = { ...(booking.piiStrikes || {}), [senderRole]: newStrikes };
-        const existingMsgs = Array.isArray(booking.messages) ? booking.messages : [];
-
-        if (newStrikes === 1) {
-          // LẦN 1: Cảnh báo nhẹ, chặn gửi tin + GỬI THƯ CẢNH BÁO HỆ THỐNG
-          if (senderKey) {
-            await updateUserStatus(senderKey, { piiStrikes: 1 });
-          }
-
-          const warningNoticeMsg = {
-            id: `SYS-WARN-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            senderRole: 'system',
-            senderName: 'Hệ thống CarMate',
-            isSystem: true,
-            isWarningNotice: true,
-            noticeType: 'strike_warning',
-            strike: 1,
-            detectedSample: piiCheck.detectedSample || '',
-            warningMessage: piiCheck.warningMessage,
-            canDispute: true,
-            text: `⚠️ THƯ CẢNH BÁO QUY CHẾ (Lần 1/3): Hệ thống phát hiện nội dung có chứa số điện thoại hoặc kênh liên lạc ngoài luồng khi chưa chốt chuyến: "${piiCheck.detectedSample || ''}". Vui lòng trao đổi trên CarMate và bấm [Đề xuất chốt & Giữ chỗ 15p] để mở khóa SĐT an toàn. Nếu bạn gõ nhầm địa chỉ hoặc số nhà, hãy bấm nút [Khiếu nại / Kháng nghị] bên dưới.`,
-            createdAt: new Date().toISOString()
-          };
-
-          await updateBookingStatus(id, booking.status, {
-            piiStrikes: bookingStrikes,
-            messages: [...existingMsgs, warningNoticeMsg],
-            lastMessageAt: warningNoticeMsg.createdAt
-          });
-
-          return res.status(400).json({
-            success: false,
-            strike: 1,
-            violationLevel: 'warning',
-            warningNotice: warningNoticeMsg,
-            error: `⚠️ CẢNH BÁO VI PHẠM (Lần 1/3): ${piiCheck.warningMessage} Vui lòng thỏa thuận trên CarMate và bấm [Đề xuất chốt] để mở khóa an toàn.`,
-            reason: piiCheck.reason,
-            detectedSample: piiCheck.detectedSample
-          });
-        } else if (newStrikes === 2) {
-          // LẦN 2: Cảnh cáo nghiêm trọng + HẠ ĐIỂM TÍN NHIỆM (-15 ĐIỂM) + THƯ XỬ PHẠT
-          const currentTrust = Number(senderUser?.trustScore ?? 98);
-          const newTrustScore = Math.max(0, currentTrust - 15);
-
-          if (senderKey) {
-            await updateUserStatus(senderKey, {
-              trustScore: newTrustScore,
-              piiStrikes: 2
-            });
-          }
-
-          const penaltyNoticeMsg = {
-            id: `SYS-WARN-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            senderRole: 'system',
-            senderName: 'Hệ thống CarMate',
-            isSystem: true,
-            isWarningNotice: true,
-            noticeType: 'strike_penalty',
-            strike: 2,
-            deductedPoints: 15,
-            trustScore: newTrustScore,
-            detectedSample: piiCheck.detectedSample || '',
-            warningMessage: piiCheck.warningMessage,
-            canDispute: true,
-            text: `🚨 QUYẾT ĐỊNH XỬ PHẠT TÍN NHIỆM (Lần 2/3): Bạn tiếp tục cố tình chia sẻ thông tin liên lạc ngoài luồng: "${piiCheck.detectedSample || ''}". Hệ thống đã TRỪ -15 ĐIỂM TÍN NHIỆM (còn ${newTrustScore}/100). Vi phạm thêm lần nữa, tài khoản sẽ bị KHÓA CẤM VĨNH VIỄN (BAN)! Nếu đây là sự nhầm lẫn, hãy bấm [Khiếu nại / Kháng nghị] ngay.`,
-            createdAt: new Date().toISOString()
-          };
-
-          await updateBookingStatus(id, booking.status, {
-            piiStrikes: bookingStrikes,
-            trustScore: newTrustScore,
-            messages: [...existingMsgs, penaltyNoticeMsg],
-            lastMessageAt: penaltyNoticeMsg.createdAt
-          });
-
-          // Báo động Telegram cho Founder
-          sendBusinessAlert({
-            title: '🚨 VI PHẠM PII LẦN 2: TRỪ 15 ĐIỂM TÍN NHIỆM',
-            details: {
-              'Mã yêu cầu': id,
-              'Người vi phạm': senderUser?.name || senderName || 'Thành viên',
-              'SĐT/ID': senderKey || 'N/A',
-              'Điểm tín nhiệm cũ': `${currentTrust}/100`,
-              'Điểm tín nhiệm MỚI': `${newTrustScore}/100 (-15đ)`,
-              'Nội dung vi phạm': text
-            },
-            req
-          }).catch(() => {});
-
-          return res.status(400).json({
-            success: false,
-            strike: 2,
-            violationLevel: 'penalty',
-            trustScore: newTrustScore,
-            deductedPoints: 15,
-            warningNotice: penaltyNoticeMsg,
-            error: `🚨 CẢNH CÁO VI PHẠM NGHIÊM TRỌNG (Lần 2/3): Bạn tiếp tục cố tình luồn lách thông tin liên lạc! Hệ thống đã TRỪ -15 ĐIỂM TÍN NHIỆM (còn ${newTrustScore}/100). Vi phạm thêm lần nữa, tài khoản sẽ bị KHÓA CẤM VĨNH VIỄN (BAN)!`,
-            reason: piiCheck.reason,
-            detectedSample: piiCheck.detectedSample
-          });
-        } else {
-          // LẦN 3 TRỞ ĐI: KHÓA TÀI KHOẢN VỚI THỜI HẠN ÂN HẠN 3 NGÀY (72H GRACE PERIOD)
-          const bannedAt = Date.now();
-          const deactivateAt = bannedAt + 3 * 24 * 60 * 60 * 1000; // 3 ngày ân hạn
-
-          if (senderKey) {
-            await updateUserStatus(senderKey, {
-              isBanned: true,
-              status: 'suspended',
-              bannedAt,
-              deactivateAt,
-              piiStrikes: newStrikes,
-              banReason: 'Cố tình chia sẻ SĐT/kênh liên lạc ngoài luồng 3 lần liên tiếp'
-            });
-          }
-
-          const banNoticeMsg = {
-            id: `SYS-WARN-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            senderRole: 'system',
-            senderName: 'Hệ thống CarMate',
-            isSystem: true,
-            isWarningNotice: true,
-            noticeType: 'strike_ban',
-            strike: 3,
-            bannedAt,
-            deactivateAt,
-            detectedSample: piiCheck.detectedSample || '',
-            warningMessage: piiCheck.warningMessage,
-            canDispute: true,
-            text: `⛔ THÔNG BÁO TẠM ĐÌNH CHỈ TÀI KHOẢN (Cấp 3): Tài khoản của bạn đã bị hạn chế đăng bài và đặt chuyến do vi phạm quy chế 3 lần liên tiếp. Bạn có thời gian ân hạn 3 ngày để bấm [Khiếu nại / Chat CSKH] giải trình trước khi tài khoản bị vô hiệu hóa hoàn toàn.`,
-            createdAt: new Date().toISOString()
-          };
-
-          await updateBookingStatus(id, booking.status, {
-            piiStrikes: bookingStrikes,
-            isBanned: true,
-            messages: [...existingMsgs, banNoticeMsg],
-            lastMessageAt: banNoticeMsg.createdAt
-          });
-
-          // Báo động Telegram Khẩn Cấp
-          sendBusinessAlert({
-            title: '⛔ TÀI KHOẢN BỊ KHÓA (AUTO-BAN): Vi phạm PII 3 lần liên tiếp (Ân hạn 3 ngày)',
-            details: {
-              'Mã yêu cầu': id,
-              'Thành viên bị khóa': senderUser?.name || senderName || 'Thành viên',
-              'SĐT/ID': senderKey || 'N/A',
-              'Lý do': 'Chia sẻ thông tin ngoài luồng 3 lần liên tiếp',
-              'Thời hạn ân hạn': '72 giờ (3 ngày) trước khi vô hiệu hóa vĩnh viễn',
-              'Nội dung vi phạm': text
-            },
-            req
-          }).catch(() => {});
-
-          return res.status(403).json({
-            success: false,
-            strike: newStrikes,
-            violationLevel: 'banned',
-            isBanned: true,
-            bannedAt,
-            deactivateAt,
-            warningNotice: banNoticeMsg,
-            error: '⛔ TÀI KHOẢN ĐÃ BỊ KHÓA VĨNH VIỄN (BAN): Bạn đã vi phạm chính sách bảo mật thông tin liên tục 3 lần. Tính năng đăng bài đã bị đình chỉ (Thời gian ân hạn khiếu nại: 3 ngày).',
-            reason: piiCheck.reason,
-            detectedSample: piiCheck.detectedSample
-          });
-        }
-      }
-    }
-
-    const newMsg = {
-      id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      senderRole,
-      senderName: senderName || (senderRole === 'driver' ? 'Chủ xe' : 'Người đi cùng'),
-      text: text.trim(),
-      createdAt: new Date().toISOString()
-    };
-
-    const existingMsgs = Array.isArray(booking.messages) ? booking.messages : [];
-    const updatedMsgs = [...existingMsgs, newMsg];
-
-    // Mô phỏng phản hồi thân thiện của Chủ xe đối với chuyến đi mẫu (Single-tester Demo Simulation)
-    const isMockTrip = Boolean(
-      booking.targetTripId?.startsWith('DRV-') ||
-      booking.driverPhone?.startsWith('0900') ||
-      booking.targetItem?.maskedCode?.startsWith('CX-') ||
-      booking.targetTrip?.maskedCode?.startsWith('CX-')
-    );
-
-    if (isMockTrip && senderRole === 'passenger' && !booking.bothConfirmed) {
-      let driverReplyText = 'Dạ ok bạn, mình đón tại đúng điểm hẹn trên đường nhé! Mình nhất trí chốt chuyến.';
-      const lowerText = text.toLowerCase();
-      if (/(vali|balo|hành lý|đồ|cốp)/i.test(lowerText)) {
-        driverReplyText = '🧳 Cốp xe rộng rãi thoải mái nhé bạn! Mình đón đúng điểm hẹn, bạn bấm [Đề xuất chốt & Giữ chỗ 15p] để mình giữ ghế nha.';
-      } else if (/(cây xăng|ngã tư|bến xe|điểm|đón|ở đâu|chỗ)/i.test(lowerText)) {
-        driverReplyText = '📍 Dạ ok bạn, mình đón đúng điểm hẹn trên đường nhé! Mình giữ chỗ cho bạn luôn.';
-      }
-
-      const hostMsg = {
-        id: `MSG-HOST-${Date.now()}`,
-        senderRole: 'driver',
-        senderName: booking.contactName || 'Chủ xe',
-        text: driverReplyText,
-        createdAt: new Date(Date.now() + 100).toISOString()
-      };
-      updatedMsgs.push(hostMsg);
-    }
-
-    const updated = await updateBookingStatus(id, booking.status, {
-      messages: updatedMsgs,
-      lastMessageAt: newMsg.createdAt
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Đã gửi tin nhắn thành công',
-      data: {
-        newMessage: newMsg,
-        booking: updated
-      }
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    const existing = getBookingById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, error: 'Không tìm thấy cuộc trò chuyện.' });
+    const senderRole = getBookingRole(req.user, existing);
+    if (!senderRole) return res.status(403).json({ success: false, error: 'Bạn không thuộc cuộc trò chuyện này.' });
+    const content = String(req.body?.text || '').trim();
+    if (!content || content.length > 4000) return res.status(400).json({ success: false, error: 'Tin nhắn cần từ 1 đến 4.000 ký tự.' });
+    const newMessage = { id: crypto.randomUUID(), senderRole, senderName: req.user.name || '', text: content, createdAt: new Date().toISOString() };
+    const updated = await updateBookingStatus(req.params.id, existing.status, { messages: [...(existing.messages || []), newMessage], lastMessageAt: newMessage.createdAt });
+    return res.json({ success: true, message: 'Đã gửi tin nhắn.', data: { newMessage, booking: updated } });
+  } catch (err) { return res.status(err.status || 500).json({ success: false, error: err.message }); }
 }
 
 /**
@@ -1167,79 +589,10 @@ export async function addBookingMessageHandler(req, res) {
  */
 export async function preConfirmBookingHandler(req, res) {
   try {
-    const { id } = req.params;
-    const { preConfirmedBy = 'driver', note = '' } = req.body || {};
-
-    const existing = getBookingById(id);
-    if (!existing) {
-      return res.status(404).json({
-        success: false,
-        error: 'Không tìm thấy yêu cầu chuyến đi để đề xuất chốt'
-      });
-    }
-
-    if (existing.status === 'confirmed' || existing.bothConfirmed) {
-      return res.status(400).json({
-        success: false,
-        error: 'Chuyến đi này đã được chốt chính thức trước đó'
-      });
-    }
-
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 phút TTL
-
-    const proposerTitle = preConfirmedBy === 'driver' ? 'Chủ xe' : 'Người đi cùng';
-    const receiverTitle = preConfirmedBy === 'driver' ? 'Người đi cùng' : 'Chủ xe';
-
-    const systemMsg = {
-      id: `SYS-${Date.now()}`,
-      senderRole: 'system',
-      senderName: 'Hệ thống CarMate',
-      isSystem: true,
-      text: `⚡ ${proposerTitle} đã ĐỀ XUẤT CHỐT CHUYẾN & tạm giữ chỗ trong 15 phút. Vui lòng ${receiverTitle} bấm [✅ Xác nhận chốt chuyến ngay] để hoàn tất chuyến đi!`,
-      createdAt: now.toISOString()
-    };
-
-    const existingMsgs = Array.isArray(existing.messages) ? existing.messages : [];
-    const updatedMsgs = [...existingMsgs, systemMsg];
-
-    const updated = await updateBookingStatus(id, 'pre_confirmed', {
-      preConfirmedBy,
-      preConfirmedAt: now.toISOString(),
-      preConfirmedExpiresAt: expiresAt.toISOString(),
-      preConfirmNote: note || '',
-      messages: updatedMsgs,
-      lastMessageAt: now.toISOString()
-    });
-
-    // Alert Telegram
-    sendBusinessAlert({
-      title: '⚡ Đề xuất chốt chuyến (Pre-confirm) mới',
-      details: {
-        'Mã yêu cầu': id,
-        'Người đề xuất': proposerTitle,
-        'Thời hạn': '15 phút đếm ngược',
-        'Lộ trình': `${existing.from} ➔ ${existing.to}`
-      },
-      req
-    }).catch(() => {});
-
-    const sanitizedUpdated = {
-      ...updated,
-      phoneReal: maskPhoneNumber(updated.phoneReal || updated.contactPhone || ''),
-      contactPhone: maskPhoneNumber(updated.contactPhone || ''),
-      driverPhone: maskPhoneNumber(updated.driverPhone || ''),
-      passengerPhone: maskPhoneNumber(updated.passengerPhone || '')
-    };
-
-    return res.status(200).json({
-      success: true,
-      message: `${proposerTitle} đã đề xuất chốt chuyến & tạm giữ chỗ 15 phút.`,
-      data: sanitizedUpdated
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    const updated = proposeAppointment({ bookingId: req.params.id, user: req.user,
+      terms: req.body?.terms || {}, replacementTripId: req.body?.replacementTripId || null });
+    return res.json({ success: true, message: 'Đã gửi đề nghị điểm, giờ và giá. Đang chờ bên còn lại xác nhận.', data: updated });
+  } catch (err) { return res.status(err.status || 500).json({ success: false, error: err.message }); }
 }
 
 /**
@@ -1248,75 +601,9 @@ export async function preConfirmBookingHandler(req, res) {
  */
 export async function finalConfirmBookingHandler(req, res) {
   try {
-    const { id } = req.params;
-    const { confirmedBy = 'passenger', note = '' } = req.body || {};
-
-    const existing = getBookingById(id);
-    if (!existing) {
-      return res.status(404).json({
-        success: false,
-        error: 'Không tìm thấy yêu cầu chuyến đi để xác nhận'
-      });
-    }
-
-    // Kiểm tra nếu đã quá 15 phút TTL
-    if (existing.status === 'pre_confirmed' && existing.preConfirmedExpiresAt) {
-      if (Date.now() > new Date(existing.preConfirmedExpiresAt).getTime()) {
-        await updateBookingStatus(id, 'expired');
-        return res.status(400).json({
-          success: false,
-          error: 'Thời hạn 15 phút giữ chỗ đã hết hạn. Vui lòng thỏa thuận lại!'
-        });
-      }
-    }
-
-    const now = new Date();
-    const systemMsg = {
-      id: `SYS-${Date.now()}`,
-      senderRole: 'system',
-      senderName: 'Hệ thống CarMate',
-      isSystem: true,
-      text: '🎉 Chúc mừng 2 bạn! Chuyến đi đã được CHỐT CHÍNH THỨC 2 CHIỀU. Tên thật và số điện thoại liên hệ của 2 bên đã được mở khóa an toàn kèm nút Gọi điện / Sao chép số.',
-      createdAt: now.toISOString()
-    };
-
-    const existingMsgs = Array.isArray(existing.messages) ? existing.messages : [];
-    const updatedMsgs = [...existingMsgs, systemMsg];
-
-    // KHÔNG trừ ghế ở đây. Ghế đã được giữ ngay khi tạo booking (xem createBooking),
-    // vì chỗ phải được khoá từ lúc khách đặt chứ không phải lúc hai bên chốt.
-    // Trừ thêm lần nữa tại đây từng làm ghế biến mất gấp đôi cho cùng một khách.
-
-    const updated = await updateBookingStatus(id, 'confirmed', {
-      bothConfirmed: true,
-      confirmedAt: now.toISOString(),
-      confirmedBy,
-      confirmNote: note || '',
-      messages: updatedMsgs,
-      lastMessageAt: now.toISOString()
-    });
-
-    // Alert Telegram
-    sendBusinessAlert({
-      title: '🎉 KHỚP CHUYẾN THÀNH CÔNG (Mutual Final Committed)',
-      details: {
-        'Mã chuyến': id,
-        'Lộ trình': `${existing.from} ➔ ${existing.to}`,
-        'Tổng phụ xăng': `${existing.totalDeal || 0}đ`,
-        'SĐT Chủ xe': existing.driverPhone || existing.contactPhone || 'N/A',
-        'SĐT Khách': existing.passengerPhone || existing.userPhone || 'N/A'
-      },
-      req
-    }).catch(() => {});
-
-    return res.status(200).json({
-      success: true,
-      message: 'Chuyến đi đã được chốt chính thức thành công!',
-      data: updated
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+    const updated = confirmAppointment({ bookingId: req.params.id, user: req.user, proposalVersion: req.body?.proposalVersion });
+    return res.json({ success: true, message: 'Hai bên đã xác nhận cùng cuộc hẹn. Chỗ đã được giữ.', data: updated });
+  } catch (err) { return res.status(err.status || 500).json({ success: false, error: err.message }); }
 }
 
 /**

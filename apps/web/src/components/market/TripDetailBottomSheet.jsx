@@ -13,13 +13,14 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { formatVND } from '@carmate/shared';
+import { priceLabel, publicContactPhone, pickupLabel, freshnessLabel } from './tripPresentation.js';
 import { CarMateBadge } from '../ui/Logo.jsx';
 
 /**
  * Trả về chuỗi Thứ và Ngày/Tháng/Năm theo định dạng Việt Nam (ví dụ: "Thứ 2 (14/09/2026)")
  */
-function formatTripTimeHeader(_departureLabel = '04:30', departureDate = null) {
+function formatTripTimeHeader(_departureLabel = '', departureDate = null) {
+  if (!departureDate) return 'Chưa rõ ngày đi';
   let targetDate = new Date();
 
   if (departureDate === 'Ngày mai') {
@@ -63,14 +64,14 @@ export default function TripDetailBottomSheet({
   trip,
   originName = 'Cây xăng Petrolimex Tân Khai (QL13)',
   destName = 'Cụm BV Chợ Rẫy / BV Đại học Y Dược',
-  segmentPrice = 165000,
+  initialSeats = 1,
   isMyTrip = false,
   onManageTrip,
   onConfirmBook
 }) {
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
-  const [selectedSeats, setSelectedSeats] = useState(1);
+  const [selectedSeats, setSelectedSeats] = useState(initialSeats);
 
   const allPhotos = (() => {
     let list = [];
@@ -87,7 +88,7 @@ export default function TripDetailBottomSheet({
     list = list.filter((p) => !p.includes('hero_family_ride') && !p.includes('passenger_comfort'));
 
     // Chỉ hiển thị ảnh THẬT do Chủ xe đăng. Trước đây, chuyến có dưới 2 ảnh sẽ bị
-    // thay bằng 5 ảnh stock Unsplash gắn nhãn "Ảnh xe thực tế" — vừa bịa, vừa vứt
+    // thay bằng 5 ảnh stock Unsplash gắn nhãn "Ảnh chủ xe đăng" — vừa bịa, vừa vứt
     // bỏ cả ảnh thật khi Chủ xe mới chỉ đăng được một tấm.
     // Chủ xe chưa có ảnh thì không hiện ảnh nào.
     return list;
@@ -117,37 +118,17 @@ export default function TripDetailBottomSheet({
 
   if (!isOpen || !trip || typeof document === 'undefined') return null;
 
-  const seatsAvailable = Number(trip.seatsAvailable ?? 1);
-  const isSoldOut = seatsAvailable <= 0;
-  const displayPrice = trip.pricePerSeat || segmentPrice;
+  const seatsAvailable = trip.seatsAvailable == null ? null : Number(trip.seatsAvailable);
+  const isSoldOut = seatsAvailable !== null && seatsAvailable <= 0;
+  const publicPhone = publicContactPhone(trip);
   const timeHeader = formatTripTimeHeader(trip.departureLabel, trip.departureDate);
   // Không bịa dòng xe / biển số khi Chủ xe chưa khai. Chuỗi rỗng => giao diện ẩn dòng.
   const vehicleModel = trip.vehicleModel || '';
   const maskedPlate = trip.plateMasked || '';
 
   // Thông tin chủ xe & danh xưng văn minh CarMate: "Chủ xe: H. (#102)"
-  const driverDisplayName = (() => {
-    const rawCode = trip?.maskedCode || trip?.driver?.maskedCode || trip?.driverCode || trip?.id || '';
-    const numMatch = String(rawCode).match(/\d+/);
-    const codeSuffix = numMatch ? `#${numMatch[0]}` : '#102';
-
-    const rawName = trip?.driverName || trip?.publicName || trip?.driver?.name || trip?.driver?.publicName || '';
-    let cleanName = String(rawName)
-      .replace(/^Chủ xe\s+/i, '')
-      .replace(/^(Anh|Chị|Chú|Bác)\s+/i, '')
-      .replace(/\(.*\)/g, '')
-      .trim();
-
-    // Chưa có tên thì chỉ hiện mã ẩn danh, không gán tên người có thật.
-    if (!cleanName || /^CX-\d+/i.test(cleanName) || /^\d+$/.test(cleanName)) {
-      return `Chủ xe (${codeSuffix})`;
-    }
-
-    const initial = cleanName.charAt(0).toUpperCase();
-    return `${initial}. (${codeSuffix})`;
-  })();
-  // Chủ xe mới khởi điểm 5 sao; số chuyến chỉ hiện khi đã thực sự chạy chuyến nào.
-  const driverRating = Number(trip.rating || 5.0).toFixed(1);
+  const driverDisplayName = trip.operatorName || trip.publicContactName || trip.publicName || trip.driverName || 'Chủ xe chưa công khai tên';
+  const driverRating = trip.rating == null ? null : Number(trip.rating).toFixed(1);
   const rawDriverTrips = Number(trip.completedCount ?? trip.assurance?.completedTrips ?? 0);
   const driverTrips = Number.isFinite(rawDriverTrips) ? rawDriverTrips : 0;
 
@@ -178,7 +159,7 @@ export default function TripDetailBottomSheet({
             <CarMateBadge size="xs" />
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-50 dark:bg-blue-950/50 text-[#0071e3] dark:text-blue-300 border border-blue-200/60 dark:border-blue-700/40">
               <ShieldCheck className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
-              <span>Chuyến xe xác thực</span>
+              <span>Thông tin chuyến đăng</span>
             </span>
           </div>
 
@@ -201,7 +182,7 @@ export default function TripDetailBottomSheet({
               <div className="flex-1 leading-snug">
                 <strong className="block font-bold text-emerald-950 dark:text-emerald-50">Đây là bài đăng chuyến xe của chính bạn</strong>
                 <span className="text-[11px] text-emerald-800 dark:text-emerald-200">
-                  Chuyến xe đang hiển thị trực tiếp trên sàn để người đi cùng tìm và đặt chỗ đón.
+                  Chuyến xe đang hiển thị trực tiếp trên sàn để người đi cùng tìm và liên hệ.
                 </span>
               </div>
             </div>
@@ -226,37 +207,15 @@ export default function TripDetailBottomSheet({
                   Đã hết chỗ
                 </span>
               ) : seatsAvailable >= 2 ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold hidden sm:inline">Số ghế:</span>
-                  <div className="inline-flex items-center bg-emerald-50 dark:bg-emerald-950/60 p-0.5 rounded-full border border-emerald-300 dark:border-emerald-700/60 shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSeats(1)}
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono transition-all cursor-pointer ${
-                        selectedSeats === 1
-                          ? 'bg-emerald-600 text-white shadow-2xs'
-                          : 'text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-white/10'
-                      }`}
-                    >
-                      1 ghế
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSeats(2)}
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono transition-all cursor-pointer ${
-                        selectedSeats === 2
-                          ? 'bg-emerald-600 text-white shadow-2xs'
-                          : 'text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-white/10'
-                      }`}
-                    >
-                      2 ghế
-                    </button>
-                  </div>
-                </div>
+                <label className="text-xs">Số người
+                  <select className="ml-2 p-2 rounded-xl border border-slate-300 dark:border-white/15 bg-white dark:bg-slate-900" value={selectedSeats} onChange={(e) => setSelectedSeats(Number(e.target.value))}>
+                    {Array.from({ length: Math.min(6, seatsAvailable) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} người</option>)}
+                  </select>
+                </label>
               ) : (
                 <span className="px-2.5 py-1 rounded-full text-xs font-bold font-mono bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  Nhận 1 ghế
+                  {seatsAvailable === null ? 'Chưa rõ số chỗ' : `Còn ${seatsAvailable} chỗ`}
                 </span>
               )}
             </div>
@@ -305,7 +264,7 @@ export default function TripDetailBottomSheet({
                 >
                   <img
                     src={allPhotos[selectedPhotoIndex] || allPhotos[0]}
-                    alt={`Ảnh xe thực tế - Góc ${selectedPhotoIndex + 1}`}
+                    alt={`Ảnh chủ xe đăng - Góc ${selectedPhotoIndex + 1}`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 pointer-events-none" />
@@ -313,7 +272,7 @@ export default function TripDetailBottomSheet({
                   {/* Badge định danh ảnh xe thật */}
                   <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-[10.5px] font-semibold flex items-center gap-1.5 shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Ảnh xe thực tế ({selectedPhotoIndex + 1}/{allPhotos.length})</span>
+                    <span>Ảnh chủ xe đăng ({selectedPhotoIndex + 1}/{allPhotos.length})</span>
                   </div>
 
                   {/* Nút gợi ý xem ảnh lớn */}
@@ -368,7 +327,7 @@ export default function TripDetailBottomSheet({
               </div>
               <div className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
                 <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                <span>{driverRating}</span>
+                <span>{driverRating ?? 'Chưa có đánh giá'}</span>
                 {/* Chưa chạy chuyến nào thì nói thẳng là Chủ xe mới, không bịa số chuyến */}
                 <span className="text-slate-400 font-normal">
                   {driverTrips > 0 ? `(${driverTrips} chuyến)` : '(Chủ xe mới)'}
@@ -407,18 +366,14 @@ export default function TripDetailBottomSheet({
             )}
           </div>
 
-          {/* 4. CAM KẾT NỀN TẢNG (AN TÂM 100%) */}
-          <div className="p-3 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 space-y-1.5 text-[11px] sm:text-[11.5px] text-slate-700 dark:text-slate-300">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="font-semibold text-emerald-700 dark:text-emerald-300">
-                Không cần đặt cọc · Trả tiền trực tiếp cho chủ xe khi lên xe
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
-              <span>Giá chia sẻ trọn gói xăng xe & cầu đường, không phụ phí phát sinh</span>
-            </div>
+          <div className="p-3 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 text-xs space-y-2">
+            <p>{pickupLabel(trip.pickupMode)}. Điểm đón cuối cùng cần hai bên xác nhận.</p>
+            <p>{freshnessLabel(trip)}. Lịch đăng chưa phải xác nhận nhận đón.</p>
+            <p>CarMate kết nối miễn phí. Chủ xe và khách tự chốt giá, cách thanh toán.</p>
+            {publicPhone ? <div className="grid grid-cols-2 gap-2 pt-1">
+              <a href={`tel:${publicPhone}`} className="rounded-xl p-3 text-center font-semibold bg-emerald-600 text-white">Gọi chủ xe</a>
+              <a href={`https://zalo.me/${publicPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="rounded-xl p-3 text-center font-semibold bg-[#0071e3] text-white">Mở Zalo</a>
+            </div> : <p>Chủ xe chưa công khai số liên hệ. Bạn có thể gửi yêu cầu trên CarMate.</p>}
           </div>
         </div>
 
@@ -426,11 +381,11 @@ export default function TripDetailBottomSheet({
         <div className="p-3 sm:p-3.5 border-t border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md shrink-0 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] sm:text-[10.5px] text-slate-400 uppercase tracking-wider font-semibold">
-              {isMyTrip ? 'Mức phụ xăng bạn nhận' : 'Chi phí chia sẻ'}
+              Giá chủ xe niêm yết
             </p>
             <div className="flex items-baseline gap-1">
               <span className="text-xl sm:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                {formatVND(displayPrice * (isMyTrip ? 1 : selectedSeats))}
+                {priceLabel(trip, isMyTrip ? 1 : selectedSeats)}
               </span>
               <span className="text-[11px] text-slate-500 font-medium">/ {isMyTrip ? '1 ghế' : `${selectedSeats} ghế`}</span>
             </div>
@@ -454,7 +409,7 @@ export default function TripDetailBottomSheet({
               onClick={() => onConfirmBook?.(trip, selectedSeats)}
               className="flex-1 max-w-xs h-11 sm:h-12 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <span>{isSoldOut ? 'Đã hết chỗ' : 'GIỮ CHỖ NGAY (0đ CỌC)'}</span>
+              <span>{isSoldOut ? 'Đã hết chỗ' : 'GỬI YÊU CẦU'}</span>
             </button>
           )}
         </div>

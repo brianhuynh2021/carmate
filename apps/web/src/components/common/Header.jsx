@@ -201,7 +201,7 @@ export default function Header({
             thông tin. Dùng xanh mint đồng bộ với nút nổi trên thanh dưới. */}
         <button
           type="button"
-          onClick={() => setActiveTab('cockpit')}
+          onClick={() => onRequestPostTrip?.('driver')}
           aria-current={activeTab === 'cockpit' ? 'page' : undefined}
           className={`hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-xs font-bold border transition-all duration-200 cursor-pointer select-none shrink-0 ${
             activeTab === 'cockpit'
@@ -385,7 +385,7 @@ export default function Header({
                       >
                         <div className="inline-flex items-center gap-2.5">
                           <Car className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform shrink-0" />
-                          <span>{t('nav.tabPickup')} & Taplo</span>
+                          <span>Quản lý xe đang chạy</span>
                         </div>
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
                           {t('userMenu.driverShortcutBadge')}

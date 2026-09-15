@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Star,
   MapPin,
@@ -23,11 +23,11 @@ import {
   getCorridorDisplay,
   toPublicAlias,
   normalizePhotoUrl,
-  getUserOnlineStatus,
-  getPriceGuardrail
+  getUserOnlineStatus
 } from '@carmate/shared';
 import { useI18n } from '../../i18n/index.jsx';
 import PresenceDot from '../ui/PresenceDot.jsx';
+import { priceLabel, pickupLabel } from './tripPresentation.js';
 
 export { parseLocation, getCorridorDisplay };
 
@@ -178,18 +178,10 @@ export default function TripCard({
   const { t, lang } = useI18n();
   const [coverFailed, setCoverFailed] = useState(false);
 
-  const price = item?.basePricePerSeat || item?.expectedPrice || item?.suggestedContribution || item?.price || 180000;
-
-  // Dải biên độ giá thông minh (Price Guardrail Benchmark)
-  const priceGuardrail = useMemo(() => {
-    if (!item) return null;
-    return getPriceGuardrail(item?.from, item?.to, price);
-  }, [item, price]);
-
   if (!item) return null;
 
   const isDriver = item.type === 'driver_offer';
-  const formattedPrice = `${Number(price || 0).toLocaleString('vi-VN')}đ`;
+  const formattedPrice = priceLabel(item);
 
   // Danh tính công khai: chỉ hiển thị bí danh vai trò + mã định danh chuẩn (Chủ xe CX-xxx / Khách KX-xxx)
   const driverDisplayName = toPublicAlias(item);
@@ -234,13 +226,13 @@ export default function TripCard({
   const rawRating = Number(item.rating);
   const ratingValue = Number.isFinite(rawRating) && rawRating > 0
     ? Math.round(rawRating * 10) / 10
-    : 5.0;
-  const rating = ratingValue % 1 === 0 ? `${ratingValue}.0` : String(ratingValue);
+    : null;
+  const rating = ratingValue == null ? 'Chưa có đánh giá' : ratingValue.toFixed(1);
   const completedTrips = Number(item.completedCount) || 0;
 
   // "5 chỗ" (sức chứa) khác hẳn "còn 5 chỗ" (đặt được). Luôn hiện dạng còn/tổng.
   const seatsLeft = isDriver ? Number(item.availableSeats) || 0 : Number(item.seatsNeeded) || 1;
-  const seatsTotal = isDriver ? Number(item.capacity) || Math.max(seatsLeft, 4) : null;
+  const seatsTotal = isDriver ? Number(item.vehicleSeatCount || item.capacity) || null : null;
 
   // Ngày hiển thị gọn gàng, tinh tế (Stanford Ergonomics & Apple HIG: triệt tiêu hậu tố dd/mm dư thừa)
   const dateLabel = formatCleanDateLabel(item.date);
@@ -314,22 +306,7 @@ export default function TripCard({
             </span>
             <span className="text-[12px] text-slate-400 dark:text-slate-500 font-medium">{t('tripCard.s002')}</span>
           </div>
-          {priceGuardrail?.comparisonBadge && (
-            <span
-              className={`inline-flex items-center gap-1 text-[10.5px] font-bold w-fit px-2 py-0.5 rounded-full shadow-2xs ${
-                priceGuardrail.statusTone === 'emerald'
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/60'
-                  : priceGuardrail.statusTone === 'amber'
-                    ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/60'
-                    : priceGuardrail.statusTone === 'rose'
-                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/60'
-                      : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200/60'
-              }`}
-            >
-              <Sparkles className="w-2.5 h-2.5 shrink-0 opacity-80" />
-              <span>{priceGuardrail.comparisonBadge}</span>
-            </span>
-          )}
+          <span className="text-xs text-slate-500">{pickupLabel(item.pickupMode)}</span>
         </div>
 
         {isTripFull ? (
@@ -421,7 +398,7 @@ export default function TripCard({
                 <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200 truncate group-hover/driver:text-[#0071e3] transition-colors">
                   {driverDisplayName}
                 </span>
-                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" title={t('tripCard.s019')} />
+                {item.isDriverVerified === true && <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" title="Thông tin xác thực chủ xe" />}
               </div>
 
               <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">

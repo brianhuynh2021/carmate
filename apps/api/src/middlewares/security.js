@@ -48,7 +48,7 @@ export function createRateLimiter({
 
   return (req, res, next) => {
     // Quản trị viên hệ thống không bị chặn rate limit (Stanford Ergonomics)
-    if (req.user?.role === 'admin' || req.headers['x-admin-key']) {
+    if (req.admin || req.user?.role === 'admin' || req.user?.role === 'super_admin') {
       return next();
     }
 

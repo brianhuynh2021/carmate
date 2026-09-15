@@ -1,9 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { createAuthContinuation } from '../utils/driverTripDraft.js';
 
 /**
  * Custom Hook quản lý trạng thái hiển thị của các Modals trong toàn ứng dụng CarMate
  */
 export default function useAppModals() {
+  const authContinuation = useRef(createAuthContinuation());
+  const authCancellation = useRef(null);
   const [selectedItemForEscrow, setSelectedItemForEscrow] = useState(null);
   const [selectedDriverForTrust, setSelectedDriverForTrust] = useState(null);
   const [selectedTripForPhotos, setSelectedTripForPhotos] = useState(null);
@@ -17,30 +20,47 @@ export default function useAppModals() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalConfig, setAuthModalConfig] = useState({
     title: 'Đăng Nhập CarMate',
-    subtitle: 'Đồng bộ bài đăng · Tiết kiệm chi phí · An toàn & bảo mật',
+    subtitle: 'Quản lý chuyến và nhận phản hồi cho nhu cầu của bạn.',
     contextNotice: null,
     pendingTab: null
   });
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-  const [pendingBookingTrip, setPendingBookingTrip] = useState(null);
-  const [pendingPostTrip, setPendingPostTrip] = useState(null);
 
   const openAuthWithContext = useCallback(
     ({
       title = 'Đăng Nhập CarMate',
-      subtitle = 'Đồng bộ bài đăng · Tiết kiệm chi phí · An toàn & bảo mật',
+      subtitle = 'Quản lý chuyến và nhận phản hồi cho nhu cầu của bạn.',
       contextNotice = null,
-      pendingTab = null
+      pendingTab = null,
+      onSuccess = null,
+      onCancel = null
     } = {}) => {
+      authContinuation.current.set(onSuccess);
+      authCancellation.current = onCancel;
       setAuthModalConfig({ title, subtitle, contextNotice, pendingTab });
       setShowAuthModal(true);
     },
     []
   );
 
+  const takeAuthContinuation = useCallback(() => {
+    authCancellation.current = null;
+    return authContinuation.current.take();
+  }, []);
+
+  const cancelAuth = useCallback(() => {
+    const onCancel = authCancellation.current;
+    authCancellation.current = null;
+    authContinuation.current.clear();
+    setShowAuthModal(false);
+    onCancel?.();
+  }, []);
+
   const closeAllModals = useCallback(() => {
+    authContinuation.current.clear();
+    authCancellation.current = null;
     setSelectedItemForEscrow(null);
     setSelectedDriverForTrust(null);
     setSelectedTripForPhotos(null);
@@ -87,11 +107,9 @@ export default function useAppModals() {
     setShowAiModal,
     showDeleteAccountModal,
     setShowDeleteAccountModal,
-    pendingBookingTrip,
-    setPendingBookingTrip,
-    pendingPostTrip,
-    setPendingPostTrip,
     openAuthWithContext,
+    takeAuthContinuation,
+    cancelAuth,
     closeAllModals
   };
 }
