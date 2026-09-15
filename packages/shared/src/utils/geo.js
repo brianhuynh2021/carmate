@@ -384,7 +384,7 @@ const ROUTE_CORRIDORS = {
   }
 };
 
-const PROVINCE_COORDINATES = {
+export const PROVINCE_COORDINATES = {
   'hà nội': { name: 'Hà Nội', lat: 21.0285, lng: 105.8542 },
   'hải phòng': { name: 'Hải Phòng', lat: 20.8449, lng: 106.6881 },
   'quảng ninh': { name: 'Quảng Ninh', lat: 20.9505, lng: 107.0734 },
