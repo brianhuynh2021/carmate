@@ -278,12 +278,21 @@ function buildPlaceIndex() {
   //
   // Mỗi mục đã tiền tính dạng chuẩn hoá và số từ, tránh băm lại khi chạy.
   const byToken = new Map();
+  const byAlias = new Map();
   const addKey = (key, entry) => {
     if (!key) return;
     let bucket = byToken.get(key);
     if (!bucket) {
       bucket = new Set();
       byToken.set(key, bucket);
+    }
+    bucket.add(entry);
+  };
+  const addAlias = (key, entry) => {
+    let bucket = byAlias.get(key);
+    if (!bucket) {
+      bucket = new Set();
+      byAlias.set(key, bucket);
     }
     bucket.add(entry);
   };
@@ -299,7 +308,8 @@ function buildPlaceIndex() {
         const tokens = normalized.split(' ').filter(Boolean);
         if (tokens.length === 0) continue;
 
-        const entry = { candidate: cand, alias, normalized, tokens, isRegional };
+        const entry = { candidate: cand, alias, normalized, tokens, tokenSet: new Set(tokens), isRegional };
+        addAlias(normalized, entry);
         for (const token of tokens) {
           addKey(token, entry);
           // Tiền tố 4 ký tự bắt trường hợp gõ thiếu/sai đuôi ("hnag" ~ "hang").
@@ -311,7 +321,7 @@ function buildPlaceIndex() {
     }
   }
 
-  return { all, byToken };
+  return { all, byToken, byAlias };
 }
 
 /**
@@ -341,26 +351,27 @@ function selectAliasEntries(normalizedText) {
   return [...selected];
 }
 
-/** Tìm một alias đã khớp trọn từ để bỏ qua quét fuzzy tốn kém. */
-function findExactTokenSequence(tokens, aliasTokens) {
-  if (aliasTokens.length === 0 || aliasTokens.length > tokens.length) return -1;
-
-  outer: for (let start = 0; start <= tokens.length - aliasTokens.length; start++) {
-    for (let offset = 0; offset < aliasTokens.length; offset++) {
-      if (tokens[start + offset] !== aliasTokens[offset]) continue outer;
-    }
-    return start;
-  }
-  return -1;
-}
-
 /** Đếm số lần xuất hiện cụm từ khoá trong câu đã chuẩn hoá. */
 function countPhrase(haystack, phrase) {
   if (!phrase) return 0;
-  // Khớp theo ranh giới từ để "di" không dính vào "dinh".
-  const safe = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const matches = haystack.match(new RegExp(`(?:^|\\s)${safe}(?=\\s|$)`, 'g'));
-  return matches ? matches.length : 0;
+  // `haystack` và `phrase` đều đã chuẩn hoá: chỉ còn chữ/số cách bởi một space.
+  // Dò ranh giới trực tiếp tránh dựng RegExp + mảng match cho từng từ khoá trong
+  // đường nóng của intent/perk/time. Đây là phần được gọi hàng trăm lần mỗi câu.
+  let hits = 0;
+  let start = 0;
+  while (start < haystack.length) {
+    const index = haystack.indexOf(phrase, start);
+    if (index === -1) break;
+
+    const end = index + phrase.length;
+    const startsAtBoundary = index === 0 || haystack.charCodeAt(index - 1) === 32;
+    const endsAtBoundary = end === haystack.length || haystack.charCodeAt(end) === 32;
+    if (startsAtBoundary && endsAtBoundary) hits++;
+
+    // `phrase` luôn không rỗng; nhảy hết cụm vừa xét để không đếm trùng.
+    start = end;
+  }
+  return hits;
 }
 
 /**
@@ -435,6 +446,27 @@ export function extractRoute(rawText) {
   const aliasEntries = selectAliasEntries(text);
   // Băm câu MỘT LẦN và dùng lại cho mọi bí danh (xem findBestSpan).
   const sentenceTokens = tokenize(text, { keepStopWords: true });
+  const { byAlias, byToken } = placeIndexCache;
+
+  // Đa số địa danh được gõ đúng. Quét các n-gram của câu một lần rồi tra Map
+  // để tìm tất cả bí danh khớp trọn; không lặp lại so sánh từng alias với toàn
+  // bộ câu. Fuzzy chỉ còn là nhánh hẹp cho lỗi gõ như "hnag xanh".
+  const exactStarts = new Map();
+  const maxAliasWords = Math.min(4, sentenceTokens.length);
+  for (let size = 1; size <= maxAliasWords; size++) {
+    for (let start = 0; start + size <= sentenceTokens.length; start++) {
+      const entries = byAlias.get(sentenceTokens.slice(start, start + size).join(' '));
+      if (!entries) continue;
+      for (const entry of entries) exactStarts.set(entry, start);
+    }
+  }
+
+  // Chỉ chạy fuzzy khi có dấu hiệu lỗi gõ cạnh một token địa danh hợp lệ.
+  // Điều kiện sẽ được xét THEO TỪNG alias ở bên dưới; nếu áp dụng toàn câu,
+  // một từ thường như "không" cạnh một địa danh tình cờ sẽ kích hoạt quét mờ
+  // cho mọi alias không liên quan.
+  const tokenIsIndexed = (token) =>
+    Boolean(byToken.get(token)) || (token.length >= 5 && Boolean(byToken.get(token.slice(0, 4))));
 
   // Tìm mọi hub xuất hiện trong câu, kèm vị trí để suy ra chiều đi.
   //
@@ -455,16 +487,29 @@ export function extractRoute(rawText) {
     const cand = entry.candidate;
     const threshold = cand.kind === 'province' ? PROVINCE_MATCH_THRESHOLD : HUB_MATCH_THRESHOLD;
 
-    const exactStart = findExactTokenSequence(sentenceTokens, entry.tokens);
+    const exactStart = exactStarts.get(entry);
+    const anchorIndices = [];
+    for (let index = 0; index < sentenceTokens.length; index++) {
+      if (entry.tokenSet.has(sentenceTokens[index])) anchorIndices.push(index);
+    }
+    const hasAdjacentTypoSignal = anchorIndices.some((index) => {
+      const previous = sentenceTokens[index - 1] || '';
+      const next = sentenceTokens[index + 1] || '';
+      return [previous, next].some(
+        (token) => token.length >= 3 && !WEAK_PLACE_TOKENS.has(token) && !tokenIsIndexed(token)
+      );
+    });
     const span =
-      exactStart >= 0
+      exactStart !== undefined
         ? {
             span: entry.normalized,
             score: 0.95,
             startIndex: exactStart,
             endIndex: exactStart + entry.tokens.length
           }
-        : findBestSpan(text, entry.normalized, { threshold, tokens: sentenceTokens });
+        : hasAdjacentTypoSignal
+          ? findBestSpan(text, entry.normalized, { threshold, tokens: sentenceTokens, anchorIndices })
+          : null;
     if (!span) continue;
     if (span.span.replace(/\s/g, '').length < 3) continue;
     // Xét chất lượng bằng chứng, không chỉ điểm số: loại các cụm toàn từ đệm

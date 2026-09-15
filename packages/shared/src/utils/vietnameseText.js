@@ -437,7 +437,7 @@ export function fuzzyFind(query, candidates = [], options = {}) {
  *
  * Trượt cửa sổ 1..4 từ (độ dài phổ biến của địa danh Việt Nam).
  */
-export function findBestSpan(sentence, candidateText, { threshold = 0.72, tokens: presetTokens } = {}) {
+export function findBestSpan(sentence, candidateText, { threshold = 0.72, tokens: presetTokens, anchorIndices } = {}) {
   // `tokens` cho phép người gọi băm câu MỘT LẦN rồi dùng lại cho hàng chục ứng viên.
   // Không có nó, việc dò địa danh phải tokenize lại cùng một câu ~50 lần và
   // chi phí đội lên gần 10ms/câu — quá ngưỡng <1ms của trí tuệ bản địa.
@@ -450,6 +450,16 @@ export function findBestSpan(sentence, candidateText, { threshold = 0.72, tokens
   let best = null;
   const maxWindow = Math.min(4, tokens.length);
   const candLength = candidate.length;
+  // Khi tầng gọi đã biết các vị trí chia sẻ token với ứng viên, mọi cửa sổ
+  // không chứa một trong các vị trí đó chắc chắn không thể là lỗi gõ hợp lệ.
+  // Giảm mạnh số lần chạy similarity (Damerau-Levenshtein + Dice) trong câu dài.
+  const anchorPrefix = Array.isArray(anchorIndices) && anchorIndices.length > 0 ? new Int32Array(tokens.length + 1) : null;
+  if (anchorPrefix) {
+    for (const index of anchorIndices) {
+      if (index >= 0 && index < tokens.length) anchorPrefix[index + 1] = 1;
+    }
+    for (let index = 1; index < anchorPrefix.length; index++) anchorPrefix[index] += anchorPrefix[index - 1];
+  }
 
   // Lọc rẻ trước khi chấm điểm đắt: điểm tương đồng bị chặn trên bởi tỷ lệ độ dài
   // hai chuỗi, nên cụm quá ngắn hoặc quá dài so với ứng viên không thể vượt ngưỡng.
@@ -461,6 +471,7 @@ export function findBestSpan(sentence, candidateText, { threshold = 0.72, tokens
   // Quét ngược lại sẽ nuốt kèm giới từ ("đi từ bù đốp" thay vì "bù đốp").
   for (let size = 1; size <= maxWindow; size++) {
     for (let i = 0; i + size <= tokens.length; i++) {
+      if (anchorPrefix && anchorPrefix[i + size] === anchorPrefix[i]) continue;
       const span = tokens.slice(i, i + size).join(' ');
       if (span.length < minLength || span.length > maxLength) continue;
 
