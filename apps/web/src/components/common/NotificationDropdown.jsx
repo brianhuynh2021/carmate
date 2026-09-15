@@ -332,11 +332,11 @@ export default function NotificationDropdown({
       {/* ── 1. YouTube Notification Header ── */}
       <div className="flex items-center justify-between px-4 pt-3.5 pb-2 border-b border-black/[0.05] dark:border-white/[0.06]">
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+          <h3 className="type-heading text-slate-900 dark:text-white">
             {t('notifDrop.s001')}
           </h3>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#0071e3] text-white">
+            <span className="type-footnote px-2 py-0.5 rounded-full bg-[#0071e3] text-white">
               {unreadCount} mới
             </span>
           )}
@@ -348,7 +348,7 @@ export default function NotificationDropdown({
               type="button"
               onClick={onMarkAllRead}
               title={t('notifDrop.s009')}
-              className="px-2.5 py-1 rounded-full text-xs font-semibold text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
+              className="type-button px-2.5 py-1 rounded-full text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
             >
               <CheckCheck className="w-3.5 h-3.5" />
               <span>{t('notifDrop.s002')}</span>
@@ -359,7 +359,7 @@ export default function NotificationDropdown({
             type="button"
             onClick={onClose}
             aria-label={t('notifDrop.s010')}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            className="type-button w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -371,7 +371,7 @@ export default function NotificationDropdown({
         <button
           type="button"
           onClick={() => setFilterTab('all')}
-          className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+          className={`type-button px-3 py-1 rounded-full transition-all cursor-pointer ${
             filterTab === 'all'
               ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
               : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-600 dark:text-slate-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.12]'
@@ -383,7 +383,7 @@ export default function NotificationDropdown({
         <button
           type="button"
           onClick={() => setFilterTab('unread')}
-          className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
+          className={`type-button px-3 py-1 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
             filterTab === 'unread'
               ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
               : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-600 dark:text-slate-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.12]'
@@ -416,7 +416,7 @@ export default function NotificationDropdown({
                     className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/10 shadow-xs"
                   />
                 ) : (
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white font-bold flex items-center justify-center text-sm shadow-xs">
+                  <div className="type-body-strong w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-xs">
                     {item.senderName ? item.senderName.charAt(0).toUpperCase() : 'C'}
                   </div>
                 )}
@@ -431,7 +431,7 @@ export default function NotificationDropdown({
 
               {/* Cột giữa: Nội dung chi tiết phong cách YouTube */}
               <div className="flex-1 min-w-0 pr-1">
-                <p className="text-[12.5px] sm:text-[13px] text-slate-800 dark:text-slate-200 leading-snug line-clamp-2">
+                <p className="type-caption text-slate-800 dark:text-slate-200 line-clamp-2">
                   <span className="font-bold text-slate-900 dark:text-white mr-1">
                     {item.senderName}
                   </span>
@@ -441,17 +441,17 @@ export default function NotificationDropdown({
                 </p>
 
                 {item.snippet && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 italic font-normal">
+                  <p className="type-caption text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 italic">
                     &ldquo;{item.snippet}&rdquo;
                   </p>
                 )}
 
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium font-mono">
+                  <span className="type-footnote text-slate-400 dark:text-slate-500">
                     {item.relativeTime}
                   </span>
                   {item.booking?.status && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded font-medium bg-black/[0.04] dark:bg-white/[0.06] text-slate-500 dark:text-slate-400">
+                    <span className="type-footnote px-1.5 py-0.2 rounded bg-black/[0.04] dark:bg-white/[0.06] text-slate-500 dark:text-slate-400">
                       {item.booking.status === 'confirmed' ? 'Đã chốt' : item.booking.status === 'pre_confirmed' ? 'Giữ chỗ 15p' : 'Trao đổi'}
                     </span>
                   )}
@@ -465,7 +465,7 @@ export default function NotificationDropdown({
                     <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
                   </div>
                 ) : item.routeBadge ? (
-                  <div className="hidden xs:flex flex-col items-end justify-center px-2 py-1 rounded-lg bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] text-[10px] font-semibold text-slate-600 dark:text-slate-300 max-w-[85px] truncate">
+                  <div className="type-footnote hidden xs:flex flex-col items-end justify-center px-2 py-1 rounded-lg bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] text-slate-600 dark:text-slate-300 max-w-[85px] truncate">
                     <span className="truncate">{item.routeBadge}</span>
                   </div>
                 ) : null}
@@ -487,7 +487,7 @@ export default function NotificationDropdown({
                       setActiveMenuId(activeMenuId === item.id ? null : item.id);
                     }}
                     title={t('notifDrop.s011')}
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                    className="type-button w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
@@ -502,7 +502,7 @@ export default function NotificationDropdown({
                         <button
                           type="button"
                           onClick={(e) => handleToggleReadStatus(e, item)}
-                          className="w-full px-2.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                          className="type-button w-full px-2.5 py-1.5 rounded-xl flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
                         >
                           <Check className="w-3.5 h-3.5 text-[#0071e3]" />
                           <span>{item.isUnread ? 'Đánh dấu là đã đọc' : 'Đánh dấu là chưa đọc'}</span>
@@ -512,7 +512,7 @@ export default function NotificationDropdown({
                       <button
                         type="button"
                         onClick={(e) => handleDismiss(e, item.id)}
-                        className="w-full px-2.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                        className="type-button w-full px-2.5 py-1.5 rounded-xl flex items-center gap-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                       >
                         <EyeOff className="w-3.5 h-3.5 text-rose-600" />
                         <span>{t('notifDrop.s005')}</span>
@@ -529,10 +529,10 @@ export default function NotificationDropdown({
             <div className="w-14 h-14 rounded-full bg-black/[0.03] dark:bg-white/[0.05] flex items-center justify-center mx-auto mb-3 text-slate-400">
               <Bell className="w-7 h-7 opacity-50" />
             </div>
-            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            <h4 className="type-heading text-slate-800 dark:text-slate-200">
               {filterTab === 'unread' ? 'Không có thông báo chưa đọc' : 'Thông báo của bạn sẽ hiển thị ở đây'}
             </h4>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
+            <p className="type-caption text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto">
               {filterTab === 'unread'
                 ? 'Tuyệt vời! Bạn đã đọc toàn bộ tin nhắn và cập nhật chuyến đi.'
                 : 'Mọi tin nhắn, cập nhật giữ chỗ và ghép xe tiện chuyến sẽ hiển thị tức thời tại đây.'}
@@ -554,7 +554,7 @@ export default function NotificationDropdown({
             });
           }}
           title={t('notifDrop.s012')}
-          className="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1.5 cursor-pointer"
+          className="type-button px-2.5 py-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:text-[#0071e3] hover:bg-[#0071e3]/10 transition-colors flex items-center gap-1.5 cursor-pointer"
         >
           <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
           <span>{t('notifDrop.s006')}</span>
@@ -566,7 +566,7 @@ export default function NotificationDropdown({
             onClose?.();
             onOpenInbox?.();
           }}
-          className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+          className="type-button px-3.5 py-1.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
         >
           <Inbox className="w-3.5 h-3.5" />
           <span>{t('notifDrop.s007')}</span>

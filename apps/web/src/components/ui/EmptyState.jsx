@@ -8,8 +8,8 @@ export default function EmptyState({ icon: Icon, title, description, action, cla
           <Icon className="w-8 h-8" strokeWidth={1.8} />
         </div>
       )}
-      <h4 className="font-display text-lg font-bold text-[#1d1d1f]">{title}</h4>
-      {description && <p className="text-sm text-[#86868b] mt-1.5 max-w-sm mx-auto leading-relaxed">{description}</p>}
+      <h4 className="type-heading text-[#1d1d1f]">{title}</h4>
+      {description && <p className="type-body text-[#86868b] mt-1.5 max-w-sm mx-auto ">{description}</p>}
       {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
   );
@@ -25,8 +25,8 @@ export function SectionHeader({ icon: Icon, title, description, action, classNam
           </span>
         )}
         <div className="min-w-0 pt-0.5">
-          <h2 className="font-display text-2xl font-extrabold text-[#1d1d1f] tracking-tight leading-tight">{title}</h2>
-          {description && <p className="text-sm text-[#86868b] mt-1 leading-relaxed font-normal">{description}</p>}
+          <h2 className="type-title text-[#1d1d1f] ">{title}</h2>
+          {description && <p className="type-body text-[#86868b] mt-1  ">{description}</p>}
         </div>
       </div>
       {action && <div className="shrink-0">{action}</div>}

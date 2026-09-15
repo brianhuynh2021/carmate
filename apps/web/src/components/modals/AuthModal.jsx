@@ -8,7 +8,7 @@ import { GoogleIcon, TelegramIcon } from '../ui/SocialIcons.jsx';
 import { auth } from '../../firebase.js';
 import api from '../../api/client.js';
 
-const inputClass = 'w-full min-h-11 px-3 rounded-xl border border-slate-300 dark:border-white/15 bg-white dark:bg-[#1a2232] text-sm';
+const inputClass = 'type-input w-full min-h-11 px-3 rounded-xl border border-slate-300 dark:border-white/15 bg-white dark:bg-[#1a2232]';
 const OTP_SESSION_KEY = 'carmate_otp_session_v1';
 
 function readOtpSession() {
@@ -140,24 +140,24 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '', title
 
   return <Modal onClose={() => !busy && onClose?.()} title={title} subtitle={subtitle} icon={ShieldCheck} zIndex="z-[10020]" bodyClassName="bg-[#DFE5EC] dark:bg-[#0b0f19]">
     <div className="space-y-4">
-      {contextNotice && <p className="text-sm text-slate-600 dark:text-slate-300">{contextNotice}</p>}
+      {contextNotice && <p className="type-body text-slate-600 dark:text-slate-300">{contextNotice}</p>}
       <Segmented fullWidth value={method} onChange={(value) => { if (!busy) { setMethod(value); setError(''); } }} options={[{ value: 'phone', label: 'Điện thoại', icon: Phone }, { value: 'google', label: 'Google', icon: GoogleIcon }, { value: 'telegram', label: 'Telegram', icon: TelegramIcon }]} />
-      {error && <p role="alert" className="p-3 rounded-xl bg-rose-50 text-rose-700 text-sm">{error}</p>}
+      {error && <p role="alert" className="type-body p-3 rounded-xl bg-rose-50 text-rose-700">{error}</p>}
       {method === 'phone' && <form onSubmit={confirmation ? verifyOtp : sendOtp} className="space-y-3">
         {!confirmation ? <>
-          <label className="grid gap-1.5 text-xs">Tên hiển thị (không bắt buộc)<input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={inputClass} /></label>
-          <label className="grid gap-1.5 text-xs">Số điện thoại<input type="tel" required autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} /></label>
+          <label className="type-label grid gap-1.5">Tên hiển thị (không bắt buộc)<input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={inputClass} /></label>
+          <label className="type-label grid gap-1.5">Số điện thoại<input type="tel" required autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} /></label>
         </> : <>
-          <p className="text-sm">Nhập mã gửi đến {phone}.</p>
-          <label className="grid gap-1.5 text-xs">Mã xác thực<input autoComplete="one-time-code" inputMode="numeric" maxLength="6" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className={inputClass} /></label>
-          <button type="button" disabled={busy} onClick={() => { setConfirmation(null); setOtp(''); }} className="text-xs text-[#0071e3]">Đổi số hoặc gửi lại mã</button>
+          <p className="type-body">Nhập mã gửi đến {phone}.</p>
+          <label className="type-label grid gap-1.5">Mã xác thực<input autoComplete="one-time-code" inputMode="numeric" maxLength="6" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className={inputClass} /></label>
+          <button type="button" disabled={busy} onClick={() => { setConfirmation(null); setOtp(''); }} className="type-button text-[#0071e3]">Đổi số hoặc gửi lại mã</button>
         </>}
         <div id="carmate-auth-recaptcha" />
-        <button type="submit" disabled={busy || (!confirmation && remaining > 0)} className="w-full min-h-11 rounded-xl bg-[#0071e3] text-white text-sm font-semibold disabled:opacity-50">{busy ? 'Đang xử lý…' : confirmation ? 'Xác thực và tiếp tục' : remaining > 0 ? `Gửi lại sau ${remaining}s` : 'Nhận mã xác thực'}</button>
+        <button type="submit" disabled={busy || (!confirmation && remaining > 0)} className="type-button w-full min-h-11 rounded-xl bg-[#0071e3] text-white disabled:opacity-50">{busy ? 'Đang xử lý…' : confirmation ? 'Xác thực và tiếp tục' : remaining > 0 ? `Gửi lại sau ${remaining}s` : 'Nhận mã xác thực'}</button>
       </form>}
-      {method === 'google' && <div className="space-y-3"><div ref={googleContainer} className="flex justify-center" />{!config ? <p className="text-sm">Đang tải Google…</p> : !config.googleClientId && <p className="text-sm">Google chưa khả dụng. Bạn có thể chọn cách đăng nhập khác.</p>}</div>}
-      {method === 'telegram' && <div className="space-y-3"><div ref={telegramContainer} className="flex justify-center" />{!config ? <p className="text-sm">Đang tải Telegram…</p> : !config.telegramBotUsername && <p className="text-sm">Telegram chưa khả dụng. Bạn có thể chọn cách đăng nhập khác.</p>}</div>}
-      <p className="text-xs text-slate-500 dark:text-slate-400">Đăng nhập miễn phí. Thông tin bạn vừa nhập vẫn được giữ nguyên.</p>
+      {method === 'google' && <div className="space-y-3"><div ref={googleContainer} className="flex justify-center" />{!config ? <p className="type-body">Đang tải Google…</p> : !config.googleClientId && <p className="type-body">Google chưa khả dụng. Bạn có thể chọn cách đăng nhập khác.</p>}</div>}
+      {method === 'telegram' && <div className="space-y-3"><div ref={telegramContainer} className="flex justify-center" />{!config ? <p className="type-body">Đang tải Telegram…</p> : !config.telegramBotUsername && <p className="type-body">Telegram chưa khả dụng. Bạn có thể chọn cách đăng nhập khác.</p>}</div>}
+      <p className="type-caption text-slate-500 dark:text-slate-400">Đăng nhập miễn phí. Thông tin bạn vừa nhập vẫn được giữ nguyên.</p>
     </div>
   </Modal>;
 }

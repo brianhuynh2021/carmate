@@ -74,9 +74,9 @@ export default function Modal({
             </div>
           )}
           <div className="flex-1 min-w-0 pt-0.5">
-            <h3 className="font-display text-lg font-bold text-[#1d1d1f] dark:text-white leading-snug">{title}</h3>
+            <h3 className="type-title text-[#1d1d1f] dark:text-white">{title}</h3>
             {subtitle && (
-              <div className="text-[13px] text-[#86868b] dark:text-slate-400 mt-0.5 leading-snug">{subtitle}</div>
+              <div className="type-caption text-[#86868b] dark:text-slate-400 mt-0.5">{subtitle}</div>
             )}
           </div>
           <button

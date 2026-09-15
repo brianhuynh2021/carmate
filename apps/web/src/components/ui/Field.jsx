@@ -1,22 +1,22 @@
 import React from 'react';
 
 export const inputBase =
-  'w-full h-11 px-3.5 rounded-xl border text-sm text-[#1d1d1f] placeholder:text-[#86868b] bg-[#f5f5f7] hover:bg-[#ebebee] focus:bg-white border-black/[0.08] focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 outline-none transition-all duration-150 shadow-2xs';
+  'w-full h-11 px-3.5 rounded-xl border type-input text-[#1d1d1f] placeholder:text-[#86868b] bg-[#f5f5f7] hover:bg-[#ebebee] focus:bg-white border-black/[0.08] focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 outline-none transition-all duration-150 shadow-2xs';
 
 export function Field({ label, hint, required, optional, children, className = '' }) {
   return (
     <label className={`block ${className}`}>
       {label && (
         <span className="flex items-baseline justify-between mb-1.5">
-          <span className="text-[13px] font-semibold text-[#1d1d1f] tracking-tight">
+          <span className="type-label text-[#1d1d1f]">
             {label}
             {required && <span className="text-[#ff3b30] ml-0.5">*</span>}
           </span>
-          {optional && <span className="text-xs text-[#86868b]">{optional}</span>}
+          {optional && <span className="type-caption text-[#86868b]">{optional}</span>}
         </span>
       )}
       {children}
-      {hint && <span className="block mt-1.5 text-xs text-[#86868b] leading-snug">{hint}</span>}
+      {hint && <span className="block mt-1.5 type-caption text-[#86868b] ">{hint}</span>}
     </label>
   );
 }
@@ -35,7 +35,7 @@ export function Select({ className = '', children, ...props }) {
 
 export function Textarea({ className = '', rows = 3, ...props }) {
   return (
-    <textarea rows={rows} className={`${inputBase} h-auto py-3 resize-y leading-relaxed ${className}`} {...props} />
+    <textarea rows={rows} className={`${inputBase} h-auto py-3 resize-y  ${className}`} {...props} />
   );
 }
 
@@ -48,8 +48,8 @@ export function Checkbox({ label, description, className = '', ...props }) {
         {...props}
       />
       <span className="min-w-0">
-        <span className="block text-sm text-[#1d1d1f] leading-snug font-medium">{label}</span>
-        {description && <span className="block text-xs text-[#86868b] mt-0.5 leading-snug">{description}</span>}
+        <span className="block type-label text-[#1d1d1f]">{label}</span>
+        {description && <span className="block type-caption text-[#86868b] mt-0.5 ">{description}</span>}
       </span>
     </label>
   );
@@ -79,14 +79,14 @@ export function OptionCard({ active, onClick, title, description, icon: Icon, ta
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             {Icon && <Icon className={`w-4 h-4 ${active ? 'text-[#0071e3]' : 'text-[#86868b]'}`} />}
-            <span className={`text-sm font-bold ${active ? 'text-[#1d1d1f]' : 'text-[#515154]'}`}>{title}</span>
+            <span className={`type-body-strong ${active ? 'text-[#1d1d1f]' : 'text-[#515154]'}`}>{title}</span>
             {tag && (
-              <span className="ml-auto text-[11px] font-mono px-2 py-0.5 rounded-full bg-black/[0.05] text-[#515154]">
+              <span className="ml-auto type-badge px-2 py-0.5 rounded-full bg-black/[0.05] text-[#515154]">
                 {tag}
               </span>
             )}
           </div>
-          {description && <p className="text-xs text-[#86868b] mt-1 leading-snug">{description}</p>}
+          {description && <p className="type-caption text-[#86868b] mt-1 ">{description}</p>}
         </div>
       </div>
     </button>

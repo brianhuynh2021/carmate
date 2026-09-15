@@ -236,13 +236,13 @@ export default function StationContactModal({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold text-white truncate">{driverDisplayName}</h3>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                <h3 className="type-heading text-white truncate">{driverDisplayName}</h3>
+                <span className="type-caption px-1.5 py-0.5 rounded font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
                   PIN #{boardingPass?.pin || '8842'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-mono truncate mt-0.5">
-                {carDisplayModel} · <strong className="text-slate-200">{carDisplayPlate}</strong>
+              <p className="type-caption text-slate-400 truncate mt-0.5">
+                {carDisplayModel} · <strong className="type-body-strong text-slate-200">{carDisplayPlate}</strong>
               </p>
             </div>
           </div>
@@ -250,7 +250,7 @@ export default function StationContactModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-11 h-11 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            className="type-button w-11 h-11 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
             title={t('stationContact.s016')}
           >
             <X className="w-4 h-4" />
@@ -263,9 +263,9 @@ export default function StationContactModal({
             <button
               type="button"
               onClick={() => setActiveTab('chat')}
-              className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
+              className={`type-button flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
                 activeTab === 'chat'
-                  ? 'bg-sky-500 text-slate-950 font-bold shadow-xs'
+                  ? 'bg-sky-500 text-slate-950 shadow-xs'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -276,9 +276,9 @@ export default function StationContactModal({
             <button
               type="button"
               onClick={() => setActiveTab('call')}
-              className={`flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
+              className={`type-button flex-1 h-9 rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
                 activeTab === 'call'
-                  ? 'bg-sky-500 text-slate-950 font-bold shadow-xs'
+                  ? 'bg-sky-500 text-slate-950 shadow-xs'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -295,12 +295,12 @@ export default function StationContactModal({
         {activeTab === 'chat' && (
           <div className="flex-1 flex flex-col min-h-0 bg-[#0a0c14]">
             {/* Cảnh báo bảo mật PII Header */}
-            <div className="px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between text-[11px] text-emerald-300">
+            <div className="type-caption px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between text-emerald-300">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>{t('stationContact.s003')}</span>
               </span>
-              <span className="font-mono text-[10px] text-emerald-400/80">{t('stationContact.s004')}</span>
+              <span className="type-caption text-emerald-400/80">{t('stationContact.s004')}</span>
             </div>
 
             {/* Dòng lịch sử tin nhắn */}
@@ -312,8 +312,8 @@ export default function StationContactModal({
                       key={msg.id}
                       className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-center space-y-1 my-1"
                     >
-                      <p className="text-[11.5px] text-slate-300 leading-relaxed font-sans">{msg.text}</p>
-                      <span className="text-[10px] text-slate-500 font-mono block">{msg.time}</span>
+                      <p className="type-caption text-slate-300">{msg.text}</p>
+                      <span className="type-caption text-slate-500 block">{msg.time}</span>
                     </div>
                   );
                 }
@@ -324,13 +324,13 @@ export default function StationContactModal({
                     key={msg.id}
                     className={`flex flex-col ${isRider ? 'items-end' : 'items-start'} space-y-1`}
                   >
-                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono px-1">
+                    <div className="type-caption flex items-center gap-1.5 text-slate-400 px-1">
                       <span>{isRider ? 'Bạn (Người đi cùng)' : driverDisplayName}</span>
                       <span>•</span>
                       <span>{msg.time}</span>
                     </div>
                     <div
-                      className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed font-sans ${
+                      className={`type-caption max-w-[85%] px-3.5 py-2.5 rounded-2xl ${
                         isRider
                           ? 'bg-[#0071e3] text-white rounded-br-xs shadow-md'
                           : 'bg-white/[0.08] text-slate-100 rounded-bl-xs border border-white/[0.08]'
@@ -346,12 +346,12 @@ export default function StationContactModal({
 
             {/* Khung chip tin nhắn nhanh 1-chạm (Curbside Quick Presets - Stanford 0-Typing) */}
             <div className="p-3 border-t border-white/[0.06] bg-black/20 space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 px-0.5">
-                <span className="flex items-center gap-1 text-sky-400 font-semibold">
+              <div className="type-caption flex items-center justify-between text-slate-400 px-0.5">
+                <span className="flex items-center gap-1 text-sky-400">
                   <Sparkles className="w-3 h-3" />
                   <span>{t('stationContact.s005')}</span>
                 </span>
-                <span className="text-[10px]">{t('stationContact.s006')}</span>
+                <span className="">{t('stationContact.s006')}</span>
               </div>
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                 {CURBSIDE_QUICK_CHIPS.map((chip, idx) => (
@@ -359,7 +359,7 @@ export default function StationContactModal({
                     key={idx}
                     type="button"
                     onClick={() => handleSendQuickChip(chip)}
-                    className="px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] active:scale-95 border border-white/[0.08] text-xs text-slate-200 hover:text-white whitespace-nowrap shrink-0 transition-all cursor-pointer font-sans"
+                    className="type-button px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] active:scale-95 border border-white/[0.08] text-slate-200 hover:text-white whitespace-nowrap shrink-0 transition-all cursor-pointer"
                   >
                     {chip}
                   </button>
@@ -369,10 +369,10 @@ export default function StationContactModal({
 
             {/* Cảnh báo vi phạm PII nếu người dùng gõ SĐT/Zalo */}
             {piiCheck.hasLeak && (
-              <div className="mx-3 mb-2 p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-[11px] text-rose-300 flex items-start gap-2 animate-in fade-in">
+              <div className="type-caption mx-3 mb-2 p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 flex items-start gap-2 animate-in fade-in">
                 <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <div className="space-y-0.5 leading-relaxed">
-                  <span className="font-bold block text-rose-200">
+                <div className="type-body space-y-0.5">
+                  <span className="block text-rose-200">
                     ⚠️ Phát hiện thông tin liên hệ ngoài sàn ({piiCheck.detectedSample || 'SĐT/Zalo'}):
                   </span>
                   <span>{piiCheck.warningMessage || 'Để bảo vệ an toàn và chống lừa đảo, vui lòng liên lạc trực tiếp trong app!'}</span>
@@ -387,15 +387,15 @@ export default function StationContactModal({
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={t('stationContact.s017')}
-                className="flex-1 h-11 px-3.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 outline-none transition-all font-sans"
+                className="type-input flex-1 h-11 px-3.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-white placeholder-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 outline-none transition-all"
               />
               <button
                 type="submit"
                 disabled={!inputText.trim() || piiCheck.hasLeak}
-                className="w-11 h-11 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-30 disabled:hover:bg-sky-500 text-slate-950 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-md active:scale-95"
+                className="type-button w-11 h-11 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-30 disabled:hover:bg-sky-500 text-slate-950 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-md active:scale-95"
                 title={t('stationContact.s018')}
               >
-                <Send className="w-4 h-4 font-bold" />
+                <Send className="w-4 h-4" />
               </button>
             </form>
           </div>
@@ -405,7 +405,7 @@ export default function StationContactModal({
         {activeTab === 'call' && (
           <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 bg-[#0a0c14] text-center space-y-6 min-h-[380px]">
             {/* Huy hiệu an toàn */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            <div className="type-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>{t('stationContact.s007')}</span>
             </div>
@@ -421,35 +421,35 @@ export default function StationContactModal({
               {callState === 'connected' && (
                 <span className="absolute -inset-2 rounded-full bg-emerald-500/20 animate-pulse" />
               )}
-              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-tr from-sky-600 to-emerald-500 flex items-center justify-center text-2xl font-bold text-white shadow-xl shadow-sky-500/20 border border-white/20">
+              <div className="type-metric relative w-20 h-20 rounded-3xl bg-gradient-to-tr from-sky-600 to-emerald-500 flex items-center justify-center text-white shadow-xl shadow-sky-500/20 border border-white/20">
                 <Car className="w-9 h-9 text-white" />
               </div>
             </div>
 
             {/* Thông tin đối tác & Thời gian đàm thoại */}
             <div className="space-y-1 max-w-xs">
-              <h4 className="text-base font-bold text-white">{driverDisplayName}</h4>
-              <p className="text-xs text-slate-400 font-mono">
+              <h4 className="type-heading text-white">{driverDisplayName}</h4>
+              <p className="type-caption text-slate-400">
                 {carDisplayModel} ({carDisplayPlate})
               </p>
-              <p className="text-[11px] text-slate-500">
-                {t('stationContact.s008')} <strong className="text-slate-300">{stationName}</strong>
+              <p className="type-caption text-slate-500">
+                {t('stationContact.s008')} <strong className="type-body-strong text-slate-300">{stationName}</strong>
               </p>
 
               <div className="pt-2">
                 {callState === 'idle' && (
-                  <p className="text-xs text-slate-400">
+                  <p className="type-caption text-slate-400">
                     {t('stationContact.s009')}
                   </p>
                 )}
 
                 {callState === 'ringing' && (
                   <div className="space-y-1.5">
-                    <p className="text-xs font-semibold text-sky-400 animate-pulse flex items-center justify-center gap-1.5">
+                    <p className="type-caption text-sky-400 animate-pulse flex items-center justify-center gap-1.5">
                       <Phone className="w-3.5 h-3.5 animate-bounce" />
                       <span>Đang đổ chuông qua App ({ringSeconds}s)...</span>
                     </p>
-                    <p className="text-[10.5px] text-slate-500">
+                    <p className="type-caption text-slate-500">
                       {t('stationContact.s010')}
                     </p>
                   </div>
@@ -457,10 +457,10 @@ export default function StationContactModal({
 
                 {callState === 'connected' && (
                   <div className="space-y-1">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 inline-block">
+                    <span className="type-badge px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 inline-block">
                       {t('stationContact.s011')}
                     </span>
-                    <p className="text-xl font-mono font-black text-emerald-400 tracking-wider">
+                    <p className="type-title text-emerald-400">
                       {Math.floor(callSeconds / 60).toString().padStart(2, '0')}:
                       {(callSeconds % 60).toString().padStart(2, '0')}
                     </p>
@@ -468,7 +468,7 @@ export default function StationContactModal({
                 )}
 
                 {callState === 'ended' && (
-                  <p className="text-xs text-slate-400">
+                  <p className="type-caption text-slate-400">
                     {t('stationContact.s012')}
                   </p>
                 )}
@@ -481,7 +481,7 @@ export default function StationContactModal({
                 <button
                   type="button"
                   onClick={handleStartCall}
-                  className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-98 text-slate-950 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
+                  className="type-button w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-98 text-slate-950 uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
                 >
                   <Phone className="w-4 h-4" />
                   <span>{t('stationContact.s013')}</span>
@@ -492,7 +492,7 @@ export default function StationContactModal({
                   <button
                     type="button"
                     onClick={() => setIsMuted(!isMuted)}
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+                    className={`type-button w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
                       isMuted
                         ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                         : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
@@ -506,7 +506,7 @@ export default function StationContactModal({
                   <button
                     type="button"
                     onClick={() => setIsSpeaker(!isSpeaker)}
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+                    className={`type-button w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
                       isSpeaker
                         ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
                         : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
@@ -520,7 +520,7 @@ export default function StationContactModal({
                   <button
                     type="button"
                     onClick={handleEndCall}
-                    className="w-14 h-14 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
+                    className="type-button w-14 h-14 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
                     title={t('stationContact.s019')}
                   >
                     <PhoneOff className="w-6 h-6" />
@@ -535,7 +535,7 @@ export default function StationContactModal({
                 <button
                   type="button"
                   onClick={handleSimulateAnswer}
-                  className="text-[11px] text-sky-400 hover:text-sky-300 underline cursor-pointer transition-colors"
+                  className="type-button text-sky-400 hover:text-sky-300 underline cursor-pointer transition-colors"
                 >
                   {t('stationContact.s014')}
                 </button>
@@ -545,7 +545,7 @@ export default function StationContactModal({
         )}
 
         {/* ── FOOTER MODAL ── */}
-        <footer className="p-3 bg-black/40 border-t border-white/[0.06] text-center text-[10.5px] font-mono text-slate-500">
+        <footer className="type-caption p-3 bg-black/40 border-t border-white/[0.06] text-center text-slate-500">
           {t('stationContact.s015')}
         </footer>
       </div>

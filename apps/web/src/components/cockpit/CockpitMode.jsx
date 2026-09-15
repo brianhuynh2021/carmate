@@ -8,16 +8,16 @@ import useOwnedDriverTrips from '../../hooks/useOwnedDriverTrips.js';
 import { currentManifest, formatAppointmentTime, pointLabel, realPositionPayload } from '../../utils/driverOperations.js';
 
 const panel = 'rounded-3xl border border-slate-300/70 dark:border-white/10 bg-white dark:bg-[#1a2232] p-5 space-y-3 shadow-sm';
-const field = 'w-full rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#1a2232] px-3 py-3';
+const field = 'type-input w-full rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#1a2232] px-3 py-3';
 const ACTIVE_BOOKING = ['inquiring', 'pre_confirmed', 'confirmed', 'boarded'];
 
 function AppointmentTerms({ terms = {} }) {
-  return <div className="space-y-1 text-sm">
-    <p><strong>Đón:</strong> {pointLabel(terms.pickupPoint)}</p>
-    <p><strong>Trả:</strong> {pointLabel(terms.dropoffPoint)}</p>
-    <p><strong>Giờ đón:</strong> {formatAppointmentTime(terms.pickupStartAt)} – {formatAppointmentTime(terms.pickupEndAt)}</p>
-    {terms.dropoffLatestAt && <p><strong>Trả trước:</strong> {formatAppointmentTime(terms.dropoffLatestAt)}</p>}
-    <p><strong>Tổng tiền:</strong> {terms.totalPrice == null ? 'Chưa chốt' : formatVND(terms.totalPrice)} · {terms.seats || '—'} người</p>
+  return <div className="space-y-1">
+    <p className="type-body"><strong className="type-body-strong">Đón:</strong> {pointLabel(terms.pickupPoint)}</p>
+    <p className="type-body"><strong className="type-body-strong">Trả:</strong> {pointLabel(terms.dropoffPoint)}</p>
+    <p className="type-body"><strong className="type-body-strong">Giờ đón:</strong> {formatAppointmentTime(terms.pickupStartAt)} – {formatAppointmentTime(terms.pickupEndAt)}</p>
+    {terms.dropoffLatestAt && <p className="type-body"><strong className="type-body-strong">Trả trước:</strong> {formatAppointmentTime(terms.dropoffLatestAt)}</p>}
+    <p className="type-body"><strong className="type-body-strong">Tổng tiền:</strong> {terms.totalPrice == null ? 'Chưa chốt' : formatVND(terms.totalPrice)} · {terms.seats || '—'} người</p>
   </div>;
 }
 
@@ -151,51 +151,51 @@ export default function CockpitMode({ currentUser = null, onBack, onShowToast, o
   return <main className="min-h-screen bg-[#DFE5EC] dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 pb-16">
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3"><Button variant="secondary" icon={ArrowLeft} onClick={onBack}>Quay lại</Button><div><h1 className="text-xl font-bold">Quản lý xe đang chạy</h1><p className="text-sm text-slate-500">Chuyến thật, cuộc hẹn rõ ràng.</p></div></div>
+        <div className="flex items-center gap-3"><Button variant="secondary" icon={ArrowLeft} onClick={onBack}>Quay lại</Button><div><h1 className="type-page-title">Quản lý xe đang chạy</h1><p className="type-body text-slate-500">Chuyến thật, cuộc hẹn rõ ràng.</p></div></div>
         <Button icon={Plus} onClick={onOpenQuickPostTrip}>Đăng chuyến</Button>
       </header>
-      {!currentUser ? <section className={panel}><h2 className="font-bold">Xem chuyến thuộc tài khoản của bạn</h2><p>Đăng nhập để quản lý cuộc hẹn và cập nhật vị trí cho chuyến đang đi.</p><Button onClick={() => onRequireAuth?.({ title: 'Quản lý xe của bạn', subtitle: 'Đăng nhập để xem đúng chuyến và các cuộc hẹn của bạn.' })}>Đăng nhập</Button></section> : <>
-        {tripError && <p role="alert" className="rounded-2xl p-3 bg-amber-50 text-amber-800">{tripError}</p>}
-        <div className="flex justify-between items-center"><p className="text-sm text-slate-500">{loading ? 'Đang tải chuyến…' : `${trips.length} chuyến đang mở`}</p><Button variant="secondary" icon={RefreshCw} disabled={loading || !!busy} onClick={() => { reload(); refreshPassengers(); }}>Làm mới</Button></div>
-        {!loading && !tripError && !trips.length && <section className={panel}><h2 className="font-semibold">Bạn chưa có chuyến đang mở</h2><p>Đăng hành trình và thông tin xe trước khi bắt đầu nhận khách.</p></section>}
+      {!currentUser ? <section className={panel}><h2 className="type-heading">Xem chuyến thuộc tài khoản của bạn</h2><p className="type-body">Đăng nhập để quản lý cuộc hẹn và cập nhật vị trí cho chuyến đang đi.</p><Button onClick={() => onRequireAuth?.({ title: 'Quản lý xe của bạn', subtitle: 'Đăng nhập để xem đúng chuyến và các cuộc hẹn của bạn.' })}>Đăng nhập</Button></section> : <>
+        {tripError && <p role="alert" className="type-body rounded-2xl p-3 bg-amber-50 text-amber-800">{tripError}</p>}
+        <div className="flex justify-between items-center"><p className="type-body text-slate-500">{loading ? 'Đang tải chuyến…' : `${trips.length} chuyến đang mở`}</p><Button variant="secondary" icon={RefreshCw} disabled={loading || !!busy} onClick={() => { reload(); refreshPassengers(); }}>Làm mới</Button></div>
+        {!loading && !tripError && !trips.length && <section className={panel}><h2 className="type-heading">Bạn chưa có chuyến đang mở</h2><p className="type-body">Đăng hành trình và thông tin xe trước khi bắt đầu nhận khách.</p></section>}
         {!!trips.length && <section className={panel}>
-          <label className="block font-semibold" htmlFor="cockpit-trip">Chọn chuyến đang thực hiện</label>
+          <label className="type-label block" htmlFor="cockpit-trip">Chọn chuyến đang thực hiện</label>
           <select id="cockpit-trip" className={field} value={selectedId} disabled={tracking || !!busy} onChange={(event) => setSelectedId(event.target.value)}>{trips.map((row) => <option key={row.id} value={row.id}>{row.from} → {row.to} · {row.date} {row.time || row.timeSlot}</option>)}</select>
-          {trip && <><p className="text-sm flex flex-wrap gap-3"><span className="inline-flex items-center gap-2"><Car size={16} />{trip.carType || 'Chưa có thông tin xe'} · {trip.licensePlate || trip.plateMask || 'Chưa có biển số'}</span><span>{trip.capacity ? `Xe ${trip.capacity} chỗ` : ''}</span><span>{connectionPriceLabel(trip)}{connectionPriceLabel(trip) !== 'Liên hệ' ? '/ghế' : ''}</span></p>
-            <p className="text-sm">{session?.seatsAvailable ?? trip.availableSeats ?? '—'} chỗ còn nhận theo dữ liệu chuyến. Mỗi đề nghị được kiểm tra lại theo đoạn đường.</p></>}
-          <p className="text-sm text-slate-500">Bật vị trí khi bắt đầu đi để tìm khách phù hợp trên phần đường còn lại. Vị trí chỉ được cập nhật khi bạn bật và giữ màn hình này mở. Thao tác khi đã dừng xe.</p>
-          <div className="flex flex-wrap items-center gap-3"><Button icon={tracking ? Pause : MapPin} disabled={!trip || !!busy} variant={tracking ? 'secondary' : 'primary'} onClick={() => { setGpsError(''); setTracking((value) => !value); }}>{tracking ? 'Tạm dừng vị trí' : 'Bắt đầu cập nhật vị trí'}</Button><span role="status" className="text-sm">{tracking ? positionFresh ? 'Vị trí vừa được cập nhật' : 'Đang chờ vị trí mới' : 'Chưa chia sẻ vị trí'}</span></div>
-          {gpsError && <p role="alert" className="text-amber-700 dark:text-amber-300">{gpsError}</p>}
-          {lastPositionAt && <p className="text-xs text-slate-500">GPS gần nhất: {formatAppointmentTime(lastPositionAt)}. Dừng cập nhật vị trí không hủy các cuộc hẹn đã chốt.</p>}
+          {trip && <><p className="type-body flex flex-wrap gap-3"><span className="inline-flex items-center gap-2"><Car size={16} />{trip.carType || 'Chưa có thông tin xe'} · {trip.licensePlate || trip.plateMask || 'Chưa có biển số'}</span><span>{trip.capacity ? `Xe ${trip.capacity} chỗ` : ''}</span><span>{connectionPriceLabel(trip)}{connectionPriceLabel(trip) !== 'Liên hệ' ? '/ghế' : ''}</span></p>
+            <p className="type-body">{session?.seatsAvailable ?? trip.availableSeats ?? '—'} chỗ còn nhận theo dữ liệu chuyến. Mỗi đề nghị được kiểm tra lại theo đoạn đường.</p></>}
+          <p className="type-body text-slate-500">Bật vị trí khi bắt đầu đi để tìm khách phù hợp trên phần đường còn lại. Vị trí chỉ được cập nhật khi bạn bật và giữ màn hình này mở. Thao tác khi đã dừng xe.</p>
+          <div className="flex flex-wrap items-center gap-3"><Button icon={tracking ? Pause : MapPin} disabled={!trip || !!busy} variant={tracking ? 'secondary' : 'primary'} onClick={() => { setGpsError(''); setTracking((value) => !value); }}>{tracking ? 'Tạm dừng vị trí' : 'Bắt đầu cập nhật vị trí'}</Button><span role="status" className="">{tracking ? positionFresh ? 'Vị trí vừa được cập nhật' : 'Đang chờ vị trí mới' : 'Chưa chia sẻ vị trí'}</span></div>
+          {gpsError && <p role="alert" className="type-body text-amber-700 dark:text-amber-300">{gpsError}</p>}
+          {lastPositionAt && <p className="type-caption text-slate-500">GPS gần nhất: {formatAppointmentTime(lastPositionAt)}. Dừng cập nhật vị trí không hủy các cuộc hẹn đã chốt.</p>}
         </section>}
-        {error && <p role="alert" className="rounded-2xl p-3 bg-red-50 text-red-700">{error}</p>}
-        {syncError && <p role="alert" className="rounded-2xl p-3 bg-amber-50 text-amber-800">{syncError}</p>}
+        {error && <p role="alert" className="type-body rounded-2xl p-3 bg-red-50 text-red-700">{error}</p>}
+        {syncError && <p role="alert" className="type-body rounded-2xl p-3 bg-amber-50 text-amber-800">{syncError}</p>}
         {currentOffer && <section className={panel}>
-          <h2 className="text-lg font-bold">Có nhu cầu có thể đón trên đường</h2>
-          <p>{offer.riderCount} người · {offer.stationName} → {offer.destinationName}</p>
+          <h2 className="type-heading">Có nhu cầu có thể đón trên đường</h2>
+          <p className="type-body">{offer.riderCount} người · {offer.stationName} → {offer.destinationName}</p>
           <AppointmentTerms terms={offer.proposalTerms} />
-          <label className="block text-sm font-semibold" htmlFor="cockpit-price">Tổng tiền bạn đề nghị cho cả nhóm (đồng)</label>
+          <label className="type-label block" htmlFor="cockpit-price">Tổng tiền bạn đề nghị cho cả nhóm (đồng)</label>
           <input id="cockpit-price" type="number" min="0" step="1000" className={field} value={price} onChange={(event) => setPrice(event.target.value)} />
-          <p className="text-sm text-slate-500">Khách cần xác nhận cùng điểm, giờ và giá trước khi cuộc hẹn được chốt. CarMate không thu phí kết nối.</p>
+          <p className="type-body text-slate-500">Khách cần xác nhận cùng điểm, giờ và giá trước khi cuộc hẹn được chốt. CarMate không thu phí kết nối.</p>
           <div className="flex flex-wrap gap-2"><Button disabled={!!busy || !tracking || !positionFresh} onClick={sendOffer}>Gửi đề nghị đón</Button><Button variant="secondary" disabled={!!busy} onClick={() => perform(`reject:${offer.intentId}`, () => api.cockpitRejectOffer({ tripId: selectedId, intentId: offer.intentId }), 'Đã bỏ qua đề nghị.')}>Bỏ qua</Button></div>
         </section>}
         {trip && <section className={panel}>
-          <h2 className="font-bold text-lg">Các nhóm khách trên chuyến</h2>
-          {!riders.filter((rider) => rider.status !== 'OFFERED' || rider.driverAccepted).length && !directBookings.length && <p className="text-slate-500">Chưa có cuộc hẹn đang theo dõi. Đề xuất mới sẽ xuất hiện khi có nhu cầu phù hợp và vị trí xe còn mới.</p>}
+          <h2 className="type-heading">Các nhóm khách trên chuyến</h2>
+          {!riders.filter((rider) => rider.status !== 'OFFERED' || rider.driverAccepted).length && !directBookings.length && <p className="type-body text-slate-500">Chưa có cuộc hẹn đang theo dõi. Đề xuất mới sẽ xuất hiện khi có nhu cầu phù hợp và vị trí xe còn mới.</p>}
           {riders.filter((rider) => rider.status !== 'OFFERED' || rider.driverAccepted).map((rider) => {
             const phone = cleanPhoneNumber(rider.phone || '');
             return <article key={rider.intentId} className="rounded-2xl border border-slate-200 dark:border-white/10 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2"><h3 className="font-semibold">{rider.name || 'Khách'} · {rider.seatsNeeded} người</h3>{phone && <a className="inline-flex items-center gap-2 p-2 text-[#0071e3]" href={`tel:${phone}`}><Phone size={16} />Gọi</a>}</div>
-              <p className={rider.status === 'OFFERED' ? 'text-amber-700 dark:text-amber-300' : 'text-green-700 dark:text-green-300'}>{rider.status === 'OFFERED' ? 'Chờ khách xác nhận — chưa chốt đón' : rider.status === 'ARRIVING' ? 'Hai bên đã chốt — chờ đón khách' : 'Khách đã lên xe'}</p>
+              <div className="flex items-center justify-between gap-2"><h3 className="type-heading">{rider.name || 'Khách'} · {rider.seatsNeeded} người</h3>{phone && <a className="type-button inline-flex items-center gap-2 p-2 text-[#0071e3]" href={`tel:${phone}`}><Phone size={16} />Gọi</a>}</div>
+              <p className={rider.status === 'OFFERED' ? 'type-body text-amber-700 dark:text-amber-300' : 'type-body text-green-700 dark:text-green-300'}>{rider.status === 'OFFERED' ? 'Chờ khách xác nhận — chưa chốt đón' : rider.status === 'ARRIVING' ? 'Hai bên đã chốt — chờ đón khách' : 'Khách đã lên xe'}</p>
               <AppointmentTerms terms={rider.committedTerms || rider.proposalTerms} />
-              {rider.status === 'ARRIVING' && <div className="flex flex-wrap gap-2"><input aria-label={`Mã PIN của ${rider.name || 'khách'}`} className={`${field} max-w-48`} inputMode="numeric" autoComplete="off" placeholder="PIN khách đọc khi lên xe" maxLength={4} value={pins[rider.intentId] || ''} onChange={(event) => setPins((value) => ({ ...value, [rider.intentId]: event.target.value.replace(/\D/g, '').slice(0, 4) }))} /><Button disabled={!!busy || !/^\d{4}$/.test(pins[rider.intentId] || '')} onClick={() => perform(`pin:${rider.intentId}`, () => api.cockpitVerifyPin({ tripId: selectedId, intentId: rider.intentId, pin: pins[rider.intentId] }), 'Đã ghi nhận khách lên xe.')}>Xác nhận lên xe</Button></div>}
+              {rider.status === 'ARRIVING' && <div className="flex flex-wrap gap-2"><input aria-label={`Mã PIN của ${rider.name || 'khách'}`} className={`type-input ${field} max-w-48`} inputMode="numeric" autoComplete="off" placeholder="PIN khách đọc khi lên xe" maxLength={4} value={pins[rider.intentId] || ''} onChange={(event) => setPins((value) => ({ ...value, [rider.intentId]: event.target.value.replace(/\D/g, '').slice(0, 4) }))} /><Button disabled={!!busy || !/^\d{4}$/.test(pins[rider.intentId] || '')} onClick={() => perform(`pin:${rider.intentId}`, () => api.cockpitVerifyPin({ tripId: selectedId, intentId: rider.intentId, pin: pins[rider.intentId] }), 'Đã ghi nhận khách lên xe.')}>Xác nhận lên xe</Button></div>}
               {rider.status === 'BOARDED' && <Button variant="success" disabled={!!busy} onClick={() => setDropoff(rider)}>Đã đến điểm trả khách</Button>}
             </article>;
           })}
-          {directBookings.map((booking) => <article key={booking.escrowId || booking.id} className="rounded-2xl border border-slate-200 dark:border-white/10 p-4 space-y-2"><h3 className="font-semibold">{booking.passengerName || booking.contactName || 'Khách'} · {booking.seats || '—'} người</h3><p>{booking.bothConfirmed ? booking.status === 'boarded' ? 'Đã lên xe' : 'Hai bên đã chốt cuộc hẹn' : 'Đang trao đổi, chưa chốt'}</p>{(booking.committedTerms || booking.proposalTerms) && <AppointmentTerms terms={booking.committedTerms || booking.proposalTerms} />}{onOpenBookings && <Button variant="secondary" onClick={onOpenBookings}>Xem cuộc hẹn và trao đổi</Button>}</article>)}
+          {directBookings.map((booking) => <article key={booking.escrowId || booking.id} className="rounded-2xl border border-slate-200 dark:border-white/10 p-4 space-y-2"><h3 className="type-heading">{booking.passengerName || booking.contactName || 'Khách'} · {booking.seats || '—'} người</h3><p className="type-body">{booking.bothConfirmed ? booking.status === 'boarded' ? 'Đã lên xe' : 'Hai bên đã chốt cuộc hẹn' : 'Đang trao đổi, chưa chốt'}</p>{(booking.committedTerms || booking.proposalTerms) && <AppointmentTerms terms={booking.committedTerms || booking.proposalTerms} />}{onOpenBookings && <Button variant="secondary" onClick={onOpenBookings}>Xem cuộc hẹn và trao đổi</Button>}</article>)}
         </section>}
       </>}
     </div>
-    {dropoff && <Modal title="Xác nhận đã trả khách?" subtitle={`${dropoff.name || 'Khách'} · ${dropoff.seatsNeeded} người`} onClose={() => !busy && setDropoff(null)} footer={<div className="flex justify-end gap-2"><Button variant="secondary" disabled={!!busy} onClick={() => setDropoff(null)}>Chưa trả</Button><Button variant="success" disabled={!!busy} onClick={() => perform(`drop:${dropoff.intentId}`, () => api.cockpitDropoff({ tripId: selectedId, intentId: dropoff.intentId }), 'Đã trả khách. Chỗ được cập nhật cho phần hành trình còn lại.')}>Xác nhận đã trả</Button></div>}><p>Điểm trả đã chốt: <strong>{pointLabel((dropoff.committedTerms || dropoff.proposalTerms)?.dropoffPoint)}</strong>.</p><p className="mt-2">Chỉ xác nhận khi nhóm khách đã xuống xe. Hệ thống hoàn tất cuộc hẹn và cập nhật chỗ cho các đoạn tiếp theo.</p>{error && <p role="alert" className="mt-3 text-red-600">{error}</p>}</Modal>}
+    {dropoff && <Modal title="Xác nhận đã trả khách?" subtitle={`${dropoff.name || 'Khách'} · ${dropoff.seatsNeeded} người`} onClose={() => !busy && setDropoff(null)} footer={<div className="flex justify-end gap-2"><Button variant="secondary" disabled={!!busy} onClick={() => setDropoff(null)}>Chưa trả</Button><Button variant="success" disabled={!!busy} onClick={() => perform(`drop:${dropoff.intentId}`, () => api.cockpitDropoff({ tripId: selectedId, intentId: dropoff.intentId }), 'Đã trả khách. Chỗ được cập nhật cho phần hành trình còn lại.')}>Xác nhận đã trả</Button></div>}><p className="type-body">Điểm trả đã chốt: <strong className="type-body-strong">{pointLabel((dropoff.committedTerms || dropoff.proposalTerms)?.dropoffPoint)}</strong>.</p><p className="type-body mt-2">Chỉ xác nhận khi nhóm khách đã xuống xe. Hệ thống hoàn tất cuộc hẹn và cập nhật chỗ cho các đoạn tiếp theo.</p>{error && <p role="alert" className="type-body mt-3 text-red-600">{error}</p>}</Modal>}
   </main>;
 }

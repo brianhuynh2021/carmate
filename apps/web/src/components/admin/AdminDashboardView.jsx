@@ -669,29 +669,29 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <div className="w-12 h-12 rounded-2xl bg-primary-500/10 text-primary-600 dark:text-primary-400 inline-flex items-center justify-center mb-1">
               <Lock className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold font-display text-slate-900 dark:text-white">Cổng Quản Trị CarMate</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <h2 className="type-title text-slate-900 dark:text-white">Cổng Quản Trị CarMate</h2>
+            <p className="type-caption text-slate-500 dark:text-slate-400">
               Nhập mã bảo mật quản trị viên để điều hành sàn ghép xe
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="type-body space-y-4">
             {requireMfa ? (
               <div className="space-y-4">
-                <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/50 text-xs space-y-1.5">
-                  <div className="flex items-center gap-2 text-sky-700 dark:text-sky-300 font-bold">
+                <div className="type-body p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/50 space-y-1.5">
+                  <div className="type-body-strong flex items-center gap-2 text-sky-700 dark:text-sky-300">
                     <Send className="w-4 h-4 text-sky-500 shrink-0" />
                     <span>{mfaViaTelegram ? 'Mã OTP đã được gửi đến Telegram' : 'Mã Xác Thực Quản Trị Viên (Dev Local)'}</span>
                   </div>
-                  <p className="text-slate-600 dark:text-slate-400 text-[11.5px] leading-relaxed">
+                  <p className="type-footnote text-slate-600 dark:text-slate-400">
                     {mfaViaTelegram
                       ? 'Vui lòng kiểm tra ứng dụng Telegram trên điện thoại của bạn để lấy mã xác thực 6 số.'
                       : 'Đang ở môi trường Local Development (chặn gửi Telegram thật để chống spam). Dùng mã bên dưới hoặc 123456.'}
                   </p>
-                  <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                  <div className="type-footnote flex items-center justify-between pt-1 text-slate-500 dark:text-slate-400">
                     <span>Thời hạn mã:</span>
                     <span
-                      className={`font-bold ${mfaCountdown < 30 ? 'text-rose-500 animate-pulse' : 'text-sky-600 dark:text-sky-400'}`}
+                      className={`type-body-strong  ${mfaCountdown < 30 ? "text-rose-500 animate-pulse" : "text-sky-600 dark:text-sky-400"}`}
                     >
                       {Math.floor(mfaCountdown / 60)}:{(mfaCountdown % 60).toString().padStart(2, '0')}
                     </span>
@@ -699,7 +699,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-bold uppercase text-slate-400 mb-1.5">
+                  <label className="type-label block uppercase text-slate-400 mb-1.5">
                     Mã Xác Thực 6 Số (MFA OTP)
                   </label>
                   <input
@@ -710,34 +710,34 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     value={mfaCode}
                     onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="VD: 123456"
-                    className="w-full h-12 px-4 text-center tracking-[0.4em] font-mono text-xl font-black rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/40"
+                    className="type-input font-mono w-full h-12 px-4 text-center rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/40"
                   />
                 </div>
 
                 {(devOtp || !mfaViaTelegram) && (
-                  <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 flex items-center justify-between gap-3 text-xs">
+                  <div className="type-body p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 flex items-center justify-between gap-3">
                     <div className="space-y-0.5">
-                      <div className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                      <div className="type-body-strong text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                         <span>⚡ Mã OTP Local:</span>
-                        <code className="font-mono font-black text-sm bg-amber-200/60 dark:bg-amber-800/60 px-1.5 py-0.5 rounded text-amber-950 dark:text-amber-100">
+                        <code className="type-body-strong font-mono bg-amber-200/60 dark:bg-amber-800/60 px-1.5 py-0.5 rounded text-amber-950 dark:text-amber-100">
                           {devOtp || '123456'}
                         </code>
                       </div>
-                      <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                      <p className="type-footnote text-amber-700 dark:text-amber-400">
                         Chống spam bot Telegram ở Local. Bấm nút để điền ngay.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setMfaCode(devOtp || '123456')}
-                      className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                      className="type-button-sm shrink-0 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition-colors cursor-pointer"
                     >
                       1-Chạm Điền
                     </button>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between text-xs pt-1">
+                <div className="type-body flex items-center justify-between pt-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -747,7 +747,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       setAuthError('');
                       setAuthNotice('');
                     }}
-                    className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer font-medium"
+                    className="type-button text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
                   >
                     ← Nhập lại mật mã
                   </button>
@@ -756,7 +756,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     type="button"
                     disabled={isResendingMfa || mfaCountdown > 150}
                     onClick={handleResendOtp}
-                    className="text-sky-600 dark:text-sky-400 hover:underline font-semibold disabled:opacity-40 disabled:no-underline cursor-pointer"
+                    className="type-button text-sky-600 dark:text-sky-400 hover:underline disabled:opacity-40 disabled:no-underline cursor-pointer"
                   >
                     {isResendingMfa ? 'Đang gửi...' : 'Gửi lại mã OTP'}
                   </button>
@@ -764,7 +764,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-mono font-bold uppercase text-slate-400 mb-1.5">
+                <label className="type-label block uppercase text-slate-400 mb-1.5">
                   Mã Bảo Mật Admin
                 </label>
                 <input
@@ -774,20 +774,20 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   placeholder="Nhập mã bảo mật quản trị"
-                  className="w-full h-11 px-4 rounded-xl text-sm font-semibold bg-slate-50 dark:bg-[#1e1f29] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/40"
+                  className="type-input w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/40"
                 />
               </div>
             )}
 
             {authNotice && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+              <p className="type-caption text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                 <span>{authNotice}</span>
               </p>
             )}
 
             {authError && (
-              <p className="text-xs text-rose-500 font-semibold flex items-center gap-1.5">
+              <p className="type-caption text-rose-500 flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 <span>{authError}</span>
               </p>
@@ -799,7 +799,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               size="md"
               fullWidth
               disabled={isLoading}
-              className="rounded-xl font-bold shadow-md shadow-primary-600/20"
+              className="type-button rounded-xl shadow-md shadow-primary-600/20"
             >
               {isLoading ? 'Đang xác thực...' : requireMfa ? 'Xác Nhận Mã OTP ➔' : 'Truy Cập Quản Trị ➔'}
             </Button>
@@ -809,7 +809,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <button
               type="button"
               onClick={onExitAdmin}
-              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium inline-flex items-center gap-1 cursor-pointer"
+              className="type-button-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 inline-flex items-center gap-1 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Quay lại trang chính</span>
@@ -852,23 +852,23 @@ export default function AdminDashboardView({ onExitAdmin }) {
       {/* Top Bar Quản Trị */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-white/95 dark:bg-[#16171d]/95 backdrop-blur-xl border border-slate-200/90 dark:border-white/10 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-600 text-white inline-flex items-center justify-center font-black text-base shadow-md shadow-primary-600/30">
+          <div className="type-body-strong w-10 h-10 rounded-xl bg-primary-600 text-white inline-flex items-center justify-center shadow-md shadow-primary-600/30">
             CM
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold font-display text-slate-900 dark:text-white">
+              <h1 className="type-page-title text-slate-900 dark:text-white">
                 Cổng Quản Trị Hệ Thống (CarMate Admin)
               </h1>
-              <span className="px-2 py-0.5 rounded-full text-[10.5px] font-mono font-bold bg-primary-100 text-primary-800 dark:bg-primary-950 dark:text-primary-300">
+              <span className="type-badge px-2 py-0.5 rounded-full bg-primary-100 text-primary-800 dark:bg-primary-950 dark:text-primary-300">
                 v1.0 Solo
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-[#107c41] shrink-0" />
+            <div className="type-body flex items-center gap-2 text-slate-500 dark:text-slate-400 mt-0.5">
+              <span className="type-badge w-2 h-2 rounded-full bg-[#107c41] shrink-0" />
               <span>Node.js Unified Engine: Hoạt động bình thường</span>
               <span>·</span>
-              <span className="font-mono">RAM: {sysHealth.heapUsedMB || 28} MB</span>
+              <span className="type-body">RAM: {sysHealth.heapUsedMB || 28} MB</span>
             </div>
           </div>
         </div>
@@ -881,7 +881,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               setShowClearDataModal(true);
             }}
             title="Dọn sạch dữ liệu kiểm thử & log"
-            className="h-9 px-3 rounded-full border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100/80 dark:hover:bg-rose-900/40 inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            className="type-button-sm h-9 px-3 rounded-full border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100/80 dark:hover:bg-rose-900/40 inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Dọn dữ liệu test</span>
@@ -890,7 +890,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             type="button"
             onClick={loadAllAdminData}
             title="Làm mới dữ liệu"
-            className="h-9 px-3 rounded-full border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            className="type-button-sm h-9 px-3 rounded-full border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Tải lại</span>
@@ -898,7 +898,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <button
             type="button"
             onClick={onExitAdmin}
-            className="h-9 px-3 rounded-full border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            className="type-button-sm h-9 px-3 rounded-full border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Xem Web</span>
@@ -907,7 +907,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             type="button"
             onClick={handleLogout}
             title="Đăng xuất Admin"
-            className="h-9 px-3 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5"
+            className="type-button-sm h-9 px-3 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 hover:bg-rose-100 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Thoát</span>
@@ -917,10 +917,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
       {statusNotice && (
         <div
-          className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 anim-fade-in ${
-            noticeType === 'error'
-              ? 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
-              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+          className={`type-body p-3 rounded-xl border flex items-center gap-2 anim-fade-in ${
+            noticeType === "error"
+              ? "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300"
+              : "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
           }`}
         >
           {noticeType === 'error' ? (
@@ -935,53 +935,53 @@ export default function AdminDashboardView({ onExitAdmin }) {
       {/* 4 Thẻ KPI Đo Lường Toàn Diện */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[10.5px] sm:text-[11px] font-mono font-bold uppercase text-slate-400">Chuyến Xe Đang Mở</p>
+          <p className="type-label uppercase text-slate-400">Chuyến Xe Đang Mở</p>
           <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-mono font-black text-slate-900 dark:text-white tabular-nums">
+            <span className="type-metric text-slate-900 dark:text-white tabular-nums">
               {overview.activeTripsCount || 0}
             </span>
-            <span className="text-[11px] sm:text-xs text-slate-400 font-medium">/ {overview.totalTripsCount || 0} tổng</span>
+            <span className="type-footnote text-slate-400">/ {overview.totalTripsCount || 0} tổng</span>
           </div>
           {overview.hiddenTripsCount > 0 && (
-            <p className="text-[10px] sm:text-[10.5px] text-amber-600 dark:text-amber-400 font-semibold truncate">
+            <p className="type-footnote text-amber-600 dark:text-amber-400 truncate">
               ⚠️ Có {overview.hiddenTripsCount} bài đang bị ẩn/khoá
             </p>
           )}
         </div>
 
         <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[10.5px] sm:text-[11px] font-mono font-bold uppercase text-slate-400">Chủ Xe & Thành Viên</p>
+          <p className="type-label uppercase text-slate-400">Chủ Xe & Thành Viên</p>
           <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+            <span className="type-metric text-emerald-600 dark:text-emerald-400 tabular-nums">
               {overview.verifiedDriversCount || 0}
             </span>
-            <span className="text-[11px] sm:text-xs text-slate-400 font-medium truncate">đã duyệt CCCD/GPLX</span>
+            <span className="type-footnote text-slate-400 truncate">đã duyệt CCCD/GPLX</span>
           </div>
-          <p className="text-[10px] sm:text-[10.5px] text-slate-400 truncate">Tổng {overview.totalMembersCount || 0} hồ sơ trong hệ thống</p>
+          <p className="type-footnote text-slate-400 truncate">Tổng {overview.totalMembersCount || 0} hồ sơ trong hệ thống</p>
         </div>
 
         <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[10.5px] sm:text-[11px] font-mono font-bold uppercase text-slate-400">Lượt Chốt Zalo</p>
+          <p className="type-label uppercase text-slate-400">Lượt Chốt Zalo</p>
           <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-mono font-black text-primary-600 dark:text-primary-400 tabular-nums">
+            <span className="type-metric text-primary-600 dark:text-primary-400 tabular-nums">
               {overview.totalBookingsCount || 0}
             </span>
-            <span className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-semibold truncate">
+            <span className="type-footnote text-emerald-600 dark:text-emerald-400 truncate">
               ({overview.completedBookingsCount || 0} hoàn tất)
             </span>
           </div>
-          <p className="text-[10px] sm:text-[10.5px] text-slate-400 truncate">Kết nối trực tiếp 0% phí sàn</p>
+          <p className="type-footnote text-slate-400 truncate">Kết nối trực tiếp 0% phí sàn</p>
         </div>
 
         <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
-          <p className="text-[10.5px] sm:text-[11px] font-mono font-bold uppercase text-slate-400">Uptime & Tài Nguyên</p>
+          <p className="type-label uppercase text-slate-400">Uptime & Tài Nguyên</p>
           <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-mono font-black text-slate-900 dark:text-white tabular-nums">
+            <span className="type-metric text-slate-900 dark:text-white tabular-nums">
               {Math.floor((sysHealth.uptimeSeconds || 0) / 60)}p
             </span>
-            <span className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-semibold">100% Ổn định</span>
+            <span className="type-footnote text-emerald-600 dark:text-emerald-400">100% Ổn định</span>
           </div>
-          <p className="text-[10px] sm:text-[10.5px] text-slate-400 font-mono truncate">
+          <p className="type-footnote text-slate-400 truncate">
             Heap: {sysHealth.heapUsedMB || 28}MB / Node {sysHealth.nodeVersion || 'v20'}
           </p>
         </div>
@@ -994,31 +994,31 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <button
               type="button"
               onClick={() => setActiveTab('trips')}
-              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-                activeTab === 'trips'
-                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`type-button-sm h-9 px-4 rounded-full cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === "trips"
+                  ? "bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Car className="w-3.5 h-3.5 text-[#0071e3]" />
               <span>Chuyến xe ({trips.length})</span>
             </button>
-            <button type="button" onClick={() => setActiveTab('operators')} className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${activeTab === 'operators' ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
+            <button type="button" onClick={() => setActiveTab('operators')} className={`type-button-sm h-9 px-4 rounded-full cursor-pointer transition-all inline-flex items-center gap-1.5 ${activeTab === "operators" ? "bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"}`}>
               <Car className="w-3.5 h-3.5 text-[#0071e3]" /><span>Hồ sơ chủ xe</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('users')}
-              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-                activeTab === 'users'
-                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`type-button-sm h-9 px-4 rounded-full cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === "users"
+                  ? "bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Users className="w-3.5 h-3.5 text-emerald-600" />
               <span>Thành viên ({users.length})</span>
               {deletionRequests.some((r) => r.status === 'pending') && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                <span className="type-badge px-1.5 py-0.2 rounded-full bg-rose-500 text-white">
                   {deletionRequests.filter((r) => r.status === 'pending').length} xóa
                 </span>
               )}
@@ -1026,10 +1026,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <button
               type="button"
               onClick={() => setActiveTab('reports')}
-              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-                activeTab === 'reports'
-                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`type-button-sm h-9 px-4 rounded-full cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === "reports"
+                  ? "bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
@@ -1038,10 +1038,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <button
               type="button"
               onClick={() => setActiveTab('ai')}
-              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-                activeTab === 'ai'
-                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`type-button-sm h-9 px-4 rounded-full cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === "ai"
+                  ? "bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -1050,16 +1050,16 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <button
               type="button"
               onClick={() => setActiveTab('analytics')}
-              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-                activeTab === 'analytics'
-                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`type-button-sm h-9 px-4 rounded-full cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === "analytics"
+                  ? "bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
               <span>Phễu & Analytics</span>
               {analyticsSummary?.totalEvents > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                <span className="type-badge px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
                   {analyticsSummary.totalEvents}
                 </span>
               )}
@@ -1067,10 +1067,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <button
               type="button"
               onClick={() => setActiveTab('trust')}
-              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-                activeTab === 'trust'
-                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`type-button-sm h-9 px-4 rounded-full cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === "trust"
+                  ? "bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
@@ -1079,10 +1079,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <button
               type="button"
               onClick={() => setActiveTab('fuel')}
-              className={`h-9 px-4 rounded-full text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 ${
-                activeTab === 'fuel'
-                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`type-button-sm h-9 px-4 rounded-full cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                activeTab === "fuel"
+                  ? "bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Fuel className="w-3.5 h-3.5 text-amber-500" />
@@ -1098,7 +1098,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Tìm tên, SĐT, tuyến, mã..."
-            className="w-full h-9 pl-9 pr-3 rounded-full text-xs font-semibold bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/30"
+            className="type-input w-full h-9 pl-9 pr-3 rounded-full bg-white dark:bg-[#151c2e] border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/30"
           />
         </div>
       </div>
@@ -1109,18 +1109,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
       {activeTab === 'trips' && (
         <div className="rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 font-mono uppercase text-[10.5px]">
+            <table className="type-body w-full text-left">
+              <thead className="type-label bg-slate-50/80 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 uppercase">
                 <tr>
-                  <th className="py-3 px-4">Mã & Vai Trò</th>
-                  <th className="py-3 px-4">Lộ Trình</th>
-                  <th className="py-3 px-4">Chủ Xe / SĐT Thật</th>
-                  <th className="py-3 px-4">Giá / Ghế</th>
-                  <th className="py-3 px-4">Trạng Thái</th>
-                  <th className="py-3 px-4 text-right">Thao Tác Admin</th>
+                  <th className="type-label py-3 px-4">Mã & Vai Trò</th>
+                  <th className="type-label py-3 px-4">Lộ Trình</th>
+                  <th className="type-label py-3 px-4">Chủ Xe / SĐT Thật</th>
+                  <th className="type-label py-3 px-4">Giá / Ghế</th>
+                  <th className="type-label py-3 px-4">Trạng Thái</th>
+                  <th className="type-label py-3 px-4 text-right">Thao Tác Admin</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+              <tbody className="type-body divide-y divide-slate-100 dark:divide-white/5">
                 {filteredTrips.map((t) => (
                   <tr
                     key={t.id}
@@ -1128,66 +1128,66 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       t.isHidden ? 'opacity-60 bg-amber-50/30 dark:bg-amber-950/20' : ''
                     }`}
                   >
-                    <td className="py-3 px-4">
-                      <div className="font-mono font-bold text-slate-900 dark:text-white">{t.maskedCode}</div>
-                      <span className="text-[10px] text-slate-400 font-mono">
+                    <td className="type-body py-3 px-4">
+                      <div className="type-body-strong font-mono text-slate-900 dark:text-white">{t.maskedCode}</div>
+                      <span className="type-footnote text-slate-400">
                         {t.type === 'driver_offer' ? '🚗 Chủ xe' : '👥 Khách tìm xe'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 max-w-xs">
-                      <div className="font-bold text-slate-900 dark:text-white truncate">
+                    <td className="type-body py-3 px-4 max-w-xs">
+                      <div className="type-body-strong text-slate-900 dark:text-white truncate">
                         {t.from} ➔ {t.to}
                       </div>
-                      <span className="text-[10px] text-primary-600 dark:text-primary-400 font-semibold">
+                      <span className="type-footnote text-primary-600 dark:text-primary-400">
                         {t.routeCategory}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900 dark:text-white">
+                    <td className="type-body py-3 px-4">
+                      <div className="type-body-strong text-slate-900 dark:text-white">
                         {t.publicName || 'Chủ xe ' + t.maskedCode}
                       </div>
                       <a
                         href={`https://zalo.me/${t.phoneReal || t.phone}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5"
+                        className="type-button-sm text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5"
                       >
                         <span>{t.phoneReal || t.phone}</span>
                         <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </td>
-                    <td className="py-3 px-4 font-mono">
-                      <div className="font-bold text-slate-900 dark:text-white">
+                    <td className="type-body py-3 px-4">
+                      <div className="type-body-strong text-slate-900 dark:text-white">
                         {formatVND(t.basePricePerSeat || t.expectedPrice || 180000)}
                       </div>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="type-footnote text-slate-400">
                         {t.availableSeats ? `Còn ${t.availableSeats} chỗ` : 'Cần ghế'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="type-body py-3 px-4">
                       {t.isHidden ? (
-                        <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 text-[10.5px] font-bold inline-flex items-center gap-1">
+                        <span className="type-badge px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 inline-flex items-center gap-1">
                           <EyeOff className="w-3 h-3" /> Đã ẩn
                         </span>
                       ) : t.status === 'full' ? (
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[10.5px] font-bold">
+                        <span className="type-badge px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                           Đã đủ
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10.5px] font-bold inline-flex items-center gap-1">
+                        <span className="type-badge px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 inline-flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Đang mở
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                    <td className="type-body py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => handleToggleHideTrip(t.id, t.isHidden)}
                         title={t.isHidden ? 'Khôi phục hiển thị bài' : 'Ẩn bài đăng này khỏi bảng tin'}
-                        className={`p-1.5 rounded-lg border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 text-[11px] font-semibold ${
+                        className={`type-button-sm p-1.5 rounded-lg border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
                           t.isHidden
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300'
-                            : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300'
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300"
+                            : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300"
                         }`}
                       >
                         {t.isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -1198,7 +1198,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         type="button"
                         onClick={() => setAdminTripToDelete(t)}
                         title="Xoá vĩnh viễn"
-                        className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 text-[11px] font-semibold"
+                        className="type-button-sm p-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Xoá</span>
@@ -1216,9 +1216,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
       {activeTab === 'users' && (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200 dark:border-white/10 space-y-2">
-            <h3 className="font-semibold">Danh bạ chủ xe và tài khoản là hai mục riêng</h3>
-            <p className="text-sm text-slate-500">Nhập hồ sơ có nguồn và xử lý nhận quyền quản lý trong Hồ sơ chủ xe. Tài khoản chỉ thuộc người đã đăng ký.</p>
-            <Button variant="secondary" onClick={() => setActiveTab('operators')}>Mở Hồ sơ chủ xe</Button>
+            <h3 className="type-heading">Danh bạ chủ xe và tài khoản là hai mục riêng</h3>
+            <p className="type-body text-slate-500">Nhập hồ sơ có nguồn và xử lý nhận quyền quản lý trong Hồ sơ chủ xe. Tài khoản chỉ thuộc người đã đăng ký.</p>
+            <Button variant="secondary" onClick={() => setActiveTab('operators')} className="type-button">Mở Hồ sơ chủ xe</Button>
           </div>
 
           {/* KHU VỰC YÊU CẦU XÓA TÀI KHOẢN (ĐỐI SOÁT & PHÊ DUYỆT BỞI ADMIN) */}
@@ -1230,13 +1230,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     <Trash2 className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <h3 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                       <span>Yêu Cầu Xóa Tài Khoản Chờ Duyệt</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+                      <span className="type-badge px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
                         {deletionRequests.filter((r) => r.status === 'pending').length} yêu cầu
                       </span>
                     </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="type-body text-slate-500 dark:text-slate-400">
                       Đối soát các chuyến đi dở dang trước khi thực hiện xóa vĩnh viễn dữ liệu theo Nghị định 13/2023.
                     </p>
                   </div>
@@ -1244,38 +1244,38 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-rose-50/50 dark:bg-rose-950/20 text-slate-500 font-mono uppercase text-[10px]">
+                <table className="type-body w-full text-left">
+                  <thead className="type-label bg-rose-50/50 dark:bg-rose-950/20 text-slate-500 uppercase">
                     <tr>
-                      <th className="py-2.5 px-3">Thành viên</th>
-                      <th className="py-2.5 px-3">Liên hệ</th>
-                      <th className="py-2.5 px-3">Lý do đóng tài khoản</th>
-                      <th className="py-2.5 px-3">Thời điểm gửi</th>
-                      <th className="py-2.5 px-3 text-right">Thao tác Admin</th>
+                      <th className="type-label py-2.5 px-3">Thành viên</th>
+                      <th className="type-label py-2.5 px-3">Liên hệ</th>
+                      <th className="type-label py-2.5 px-3">Lý do đóng tài khoản</th>
+                      <th className="type-label py-2.5 px-3">Thời điểm gửi</th>
+                      <th className="type-label py-2.5 px-3 text-right">Thao tác Admin</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+                  <tbody className="type-body divide-y divide-slate-100 dark:divide-white/5">
                     {deletionRequests
                       .filter((r) => r.status === 'pending')
                       .map((req) => (
                         <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
-                          <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">
+                          <td className="type-body py-3 px-3 text-slate-900 dark:text-white">
                             {req.name || 'Thành viên'}
                           </td>
-                          <td className="py-3 px-3 font-mono text-slate-600 dark:text-slate-300">
+                          <td className="type-body py-3 px-3 text-slate-600 dark:text-slate-300">
                             {req.phone || req.email || 'N/A'}
                           </td>
-                          <td className="py-3 px-3 text-slate-600 dark:text-slate-300 max-w-[260px] truncate">
+                          <td className="type-body py-3 px-3 text-slate-600 dark:text-slate-300 max-w-[260px] truncate">
                             {req.reason}
                           </td>
-                          <td className="py-3 px-3 text-[11px] text-slate-400">
+                          <td className="type-body py-3 px-3 text-slate-400">
                             {new Date(req.createdAt).toLocaleString('vi-VN')}
                           </td>
-                          <td className="py-3 px-3 text-right space-x-2 whitespace-nowrap">
+                          <td className="type-body py-3 px-3 text-right space-x-2 whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => setAdminReqToProcess({ req, action: 'approved' })}
-                              className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 active:scale-95 transition-all"
+                              className="type-button-sm px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 cursor-pointer inline-flex items-center gap-1 active:scale-95 transition-all"
                             >
                               <Trash2 className="w-3 h-3 text-rose-600" />
                               <span>Duyệt & Xóa</span>
@@ -1283,7 +1283,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                             <button
                               type="button"
                               onClick={() => setAdminReqToProcess({ req, action: 'rejected' })}
-                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 active:scale-95 transition-all"
+                              className="type-button-sm px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer inline-flex items-center gap-1 active:scale-95 transition-all"
                             >
                               <span>Từ chối</span>
                             </button>
@@ -1298,18 +1298,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
           <div className="rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 font-mono uppercase text-[10.5px]">
+            <table className="type-body w-full text-left">
+              <thead className="type-label bg-slate-50/80 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 uppercase">
                 <tr>
-                  <th className="py-3 px-4">Họ Tên & Quê Quán</th>
-                  <th className="py-3 px-4">Số Điện Thoại</th>
-                  <th className="py-3 px-4">Phương Tiện / Biển Số</th>
-                  <th className="py-3 px-4">Trạng Thái Xe / Nhận Khách</th>
-                  <th className="py-3 px-4">Phê Duyệt Kích Hoạt</th>
-                  <th className="py-3 px-4 text-right">Thao Tác Quản Trị</th>
+                  <th className="type-label py-3 px-4">Họ Tên & Quê Quán</th>
+                  <th className="type-label py-3 px-4">Số Điện Thoại</th>
+                  <th className="type-label py-3 px-4">Phương Tiện / Biển Số</th>
+                  <th className="type-label py-3 px-4">Trạng Thái Xe / Nhận Khách</th>
+                  <th className="type-label py-3 px-4">Phê Duyệt Kích Hoạt</th>
+                  <th className="type-label py-3 px-4 text-right">Thao Tác Quản Trị</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+              <tbody className="type-body divide-y divide-slate-100 dark:divide-white/5">
                 {filteredUsers.map((u) => (
                   <tr
                     key={u.id}
@@ -1321,72 +1321,72 @@ export default function AdminDashboardView({ onExitAdmin }) {
                           : ''
                     }`}
                   >
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <td className="type-body py-3 px-4">
+                      <div className="type-body-strong text-slate-900 dark:text-white flex items-center gap-1.5">
                         <span>{u.name}</span>
                         {u.isBanned && (
-                          <span className="px-1.5 py-0.2 rounded text-[9.5px] font-mono font-bold bg-rose-600 text-white">
+                          <span className="type-badge px-1.5 py-0.2 rounded bg-rose-600 text-white">
                             BANNED
                           </span>
                         )}
                         {(u.isDeactivated || u.status === 'deactivated') && !u.isBanned && (
-                          <span className="px-1.5 py-0.2 rounded text-[9.5px] font-mono font-bold bg-amber-500 text-white">
+                          <span className="type-badge px-1.5 py-0.2 rounded bg-amber-500 text-white">
                             TẠM NGƯNG
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="type-footnote text-slate-400">
                         {u.hometown || 'Bình Phước'} · {u.role === 'driver' ? 'Chủ xe' : 'Người đi cùng'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-mono">
-                      <span className="font-bold text-slate-800 dark:text-slate-200">{u.phone}</span>
+                    <td className="type-body py-3 px-4">
+                      <span className="type-body-strong text-slate-800 dark:text-slate-200">{u.phone}</span>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800 dark:text-slate-200">
+                    <td className="type-body py-3 px-4">
+                      <div className="type-body-strong text-slate-800 dark:text-slate-200">
                         {u.vehicle?.model || u.carModel || 'Chưa đăng ký xe'}
                       </div>
-                      <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                      <span className="type-footnote text-emerald-600 dark:text-emerald-400">
                         Biển: {u.vehicle?.plate || u.licensePlate || '---'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="type-body py-3 px-4">
                       {u.vehicleStatus === 'PENDING' || u.vehicle?.status === 'PENDING' ? (
-                        <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/60 inline-flex items-center gap-1 animate-pulse">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                        <span className="type-badge px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/60 inline-flex items-center gap-1 animate-pulse">
+                          <span className="type-badge w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
                           <span>⏳ Chờ kích hoạt</span>
                         </span>
                       ) : u.vehicleStatus === 'VERIFIED' || u.vehicle?.status === 'VERIFIED' || u.isDriverVerified ? (
-                        <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/60 inline-flex items-center gap-1">
+                        <span className="type-badge px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/60 inline-flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           <span>✅ Đã kích hoạt</span>
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-full text-[10.5px] font-medium bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                        <span className="type-badge px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-400 border border-slate-200 dark:border-white/10">
                           Chưa gửi hồ sơ
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="type-body py-3 px-4">
                       {u.vehicleStatus === 'PENDING' || u.vehicle?.status === 'PENDING' || (!u.isDriverVerified && (u.vehicle || u.carModel)) ? (
                         <button
                           type="button"
                           onClick={() => handleApproveVehicle(u)}
                           title="Bấm để kích hoạt xe cho Chủ xe trong 1 giây"
-                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                          className="type-button-sm px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Duyệt 1-Chạm</span>
                         </button>
                       ) : u.vehicleStatus === 'VERIFIED' || u.vehicle?.status === 'VERIFIED' || u.isDriverVerified ? (
-                        <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                        <span className="type-footnote text-emerald-600 dark:text-emerald-400">
                           Đang hoạt động
                         </span>
                       ) : (
-                        <span className="text-[11px] text-slate-400 font-mono">---</span>
+                        <span className="type-footnote text-slate-400">---</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                    <td className="type-body py-3 px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center justify-end gap-1.5">
                         {/* Tạm ngưng / Kích hoạt lại */}
                         <button
@@ -1397,10 +1397,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                               ? 'Kích hoạt lại tài khoản'
                               : 'Tạm ngưng hoạt động tài khoản'
                           }
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
-                            u.isDeactivated || u.status === 'deactivated'
-                              ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300'
-                              : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'
+                          className={`type-button-sm px-2.5 py-1 rounded-full border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
+                            u.isDeactivated || u.status === "deactivated"
+                              ? "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300"
+                              : "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300"
                           }`}
                         >
                           <PauseCircle className="w-3 h-3" />
@@ -1412,10 +1412,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                           type="button"
                           onClick={() => setAdminUserToBan(u)}
                           title={u.isBanned ? 'Mở khoá cấm' : 'Khoá cấm do vi phạm'}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
+                          className={`type-button-sm px-2.5 py-1 rounded-full border cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1 ${
                             u.isBanned
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                              : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300'
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                              : "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300"
                           }`}
                         >
                           <Ban className="w-3 h-3" />
@@ -1428,7 +1428,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                             type="button"
                             onClick={() => setAdminUserToDelete(u)}
                             title="Xóa vĩnh viễn tài khoản khỏi hệ thống"
-                            className="p-1.5 rounded-lg text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 dark:border-rose-900/40 transition-colors cursor-pointer active:scale-95 inline-flex items-center justify-center"
+                            className="type-button p-1.5 rounded-lg text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 dark:border-rose-900/40 transition-colors cursor-pointer active:scale-95 inline-flex items-center justify-center"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1455,13 +1455,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   <ShieldAlert className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <h3 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                     <span>Báo Cáo Vi Phạm An Toàn & Cam Kết (Chống Xe Dù & Nhồi Nhét)</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+                    <span className="type-badge px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
                       {reports?.vehicleMismatchReports?.length || 0} phản ánh
                     </span>
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="type-body text-slate-500 dark:text-slate-400">
                     Bảo vệ tính an toàn và minh bạch: Xử lý nhồi nhét, sang xe giữa đường, chặt chém giá hoặc khóa tài khoản vi phạm
                   </p>
                 </div>
@@ -1471,10 +1471,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
             {!reports?.vehicleMismatchReports || reports.vehicleMismatchReports.length === 0 ? (
               <div className="p-6 rounded-xl bg-slate-50/60 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 text-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
-                <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
+                <p className="type-body text-slate-600 dark:text-slate-300">
                   Tất cả chuyến xe đều tuân thủ cam kết văn minh, không nhồi nhét, không sang xe!
                 </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="type-footnote text-slate-400 mt-0.5">
                   Không có phản ánh nào về vi phạm an toàn hay nhồi nhét khách.
                 </p>
               </div>
@@ -1493,46 +1493,46 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                         <div className="space-y-1.5 min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap text-xs">
-                            <span className="font-mono font-bold text-slate-900 dark:text-white">
+                          <div className="type-body flex items-center gap-2 flex-wrap">
+                            <span className="type-body-strong font-mono text-slate-900 dark:text-white">
                               {report.bookingId}
                             </span>
-                            <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+                            <span className="type-badge px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
                               {report.mismatchTitle}
                             </span>
                             {report.actualPlate && (
-                              <span className="font-mono font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300/60 text-[10.5px]">
+                              <span className="type-badge px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300/60">
                                 Biển thực tế: {report.actualPlate}
                               </span>
                             )}
-                            <span className="text-[10.5px] text-slate-400">
+                            <span className="type-footnote text-slate-400">
                               {report.reportedAt ? new Date(report.reportedAt).toLocaleString('vi-VN') : ''}
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                          <div className="type-body grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                             <div>
                               <span className="text-slate-400">Chủ xe: </span>
-                              <span className="font-bold text-slate-800 dark:text-slate-200">{report.driverName}</span>
-                              <span className="font-mono text-slate-500 ml-1">({report.driverPhone})</span>
+                              <span className="type-body-strong text-slate-800 dark:text-slate-200">{report.driverName}</span>
+                              <span className="type-body text-slate-500 ml-1">({report.driverPhone})</span>
                             </div>
                             <div>
                               <span className="text-slate-400">Người báo: </span>
-                              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                              <span className="type-body-strong text-slate-700 dark:text-slate-300">
                                 {report.reporterName}
                               </span>
-                              <span className="font-mono text-slate-500 ml-1">({report.reporterPhone})</span>
+                              <span className="type-body text-slate-500 ml-1">({report.reporterPhone})</span>
                             </div>
                           </div>
 
                           {report.passengerNote && (
-                            <p className="text-xs text-rose-900 dark:text-rose-200 italic p-2 rounded-xl bg-rose-100/60 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/40 mt-1">
+                            <p className="type-caption text-rose-900 dark:text-rose-200 italic p-2 rounded-xl bg-rose-100/60 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/40 mt-1">
                               &ldquo;{report.passengerNote}&rdquo;
                             </p>
                           )}
 
                           {report.resolvedAction && (
-                            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium pt-0.5">
+                            <p className="type-footnote text-emerald-700 dark:text-emerald-300 pt-0.5">
                               ✓ {report.resolvedAction} ({new Date(report.resolvedAt).toLocaleTimeString('vi-VN')})
                             </p>
                           )}
@@ -1547,7 +1547,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                                 onClick={() =>
                                   handleConvertCarCategory(report.tripId, report.bookingId, 'convenient_trip')
                                 }
-                                className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                                className="type-button-sm px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5"
                                 title="Đổi loại xe thành Biển vàng"
                               >
                                 <span>⚡ Chuyển thành Biển vàng</span>
@@ -1555,13 +1555,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
                               <button
                                 type="button"
                                 onClick={() => handleResolveMismatch(report.bookingId, 'dismissed', 'Bỏ qua')}
-                                className="px-2.5 py-1 rounded-full text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                                className="type-button-sm px-2.5 py-1 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                               >
                                 Bỏ qua
                               </button>
                             </>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                            <span className="type-badge px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                               ✓ Đã xử lý
                             </span>
                           )}
@@ -1577,24 +1577,24 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Lịch sử báo trễ */}
             <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm space-y-3">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <h3 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                 <Clock className="w-4 h-4 text-amber-500" />
                 <span>Ghi nhận Báo trễ chuyến ({reports?.delayed?.length || 0})</span>
               </h3>
               {!reports?.delayed || reports.delayed.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">Chưa có chuyến xe nào ghi nhận báo trễ.</p>
+                <p className="type-caption text-slate-400 italic">Chưa có chuyến xe nào ghi nhận báo trễ.</p>
               ) : (
                 <div className="space-y-2">
                   {reports.delayed.map((item) => (
                     <div
                       key={item.escrowId}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs"
+                      className="type-body p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5"
                     >
-                      <div className="flex items-center justify-between font-bold">
-                        <span className="font-mono text-primary-600">{item.escrowId}</span>
-                        <span className="text-amber-600 font-mono">Trễ ~{item.delayedMinutes || 15} phút</span>
+                      <div className="type-body-strong flex items-center justify-between">
+                        <span className="type-body font-mono text-primary-600">{item.escrowId}</span>
+                        <span className="type-body text-amber-600">Trễ ~{item.delayedMinutes || 15} phút</span>
                       </div>
-                      <p className="text-slate-600 dark:text-slate-300 mt-1">
+                      <p className="type-body text-slate-600 dark:text-slate-300 mt-1">
                         Lý do: &ldquo;{item.delayNote || 'Kẹt xe dọc tuyến'}&rdquo;
                       </p>
                     </div>
@@ -1605,24 +1605,24 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
             {/* Lịch sử huỷ chuyến văn minh */}
             <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm space-y-3">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <h3 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-500" />
                 <span>Ghi nhận Huỷ chuyến ({reports?.cancelled?.length || 0})</span>
               </h3>
               {!reports?.cancelled || reports.cancelled.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">Chưa có chuyến xe nào bị huỷ.</p>
+                <p className="type-caption text-slate-400 italic">Chưa có chuyến xe nào bị huỷ.</p>
               ) : (
                 <div className="space-y-2">
                   {reports.cancelled.map((item) => (
                     <div
                       key={item.escrowId}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5 text-xs"
+                      className="type-body p-3 rounded-xl bg-slate-50 dark:bg-[#1e1f29] border border-slate-100 dark:border-white/5"
                     >
-                      <div className="flex items-center justify-between font-bold">
-                        <span className="font-mono text-primary-600">{item.escrowId}</span>
+                      <div className="type-body-strong flex items-center justify-between">
+                        <span className="type-body font-mono text-primary-600">{item.escrowId}</span>
                         <span className="text-rose-600">Đã huỷ</span>
                       </div>
-                      <p className="text-slate-600 dark:text-slate-300 mt-1">
+                      <p className="type-body text-slate-600 dark:text-slate-300 mt-1">
                         Lý do: &ldquo;{item.cancelReason || 'Thay đổi kế hoạch gia đình'}&rdquo;
                       </p>
                     </div>
@@ -1640,47 +1640,47 @@ export default function AdminDashboardView({ onExitAdmin }) {
           {/* Telemetry KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="type-label text-[#86868b] uppercase flex items-center gap-1.5">
                 <Cpu className="w-3.5 h-3.5 text-[#0071e3]" />
                 Lượt tương tác trợ lý
               </span>
-              <p className="text-2xl font-bold font-display tabular text-[#1d1d1f] dark:text-white">
+              <p className="type-metric tabular text-[#1d1d1f] dark:text-white">
                 {aiIntelligence?.summary?.totalQueries || 0}
               </p>
-              <p className="text-[11px] text-[#86868b]">Truy vấn ngôn ngữ tự nhiên</p>
+              <p className="type-footnote text-[#86868b]">Truy vấn ngôn ngữ tự nhiên</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="type-label text-[#86868b] uppercase flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                 Tỷ lệ giải quyết mục tiêu
               </span>
-              <p className="text-2xl font-bold font-display tabular text-emerald-600 dark:text-emerald-400">
+              <p className="type-metric tabular text-emerald-600 dark:text-emerald-400">
                 {aiIntelligence?.summary?.resolutionRate ?? 100}%
               </p>
-              <p className="text-[11px] text-[#86868b]">Khớp chuyến thành công</p>
+              <p className="type-footnote text-[#86868b]">Khớp chuyến thành công</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="type-label text-[#86868b] uppercase flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-blue-500" />
                 Độ trễ trung bình
               </span>
-              <p className="text-2xl font-bold font-display tabular text-[#0071e3]">
+              <p className="type-metric tabular text-[#0071e3]">
                 {aiIntelligence?.summary?.avgLatencyMs || 0} ms
               </p>
-              <p className="text-[11px] text-[#86868b]">Thời gian phản hồi hệ thống</p>
+              <p className="type-footnote text-[#86868b]">Thời gian phản hồi hệ thống</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="type-label text-[#86868b] uppercase flex items-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
                 Nhu cầu khát xe (Unmet)
               </span>
-              <p className="text-2xl font-bold font-display tabular text-amber-600 dark:text-amber-400">
+              <p className="type-metric tabular text-amber-600 dark:text-amber-400">
                 {aiIntelligence?.summary?.unmetDemandCount || 0}
               </p>
-              <p className="text-[11px] text-[#86868b]">Lượt khách tìm nhưng thiếu xe</p>
+              <p className="type-footnote text-[#86868b]">Lượt khách tìm nhưng thiếu xe</p>
             </div>
           </div>
 
@@ -1688,22 +1688,22 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <div className="p-5 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                <h3 className="type-heading text-[#1d1d1f] dark:text-white flex items-center gap-2">
                   <ShieldAlert className="w-4 h-4 text-amber-500" />
                   <span>Radar Tuyến Đường Khát Xe (Unmet Demand Discovery)</span>
                 </h3>
-                <p className="text-xs text-[#86868b] mt-0.5">
+                <p className="type-body text-[#86868b] mt-0.5">
                   Phát hiện tự động các tuyến đường hành khách hỏi tìm nhiều nhất nhưng hiện tại chưa có chủ xe
                   nào đăng bài
                 </p>
               </div>
-              <Badge tone="warning" className="text-xs font-semibold">
+              <Badge tone="warning" className="type-badge">
                 Cơ hội mở rộng cộng đồng
               </Badge>
             </div>
 
             {!aiIntelligence?.unmetDemandRoutes || aiIntelligence.unmetDemandRoutes.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-xs text-[#86868b]">
+              <div className="type-body p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-[#86868b]">
                 Hiện tại tất cả các yêu cầu tìm xe đều được đáp ứng hoặc có chuyến xe chạy ngang thuận tiện.
               </div>
             ) : (
@@ -1715,17 +1715,17 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center">
+                        <span className="type-badge w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center">
                           {idx + 1}
                         </span>
-                        <p className="text-sm font-bold text-[#1d1d1f] dark:text-white">{routeItem.route}</p>
+                        <p className="type-body-strong text-[#1d1d1f] dark:text-white">{routeItem.route}</p>
                       </div>
-                      <p className="text-xs text-[#86868b]">
+                      <p className="type-body text-[#86868b]">
                         Gợi ý: Đăng bài thông báo vào nhóm Zalo địa phương để kêu gọi thêm chủ xe tuyến này.
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300/60 tabular">
+                      <span className="type-badge px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300/60 tabular">
                         {routeItem.count} lượt tìm
                       </span>
                     </div>
@@ -1739,11 +1739,11 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <div className="p-5 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                <h3 className="type-heading text-[#1d1d1f] dark:text-white flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[#0071e3]" />
                   <span>Nhật ký luồng xử lý tự động (Execution Log)</span>
                 </h3>
-                <p className="text-xs text-[#86868b] mt-0.5">
+                <p className="type-body text-[#86868b] mt-0.5">
                   Nhật ký xử lý đa bước tự động [Lập kế hoạch ➔ Rà soát chuyến ➔ Kiểm tra định mức ➔ Đề xuất]
                 </p>
               </div>
@@ -1754,19 +1754,19 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     setClearTarget('ai');
                     setShowClearDataModal(true);
                   }}
-                  className="px-3 py-1 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer transition-colors inline-flex items-center gap-1.5"
+                  className="type-button-sm px-3 py-1 rounded-full text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer transition-colors inline-flex items-center gap-1.5"
                 >
                   <Trash2 className="w-3 h-3" />
                   <span>Dọn Nhật ký</span>
                 </button>
-                <span className="text-xs text-[#86868b] tabular font-medium">
+                <span className="type-caption text-[#86868b] tabular">
                   {aiIntelligence?.recentTrajectories?.length || 0} lượt gần nhất
                 </span>
               </div>
             </div>
 
             {!aiIntelligence?.recentTrajectories || aiIntelligence.recentTrajectories.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-xs text-[#86868b]">
+              <div className="type-body p-6 rounded-2xl bg-[#f5f5f7] border border-black/[0.04] text-center text-[#86868b]">
                 Chưa có dữ liệu quỹ đạo nào được lưu. Hãy thử trò chuyện với Trợ lý CarMate để xem luồng xử lý
                 xuất hiện tại đây.
               </div>
@@ -1777,29 +1777,29 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-bold text-[#0071e3]">{traj.id}</span>
+                          <span className="type-caption font-mono text-[#0071e3]">{traj.id}</span>
                           {traj.requestedRoute && (
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-900 border border-blue-200">
+                            <span className="type-badge px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
                               {traj.requestedRoute}
                             </span>
                           )}
                           {traj.unmetDemand ? (
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                            <span className="type-badge px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
                               Khát xe (0 chuyến)
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-900 border border-emerald-200">
+                            <span className="type-badge px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
                               {traj.suggestionsCount} xe phù hợp
                             </span>
                           )}
                         </div>
-                        <p className="text-xs font-semibold text-[#1d1d1f] dark:text-white pt-1">
+                        <p className="type-caption text-[#1d1d1f] dark:text-white pt-1">
                           &ldquo;{traj.userGoal}&rdquo;
                         </p>
                       </div>
 
-                      <div className="text-right text-[11px] text-[#86868b] tabular shrink-0">
-                        <span className="font-bold text-[#1d1d1f]">{traj.executionTimeMs}ms</span>
+                      <div className="type-footnote text-right text-[#86868b] tabular shrink-0">
+                        <span className="type-body-strong text-[#1d1d1f]">{traj.executionTimeMs}ms</span>
                         <span className="mx-1">·</span>
                         <span>
                           {new Date(traj.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
@@ -1810,10 +1810,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     {/* Chuỗi reasoning steps */}
                     {Array.isArray(traj.reasoningSteps) && traj.reasoningSteps.length > 0 && (
                       <div className="p-3 rounded-xl bg-white dark:bg-[#12131a] border border-black/[0.04] space-y-1.5">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                        <span className="type-label uppercase text-[#86868b] block">
                           Chuỗi lập luận ({traj.reasoningSteps.length} bước):
                         </span>
-                        <div className="space-y-1 font-mono text-[11px]">
+                        <div className="type-footnote space-y-1">
                           {traj.reasoningSteps.map((step, sIdx) => {
                             const isVerify = step.startsWith('[VERIFY]');
                             const isReflect = step.startsWith('[REFLECT]');
@@ -1821,14 +1821,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
                             return (
                               <div
                                 key={sIdx}
-                                className={`p-1.5 rounded-lg leading-relaxed ${
+                                className={`type-body p-1.5 rounded-lg ${
                                   isVerify
-                                    ? 'bg-blue-50/80 text-blue-900 border border-blue-200/60'
+                                    ? "bg-blue-50/80 text-blue-900 border border-blue-200/60"
                                     : isReflect
-                                      ? 'bg-amber-50/80 text-amber-900 border border-amber-200/60'
+                                      ? "bg-amber-50/80 text-amber-900 border border-amber-200/60"
                                       : isReplan
-                                        ? 'bg-emerald-50/80 text-emerald-900 border border-emerald-200/60'
-                                        : 'text-[#515154] bg-black/[0.02]'
+                                        ? "bg-emerald-50/80 text-emerald-900 border border-emerald-200/60"
+                                        : "text-[#515154] bg-black/[0.02]"
                                 }`}
                               >
                                 {step}
@@ -1852,27 +1852,27 @@ export default function AdminDashboardView({ onExitAdmin }) {
           {/* 4 Thẻ KPI Phễu */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Tổng Sự Kiện Đã Lưu</p>
-              <p className="text-2xl sm:text-3xl font-mono font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+              <p className="type-label uppercase text-slate-400">Tổng Sự Kiện Đã Lưu</p>
+              <p className="type-metric text-indigo-600 dark:text-indigo-400 tabular-nums">
                 {analyticsSummary?.totalEvents || 0}
               </p>
-              <p className="text-[10.5px] text-slate-400">SQLite In-Memory + Persistent Disk (0đ)</p>
+              <p className="type-footnote text-slate-400">SQLite In-Memory + Persistent Disk (0đ)</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Lượt Xem Chuyến Đi</p>
-              <p className="text-2xl sm:text-3xl font-mono font-black text-blue-600 dark:text-blue-400 tabular-nums">
+              <p className="type-label uppercase text-slate-400">Lượt Xem Chuyến Đi</p>
+              <p className="type-metric text-blue-600 dark:text-blue-400 tabular-nums">
                 {analyticsSummary?.funnel?.view_trip || 0}
               </p>
-              <p className="text-[10.5px] text-slate-400">Khách xem chi tiết bài đăng ghép xe</p>
+              <p className="type-footnote text-slate-400">Khách xem chi tiết bài đăng ghép xe</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Lượt Chốt Qua Zalo</p>
-              <p className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+              <p className="type-label uppercase text-slate-400">Lượt Chốt Qua Zalo</p>
+              <p className="type-metric text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {analyticsSummary?.funnel?.open_zalo ?? analyticsSummary?.funnel?.open_zalo_chat ?? 0}
               </p>
-              <p className="text-[10.5px] text-emerald-600 dark:text-emerald-400 font-semibold">
+              <p className="type-footnote text-emerald-600 dark:text-emerald-400">
                 Tỷ lệ mở Zalo:{' '}
                 {(() => {
                   const zaloCount =
@@ -1885,11 +1885,11 @@ export default function AdminDashboardView({ onExitAdmin }) {
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
-              <p className="text-[11px] font-mono font-bold uppercase text-slate-400">Chủ Xe Đã Nhận Đón</p>
-              <p className="text-2xl sm:text-3xl font-mono font-black text-teal-600 dark:text-teal-400 tabular-nums">
+              <p className="type-label uppercase text-slate-400">Chủ Xe Đã Nhận Đón</p>
+              <p className="type-metric text-teal-600 dark:text-teal-400 tabular-nums">
                 {analyticsSummary?.funnel?.driver_confirm || 0}
               </p>
-              <p className="text-[10.5px] text-slate-400">Xác nhận qua Magic Link</p>
+              <p className="type-footnote text-slate-400">Xác nhận qua Magic Link</p>
             </div>
           </div>
 
@@ -1897,11 +1897,11 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-black/[0.06]">
               <div>
-                <h3 className="font-bold text-base text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                <h3 className="type-heading text-[#1d1d1f] dark:text-white flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-indigo-500" />
                   <span>Phễu Chuyển Đổi Hành Khách (6 Tầng Vận Hành)</span>
                 </h3>
-                <p className="text-xs text-[#86868b] mt-0.5">
+                <p className="type-body text-[#86868b] mt-0.5">
                   Đo lường từng điểm rơi (drop-off) từ lúc khách vào web đến khi chủ xe bấm nhận đón trên Zalo
                 </p>
               </div>
@@ -1912,12 +1912,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     setClearTarget('analytics');
                     setShowClearDataModal(true);
                   }}
-                  className="px-3 py-1 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer transition-colors inline-flex items-center gap-1.5"
+                  className="type-button-sm px-3 py-1 rounded-full text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer transition-colors inline-flex items-center gap-1.5"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Dọn Phễu & Sự kiện</span>
                 </button>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+                <span className="type-badge px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
                   Tự động lưu SQLite 0đ
                 </span>
               </div>
@@ -1980,23 +1980,23 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       >
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white text-xs font-bold flex items-center justify-center border border-black/[0.08] dark:border-white/[0.1] shadow-xs">
+                            <span className="type-badge w-6 h-6 rounded-full bg-white dark:bg-slate-800 text-[#1d1d1f] dark:text-white flex items-center justify-center border border-black/[0.08] dark:border-white/[0.1] shadow-xs">
                               {sIdx + 1}
                             </span>
                             <div>
-                              <p className="text-xs font-bold text-[#1d1d1f] dark:text-white">{stg.name}</p>
-                              <p className="text-[11px] text-[#86868b]">{stg.desc}</p>
+                              <p className="type-caption text-[#1d1d1f] dark:text-white">{stg.name}</p>
+                              <p className="type-footnote text-[#86868b]">{stg.desc}</p>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-3 shrink-0">
                             <div className="text-right">
-                              <span className="text-sm sm:text-base font-mono font-bold text-[#1d1d1f] dark:text-white tabular">
+                              <span className="type-body-strong text-[#1d1d1f] dark:text-white tabular">
                                 {stg.count}
                               </span>
-                              <span className="text-xs text-[#86868b] ml-1">lượt</span>
+                              <span className="type-caption text-[#86868b] ml-1">lượt</span>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-white dark:bg-slate-800 border border-black/[0.08] dark:border-white/[0.1] text-indigo-600 dark:text-indigo-400 min-w-[52px] text-center">
+                            <span className="type-badge px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 border border-black/[0.08] dark:border-white/[0.1] text-indigo-600 dark:text-indigo-400 min-w-[52px] text-center">
                               {pctOfBase}%
                             </span>
                           </div>
@@ -2012,9 +2012,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
                         {sIdx > 0 && prevCount > 0 && (
                           <div className="text-right">
-                            <span className="text-[10.5px] text-[#86868b]">
+                            <span className="type-footnote text-[#86868b]">
                               Chuyển đổi từ bước trước:{' '}
-                              <strong className="text-[#1d1d1f] dark:text-white">{stepConversion}%</strong>
+                              <strong className="type-body-strong text-[#1d1d1f] dark:text-white">{stepConversion}%</strong>
                             </span>
                           </div>
                         )}
@@ -2030,7 +2030,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Top Tuyến Đường Tìm Kiếm */}
             <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
-              <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
+              <h3 className="type-heading text-[#1d1d1f] dark:text-white flex items-center gap-2">
                 <Compass className="w-4 h-4 text-blue-500" />
                 <span>Top Tuyến Đường Tìm Kiếm Nhiều Nhất</span>
               </h3>
@@ -2039,7 +2039,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 const routesList = analyticsSummary?.topRoutes || analyticsSummary?.topSearchedRoutes || [];
                 if (!routesList || routesList.length === 0) {
                   return (
-                    <div className="p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-xs text-[#86868b]">
+                    <div className="type-body p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-[#86868b]">
                       Chưa có dữ liệu tìm kiếm tuyến. Khi khách gõ tìm xe trên trang chủ, dữ liệu sẽ tự động tổng hợp
                       tại đây.
                     </div>
@@ -2053,12 +2053,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         className="p-3 rounded-xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-3"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[11px] font-bold flex items-center justify-center">
+                          <span className="type-badge w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center">
                             {rIdx + 1}
                           </span>
-                          <span className="text-xs font-bold text-[#1d1d1f] dark:text-white">{rt.route}</span>
+                          <span className="type-caption text-[#1d1d1f] dark:text-white">{rt.route}</span>
                         </div>
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+                        <span className="type-badge px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
                           {rt.count} lượt
                         </span>
                       </div>
@@ -2071,17 +2071,17 @@ export default function AdminDashboardView({ onExitAdmin }) {
             {/* Dòng Sự Kiện Thời Gian Thực (Live Event Stream) */}
             <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                <h3 className="type-heading text-[#1d1d1f] dark:text-white flex items-center gap-2">
                   <Activity className="w-4 h-4 text-emerald-500" />
                   <span>Dòng Sự Kiện Trực Tiếp (Live Event Log)</span>
                 </h3>
-                <span className="text-xs text-[#86868b]">
+                <span className="type-caption text-[#86868b]">
                   {analyticsSummary?.recentEvents?.length || 0} sự kiện gần nhất
                 </span>
               </div>
 
               {!analyticsSummary?.recentEvents || analyticsSummary.recentEvents.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-xs text-[#86868b]">
+                <div className="type-body p-6 rounded-2xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] text-center text-[#86868b]">
                   Chưa có sự kiện nào được ghi nhận.
                 </div>
               ) : (
@@ -2094,28 +2094,28 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     return (
                       <div
                         key={ev.id}
-                        className="p-2.5 rounded-xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] text-xs space-y-1"
+                        className="type-body p-2.5 rounded-xl bg-[#f5f5f7] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] space-y-1"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span
-                            className={`px-2 py-0.5 rounded-md font-mono text-[10.5px] font-bold ${
+                            className={`type-badge px-2 py-0.5 rounded-md ${
                               isError
-                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
                                 : isBooking
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                   : isSearch
-                                    ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
-                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                    ? "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300"
+                                    : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                             }`}
                           >
                             {ev.event_name}
                           </span>
-                          <span className="text-[10.5px] text-slate-400 font-mono">
+                          <span className="type-footnote text-slate-400">
                             {new Date(ev.created_at).toLocaleTimeString('vi-VN')}
                           </span>
                         </div>
                         {ev.properties && (
-                          <p className="text-[11px] text-[#86868b] font-mono truncate">
+                          <p className="type-footnote text-[#86868b] truncate">
                             {JSON.stringify(ev.properties)}
                           </p>
                         )}
@@ -2135,14 +2135,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
           {/* Header & Quick Action Bar */}
           <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+              <div className="type-body inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>Quy Chuẩn Tín Nhiệm Động (Zero-Code Policy)</span>
               </div>
-              <h3 className="text-xl font-bold font-display text-slate-900 dark:text-white">
+              <h3 className="type-title text-slate-900 dark:text-white">
                 Chính Sách Điểm Tín Nhiệm & Quy Tắc Sàn
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+              <p className="type-body text-slate-500 dark:text-slate-400 max-w-2xl">
                 Điều chỉnh trọng số, bật/tắt tiêu chí, khóa trần hoặc thêm tiêu chí mới trực tiếp trên sàn mà không cần sửa code. Mọi thay đổi áp dụng tức thì cho cả Chủ xe và Người đi cùng.
               </p>
             </div>
@@ -2152,7 +2152,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="ghost"
                 size="sm"
                 onClick={handleResetRules}
-                className="h-10 px-3.5 font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
+                className="type-button-sm h-10 px-3.5 text-slate-600 dark:text-slate-300 cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4 mr-1.5" />
                 Khôi phục mặc định
@@ -2161,7 +2161,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAddRuleModal(true)}
-                className="h-10 px-3.5 font-bold cursor-pointer"
+                className="type-button-sm h-10 px-3.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4 mr-1.5" />
                 Thêm tiêu chí mới
@@ -2171,7 +2171,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 size="sm"
                 onClick={handleSaveRules}
                 loading={isSavingRules}
-                className="h-10 px-4 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
+                className="type-button-sm h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
               >
                 <Save className="w-4 h-4 mr-1.5" />
                 Lưu thay đổi chính sách
@@ -2182,42 +2182,42 @@ export default function AdminDashboardView({ onExitAdmin }) {
           {/* Quick Metrics */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm">
-              <span className="text-[11px] font-mono uppercase font-bold text-slate-400">Tiêu chí kích hoạt</span>
-              <p className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+              <span className="type-label uppercase text-slate-400">Tiêu chí kích hoạt</span>
+              <p className="type-metric text-emerald-600 dark:text-emerald-400 mt-1">
                 {trustRules.filter((r) => r.enabled).length}
-                <span className="text-sm font-normal text-slate-400"> / {trustRules.length}</span>
+                <span className="type-body text-slate-400"> / {trustRules.length}</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Đang vận hành toàn sàn</p>
+              <p className="type-footnote text-slate-500 mt-0.5">Đang vận hành toàn sàn</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm">
-              <span className="text-[11px] font-mono uppercase font-bold text-slate-400">Điểm bình quân sàn</span>
-              <p className="text-2xl font-bold font-mono text-sky-600 dark:text-sky-400 mt-1">
+              <span className="type-label uppercase text-slate-400">Điểm bình quân sàn</span>
+              <p className="type-metric text-sky-600 dark:text-sky-400 mt-1">
                 {users.length > 0
                   ? Math.round(users.reduce((acc, u) => acc + (u.trustScore || 50), 0) / users.length)
                   : 75}
-                <span className="text-sm font-normal text-slate-400"> / 100</span>
+                <span className="type-body text-slate-400"> / 100</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Dựa trên {users.length} thành viên</p>
+              <p className="type-footnote text-slate-500 mt-0.5">Dựa trên {users.length} thành viên</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm">
-              <span className="text-[11px] font-mono uppercase font-bold text-slate-400">Tỷ lệ có Avatar</span>
-              <p className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
+              <span className="type-label uppercase text-slate-400">Tỷ lệ có Avatar</span>
+              <p className="type-metric text-amber-600 dark:text-amber-400 mt-1">
                 {users.length > 0
                   ? Math.round((users.filter((u) => Boolean(u.avatar)).length / users.length) * 100)
                   : 0}%
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Tránh tài khoản ẩn danh</p>
+              <p className="type-footnote text-slate-500 mt-0.5">Tránh tài khoản ẩn danh</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm">
-              <span className="text-[11px] font-mono uppercase font-bold text-slate-400">Trần thiếu Avatar</span>
-              <p className="text-2xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-1">
+              <span className="type-label uppercase text-slate-400">Trần thiếu Avatar</span>
+              <p className="type-metric text-rose-600 dark:text-rose-400 mt-1">
                 {trustRules.find((r) => r.id === 'no_avatar_cap')?.points || 65}
-                <span className="text-sm font-normal text-slate-400"> điểm</span>
+                <span className="type-body text-slate-400"> điểm</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Quy chuẩn hệ thống</p>
+              <p className="type-footnote text-slate-500 mt-0.5">Quy chuẩn hệ thống</p>
             </div>
           </div>
 
@@ -2225,12 +2225,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <div className="rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Danh Sách Tiêu Chí & Trọng Số</h4>
-                <p className="text-[11.5px] text-slate-500">
+                <h4 className="type-heading text-slate-900 dark:text-white">Danh Sách Tiêu Chí & Trọng Số</h4>
+                <p className="type-body text-slate-500">
                   Kéo thanh trượt hoặc chỉnh trực tiếp để thay đổi số điểm. Bấm công tắc để tạm dừng áp dụng.
                 </p>
               </div>
-              <span className="text-xs font-mono text-slate-400">{trustRules.length} tiêu chí</span>
+              <span className="type-caption text-slate-400">{trustRules.length} tiêu chí</span>
             </div>
 
             <div className="divide-y divide-slate-100 dark:divide-white/[0.06]">
@@ -2250,28 +2250,28 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     {/* Left: Info */}
                     <div className="space-y-1 max-w-lg">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        <span className="type-caption text-slate-900 dark:text-white">
                           {rule.title}
                         </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold">
+                        <span className="type-badge font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
                           {rule.id}
                         </span>
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            rule.role === 'driver'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                              : rule.role === 'passenger'
-                                ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
-                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          className={`type-badge  px-2 py-0.5 rounded-full ${
+                            rule.role === "driver"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                              : rule.role === "passenger"
+                                ? "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300"
+                                : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                           }`}
                         >
                           {rule.role === 'driver' ? 'Chủ xe' : rule.role === 'passenger' ? 'Người đi cùng' : 'Cả hai'}
                         </span>
                         {rule.isLocked && (
-                          <span className="text-[10px] text-slate-400 font-semibold">(Cốt lõi)</span>
+                          <span className="type-footnote text-slate-400">(Cốt lõi)</span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      <p className="type-caption text-slate-500 dark:text-slate-400">
                         {rule.description}
                       </p>
                     </div>
@@ -2283,42 +2283,42 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         {isAccumulate ? (
                           <div className="text-right space-y-1">
                             <div className="flex items-center gap-1.5 justify-end">
-                              <span className="text-xs text-slate-400">Mỗi chuyến:</span>
+                              <span className="type-caption text-slate-400">Mỗi chuyến:</span>
                               <input
                                 type="number"
                                 min={1}
                                 max={10}
                                 value={rule.points}
                                 onChange={(e) => handleRulePointChange(rule.id, e.target.value)}
-                                className="w-14 h-8 px-2 text-center text-xs font-mono font-bold rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                                className="type-input w-14 h-8 px-2 text-center rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                               />
-                              <span className="text-xs font-bold text-emerald-600">đ</span>
+                              <span className="type-caption text-emerald-600">đ</span>
                             </div>
                             <div className="flex items-center gap-1.5 justify-end">
-                              <span className="text-[11px] text-slate-400">Trần cộng:</span>
+                              <span className="type-footnote text-slate-400">Trần cộng:</span>
                               <input
                                 type="number"
                                 min={5}
                                 max={30}
                                 value={rule.maxAccumulated || 15}
                                 onChange={(e) => handleRuleAccumulateCapChange(rule.id, e.target.value)}
-                                className="w-14 h-7 px-2 text-center text-xs font-mono font-bold rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                                className="type-input w-14 h-7 px-2 text-center rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                               />
-                              <span className="text-[11px] font-bold text-emerald-600">đ</span>
+                              <span className="type-footnote text-emerald-600">đ</span>
                             </div>
                           </div>
                         ) : isCap ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-slate-400">Trần tối đa:</span>
+                            <span className="type-caption text-slate-400">Trần tối đa:</span>
                             <input
                               type="number"
                               min={40}
                               max={90}
                               value={rule.points}
                               onChange={(e) => handleRulePointChange(rule.id, e.target.value)}
-                              className="w-16 h-8 px-2 text-center text-xs font-mono font-bold rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400"
+                              className="type-input w-16 h-8 px-2 text-center rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400"
                             />
-                            <span className="text-xs font-bold text-rose-600">đ</span>
+                            <span className="type-caption text-rose-600">đ</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -2336,15 +2336,15 @@ export default function AdminDashboardView({ onExitAdmin }) {
                                 type="number"
                                 value={rule.points}
                                 onChange={(e) => handleRulePointChange(rule.id, e.target.value)}
-                                className={`w-14 h-8 px-1 text-center text-xs font-mono font-bold rounded-lg border ${
+                                className={`type-input w-14 h-8 px-1 text-center rounded-lg border ${
                                   isSub
-                                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400'
+                                    ? "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400"
                                     : isBase
-                                      ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white'
-                                      : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                                      ? "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                                      : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400"
                                 }`}
                               />
-                              <span className="text-xs font-bold text-slate-500">đ</span>
+                              <span className="type-caption text-slate-500">đ</span>
                             </div>
                           </div>
                         )}
@@ -2354,14 +2354,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       <button
                         type="button"
                         onClick={() => handleRuleToggle(rule.id)}
-                        className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                          rule.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                        className={`type-button w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                          rule.enabled ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
                         }`}
                         title={rule.enabled ? 'Đang kích hoạt (Bấm để tắt)' : 'Đang tắt (Bấm để bật)'}
                       >
                         <span
-                          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${
-                            rule.enabled ? 'left-5.5' : 'left-0.5'
+                          className={`type-badge absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${
+                            rule.enabled ? "left-5.5" : "left-0.5"
                           }`}
                         />
                       </button>
@@ -2371,7 +2371,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                         <button
                           type="button"
                           onClick={() => handleRuleDelete(rule.id)}
-                          className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                          className="type-button w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
                           title="Xóa tiêu chí tùy biến này"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -2392,14 +2392,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
           {/* Header & Quick Action Bar */}
           <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold">
+              <div className="type-body inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 <Fuel className="w-3.5 h-3.5" />
                 <span>Bất Biến Chi Phí Xăng Dầu (MIT Invariants)</span>
               </div>
-              <h3 className="text-xl font-bold font-display text-slate-900 dark:text-white">
+              <h3 className="type-title text-slate-900 dark:text-white">
                 Biểu Phí Xăng Dầu & Tham Chiếu Lăn Bánh
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+              <p className="type-body text-slate-500 dark:text-slate-400 max-w-2xl">
                 Quản trị viên cập nhật mốc giá xăng RON 95-III sau mỗi kỳ điều hành giá của Liên Bộ Công Thương - Tài chính. Giá mới tự động lưu vào hệ thống và áp dụng tức thì cho mọi thuật toán định giá chia sẻ chi phí, Nash Equilibrium và kiểm tra trần giá.
               </p>
             </div>
@@ -2410,7 +2410,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 size="sm"
                 onClick={handleResetFuelPrice}
                 disabled={isSavingFuel}
-                className="h-10 px-3.5 font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
+                className="type-button-sm h-10 px-3.5 text-slate-600 dark:text-slate-300 cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4 mr-1.5" />
                 Khôi phục chuẩn ({formatVND(DEFAULT_DAILY_FUEL_PRICE)})
@@ -2420,7 +2420,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 size="sm"
                 onClick={handleSaveFuelPrice}
                 disabled={isSavingFuel}
-                className="h-10 px-4 font-bold shadow-md cursor-pointer bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white"
+                className="type-button-sm h-10 px-4 shadow-md cursor-pointer bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white"
               >
                 <Save className="w-4 h-4 mr-1.5" />
                 {isSavingFuel ? 'Đang lưu...' : 'Lưu & Áp Dụng Ngay'}
@@ -2432,16 +2432,16 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Giá RON 95-III Hệ Thống</span>
-                <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <span className="type-caption text-slate-500">Giá RON 95-III Hệ Thống</span>
+                <span className="type-badge p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
                   <Fuel className="w-4 h-4" />
                 </span>
               </div>
-              <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+              <div className="type-metric text-slate-900 dark:text-white">
                 {fuelConfig?.ron95Price ? formatVND(fuelConfig.ron95Price) : `${formatVND(DEFAULT_DAILY_FUEL_PRICE)}`}
               </div>
-              <div className="flex items-center gap-1.5 text-[11px]">
-                <span className={`px-2 py-0.5 rounded-full font-bold ${fuelConfig?.isDefault ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'}`}>
+              <div className="type-footnote flex items-center gap-1.5">
+                <span className={`type-badge px-2 py-0.5 rounded-full ${fuelConfig?.isDefault ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"}`}>
                   {fuelConfig?.isDefault ? 'Mặc định tham chiếu' : 'Đã tinh chỉnh'}
                 </span>
                 <span className="text-slate-400 truncate">
@@ -2452,45 +2452,45 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
             <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Tiêu Hao Tiêu Chuẩn</span>
-                <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <span className="type-caption text-slate-500">Tiêu Hao Tiêu Chuẩn</span>
+                <span className="type-badge p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
                   <Car className="w-4 h-4" />
                 </span>
               </div>
-              <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
-                8.2 <span className="text-sm font-normal text-slate-400">L/100km</span>
+              <div className="type-metric text-slate-900 dark:text-white">
+                8.2 <span className="type-body text-slate-400">L/100km</span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="type-footnote text-slate-500 dark:text-slate-400">
                 Đo đạc thực tế đường hỗn hợp (Sedan/Crossover 5 - 7 chỗ).
               </p>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Khấu Hao Hao Mòn</span>
-                <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <span className="type-caption text-slate-500">Khấu Hao Hao Mòn</span>
+                <span className="type-badge p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                   <TrendingUp className="w-4 h-4" />
                 </span>
               </div>
-              <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
-                +10% <span className="text-sm font-normal text-slate-400">/ chi phí xăng</span>
+              <div className="type-metric text-slate-900 dark:text-white">
+                +10% <span className="type-body text-slate-400">/ chi phí xăng</span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="type-footnote text-slate-500 dark:text-slate-400">
                 Lốp xe, dầu nhớt, rửa xe, hao mòn cơ khí định kỳ.
               </p>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Biên Độ An Toàn (Invariant)</span>
-                <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <span className="type-caption text-slate-500">Biên Độ An Toàn (Invariant)</span>
+                <span className="type-badge p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   <ShieldCheck className="w-4 h-4" />
                 </span>
               </div>
-              <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
-                15k - 45k <span className="text-sm font-normal text-slate-400">đ/Lít</span>
+              <div className="type-metric text-slate-900 dark:text-white">
+                15k - 45k <span className="type-body text-slate-400">đ/Lít</span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="type-footnote text-slate-500 dark:text-slate-400">
                 Chặn cứng trong mã nguồn để triệt tiêu lỗi nhập liệu phi lý.
               </p>
             </div>
@@ -2502,18 +2502,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <div className="lg:col-span-5 space-y-5">
               <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-5">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <h4 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-amber-500" />
                     <span>Điều Chỉnh Mức Giá Mới</span>
                   </h4>
-                  <span className="text-[11px] font-mono font-semibold text-slate-400">
+                  <span className="type-footnote text-slate-400">
                     Đơn vị: VNĐ / Lít
                   </span>
                 </div>
 
                 {/* Input with large font */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  <label className="type-label text-slate-600 dark:text-slate-400">
                     Giá xăng RON 95-III áp dụng:
                   </label>
                   <div className="relative">
@@ -2524,15 +2524,15 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       max="45000"
                       value={fuelPriceInput}
                       onChange={(e) => setFuelPriceInput(Number(e.target.value) || 0)}
-                      className="w-full h-14 pl-4 pr-16 rounded-2xl bg-slate-50 dark:bg-[#151c2e] border border-slate-300/80 dark:border-white/10 text-2xl font-black font-mono text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/30"
+                      className="type-input w-full h-14 pl-4 pr-16 rounded-2xl bg-slate-50 dark:bg-[#151c2e] border border-slate-300/80 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/30"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 font-mono pointer-events-none">
+                    <span className="type-body-strong absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                       đ/Lít
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="type-body flex items-center justify-between">
                     <span className="text-slate-500">Hiển thị định dạng:</span>
-                    <span className="font-mono font-black text-amber-600 dark:text-amber-400">
+                    <span className="type-body-strong text-amber-600 dark:text-amber-400">
                       {formatVND(fuelPriceInput || 0)}
                     </span>
                   </div>
@@ -2540,7 +2540,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
                 {/* Step delta adjustment buttons */}
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  <span className="type-caption text-slate-600 dark:text-slate-400">
                     Tăng / Giảm nhanh:
                   </span>
                   <div className="grid grid-cols-6 gap-1.5">
@@ -2559,10 +2559,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                           const nextVal = Math.max(15000, Math.min(45000, Number(fuelPriceInput || 24120) + step.delta));
                           setFuelPriceInput(nextVal);
                         }}
-                        className={`h-8 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer border ${
+                        className={`type-button-sm h-8 rounded-lg transition-all cursor-pointer border ${
                           step.delta > 0
-                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800/40'
-                            : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800/40'
+                            ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800/40"
+                            : "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800/40"
                         }`}
                       >
                         {step.label}
@@ -2573,7 +2573,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
                 {/* Preset Chips (Stanford Ergonomics) */}
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  <span className="type-caption text-slate-600 dark:text-slate-400">
                     Chọn nhanh các mốc tham chiếu phổ biến:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -2584,10 +2584,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                           key={preset}
                           type="button"
                           onClick={() => setFuelPriceInput(preset)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
+                          className={`type-button-sm px-3 py-1.5 rounded-full transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-amber-500 text-white shadow-xs'
-                              : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                              ? "bg-amber-500 text-white shadow-xs"
+                              : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
                           }`}
                         >
                           {preset.toLocaleString('vi-VN')}đ
@@ -2600,7 +2600,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
                 {/* Ghi chú kỳ điều hành */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  <label className="type-label text-slate-600 dark:text-slate-400">
                     Ghi chú / Nguồn văn bản (Tùy chọn):
                   </label>
                   <input
@@ -2608,10 +2608,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     value={fuelNoteInput}
                     onChange={(e) => setFuelNoteInput(e.target.value)}
                     placeholder="VD: Kỳ điều hành 15h00 Thứ Năm 10/09/2026 - Petrolimex / Bộ Công Thương"
-                    className="w-full h-10 px-3.5 rounded-xl bg-slate-50 dark:bg-[#151c2e] border border-slate-300/80 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/30"
+                    className="type-input w-full h-10 px-3.5 rounded-xl bg-slate-50 dark:bg-[#151c2e] border border-slate-300/80 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/30"
                   />
                   {fuelConfig?.note && (
-                    <p className="text-[11px] text-slate-400 italic">
+                    <p className="type-footnote text-slate-400 italic">
                       Ghi chú hiện tại: &ldquo;{fuelConfig.note}&rdquo;
                     </p>
                   )}
@@ -2624,7 +2624,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     size="md"
                     onClick={handleSaveFuelPrice}
                     disabled={isSavingFuel}
-                    className="w-full sm:flex-1 h-11 font-bold cursor-pointer bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white shadow-md"
+                    className="type-button w-full sm:flex-1 h-11 cursor-pointer bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white shadow-md"
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {isSavingFuel ? 'Đang lưu...' : 'Lưu Thay Đổi'}
@@ -2634,7 +2634,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     size="md"
                     onClick={handleResetFuelPrice}
                     disabled={isSavingFuel}
-                    className="w-full sm:w-auto h-11 px-4 text-xs font-semibold cursor-pointer"
+                    className="type-button w-full sm:w-auto h-11 px-4 cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                     Đặt lại
@@ -2648,37 +2648,37 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <h4 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-indigo-500" />
                       <span>Mô Phỏng Trực Tiếp (Live Dynamic Tariff Invariants)</span>
                     </h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="type-footnote text-slate-500 dark:text-slate-400 mt-0.5">
                       Xem trước tác động cước phí chia sẻ tức thì khi đổi giá xăng sang{' '}
-                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                      <span className="type-body-strong text-amber-600 dark:text-amber-400">
                         {formatVND(fuelPriceInput || DEFAULT_DAILY_FUEL_PRICE)}
                       </span>
                     </p>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10.5px] font-mono font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+                  <span className="type-badge px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
                     Nash Equilibrium Model
                   </span>
                 </div>
 
                 {/* Table simulation */}
                 <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-white/10">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 font-mono uppercase text-[10.5px]">
+                  <table className="type-body w-full text-left">
+                    <thead className="type-label bg-slate-50 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 uppercase">
                       <tr>
-                        <th className="py-2.5 px-3">Tuyến / Cự Ly</th>
-                        <th className="py-2.5 px-3">Xăng (Lít) & Phí</th>
-                        <th className="py-2.5 px-3">Vé Cầu Đường (BOT)</th>
-                        <th className="py-2.5 px-3">Tổng Chi Phí</th>
-                        <th className="py-2.5 px-3 font-bold text-slate-900 dark:text-white text-right">
+                        <th className="type-label py-2.5 px-3">Tuyến / Cự Ly</th>
+                        <th className="type-label py-2.5 px-3">Xăng (Lít) & Phí</th>
+                        <th className="type-label py-2.5 px-3">Vé Cầu Đường (BOT)</th>
+                        <th className="type-label py-2.5 px-3">Tổng Chi Phí</th>
+                        <th className="type-label py-2.5 px-3 text-slate-900 dark:text-white text-right">
                           Giá Vé Gợi Ý (P*)
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+                    <tbody className="type-body divide-y divide-slate-100 dark:divide-white/5">
                       {[
                         { name: 'Bình Long ➔ Sài Gòn', dist: 110, corridor: 'Tuyến QL13' },
                         { name: 'Chơn Thành ➔ Sài Gòn', dist: 70, corridor: 'Tuyến QL13' },
@@ -2694,37 +2694,37 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
                         return (
                           <tr key={rIdx} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
-                            <td className="py-3 px-3">
-                              <div className="font-bold text-slate-900 dark:text-white">{route.name}</div>
-                              <div className="text-[11px] text-slate-400 font-mono">{route.dist} km</div>
+                            <td className="type-body py-3 px-3">
+                              <div className="type-body-strong text-slate-900 dark:text-white">{route.name}</div>
+                              <div className="type-footnote text-slate-400">{route.dist} km</div>
                             </td>
-                            <td className="py-3 px-3">
-                              <div className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                            <td className="type-body py-3 px-3">
+                              <div className="type-body-strong text-slate-800 dark:text-slate-200">
                                 {tripCost.fuelLiters || 0} L
                               </div>
-                              <div className="text-[11px] text-slate-400 font-mono">
+                              <div className="type-footnote text-slate-400">
                                 {formatVND(tripCost.fuelCost || 0)}
                               </div>
                             </td>
-                            <td className="py-3 px-3">
-                              <div className="font-mono text-slate-700 dark:text-slate-300">
+                            <td className="type-body py-3 px-3">
+                              <div className="type-body text-slate-700 dark:text-slate-300">
                                 {formatVND(tripCost.botFee || 0)}
                               </div>
-                              <div className="text-[10px] text-slate-400">Trạm QL13</div>
+                              <div className="type-footnote text-slate-400">Trạm QL13</div>
                             </td>
-                            <td className="py-3 px-3">
-                              <div className="font-mono font-bold text-slate-900 dark:text-white">
+                            <td className="type-body py-3 px-3">
+                              <div className="type-body-strong text-slate-900 dark:text-white">
                                 {formatVND(tripCost.totalDirectCost || 0)}
                               </div>
-                              <div className="text-[10.5px] text-slate-400 font-mono">
+                              <div className="type-footnote text-slate-400">
                                 Đã gồm 10% hao mòn
                               </div>
                             </td>
-                            <td className="py-3 px-3 text-right">
-                              <div className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                            <td className="type-body py-3 px-3 text-right">
+                              <div className="type-body-strong text-emerald-600 dark:text-emerald-400">
                                 {formatVND(tariff.pricePerSeat || 0)}
                               </div>
-                              <div className="text-[10px] text-slate-400 font-mono">
+                              <div className="type-footnote text-slate-400">
                                 Tiết kiệm {tariff.savingVsLimoPercent || 25}% vs Limousine
                               </div>
                             </td>
@@ -2736,12 +2736,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 </div>
 
                 {/* Explanation Footnote */}
-                <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                <div className="type-body p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-1.5">
+                  <div className="type-body-strong flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
                     <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                     <span>Tuân Thủ Pháp Lý Về Chia Sẻ Chi Phí (Nghị Định 10/2020/NĐ-CP)</span>
                   </div>
-                  <p className="text-[11.5px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p className="type-body text-slate-600 dark:text-slate-400">
                     CarMate là nền tảng đi ghép văn minh phi thương mại giữa Chủ xe và Người đi cùng. Giá gợi ý P* được thuật toán toán học bảo đảm nằm trong khoảng hòa vốn chi phí trực tiếp và tuyệt đối không vượt quá chi phí lăn bánh thực tế của toàn bộ hành trình.
                   </p>
                 </div>
@@ -2754,20 +2754,20 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <div className="mt-6 p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-5">
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <h4 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-[#0071e3]" />
                     <span>Công Thức Định Giá Toàn Sàn</span>
                   </h4>
-                  <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-w-2xl">
+                  <p className="type-body text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
                     Chủ xe không được tự đặt giá: giá mỗi ghế là đầu ra của công thức bên dưới, tính từ cặp trạm ảo.
                     Đây là nơi duy nhất thay đổi được giá của toàn bộ sàn — lưu xong áp dụng ngay lập tức.
                   </p>
                 </div>
                 <span
-                  className={`px-2.5 py-1 rounded-full text-[10.5px] font-mono font-bold border ${
+                  className={`type-badge px-2.5 py-1 rounded-full border ${
                     tariffConfig?.isDefault
-                      ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                      : 'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/40'
+                      ? "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/40"
                   }`}
                 >
                   {tariffConfig?.isDefault ? 'Đang dùng công thức mặc định' : 'Đã tinh chỉnh'}
@@ -2777,7 +2777,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {Object.entries(tariffBounds).map(([key, bound]) => (
                   <div key={key} className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    <label className="type-label block text-slate-700 dark:text-slate-300">
                       {bound.label}
                     </label>
                     <input
@@ -2789,9 +2789,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       onChange={(e) =>
                         setTariffForm((f) => ({ ...f, [key]: e.target.value }))
                       }
-                      className="w-full h-10 px-3 rounded-xl text-sm font-mono font-bold bg-slate-50 dark:bg-[#151c2e] border border-slate-200 dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
+                      className="type-input w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-[#151c2e] border border-slate-200 dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
                     />
-                    <p className="text-[10px] font-mono text-slate-400">
+                    <p className="type-footnote text-slate-400">
                       Cho phép {bound.min} – {bound.max}
                     </p>
                   </div>
@@ -2799,7 +2799,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                <label className="type-label block text-slate-700 dark:text-slate-300">
                   Lý do thay đổi (lưu vào nhật ký)
                 </label>
                 <input
@@ -2807,40 +2807,40 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   value={tariffNote}
                   onChange={(e) => setTariffNote(e.target.value)}
                   placeholder="VD: Giá xăng tăng mạnh quý IV, nâng định mức tiêu thụ thực tế"
-                  className="w-full h-10 px-3 rounded-xl text-xs font-medium bg-slate-50 dark:bg-[#151c2e] border border-slate-200 dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
+                  className="type-input w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-[#151c2e] border border-slate-200 dark:border-white/[0.14] text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
                 />
               </div>
 
               {/* Bảng giá xem trước: thấy ngay hệ quả trước khi áp cho toàn sàn */}
               {tariffPreview.length > 0 && (
                 <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-white/10">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 font-mono uppercase text-[10.5px]">
+                  <table className="type-body w-full text-left">
+                    <thead className="type-label bg-slate-50 dark:bg-[#1a1c24] border-b border-slate-200/80 dark:border-white/10 text-slate-500 uppercase">
                       <tr>
-                        <th className="py-2.5 px-3">Chặng</th>
-                        <th className="py-2.5 px-3 text-right">Cự ly</th>
-                        <th className="py-2.5 px-3 text-right">Giá / ghế</th>
-                        <th className="py-2.5 px-3 text-right">Sàn – Trần</th>
-                        <th className="py-2.5 px-3 text-right">Rẻ hơn Limo</th>
+                        <th className="type-label py-2.5 px-3">Chặng</th>
+                        <th className="type-label py-2.5 px-3 text-right">Cự ly</th>
+                        <th className="type-label py-2.5 px-3 text-right">Giá / ghế</th>
+                        <th className="type-label py-2.5 px-3 text-right">Sàn – Trần</th>
+                        <th className="type-label py-2.5 px-3 text-right">Rẻ hơn Limo</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200/70 dark:divide-white/[0.06]">
+                    <tbody className="type-body divide-y divide-slate-200/70 dark:divide-white/[0.06]">
                       {tariffPreview.map((row) => (
                         <tr key={row.label} className="text-slate-700 dark:text-slate-200">
-                          <td className="py-2.5 px-3 font-semibold">{row.label}</td>
-                          <td className="py-2.5 px-3 text-right font-mono">{row.distanceKm} km</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-black text-[#0071e3] dark:text-sky-400">
+                          <td className="type-body py-2.5 px-3">{row.label}</td>
+                          <td className="type-body py-2.5 px-3 text-right">{row.distanceKm} km</td>
+                          <td className="type-body py-2.5 px-3 text-right text-[#0071e3] dark:text-sky-400">
                             {formatVND(row.pricePerSeat)}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-[11px] text-slate-500">
+                          <td className="type-body py-2.5 px-3 text-right text-slate-500">
                             {formatVND(row.pMin)} – {formatVND(row.pMax)}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono">
+                          <td className="type-body py-2.5 px-3 text-right">
                             <span
                               className={
-                                row.breakevenCovered
-                                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                                  : 'text-rose-600 dark:text-rose-400 font-bold'
+                                `type-body-strong ${row.breakevenCovered
+                                  ? "text-emerald-600 dark:text-emerald-400 "
+                                  : "text-rose-600 dark:text-rose-400 "}`
                               }
                             >
                               {row.savingVsLimoPercent}%
@@ -2859,7 +2859,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   size="md"
                   onClick={handlePreviewTariff}
                   disabled={isSavingTariff}
-                  className="w-full sm:w-auto h-11 px-4 text-xs font-semibold cursor-pointer"
+                  className="type-button w-full sm:w-auto h-11 px-4 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                   Xem trước
@@ -2869,7 +2869,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   size="md"
                   onClick={handleSaveTariff}
                   disabled={isSavingTariff}
-                  className="w-full sm:flex-1 h-11 font-bold cursor-pointer shadow-md"
+                  className="type-button w-full sm:flex-1 h-11 cursor-pointer shadow-md"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {isSavingTariff ? 'Đang áp dụng...' : 'Áp dụng cho toàn sàn'}
@@ -2879,7 +2879,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   size="md"
                   onClick={handleResetTariff}
                   disabled={isSavingTariff}
-                  className="w-full sm:w-auto h-11 px-4 text-xs font-semibold cursor-pointer"
+                  className="type-button w-full sm:w-auto h-11 px-4 cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                   Đặt lại
@@ -2887,9 +2887,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </div>
 
               {tariffConfig?.updatedAt && !tariffConfig.isDefault && (
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                <p className="type-footnote text-slate-500 dark:text-slate-400">
                   Lần nâng gần nhất: {new Date(tariffConfig.updatedAt).toLocaleString('vi-VN')} bởi{' '}
-                  <span className="font-mono font-bold">{tariffConfig.updatedBy}</span>
+                  <span className="type-body-strong">{tariffConfig.updatedBy}</span>
                   {tariffConfig.note ? ` — “${tariffConfig.note}”` : ''}
                 </p>
               )}
@@ -2913,7 +2913,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setAdminTripToDelete(null)}
-                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+                className="type-button-sm px-4 text-slate-700 dark:text-slate-300"
               >
                 Huỷ bỏ
               </Button>
@@ -2921,7 +2921,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="danger"
                 size="sm"
                 onClick={handleExecuteDeleteTrip}
-                className="px-5 font-bold rounded-full shadow-sm"
+                className="type-button-sm px-5 rounded-full shadow-sm"
               >
                 Xác nhận xoá vĩnh viễn
               </Button>
@@ -2931,8 +2931,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
           <div className="p-1 space-y-3 text-left">
             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-bold uppercase text-slate-500">{adminTripToDelete.id}</span>
-                <span className="text-xs font-bold font-mono text-emerald-600">
+                <span className="type-label font-mono uppercase text-slate-500">{adminTripToDelete.id}</span>
+                <span className="type-caption text-emerald-600">
                   {formatVND(
                     adminTripToDelete.basePricePerSeat ||
                       adminTripToDelete.price ||
@@ -2943,16 +2943,16 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   /{adminTripToDelete.type === 'passenger_request' ? 'người' : 'ghế'}
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white">
+              <div className="type-body text-slate-900 dark:text-white">
                 {adminTripToDelete.from} ➔ {adminTripToDelete.to}
               </div>
-              <div className="text-[11.5px] text-slate-500">
+              <div className="type-footnote text-slate-500">
                 Chủ xe / Người đăng:{' '}
-                <strong>{adminTripToDelete.driverName || adminTripToDelete.contactName || 'Chưa rõ'}</strong> (
+                <strong className="type-body-strong">{adminTripToDelete.driverName || adminTripToDelete.contactName || 'Chưa rõ'}</strong> (
                 {adminTripToDelete.driverPhone || adminTripToDelete.phone || 'N/A'})
               </div>
             </div>
-            <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+            <p className="type-body text-rose-600 dark:text-rose-400">
               ⚠️ Cảnh báo: Bài đăng sẽ bị xoá hoàn toàn khỏi cơ sở dữ liệu và không thể hoàn tác.
             </p>
           </div>
@@ -2983,7 +2983,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 size="sm"
                 disabled={isClearing}
                 onClick={() => setShowClearDataModal(false)}
-                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+                className="type-button-sm px-4 text-slate-700 dark:text-slate-300"
               >
                 Huỷ bỏ
               </Button>
@@ -2992,7 +2992,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 size="sm"
                 disabled={isClearing}
                 onClick={handleExecuteClearData}
-                className="px-5 font-bold rounded-full shadow-sm"
+                className="type-button-sm px-5 rounded-full shadow-sm"
               >
                 {isClearing ? 'Đang dọn...' : 'Xác nhận dọn sạch'}
               </Button>
@@ -3000,7 +3000,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
           }
         >
           <div className="p-1 space-y-3 text-left">
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="type-caption text-slate-600 dark:text-slate-300">
               {clearTarget === 'analytics'
                 ? 'Hệ thống sẽ xoá toàn bộ sự kiện đã ghi nhận trong bảng analytics_events, đưa chỉ số Phễu và lượt tương tác về 0.'
                 : clearTarget === 'ai'
@@ -3009,7 +3009,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 ? 'Hệ thống sẽ xoá toàn bộ lịch hẹn chuyến xe kiểm thử, đưa giao diện Lịch hẹn về trạng thái ban đầu.'
                 : 'Hệ thống sẽ xoá toàn bộ sự kiện phân tích (Analytics), nhật ký điều phối (Trajectories), tin nhắn kiểm thử CSKH và toàn bộ lịch hẹn test để đưa Dashboard về trạng thái sạch sẽ nhất.'}
             </p>
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11.5px] text-amber-800 dark:text-amber-300 font-medium">
+            <div className="type-footnote p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300">
               ⚠️ Các chuyến xe thật và tài khoản thành viên sẽ được giữ nguyên an toàn 100%.
             </div>
           </div>
@@ -3031,7 +3031,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setAdminUserToBan(null)}
-                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+                className="type-button-sm px-4 text-slate-700 dark:text-slate-300"
               >
                 Quay lại
               </Button>
@@ -3039,7 +3039,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant={adminUserToBan.isBanned ? 'success' : 'danger'}
                 size="sm"
                 onClick={handleExecuteToggleBan}
-                className="px-5 font-bold rounded-full shadow-sm"
+                className="type-button-sm px-5 rounded-full shadow-sm"
               >
                 {adminUserToBan.isBanned ? 'Xác nhận mở khoá' : 'Xác nhận khoá tài khoản'}
               </Button>
@@ -3047,17 +3047,17 @@ export default function AdminDashboardView({ onExitAdmin }) {
           }
         >
           <div className="p-1 space-y-3 text-left">
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5 text-xs">
-              <p className="text-slate-500 font-medium">
-                Họ tên: <strong className="text-slate-900 dark:text-white">{adminUserToBan.name}</strong>
+            <div className="type-body p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5">
+              <p className="type-label text-slate-500">
+                Họ tên: <strong className="type-body-strong text-slate-900 dark:text-white">{adminUserToBan.name}</strong>
               </p>
-              <p className="text-slate-500 font-medium">
+              <p className="type-label text-slate-500">
                 Số điện thoại:{' '}
-                <strong className="text-slate-900 dark:text-white font-mono">{adminUserToBan.phone || 'N/A'}</strong>
+                <strong className="type-body-strong text-slate-900 dark:text-white">{adminUserToBan.phone || 'N/A'}</strong>
               </p>
-              <p className="text-slate-500 font-medium">
+              <p className="type-label text-slate-500">
                 Vai trò:{' '}
-                <strong className="text-slate-900 dark:text-white">
+                <strong className="type-body-strong text-slate-900 dark:text-white">
                   {adminUserToBan.role === 'driver'
                     ? 'Chủ xe'
                     : adminUserToBan.role === 'admin'
@@ -3067,7 +3067,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </p>
             </div>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="type-caption text-slate-600 dark:text-slate-300">
               {adminUserToBan.isBanned
                 ? 'Tài khoản này sẽ được khôi phục quyền truy cập, có thể đăng bài và ghép chuyến bình thường trên hệ thống CarMate.'
                 : 'Tài khoản này sẽ bị cấm ngay lập tức: không thể đăng nhập, không thể đăng bài và không thể kết nối ghép chuyến trên toàn hệ thống.'}
@@ -3099,7 +3099,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setAdminUserToDeactivate(null)}
-                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+                className="type-button-sm px-4 text-slate-700 dark:text-slate-300"
               >
                 Quay lại
               </Button>
@@ -3111,7 +3111,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 }
                 size="sm"
                 onClick={handleExecuteToggleDeactivate}
-                className="px-5 font-bold rounded-full shadow-sm"
+                className="type-button-sm px-5 rounded-full shadow-sm"
               >
                 {adminUserToDeactivate.isDeactivated || adminUserToDeactivate.status === 'deactivated'
                   ? 'Xác nhận kích hoạt'
@@ -3121,17 +3121,17 @@ export default function AdminDashboardView({ onExitAdmin }) {
           }
         >
           <div className="p-1 space-y-3 text-left">
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5 text-xs">
-              <p className="text-slate-500 font-medium">
-                Họ tên: <strong className="text-slate-900 dark:text-white">{adminUserToDeactivate.name}</strong>
+            <div className="type-body p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5">
+              <p className="type-label text-slate-500">
+                Họ tên: <strong className="type-body-strong text-slate-900 dark:text-white">{adminUserToDeactivate.name}</strong>
               </p>
-              <p className="text-slate-500 font-medium">
+              <p className="type-label text-slate-500">
                 Số điện thoại:{' '}
-                <strong className="text-slate-900 dark:text-white font-mono">{adminUserToDeactivate.phone || 'N/A'}</strong>
+                <strong className="type-body-strong text-slate-900 dark:text-white">{adminUserToDeactivate.phone || 'N/A'}</strong>
               </p>
-              <p className="text-slate-500 font-medium">
+              <p className="type-label text-slate-500">
                 Vai trò:{' '}
-                <strong className="text-slate-900 dark:text-white">
+                <strong className="type-body-strong text-slate-900 dark:text-white">
                   {adminUserToDeactivate.role === 'driver'
                     ? 'Chủ xe'
                     : adminUserToDeactivate.role === 'admin'
@@ -3141,7 +3141,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </p>
             </div>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="type-caption text-slate-600 dark:text-slate-300">
               {adminUserToDeactivate.isDeactivated || adminUserToDeactivate.status === 'deactivated'
                 ? 'Tài khoản này sẽ được mở lại hoạt động bình thường trên hệ thống CarMate.'
                 : 'Tài khoản này sẽ được tạm đóng băng: các bài đăng chuyến đi sẽ tạm ẩn khỏi sàn, thành viên không bị coi là vi phạm và điểm tín nhiệm được bảo toàn nguyên vẹn.'}
@@ -3165,7 +3165,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setAdminUserToDelete(null)}
-                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+                className="type-button-sm px-4 text-slate-700 dark:text-slate-300"
               >
                 Hủy bỏ
               </Button>
@@ -3173,7 +3173,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="danger"
                 size="sm"
                 onClick={handleExecuteDeleteUser}
-                className="px-5 font-bold rounded-full shadow-sm bg-rose-600 hover:bg-rose-700 text-white"
+                className="type-button-sm px-5 rounded-full shadow-sm bg-rose-600 hover:bg-rose-700 text-white"
               >
                 Xóa vĩnh viễn
               </Button>
@@ -3181,26 +3181,26 @@ export default function AdminDashboardView({ onExitAdmin }) {
           }
         >
           <div className="p-1 space-y-3 text-left">
-            <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 space-y-1.5 text-xs">
-              <p className="text-rose-700 dark:text-rose-300 font-medium">
-                Họ tên: <strong className="text-slate-900 dark:text-white">{adminUserToDelete.name}</strong>
+            <div className="type-body p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 space-y-1.5">
+              <p className="type-label text-rose-700 dark:text-rose-300">
+                Họ tên: <strong className="type-body-strong text-slate-900 dark:text-white">{adminUserToDelete.name}</strong>
               </p>
-              <p className="text-rose-700 dark:text-rose-300 font-medium">
+              <p className="type-label text-rose-700 dark:text-rose-300">
                 Số điện thoại:{' '}
-                <strong className="text-slate-900 dark:text-white font-mono">{adminUserToDelete.phone || 'N/A'}</strong>
+                <strong className="type-body-strong text-slate-900 dark:text-white">{adminUserToDelete.phone || 'N/A'}</strong>
               </p>
-              <p className="text-rose-700 dark:text-rose-300 font-medium">
-                Mã định danh: <strong className="font-mono text-slate-900 dark:text-white">{adminUserToDelete.id}</strong>
+              <p className="type-label text-rose-700 dark:text-rose-300">
+                Mã định danh: <strong className="type-body-strong font-mono text-slate-900 dark:text-white">{adminUserToDelete.id}</strong>
               </p>
             </div>
 
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 text-[11.5px] text-amber-800 dark:text-amber-200 space-y-1">
-              <p className="font-bold flex items-center gap-1.5">
+            <div className="type-footnote p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 space-y-1">
+              <p className="type-body-strong flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                 <span>Cảnh báo an toàn dữ liệu:</span>
               </p>
-              <p>
-                Thao tác này sẽ xóa hoàn toàn tài khoản khỏi CSDL, xóa toàn bộ bài đăng / chuyến xe và ẩn danh hóa lịch sử cuốc xe theo Nghị định 13/2023. <strong>Hành động không thể khôi phục.</strong>
+              <p className="type-body">
+                Thao tác này sẽ xóa hoàn toàn tài khoản khỏi CSDL, xóa toàn bộ bài đăng / chuyến xe và ẩn danh hóa lịch sử cuốc xe theo Nghị định 13/2023. <strong className="type-body-strong">Hành động không thể khôi phục.</strong>
               </p>
             </div>
           </div>
@@ -3222,7 +3222,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setAdminReqToProcess(null)}
-                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+                className="type-button-sm px-4 text-slate-700 dark:text-slate-300"
               >
                 Quay lại
               </Button>
@@ -3230,7 +3230,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant={adminReqToProcess.action === 'approved' ? 'danger' : 'outline'}
                 size="sm"
                 onClick={handleExecuteProcessDeletion}
-                className="px-5 font-bold rounded-full shadow-sm"
+                className="type-button-sm px-5 rounded-full shadow-sm"
               >
                 {adminReqToProcess.action === 'approved' ? 'Xác nhận xóa vĩnh viễn' : 'Xác nhận từ chối'}
               </Button>
@@ -3238,23 +3238,23 @@ export default function AdminDashboardView({ onExitAdmin }) {
           }
         >
           <div className="p-1 space-y-3 text-left">
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5 text-xs">
-              <p className="text-slate-500 font-medium">
-                Họ tên: <strong className="text-slate-900 dark:text-white">{adminReqToProcess.req.name}</strong>
+            <div className="type-body p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5">
+              <p className="type-label text-slate-500">
+                Họ tên: <strong className="type-body-strong text-slate-900 dark:text-white">{adminReqToProcess.req.name}</strong>
               </p>
-              <p className="text-slate-500 font-medium">
+              <p className="type-label text-slate-500">
                 Liên hệ:{' '}
-                <strong className="text-slate-900 dark:text-white font-mono">
+                <strong className="type-body-strong text-slate-900 dark:text-white">
                   {adminReqToProcess.req.phone || adminReqToProcess.req.email || 'N/A'}
                 </strong>
               </p>
-              <p className="text-slate-500 font-medium">
+              <p className="type-label text-slate-500">
                 Lý do gửi:{' '}
-                <strong className="text-slate-900 dark:text-white">{adminReqToProcess.req.reason}</strong>
+                <strong className="type-body-strong text-slate-900 dark:text-white">{adminReqToProcess.req.reason}</strong>
               </p>
             </div>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="type-caption text-slate-600 dark:text-slate-300">
               {adminReqToProcess.action === 'approved'
                 ? 'Toàn bộ bài đăng trên sàn và dữ liệu cá nhân của tài khoản này sẽ bị xóa vĩnh viễn khỏi hệ thống theo Nghị định 13/2023/NĐ-CP. Hành động này không thể hoàn tác!'
                 : 'Yêu cầu xóa tài khoản sẽ được đánh dấu từ chối trong hệ thống.'}
@@ -3278,7 +3278,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAddRuleModal(false)}
-                className="px-4 font-semibold text-slate-700 dark:text-slate-300"
+                className="type-button-sm px-4 text-slate-700 dark:text-slate-300"
               >
                 Huỷ bỏ
               </Button>
@@ -3286,17 +3286,17 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 variant="primary"
                 size="sm"
                 onClick={handleAddRuleSubmit}
-                className="px-5 font-bold rounded-full shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="type-button-sm px-5 rounded-full shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 Thêm tiêu chí
               </Button>
             </div>
           }
         >
-          <form onSubmit={handleAddRuleSubmit} className="space-y-4 text-left p-1">
+          <form onSubmit={handleAddRuleSubmit} className="type-body space-y-4 text-left p-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="type-label block text-slate-700 dark:text-slate-300 mb-1">
                   Mã tiêu chí (ID không dấu)
                 </label>
                 <input
@@ -3305,18 +3305,18 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   placeholder="VD: zalo_official_linked"
                   value={newRuleForm.id}
                   onChange={(e) => setNewRuleForm({ ...newRuleForm, id: e.target.value })}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  className="type-input font-mono w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="type-label block text-slate-700 dark:text-slate-300 mb-1">
                   Đối tượng áp dụng
                 </label>
                 <select
                   value={newRuleForm.role}
                   onChange={(e) => setNewRuleForm({ ...newRuleForm, role: e.target.value })}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  className="type-input w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                   <option value="all">Tất cả thành viên</option>
                   <option value="driver">Chủ xe</option>
@@ -3326,7 +3326,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="type-label block text-slate-700 dark:text-slate-300 mb-1">
                 Tên tiêu chí hiển thị
               </label>
               <input
@@ -3335,12 +3335,12 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 placeholder="VD: Đã liên kết Zalo Official Account"
                 value={newRuleForm.title}
                 onChange={(e) => setNewRuleForm({ ...newRuleForm, title: e.target.value })}
-                className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                className="type-input w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="type-label block text-slate-700 dark:text-slate-300 mb-1">
                 Mô tả ý nghĩa tiêu chí
               </label>
               <textarea
@@ -3348,13 +3348,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 placeholder="Mô tả ngắn gọn về tiêu chí này để người dùng hiểu vì sao được cộng/trừ điểm..."
                 value={newRuleForm.description}
                 onChange={(e) => setNewRuleForm({ ...newRuleForm, description: e.target.value })}
-                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                className="type-input w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="type-label block text-slate-700 dark:text-slate-300 mb-1">
                   Loại điểm
                 </label>
                 <select
@@ -3367,7 +3367,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       points: t === 'sub' ? -Math.abs(newRuleForm.points || 5) : Math.abs(newRuleForm.points || 5)
                     });
                   }}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  className="type-input w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                   <option value="add">+ Thưởng điểm (Khuyến khích)</option>
                   <option value="sub">- Trừ điểm (Xử phạt / Rủi ro)</option>
@@ -3375,7 +3375,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="type-label block text-slate-700 dark:text-slate-300 mb-1">
                   Số điểm ({newRuleForm.type === 'sub' ? 'âm' : 'dương'})
                 </label>
                 <input
@@ -3383,7 +3383,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   required
                   value={newRuleForm.points}
                   onChange={(e) => setNewRuleForm({ ...newRuleForm, points: Number(e.target.value) })}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-mono font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  className="type-input w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
               </div>
             </div>

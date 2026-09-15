@@ -33,7 +33,7 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
           <Button variant="outline" onClick={onClose}>
             {t('delayModal2.s001')}
           </Button>
-          <Button className="bg-amber-600 hover:bg-amber-700 text-white font-bold" onClick={handleConfirmAndSend}>
+          <Button className="bg-amber-600 hover:bg-amber-700 text-white" onClick={handleConfirmAndSend}>
             <Timer className="w-4 h-4 mr-1.5" />
             <span>Xác nhận báo trễ +{minutes}p</span>
           </Button>
@@ -42,7 +42,7 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
     >
       <div className="space-y-4">
         <div>
-          <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+          <p className="type-caption text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-amber-500" />
             <span>{t('delayModal2.s002')}</span>
           </p>
@@ -52,7 +52,7 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
                 key={m}
                 active={minutes === m}
                 onClick={() => setMinutes(m)}
-                className="flex-1 justify-center tabular font-bold cursor-pointer"
+                className="type-button-sm flex-1 justify-center tabular cursor-pointer"
               >
                 +{m} phút
               </Chip>
@@ -70,11 +70,11 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
 
         {/* Khung xem trước tin nhắn Zalo gửi đối tác */}
         <div className="p-3 rounded-2xl bg-slate-900 text-slate-200 border border-slate-800 space-y-1.5 text-left">
-          <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+          <span className="type-caption text-slate-400 flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-400" />
             {t('delayModal2.s003')}
           </span>
-          <p className="text-xs text-slate-100 font-sans leading-relaxed p-2 rounded-xl bg-black/40 border border-slate-800 select-all">
+          <p className="type-caption text-slate-100 p-2 rounded-xl bg-black/40 border border-slate-800 select-all">
             {delayMsg}
           </p>
         </div>

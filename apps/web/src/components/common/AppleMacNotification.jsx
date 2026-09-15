@@ -137,10 +137,10 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
             <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-[#0071e3] to-[#5ac8fa] flex items-center justify-center text-white shadow-2xs shrink-0">
               {getIcon()}
             </div>
-            <span className="text-[10px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400 font-mono truncate">
+            <span className="type-footnote uppercase text-slate-500 dark:text-slate-400 truncate">
               CARMATE
             </span>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+            <span className="type-footnote text-slate-400 dark:text-slate-500">
               {t('macNotif.s001')}
             </span>
           </div>
@@ -152,7 +152,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
               handleClose();
             }}
             aria-label={t('macNotif.s004')}
-            className="w-9 h-9 -m-2 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
+            className="type-button w-9 h-9 -m-2 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -160,10 +160,10 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
 
         {/* Nội dung thông báo */}
         <div className="space-y-1 pr-1">
-          <h4 className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-[#0071e3] transition-colors">
+          <h4 className="type-heading text-slate-900 dark:text-white line-clamp-1 group-hover:text-[#0071e3] transition-colors">
             {notification.title}
           </h4>
-          <p className="text-[11.5px] sm:text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
+          <p className="type-caption text-slate-600 dark:text-slate-300 line-clamp-2">
             {notification.message}
           </p>
         </div>
@@ -176,7 +176,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
               e.stopPropagation();
               handleClose();
             }}
-            className="px-2.5 py-1 rounded-full text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+            className="type-button px-2.5 py-1 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
           >
             {t('macNotif.s002')}
           </button>
@@ -186,7 +186,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
               e.stopPropagation();
               handleAction();
             }}
-            className="px-3 py-1 rounded-full text-[11px] font-bold bg-[#0071e3] hover:bg-[#0077ed] active:scale-95 text-white shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+            className="type-button px-3 py-1 rounded-full bg-[#0071e3] hover:bg-[#0077ed] active:scale-95 text-white shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
           >
             <span>{notification.actionLabel || 'Xem ngay'}</span>
             <ArrowRight className="w-3 h-3" />

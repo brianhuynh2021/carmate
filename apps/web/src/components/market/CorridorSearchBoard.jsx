@@ -518,7 +518,7 @@ export default function CorridorSearchBoard({
                 setCorridorId(c.id);
                 writeStore(CORRIDOR_KEY, c.id);
               }}
-              className={`relative tap-area-44 shrink-0 px-3.5 h-9 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
+              className={`relative tap-area-44 shrink-0 px-3.5 h-9 rounded-full transition-all cursor-pointer border active:scale-95 type-button ${
                 c.id === corridor.id
                   ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-sm shadow-[#0071e3]/30'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-white/20 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-sm'
@@ -526,7 +526,7 @@ export default function CorridorSearchBoard({
             >
               {c.shortName}
               {c.status === 'beta' && (
-                <span className="ml-1.5 text-[9px] font-mono opacity-70 uppercase">beta</span>
+                <span className="ml-1.5 opacity-70 tabular type-caption">beta</span>
               )}
             </button>
           ))}
@@ -552,9 +552,9 @@ export default function CorridorSearchBoard({
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 shrink-0" />
 
-            <div className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5">
+            <div className="text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5 type-caption">
               <span className="truncate">{macroFromLabel}</span>
-              <span className="text-slate-400 dark:text-slate-500 mx-1.5 shrink-0 font-normal">➔</span>
+              <span className="text-slate-400 dark:text-slate-500 mx-1.5 shrink-0 type-body">➔</span>
               <span className="truncate">{macroToLabel}</span>
             </div>
           </div>
@@ -568,14 +568,14 @@ export default function CorridorSearchBoard({
               e.stopPropagation();
               swap();
             }}
-            className="p-1.5 ml-1 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition-colors shrink-0 active:scale-90 cursor-pointer"
+            className="p-1.5 ml-1 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition-colors shrink-0 active:scale-90 cursor-pointer type-button"
           >
             <ArrowUpDown className="w-4 h-4" />
           </button>
         </div>
       ) : (
         <section className="surface rounded-3xl overflow-hidden border border-slate-300/90 dark:border-white/15 bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 transition-all duration-200">
-          <div className="flex items-center justify-between px-4 sm:px-5 pt-3 pb-2 border-b border-slate-100 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300">
+          <div className="flex items-center justify-between px-4 sm:px-5 pt-3 pb-2 border-b border-slate-100 dark:border-white/10 text-slate-600 dark:text-slate-300 type-caption">
             <span className="flex items-center gap-1.5">
               <Search className="w-3.5 h-3.5 text-slate-400" />
               Chọn trạm đón & trả trên QL13
@@ -583,17 +583,17 @@ export default function CorridorSearchBoard({
             <button
               type="button"
               onClick={() => setIsEditingRoute(false)}
-              className="p-1 -mr-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              className="p-1 -mr-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer type-button"
               title="Đóng / Thu gọn"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
-        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-start gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl">
+        <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-start gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl type-body">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5 group-hover/from:scale-115 transition-transform" />
-          <div className="flex-1 min-w-0">
-            <label className="block type-label text-slate-400 group-hover/from:text-emerald-700 dark:group-hover/from:text-emerald-400 mb-0.5 cursor-pointer transition-colors">
+          <div className="flex-1 min-w-0 type-body">
+            <label className="block text-slate-400 group-hover/from:text-emerald-700 dark:group-hover/from:text-emerald-400 mb-0.5 cursor-pointer transition-colors type-label">
               {t('search.from')}
             </label>
             <div className="relative flex items-center">
@@ -601,7 +601,7 @@ export default function CorridorSearchBoard({
                 value={fromHubId}
                 onChange={(e) => setFromHubId(e.target.value)}
                 style={{ backgroundImage: 'none' }}
-                className="tap-44 w-full appearance-none !bg-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/from:text-emerald-800 dark:group-hover/from:text-emerald-300 outline-none cursor-pointer truncate transition-colors"
+                className="tap-44 w-full appearance-none !bg-none bg-transparent pr-7 text-slate-900 dark:text-white group-hover/from:text-emerald-800 dark:group-hover/from:text-emerald-300 outline-none cursor-pointer truncate transition-colors type-input"
               >
                 {fromHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
@@ -617,7 +617,7 @@ export default function CorridorSearchBoard({
               type="button"
               onClick={handleAutoDetectGPS}
               disabled={isDetectingGPS}
-              className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-2 py-1.5 rounded-lg transition-colors border border-emerald-200/50 dark:border-emerald-500/20 active:scale-95"
+              className="mt-2 flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-2 py-1.5 rounded-lg transition-colors border border-emerald-200/50 dark:border-emerald-500/20 active:scale-95 type-button"
             >
               {isDetectingGPS ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -640,17 +640,17 @@ export default function CorridorSearchBoard({
             onClick={swap}
             aria-label={t('search.swap')}
             title={t('search.swap')}
-            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-white/20 ring-4 ring-white dark:ring-[#1c1c1e] shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-lg hover:scale-110 focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-200 cursor-pointer"
+            className="group absolute right-1 -top-[22px] w-11 h-11 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-white/20 ring-4 ring-white dark:ring-[#1c1c1e] shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-[#0071e3] hover:border-[#0071e3] hover:text-white hover:shadow-lg hover:scale-110 focus-visible:bg-[#0071e3] focus-visible:text-white active:scale-90 transition-all duration-200 cursor-pointer type-button"
           >
             <ArrowUpDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
           </button>
         </div>
 
         {/* Điểm đến */}
-        <div className="group/to py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-blue-50/60 dark:hover:bg-blue-500/10 cursor-pointer transition-all rounded-2xl">
+        <div className="group/to py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-blue-50/60 dark:hover:bg-blue-500/10 cursor-pointer transition-all rounded-2xl type-body">
           <MapPin className="w-5 h-5 text-[#0071e3] shrink-0 group-hover/to:scale-115 transition-transform" />
-          <div className="flex-1 min-w-0">
-            <label className="block type-label text-slate-400 group-hover/to:text-[#0071e3] mb-0.5 cursor-pointer transition-colors">
+          <div className="flex-1 min-w-0 type-body">
+            <label className="block text-slate-400 group-hover/to:text-[#0071e3] mb-0.5 cursor-pointer transition-colors type-label">
               {t('search.to')}
             </label>
             <div className="relative flex items-center">
@@ -658,7 +658,7 @@ export default function CorridorSearchBoard({
                 value={toHubId}
                 onChange={(e) => setToHubId(e.target.value)}
                 style={{ backgroundImage: 'none' }}
-                className="tap-44 w-full appearance-none !bg-none bg-transparent pr-7 text-base font-bold text-slate-900 dark:text-white group-hover/to:text-[#0071e3] outline-none cursor-pointer truncate transition-colors"
+                className="tap-44 w-full appearance-none !bg-none bg-transparent pr-7 text-slate-900 dark:text-white group-hover/to:text-[#0071e3] outline-none cursor-pointer truncate transition-colors type-input"
               >
                 {toHubs.map((h) => (
                   <option key={h.id} value={h.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
@@ -680,8 +680,8 @@ export default function CorridorSearchBoard({
         {ENABLE_DEPARTURE_CHIPS && (
           <>
             <div className="h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5" />
-            <div className="py-3.5 px-4 sm:py-4 sm:px-5">
-              <label className="flex items-center gap-2 type-label text-slate-400 mb-2.5">
+            <div className="py-3.5 px-4 sm:py-4 sm:px-5 type-body">
+              <label className="flex items-center gap-2 text-slate-400 mb-2.5 type-label">
                 <Clock className="w-4 h-4 text-amber-500 shrink-0" />
                 {t('search.departureLabel')}
               </label>
@@ -700,7 +700,7 @@ export default function CorridorSearchBoard({
                         if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
                       }}
                       aria-pressed={active}
-                      className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
+                      className={`h-[52px] px-2 rounded-2xl border flex flex-col items-center justify-center transition-all duration-150 cursor-pointer active:scale-95 type-button-sm ${
                         active
                           ? 'bg-[#0071e3] border-2 border-[#0071e3] text-white shadow-md shadow-[#0071e3]/30 scale-[1.01] hover:bg-[#0062c4] hover:border-[#0062c4] hover:shadow-lg'
                           : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
@@ -709,9 +709,9 @@ export default function CorridorSearchBoard({
                       {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
                           (Android phổ thông) chuỗi "Chiều nay (16h30-18h)" bị cắt cụt
                           đúng phần giờ — mất chính thông tin quan trọng nhất. */}
-                      <span className="text-xs font-bold truncate max-w-full">{chip.label}</span>
+                      <span className="truncate max-w-full type-button-sm">{chip.label}</span>
                       <span
-                        className={`text-[10px] font-mono truncate max-w-full ${
+                        className={`truncate max-w-full tabular type-caption ${
                           active ? 'text-white/80' : 'text-slate-400'
                         }`}
                       >
@@ -727,7 +727,7 @@ export default function CorridorSearchBoard({
                   type="button"
                   onClick={() => setShowDatePanel((v) => !v)}
                   aria-expanded={showDatePanel}
-                  className={`h-[52px] px-2 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
+                  className={`h-[52px] px-2 rounded-2xl border-2 flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 type-button-sm ${
                     showDatePanel
                       ? 'bg-slate-900 dark:bg-white/15 border-slate-900 dark:border-white/25 text-white shadow-sm hover:bg-slate-800'
                       : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
@@ -744,7 +744,7 @@ export default function CorridorSearchBoard({
                   <div>
                     <label
                       htmlFor="carmate-pick-date"
-                      className="block type-label text-slate-400 mb-1"
+                      className="block text-slate-400 mb-1 type-label"
                     >
                       {t('search.pickDate')}
                     </label>
@@ -754,12 +754,12 @@ export default function CorridorSearchBoard({
                       value={pickDate}
                       min={todayIso}
                       onChange={(e) => setPickDate(e.target.value)}
-                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/20 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all cursor-pointer"
+                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/20 text-slate-900 dark:text-white outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all cursor-pointer type-input"
                     />
                   </div>
 
                   <div>
-                    <span className="block type-label text-slate-400 mb-1">
+                    <span className="block text-slate-400 mb-1 type-body">
                       {t('search.pickWindow')}
                     </span>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -769,7 +769,7 @@ export default function CorridorSearchBoard({
                           type="button"
                           onClick={() => setPickWindow(w.id)}
                           aria-pressed={w.id === pickWindow}
-                          className={`h-12 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center leading-tight transition-all duration-150 cursor-pointer active:scale-95 ${
+                          className={`h-12 rounded-xl border flex flex-col items-center justify-center transition-all duration-150 cursor-pointer active:scale-95 type-button ${
                             w.id === pickWindow
                               ? 'bg-[#0071e3] border-[#0071e3] text-white shadow-sm shadow-[#0071e3]/25'
                               : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-300 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10'
@@ -779,7 +779,7 @@ export default function CorridorSearchBoard({
                           {/* Kèm giờ ngay dưới nhãn: "Sáng" một mình là mơ hồ, mà
                               các chip phía trên đều có giờ nên thiếu ở đây thành lệch. */}
                           <span
-                            className={`text-[9px] font-mono ${
+                            className={`tabular type-caption ${
                               w.id === pickWindow ? 'text-white/75' : 'text-slate-400'
                             }`}
                           >
@@ -793,7 +793,7 @@ export default function CorridorSearchBoard({
                   <button
                     type="button"
                     onClick={applyCustomDate}
-                    className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold cursor-pointer active:scale-[0.98] transition-all duration-150 shadow-sm"
+                    className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 cursor-pointer active:scale-[0.98] transition-all duration-150 shadow-sm type-button"
                   >
                     {t('search.applyDate')}
                   </button>
@@ -803,13 +803,13 @@ export default function CorridorSearchBoard({
           </>
         )}
 
-        <div className="px-4 pb-3 flex items-center justify-between gap-3">
-          <label htmlFor="carmate-search-seats" className="text-sm text-slate-600 dark:text-slate-300">Số người đi</label>
-          <select id="carmate-search-seats" value={seatsNeeded} onChange={(e) => setSeatsNeeded(Number(e.target.value))} className="h-11 rounded-xl border border-slate-300 bg-white dark:bg-slate-900 px-3">
+        <div className="px-4 pb-3 flex items-center justify-between gap-3 type-body">
+          <label htmlFor="carmate-search-seats" className="text-slate-600 dark:text-slate-300 type-label">Số người đi</label>
+          <select id="carmate-search-seats" value={seatsNeeded} onChange={(e) => setSeatsNeeded(Number(e.target.value))} className="h-11 rounded-xl border border-slate-300 bg-white dark:bg-slate-900 px-3 type-input">
             {[1,2,3,4,5,6].map((n) => <option key={n} value={n}>{n} người</option>)}
           </select>
         </div>
-        <p className="px-4 pb-3 text-xs text-slate-500">Trạm là mốc tìm chuyến. Hai bên có thể hẹn điểm đón khác. Tìm kiếm không tự đăng nhu cầu.</p>
+        <p className="px-4 pb-3 text-slate-500 type-caption">Trạm là mốc tìm chuyến. Hai bên có thể hẹn điểm đón khác. Tìm kiếm không tự đăng nhu cầu.</p>
         {/* ── THANH HÀNH ĐỘNG ── */}
         {ENABLE_DEPARTURE_CHIPS ? (
           <>
@@ -819,7 +819,7 @@ export default function CorridorSearchBoard({
                 type="button"
                 onClick={() => handleSearchNow(true)}
                 disabled={isSearching || !fromHubId || !toHubId}
-                className="group relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0062c4] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/45 hover:-translate-y-0.5 hover:scale-[1.008] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 disabled:hover:scale-100 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                className="group relative overflow-hidden w-full h-13 min-h-[52px] rounded-2xl bg-[#0071e3] hover:bg-[#0062c4] border border-blue-400/40 hover:shadow-xl hover:shadow-[#0071e3]/45 hover:-translate-y-0.5 hover:scale-[1.008] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#0071e3] disabled:hover:shadow-md disabled:hover:translate-y-0 disabled:hover:scale-100 text-white flex items-center justify-center gap-2 shadow-md shadow-[#0071e3]/25 active:scale-[0.98] transition-all duration-200 cursor-pointer type-button"
               >
                 {!isSearching && fromHubId && toHubId && (
                   <span
@@ -840,13 +840,13 @@ export default function CorridorSearchBoard({
           </>
         ) : (
           <div className="p-3 sm:px-5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+            <span className="text-slate-500 dark:text-slate-400 tabular type-caption">
               ~{matrix?.distanceKm || '—'}km · Tuyến Quốc Lộ 13
             </span>
             <button
               type="button"
               onClick={() => setIsEditingRoute(false)}
-              className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-all cursor-pointer active:scale-95"
+              className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 transition-all cursor-pointer active:scale-95 type-button"
             >
               Xong / Thu gọn
             </button>
@@ -855,7 +855,7 @@ export default function CorridorSearchBoard({
       </section>
     )}
 
-      {searchError && <p role="alert" className="p-3 text-sm text-rose-700 dark:text-rose-300">{searchError}</p>}
+      {searchError && <p role="alert" className="p-3 text-rose-700 dark:text-rose-300 type-body">{searchError}</p>}
       {/* ── ACCORDION LỊCH CHẠY TOÀN TUYẾN (BẢO LƯU CODE - ẨN Ở GIAI ĐOẠN COLD START CRO) ── */}
       {ENABLE_TIMELINE_ACCORDION && !matrix && (
         <button
@@ -865,7 +865,7 @@ export default function CorridorSearchBoard({
             else onOpenIntentModal?.('passenger', fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot, seatsNeeded);
           }}
           aria-expanded={isDense ? showTimeline : undefined}
-          className="group w-full p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 flex items-center justify-between gap-3 hover:border-[#0071e3] hover:bg-blue-50/40 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-150 cursor-pointer text-left shadow-2xs"
+          className="group w-full p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 flex items-center justify-between gap-3 hover:border-[#0071e3] hover:bg-blue-50/40 dark:hover:bg-blue-500/10 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-150 cursor-pointer text-left shadow-2xs type-button"
         >
           <div className="flex items-center gap-3 min-w-0">
             {isDense ? (
@@ -874,10 +874,10 @@ export default function CorridorSearchBoard({
               <MapPin className="w-4 h-4 text-[#0071e3] shrink-0" />
             )}
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate group-hover:text-[#0071e3] transition-colors">
+              <p className="text-slate-900 dark:text-white truncate group-hover:text-[#0071e3] transition-colors type-body-strong">
                 {isDense ? t('search.viewTimeline') : t('search.scheduleTitle')}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              <p className="text-slate-500 dark:text-slate-400 truncate type-caption">
                 {isDense
                   ? t('search.viewTimelineDesc', { n: timeline.totalTrips })
                   : t('search.scheduleDesc')}
@@ -901,34 +901,34 @@ export default function CorridorSearchBoard({
               className="p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-300 dark:border-white/20 shadow-2xs space-y-2"
             >
               <div className="flex items-baseline justify-between gap-2">
-                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                <p className="text-slate-900 dark:text-white type-caption">
                   {p.label}
-                  <span className="ml-1.5 font-mono font-normal text-slate-400">{p.hint}</span>
+                  <span className="ml-1.5 text-slate-400 tabular type-body">{p.hint}</span>
                 </p>
-                <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                <span className="text-slate-400 shrink-0 tabular type-caption">
                   {t('search.tripCount', { n: p.count })}
                 </span>
               </div>
 
               {p.count > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 type-body">
                   {p.trips.map((trip) => (
                     <button
                       key={trip.tripId || trip.departureLabel}
                       type="button"
                       onClick={() => onOpenStationView?.(fromHubId, toHubId)}
-                      className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/90 dark:border-white/10 hover:border-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:shadow-xs hover:-translate-y-0.5 flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-[0.98]"
+                      className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/90 dark:border-white/10 hover:border-[#0071e3] hover:bg-blue-50/60 dark:hover:bg-blue-500/10 hover:shadow-xs hover:-translate-y-0.5 flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-[0.98] type-button"
                     >
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-bold font-mono text-slate-900 dark:text-white shrink-0">
+                      <span className="flex items-center gap-2 min-w-0 type-body">
+                        <span className="text-slate-900 dark:text-white shrink-0 tabular type-body-strong">
                           {trip.departureLabel}
                         </span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                        <span className="text-slate-500 dark:text-slate-400 truncate type-body-strong">
                           {trip.assurance?.badge} {trip.vehicleModel || trip.driverName}
                         </span>
                       </span>
                       {trip.seatsAvailable != null && (
-                        <span className="text-[11px] font-mono text-slate-500 shrink-0">
+                        <span className="text-slate-500 shrink-0 tabular type-body">
                           {t('search.seatsLeft', { n: trip.seatsAvailable })}
                         </span>
                       )}
@@ -939,7 +939,7 @@ export default function CorridorSearchBoard({
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.('passenger', fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot, seatsNeeded)}
-                  className="mt-1 w-full min-h-[44px] rounded-xl border-2 border-dashed border-slate-300 dark:border-white/20 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-xs hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer"
+                  className="mt-1 w-full min-h-[44px] rounded-xl border-2 border-dashed border-slate-300 dark:border-white/20 text-slate-600 dark:text-slate-400 hover:border-[#0071e3] hover:bg-blue-50/50 dark:hover:bg-blue-500/10 hover:text-[#0071e3] hover:shadow-xs hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer type-button"
                 >
                   {t('search.emptyPeriodCta')}
                 </button>
@@ -969,10 +969,10 @@ export default function CorridorSearchBoard({
         <section ref={resultsRef} className="space-y-3 pt-1 animate-fade-in">
           {/* Header tóm tắt: Tiêu đề gọn gàng & Badge Thông tin chủ xe đăng */}
           <div className="flex items-center justify-between gap-1.5 px-1 pb-0.5">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 truncate">
+            <p className="text-slate-800 dark:text-slate-200 truncate type-caption">
               {carmateDisplayTrips.length > 0 ? `${carmateDisplayTrips.length} chuyến phù hợp` : 'Chưa có chuyến phù hợp'}
             </p>
-            <span className="text-[10.5px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-white dark:bg-white/10 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-white/10 shadow-xs">
+            <span className="text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-white dark:bg-white/10 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-white/10 shadow-xs type-badge">
 
               Thông tin chủ xe đăng
             </span>
@@ -1005,13 +1005,13 @@ export default function CorridorSearchBoard({
 
               {/* ⭐️ ƯU TIÊN #1: GOM NHU CẦU LỆCH GIỜ (ĐẶT LỊCH TRƯỚC - BẢO TOÀN PHỄU CHUYỂN ĐỔI) */}
               <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 text-center space-y-2 shadow-sm">
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <p className="text-slate-700 dark:text-slate-300 type-caption">
                   Chưa tìm thấy giờ phù hợp lịch trình?
                 </p>
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.('passenger', fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot, seatsNeeded)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0062c4] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0062c4] active:scale-[0.99] text-white shadow-md shadow-blue-500/20 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 type-button"
                 >
                   <span>⚡ Đăng nhu cầu theo giờ của bạn</span>
                 </button>
@@ -1022,24 +1022,24 @@ export default function CorridorSearchBoard({
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 bg-amber-500/10 dark:bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
 
               {/* Badge trên cùng theo State 2: ⚡ Ghép xe theo giờ của bạn (Màu cam) */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 dark:bg-amber-400/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold select-none shadow-2xs">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 dark:bg-amber-400/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 select-none shadow-2xs type-caption">
                 <span className="text-amber-600 dark:text-amber-400">⚡</span>
                 <span>{heading === 'a_to_b' ? 'Báo giờ bạn cần về Bình Phước' : 'Ghép xe theo giờ của bạn'}</span>
               </div>
 
               <div className="relative space-y-1.5">
-                <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                <p className="text-slate-900 dark:text-white type-body-strong">
                   Chưa có chuyến phù hợp với ngày, giờ và số người bạn chọn
                 </p>
-                <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto type-caption">
                   Bạn có thể đổi khung giờ, liên hệ nhà xe hoặc chủ động đăng nhu cầu để chủ xe phù hợp tìm thấy. Đăng nhu cầu chưa phải có xe nhận đón.
                 </p>
               </div>
-              <div className="relative pt-0.5 space-y-2.5">
+              <div className="relative pt-0.5 space-y-2.5 type-body">
                 <button
                   type="button"
                   onClick={() => onOpenIntentModal?.('passenger', fromHubId, toHubId, targetDepartureDate, targetDepartureTimeSlot, seatsNeeded)}
-                  className="h-11 sm:h-12 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:-translate-y-0.5 active:scale-95"
+                  className="h-11 sm:h-12 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:-translate-y-0.5 active:scale-95 type-button"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>
@@ -1049,11 +1049,11 @@ export default function CorridorSearchBoard({
 
                 {/* Huy hiệu uy tín thực tế & Social Proof */}
                 <div className="pt-1 space-y-1">
-                  <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5">
+                  <p className="text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5 type-body">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                     <span>Kết nối miễn phí · Điểm đón do hai bên xác nhận</span>
                   </p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
+                  <p className="text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1 type-caption">
                     <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
                     <span>
                       Chưa có chủ xe nhận đón. Bạn không cần ra trạm lúc này.

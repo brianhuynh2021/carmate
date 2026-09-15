@@ -6,9 +6,9 @@ import api from '../../api/client.js';
 import { buildDriverDemandPreview, buildDriverTripPayload, vietnamDate } from '../../utils/driverTripDraft.js';
 
 const corridor = getDefaultCorridor();
-const inputClass = 'w-full min-h-11 px-3 rounded-xl border border-slate-300 dark:border-white/15 bg-white dark:bg-[#1a2232] text-sm text-slate-900 dark:text-white';
+const inputClass = 'type-input w-full min-h-11 px-3 rounded-xl border border-slate-300 dark:border-white/15 bg-white dark:bg-[#1a2232] text-slate-900 dark:text-white';
 const blockClass = 'p-4 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 space-y-3';
-const labelClass = 'grid gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300';
+const labelClass = 'type-label grid gap-1.5 text-slate-600 dark:text-slate-300';
 const pickupLabels = { station: 'Tại trạm', doorstep: 'Tận nơi nếu thống nhất', hybrid: 'Tại trạm hoặc điểm khác nếu thống nhất' };
 
 export default function QuickPostTripModal({ isOpen, onClose, currentUser = null, onRequireAuth, onSuccess, onShowToast }) {
@@ -108,34 +108,34 @@ export default function QuickPostTripModal({ isOpen, onClose, currentUser = null
       <form onSubmit={submit} className="space-y-4">
         {preview ? (
           <section className={blockClass} aria-label="Xem trước tin chuyến">
-            <h3 className="font-semibold text-slate-900 dark:text-white">{origin?.shortName || origin?.name} → {destination?.shortName || destination?.name}</h3>
-            <p className="text-sm">{draft.time} · {draft.date.split('-').reverse().join('/')} · {draft.availableSeats} chỗ nhận khách</p>
-            <p className="font-semibold">{draft.pricingMode === 'contact' ? 'Giá: Liên hệ' : `${formatVND(Number(draft.basePricePerSeat))} / khách`}</p>
-            <p className="text-sm">{pickupLabels[draft.pickupMode]}</p>
-            {draft.pickupNotes && <p className="text-sm text-slate-600 dark:text-slate-300">{draft.pickupNotes}</p>}
-            {draft.carType && <p className="text-sm">Xe: {draft.carType} · {draft.licensePlate}</p>}
-            <p className="text-xs text-slate-500">Đây là bản xem trước, chưa xuất hiện công khai.</p>
-            <button type="button" onClick={() => { demandRequest.current++; setPreview(false); }} className="text-sm font-medium text-[#0071e3]">Sửa thông tin chuyến</button>
+            <h3 className="type-heading text-slate-900 dark:text-white">{origin?.shortName || origin?.name} → {destination?.shortName || destination?.name}</h3>
+            <p className="type-body">{draft.time} · {draft.date.split('-').reverse().join('/')} · {draft.availableSeats} chỗ nhận khách</p>
+            <p className="type-body-strong">{draft.pricingMode === 'contact' ? 'Giá: Liên hệ' : `${formatVND(Number(draft.basePricePerSeat))} / khách`}</p>
+            <p className="type-body">{pickupLabels[draft.pickupMode]}</p>
+            {draft.pickupNotes && <p className="type-body text-slate-600 dark:text-slate-300">{draft.pickupNotes}</p>}
+            {draft.carType && <p className="type-body">Xe: {draft.carType} · {draft.licensePlate}</p>}
+            <p className="type-caption text-slate-500">Đây là bản xem trước, chưa xuất hiện công khai.</p>
+            <button type="button" onClick={() => { demandRequest.current++; setPreview(false); }} className="type-button text-[#0071e3]">Sửa thông tin chuyến</button>
           </section>
         ) : (
           <>
             {currentUser && (managedOperators.length > 0 || operatorLoadError) && <section className={blockClass}>
-              {operatorLoadError ? <p className="text-sm text-amber-700">Chưa tải được hồ sơ nhà xe bạn quản lý. Đóng và mở lại biểu mẫu để thử lại.</p> : <label className={labelClass}>Đăng chuyến với tư cách<select className={inputClass} value={draft.operatorId || ''} onChange={event => field('operatorId', event.target.value)}><option value="">Chủ xe cá nhân</option>{managedOperators.map(operator => <option key={operator.id} value={operator.id}>{operator.name}</option>)}</select></label>}
+              {operatorLoadError ? <p className="type-body text-amber-700">Chưa tải được hồ sơ nhà xe bạn quản lý. Đóng và mở lại biểu mẫu để thử lại.</p> : <label className={labelClass}>Đăng chuyến với tư cách<select className={inputClass} value={draft.operatorId || ''} onChange={event => field('operatorId', event.target.value)}><option value="">Chủ xe cá nhân</option>{managedOperators.map(operator => <option key={operator.id} value={operator.id}>{operator.name}</option>)}</select></label>}
             </section>}
             <section className={blockClass}>
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold">Hành trình</h3>
-                <button type="button" onClick={() => setDraft((prev) => ({ ...prev, direction: towardSaigon ? 'tphcm_to_binh_phuoc' : 'binh_phuoc_to_tphcm', originHubId: prev.destinationHubId, destinationHubId: prev.originHubId }))} className="flex items-center gap-1 text-xs text-[#0071e3] min-h-10"><ArrowLeftRight className="w-4 h-4" /> Đảo chiều</button>
+                <h3 className="type-heading">Hành trình</h3>
+                <button type="button" onClick={() => setDraft((prev) => ({ ...prev, direction: towardSaigon ? 'tphcm_to_binh_phuoc' : 'binh_phuoc_to_tphcm', originHubId: prev.destinationHubId, destinationHubId: prev.originHubId }))} className="type-button flex items-center gap-1 text-[#0071e3] min-h-10"><ArrowLeftRight className="w-4 h-4" /> Đảo chiều</button>
               </div>
               <label className={labelClass}>Từ trạm/khu vực<select value={draft.originHubId} onChange={(e) => field('originHubId', e.target.value)} className={inputClass}>{originHubs.map((hub) => <option key={hub.id} value={hub.id}>{hub.shortName || hub.name}</option>)}</select></label>
               <label className={labelClass}>Đến trạm/khu vực<select value={draft.destinationHubId} onChange={(e) => field('destinationHubId', e.target.value)} className={inputClass}>{destinationHubs.map((hub) => <option key={hub.id} value={hub.id}>{hub.shortName || hub.name}</option>)}</select></label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                 <label className={labelClass}>Ngày đi<input type="date" required min={vietnamDate()} value={draft.date} onChange={(e) => field('date', e.target.value)} className={inputClass} /></label>
                 <label className={labelClass}>Giờ xuất phát<input type="time" required value={draft.time} onChange={(e) => field('time', e.target.value)} className={inputClass} /></label>
               </div>
             </section>
             <section className={blockClass}>
-              <h3 className="text-sm font-semibold">Chỗ và giá</h3>
+              <h3 className="type-heading">Chỗ và giá</h3>
               <div className="grid grid-cols-2 gap-3">
                 <label className={labelClass}>Tổng số chỗ của xe<input type="number" min="2" max="55" step="1" required value={draft.capacity} onChange={(e) => setDraft((prev) => ({ ...prev, capacity: e.target.value, availableSeats: Math.min(Number(prev.availableSeats), Math.max(1, Number(e.target.value) - 1)) }))} className={inputClass} /></label>
                 <label className={labelClass}>Chỗ nhận khách<input type="number" min="1" max={Math.max(1, Number(draft.capacity) - 1)} step="1" required value={draft.availableSeats} onChange={(e) => field('availableSeats', e.target.value)} className={inputClass} /></label>
@@ -144,40 +144,40 @@ export default function QuickPostTripModal({ isOpen, onClose, currentUser = null
               {draft.pricingMode === 'listed' && <label className={labelClass}>Giá mỗi khách (đồng)<input type="number" min="0" step="1000" required value={draft.basePricePerSeat} onChange={(e) => field('basePricePerSeat', e.target.value)} className={inputClass} /></label>}
             </section>
             <section className={blockClass}>
-              <h3 className="text-sm font-semibold">Cách đón khách</h3>
+              <h3 className="type-heading">Cách đón khách</h3>
               <label className={labelClass}>Bạn có thể đón<select value={draft.pickupMode} onChange={(e) => field('pickupMode', e.target.value)} className={inputClass}>{Object.entries(pickupLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
               {draft.pickupMode !== 'station' && <label className={labelClass}>Có thể đi vòng thêm tối đa (km)<input type="number" min="0" step="0.5" required value={draft.maxDetourKm} onChange={(e) => field('maxDetourKm', e.target.value)} className={inputClass} /></label>}
-              <label className={labelClass}>Ghi chú điểm đón<textarea rows="2" maxLength="500" value={draft.pickupNotes} onChange={(e) => field('pickupNotes', e.target.value)} placeholder="Khu vực có thể ghé, điểm hẹn dễ nhận ra…" className={`${inputClass} py-2`} /></label>
-              <p className="text-xs text-slate-500">Trạm là mốc tìm chuyến. Điểm đón cuối cùng do bạn và khách thống nhất.</p>
+              <label className={labelClass}>Ghi chú điểm đón<textarea rows="2" maxLength="500" value={draft.pickupNotes} onChange={(e) => field('pickupNotes', e.target.value)} placeholder="Khu vực có thể ghé, điểm hẹn dễ nhận ra…" className={`type-input ${inputClass} py-2`} /></label>
+              <p className="type-caption text-slate-500">Trạm là mốc tìm chuyến. Điểm đón cuối cùng do bạn và khách thống nhất.</p>
             </section>
             <section className={blockClass}>
-              <h3 className="text-sm font-semibold">Thông tin xe</h3>
+              <h3 className="type-heading">Thông tin xe</h3>
               <label className={labelClass}>Dòng xe<input required value={draft.carType} onChange={(e) => field('carType', e.target.value)} className={inputClass} placeholder="Nhập dòng xe của bạn" /></label>
               <label className={labelClass}>Biển số<input required value={draft.licensePlate} onChange={(e) => field('licensePlate', e.target.value.toUpperCase())} className={inputClass} placeholder="Nhập biển số xe của bạn" /></label>
             </section>
           </>
         )}
         {preview && <section className={blockClass} aria-live="polite" aria-label="Nhu cầu phù hợp với chuyến">
-          <h3 className="text-sm font-semibold">Nhu cầu đang tìm xe cùng hành trình</h3>
-          {demandPreview.status === 'loading' && <p className="text-sm text-slate-600 dark:text-slate-300">Đang kiểm tra nhu cầu đã được đăng…</p>}
-          {demandPreview.status === 'error' && <><p className="text-sm text-slate-600 dark:text-slate-300">Chưa kiểm tra được nhu cầu lúc này. Đây không phải kết quả không có khách.</p><button type="button" onClick={() => checkDemand({ ...draft })} className="text-sm text-[#0071e3]">Thử lại</button></>}
-          {demandPreview.status === 'ready' && (demandPreview.count === 0 ? <p className="text-sm text-slate-600 dark:text-slate-300">Chưa có nhu cầu phù hợp trong dữ liệu CarMate hiện tại. Bạn vẫn có thể đăng chuyến để khách tìm và liên hệ.</p> : <>
-            <p className="text-sm font-medium">{demandPreview.count} nhu cầu có thể phù hợp</p>
-            <ul className="divide-y divide-slate-200 dark:divide-white/10">{demandPreview.data.slice(0, 3).map((item) => <li key={item.id} className="py-2 text-sm space-y-1">
-              <p>{item.originName} → {item.destinationName}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{item.date} · {item.timeSlot} · {item.seats} người</p>
-              {item.matchingReason && <p className="text-xs text-slate-600 dark:text-slate-300">{Array.isArray(item.matchingReason) ? item.matchingReason.join(' · ') : item.matchingReason}</p>}
+          <h3 className="type-heading">Nhu cầu đang tìm xe cùng hành trình</h3>
+          {demandPreview.status === 'loading' && <p className="type-body text-slate-600 dark:text-slate-300">Đang kiểm tra nhu cầu đã được đăng…</p>}
+          {demandPreview.status === 'error' && <><p className="type-body text-slate-600 dark:text-slate-300">Chưa kiểm tra được nhu cầu lúc này. Đây không phải kết quả không có khách.</p><button type="button" onClick={() => checkDemand({ ...draft })} className="type-button text-[#0071e3]">Thử lại</button></>}
+          {demandPreview.status === 'ready' && (demandPreview.count === 0 ? <p className="type-body text-slate-600 dark:text-slate-300">Chưa có nhu cầu phù hợp trong dữ liệu CarMate hiện tại. Bạn vẫn có thể đăng chuyến để khách tìm và liên hệ.</p> : <>
+            <p className="type-body-strong">{demandPreview.count} nhu cầu có thể phù hợp</p>
+            <ul className="divide-y divide-slate-200 dark:divide-white/10">{demandPreview.data.slice(0, 3).map((item) => <li key={item.id} className="type-body py-2 space-y-1">
+              <p className="type-body">{item.originName} → {item.destinationName}</p>
+              <p className="type-caption text-slate-500 dark:text-slate-400">{item.date} · {item.timeSlot} · {item.seats} người</p>
+              {item.matchingReason && <p className="type-caption text-slate-600 dark:text-slate-300">{Array.isArray(item.matchingReason) ? item.matchingReason.join(' · ') : item.matchingReason}</p>}
             </li>)}</ul>
-            <p className="text-xs text-slate-500">Đây là gợi ý tương thích, chưa có khách nào chốt chuyến với bạn.</p>
+            <p className="type-caption text-slate-500">Đây là gợi ý tương thích, chưa có khách nào chốt chuyến với bạn.</p>
           </>)}
-          {demandPreview.status === 'ready' && demandPreview.updatedAt && Number.isFinite(new Date(demandPreview.updatedAt).getTime()) && <p className="text-xs text-slate-500">Cập nhật {new Date(demandPreview.updatedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</p>}
+          {demandPreview.status === 'ready' && demandPreview.updatedAt && Number.isFinite(new Date(demandPreview.updatedAt).getTime()) && <p className="type-caption text-slate-500">Cập nhật {new Date(demandPreview.updatedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</p>}
         </section>}
         {preview && <section className={blockClass}>
           <label className={labelClass}>Số điện thoại khách có thể liên hệ<input type="tel" autoComplete="tel" required value={draft.phoneReal} onChange={(e) => field('phoneReal', e.target.value)} placeholder="Số điện thoại của bạn" className={inputClass} /></label>
-          <label className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300"><input type="checkbox" checked={draft.publicContactConsent} onChange={(e) => field('publicContactConsent', e.target.checked)} className="mt-0.5" />Tôi đồng ý công khai số liên hệ này trên tin chuyến để khách gọi trực tiếp.</label>
+          <label className="type-label flex items-start gap-2 text-slate-600 dark:text-slate-300"><input type="checkbox" checked={draft.publicContactConsent} onChange={(e) => field('publicContactConsent', e.target.checked)} className="type-input mt-0.5" />Tôi đồng ý công khai số liên hệ này trên tin chuyến để khách gọi trực tiếp.</label>
         </section>}
-        {error && <p role="alert" className="p-3 rounded-xl bg-rose-50 text-rose-700 text-sm">{error}</p>}
-        <button type="submit" disabled={busy} className="w-full min-h-12 px-4 rounded-2xl bg-[#0071e3] text-white font-semibold disabled:opacity-50">{busy ? 'Đang đăng chuyến…' : preview ? 'Đăng chuyến miễn phí' : 'Xem trước chuyến'}</button>
+        {error && <p role="alert" className="type-body p-3 rounded-xl bg-rose-50 text-rose-700">{error}</p>}
+        <button type="submit" disabled={busy} className="type-button w-full min-h-12 px-4 rounded-2xl bg-[#0071e3] text-white disabled:opacity-50">{busy ? 'Đang đăng chuyến…' : preview ? 'Đăng chuyến miễn phí' : 'Xem trước chuyến'}</button>
       </form>
     </Modal>
   );

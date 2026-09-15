@@ -33,6 +33,8 @@
 - Modal dùng React Portal vào `document.body`, lớp thông thường `z-[9999]`; xác thực nằm trên biểu mẫu đang nhập. Đóng xác thực không làm mất bản nháp.
 - Giữ thuật ngữ kỹ thuật và tên nghiên cứu ngoài luồng thao tác phổ thông trừ khi chúng giúp người dùng quyết định.
 
+- Typography dùng các class `type-*` trong `apps/web/src/index.css`; xem `docs/UI_TYPOGRAPHY.md`. Một họ chữ Inter, nhãn/nút/nội dung 14px, ô nhập 16px; không tạo cỡ chữ riêng hoặc trộn class ghi đè vai trò.
+
 ## 4. Kỷ luật Git và kiểm chứng
 
 - Không commit hoặc push thẳng lên `main`.

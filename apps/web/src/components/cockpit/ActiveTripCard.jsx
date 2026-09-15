@@ -29,27 +29,27 @@ export default function ActiveTripCard({ trip, onCancelTrip, onRefresh, onShowTo
   return (
     <article className="rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 p-5 space-y-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h3 className="font-bold text-lg">{trip.from || 'Chưa có điểm đi'} → {trip.to || 'Chưa có điểm đến'}</h3>
-          <p className="text-sm text-slate-500">{trip.date || 'Chưa có ngày'} · {trip.time || trip.timeSlot || 'Chưa có giờ'}</p></div>
-        <span className="rounded-xl bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-sm font-semibold text-[#0071e3]">{price}{price !== 'Liên hệ' ? '/ghế' : ''}</span>
+        <div><h3 className="type-heading">{trip.from || 'Chưa có điểm đi'} → {trip.to || 'Chưa có điểm đến'}</h3>
+          <p className="type-body text-slate-500">{trip.date || 'Chưa có ngày'} · {trip.time || trip.timeSlot || 'Chưa có giờ'}</p></div>
+        <span className="type-body-strong rounded-xl bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-[#0071e3]">{price}{price !== 'Liên hệ' ? '/ghế' : ''}</span>
       </div>
-      <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+      <div className="flex flex-wrap gap-x-5 gap-y-2">
         <span className="inline-flex gap-2 items-center"><Car size={16} />{trip.carType || 'Chưa có thông tin xe'} · {trip.licensePlate || trip.plateMask || 'Chưa có biển số'}</span>
         <span className="inline-flex gap-2 items-center"><Users size={16} />{Number.isFinite(Number(trip.availableSeats)) ? `${trip.availableSeats} chỗ còn nhận` : 'Chưa có số chỗ'}</span>
         {Number.isFinite(Number(trip.capacity)) && <span>Xe {trip.capacity} chỗ, gồm người lái</span>}
       </div>
-      <p className="text-sm text-slate-500">{pickupLabel}{trip.pickupNotes ? ` · ${trip.pickupNotes}` : ''}. Chỗ được kiểm tra lại theo đoạn đường khách đi khi chốt.</p>
+      <p className="type-body text-slate-500">{pickupLabel}{trip.pickupNotes ? ` · ${trip.pickupNotes}` : ''}. Chỗ được kiểm tra lại theo đoạn đường khách đi khi chốt.</p>
       <section className="space-y-2">
-        <h4 className="font-semibold">{manifest.length} nhóm khách đã chốt{pending.length ? ` · ${pending.length} yêu cầu đang trao đổi` : ''}</h4>
-        {manifest.length === 0 && <p className="text-sm text-slate-500">Chưa có cuộc hẹn đã được hai bên xác nhận.</p>}
+        <h4 className="type-heading">{manifest.length} nhóm khách đã chốt{pending.length ? ` · ${pending.length} yêu cầu đang trao đổi` : ''}</h4>
+        {manifest.length === 0 && <p className="type-body text-slate-500">Chưa có cuộc hẹn đã được hai bên xác nhận.</p>}
         {manifest.map((rider, index) => {
           const phone = cleanPhoneNumber(rider.passengerPhone || '');
           const terms = rider.committedTerms || {};
           return <div key={rider.bookingId || index} className="rounded-2xl bg-slate-50 dark:bg-white/5 p-3 flex items-center justify-between gap-3">
-            <div><p className="font-medium">{rider.passengerName || 'Khách'} · {terms.seats || rider.seatsBooked || '—'} người</p>
-              <p className="text-sm text-slate-500">{pointLabel(terms.pickupPoint || rider.pickupSpot)} → {pointLabel(terms.dropoffPoint || rider.dropoffSpot)}</p>
-              <p className="text-xs text-slate-500">{rider.status === 'boarded' ? 'Đã lên xe' : 'Đã xác nhận cuộc hẹn'}</p></div>
-            {phone && <a className="inline-flex items-center gap-2 text-[#0071e3] p-2" href={`tel:${phone}`}><Phone size={16} />Gọi</a>}
+            <div><p className="type-body-strong">{rider.passengerName || 'Khách'} · {terms.seats || rider.seatsBooked || '—'} người</p>
+              <p className="type-body text-slate-500">{pointLabel(terms.pickupPoint || rider.pickupSpot)} → {pointLabel(terms.dropoffPoint || rider.dropoffSpot)}</p>
+              <p className="type-caption text-slate-500">{rider.status === 'boarded' ? 'Đã lên xe' : 'Đã xác nhận cuộc hẹn'}</p></div>
+            {phone && <a className="type-button inline-flex items-center gap-2 text-[#0071e3] p-2" href={`tel:${phone}`}><Phone size={16} />Gọi</a>}
           </div>;
         })}
       </section>
@@ -59,9 +59,9 @@ export default function ActiveTripCard({ trip, onCancelTrip, onRefresh, onShowTo
       </div>
       {showCancel && <Modal title="Hủy chuyến này?" subtitle={`${trip.from || ''} → ${trip.to || ''} · ${trip.date || ''} ${trip.time || trip.timeSlot || ''}`} onClose={() => !canceling && setShowCancel(false)}
         footer={<div className="flex justify-end gap-2"><Button variant="secondary" disabled={canceling} onClick={() => setShowCancel(false)}>Giữ chuyến</Button><Button variant="danger" disabled={canceling} onClick={cancelTrip}>{canceling ? 'Đang hủy…' : 'Xác nhận hủy'}</Button></div>}>
-        <p>Chuyến sẽ ngừng nhận khách. Các cuộc hẹn liên quan được ghi nhận hủy; nhu cầu còn hiệu lực được mở lại để khách tìm phương án khác. Chưa có xe thay thế được xác nhận.</p>
-        {!!manifest.length && <p className="mt-3 font-semibold">Có {manifest.length} nhóm khách đã chốt. Hãy liên hệ trực tiếp để khách biết thay đổi.</p>}
-        {error && <p role="alert" className="mt-3 text-red-600">{error}</p>}
+        <p className="type-body">Chuyến sẽ ngừng nhận khách. Các cuộc hẹn liên quan được ghi nhận hủy; nhu cầu còn hiệu lực được mở lại để khách tìm phương án khác. Chưa có xe thay thế được xác nhận.</p>
+        {!!manifest.length && <p className="type-body-strong mt-3">Có {manifest.length} nhóm khách đã chốt. Hãy liên hệ trực tiếp để khách biết thay đổi.</p>}
+        {error && <p role="alert" className="type-body mt-3 text-red-600">{error}</p>}
       </Modal>}
     </article>
   );

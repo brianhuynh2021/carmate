@@ -17,9 +17,9 @@ export default function Toast({ message }) {
       role="status"
       aria-live="polite"
     >
-      <div className="bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-4 py-3.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-start gap-3 text-sm pointer-events-auto border border-white/10 dark:border-black/10">
+      <div className="type-body bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-4 py-3.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-start gap-3 pointer-events-auto border border-white/10 dark:border-black/10">
         <CheckCircle2 className="w-5 h-5 text-emerald-400 dark:text-emerald-600 shrink-0 mt-px" />
-        <span className="leading-snug font-medium">{message}</span>
+        <span className="type-body">{message}</span>
       </div>
     </div>
   );

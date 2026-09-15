@@ -70,13 +70,13 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
               <Car className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-bold text-white truncate flex items-center gap-2">
+              <h3 className="type-heading text-white truncate flex items-center gap-2">
                 <span>{cleanCarName}</span>
-                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-mono font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="type-caption px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   {total > 0 ? `${total} ảnh chụp` : 'Xe đã xác minh'}
                 </span>
               </h3>
-              <p className="text-xs text-slate-400 truncate mt-0.5">
+              <p className="type-caption text-slate-400 truncate mt-0.5">
                 Xe {effectiveCapacity} chỗ{trip.maskedCode ? ` · Mã chuyến ${trip.maskedCode}` : ''}
               </p>
             </div>
@@ -85,7 +85,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            className="type-button w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
             title={t('carPhotos.s010')}
           >
             <X className="w-4 h-4" />
@@ -109,10 +109,10 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                   <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
                     <Car className="w-7 h-7" />
                   </div>
-                  <p className="text-xs font-semibold text-slate-300">
+                  <p className="type-caption text-slate-300">
                     {currentPhoto.label || `Góc ${activeIndex + 1}`}
                   </p>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="type-caption text-slate-500">
                     {t('carPhotos.s001')}
                   </p>
                 </div>
@@ -121,14 +121,14 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
               {/* Privacy Plate Badge Watermark */}
               <div className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center gap-2 shadow-lg">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="text-[11.5px] font-mono font-bold tracking-wide">Biển số: {plateMask}</span>
-                <span className="text-[10px] text-emerald-300 font-normal hidden xs:inline">{t('carPhotos.s002')}</span>
+                <span className="type-caption font-mono">Biển số: {plateMask}</span>
+                <span className="type-caption text-emerald-300 hidden xs:inline">{t('carPhotos.s002')}</span>
               </div>
 
               {/* Angle Tag Badge */}
               <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/65 backdrop-blur-md border border-white/20 text-white flex items-center gap-1.5 shadow-lg">
                 <span className="w-2 h-2 rounded-full bg-primary-400" />
-                <span className="text-xs font-bold text-white">
+                <span className="type-caption text-white">
                   {currentPhoto.label || `Góc ${activeIndex + 1}/${total}`}
                 </span>
               </div>
@@ -139,7 +139,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                   <button
                     type="button"
                     onClick={handlePrev}
-                    className="absolute left-3 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm border border-white/20 opacity-90 transition-all cursor-pointer hover:scale-105"
+                    className="type-button absolute left-3 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm border border-white/20 opacity-90 transition-all cursor-pointer hover:scale-105"
                     title={t('carPhotos.s011')}
                   >
                     <ChevronLeft className="w-5 h-5" />
@@ -147,7 +147,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="absolute right-3 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm border border-white/20 opacity-90 transition-all cursor-pointer hover:scale-105"
+                    className="type-button absolute right-3 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm border border-white/20 opacity-90 transition-all cursor-pointer hover:scale-105"
                     title={t('carPhotos.s012')}
                   >
                     <ChevronRight className="w-5 h-5" />
@@ -156,7 +156,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
               )}
 
               {/* Photo Counter */}
-              <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-mono font-medium border border-white/10">
+              <div className="type-badge absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/10">
                 {activeIndex + 1} / {total}
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                       key={idx}
                       type="button"
                       onClick={() => setActiveIndex(idx)}
-                      className={`relative w-16 sm:w-20 aspect-[16/10] rounded-xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                      className={`type-button relative w-16 sm:w-20 aspect-[16/10] rounded-xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
                         isSel
                           ? 'border-primary-500 ring-2 ring-primary-500/30 scale-105'
                           : 'border-white/15 opacity-60 hover:opacity-100 hover:border-white/40'
@@ -191,7 +191,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
                           <Car className="w-4 h-4" />
                         </div>
                       )}
-                      <span className="absolute bottom-0 inset-x-0 bg-black/70 text-[9px] text-white text-center py-0.5 font-bold truncate px-1">
+                      <span className="type-caption absolute bottom-0 inset-x-0 bg-black/70 text-white text-center py-0.5 truncate px-1">
                         {p.label ? p.label.replace('Góc ', '') : `${idx + 1}`}
                       </span>
                     </button>
@@ -207,8 +207,8 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
               <Car className="w-10 h-10" />
             </div>
             <div className="space-y-1 max-w-md">
-              <h4 className="text-base font-bold text-white">{cleanCarName}</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <h4 className="type-heading text-white">{cleanCarName}</h4>
+              <p className="type-caption text-slate-400">
                 {t('carPhotos.s003')}
               </p>
             </div>
@@ -218,32 +218,32 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
         {/* ── 3. SPECS BAR: CÁC THÔNG SỐ XE MINH BẠCH ── */}
         <div className="grid grid-cols-3 gap-2 px-5 py-3 border-t border-white/5 bg-white/[0.01]">
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">
-            <span className="text-[10.5px] text-slate-400 font-medium">{t('carPhotos.s004')}</span>
-            <span className="text-xs font-bold text-white truncate max-w-full mt-0.5">{cleanCarName}</span>
+            <span className="text-slate-400">{t('carPhotos.s004')}</span>
+            <span className="type-caption text-white truncate max-w-full mt-0.5">{cleanCarName}</span>
           </div>
 
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">
-            <span className="text-[10.5px] text-slate-400 font-medium">{t('carPhotos.s005')}</span>
-            <span className="text-xs font-bold text-white mt-0.5">{effectiveCapacity} chỗ</span>
+            <span className="text-slate-400">{t('carPhotos.s005')}</span>
+            <span className="type-caption text-white mt-0.5">{effectiveCapacity} chỗ</span>
           </div>
 
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">
-            <span className="text-[10.5px] text-slate-400 font-medium">{t('carPhotos.s006')}</span>
-            <span className="text-xs font-mono font-bold text-emerald-400 mt-0.5">{plateMask}</span>
+            <span className="text-slate-400">{t('carPhotos.s006')}</span>
+            <span className="type-caption font-mono text-emerald-400 mt-0.5">{plateMask}</span>
           </div>
         </div>
 
         {/* Tiện nghi kèm theo (nếu có) */}
         {trip.acceptsParcel && (
-          <div className="px-5 py-2 border-t border-white/5 flex items-center gap-2 text-xs text-amber-300/90 bg-amber-500/5">
+          <div className="type-caption px-5 py-2 border-t border-white/5 flex items-center gap-2 text-amber-300/90 bg-amber-500/5">
             <Package className="w-3.5 h-3.5 shrink-0 text-amber-400" />
             <span>{t('carPhotos.s007')}</span>
           </div>
         )}
 
         {/* ── 4. FOOTER: REASSURANCE & NÚT ĐÓNG ── */}
-        <div className="px-5 py-3.5 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 bg-white/[0.02]">
-          <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+        <div className="type-caption px-5 py-3.5 border-t border-white/10 flex items-center justify-between text-slate-400 bg-white/[0.02]">
+          <div className="flex items-center gap-1.5 text-emerald-400">
             <Check className="w-3.5 h-3.5 shrink-0" />
             <span>{t('carPhotos.s008')}</span>
           </div>

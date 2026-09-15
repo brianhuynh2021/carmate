@@ -94,7 +94,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
       {loading ? (
         <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">
           <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
-          <p className="text-xs font-medium">{t('driverConfirm.s001')}</p>
+          <p className="type-caption">{t('driverConfirm.s001')}</p>
         </div>
       ) : error ? (
         <div className="py-8 space-y-4 text-center">
@@ -102,8 +102,8 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <h4 className="font-bold text-slate-900 text-base">{t('driverConfirm.s002')}</h4>
-            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">{error}</p>
+            <h4 className="type-heading text-slate-900">{t('driverConfirm.s002')}</h4>
+            <p className="type-caption text-slate-500 mt-1 max-w-xs mx-auto">{error}</p>
           </div>
           <Button variant="secondary" onClick={onClose} className="mt-2">
             {t('driverConfirm.s003')}
@@ -116,31 +116,31 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
           </div>
 
           <div>
-            <h4 className="font-bold text-slate-900 text-lg">{t('driverConfirm.s004')}</h4>
-            <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto leading-relaxed">
-              {t('driverConfirm.s005')} <strong>{passengerName}</strong>{t('driverConfirm.s006')}
+            <h4 className="type-heading text-slate-900">{t('driverConfirm.s004')}</h4>
+            <p className="type-caption text-slate-600 mt-1 max-w-sm mx-auto">
+              {t('driverConfirm.s005')} <strong className="type-body-strong">{passengerName}</strong>{t('driverConfirm.s006')}
             </p>
           </div>
 
           {/* Chi tiết tóm tắt */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs space-y-1.5 text-slate-700">
-            <div className="flex items-center gap-1.5 font-bold text-slate-900">
+          <div className="type-caption p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-1.5 text-slate-700">
+            <div className="type-body-strong flex items-center gap-1.5 text-slate-900">
               <MapPin className="w-3.5 h-3.5 text-emerald-600" />
               <span>
                 {booking.from} ➔ {booking.to}
               </span>
             </div>
             {booking.pickupPoint && (
-              <p className="text-slate-600">
-                {t('driverConfirm.s007')} <strong className="text-slate-800">{booking.pickupPoint}</strong>
+              <p className="type-body text-slate-600">
+                {t('driverConfirm.s007')} <strong className="type-body-strong text-slate-800">{booking.pickupPoint}</strong>
               </p>
             )}
-            <div className="flex justify-between pt-1 border-t border-slate-200/80 text-slate-500 text-[11px]">
+            <div className="flex justify-between pt-1 border-t border-slate-200/80 text-slate-500">
               <span>
-                {t('driverConfirm.s008')} <strong>{booking.timeSlot}</strong>
+                {t('driverConfirm.s008')} <strong className="type-body-strong">{booking.timeSlot}</strong>
               </span>
               <span>
-                {t('driverConfirm.s009')} <strong className="text-emerald-700 font-bold">{formatVND(booking.totalDeal)}</strong>
+                {t('driverConfirm.s009')} <strong className="type-body-strong text-emerald-700">{formatVND(booking.totalDeal)}</strong>
               </span>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
               fullWidth
               size="lg"
               onClick={onClose}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               {t('driverConfirm.s010')}
             </Button>
@@ -166,16 +166,16 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
                   <User className="w-4 h-4" strokeWidth={2.2} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-900">{passengerName}</p>
-                  <p className="text-[10px] text-slate-500">{t('driverConfirm.s011')}</p>
+                  <p className="type-caption text-slate-900">{passengerName}</p>
+                  <p className="type-caption text-slate-500">{t('driverConfirm.s011')}</p>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-200/60 text-xs font-bold tabular">
+              <span className="type-badge px-2.5 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-200/60 tabular">
                 {booking.timeSlot}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
+            <div className="type-caption flex items-center gap-2 text-slate-800">
               <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="truncate">{booking.from}</span>
               <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -183,19 +183,19 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             </div>
 
             {booking.pickupPoint && (
-              <div className="p-2 rounded-xl bg-amber-50/80 border border-amber-200/60 text-xs text-amber-900">
-                <span className="font-bold">{t('driverConfirm.s012')} </span>
+              <div className="type-caption p-2 rounded-xl bg-amber-50/80 border border-amber-200/60 text-amber-900">
+                <span className="">{t('driverConfirm.s012')} </span>
                 <span>{booking.pickupPoint}</span>
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
               <span className="text-slate-600">
-                {t('driverConfirm.s013')} <strong className="text-slate-900">{booking.seats || 1} ghế</strong>
+                {t('driverConfirm.s013')} <strong className="type-body-strong text-slate-900">{booking.seats || 1} ghế</strong>
               </span>
               <span className="text-slate-600">
                 Phụ xăng chia sẻ:{' '}
-                <strong className="text-emerald-700 font-extrabold text-sm tabular">
+                <strong className="type-body-strong text-emerald-700 tabular">
                   {formatVND(booking.totalDeal)}
                 </strong>
               </span>
@@ -204,7 +204,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
 
           {/* Lời nhắn kèm theo của chủ xe (Tùy chọn) */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <label className="type-label text-slate-800 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               {t('driverConfirm.s014')}
             </label>
@@ -213,7 +213,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
               value={driverNote}
               onChange={(e) => setDriverNote(e.target.value)}
               placeholder={t('driverConfirm.s018')}
-              className="w-full h-10 px-3 rounded-xl text-xs bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+              className="type-input w-full h-10 px-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
             />
           </div>
 
@@ -224,18 +224,18 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
               size="lg"
               disabled={submitting}
               onClick={handleConfirm}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base py-3 cursor-pointer shadow-sm active:scale-[0.99]"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white py-3 cursor-pointer shadow-sm active:scale-[0.99]"
             >
               <CheckCircle2 className="w-5 h-5 mr-2" />
               {submitting ? 'Đang xác nhận...' : '✓ Chủ xe đồng ý nhận đón'}
             </Button>
 
-            <Button fullWidth variant="secondary" onClick={onClose} className="text-xs py-2 text-slate-600">
+            <Button fullWidth variant="secondary" onClick={onClose} className="py-2 text-slate-600">
               {t('driverConfirm.s015')}
             </Button>
           </div>
 
-          <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-1">
+          <div className="type-caption flex items-center justify-center gap-2 text-slate-400 pt-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span>{t('driverConfirm.s016')}</span>
           </div>

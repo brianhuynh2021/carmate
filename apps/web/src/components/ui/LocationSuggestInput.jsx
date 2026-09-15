@@ -185,8 +185,8 @@ export default function LocationSuggestInput({
           autoComplete="off"
           className={
             isOmnibar
-              ? 'w-full bg-transparent border-0 p-0 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none truncate'
-              : `w-full h-10 ${LeadingIcon ? 'pl-9' : 'pl-3'} pr-8 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-[#151c2e] border ${
+              ? 'type-input w-full bg-transparent border-0 p-0 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none truncate'
+              : `w-full h-10 ${LeadingIcon ? 'pl-9' : 'pl-3'} pr-8 rounded-xl bg-white dark:bg-[#151c2e] border ${
                   isOpen
                     ? 'border-[#0071e3] ring-2 ring-[#0071e3]/20 shadow-md'
                     : 'border-black/[0.12] dark:border-white/[0.14]'
@@ -205,7 +205,7 @@ export default function LocationSuggestInput({
               setIsOpen(false);
               setSuggestions([]);
             }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+            className="type-button absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
             title={t('locSuggest.s004')}
             aria-label={t('locSuggest.s005')}
           >
@@ -227,12 +227,12 @@ export default function LocationSuggestInput({
         >
           {/* Header nhỏ gọn */}
           <div className="px-3.5 py-1.5 bg-[#f5f5f7] dark:bg-white/[0.04] border-b border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+            <span className="type-footnote text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
               <Search className="w-3 h-3 text-[#0071e3]" />
               <span>{t('locSuggest.s001')}</span>
             </span>
             {loading && (
-              <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-[#0071e3]">
+              <span className="type-footnote inline-flex items-center gap-1 text-[#0071e3]">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 <span>{t('locSuggest.s002')}</span>
               </span>
@@ -248,19 +248,19 @@ export default function LocationSuggestInput({
                   onChange?.(value);
                   setIsOpen(false);
                 }}
-                className="w-full px-3.5 py-2 text-left flex items-center justify-between gap-2.5 hover:bg-[#0071e3]/5 dark:hover:bg-[#0071e3]/10 transition-colors cursor-pointer bg-blue-50/40 dark:bg-blue-950/20"
+                className="type-button w-full px-3.5 py-2 text-left flex items-center justify-between gap-2.5 hover:bg-[#0071e3]/5 dark:hover:bg-[#0071e3]/10 transition-colors cursor-pointer bg-blue-50/40 dark:bg-blue-950/20"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[#0071e3]/10 text-[#0071e3]">
                     <MapPin className="w-3.5 h-3.5" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#0071e3] dark:text-[#2997ff] truncate">
+                    <p className="type-caption text-[#0071e3] dark:text-[#2997ff] truncate">
                       Tìm theo từ khoá: &quot;{value}&quot;
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-mono text-[#0071e3] font-bold px-1.5 py-0.5 rounded bg-[#0071e3]/10">
+                <span className="type-footnote text-[#0071e3] px-1.5 py-0.5 rounded bg-[#0071e3]/10">
                   {t('locSuggest.s003')}
                 </span>
               </button>
@@ -275,7 +275,7 @@ export default function LocationSuggestInput({
                     type="button"
                     onClick={() => handleSelect(item)}
                     onMouseEnter={() => setActiveIndex(idx)}
-                    className={`w-full px-3.5 py-2 text-left flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
+                    className={`type-button w-full px-3.5 py-2 text-left flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
                       isSelected
                         ? 'bg-blue-50/80 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff]'
                         : 'hover:bg-slate-50 dark:hover:bg-white/[0.04] text-slate-900 dark:text-slate-200'
@@ -290,11 +290,11 @@ export default function LocationSuggestInput({
                         <CategoryIcon type={item.category} className="w-3 h-3" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold truncate leading-tight text-slate-900 dark:text-white">
+                        <p className="type-caption truncate text-slate-900 dark:text-white">
                           {item.name}
                         </p>
                         {item.detail && (
-                          <p className="text-[10.5px] text-slate-400 truncate mt-0.5">{item.detail}</p>
+                          <p className="type-caption text-slate-400 truncate mt-0.5">{item.detail}</p>
                         )}
                       </div>
                     </div>
