@@ -8,11 +8,11 @@
 
 ## 🌟 1. Mô Hình Hoạt Động & Cơ Chế Kết Nối Trực Tiếp (0% Chiết Khấu Sàn)
 
-CarMate được tạo ra để kết nối những người **CÙNG ĐƯỜNG, TIỆN TUYẾN**: Chủ xe có ghế trống (dù là đi làm hàng tuần, về thăm gia đình dòng họ, đi công tác hay việc riêng) chia sẻ chỗ cho hành khách đi cùng hướng để san sẻ chi phí xăng xe và vé cầu đường văn minh, tiết kiệm. (Nếu có duyên cùng quê hay gần nhà thì càng vui và ấm áp hơn, nhưng cốt lõi là **tiện đường đi chung**).
+CarMate được tạo ra để kết nối những người **CÙNG ĐƯỜNG, TIỆN TUYẾN**: Chủ xe có ghế trống (dù là đi làm hàng tuần, về thăm gia đình dòng họ, đi công tác hay việc riêng) chia sẻ chỗ cho Người đi cùng cùng hướng để san sẻ chi phí xăng xe và vé cầu đường văn minh, tiết kiệm. (Nếu có duyên cùng quê hay gần nhà thì càng vui và ấm áp hơn, nhưng cốt lõi là **tiện đường đi chung**).
 
 ### Cơ chế Kết Nối Trực Tiếp (Sáng Kiến Đi Chung Xe CarMate + Zalo Organic KYC):
 
-1. **Không thu phí cọc sàn:** Hành khách không cần nạp tiền hay trả phí trung gian qua sàn (loại bỏ tâm lý e ngại lừa đảo và không rủi ro pháp lý cho Founder).
+1. **Không thu phí cọc sàn:** Người đi cùng không cần nạp tiền hay trả phí trung gian qua sàn (loại bỏ tâm lý e ngại lừa đảo và không rủi ro pháp lý cho Founder).
 2. **Cam kết qua Zalo trong 30 phút:** Sau khi bấm ghép chuyến, hai bên có 30 phút để nhắn tin Zalo cho nhau chốt điểm đón. Profile Zalo thật (avatar, số điện thoại, quê quán) là bộ lọc danh tính tự nhiên tốt nhất. Quá 30 phút không nhắn, hệ thống tự động nhả ghế.
 3. **Thanh toán trực tiếp:** Tiền cước xăng dầu & vé cầu đường trả bằng tiền mặt hoặc chuyển khoản trực tiếp cho Chủ xe khi bước lên xe.
 4. **Vé hành trình thông minh (Boarding Pass):** Tự động tạo thẻ vé ảnh sang trọng kèm link rút gọn để Chủ xe 1-chạm chia sẻ vào các Group Zalo / Facebook đồng hương (QL13, QL51...) kéo khách tự nhiên.
@@ -51,6 +51,11 @@ CarMate tích hợp **Bộ điều phối tự động Cấp độ 3 (Autonomous
 Quy chuẩn vận hành 4 nhịp thực tế ngoài đời và mạng lưới an toàn 3 tầng bảo vệ (**Silent Fallback N+1**, **In-Transit VietQR P2P**, **Quy tắc 10 giây Trả khách Hàng Xanh chống phạt nguội camera CSGT**, và **Khóa kép No-Show Dwell-Time 5 phút**) được ghi chép đầy đủ tại:  
 👉 **[`docs/OPERATIONAL_WORKFLOW.md`](docs/OPERATIONAL_WORKFLOW.md)**.
 
+### 🧠 Luồng trợ lý & hiểu ý định bản địa
+
+Trợ lý dùng Gemini function calling khi có khoá hợp lệ; khi thiếu khoá hoặc lỗi API, hệ thống chuyển sang Native Intent Engine xác định. Luồng, bất biến dữ liệu và biên giới quyền riêng tư được ghi nhận tại:
+👉 **[`docs/NATIVE_INTENT_FLOW.md`](docs/NATIVE_INTENT_FLOW.md)**.
+
 ---
 
 ## 🏛️ 3. Cấu Trúc Mã Nguồn Monorepo
@@ -60,10 +65,11 @@ carmate/
 ├── package.json                    # Workspace ["apps/*", "packages/*"], yêu cầu Node >= 22
 ├── fly.toml                        # Cấu hình triển khai Fly.io (region Singapore)
 ├── Dockerfile                      # Build 2 stage: build web -> chạy server Node
-├── .github/workflows/ci.yml        # CI: build + chạy toàn bộ E2E mỗi lần push
+├── .github/workflows/ci.yml        # CI: lint, build, toàn bộ test suite và pentest mỗi lần push
 ├── ARCHITECTURE.md                 # Tài liệu kiến trúc & nền tảng toán học
 ├── docs/
-│   └── OPERATIONAL_WORKFLOW.md     # Sổ tay vận hành thực địa QL13 & Fail-Safe playbook
+│   ├── NATIVE_INTENT_FLOW.md        # Luồng Gemini / native intent và các bất biến dữ liệu
+│   └── OPERATIONAL_WORKFLOW.md      # Sổ tay vận hành thực địa QL13 & Fail-Safe playbook
 │
 ├── scripts/
 │   ├── test-local-e2e.js           # Bộ E2E (API, phân quyền, PII, XSS, AI agent)
@@ -75,7 +81,7 @@ carmate/
 │   └── shared/                     # @carmate/shared — dùng chung Web & API
 │       └── src/
 │           ├── constants/          # routes, timeSlots, policies, mockData, site
-│           └── utils/              # pricing, zalo, geo, date
+│           └── utils/              # pricing, zalo, geo, date, vietnameseText, intentEngine
 │
 └── apps/
     ├── web/                        # @carmate/web (React 19 + Vite + Tailwind)
@@ -90,7 +96,7 @@ carmate/
     │           ├── radar/          # MatchRadarView — ghép 2 chiều
     │           ├── booked/         # BookedTripList — nút Zalo & Gọi ngay
     │           ├── admin/          # AdminDashboardView
-    │           ├── agent/          # AiConciergeModal — trợ lý AI
+│           ├── agent/          # AiConciergeModal — giao diện trợ lý
     │           ├── modals/         # Auth, Ticket, Review, Policy, Cancel...
     │           ├── profile/        # TrustProfileView
     │           ├── common/         # Header, Footer, BottomNav, ErrorBoundary
@@ -104,7 +110,7 @@ carmate/
             ├── controllers/        # trip, booking, auth, admin, match, agent...
             ├── middlewares/        # security (rate limit, CORS, XSS), authMiddleware
             ├── db/sqliteStore.js   # Truy cập SQLite (WAL, prepared statement)
-            ├── agent/              # Trợ lý AI + tool calling
+            ├── agent/              # Gemini tool calling + native intent fallback
             └── utils/token.js      # Ký & xác thực JWT
 ```
 
@@ -130,8 +136,9 @@ npm run dev
 ### Các lệnh khác
 
 ```bash
-node scripts/test-level3-engine.mjs   # Chạy bộ 139 bài test tự động Cấp độ 3 (Frenet, Kinematics, Nash, Whitelist, Ghosting Penalty)
-npm test                             # chạy toàn bộ bộ kiểm thử E2E
+node scripts/test-level3-engine.mjs   # Kiểm thử Cấp độ 3 (Frenet, Kinematics, Nash, Whitelist, Ghosting Penalty)
+npm run test:intent                  # Kiểm thử Native Intent Engine và các bất biến NLP
+npm test                             # Toàn bộ suite: E2E, engine nghiệp vụ và intent
 npm run build                        # build web ra apps/web/dist
 npm run backup                       # sao lưu database ngay
 npm run backup:setup                 # cài lịch sao lưu tự động 02:00 hằng ngày
@@ -151,7 +158,7 @@ npm run restore                      # liệt kê các bản sao lưu
 | `ALLOWED_ORIGINS`        |               | Danh sách domain được gọi API, ngăn cách bằng dấu phẩy      |
 | `TRUST_PROXY`            |               | Đặt `true` khi có proxy/CDN đứng trước                      |
 | `CARMATE_ADMIN_MFA_CODE` |               | Bật xác thực 2 lớp cho cổng quản trị                        |
-| `GEMINI_API_KEY`         |               | Bật trợ lý AI (thiếu thì tự chuyển sang bộ suy luận cục bộ) |
+| `GEMINI_API_KEY`         |               | Bật Gemini function calling; thiếu/lỗi API sẽ dùng Native Intent Engine xác định |
 | `DISABLE_VITE_DEV`       |               | Đặt `true` để bỏ Vite middleware, phục vụ bản dist đã build |
 
 > ⚠️ Không đặt khoá bí mật vào `apps/web/.env`. Vite nhúng mọi biến `VITE_*` thẳng vào bundle công khai — khoá API phải nằm ở `apps/api/.env`.
@@ -170,15 +177,18 @@ devbox run dev
 ### Tự động
 
 ```bash
-# 1. Bộ kiểm thử Level 3 Autonomous Engine (139/139 PASS):
+# 1. Bộ kiểm thử Level 3 Autonomous Engine:
 node scripts/test-level3-engine.mjs
 
-# 2. Bộ kiểm thử E2E tích hợp:
+# 2. Bộ kiểm thử Native Intent Engine:
+npm run test:intent
+
+# 3. Toàn bộ suite tích hợp:
 npm run dev     # cửa sổ 1: chạy server
-npm test        # cửa sổ 2: chạy toàn bộ E2E
+npm test        # cửa sổ 2: E2E, engine nghiệp vụ và intent
 ```
 
-Bộ kiểm thử bao trùm API, phân quyền (chống IDOR), che giấu thông tin cá nhân, chống XSS lưu trữ, cổng quản trị và trợ lý AI. CI cũng chạy đúng bộ này mỗi lần push.
+Bộ kiểm thử bao trùm API, phân quyền (chống IDOR), che giấu thông tin cá nhân, chống XSS lưu trữ, cổng quản trị, native intent và trợ lý Gemini. CI cũng chạy đúng bộ này mỗi lần push.
 
 ### Thủ công trên trình duyệt
 

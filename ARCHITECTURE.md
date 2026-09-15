@@ -8,6 +8,7 @@
 
 ## MỤC LỤC HỆ THỐNG
 1. [Sơ Đồ Kiến Trúc Hệ Thống Cấp Cao (High-Level Architecture)](#1-sơ-đồ-kiến-trúc-hệ-thống-cấp-cao)
+   - [Luồng trợ lý & hiểu ý định bản địa](#11-luồng-trợ-lý--hiểu-ý-định-bản-địa)
 2. [Quy Trình Khớp Lệnh Tự Động Cấp Độ 3 (Level 3 Autonomous Engine Pipeline)](#2-quy-trình-khớp-lệnh-tự-động-cấp-độ-3)
 3. [Mạng Lưới Điểm Đón Ảo Chuẩn Hóa Dọc Tuyến (100% Virtual Hubs — Triệt Tiêu Đón Tận Nhà)](#3-mạng-lưới-điểm-đón-ảo-chuẩn-hóa-dọc-tuyến)
 4. [Các Công Trình & Mô Hình Toán Học Cốt Lõi (Core Mathematical Foundations)](#4-các-công-trình--mô-hình-toán-học-cốt-lõi)
@@ -52,6 +53,7 @@ graph TB
         RoutesConst["📍 routes.js<br>28 Trạm đón ảo Tuyến QL13 & N2<br>100% Cây xăng Petrolimex cố định"]
         PricingMath["⚖️ pricing.js & vehicles.js<br>Mô hình chi phí lăn bánh thực tế<br>Định mức cước kiện hàng & chành xe"]
         TimeSlots["⏰ timeSlots.js<br>Chuẩn hoá 24h không từ thừa"]
+        NativeIntent["🧠 vietnameseText.js & intentEngine.js<br>Hiểu ý định xác định • Không bịa slot"]
         PoliciesConst["📜 policies.js<br>Quy chế văn minh, 0% phí sàn, cam kết trực tiếp"]
     end
 
@@ -78,6 +80,7 @@ graph TB
 
     PWA --> SHARED_CORE
     ExpressApp --> SHARED_CORE
+    ExpressApp --> NativeIntent
     PWA <-->|"REST API (JSON) + Reactive Polling"| ExpressApp
     BatchScheduler --> GraphBuilder
     GraphBuilder --> GaleShapleyCore
@@ -89,6 +92,10 @@ graph TB
     CLIENT_TIER <-->|"Cuộc gọi thực tế"| DirectDial
     ExpressApp -.->|"Thông báo khẩn"| TelegramAlerts
 ```
+
+### 1.1. Luồng trợ lý & hiểu ý định bản địa
+
+Trợ lý có hai nhánh cùng đi qua các công cụ server đã kiểm soát: Gemini function calling khi có khoá hợp lệ, hoặc Native Intent Engine khi thiếu khoá/lỗi API. Nhánh bản địa chuẩn hoá tiếng Việt, chỉ nhận hub/tỉnh có thật, kiểm tra ngày lịch và trả ID khung giờ chuẩn trước khi tra cứu chuyến. Sơ đồ, bất biến và điểm kiểm thử chuẩn được duy trì tại [Luồng Trợ lý & Hiểu Ý Định Bản Địa](docs/NATIVE_INTENT_FLOW.md).
 
 ---
 
@@ -195,7 +202,7 @@ $$\phi_i(v) = \sum_{S \subseteq N \setminus \{i\}} \frac{|S|!\; (|N| - |S| - 1)!
 
 Thuật toán của CarMate thỏa mãn tuyệt đối **4 Tiên đề Shapley**:
 1. **Tiên đề Hiệu quả (Efficiency):** Tổng tiền người đi cùng đóng góp cộng với phần của Chủ xe bằng đúng $100\%$ chi phí thực tế chuyến đi: $\sum_{i \in N} \phi_i(v) = v(N)$.
-2. **Tiên đề Đối xứng (Symmetry):** Hai hành khách có cùng điểm đón và điểm trả chi trả mức tiền xăng hoàn toàn bằng nhau: Nếu $v(S \cup \{i\}) = v(S \cup \{j\}), \forall S$ thì $\phi_i = \phi_j$.
+2. **Tiên đề Đối xứng (Symmetry):** Hai Người đi cùng có cùng điểm đón và điểm trả chi trả mức tiền xăng hoàn toàn bằng nhau: Nếu $v(S \cup \{i\}) = v(S \cup \{j\}), \forall S$ thì $\phi_i = \phi_j$.
 3. **Tiên đề Người chơi rỗng (Dummy Player):** Người không gây thêm chi phí phát sinh chỉ trả đúng định mức dùng của mình.
 4. **Tiên đề Cộng gộp (Additivity):** Khi phát sinh thêm chi phí độc lập (như vé trạm thu phí BOT), phần đóng góp được chia tách tuyến tính: $\phi_i(u + v) = \phi_i(u) + \phi_i(v)$.
 
@@ -223,7 +230,7 @@ Mọi chuyến đi trên trục hành lang đều áp dụng bảng cước phâ
 Hệ thống bảo đảm tuyệt đối 3 bất biến kinh tế:
 1. **Zero-Surge Invariant:** `noSurge: true` — Tuyệt đối không tăng giá giờ cao điểm, lễ tết hay mưa bão.
 2. **Zero-Doorstep Detour Invariant:** `doorstepSurcharge = 0đ` — 100% đón trả tại trạm cây xăng, triệt tiêu đón tận nhà ("Tour de Hẻm").
-3. **Zero-Split Invariant:** `compensationDiscount = 0đ` — Không phát sinh việc chia tiền đền bù phức tạp giữa các hành khách. Mọi người trên xe đều bình đẳng với mức đóng góp chuẩn mực.
+3. **Zero-Split Invariant:** `compensationDiscount = 0đ` — Không phát sinh việc chia tiền đền bù phức tạp giữa các Người đi cùng. Mọi người trên xe đều bình đẳng với mức đóng góp chuẩn mực.
 
 ---
 
@@ -317,7 +324,7 @@ CarMate giải quyết bằng **Micro-Batch Epochs (Cửa sổ 180 giây)**:
 Khi xảy ra biến cố bất khả kháng (chủ xe hỏng xe, sự cố gia đình đột xuất) trong vòng 45 phút trước giờ chạy, CarMate kích hoạt luồng **Standby Rescue Buffer**:
 1. Đánh dấu chuyến chính thức là `cancelled_driver_emergency`.
 2. Quét danh sách các xe dự phòng có trạng thái `isStandbyBuffer = true` trên cùng hành lang trong bán kính thời gian $\pm 45$ phút.
-3. Tự động điều phối chuyển giao hành khách sang xe đệm với mức giá cũ được giữ nguyên, đảm bảo người đi cùng không bị bơ vơ giữa đường.
+3. Tự động điều phối chuyển giao Người đi cùng sang xe đệm với mức giá cũ được giữ nguyên, đảm bảo người đi cùng không bị bơ vơ giữa đường.
 
 ---
 
@@ -409,7 +416,7 @@ Hệ thống cam kết `noSurge: true` — Bất biến không tăng giá giờ 
 
 #### 1. Cơ Sở Dữ Liệu Thực Nghiệm Về Rủi Ro Phân Tâm Khi Lái Xe
 - Theo nghiên cứu của **VTTI & NHTSA**: Thao tác bấm số hoặc gọi điện thoại khi đang lái xe làm tăng nguy cơ va chạm gấp **$6.1\text{ lần}$**, đọc hoặc gõ tin nhắn làm tăng nguy cơ gấp **$23.2\text{ lần}$**.
-- Báo cáo của **UC Berkeley TSRC (Transportation Sustainability Research Center)**: $78\%$ các cuộc gọi và tin nhắn giữa tài xế và hành khách trong các ứng dụng gọi xe truyền thống chỉ nhằm trả lời 2 câu hỏi: *"Anh đang ở đâu?"* và *"Xe anh biển số gì, màu gì?"*.
+- Báo cáo của **UC Berkeley TSRC (Transportation Sustainability Research Center)**: $78\%$ các cuộc gọi và tin nhắn giữa Chủ xe và Người đi cùng trong các ứng dụng gọi xe truyền thống chỉ nhằm trả lời 2 câu hỏi: *"Anh đang ở đâu?"* và *"Xe anh biển số gì, màu gì?"*.
 
 #### 2. Giải Pháp Triệt Tiêu Nhu Cầu Gọi Điện / Chat Của CarMate
 CarMate triệt tiêu vĩnh viễn sự cần thiết của việc gọi điện thoại khi đang điều khiển phương tiện:
@@ -433,7 +440,7 @@ CarMate triệt tiêu vĩnh viễn sự cần thiết của việc gọi điện
 ### Công trình 13: Kiến Trúc An Ninh Bất Đối Xứng (Asymmetric Trust & Fly-By Ghosting Penalty)
 
 Trong kinh tế học nền tảng, không thể đối xử đối xứng giữa hai phía:
-- **Người đi cùng (Hành khách):** Là bên có tải nhận thức bằng 0, đang đứng ngoài trời nắng. Cửa **mở toang**: Cơ chế **Unified Auth / Upsert Flow** cho phép khách quét QR, nhập SĐT là nhận vé ngay lập tức. Hệ thống tự động khởi tạo tài khoản và sinh JWT token ngầm trong $0.05\text{s}$ mà không bắt tạo mật khẩu hay điền form phức tạp.
+- **Người đi cùng:** Là bên có tải nhận thức bằng 0, đang đứng ngoài trời nắng. Cửa **mở toang**: Cơ chế **Unified Auth / Upsert Flow** cho phép Khách đi cùng quét QR, nhập SĐT là nhận vé ngay lập tức. Hệ thống tự động khởi tạo tài khoản và sinh JWT token ngầm trong $0.05\text{s}$ mà không bắt tạo mật khẩu hay điền form phức tạp.
 - **Chủ xe:** Là bên điều khiển cỗ máy cơ khí 2 tấn với tốc độ cao. Cửa **đóng then cài** với 3 tầng khóa chặn kỹ thuật:
   1. **Tầng 1 — Driver Whitelist Guard:** Mặc định tài khoản ở trạng thái `PENDING_VERIFICATION`. Yêu cầu đối soát thủ công 3 hồ sơ: CCCD gắn chip, GPLX B2 trở lên, Cà-vẹt/Đăng kiểm chính chủ (biển số Bình Phước 93, Bình Dương 61, TP.HCM 51).
   2. **Tầng 2 — Cảm Biến Động Học Phần Cứng (`DeviceMotionEvent`):** Kích hoạt cảm biến gia tốc trên thiết bị chủ xe để phát hiện rung động cơ học thực tế của ô tô lăn bánh, chặn đứng 100% hành vi dùng phần mềm giả lập toạ độ (Fake GPS / Mock Location).
@@ -451,7 +458,7 @@ Trong kinh tế học nền tảng, không thể đối xử đối xứng giữ
 - **Vùng đậm đặc (DENSE ZONE):** Các trạm từ Lộc Ninh, Bình Long, Tân Khai, Chơn Thành có tần suất xe qua lại dồi dào, hỗ trợ đón trả trực tiếp $100\%$.
 
 #### 2. Tích Hợp Chặng Cuối (First-Mile / Last-Mile Micro-Mobility)
-Tại các trạm trả lớn ở TP.HCM (Ngã tư Hàng Xanh, Sân bay Tân Sơn Nhất, Ngã tư Bình Phước), hệ thống tích hợp module tính toán chặng cuối [`lastMileCalculator.js`](file:///Users/huynhnguyen/Desktop/nhat_minh_projects/carmate/packages/shared/src/utils/lastMileCalculator.js):
+Tại các trạm trả lớn ở TP.HCM (Ngã tư Hàng Xanh, Sân bay Tân Sơn Nhất, Ngã tư Bình Phước), hệ thống tích hợp module tính toán chặng cuối [`lastMileCalculator.js`](packages/shared/src/utils/lastMileCalculator.js):
 - Tự động ghép nối lộ trình với xe buýt đô thị hoặc GrabBike về tận nhà (Chợ Bà Chiểu, Landmark 81, Bến xe An Sương...).
 - Hiển thị ước tính cước trọn gói: Cước CarMate ($150.000\text{đ}$) + GrabBike chặng cuối ($15.000\text{đ}$) = $165.000\text{đ}$, tiết kiệm hơn $500.000\text{đ}$ so với đi taxi nguyên chuyến.
 
@@ -493,7 +500,7 @@ stateDiagram-v2
    * Xe tải nhẹ N2: Tối đa 1 khách ngồi ghế phụ.
 2. **Bất biến Không Cầm Tiền Trung Gian (Zero-Escrow Liability Invariant):**
    $$\text{PlatformBalance} \equiv 0\text{đ}$$
-   Nền tảng không bao giờ thu giữ tiền cọc của hành khách. Toàn bộ thanh toán chi phí xăng diễn ra trực tiếp $100\%$ giữa hai bên khi lên xe.
+   Nền tảng không bao giờ thu giữ tiền cọc của Người đi cùng. Toàn bộ thanh toán chi phí xăng diễn ra trực tiếp $100\%$ giữa hai bên khi lên xe.
 3. **Bất biến Tính lũy thoái (Idempotency Invariant):**
    Mọi API huỷ, nhả ghế, hoặc đồng bộ trạng thái khi gọi lặp lại $N$ lần đều cho cùng một kết quả nhất quán mà không gây duplicate booking hoặc trừ điểm 2 lần.
 
@@ -520,6 +527,8 @@ carmate/
 ├── ARCHITECTURE.md                     # Tài liệu thiết kế kiến trúc toàn diện (Tài liệu này)
 ├── AGENTS.md                           # 4 trụ cột kỹ thuật & quy chuẩn danh xưng bất biến
 ├── README.md                           # Hướng dẫn khởi chạy và vận hành
+├── docs/
+│   └── NATIVE_INTENT_FLOW.md           # Nguồn sự thật luồng Gemini / native intent
 ├── package.json                        # Root workspace: ["apps/*", "packages/*"]
 │
 ├── packages/
@@ -531,7 +540,9 @@ carmate/
 │           │   ├── timeSlots.js        # Chuẩn hoá 24h (loại bỏ từ thừa "Sáng / Chiều")
 │           │   └── policies.js         # Quy chế 0% phí sàn, kết nối trực tiếp văn minh
 │           └── utils/
-│               └── pricing.js          # Thuật toán tính cước lăn bánh Geodesic
+│               ├── pricing.js          # Thuật toán tính cước lăn bánh Geodesic
+│               ├── vietnameseText.js   # Chuẩn hoá & so khớp mờ tiếng Việt
+│               └── intentEngine.js     # Phân loại ý định & trích xuất slot xác định
 │
 ├── apps/
 │   ├── api/                            # @carmate/api (Backend Node.js & Autonomous Engine)
@@ -540,6 +551,8 @@ carmate/
 │   │       ├── controllers/            # Điều phối Request: admin, booking, intent, trip
 │   │       ├── db/
 │   │       │   └── sqliteStore.js      # SQLite persistence layer (WAL Mode, ACID)
+│   │       ├── agent/
+│   │       │   └── carmateAgent.js     # Gemini tool calling + native intent fallback
 │   │       └── services/
 │   │           └── batchMatchingEngine.js # BỘ ĐIỀU PHỐI KHỚP LỆNH TỰ ĐỘNG CẤP ĐỘ 3
 │   │                                       # • Gale-Shapley Bipartite Matching
@@ -561,8 +574,9 @@ carmate/
 │               └── modals/             # EscrowBookingModal, TicketShareModal, EditTripModal...
 │
 └── scripts/
-    ├── test-level3-engine.mjs          # Bộ kiểm thử 139 kịch bản tự động Cấp độ 3 (Pass 100%)
-    └── test-local-e2e.js               # Bộ kiểm thử 80 kịch bản tích hợp nghiệp vụ (Pass 100%)
+	├── test-level3-engine.mjs          # Bộ kiểm thử 139 kịch bản tự động Cấp độ 3 (Pass 100%)
+	├── test-local-e2e.js               # Bộ kiểm thử tích hợp nghiệp vụ
+	└── test-intent-engine.mjs          # Bất biến Native Intent Engine và mục tiêu <1ms/câu
 ```
 
 ---
@@ -571,7 +585,7 @@ carmate/
 
 1. **Chuẩn Mực Danh Xưng Tuyệt Đối:**
    * Luôn dùng: **"Chủ xe"**, **"Người đi cùng"**, **"Khách đi cùng"**, **"Người gửi đồ"**.
-   * Tuyệt đối không dùng danh xưng taxi thương mại *"Bác tài"* hoặc *"Tài xế"*.
+   * Tuyệt đối không dùng danh xưng taxi thương mại; chỉ dùng **"Chủ xe"** và **"Người đi cùng"** / **"Khách đi cùng"**.
 2. **Kỷ Luật Trải Nghiệm Zero-Blocking:**
    * Tuyệt đối không dùng `window.alert`, `window.confirm`, `window.prompt`.
    * Mọi tương tác nguy hiểm (Huỷ chuyến, Xóa tài khoản) đều được xác nhận qua Modal Portal `z-[9999]` với đầy đủ ngữ cảnh minh bạch.
@@ -622,7 +636,7 @@ graph TD
    * Triệt tiêu 100% tình trạng chặt chém, giữ giá cước bám sát tiêu hao nhiên liệu thực tế ($35\text{k} + d \times 850\text{đ} + \text{BOT}$), đảm bảo tính phi thương mại.
 2. **Xe Biển Số Vàng Tiện Chuyến Quay Đầu (`convenient_trip`):**
    * Xe hợp đồng biển vàng trả khách xong chiều về thường chạy rỗng (Deadhead miles). CarMate hoan nghênh xe quay đầu tham gia để lấp đầy ghế trống, tiết kiệm nhiên liệu xã hội.
-   * **Vị thế pháp lý:** Xe biển vàng đã có đăng ký kinh doanh vận tải, phù hiệu hợp đồng, bảo hiểm hành khách và hộp đen camera theo Nghị định 10/2020. Khi tham gia CarMate, họ bắt buộc tuân thủ trần giá và quy chuẩn trạm ảo của CarMate.
+   * **Vị thế pháp lý:** Xe biển vàng đã có đăng ký kinh doanh vận tải, phù hiệu hợp đồng, bảo hiểm Người đi cùng và hộp đen camera theo Nghị định 10/2020. Khi tham gia CarMate, họ bắt buộc tuân thủ trần giá và quy chuẩn trạm ảo của CarMate.
 3. **Căn Cứ Pháp Lý Bất Khả Xâm Phạm:**
    * **Nghị định 10/2020/NĐ-CP:** CarMate không phải đơn vị kinh doanh vận tải vì không sở hữu xe, không điều hành lái xe và không có mục đích sinh lợi từ cước vận tải.
    * **Nghị định 52/2013 & 85/2021/NĐ-CP:** CarMate đăng ký hoạt động dưới hình thức Sàn thương mại điện tử / Bảng tin kết nối thông tin trực tuyến.
@@ -633,7 +647,7 @@ graph TD
 
 ## 11. Tam Giác Bảo Chứng Niềm Tin (The Trust Triangle & Human Handshake)
 
-CarMate tuyệt đối không để xảy ra tình trạng "khớp lệnh tự động rồi hai bên im lặng không nói gì với nhau", gây hoang mang lo lắng cho hành khách:
+CarMate tuyệt đối không để xảy ra tình trạng "khớp lệnh tự động rồi hai bên im lặng không nói gì với nhau", gây hoang mang lo lắng cho Người đi cùng:
 
 ```
               TAM GIÁC BẢO CHỨNG NIỀM TIN CARMATE
@@ -668,7 +682,7 @@ CarMate tuyệt đối không để xảy ra tình trạng "khớp lệnh tự �
 
 ## 12. Quy Chuẩn Vận Hành Thực Địa Tuyến Hành Lang QL13 & Mạng Lưới An Toàn Toàn Diện
 
-Hệ thống bổ sung chi tiết quy chuẩn vận hành và kiểm soát rủi ro thực địa tuyến **Tân Khai ⇄ Hàng Xanh** theo tài liệu kỹ thuật chi tiết: [`docs/OPERATIONAL_WORKFLOW.md`](file:///Users/huynhnguyen/Desktop/nhat_minh_projects/carmate/docs/OPERATIONAL_WORKFLOW.md).
+Hệ thống bổ sung chi tiết quy chuẩn vận hành và kiểm soát rủi ro thực địa tuyến **Tân Khai ⇄ Hàng Xanh** theo tài liệu kỹ thuật chi tiết: [`docs/OPERATIONAL_WORKFLOW.md`](docs/OPERATIONAL_WORKFLOW.md).
 
 ### 1. Luồng 4 Nhịp Vận Hành Thực Địa (Happy Case):
 * **Nhịp 1: Tối Hôm Trước (21:00) — Khóa sổ & Zero Doubt Seeding:**  
@@ -684,5 +698,3 @@ Hệ thống bổ sung chi tiết quy chuẩn vận hành và kiểm soát rủi
 * **No-Show Khách Vắng Mặt:** Bắt buộc Dwell-Time $\ge 5\text{ phút}$ dừng đỗ tại trạm mới mở khóa nút báo. Đối chiếu GPS 2 chiều: Khách ở xa $> 500\text{m} \implies$ Phạt 30đ khách, giải phóng chủ xe. Cả 2 cùng ở trạm $\le 80\text{m} \implies$ Chặn báo oan, hướng dẫn bật xi-nhan tìm nhau.
 * **Chủ xe bùng/huỷ sáng sớm:** Thi hành chế tài tức thì (-35đ, khóa 7 ngày); Đền bù Thẻ Ưu Tiên Vàng #1 (Golden Ticket) + 10 Karma; Kích hoạt Phao Cứu Sinh Vật Lý tại trạm xăng (Tuyến Buýt Số 15 tần suất 10-15 phút và các hãng xe khách liên tỉnh QL13).
 * **Silent Fallback N+1:** Khi xe chính gặp sự cố sáng sớm (05:00 - 05:30), hệ thống tự động tráo vé sang xe hỗ trợ (`Toyota Vios 61A-892.41` lúc 06:25) mà không hủy cuốc, giữ nguyên mã PIN và giá vé 50.000đ.
-
-
