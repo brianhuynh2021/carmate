@@ -4,7 +4,7 @@ import { VIRTUAL_HUBS } from '@carmate/shared';
 import api from '../../api/client.js';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
-import { buildAssistedTrip, buildClaimReview, buildOperatorPayload, dateTimeInput, operatorDraft } from '../../utils/operatorAdmin.js';
+import { buildAssistedTrip, buildClaimReview, buildOperatorPayload, dateTimeInput, freshUntilAfter, operatorDraft } from '../../utils/operatorAdmin.js';
 
 const inputClass = "type-input w-full rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#1a2232] p-3";
 const cardClass = "type-body rounded-2xl border border-slate-300/70 dark:border-white/10 bg-white dark:bg-[#1a2232] p-4 space-y-3";
@@ -15,6 +15,13 @@ const safeUrl = value => { try { const url = new URL(value); return ['http:', 'h
 function Field({ label, children }) { return <label className="type-label block space-y-1.5"><span className="type-label">{label}</span>{children}</label>; }
 function Channel({ value, onChange }) { return <select className={inputClass} value={value} onChange={event => onChange(event.target.value)}><option value="">Chọn kênh đã kiểm tra</option><option value="phone">Điện thoại</option><option value="zalo">Zalo</option><option value="email">Email</option><option value="in_person">Gặp trực tiếp</option></select>; }
 function EvidenceTime({ value, onChange, label }) { return <div><Field label={`${label} (giờ Việt Nam)`}><input type="datetime-local" step="1" className={inputClass} value={value} onChange={event => onChange(event.target.value)} /></Field><button type="button" onClick={() => onChange(dateTimeInput(new Date().toISOString()))} className="type-button text-[#0071e3] py-2">Ghi thời điểm hiện tại</button></div>; }
+// Hạn kiểm tra lại là ước lượng theo độ chắc của nguồn, không có đáp án cố định.
+// Ba mốc quen dùng đặt sẵn để khỏi tính tay; vẫn sửa được trực tiếp ở ô ngày.
+function FreshUntilField({ value, checkedAt, onChange }) {
+  return <div><Field label="Cần kiểm tra lại trước (giờ Việt Nam)"><input type="datetime-local" step="1" className={inputClass} value={value} onChange={event => onChange(event.target.value)} /></Field>
+    <div className="flex flex-wrap gap-3 py-2">{[['1 tháng', 30], ['3 tháng', 90], ['6 tháng', 180]].map(([label, days]) =>
+      <button key={days} type="button" onClick={() => onChange(freshUntilAfter(checkedAt, days))} className="type-button text-[#0071e3]">{label}</button>)}</div></div>;
+}
 function History({ rows = [] }) { return <details className="type-body"><summary className="type-body-strong cursor-pointer">Lịch sử xử lý ({rows.length})</summary><ol className="mt-2 space-y-2">{[...rows].reverse().map((row, index) => <li key={index} className="type-body rounded-xl bg-slate-50 dark:bg-white/5 p-3"><p className="type-body">{labels[row.status] || row.status} · {dateLabel(row.at)}</p><p className="type-body whitespace-pre-wrap">{row.note}</p>{row.changedFields?.length > 0 && <p className="type-caption text-slate-500">Trường đã cập nhật: {row.changedFields.join(', ')}</p>}{row.actorId && <p className="type-caption text-slate-500">Người xử lý: {row.actorId}</p>}</li>)}</ol></details>; }
 
 function ProfileEditor({ profile, onClose, onSaved }) {
@@ -46,7 +53,7 @@ function ProfileEditor({ profile, onClose, onSaved }) {
         <Field label="Loại nguồn"><select className={inputClass} value={draft.sourceKind} onChange={event => set('sourceKind', event.target.value)}>{Object.entries(sourceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
         <Field label="Tên nguồn / người cung cấp"><input className={inputClass} value={draft.sourceLabel} maxLength={200} onChange={event => set('sourceLabel', event.target.value)} /></Field>
         <Field label="Đường dẫn nguồn (nếu có)"><input type="url" className={inputClass} value={draft.sourceUrl} maxLength={1500} onChange={event => set('sourceUrl', event.target.value)} /></Field>
-        <div className="grid sm:grid-cols-2 gap-3"><EvidenceTime label="Đã kiểm tra nguồn lúc" value={draft.checkedAt} onChange={value => set('checkedAt', value)} /><Field label="Cần kiểm tra lại trước (giờ Việt Nam)"><input type="datetime-local" step="1" className={inputClass} value={draft.freshUntil} onChange={event => set('freshUntil', event.target.value)} /></Field></div>
+        <div className="grid sm:grid-cols-2 gap-3"><EvidenceTime label="Đã kiểm tra nguồn lúc" value={draft.checkedAt} onChange={value => set('checkedAt', value)} /><FreshUntilField value={draft.freshUntil} checkedAt={draft.checkedAt} onChange={value => set('freshUntil', value)} /></div>
         <Field label="Căn cứ công khai số liên hệ"><select className={inputClass} value={draft.contactPublicationBasis} onChange={event => set('contactPublicationBasis', event.target.value)}><option value="">Chưa có căn cứ</option><option value="official_business_source">Nguồn công khai chính thức của nhà xe</option><option value="owner_consent">Chủ số đã đồng ý công khai</option></select></Field>
         <Field label="Bằng chứng / nội dung đối chiếu và điều kiện được phép đăng"><textarea rows={3} className={inputClass} value={draft.authorizationNote} maxLength={3000} onChange={event => set('authorizationNote', event.target.value)} placeholder="Ghi rõ đã kiểm tra nguồn nào, ai cho phép và cho phép công khai thông tin gì." /></Field>
       </section>

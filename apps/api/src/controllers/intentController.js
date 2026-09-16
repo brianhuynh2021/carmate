@@ -255,9 +255,16 @@ export async function updateMovementIntentHandler(req, res) {
 
     if (['matched','proposed'].includes(intent.status)) return res.status(409).json({ success: false, error: 'Xử lý cuộc hẹn đang mở trước khi đổi nhu cầu.' });
     if (updates.date || updates.timeSlot || req.body?.expiresAt) {
-      updates.date = normalizeTravelDate(updates.date || intent.date);
-      updates.expiresAt = requestDeadline({ ...intent, ...updates, expiresAt: req.body?.expiresAt });
-      updates.originalDeadlineAt = updates.expiresAt;
+      // Ngày cũ đã trôi qua (hoặc dữ liệu cũ không chuẩn hóa được) là lỗi dữ liệu
+      // người dùng gửi lên, không phải sự cố máy chủ — phải trả 400 kèm lời nhắc
+      // chọn lại ngày, chứ không phải 500.
+      try {
+        updates.date = normalizeTravelDate(updates.date || intent.date);
+        updates.expiresAt = requestDeadline({ ...intent, ...updates, expiresAt: req.body?.expiresAt });
+        updates.originalDeadlineAt = updates.expiresAt;
+      } catch (err) {
+        return res.status(400).json({ success: false, error: err.message });
+      }
     }
     updates.updatedAt = new Date().toISOString();
     const updated = await updateIntent(id, updates);

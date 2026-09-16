@@ -29,11 +29,24 @@ export function ownsTrip(user, trip) {
     (user.phone && cleanPhoneNumber(user.phone) === cleanPhoneNumber(trip.phoneReal || trip.phone || ''))));
 }
 
+const FULL_ROUTE = [-Infinity, Infinity];
+
+// Đoạn [s_đón, s_trả] trên cọc km hành lang. Trạm nằm ngoài bản đồ hành lang thì
+// không định vị được; khi đó phải coi như chiếm trọn tuyến để không bán vượt ghế.
 function interval(value) {
   const terms = value.committedTerms || value.proposalTerms || value;
   const a = getStationStationKm(terms.originHubId || value.originHubId || value.hubId);
   const b = getStationStationKm(terms.destinationHubId || value.destinationHubId);
-  return a != null && b != null && a !== b ? [Math.min(a, b), Math.max(a, b)] : [-Infinity, Infinity];
+  return a != null && b != null && a !== b ? [Math.min(a, b), Math.max(a, b)] : FULL_ROUTE;
+}
+
+// Giới hạn đoạn của một chỗ đã giữ vào đúng hành trình chuyến xe. Nhờ đó chỗ giữ
+// có trạm lạ chỉ chiếm phần tuyến xe thực sự chạy, thay vì chặn cả những đoạn xe
+// không đi qua.
+function reservationInterval(booking, tripSegment) {
+  const [a, b] = interval(booking);
+  if (a !== -Infinity || b !== Infinity) return [a, b];
+  return tripSegment;
 }
 
 function activeReservations(tripId, bookings, excludeId = null) {
@@ -41,10 +54,10 @@ function activeReservations(tripId, bookings, excludeId = null) {
     !b.seatReleasedAt && (b.seatReserved === true || (b.seatReserved !== false && (b.bothConfirmed || ['confirmed', 'driver_confirmed', 'zalo_active'].includes(b.status)))));
 }
 
-function peakSeats(reservations, segment = [-Infinity, Infinity]) {
+function peakSeats(reservations, segment = FULL_ROUTE, tripSegment = FULL_ROUTE) {
   const events = [];
   for (const booking of reservations) {
-    const [a, b] = interval(booking);
+    const [a, b] = reservationInterval(booking, tripSegment);
     const start = Math.max(a, segment[0]);
     const end = Math.min(b, segment[1]);
     if (start >= end) continue;
@@ -63,13 +76,13 @@ function capacityOf(trip, reservations) {
   // Existing bookings may already have reduced availableSeats. Capture that
   // inventory once; never infer passenger capacity from total vehicle seats.
   const free = Number(trip.availableSeats ?? trip.seats ?? 0);
-  return Math.max(0, Number.isFinite(free) ? free : 0) + peakSeats(reservations);
+  return Math.max(0, Number.isFinite(free) ? free : 0) + peakSeats(reservations, FULL_ROUTE, interval(trip));
 }
 
 export function getTripAvailableSeatsForSegment(trip, segment = {}, bookings = getBookings()) {
   if (!trip) return 0;
   const reservations = activeReservations(trip.id, bookings);
-  return Math.max(0, capacityOf(trip, reservations) - peakSeats(reservations, interval(segment)));
+  return Math.max(0, capacityOf(trip, reservations) - peakSeats(reservations, interval(segment), interval(trip)));
 }
 
 function writeBooking(database, booking) {
@@ -92,10 +105,10 @@ function writeLinkedRequest(database, booking, state) {
 }
 
 function refreshInventory(database, trip, capacity, bookings) {
-  const availableSeats = Math.max(0, capacity - peakSeats(activeReservations(trip.id, bookings)));
+  const availableSeats = Math.max(0, capacity - peakSeats(activeReservations(trip.id, bookings), FULL_ROUTE, interval(trip)));
   const updated = { ...trip, bookingSeatCapacity: capacity, availableSeats, updatedAt: Date.now() };
-  // A full segment does not mean the vehicle stops running or every segment is full.
-  if (updated.status === 'full') updated.status = 'active';
+  // Trạng thái `full` là do chủ xe tự đặt qua PATCH /trips/:id/status — kho ghế
+  // không được tự lật ngược lại `active` và mở bán chuyến mà chủ xe đã khóa.
   database.prepare('UPDATE trips SET seats = ?, status = ?, payload = ? WHERE id = ?')
     .run(availableSeats, updated.status, JSON.stringify(updated), trip.id);
 }
@@ -199,7 +212,7 @@ export function confirmAppointment({ bookingId, user, proposalVersion, nowMs = D
     if (sameNeed) fail('Nhu cầu này đã có một cuộc hẹn được xác nhận.');
     const reservations = activeReservations(trip.id, all, bookingId);
     const capacity = capacityOf(trip, reservations);
-    if (capacity - peakSeats(reservations, interval(terms)) < terms.seats) fail('Ghế trên đoạn này vừa được nhận. Hãy chọn phương án khác.');
+    if (capacity - peakSeats(reservations, interval(terms), interval(trip)) < terms.seats) fail('Ghế trên đoạn này vừa được nhận. Hãy chọn phương án khác.');
     const updated = {
       ...booking, tripId: trip.id, targetTripId: trip.id,
       driverId: trip.userId || booking.proposalDriverId, driverPhone: trip.phoneReal || trip.phone || booking.proposalDriverPhone,
@@ -212,7 +225,7 @@ export function confirmAppointment({ bookingId, user, proposalVersion, nowMs = D
     writeBooking(database, updated);
     writeLinkedRequest(database, updated, 'matched');
     for (const sibling of all) {
-      if (idOf(sibling) !== bookingId && sibling.requestId === booking.requestId && !sibling.bothConfirmed && !CLOSED.has(sibling.status)) writeBooking(database, { ...sibling, status: 'expired', needStatus: 'closed', needsReplacement: false, proposalTerms: null, proposalVersion: null, closedReason: 'another_appointment_confirmed' });
+      if (idOf(sibling) !== bookingId && sibling.requestId && sibling.requestId === booking.requestId && !sibling.bothConfirmed && !CLOSED.has(sibling.status)) writeBooking(database, { ...sibling, status: 'expired', needStatus: 'closed', needsReplacement: false, proposalTerms: null, proposalVersion: null, closedReason: 'another_appointment_confirmed' });
     }
     refreshInventory(database, trip, capacity, [...reservations, updated]);
     return updated;
