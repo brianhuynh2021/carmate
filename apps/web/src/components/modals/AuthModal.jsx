@@ -103,9 +103,11 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '', title
     script.async = true;
     script.setAttribute('data-telegram-login', config.telegramBotUsername);
     script.setAttribute('data-size', 'large');
-    // Iframe của Telegram tự vẽ nền tối lộ ra ngoài mép bo tròn của nút. Khai báo
-    // bán kính đúng bằng nút để widget tự bo, không còn viền đen quanh nút.
-    script.setAttribute('data-radius', '20');
+    // Iframe của Telegram tự vẽ nền tối lộ ra ngoài mép bo tròn của nút. Hai thuộc
+    // tính dưới đây vốn có từ bản đầu, bị rơi trong lần refactor — khôi phục đúng
+    // giá trị cũ để widget tự bo góc và xin quyền nhắn tin như trước.
+    script.setAttribute('data-radius', '14');
+    script.setAttribute('data-request-access', 'write');
     script.setAttribute('data-onauth', `${callbackName}(user)`);
     telegramContainer.current.replaceChildren(script);
     return () => { delete window[callbackName]; };

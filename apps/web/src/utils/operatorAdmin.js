@@ -5,6 +5,13 @@ export function dateTimeInput(value) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(value)).map(part => [part.type, part.value]));
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;
 }
+// Hạn kiểm tra lại tính từ mốc đã kiểm tra, để hai ô luôn thỏa ràng buộc
+// freshUntil > checkedAt của máy chủ. Không có mốc đã kiểm tra thì tính từ bây giờ.
+export function freshUntilAfter(checkedAtInput, days) {
+  const base = checkedAtInput ? new Date(`${checkedAtInput}+07:00`) : new Date();
+  if (!Number.isFinite(base.getTime())) return '';
+  return dateTimeInput(new Date(base.getTime() + days * 86400000).toISOString());
+}
 export function evidenceDate(value, label) {
   if (!value) return null;
   const date = new Date(`${value}+07:00`);
