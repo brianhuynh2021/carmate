@@ -600,7 +600,7 @@ export async function deleteTripHandler(req, res) {
     if (!trip) return res.status(200).json({ success: true, message: 'Chuyến đã được xóa.' });
     const active = getBookings().filter(b => (b.tripId === trip.id || b.targetTripId === trip.id) && !['cancelled','completed','expired'].includes(b.status) && !b.needsReplacement);
     if (active.some(b => b.status === 'boarded')) return res.status(409).json({ success: false, error: 'Đang có khách trên xe. Hãy xử lý sự cố hành trình trước khi hủy chuyến.' });
-    for (const booking of active) cancelAppointment({ bookingId: booking.id || booking.escrowId, user: req.user, reason: req.body?.reason || 'Chủ xe hủy chuyến' });
+    for (const booking of active) cancelAppointment({ bookingId: booking.escrowId || booking.id, user: req.user, reason: req.body?.reason || 'Chủ xe hủy chuyến' });
     if (active.length) await updateTrip(trip.id, { status: 'cancelled', cancelledAt: Date.now(), cancelReason: req.body?.reason || '', updatedAt: Date.now() });
     else await deleteTrip(trip.id);
     return res.json({ success: true, message: active.length ? 'Đã hủy chuyến; nhu cầu còn hiệu lực của khách tiếp tục tìm xe thay thế.' : 'Đã xóa chuyến.', data: { tripId: trip.id, affectedRequests: active.length } });

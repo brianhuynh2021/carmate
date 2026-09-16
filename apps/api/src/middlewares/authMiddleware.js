@@ -69,9 +69,19 @@ export function requireTripOwnership(req, res, next) {
   }
 
   // Nếu người dùng không phải chủ sở hữu bài đăng
-  const isOwnerById = req.user && trip.userId && req.user.userId === trip.userId;
+  const isOwnerById = Boolean(req.user && trip.userId && req.user.userId === trip.userId);
 
-  if (!isOwnerById) {
+  // Bài đăng cũ lưu userId dạng `USR-<sđt>`, trong khi phiên đăng nhập Google/Telegram
+  // cấp id `USR-GG-*` / `USR-TG-*`, khiến chính chủ bị khóa khỏi bài của mình. Chỉ
+  // mở lại đúng trường hợp đó: userId của bài ĐÚNG BẰNG `USR-<sđt của phiên>`.
+  // Không đối chiếu theo phoneReal/phone hiển thị — số tổng đài nhà xe là số công
+  // khai, ai đăng ký bằng số đó cũng sẽ sửa được chuyến của nhà xe.
+  const userPhone = cleanPhoneNumber(req.user?.phone || '');
+  const isLegacyPhoneOwner = Boolean(
+    userPhone && !trip.operatorId && trip.userId === `USR-${userPhone}`
+  );
+
+  if (!isOwnerById && !isLegacyPhoneOwner) {
     return res.status(403).json({
       success: false,
       error: 'Từ chối quyền truy cập: Bạn không có quyền chỉnh sửa hoặc xóa bài đăng của người khác'
