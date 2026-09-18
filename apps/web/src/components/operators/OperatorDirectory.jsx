@@ -161,7 +161,7 @@ function OperatorRow({ operator, open, onToggle, onOpenDetail }) {
         <span className="block truncate text-slate-900 dark:text-white type-body-strong">{operator.name}</span>
         {route && <span className="mt-0.5 block truncate text-slate-500 dark:text-slate-400 type-caption">{route}</span>}
       </span>
-      <span className={`shrink-0 rounded-full px-2 py-0.5 type-caption ${badge.tone}`}>{badge.label}</span>
+      {badge && <span className={`shrink-0 rounded-full px-2 py-0.5 type-caption ${badge.tone}`}>{badge.label}</span>}
       <ChevronRight size={18} className={`shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-90' : ''}`} />
     </button>
 
@@ -173,6 +173,8 @@ function OperatorRow({ operator, open, onToggle, onOpenDetail }) {
           <dd className="text-slate-700 dark:text-slate-200 type-body">{operator.scheduleNote}</dd></>}
         <dt className="text-slate-500 dark:text-slate-400 type-caption">Quản lý</dt>
         <dd className="text-slate-700 dark:text-slate-200 type-body">{operator.managementStatus === 'claimed' ? 'Đã xác nhận người quản lý' : 'Chưa có người quản lý'}</dd>
+        <dt className="text-slate-500 dark:text-slate-400 type-caption">Đối chiếu</dt>
+        <dd className="text-slate-700 dark:text-slate-200 type-body">{operatorDate(operator.checkedAt)}</dd>
       </dl>
 
       <div className="flex items-center gap-2">
