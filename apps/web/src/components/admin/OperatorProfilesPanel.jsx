@@ -160,6 +160,7 @@ export default function OperatorProfilesPanel({ onNotice }) {
   const [tab, setTab] = useState('profiles'); const [status, setStatus] = useState(''); const [query, setQuery] = useState(''); const [search, setSearch] = useState(''); const [page, setPage] = useState(0);
   const [rows, setRows] = useState([]); const [loading, setLoading] = useState(false); const [error, setError] = useState('');
   const [editor, setEditor] = useState(null); const [review, setReview] = useState(null); const [assisted, setAssisted] = useState(null); const profiles = useRef(new Map()); const generation = useRef(0);
+  const [publishing, setPublishing] = useState('');
   const load = useCallback(async () => {
     const version = ++generation.current; setLoading(true); setError('');
     try {
@@ -171,6 +172,21 @@ export default function OperatorProfilesPanel({ onNotice }) {
     } catch (err) { if (version === generation.current) setError(err.message); } finally { if (version === generation.current) setLoading(false); }
   }, [tab, status, query, page]);
   useEffect(() => { setRows([]); load(); return () => { generation.current += 1; }; }, [load]);
+  // Công khai ngay từ danh sách: giai đoạn đầu danh bạ cần lên sóng nhanh hơn tốc
+  // độ đối chiếu từng nguồn. Hồ sơ vào danh bạ ở mức "chưa đối chiếu" nên giao diện
+  // vẫn nói đúng độ tin cậy, và máy chủ ghi lại số lấy từ đâu để còn căn cứ trả lời
+  // khi nhà xe đề nghị sửa hoặc gỡ.
+  const quickPublish = async row => {
+    if (publishing) return;
+    setPublishing(row.id);
+    try {
+      const response = await api.adminQuickPublishOperator(row.id, {});
+      if (!response?.success) throw new Error(response?.error || 'Chưa công khai được hồ sơ.');
+      profiles.current.set(response.data.id, response.data);
+      onNotice?.(`Đã công khai "${row.name}" dạng thông tin tham khảo, chưa đối chiếu nguồn.`);
+      load();
+    } catch (err) { onNotice?.(err.message); } finally { setPublishing(''); }
+  };
   const saved = profile => { profiles.current.set(profile.id, profile); setReview(previous => previous?.item.operatorId === profile.id ? { ...previous, profile } : previous); onNotice?.('Đã lưu hồ sơ và lịch sử thay đổi.'); load(); };
   const openReview = async item => {
     setError('');
@@ -188,7 +204,7 @@ export default function OperatorProfilesPanel({ onNotice }) {
     <nav className="flex gap-2 flex-wrap">{[['profiles', 'Hồ sơ'], ['claims', 'Nhận quyền quản lý'], ['reports', 'Yêu cầu sửa / gỡ']].map(([value, label]) => <Button key={value} variant={tab === value ? 'primary' : 'secondary'} onClick={() => { setTab(value); setStatus(''); setPage(0); }} className="type-button">{label}</Button>)}</nav>
     <div className="flex flex-wrap gap-2 items-center"><select aria-label="Lọc trạng thái" className={`type-input ${inputClass} sm:max-w-48`} value={status} onChange={event => { setStatus(event.target.value); setPage(0); }}><option value="">Tất cả trạng thái</option>{statuses.map(value => <option key={value} value={value}>{labels[value]}</option>)}</select>{tab === 'profiles' && <form className="type-body flex gap-2 flex-1" onSubmit={event => { event.preventDefault(); setQuery(search); setPage(0); }}><input aria-label="Tìm hồ sơ theo tên" className={inputClass} value={search} placeholder="Tên hồ sơ" onChange={event => setSearch(event.target.value)} /><Button icon={Search} variant="secondary" type="submit" className="type-button">Tìm</Button></form>}<Button icon={RefreshCw} variant="secondary" disabled={loading} onClick={load} className="type-button">Làm mới</Button></div>
     {error && <p role="alert" className="type-body rounded-xl bg-red-50 p-3 text-red-700">{error}</p>}{loading && <p role="status" className="type-body text-slate-500">Đang tải dữ liệu…</p>}{!loading && !error && !rows.length && <p className={cardClass}>Không có bản ghi phù hợp bộ lọc này.</p>}
-    {rows.map(row => <article key={row.id} className={cardClass}><div className="flex justify-between gap-3"><div><h3 className="type-heading">{tab === 'profiles' ? row.name : row.operatorName || row.operatorId}</h3><p className="type-body text-slate-500">{labels[row.status] || row.status}{tab === 'reports' ? ` · ${row.type === 'removal' ? 'Yêu cầu gỡ' : 'Đề nghị sửa'}` : ''}</p></div><Button variant="secondary" onClick={() => tab === 'profiles' ? setEditor(row) : openReview(row)} className="type-button">{tab === 'profiles' ? 'Xem / sửa hồ sơ' : 'Mở xử lý'}</Button></div>
+    {rows.map(row => <article key={row.id} className={cardClass}><div className="flex justify-between gap-3"><div><h3 className="type-heading">{tab === 'profiles' ? row.name : row.operatorName || row.operatorId}</h3><p className="type-body text-slate-500">{labels[row.status] || row.status}{tab === 'reports' ? ` · ${row.type === 'removal' ? 'Yêu cầu gỡ' : 'Đề nghị sửa'}` : ''}</p></div><div className="flex shrink-0 flex-col gap-2 sm:flex-row"><Button variant="secondary" onClick={() => tab === 'profiles' ? setEditor(row) : openReview(row)} className="type-button">{tab === 'profiles' ? 'Xem / sửa hồ sơ' : 'Mở xử lý'}</Button>{tab === 'profiles' && row.status !== 'published' && row.kind !== 'individual' && row.contactPhone && <Button disabled={publishing === row.id} onClick={() => quickPublish(row)} className="type-button">{publishing === row.id ? 'Đang công khai…' : 'Công khai ngay'}</Button>}</div></div>
       {tab === 'profiles' ? <><p className="type-body">{row.contactPhone || 'Chưa có số liên hệ'} · {row.kind === 'individual' ? 'Cá nhân' : 'Nhà xe / đơn vị'}</p><p className="type-body">Nguồn: {row.source?.label || 'Chưa ghi nhận'} · {row.ownerUserId ? 'Đã có người quản lý được duyệt' : 'Chưa nhận quyền quản lý'}</p><p className="type-caption text-slate-500">Kiểm tra: {dateLabel(row.checkedAt)} · hạn kiểm tra lại: {dateLabel(row.freshUntil)}</p>{row.source?.kind === 'legacy_directory' && <p className="type-body text-amber-700">Dữ liệu danh bạ cũ: cần bổ sung nguồn và bằng chứng trước khi công khai.</p>}{row.ownerUserId && row.status === 'published' && <Button variant="secondary" onClick={() => setAssisted(row)} className="type-button">Nhập hộ chuyến đã được chấp thuận</Button>}</> : <><p className="type-body whitespace-pre-wrap">{row.message}</p><p className="type-caption text-slate-500">Tiếp nhận: {dateLabel(row.createdAt)} · cập nhật: {dateLabel(row.updatedAt)}</p>{row.resolutionNote && <p className="type-body whitespace-pre-wrap">Kết quả: {row.resolutionNote}</p>}<History rows={row.history} /></>}
     </article>)}
     <div className="flex justify-between items-center gap-3"><p className="type-body text-slate-500">Trang {page + 1} · {rows.length} bản ghi đã tải</p><div className="flex gap-2"><Button variant="secondary" disabled={!page || loading} onClick={() => setPage(value => value - 1)} className="type-button">Trước</Button><Button variant="secondary" disabled={rows.length < 50 || loading} onClick={() => setPage(value => value + 1)} className="type-button">Tiếp</Button></div></div>

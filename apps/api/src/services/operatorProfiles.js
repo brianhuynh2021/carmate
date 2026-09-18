@@ -229,6 +229,37 @@ export function createOperator(input, admin, { now = Date.now() } = {}) {
   saveProfile(database, record);
   return record;
 }
+/**
+ * Công khai nhanh một hồ sơ danh bạ mà không bắt nhập lại nguồn, căn cứ và mốc
+ * kiểm tra.
+ *
+ * Đây là đường dành riêng cho giai đoạn đầu, khi danh bạ tham khảo cần lên sóng
+ * nhanh hơn tốc độ đối chiếu từng nguồn. Nó KHÔNG bỏ việc ghi vết: hồ sơ vẫn lưu
+ * số này lấy từ đâu (`quickPublish`) và ai bấm, để khi nhà xe đề nghị sửa hoặc gỡ
+ * thì còn căn cứ trả lời. Hồ sơ công khai theo đường này mang `freshness` khác
+ * hồ sơ đã đối chiếu, nên giao diện vẫn nói đúng mức tin cậy của thông tin.
+ *
+ * Số cá nhân không đi đường này: công khai số của một người khi họ chưa biết là
+ * chuyện khác hẳn với đăng số tổng đài doanh nghiệp.
+ */
+export function quickPublishOperator(id, input, admin, { now = Date.now() } = {}) {
+  const actorId = adminActor(admin), database = ensureStore();
+  const note = text(input?.note, 'Ghi chú', 2000);
+  return database.transaction(() => {
+    const current = requireProfile(id, database);
+    if (!current.name || !current.contactPhone) fail('Cần tên hồ sơ và số liên hệ trước khi công khai.');
+    if (current.kind === 'individual') fail('Số cá nhân chỉ được công khai khi có bằng chứng chủ số đồng ý; hãy dùng luồng duyệt đầy đủ.');
+    if (current.status === 'published') return current;
+    const basis = current.importedFrom?.kind === 'transit_directory' ? 'danh bạ nội bộ đã nhập trước đó' : 'hồ sơ do quản trị nhập';
+    const record = { ...current, status: 'published', updatedAt: nowIso(now),
+      quickPublish: { at: nowIso(now), by: actorId, sourceOfRecord: basis, note },
+      publicationReview: null, checkedAt: null, freshUntil: null,
+      history: [...current.history, { status: 'published', at: nowIso(now), actorId,
+        note: `Công khai nhanh dạng thông tin tham khảo, chưa đối chiếu nguồn độc lập. Số lấy từ ${basis}.${note ? ` ${note}` : ''}` }] };
+    saveProfile(database, record);
+    return record;
+  })();
+}
 export function updateOperator(id, input, admin, { now = Date.now() } = {}) {
   const actorId = adminActor(admin), database = ensureStore(), patch = normalizePatch(input);
   return database.transaction(() => {
