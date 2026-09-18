@@ -46,6 +46,9 @@ import {
 
 const ADMIN_TOKEN_KEY = 'carmate_admin_token';
 
+// Các tab hợp lệ của trang quản trị; dùng để lọc giá trị ?tab= do người dùng gõ vào.
+const ADMIN_TABS = ['trips', 'operators', 'users', 'reports', 'ai', 'analytics', 'trust', 'fuel'];
+
 export default function AdminDashboardView({ onExitAdmin }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return Boolean(sessionStorage.getItem(ADMIN_TOKEN_KEY));
@@ -60,7 +63,23 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [isResendingMfa, setIsResendingMfa] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
-  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'users' | 'reports' | 'ai' | 'analytics' | 'trust'
+  // Tab đang mở lưu trong địa chỉ trang. Trước đây nó chỉ nằm trong bộ nhớ React nên
+  // mỗi lần tải lại là rơi về tab đầu, mất chỗ đang làm dở — và không gửi được đường
+  // dẫn tới đúng tab cho người khác.
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === 'undefined') return 'trips';
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    return ADMIN_TABS.includes(requested) ? requested : 'trips';
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('tab') === activeTab) return;
+    // replaceState: đổi tab không tạo thêm một bước lùi, nút Back vẫn thoát được
+    // khỏi trang quản trị như bình thường.
+    url.searchParams.set('tab', activeTab);
+    window.history.replaceState(null, '', url);
+  }, [activeTab]);
 
   // Data states
   const [metrics, setMetrics] = useState(null);
