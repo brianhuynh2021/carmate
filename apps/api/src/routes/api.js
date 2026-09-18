@@ -131,7 +131,7 @@ import {
   createOperatorClaimHandler, createOperatorReportHandler, getOperatorReportStatusHandler,
   adminListOperatorsHandler, adminGetOperatorHandler, adminCreateOperatorHandler, adminUpdateOperatorHandler,
   adminListClaimsHandler, adminReviewClaimHandler, adminListReportsHandler, adminReviewReportHandler,
-  adminApplyReportedPhoneHandler
+  adminApplyReportedPhoneHandler, adminQuickPublishOperatorHandler
 } from '../controllers/operatorController.js';
 import { createAssistedOperatorTrip } from '../controllers/assistedOperatorTripController.js';
 
@@ -151,6 +151,7 @@ router.get('/admin/operators/:id', requireAdmin, adminGetOperatorHandler);
 router.post('/admin/operators', requireAdmin, adminCreateOperatorHandler);
 router.patch('/admin/operators/:id', requireAdmin, adminUpdateOperatorHandler);
 router.post('/admin/operators/:id/trips', requireAdmin, createAssistedOperatorTrip);
+router.post('/admin/operators/:id/quick-publish', requireAdmin, adminQuickPublishOperatorHandler);
 router.get('/admin/operator-claims', requireAdmin, adminListClaimsHandler);
 router.patch('/admin/operator-claims/:id', requireAdmin, adminReviewClaimHandler);
 router.get('/admin/operator-reports', requireAdmin, adminListReportsHandler);
