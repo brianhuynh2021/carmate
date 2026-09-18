@@ -85,12 +85,33 @@ function ReviewEditor({ item, type, profile, suspended, onClose, onEditProfile, 
       onSaved(response.data); onClose();
     } catch (err) { setError(err.message); } finally { lock.current = false; setBusy(false); }
   };
+  // Duyệt một chạm số do người xem đề xuất: máy chủ ghi số mới và kết luận phản ánh
+  // trong cùng một giao dịch, rồi hạ hồ sơ về bản nháp để đối chiếu nguồn lại.
+  const applyPhone = async () => {
+    if (lock.current || closed) return;
+    try {
+      setError('');
+      const note = draft.resolutionNote.trim() || 'Áp dụng số do người xem đề xuất.';
+      lock.current = true; setBusy(true);
+      const response = await api.adminApplyReportedPhone(item.id, { resolutionNote: note });
+      if (!response?.success) throw new Error(response?.error || 'Chưa áp dụng được số đề xuất.');
+      onSaved(response.data?.report || response.data); onClose();
+    } catch (err) { setError(err.message); } finally { lock.current = false; setBusy(false); }
+  };
   if (suspended) return null;
   return <Modal title={type === 'claims' ? 'Duyệt quyền quản lý hồ sơ' : 'Xử lý yêu cầu sửa / gỡ'} subtitle={`${item.operatorName || profile?.name || item.operatorId} · ${labels[item.status] || item.status}`} size="xl" onClose={() => !busy && onClose()} footer={<div className="flex justify-end gap-2"><Button variant="secondary" disabled={busy} onClick={onClose} className="type-button">Đóng</Button>{!closed && <Button disabled={busy} onClick={save} className="type-button">{busy ? 'Đang lưu…' : 'Lưu kết luận'}</Button>}</div>}>
     <div className="space-y-4">
       <p className="type-body whitespace-pre-wrap">{item.message}</p><p className="type-body text-slate-500">Tiếp nhận: {dateLabel(item.createdAt)}</p>
       {item.claimantUserId && <p className="type-body">Tài khoản yêu cầu: {item.claimantUserId}</p>}{item.reporterContact && <p className="type-body">Liên hệ người phản ánh: {item.reporterContact}</p>}
       {profile ? <div className={cardClass}><p className="type-body-strong">Hồ sơ hiện tại: {profile.name} · {labels[profile.status]}</p><p className="type-body">{profile.contactPhone || 'Chưa có số liên hệ'}</p><p className="type-body">Nguồn: {profile.source?.label || 'Chưa ghi nhận'} · kiểm tra {dateLabel(profile.checkedAt)}</p>{safeUrl(profile.source?.url) && <a className="type-body text-[#0071e3]" href={safeUrl(profile.source.url)} target="_blank" rel="noreferrer">Mở nguồn đã ghi nhận</a>}<div><Button variant="secondary" disabled={busy} onClick={() => onEditProfile(profile)} className="type-button">Mở hồ sơ để sửa hoặc ẩn</Button></div></div> : <p role="alert" className="type-body text-amber-700">Chưa tải được đúng hồ sơ. Làm mới danh sách trước khi duyệt quyền quản lý.</p>}
+      {type === 'reports' && item.suggestedPhone && <section className={cardClass}>
+        <p className="type-body-strong">Số do người xem đề xuất</p>
+        <p className="type-body">{profile?.contactPhone || 'Chưa có số'} → <span className="type-body-strong">{item.suggestedPhone}</span></p>
+        {item.appliedAt ? <p className="type-body text-slate-500">Đã áp dụng lúc {dateLabel(item.appliedAt)}.</p> : <>
+          <p className="type-body text-slate-500">Áp dụng sẽ ghi số mới và đưa hồ sơ về bản nháp: số này chưa đối chiếu với nguồn chính thức nên không được hiển thị như số đã kiểm.</p>
+          {!closed && <div><Button variant="secondary" disabled={busy} onClick={applyPhone} className="type-button">Áp dụng số này</Button></div>}
+        </>}
+      </section>}
       {!closed && <>
         <Field label="Kết luận / trạng thái"><select className={inputClass} value={draft.status} onChange={event => set('status', event.target.value)}>{(type === 'claims' ? ['approved', 'rejected'] : ['reviewing', 'resolved', 'rejected']).map(value => <option key={value} value={value}>{labels[value]}</option>)}</select></Field>
         {type === 'claims' && draft.status === 'approved' && <section className={cardClass}>

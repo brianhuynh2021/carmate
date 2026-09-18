@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronRight, ExternalLink, Loader2, Phone, RefreshCw, X } from 'lucide-react';
+import { BookOpen, ChevronRight, ExternalLink, Loader2, Phone, RefreshCw, Search, X } from 'lucide-react';
 import api from '../../api/client.js';
 import {
   REPORT_RECEIPTS_KEY, safeSourceUrl, operatorPhone, operatorFreshness, operatorDate,
@@ -8,9 +8,18 @@ import {
 } from './operatorPresentation.js';
 
 const cardClass = 'rounded-2xl border border-slate-300/70 dark:border-white/10 bg-white dark:bg-[#1a2232] p-4 shadow-sm';
+// Thẻ trong danh bạ đứng cạnh thẻ chuyến xe trên cùng một màn hình, nên dùng đúng
+// nền, viền và chuyển động của CorridorTripCard thay vì tông riêng của bảng nhập liệu.
+const operatorCardClass = 'rounded-2xl border border-slate-200 dark:border-white/15 bg-white dark:bg-[#1c1c1e] p-4 shadow-md transition-all duration-200 hover:shadow-lg hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5';
 const inputClass = 'mt-1 w-full min-h-11 rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#1a2232] px-3 py-2 text-slate-900 dark:text-white type-input';
 const primaryClass = 'min-h-11 rounded-xl bg-[#0071e3] px-4 py-2.5 text-white disabled:opacity-50 type-button';
 const secondaryClass = 'min-h-11 rounded-xl border border-slate-300 dark:border-white/15 px-3 py-2 hover:bg-slate-50 dark:hover:bg-white/5 disabled:opacity-50 type-button';
+
+// Số thẻ hiện trước khi bấm xem tất cả: đủ để thấy danh bạ có nội dung thật,
+// vẫn gọn trên một màn hình điện thoại.
+const PREVIEW_COUNT = 8;
+// Bỏ dấu để gõ "thanh cong" vẫn tìm ra "Thành Công".
+const searchText = value => String(value || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
 
 function ErrorNote({ children }) {
   return children ? <p role="alert" className="rounded-xl bg-rose-50 p-3 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 type-body">{children}</p> : null;
@@ -108,6 +117,7 @@ function ClaimForm({ operator, currentUser, onRequireAuth, onDone, onBusyChange 
 function ReportForm({ operator, onReceipt, onBusyChange }) {
   const [type, setType] = useState('correction');
   const [message, setMessage] = useState('');
+  const [suggestedPhone, setSuggestedPhone] = useState('');
   const [contact, setContact] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -115,7 +125,9 @@ function ReportForm({ operator, onReceipt, onBusyChange }) {
   const submit = async (event) => {
     event.preventDefault(); setBusy(true); onBusyChange(true); setError('');
     try {
-      const result = await api.reportOperator(operator.id, { type, message: message.trim(), ...(contact.trim() ? { reporterContact: contact.trim() } : {}) });
+      const result = await api.reportOperator(operator.id, { type, message: message.trim(),
+        ...(type === 'correction' && suggestedPhone.trim() ? { suggestedPhone: suggestedPhone.trim() } : {}),
+        ...(contact.trim() ? { reporterContact: contact.trim() } : {}) });
       if (!result?.success || !result.data?.id || !result.data.accessToken) throw new Error('Chưa nhận được mã theo dõi. Vui lòng thử lại.');
       onReceipt({ ...result.data, operatorName: operator.name }); setSent(true);
     } catch (err) { setError(err.message || 'Chưa gửi được phản ánh.'); }
@@ -127,6 +139,7 @@ function ReportForm({ operator, onReceipt, onBusyChange }) {
     <p className="text-slate-600 dark:text-slate-300 type-caption">Không cần đăng nhập. Nội dung phản ánh và thông tin liên hệ không xuất hiện trên danh bạ công khai.</p>
     <label className="block type-label">Bạn muốn báo điều gì?<select value={type} onChange={(event) => setType(event.target.value)} className={inputClass}><option value="correction">Thông tin cần sửa</option><option value="removal">Đề nghị gỡ hồ sơ</option></select></label>
     <label className="block type-label">Nội dung và nguồn để kiểm tra<textarea required minLength={10} maxLength={3000} rows={4} value={message} onChange={(event) => setMessage(event.target.value)} className={inputClass} placeholder="Thông tin nào không còn đúng? Có thể đối chiếu ở đâu?" /></label>
+    {type === 'correction' && <label className="block type-label">Số đúng của nhà xe (không bắt buộc)<input type="tel" inputMode="tel" value={suggestedPhone} onChange={(event) => setSuggestedPhone(event.target.value)} maxLength={40} className={inputClass} placeholder={operator.contactPhone ? `Đang hiển thị ${operator.contactPhone}` : 'Số tổng đài hoặc số liên hệ đúng'} /><span className="mt-1 block text-slate-500 type-caption">Ghi kèm nguồn ở ô trên để quản trị đối chiếu. Số chỉ lên danh bạ sau khi được duyệt.</span></label>}
     <label className="block type-label">Liên hệ để hỏi thêm (không bắt buộc)<input value={contact} onChange={(event) => setContact(event.target.value)} maxLength={200} className={inputClass} placeholder="Email hoặc số điện thoại" /></label>
     <ErrorNote>{error}</ErrorNote><button type="submit" disabled={busy} className={primaryClass}>{busy ? 'Đang gửi…' : 'Gửi phản ánh'}</button>
   </form>;
@@ -250,6 +263,7 @@ export default function OperatorDirectory({ corridor, currentUser, onRequireAuth
   const [showReports, setShowReports] = useState(false);
   const [revision, setRevision] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [query, setQuery] = useState('');
   const [receipts, setReceipts] = useState(() => { try { return parseReceipts(localStorage.getItem(REPORT_RECEIPTS_KEY)); } catch { return []; } });
   const [storageFailed, setStorageFailed] = useState(false);
   const sequence = useRef(0);
@@ -281,11 +295,26 @@ export default function OperatorDirectory({ corridor, currentUser, onRequireAuth
     if (!onRequireAuth) { setError('Chưa mở được đăng nhập. Hãy thử lại.'); return; }
     onRequireAuth({ title: 'Đăng nhập để xem hồ sơ quản lý', subtitle: 'Danh bạ và liên hệ vẫn mở cho mọi người.', onSuccess: async () => { setShowMine(true); } });
   };
+  // Một tuyến thực tế chỉ có vài chục nhà xe, nên lọc ngay trên danh sách đã tải:
+  // gõ vài chữ là ra, không phải cuộn và không cần gọi lại máy chủ.
+  const needle = searchText(query);
+  const matches = needle ? operators.filter(operator => searchText([operator.name, operator.corridor, ...(operator.coverage || [])].join(' ')).includes(needle)) : operators;
+  const visible = expanded ? matches : matches.slice(0, PREVIEW_COUNT);
   return <section aria-labelledby="operator-directory-title" className="mt-6 space-y-3 border-t border-slate-300/70 pt-5 dark:border-white/10">
     <div className="flex items-start gap-2"><BookOpen size={20} className="mt-0.5 shrink-0 text-[#0071e3]" /><div><h2 id="operator-directory-title" className="text-slate-900 dark:text-white type-heading">Danh bạ nhà xe tham khảo</h2><p className="mt-1 text-slate-600 dark:text-slate-300 type-caption">Nguồn liên hệ để bạn tự hỏi chuyến. Danh bạ không phải kết quả xe đang có ghế trong khung giờ tìm kiếm.</p></div></div>
     {loading ? <p role="status" className="flex items-center gap-2 py-3 text-slate-500 type-body"><Loader2 size={16} className="animate-spin" />Đang tải danh bạ…</p> : error ? <div className="space-y-2"><ErrorNote>{error}</ErrorNote><button type="button" onClick={load} className={secondaryClass}><RefreshCw size={14} className="mr-1 inline" />Thử tải lại</button></div> : !operators.length ? <div className={cardClass}><p className="type-body-strong">Chưa có hồ sơ công khai trên tuyến này</p><p className="mt-1 text-slate-600 dark:text-slate-300 type-caption">Danh bạ chỉ hiển thị sau khi nguồn thông tin được kiểm tra. Bạn vẫn có thể tìm chuyến và đăng nhu cầu ở phía trên.</p></div> : <>
-      <div className="grid gap-3 sm:grid-cols-2">{(expanded ? operators : operators.slice(0, 4)).map((operator) => <article key={operator.id} className={` ${cardClass} space-y-2`}><button type="button" onClick={() => setSelectedId(operator.id)} className="flex min-h-11 w-full items-center justify-between gap-2 text-left type-button"><h3 className="type-heading">{operator.name}</h3><ChevronRight size={18} className="shrink-0 text-slate-400" /></button><p className="text-slate-500 type-caption">{operator.coverage?.length ? operator.coverage.join(' · ') : 'Chưa công bố khu vực hoạt động'}</p><ManagementInfo operator={operator} /><SourceInfo operator={operator} compact /><button type="button" onClick={() => setSelectedId(operator.id)} className={`type-button ${secondaryClass} w-full`}>Xem thông tin và liên hệ</button></article>)}</div>
-      {operators.length > 4 && <button type="button" onClick={() => setExpanded(!expanded)} className={`type-button ${secondaryClass} w-full`}>{expanded ? 'Thu gọn danh bạ' : `Xem thêm ${operators.length - 4} hồ sơ`}</button>}
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative min-w-52 flex-1"><span className="sr-only">Tìm nhà xe theo tên hoặc khu vực</span>
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm nhà xe hoặc khu vực…"
+            className="min-h-11 w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-slate-900 type-input dark:border-white/20 dark:bg-[#1c1c1e] dark:text-white" />
+        </label>
+        <p aria-live="polite" className="text-slate-500 type-caption">{matches.length === operators.length ? `${operators.length} nhà xe` : `${matches.length}/${operators.length} nhà xe`}</p>
+      </div>
+      {!matches.length ? <div className={cardClass}><p className="type-body-strong">Không có nhà xe nào khớp “{query.trim()}”</p><p className="mt-1 text-slate-600 dark:text-slate-300 type-caption">Thử bớt từ khóa, hoặc xóa ô tìm để xem lại toàn bộ danh bạ.</p></div> : <>
+      <div className="grid gap-3 sm:grid-cols-2">{visible.map((operator) => <article key={operator.id} className={` ${operatorCardClass} space-y-2`}><button type="button" onClick={() => setSelectedId(operator.id)} className="flex min-h-11 w-full items-center justify-between gap-2 text-left type-button"><h3 className="type-heading">{operator.name}</h3><ChevronRight size={18} className="shrink-0 text-slate-400" /></button><p className="text-slate-500 type-caption">{operator.coverage?.length ? operator.coverage.join(' · ') : 'Chưa công bố khu vực hoạt động'}</p><ManagementInfo operator={operator} /><SourceInfo operator={operator} compact /><button type="button" onClick={() => setSelectedId(operator.id)} className={`type-button ${secondaryClass} w-full`}>Xem thông tin và liên hệ</button></article>)}</div>
+      {matches.length > PREVIEW_COUNT && <button type="button" onClick={() => setExpanded(!expanded)} className={`type-button ${secondaryClass} w-full`}>{expanded ? 'Thu gọn danh bạ' : `Xem tất cả ${matches.length} nhà xe`}</button>}
+      </>}
     </>}
     <div className="flex flex-wrap gap-2"><button type="button" onClick={openMine} className={secondaryClass}>Hồ sơ tôi quản lý</button><button type="button" onClick={() => setShowReports(true)} className={secondaryClass}>Phản ánh đã gửi{receipts.length ? ` (${receipts.length})` : ''}</button></div>
     {selectedId && <OperatorDetail key={selectedId} id={selectedId} currentUser={currentUser} onRequireAuth={onRequireAuth} onClose={() => setSelectedId(null)} onReceipt={(receipt) => { saveReceipt(receipt); setSelectedId(null); setShowReports(true); }} onClaimChange={() => setRevision((old) => old + 1)} />}

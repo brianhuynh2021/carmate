@@ -156,6 +156,7 @@ function projectClaim(claim) {
 }
 function projectReport(report) {
   return { id: report.id, operatorId: report.operatorId, type: report.type, status: report.status,
+    suggestedPhone: report.suggestedPhone || '', appliedAt: report.appliedAt || null,
     createdAt: report.createdAt, updatedAt: report.updatedAt, resolutionNote: report.resolutionNote || '', history: publicHistory(report.history) };
 }
 function allRecords(table, database = ensureStore()) {
@@ -334,7 +335,12 @@ export function createOperatorReport(operatorId, input, { now = Date.now() } = {
   const type = enumValue(input?.type, ['correction', 'removal'], 'Loại phản ánh');
   const message = text(input.message, 'Nội dung phản ánh', 3000, true);
   const reporterContact = text(input.reporterContact, 'Liên hệ người phản ánh', 200);
+  // Người xem đề xuất số đúng ngay trong phản ánh. Đây mới là đề xuất: số chỉ
+  // vào hồ sơ khi quản trị bấm duyệt, nên không ai đổi được số nhà xe sau lưng.
+  const suggestedPhone = type === 'correction' ? phone(input.suggestedPhone, true) : '';
+  if (suggestedPhone && suggestedPhone === profile.contactPhone) fail('Số đề xuất trùng với số đang hiển thị.');
   const report = { id: `report-${crypto.randomUUID()}`, operatorId, operatorName: profile.name, type, message, reporterContact,
+    suggestedPhone, appliedAt: null,
     status: 'pending', createdAt: nowIso(now), updatedAt: nowIso(now), resolutionNote: '', history: [{ status: 'pending', at: nowIso(now), note: 'Đã tiếp nhận phản ánh' }] };
   const accessToken = crypto.randomBytes(32).toString('base64url');
   const hash = crypto.createHash('sha256').update(accessToken).digest('hex');
@@ -352,6 +358,38 @@ export function getOperatorReportStatus(id, accessToken) {
 }
 export function adminListReports(query = {}, admin) {
   adminActor(admin); return reviewList(allRecords('operator_reports'), query, ['pending', 'reviewing']);
+}
+/**
+ * Duyệt một chạm số do người xem đề xuất: ghi số mới vào hồ sơ và kết luận phản ánh
+ * trong cùng một giao dịch.
+ *
+ * Đổi số liên hệ là thay đổi nhạy cảm, nên hồ sơ mất căn cứ công khai đã duyệt và
+ * rơi về `draft`: số mới chưa được đối chiếu với nguồn chính thức của nhà xe, và
+ * một danh bạ công khai không được để số chưa kiểm chứng hiển thị như số đã kiểm.
+ * Quản trị đối chiếu nguồn rồi công khai lại, hoặc chờ nhà xe nhận quyền quản lý
+ * và tự xác nhận số của họ.
+ */
+export function applyReportedPhone(id, input, admin, { now = Date.now() } = {}) {
+  const actorId = adminActor(admin), database = ensureStore();
+  const resolutionNote = text(input?.resolutionNote, 'Ghi chú xử lý', 2000, true);
+  return database.transaction(() => {
+    const report = readRecord('operator_reports', id, database) || fail('Không tìm thấy phản ánh.', 404);
+    if (report.type !== 'correction' || !report.suggestedPhone) fail('Phản ánh này không kèm số đề xuất.');
+    if (!['pending', 'reviewing'].includes(report.status)) fail('Phản ánh đã được kết luận; không thể áp dụng.', 409);
+    const profile = requireProfile(report.operatorId, database);
+    if (profile.contactPhone === report.suggestedPhone) fail('Hồ sơ đã dùng đúng số này.');
+    const previousPhone = profile.contactPhone;
+    const updatedProfile = { ...profile, contactPhone: report.suggestedPhone, status: 'draft',
+      publicationReview: null, checkedAt: null, freshUntil: null, updatedAt: nowIso(now),
+      history: [...profile.history, { status: 'draft', at: nowIso(now), actorId, changedFields: ['contactPhone'],
+        note: `Áp dụng số do người xem đề xuất (${previousPhone || 'chưa có'} → ${report.suggestedPhone}); cần đối chiếu nguồn trước khi công khai lại. ${resolutionNote}`.trim() }] };
+    saveProfile(database, updatedProfile);
+    const resolved = { ...report, status: 'resolved', resolutionNote, appliedAt: nowIso(now), updatedAt: nowIso(now),
+      history: [...report.history, { status: 'resolved', at: nowIso(now), actorId,
+        note: `Đã áp dụng số đề xuất ${report.suggestedPhone}. ${resolutionNote}`.trim() }] };
+    database.prepare('UPDATE operator_reports SET status=?,payload=? WHERE id=?').run(resolved.status, JSON.stringify(resolved), id);
+    return { report: resolved, profile: updatedProfile };
+  })();
 }
 export function reviewOperatorReport(id, input, admin, { now = Date.now() } = {}) {
   const actorId = adminActor(admin), database = ensureStore();
