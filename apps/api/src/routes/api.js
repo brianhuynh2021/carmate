@@ -130,7 +130,8 @@ import {
   listOperatorsHandler, getOperatorHandler, listMyOperatorsHandler, updateOwnedOperatorHandler,
   createOperatorClaimHandler, createOperatorReportHandler, getOperatorReportStatusHandler,
   adminListOperatorsHandler, adminGetOperatorHandler, adminCreateOperatorHandler, adminUpdateOperatorHandler,
-  adminListClaimsHandler, adminReviewClaimHandler, adminListReportsHandler, adminReviewReportHandler
+  adminListClaimsHandler, adminReviewClaimHandler, adminListReportsHandler, adminReviewReportHandler,
+  adminApplyReportedPhoneHandler
 } from '../controllers/operatorController.js';
 import { createAssistedOperatorTrip } from '../controllers/assistedOperatorTripController.js';
 
@@ -154,6 +155,7 @@ router.get('/admin/operator-claims', requireAdmin, adminListClaimsHandler);
 router.patch('/admin/operator-claims/:id', requireAdmin, adminReviewClaimHandler);
 router.get('/admin/operator-reports', requireAdmin, adminListReportsHandler);
 router.patch('/admin/operator-reports/:id', requireAdmin, adminReviewReportHandler);
+router.post('/admin/operator-reports/:id/apply-phone', requireAdmin, adminApplyReportedPhoneHandler);
 
 import { suggestLocationsHandler } from '../controllers/locationController.js';
 import { agentChatHandler } from '../controllers/agentController.js';
