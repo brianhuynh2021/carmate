@@ -8,6 +8,10 @@ import { buildAssistedTrip, buildClaimReview, buildOperatorPayload, dateTimeInpu
 
 const inputClass = "type-input w-full rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#1a2232] p-3";
 const cardClass = "type-body rounded-2xl border border-slate-300/70 dark:border-white/10 bg-white dark:bg-[#1a2232] p-4 space-y-3";
+// Số trong danh bạ tham khảo được tổng hợp từ trang và nhóm Facebook của nhà xe.
+// Ghi lại đúng nguồn này khi công khai nhanh, để còn căn cứ trả lời nếu nhà xe đề
+// nghị sửa hoặc gỡ.
+const QUICK_PUBLISH_SOURCE = 'tổng hợp từ trang/nhóm Facebook của nhà xe';
 const labels = { draft: 'Bản nháp', published: 'Công khai', hidden: 'Đã ẩn', pending: 'Chờ xử lý', approved: 'Đã duyệt', reviewing: 'Đang xử lý', resolved: 'Đã xử lý', rejected: 'Từ chối' };
 const sourceLabels = { website: 'Website', facebook: 'Facebook', owner_contact: 'Liên hệ trực tiếp chủ xe', legacy_directory: 'Danh bạ cũ, cần rà soát', other: 'Nguồn khác' };
 const dateLabel = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa ghi nhận';
@@ -180,7 +184,7 @@ export default function OperatorProfilesPanel({ onNotice }) {
     if (publishing) return;
     setPublishing(row.id);
     try {
-      const response = await api.adminQuickPublishOperator(row.id, {});
+      const response = await api.adminQuickPublishOperator(row.id, { sourceOfRecord: QUICK_PUBLISH_SOURCE });
       if (!response?.success) throw new Error(response?.error || 'Chưa công khai được hồ sơ.');
       profiles.current.set(response.data.id, response.data);
       onNotice?.(`Đã công khai "${row.name}" dạng thông tin tham khảo, chưa đối chiếu nguồn.`);

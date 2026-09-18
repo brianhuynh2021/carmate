@@ -250,7 +250,10 @@ export function quickPublishOperator(id, input, admin, { now = Date.now() } = {}
     if (!current.name || !current.contactPhone) fail('Cần tên hồ sơ và số liên hệ trước khi công khai.');
     if (current.kind === 'individual') fail('Số cá nhân chỉ được công khai khi có bằng chứng chủ số đồng ý; hãy dùng luồng duyệt đầy đủ.');
     if (current.status === 'published') return current;
-    const basis = current.importedFrom?.kind === 'transit_directory' ? 'danh bạ nội bộ đã nhập trước đó' : 'hồ sơ do quản trị nhập';
+    // Nguồn gốc số ghi theo thực tế thu thập. Không có gì truyền lên thì ghi đúng
+    // nơi bản ghi này sinh ra, chứ không để trống rồi sau không ai biết số ở đâu ra.
+    const basis = text(input?.sourceOfRecord, 'Nguồn thu thập', 200)
+      || (current.importedFrom?.kind === 'transit_directory' ? 'danh bạ nội bộ đã nhập trước đó' : 'hồ sơ do quản trị nhập');
     const record = { ...current, status: 'published', updatedAt: nowIso(now),
       quickPublish: { at: nowIso(now), by: actorId, sourceOfRecord: basis, note },
       publicationReview: null, checkedAt: null, freshUntil: null,
