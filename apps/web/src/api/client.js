@@ -101,6 +101,7 @@ export const api = {
   async adminReviewOperatorClaim(id, body) { return request(`/admin/operator-claims/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }); },
   async adminListOperatorReports(params = {}) { return request(`/admin/operator-reports?${new URLSearchParams(params)}`); },
   async adminReviewOperatorReport(id, body) { return request(`/admin/operator-reports/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }); },
+  async adminApplyReportedPhone(id, body) { return request(`/admin/operator-reports/${encodeURIComponent(id)}/apply-phone`, { method: 'POST', body: JSON.stringify(body) }); },
   async adminCreateOperatorTrip(id, body) { return request(`/admin/operators/${encodeURIComponent(id)}/trips`, { method: 'POST', body: JSON.stringify(body) }); },
   async previewDriverDemand(draft) {
     return request('/connections/driver-preview', { method: 'POST', body: JSON.stringify(draft) });

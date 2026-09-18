@@ -2,7 +2,7 @@ import {
   listOperators, getPublicOperator, listMyOperators, updateOwnedOperator,
   createOperatorClaim, createOperatorReport, getOperatorReportStatus,
   adminListOperators, adminGetOperator, createOperator, updateOperator, adminListClaims,
-  reviewOperatorClaim, adminListReports, reviewOperatorReport
+  reviewOperatorClaim, adminListReports, reviewOperatorReport, applyReportedPhone
 } from '../services/operatorProfiles.js';
 
 function handler(action, successStatus = 200) {
@@ -36,3 +36,4 @@ export const adminListClaimsHandler = handler(req => adminListClaims(req.query, 
 export const adminReviewClaimHandler = handler(req => reviewOperatorClaim(req.params.id, req.body, req.admin));
 export const adminListReportsHandler = handler(req => adminListReports(req.query, req.admin));
 export const adminReviewReportHandler = handler(req => reviewOperatorReport(req.params.id, req.body, req.admin));
+export const adminApplyReportedPhoneHandler = handler(req => applyReportedPhone(req.params.id, req.body, req.admin));

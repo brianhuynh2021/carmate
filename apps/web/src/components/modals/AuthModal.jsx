@@ -85,11 +85,19 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '', title
       googleContainer.current.replaceChildren();
       window.google.accounts.id.renderButton(googleContainer.current, { type: 'standard', size: 'large', text: 'continue_with', shape: 'pill', width: 280 });
     };
+    // SDK của Google chỉ được tải khi người dùng thực sự chọn đăng nhập Google.
+    // Nạp sẵn ở mọi lượt vào trang khiến ai cũng phải tải thư viện bên thứ ba, và
+    // trên localhost nó còn dò cổng nội bộ nên trình duyệt hỏi quyền mỗi lần tải lại.
     let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
     if (window.google?.accounts?.id) render();
+    else if (script) script.addEventListener('load', render);
     else {
-      if (!script) { script = document.createElement('script'); script.src = 'https://accounts.google.com/gsi/client'; script.async = true; document.head.appendChild(script); }
+      script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
       script.addEventListener('load', render);
+      script.addEventListener('error', () => { if (!cancelled) setError('Chưa tải được đăng nhập Google. Kiểm tra kết nối hoặc chọn cách đăng nhập khác.'); });
+      document.head.appendChild(script);
     }
     return () => { cancelled = true; script?.removeEventListener('load', render); };
   }, [method, config?.googleClientId]);
@@ -103,6 +111,11 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '', title
     script.async = true;
     script.setAttribute('data-telegram-login', config.telegramBotUsername);
     script.setAttribute('data-size', 'large');
+    // Iframe của Telegram tự vẽ nền tối lộ ra ngoài mép bo tròn của nút. Hai thuộc
+    // tính dưới đây vốn có từ bản đầu, bị rơi trong lần refactor — khôi phục đúng
+    // giá trị cũ để widget tự bo góc và xin quyền nhắn tin như trước.
+    script.setAttribute('data-radius', '14');
+    script.setAttribute('data-request-access', 'write');
     script.setAttribute('data-onauth', `${callbackName}(user)`);
     telegramContainer.current.replaceChildren(script);
     return () => { delete window[callbackName]; };

@@ -67,3 +67,26 @@ export function parseCopiedReceipt(raw) {
     return { id: value.id, accessToken: value.accessToken };
   } catch { return null; }
 }
+// Trong hạn đối chiếu là trạng thái bình thường của mọi hồ sơ đang công khai, nên
+// không cần nhãn: gắn chữ lên tất cả thì không phân biệt được gì mà chỉ thêm chữ
+// phải đọc. Chỉ cảnh báo khi thông tin quá hạn hoặc chưa được đối chiếu — lúc đó
+// số liên hệ và giá mới thực sự có thể đã đổi.
+export function freshnessBadge(operator, now = Date.now()) {
+  const state = operatorFreshness(operator, now).state;
+  if (state === 'fresh') return null;
+  if (state === 'stale') return { state, label: 'Quá hạn', tone: 'text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-500/10' };
+  return { state, label: 'Chưa đối chiếu', tone: 'text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/10' };
+}
+
+// Khu vực trong dữ liệu là một dòng dài nối bằng ⇄. Ngoài hàng chỉ hiện đầu và
+// cuối tuyến; đọc cả chuỗi mười trạm trên một hàng vừa chật vừa mệt mắt.
+export function coverageEndpoints(coverage = []) {
+  const legs = String(coverage[0] || '').split(/[⇄→/]/).map(part => part.trim()).filter(Boolean);
+  if (!legs.length) return '';
+  return legs.length < 2 ? legs[0] : `${legs[0]} ⇄ ${legs[legs.length - 1]}`;
+}
+
+export function operatorPriceLabel(operator) {
+  if (operator?.pricingMode !== 'listed' || !operator?.priceNote) return 'Liên hệ';
+  return operator.priceNote;
+}
