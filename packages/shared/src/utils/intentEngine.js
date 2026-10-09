@@ -1,19 +1,19 @@
 /**
- * Bộ Hiểu Ý Định Bản Địa (Native Intent Engine — Zero-LLM, <1ms).
+ * Native Intent Understanding Engine (Native Intent Engine — Zero-LLM, <1ms).
  *
- * Thay thế hoàn toàn chuỗi `prompt.includes('giá')` trong agent cũ bằng một
- * bộ phân loại có trọng số + trích xuất thực thể (slot filling) thật sự.
+ * Completely replaces the `prompt.includes('giá')` chain in the old agent with a
+ * weighted classifier + real entity extraction (slot filling).
  *
- * Kiến trúc kinh điển của NLU trước kỷ nguyên LLM, nhưng vẫn là lựa chọn đúng ở đây:
- *  - Xác định (deterministic): cùng đầu vào luôn cho cùng đầu ra, kiểm thử được 100%.
- *  - Không ảo giác: không bao giờ bịa ra địa danh hay con số không có trong dữ liệu.
- *  - Chạy offline, 0đ, <1ms, không cần API key, không rò rỉ dữ liệu cá nhân ra ngoài.
+ * The classic pre-LLM-era NLU architecture, yet still the right choice here:
+ *  - Deterministic: the same input always gives the same output, 100% testable.
+ *  - No hallucination: never invents place names or numbers that are not in the data.
+ *  - Runs offline, 0đ, <1ms, no API key needed, leaks no personal data outside.
  *
- * Phương pháp:
- *  1. Chuẩn hoá tiếng Việt (khử dấu, mở rộng viết tắt) — vietnameseText.js
- *  2. Chấm điểm ý định bằng từ khoá có trọng số + n-gram (naive-Bayes rút gọn)
- *  3. Trích xuất thực thể: điểm đi/đến (fuzzy khớp hub thật), thời gian, số ghế, tiện ích
- *  4. Trả kèm độ tin cậy (confidence) để tầng trên quyết định có cần hỏi lại không
+ * Method:
+ *  1. Vietnamese normalization (diacritics folding, abbreviation expansion) — vietnameseText.js
+ *  2. Intent scoring by weighted keywords + n-grams (condensed naive-Bayes)
+ *  3. Entity extraction: origin/destination (fuzzy matching against real hubs), time, seats, amenities
+ *  4. Return a confidence so that the upper layer can decide whether it needs to ask again
  */
 
 import { VIRTUAL_HUBS, ROUTE_BENCHMARKS } from '../constants/routes.js';
@@ -21,11 +21,11 @@ import { mapTimeToSlot } from '../constants/timeSlots.js';
 import { PROVINCE_COORDINATES } from './geo.js';
 import { expandColloquial, tokenize, similarity, findBestSpan, normalizeForMatch } from './vietnameseText.js';
 
-// ── ĐỊNH NGHĨA Ý ĐỊNH & TỪ KHOÁ CÓ TRỌNG SỐ ──
-// Trọng số phản ánh sức mạnh phân biệt của từ khoá:
-//   3 = đặc trưng mạnh (gần như chỉ xuất hiện ở ý định này)
-//   2 = đặc trưng vừa
-//   1 = gợi ý yếu, cần kết hợp
+// ── INTENT DEFINITIONS & WEIGHTED KEYWORDS ──
+// The weight reflects the discriminating power of the keyword:
+//   3 = strong feature (almost only appears in this intent)
+//   2 = medium feature
+//   1 = weak hint, needs to be combined
 export const INTENTS = Object.freeze({
   FIND_TRIP: 'find_trip',
   ASK_PRICE: 'ask_price',
@@ -81,7 +81,7 @@ const INTENT_LEXICON = Object.freeze({
   }
 });
 
-// Tiện ích / ràng buộc chuyến đi — trích xuất dưới dạng slot boolean.
+// Amenities / trip constraints — extracted as boolean slots.
 const PERK_PATTERNS = Object.freeze({
   noSmoking: ['khong thuoc', 'khong hut thuoc', 'khong khoi thuoc', 'ko thuoc', 'khong mui thuoc'],
   requiresFamilyCar: ['xe gia dinh', 'bien trang', 'xe nha', 'xe ca nhan', 'khong phai taxi', 'khong dich vu'],
@@ -93,14 +93,14 @@ const PERK_PATTERNS = Object.freeze({
   needHospital: ['benh vien', 'cho ray', 'kham benh', 'di vien', 'tai kham']
 });
 
-// Biểu thức thời gian tương đối tiếng Việt.
+// Vietnamese relative time expressions.
 const RELATIVE_DAY_PATTERNS = Object.freeze([
   { keys: ['hom nay', 'bua nay', 'nay'], offsetDays: 0 },
   { keys: ['mai', 'ngay mai', 'sang mai', 'bua sau'], offsetDays: 1 },
   { keys: ['mot', 'ngay mot', 'ngay kia'], offsetDays: 2 }
 ]);
 
-// Buổi trong ngày -> khung giờ chuẩn của hệ thống (TIME_SLOTS).
+// Part of day -> the system's standard time slot (TIME_SLOTS).
 const DAYPART_TO_SLOT = Object.freeze([
   { keys: ['rang sang', 'sang som lam', 'khuya'], slot: '03:00-05:00' },
   { keys: ['sang som', 'som'], slot: '05:00-07:00' },
@@ -113,12 +113,12 @@ const DAYPART_TO_SLOT = Object.freeze([
   { keys: ['dem'], slot: '19:00-21:00' }
 ]);
 
-// Đại từ, từ đệm và động từ thông dụng tiếng Việt trùng âm với thành tố địa danh
+// Common Vietnamese pronouns, filler words and verbs that are homophones of place-name components
 // (mình/Minh Hưng, vậy/Vàm Cống, bạn/Bàu Bàng, chở/Chợ Rẫy, tiền/Tiền Giang).
 //
-// Chúng KHÔNG bị cấm tuyệt đối — "Bình Long", "Tân Khai", "Hàng Xanh" đều hợp lệ.
-// Quy tắc: một cụm chỉ gồm toàn từ trong danh sách này thì không đủ tư cách làm
-// bằng chứng địa danh, TRỪ KHI nó khớp trọn vẹn tên (xem isTrustworthyPlaceMatch).
+// They are NOT absolutely banned — "Bình Long", "Tân Khai", "Hàng Xanh" are all valid.
+// Rule: a phrase made up entirely of words in this list does not qualify as
+// place-name evidence, UNLESS it matches the name in full (see isTrustworthyPlaceMatch).
 const WEAK_PLACE_TOKENS = new Set([
   'minh',
   'ban',
@@ -161,16 +161,16 @@ const WEAK_PLACE_TOKENS = new Set([
 ]);
 
 /**
- * Quyết định một lần khớp có đủ tư cách làm bằng chứng địa danh hay không.
+ * Decide whether a match qualifies as place-name evidence.
  *
- * Thay cho việc chỉ so một con số ngưỡng, hàm xét CHẤT LƯỢNG bằng chứng:
- *  - Khớp trọn vẹn tên (mọi từ của alias đều có mặt) -> luôn tin cậy,
- *    kể cả khi tên gồm toàn từ "yếu" ("Hàng Xanh", "Bình Long", "Tân Khai").
- *  - Khớp một phần tên -> chỉ tin khi cụm KHÔNG phải toàn từ đệm
- *    ("minh" trong "Minh Hưng" bị loại; "xoai" trong "Đồng Xoài" được giữ).
+ * Instead of just comparing a single threshold number, the function examines the QUALITY of the evidence:
+ *  - Full-name match (every word of the alias is present) -> always trusted,
+ *    even when the name consists entirely of "weak" words ("Hàng Xanh", "Bình Long", "Tân Khai").
+ *  - Partial-name match -> trusted only when the phrase is NOT made up entirely of filler words
+ *    ("minh" in "Minh Hưng" is rejected; "xoai" in "Đồng Xoài" is kept).
  */
 function isTrustworthyPlaceMatch(spanText, aliasText) {
-  // Cả hai vế đã được chuẩn hoá bởi người gọi — không chuẩn hoá lại trong vòng nóng.
+  // Both sides were already normalized by the caller — do not normalize again in the hot loop.
   const spanTokens = String(spanText || '').split(' ').filter(Boolean);
   const aliasTokens = String(aliasText || '').split(' ').filter(Boolean);
   if (spanTokens.length === 0 || aliasTokens.length === 0) return false;
@@ -178,12 +178,12 @@ function isTrustworthyPlaceMatch(spanText, aliasText) {
   const coversWholeAlias = spanTokens.length >= aliasTokens.length;
   if (coversWholeAlias) return true;
 
-  // Khớp bán phần: phải có ít nhất một từ mang thông tin thật.
+  // Partial match: must contain at least one word that carries real information.
   return spanTokens.some((t) => !WEAK_PLACE_TOKENS.has(t));
 }
 
-// Tiền tố chỉ LOẠI địa điểm, không phải tên riêng. Người dùng hầu như luôn bỏ qua
-// chúng khi nói: "đi Bù Đốp" chứ không ai nói "đi Chợ Tân Tiến (Bù Đốp)".
+// Prefixes that denote the TYPE of place, not a proper name. Users almost always omit
+// them when speaking: "đi Bù Đốp", and nobody says "đi Chợ Tân Tiến (Bù Đốp)".
 const HUB_TYPE_PREFIX = /^(?:nga\s*\d+|nga\s*(?:ba|tu)|kcn|tthc|cho|cau|cong\s*chao|vong\s*xoay|cua\s*khau|cay\s*xang(?:\s+petrolimex)?|tp\.?|tx\.?|huyen|thi\s*xa|cum\s*bv|bv|bx|vincom|aeon\s*mall)\s+/i;
 
 function stripHubTypePrefix(value) {
@@ -191,32 +191,32 @@ function stripHubTypePrefix(value) {
 }
 
 /**
- * Sinh tập bí danh cho một hub từ dữ liệu tên có sẵn.
+ * Generate the alias set for a hub from its existing name data.
  *
- * Tên hub trong hệ thống mang nhiều nhiễu cấu trúc:
- *   'Chợ Tân Tiến (Bù Đốp)'      -> còn cần: 'Bù Đốp', 'Tân Tiến'
- *   'Cụm BV Chợ Rẫy / BV ĐH Y Dược' -> còn cần: 'Chợ Rẫy'
- *   'Ngã 4 Hàng Xanh'             -> còn cần: 'Hàng Xanh'
+ * Hub names in the system carry a lot of structural noise:
+ *   'Chợ Tân Tiến (Bù Đốp)'      -> also needed: 'Bù Đốp', 'Tân Tiến'
+ *   'Cụm BV Chợ Rẫy / BV ĐH Y Dược' -> also needed: 'Chợ Rẫy'
+ *   'Ngã 4 Hàng Xanh'             -> also needed: 'Hàng Xanh'
  *
- * Bóc các lớp nhiễu này ra thành bí danh riêng, nếu không người dùng gõ đúng tên
- * thật của địa danh vẫn bị bỏ sót vì tỷ lệ phủ từ quá thấp.
+ * Peel these noise layers off into separate aliases, otherwise a user typing the real
+ * name of a place is still missed because the word coverage is too low.
  */
 function buildHubAliases(hub) {
   const seeds = [hub.shortName, hub.name].filter(Boolean);
-  const primary = new Set(seeds); // tên gọi thật của điểm đón
-  const regional = new Set(); // chú thích vùng trong ngoặc
+  const primary = new Set(seeds); // the real name of the pickup point
+  const regional = new Set(); // regional annotation in parentheses
 
   for (const seed of seeds) {
-    // Nội dung trong ngoặc thường chỉ là VÙNG chứa điểm đón, không phải tên nó:
-    // 'Cửa khẩu Hoa Lư (Lộc Ninh)' -> "Lộc Ninh" là huyện, không phải tên cửa khẩu.
-    // Nhiều hub cùng nằm trong một huyện nên alias loại này phải xếp hạng thấp hơn,
-    // nếu không "đi Lộc Ninh" sẽ khớp nhầm sang Cửa khẩu Hoa Lư.
+    // The content in parentheses is usually just the REGION containing the pickup point, not its name:
+    // 'Cửa khẩu Hoa Lư (Lộc Ninh)' -> "Lộc Ninh" is a district, not the name of the border gate.
+    // Many hubs lie within one district so this kind of alias must be ranked lower,
+    // otherwise "đi Lộc Ninh" would wrongly match Cửa khẩu Hoa Lư.
     for (const m of seed.matchAll(/\(([^)]+)\)/g)) {
       const inner = m[1].trim();
       if (inner) regional.add(stripHubTypePrefix(inner));
     }
 
-    // Phần trước ngoặc, và các biến thể ngăn bởi "/", đều là tên gọi chính thức.
+    // The part before the parentheses, and the variants separated by "/", are all official names.
     const beforeParen = seed.replace(/\s*\([^)]*\)/g, '').trim();
     for (const part of [beforeParen, ...beforeParen.split('/')]) {
       const clean = part.trim();
@@ -229,34 +229,34 @@ function buildHubAliases(hub) {
 
   const longEnough = (a) => a && normalizeForMatch(a).replace(/\s/g, '').length >= 4;
   const primaryList = [...primary].filter(longEnough);
-  // Alias vùng chỉ giữ khi không trùng alias chính.
+  // Regional aliases are only kept when they do not duplicate a primary alias.
   const regionalList = [...regional].filter((a) => longEnough(a) && !primary.has(a));
 
   return { primary: primaryList, regional: regionalList };
 }
 
-// ── CHỈ MỤC ĐỊA DANH (dựng một lần, tra cứu O(1)) ──
+// ── PLACE-NAME INDEX (built once, O(1) lookup) ──
 //
-// Không dựng lại danh sách ứng viên cho mỗi câu: tốn ~90ms/câu và vi phạm
-// yêu cầu "trí tuệ bản địa <1ms" của AGENTS.md. Thay vào đó dựng sẵn một lần
-// khi module được nạp, kèm chỉ mục đảo ngược token -> ứng viên.
+// Do not rebuild the candidate list for every sentence: it costs ~90ms/sentence and violates
+// the "native intelligence <1ms" requirement of AGENTS.md. Instead, build it once
+// when the module is loaded, together with an inverted token -> candidate index.
 let placeIndexCache = null;
 
 function buildPlaceIndex() {
-  //  1. Hub ảo thật (điểm đón/trả cụ thể) — ưu tiên cao nhất vì đặt chuyến được ngay.
+  //  1. Real virtual hubs (specific pickup/drop-off points) — highest priority because a trip can be booked right away.
   const hubCandidates = VIRTUAL_HUBS.map((h) => ({
     kind: 'hub',
     id: h.id,
     name: h.shortName || h.name,
     corridor: h.corridor,
-    // Bỏ `landmark`: mô tả dài dòng gây khớp nhiễu, không phải tên gọi người dùng dùng.
+    // Drop `landmark`: verbose descriptions cause noisy matches, and are not the names users use.
     ...buildHubAliases(h)
   }));
 
-  //  2. Tỉnh/thành hành chính — bắt các câu nói ở mức thô ("đi Sài Gòn", "về Bình Phước").
-  // Alias phải đủ dài (>= 4 ký tự sau khi khử dấu): các khoá viết tắt ("tg", "bd",
-  // "tp hcm") bị loại ở đây và được xử lý an toàn hơn qua COLLOQUIAL_MAP — nếu để lọt,
-  // từ đệm tiếng Việt sẽ khớp mờ thành tên tỉnh và làm engine bịa địa danh.
+  //  2. Administrative provinces/cities — catch coarse-level sentences ("đi Sài Gòn", "về Bình Phước").
+  // Aliases must be long enough (>= 4 characters after diacritics folding): abbreviation keys ("tg", "bd",
+  // "tp hcm") are excluded here and handled more safely via COLLOQUIAL_MAP — if they slipped through,
+  // Vietnamese filler words would fuzzy-match into province names and make the engine invent place names.
   const provinceCandidates = Object.entries(PROVINCE_COORDINATES)
     .map(([key, val]) => ({
       kind: 'province',
@@ -270,13 +270,13 @@ function buildPlaceIndex() {
 
   const all = [...hubCandidates, ...provinceCandidates];
 
-  // Chỉ mục đảo ngược ở mức BÍ DANH, không phải mức ứng viên.
+  // Inverted index at the ALIAS level, not the candidate level.
   //
-  // Một hub có thể có 5-6 bí danh; nếu chỉ lọc ở mức ứng viên thì vẫn phải chấm
-  // điểm toàn bộ bí danh của nó. Lập chỉ mục từng bí danh giúp chỉ so đúng
-  // những bí danh thật sự chia sẻ từ với câu người dùng.
+  // A hub can have 5-6 aliases; if we only filter at the candidate level we would still have to score
+  // all of its aliases. Indexing each alias lets us compare only those
+  // aliases that actually share a word with the user's sentence.
   //
-  // Mỗi mục đã tiền tính dạng chuẩn hoá và số từ, tránh băm lại khi chạy.
+  // Each entry precomputes the normalized form and word count, avoiding re-hashing at runtime.
   const byToken = new Map();
   const byAlias = new Map();
   const addKey = (key, entry) => {
@@ -312,9 +312,9 @@ function buildPlaceIndex() {
         addAlias(normalized, entry);
         for (const token of tokens) {
           addKey(token, entry);
-          // Tiền tố 4 ký tự bắt trường hợp gõ thiếu/sai đuôi ("hnag" ~ "hang").
-          // Dùng 3 ký tự thì các đầu từ phổ biến ("tan", "gia", "cho", "long")
-          // kéo theo hàng chục hub không liên quan và bóp nghẹt hiệu năng.
+          // A 4-character prefix catches missing/wrong-ending typos ("hnag" ~ "hang").
+          // Using 3 characters, common word beginnings ("tan", "gia", "cho", "long")
+          // pull in dozens of unrelated hubs and choke performance.
           if (token.length >= 5) addKey(token.slice(0, 4), entry);
         }
       }
@@ -325,18 +325,18 @@ function buildPlaceIndex() {
 }
 
 /**
- * Thu hẹp tập BÍ DANH cần chấm điểm bằng chỉ mục đảo ngược.
- * Chỉ giữ bí danh có ít nhất một từ (hoặc tiền tố 3 ký tự) trùng với câu người dùng.
+ * Narrow the set of ALIASES to be scored using the inverted index.
+ * Only keep aliases that have at least one word (or 3-character prefix) matching the user's sentence.
  */
 function selectAliasEntries(normalizedText) {
   if (!placeIndexCache) placeIndexCache = buildPlaceIndex();
   const { byToken } = placeIndexCache;
 
   const tokens = normalizedText.split(' ').filter(Boolean);
-  // Khi câu đã có một token đặc trưng ("xoai", "budop"...), các từ rất
-  // phổ biến như "xe", "gia", "di" chỉ kéo theo hàng trăm hub không liên
-  // quan. Với câu chỉ gồm tên ngắn toàn từ yếu ("Bình Long") vẫn giữ chúng
-  // để không làm mất địa danh hợp lệ.
+  // When the sentence already has a distinctive token ("xoai", "budop"...), very
+  // common words like "xe", "gia", "di" only pull in hundreds of unrelated
+  // hubs. For a sentence made up only of a short name of weak words ("Bình Long") they are still kept
+  // so that a valid place name is not lost.
   const hasSpecificToken = tokens.some((token) => token.length >= 3 && !WEAK_PLACE_TOKENS.has(token));
   const selected = new Set();
 
@@ -351,12 +351,12 @@ function selectAliasEntries(normalizedText) {
   return [...selected];
 }
 
-/** Đếm số lần xuất hiện cụm từ khoá trong câu đã chuẩn hoá. */
+/** Count the occurrences of a keyword phrase in a normalized sentence. */
 function countPhrase(haystack, phrase) {
   if (!phrase) return 0;
-  // `haystack` và `phrase` đều đã chuẩn hoá: chỉ còn chữ/số cách bởi một space.
-  // Dò ranh giới trực tiếp tránh dựng RegExp + mảng match cho từng từ khoá trong
-  // đường nóng của intent/perk/time. Đây là phần được gọi hàng trăm lần mỗi câu.
+  // `haystack` and `phrase` are both normalized: only letters/digits separated by a single space remain.
+  // Detecting boundaries directly avoids building a RegExp + match array for every keyword on
+  // the hot path of intent/perk/time. This is called hundreds of times per sentence.
   let hits = 0;
   let start = 0;
   while (start < haystack.length) {
@@ -368,15 +368,15 @@ function countPhrase(haystack, phrase) {
     const endsAtBoundary = end === haystack.length || haystack.charCodeAt(end) === 32;
     if (startsAtBoundary && endsAtBoundary) hits++;
 
-    // `phrase` luôn không rỗng; nhảy hết cụm vừa xét để không đếm trùng.
+    // `phrase` is never empty; skip past the phrase just examined so it is not double-counted.
     start = end;
   }
   return hits;
 }
 
 /**
- * Chấm điểm toàn bộ ý định và trả về bảng xếp hạng.
- * Điểm được chuẩn hoá theo softmax rút gọn để có "confidence" so sánh được.
+ * Score all intents and return a ranking.
+ * Scores are normalized with a condensed softmax to get a comparable "confidence".
  */
 export function classifyIntent(rawText, { route: precomputedRoute } = {}) {
   const text = expandColloquial(rawText);
@@ -392,7 +392,7 @@ export function classifyIntent(rawText, { route: precomputedRoute } = {}) {
       for (const phrase of phrases) {
         const hits = countPhrase(text, phrase);
         if (hits > 0) {
-          // Lần xuất hiện đầu tính đủ trọng số, các lần sau giảm dần (bão hoà).
+          // The first occurrence counts with full weight, later ones diminish (saturation).
           score += weight * (1 + Math.log(hits));
         }
       }
@@ -400,8 +400,8 @@ export function classifyIntent(rawText, { route: precomputedRoute } = {}) {
     scores[intent] = score;
   }
 
-  // Tín hiệu cấu trúc: có cặp điểm đi–đến là dấu hiệu rất mạnh của FIND_TRIP.
-  // Nhận lại kết quả đã tính từ parseUserMessage để không dò địa danh hai lần.
+  // Structural signal: having an origin–destination pair is a very strong sign of FIND_TRIP.
+  // Takes the result already computed in parseUserMessage so place names are not detected twice.
   const route = precomputedRoute || extractRoute(rawText);
   if (route.from && route.to) {
     scores[INTENTS.FIND_TRIP] += 4;
@@ -409,7 +409,7 @@ export function classifyIntent(rawText, { route: precomputedRoute } = {}) {
     scores[INTENTS.FIND_TRIP] += 1.5;
   }
 
-  // Có số tiền trong câu -> nghiêng về hỏi giá.
+  // A monetary amount in the sentence -> leans toward asking about price.
   if (/\b\d{2,3}\s*(?:k|nghin|ngan|trieu|d|dong)\b/.test(text)) {
     scores[INTENTS.ASK_PRICE] += 2;
   }
@@ -425,7 +425,7 @@ export function classifyIntent(rawText, { route: precomputedRoute } = {}) {
     return { intent: INTENTS.UNKNOWN, confidence: 0, scores, ranked };
   }
 
-  // Confidence = độ vượt trội của ý định đầu so với ý định nhì, chuẩn hoá 0..1.
+  // Confidence = how much the top intent leads over the runner-up, normalized to 0..1.
   const margin = top.score - (runnerUp?.score || 0);
   const confidence = Math.min(1, (top.score / (top.score + 3)) * 0.6 + (margin / (margin + 2)) * 0.4);
 
@@ -433,24 +433,24 @@ export function classifyIntent(rawText, { route: precomputedRoute } = {}) {
 }
 
 /**
- * Trích xuất điểm đi / điểm đến bằng fuzzy matching trên danh sách hub THẬT.
- * Không bao giờ sinh ra địa danh không tồn tại trong hệ thống.
+ * Extract the origin / destination with fuzzy matching against the list of REAL hubs.
+ * Never produces a place name that does not exist in the system.
  */
 export function extractRoute(rawText) {
   const text = expandColloquial(rawText);
   if (!text) return { from: null, to: null, fromHub: null, toHub: null };
 
-  // Chỉ chấm điểm những BÍ DANH có từ thật sự xuất hiện trong câu.
-  // Quét toàn bộ ~1.400 bí danh cho mỗi câu tốn ~90ms — vi phạm yêu cầu
-  // Cursor Ambient (<1ms). Chỉ mục đảo ngược thu hẹp còn vài bí danh.
+  // Only score ALIASES that have a word actually appearing in the sentence.
+  // Scanning all ~1,400 aliases per sentence costs ~90ms — violating the
+  // Cursor Ambient requirement (<1ms). The inverted index narrows it to a handful of aliases.
   const aliasEntries = selectAliasEntries(text);
-  // Băm câu MỘT LẦN và dùng lại cho mọi bí danh (xem findBestSpan).
+  // Tokenize the sentence ONCE and reuse it for every alias (see findBestSpan).
   const sentenceTokens = tokenize(text, { keepStopWords: true });
   const { byAlias, byToken } = placeIndexCache;
 
-  // Đa số địa danh được gõ đúng. Quét các n-gram của câu một lần rồi tra Map
-  // để tìm tất cả bí danh khớp trọn; không lặp lại so sánh từng alias với toàn
-  // bộ câu. Fuzzy chỉ còn là nhánh hẹp cho lỗi gõ như "hnag xanh".
+  // Most place names are typed correctly. Scan the sentence's n-grams once, then look up the Map
+  // to find all aliases with a full match; don't repeatedly compare each alias against the entire
+  // sentence. Fuzzy is only a narrow branch for typos like "hnag xanh".
   const exactStarts = new Map();
   const maxAliasWords = Math.min(4, sentenceTokens.length);
   for (let size = 1; size <= maxAliasWords; size++) {
@@ -461,25 +461,25 @@ export function extractRoute(rawText) {
     }
   }
 
-  // Chỉ chạy fuzzy khi có dấu hiệu lỗi gõ cạnh một token địa danh hợp lệ.
-  // Điều kiện sẽ được xét THEO TỪNG alias ở bên dưới; nếu áp dụng toàn câu,
-  // một từ thường như "không" cạnh một địa danh tình cờ sẽ kích hoạt quét mờ
-  // cho mọi alias không liên quan.
+  // Only run fuzzy when there is a sign of a typo next to a valid place-name token.
+  // The condition is evaluated PER ALIAS below; if applied to the whole sentence,
+  // a common word such as "không" next to a place name by chance would trigger a fuzzy scan
+  // for every unrelated alias.
   const tokenIsIndexed = (token) =>
     Boolean(byToken.get(token)) || (token.length >= 5 && Boolean(byToken.get(token.slice(0, 4))));
 
-  // Tìm mọi hub xuất hiện trong câu, kèm vị trí để suy ra chiều đi.
+  // Find every hub appearing in the sentence, with positions to infer the direction of travel.
   //
-  // Nguyên tắc bất biến: THÀ BỎ SÓT CÒN HƠN BỊA RA.
-  // Một địa danh chỉ được công nhận khi cụm trong câu khớp rất cao (>= 0.88) và
-  // bản thân cụm đó đủ dài (>= 3 ký tự) — chặn việc từ đệm như "a", "z", "vay"
-  // bị gán nhầm thành hub. Đây là ranh giới an toàn cốt lõi của toàn bộ engine.
+  // Invariant principle: BETTER TO MISS THAN TO INVENT.
+  // A place name is only recognized when the phrase in the sentence matches very highly (>= 0.88) and
+  // the phrase itself is long enough (>= 3 characters) — preventing filler words like "a", "z", "vay"
+  // from being wrongly assigned to a hub. This is the core safety boundary of the whole engine.
   const HUB_MATCH_THRESHOLD = 0.88;
-  // Tên tỉnh ngắn và phổ biến hơn nhiều so với tên hub, nên đòi hỏi khớp gần như
-  // tuyệt đối để không nuốt nhầm từ đệm ("mình" ~ "Bình ...", "vậy" ~ "Vĩnh ...").
+  // Province names are much shorter and more common than hub names, so they require a near-
+  // exact match so as not to wrongly swallow filler words ("mình" ~ "Bình ...", "vậy" ~ "Vĩnh ...").
   const PROVINCE_MATCH_THRESHOLD = 0.95;
-  // Bí danh vùng (chú thích huyện trong ngoặc) bị phạt điểm: nhiều hub chia sẻ cùng
-  // một vùng, nên hub mang đúng tên người dùng gọi phải luôn thắng.
+  // Regional aliases (district annotations in parentheses) are score-penalized: many hubs share the same
+  // region, so the hub bearing the exact name the user called must always win.
   const REGIONAL_PENALTY = 0.08;
 
   const bestByCandidate = new Map();
@@ -512,8 +512,8 @@ export function extractRoute(rawText) {
           : null;
     if (!span) continue;
     if (span.span.replace(/\s/g, '').length < 3) continue;
-    // Xét chất lượng bằng chứng, không chỉ điểm số: loại các cụm toàn từ đệm
-    // khớp bán phần tên hub, nhưng vẫn giữ tên thật gồm từ thông dụng.
+    // Judge the quality of the evidence, not just the score: reject phrases made entirely of filler words
+    // that partially match a hub name, but still keep real names made of common words.
     if (!isTrustworthyPlaceMatch(span.span, entry.normalized)) continue;
 
     const effective = span.score - (entry.isRegional ? REGIONAL_PENALTY : 0);
@@ -529,9 +529,9 @@ export function extractRoute(rawText) {
     return { from: null, to: null, fromHub: null, toHub: null, candidates: [] };
   }
 
-  // Khử trùng: mỗi vị trí trong câu chỉ gán cho một địa danh duy nhất.
-  // Hub cụ thể thắng tỉnh/thành khi điểm ngang nhau ("Hàng Xanh" > "TP.HCM"),
-  // vì hub đặt chuyến được ngay còn tỉnh thì chưa.
+  // Deduplicate: each position in the sentence is assigned to only one place name.
+  // A specific hub beats a province/city when scores tie ("Hàng Xanh" > "TP.HCM"),
+  // because a trip can be booked at a hub right away, while at a province it cannot yet.
   const kindRank = (k) => (k === 'hub' ? 1 : 0);
   found.sort((a, b) => b.score - a.score || kindRank(b.kind) - kindRank(a.kind) || a.position - b.position);
   const claimed = new Set();
@@ -543,7 +543,7 @@ export function extractRoute(rawText) {
   }
   unique.sort((a, b) => a.position - b.position);
 
-  // Suy chiều bằng giới từ: "từ X ... đến/về/xuống/ra Y"
+  // Infer direction from prepositions: "từ X ... đến/về/xuống/ra Y" (from X ... to Y)
   const tokens = sentenceTokens;
   const FROM_MARKERS = new Set(['tu', 'o', 'tai', 'xuat phat']);
   const TO_MARKERS = new Set(['den', 've', 'toi', 'xuong', 'len', 'ra', 'vao', 'sang', 'di']);
@@ -564,7 +564,7 @@ export function extractRoute(rawText) {
     }
   }
 
-  // Không có giới từ rõ ràng: theo quy ước thứ tự xuất hiện (đi trước = điểm đón).
+  // No clear preposition: by the convention of order of appearance (first = pickup point).
   if (!fromEntry && !toEntry) {
     fromEntry = unique[0] || null;
     toEntry = unique[1] || null;
@@ -577,9 +577,9 @@ export function extractRoute(rawText) {
   return {
     from: fromEntry?.name || null,
     to: toEntry?.name || null,
-    // Giữ cụm người dùng đã gõ để lớp tìm kiếm đối chiếu với dữ liệu chuyến.
-    // Tên hiển thị của hub thường dài hơn (ví dụ "Chợ Tân Tiến (Bù Đốp)")
-    // nên không phù hợp để dùng làm từ khoá lọc tuyệt đối.
+    // Keep the phrase the user typed so the search layer can compare it against trip data.
+    // The hub's display name is often longer (e.g. "Chợ Tân Tiến (Bù Đốp)")
+    // so it is not suitable as an absolute filter keyword.
     fromMatch: fromEntry?.span || null,
     toMatch: toEntry?.span || null,
     fromHub: fromEntry
@@ -591,14 +591,14 @@ export function extractRoute(rawText) {
 }
 
 /**
- * Trích xuất thời gian: ngày tương đối + khung giờ chuẩn hệ thống.
- * Hỗ trợ "mai 7h", "chiều nay", "sáng sớm mai", "17h30", "5 giờ chiều".
+ * Extract time: relative day + the system's standard time slot.
+ * Supports "mai 7h", "chiều nay", "sáng sớm mai", "17h30", "5 giờ chiều".
  */
 export function extractTime(rawText, now = new Date()) {
   const text = expandColloquial(rawText);
   if (!text) return { date: null, timeSlot: null, explicitHour: null };
 
-  // 1. Ngày tương đối
+  // 1. Relative day
   let offsetDays = null;
   for (const pattern of RELATIVE_DAY_PATTERNS) {
     for (const key of pattern.keys) {
@@ -610,8 +610,8 @@ export function extractTime(rawText, now = new Date()) {
     if (offsetDays !== null) break;
   }
 
-  // 2. Ngày tuyệt đối dạng "25/12" hoặc "25-12-2026".
-  // Đọc từ chuỗi GỐC: chuẩn hoá đã xoá dấu "/" và "-" nên "25/12" biến thành "25 12".
+  // 2. Absolute date in the form "25/12" or "25-12-2026".
+  // Read from the ORIGINAL string: normalization already removed "/" and "-" so "25/12" becomes "25 12".
   let absoluteDate = null;
   const rawForDate = String(rawText || '');
   const slashDate = rawForDate.match(/\b(\d{1,2})\s*[/-]\s*(\d{1,2})(?:\s*[/-]\s*(\d{2,4}))?\b/);
@@ -633,8 +633,8 @@ export function extractTime(rawText, now = new Date()) {
       if (requestedYear !== null) {
         absoluteDate = createValidCalendarDate(requestedYear);
       } else {
-        // Ngày không nêu năm nghĩa là lần xuất hiện hợp lệ gần nhất trong tương lai.
-        // Vòng lặp cũng xử lý 29/02 khi năm hiện tại hoặc năm sau không nhuận.
+        // A date with no year means the nearest valid occurrence in the future.
+        // The loop also handles 29/02 when the current year or next year is not a leap year.
         for (let year = now.getFullYear(); year <= now.getFullYear() + 4; year++) {
           const candidate = createValidCalendarDate(year);
           if (candidate && candidate >= todayStart) {
@@ -646,14 +646,14 @@ export function extractTime(rawText, now = new Date()) {
     }
   }
 
-  // 3. Giờ cụ thể: "7h", "17h30", "5 gio", "7 giờ sáng"
+  // 3. Specific hour: "7h", "17h30", "5 gio", "7 giờ sáng"
   let explicitHour = null;
   let explicitMinute = 0;
   const hourMatch = text.match(/\b(\d{1,2})\s*(?:h|gio|g)\s*(\d{1,2})?\b/);
   if (hourMatch) {
     explicitHour = Number(hourMatch[1]);
     explicitMinute = hourMatch[2] ? Number(hourMatch[2]) : 0;
-    // "5 giờ chiều" -> 17h. Chỉ quy đổi khi giờ <= 12 và có từ chỉ buổi chiều/tối.
+    // "5 giờ chiều" -> 17h. Only convert when the hour is <= 12 and there is a word for afternoon/evening.
     if (explicitHour <= 12 && /\b(chieu|toi|dem)\b/.test(text)) {
       if (explicitHour < 12) explicitHour += 12;
     }
@@ -663,13 +663,13 @@ export function extractTime(rawText, now = new Date()) {
     }
   }
 
-  // 4. Buổi trong ngày -> khung giờ
+  // 4. Part of day -> time slot
   let timeSlot = null;
   if (explicitHour !== null) {
-    // Luôn trả đúng ID trong TIME_SLOTS; không tự ghép khoảng giờ không tồn tại.
+    // Always return an exact ID in TIME_SLOTS; never compose a time range that does not exist.
     timeSlot = mapTimeToSlot(`${String(explicitHour).padStart(2, '0')}:${String(explicitMinute).padStart(2, '0')}`);
   } else {
-    // Ưu tiên cụm dài hơn ("sang som" trước "sang").
+    // Prefer longer phrases ("sang som" before "sang").
     const sorted = DAYPART_TO_SLOT.flatMap((d) => d.keys.map((k) => ({ key: k, slot: d.slot }))).sort(
       (a, b) => b.key.length - a.key.length
     );
@@ -701,7 +701,7 @@ function toIsoDate(d) {
 }
 
 /**
- * Trích xuất số ghế cần đặt. Hỗ trợ cả chữ số và chữ viết.
+ * Extract the number of seats to book. Supports both digits and written words.
  * "2 ghế", "hai người", "đi 3 đứa", "một mình"
  */
 export function extractSeats(rawText) {
@@ -712,7 +712,7 @@ export function extractSeats(rawText) {
 
   const WORD_NUMBERS = { mot: 1, hai: 2, ba: 3, bon: 4, nam: 5, sau: 6, bay: 7 };
 
-  // Số đứng cạnh danh từ chỉ người/ghế.
+  // A number standing next to a noun for people/seats.
   const digitMatch = text.match(/\b(\d{1,2})\s*(?:ghe|cho|nguoi|khach|dua|ban|me con|anh em)\b/);
   if (digitMatch) {
     const n = Number(digitMatch[1]);
@@ -735,7 +735,7 @@ export function extractSeats(rawText) {
   return 1;
 }
 
-/** Trích xuất ngân sách tối đa: "dưới 150k", "khoảng 200 nghìn", "tầm 150000". */
+/** Extract the maximum budget: "dưới 150k", "khoảng 200 nghìn", "tầm 150000". */
 export function extractBudget(rawText) {
   const text = expandColloquial(rawText);
   if (!text) return null;
@@ -750,13 +750,13 @@ export function extractBudget(rawText) {
     if (/trieu/.test(raw)) value *= 1_000_000;
     else if (/k|nghin|ngan/.test(raw)) value *= 1000;
 
-    // Chỉ chấp nhận mức tiền hợp lý cho một ghế đi ghép (20k – 2 triệu).
+    // Only accept a reasonable amount for one carpool seat (20k – 2 million).
     if (value >= 20_000 && value <= 2_000_000) return value;
   }
   return null;
 }
 
-/** Trích xuất các tiện ích / ràng buộc dưới dạng cờ boolean. */
+/** Extract amenities / constraints as boolean flags. */
 export function extractPerks(rawText) {
   const text = expandColloquial(rawText);
   const perks = {};
@@ -774,8 +774,8 @@ export function extractPerks(rawText) {
 }
 
 /**
- * Hàm tổng hợp: phân tích trọn vẹn một câu tiếng Việt thành cấu trúc máy hiểu được.
- * Đây là điểm vào duy nhất mà tầng agent nên gọi.
+ * Aggregate function: fully parse a Vietnamese sentence into a machine-understandable structure.
+ * This is the only entry point the agent layer should call.
  *
  * @returns {{
  *   intent: string, confidence: number, needsClarification: boolean,
@@ -806,7 +806,7 @@ export function parseUserMessage(rawText, { now = new Date() } = {}) {
     ...perks
   };
 
-  // Cần hỏi lại khi: không rõ ý định, hoặc muốn tìm chuyến mà thiếu cả điểm đi lẫn đến.
+  // Need to ask again when: the intent is unclear, or the user wants to find a trip but is missing both origin and destination.
   const missingRoute = classification.intent === INTENTS.FIND_TRIP && !route.from && !route.to;
   const needsClarification = classification.confidence < 0.45 || missingRoute;
 
@@ -836,8 +836,8 @@ function buildMissingSlots(intent, slots) {
 }
 
 /**
- * Gợi ý tuyến tham chiếu gần nhất khi người dùng nói địa danh ngoài mạng lưới hub.
- * Trả về tuyến trong ROUTE_BENCHMARKS khớp nhất, kèm điểm tương đồng.
+ * Suggest the nearest reference route when the user mentions a place outside the hub network.
+ * Returns the best-matching route in ROUTE_BENCHMARKS, together with its similarity score.
  */
 export function suggestBenchmarkRoute(rawText) {
   const text = expandColloquial(rawText);
@@ -858,7 +858,7 @@ export function suggestBenchmarkRoute(rawText) {
   return best;
 }
 
-/** Tiện ích cho tầng UI: chuẩn hoá chuỗi tìm kiếm người dùng gõ vào ô search. */
+/** Utility for the UI layer: normalize the search string a user types into the search box. */
 export function normalizeSearchQuery(rawText) {
   return normalizeForMatch(expandColloquial(rawText));
 }

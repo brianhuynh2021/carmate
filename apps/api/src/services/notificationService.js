@@ -1,41 +1,41 @@
 /**
  * =============================================================================
- * CARMATE NOTIFICATION SERVICE — KÊNH ĐẨY RA NGOÀI APP
+ * CARMATE NOTIFICATION SERVICE — OUT-OF-APP PUSH CHANNELS
  * =============================================================================
- * Bài toán liên tỉnh khác Grab ở một điểm sống còn: thời khắc quan trọng nhất
- * (đêm hôm trước và rạng sáng) là lúc khách KHÔNG mở app. Mọi thuật toán radar,
- * Shadow Fleet, T-30 đều vô nghĩa nếu không có cách đánh thức người dùng.
+ * The intercity problem differs from Grab in one vital way: the most important moments
+ * (the night before and the early morning) are exactly when the passenger is NOT opening the app.
+ * Every radar algorithm, Shadow Fleet, T-30 is meaningless without a way to wake up the user.
  *
- * Kiến trúc đa kênh, thử theo thứ tự ưu tiên, kênh nào thành công thì dừng:
- *   1. Web Push (VAPID)  — miễn phí, tức thời, cần trình duyệt đã cấp quyền
- *   2. Zalo ZNS          — phủ rộng nhất tại VN, tốn phí theo tin
- *   3. Hàng đợi in-app   — luôn thành công, khách thấy khi mở app lần sau
+ * Multi-channel architecture, tried in priority order; stop at the first channel that succeeds:
+ *   1. Web Push (VAPID)  — free, instant, needs a browser that has granted permission
+ *   2. Zalo ZNS          — widest reach in VN, charged per message
+ *   3. In-app queue      — always succeeds, the passenger sees it the next time they open the app
  *
- * Bậc 3 không bao giờ thất bại nên hàm này không bao giờ ném lỗi ra ngoài:
- * scheduler gọi nó trong vòng lặp, một cú ném sẽ giết cả nhịp quét.
+ * Tier 3 never fails so this function never throws errors outward:
+ * the scheduler calls it inside a loop, and a single throw would kill the whole sweep tick.
  * =============================================================================
  */
 
 import crypto from 'crypto';
 import { getRawDB } from '../db/sqliteStore.js';
 
-/** Các loại thông báo hệ thống phát ra (dùng cho lọc và chống trùng). */
+/** Kinds of notifications the system emits (used for filtering and deduplication). */
 export const NOTIFICATION_KINDS = Object.freeze({
-  T30_APPROACH: 'T30_APPROACH',           // Xe còn ~30 phút tới trạm
-  CHECKIN_REMINDER: 'CHECKIN_REMINDER',   // Nhắc lần 2 nếu chưa bấm xác nhận
-  SEAT_RELEASED: 'SEAT_RELEASED',         // Chỗ bị thu hồi do không xác nhận
-  SHADOW_SWAP: 'SHADOW_SWAP',             // Đã chuyển sang xe hỗ trợ
-  DRIVER_CONFIRM_REQUEST: 'DRIVER_CONFIRM_REQUEST', // Nhắc chủ xe chốt lịch
-  RIDER_READY: 'RIDER_READY',             // Báo chủ xe: khách đã ra trạm
-  TRIP_AT_RISK: 'TRIP_AT_RISK'            // Cảnh báo nội bộ cho vận hành
+  T30_APPROACH: 'T30_APPROACH',           // Vehicle is ~30 minutes from the station
+  CHECKIN_REMINDER: 'CHECKIN_REMINDER',   // Second reminder if the confirm button has not been tapped
+  SEAT_RELEASED: 'SEAT_RELEASED',         // Seat revoked due to no confirmation
+  SHADOW_SWAP: 'SHADOW_SWAP',             // Switched to a backup vehicle
+  DRIVER_CONFIRM_REQUEST: 'DRIVER_CONFIRM_REQUEST', // Nudge the driver to lock in the schedule
+  RIDER_READY: 'RIDER_READY',             // Tell the driver: the passenger is at the station
+  TRIP_AT_RISK: 'TRIP_AT_RISK'            // Internal alert for operations
 });
 
 let vapidConfigured = false;
 let webpushLib = null;
 
 /**
- * Nạp web-push một cách lười biếng (lazy). Thư viện là tuỳ chọn: nếu môi trường
- * chưa cài hoặc chưa cấu hình VAPID, hệ thống vẫn chạy và tự rơi xuống kênh sau.
+ * Loads web-push lazily. The library is optional: if the environment has not installed it
+ * or VAPID is not configured, the system keeps running and falls through to the next channel.
  */
 async function getWebPush() {
   if (webpushLib !== null) return webpushLib;
@@ -45,7 +45,7 @@ async function getWebPush() {
   const subject = process.env.VAPID_SUBJECT || 'mailto:support@carmate.vn';
 
   if (!publicKey || !privateKey) {
-    webpushLib = false; // đánh dấu "đã thử, không dùng được"
+    webpushLib = false; // mark as "tried, not usable"
     return false;
   }
 
@@ -65,7 +65,7 @@ async function getWebPush() {
   }
 }
 
-/** Khởi tạo 2 bảng: đăng ký thiết bị và nhật ký thông báo. */
+/** Initializes 2 tables: device subscriptions and the notification log. */
 export function initNotificationTables() {
   const db = getRawDB();
   db.exec(`
@@ -102,14 +102,14 @@ export function initNotificationTables() {
   `);
 }
 
-/** Chuẩn hoá số điện thoại về dạng chỉ chứa chữ số để tra cứu nhất quán. */
+/** Normalizes the phone number to digits only so lookups are consistent. */
 function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
 
 /**
- * Lưu đăng ký nhận Web Push của một thiết bị.
- * Một người có thể có nhiều thiết bị; endpoint là khoá duy nhất.
+ * Saves a device's Web Push subscription.
+ * One person may have several devices; endpoint is the unique key.
  */
 export function savePushSubscription({ phone, userId = null, subscription, userAgent = '' }) {
   if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
@@ -143,7 +143,7 @@ export function savePushSubscription({ phone, userId = null, subscription, userA
   return { success: true };
 }
 
-/** Gỡ đăng ký khi người dùng tắt thông báo hoặc endpoint đã chết. */
+/** Removes a subscription when the user turns off notifications or the endpoint is dead. */
 export function removePushSubscription(endpoint) {
   const db = getRawDB();
   const info = db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint);
@@ -157,7 +157,7 @@ function getSubscriptionsForPhone(phone) {
     .all(normalizePhone(phone));
 }
 
-/** Bậc 1: Web Push. Trả về số thiết bị nhận thành công. */
+/** Tier 1: Web Push. Returns the number of devices that received it successfully. */
 async function trySendWebPush(phone, payload) {
   const wp = await getWebPush();
   if (!wp) return 0;
@@ -179,7 +179,7 @@ async function trySendWebPush(phone, payload) {
           .run(Date.now(), sub.endpoint);
         delivered += 1;
       } catch (err) {
-        // 404/410 = endpoint đã chết hẳn, xoá ngay để khỏi thử lại mãi
+        // 404/410 = endpoint is permanently dead, delete it right away to avoid retrying forever
         if (err?.statusCode === 404 || err?.statusCode === 410) {
           db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
         } else {
@@ -194,8 +194,8 @@ async function trySendWebPush(phone, payload) {
 }
 
 /**
- * Bậc 2: Zalo ZNS. Chỉ hoạt động khi đã có access token và template id.
- * Giữ nguyên chữ ký hàm để khi doanh nghiệp duyệt ZNS chỉ cần đổ biến môi trường.
+ * Tier 2: Zalo ZNS. Only works when an access token and template id are present.
+ * Keeps the function signature unchanged so that once the business gets ZNS approved, only environment variables need to be filled in.
  */
 async function trySendZaloZns(phone, payload) {
   const accessToken = process.env.ZALO_ZNS_ACCESS_TOKEN || '';
@@ -226,12 +226,11 @@ async function trySendZaloZns(phone, payload) {
 }
 
 /**
- * GỬI THÔNG BÁO — điểm vào duy nhất cho toàn hệ thống.
+ * SEND A NOTIFICATION — the single entry point for the whole system.
  *
- * `dedupeKey` chống bắn trùng: scheduler quét mỗi 60 giây, nếu không có khoá này
- * thì một chuyến sắp tới trạm sẽ bị bắn T-30 hàng chục lần liên tiếp. Khoá được
- * đặt UNIQUE ở tầng database nên kể cả hai tiến trình chạy song song cũng chỉ
- * một bản ghi lọt qua.
+ * `dedupeKey` prevents duplicate firing: the scheduler sweeps every 60 seconds, and without this key
+ * a trip approaching the station would get T-30 fired dozens of times in a row. The key is declared
+ * UNIQUE at the database layer so even if two processes run in parallel only one record gets through.
  *
  * @returns {Promise<{success: boolean, channel: string, deduped?: boolean}>}
  */
@@ -249,8 +248,8 @@ export async function sendNotification({
   const id = `NOTIF-${crypto.randomUUID()}`;
   const now = Date.now();
 
-  // Chống trùng: thử ghi nhật ký TRƯỚC khi gửi. Nếu khoá đã tồn tại thì
-  // thông báo này đã được bắn rồi, dừng ngay không gửi lại.
+  // Deduplication: try writing the log BEFORE sending. If the key already exists then
+  // this notification has already been fired; stop immediately and do not send again.
   const key = dedupeKey || `${kind}:${cleanPhone}:${now}`;
   try {
     db.prepare(
@@ -266,7 +265,7 @@ export async function sendNotification({
 
   const payload = { title, body, kind, data, notificationId: id };
 
-  // Bậc 1 -> Bậc 2 -> Bậc 3 (in-app, đã ghi ở trên nên luôn thành công)
+  // Tier 1 -> Tier 2 -> Tier 3 (in-app, already written above so it always succeeds)
   let channel = 'inapp';
   try {
     if ((await trySendWebPush(cleanPhone, payload)) > 0) {
@@ -284,7 +283,7 @@ export async function sendNotification({
 
 export const dispatchNotification = sendNotification;
 
-/** Đọc hộp thư in-app của một người dùng. */
+/** Reads a user's in-app inbox. */
 export function getNotifications({ phone, limit = 30, unreadOnly = false } = {}) {
   const db = getRawDB();
   const cleanPhone = normalizePhone(phone);
@@ -314,11 +313,11 @@ export function getNotifications({ phone, limit = 30, unreadOnly = false } = {})
 }
 
 /**
- * Đánh dấu đã đọc (một thông báo hoặc toàn bộ của một số điện thoại).
+ * Marks as read (one notification or all of a phone number's).
  *
- * Mọi câu lệnh đều ràng buộc theo `phone`, kể cả khi đã có `notificationId`:
- * mã thông báo là chuỗi đoán được, thiếu ràng buộc này thì người lạ có thể đánh
- * dấu đã đọc thư của người khác và khiến họ bỏ lỡ báo xe tới.
+ * Every statement is constrained by `phone`, even when a `notificationId` is present:
+ * notification IDs are guessable strings, and without this constraint a stranger could mark
+ * someone else's mail as read and make them miss the vehicle-arrival alert.
  */
 export function markNotificationsRead({ phone, notificationId = null }) {
   const db = getRawDB();
@@ -337,12 +336,12 @@ export function markNotificationsRead({ phone, notificationId = null }) {
   return { success: true, updated: info.changes };
 }
 
-/** Khoá công khai VAPID cho trình duyệt đăng ký (không phải bí mật). */
+/** The public VAPID key for browser subscription (not a secret). */
 export function getVapidPublicKey() {
   return process.env.VAPID_PUBLIC_KEY || null;
 }
 
-/** Dọn nhật ký thông báo cũ hơn N ngày, tránh phình database. */
+/** Prunes notification logs older than N days to keep the database from bloating. */
 export function pruneOldNotifications(days = 30) {
   const db = getRawDB();
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;

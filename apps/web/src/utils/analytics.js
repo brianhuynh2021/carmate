@@ -1,6 +1,6 @@
 /**
  * CarMate Analytics & Funnel Tracking Wrapper
- * Tích hợp đa kênh: PostHog (nếu có key) + 0-cost internal SQLite store
+ * Multi-channel integration: PostHog (if a key is present) + 0-cost internal SQLite store
  */
 
 let isPosthogInitialized = false;
@@ -25,9 +25,9 @@ export function initAnalytics() {
 }
 
 /**
- * Ghi nhận sự kiện phân tích hành vi người dùng
- * @param {string} eventName Tên sự kiện (ví dụ: 'search_route', 'open_zalo')
- * @param {object} properties Dữ liệu đi kèm (route, direction, price, ...)
+ * Records a user-behavior analytics event
+ * @param {string} eventName Event name (e.g. 'search_route', 'open_zalo')
+ * @param {object} properties Accompanying data (route, direction, price, ...)
  */
 export function trackEvent(eventName, properties = {}) {
   if (!eventName) return;
@@ -39,16 +39,16 @@ export function trackEvent(eventName, properties = {}) {
     timestamp: Date.now()
   };
 
-  // 1. PostHog capture (nếu đã kích hoạt)
+  // 1. PostHog capture (if enabled)
   if (isPosthogInitialized && typeof window !== 'undefined' && window.posthog) {
     try {
       window.posthog.capture(eventName, enrichedProps);
     } catch {
-      // Bỏ qua lỗi kết nối PostHog để không block luồng người dùng
+      // Ignore PostHog connection errors so the user flow is not blocked
     }
   }
 
-  // 2. Nội bộ SQLite Event Store (0 chi phí, luôn hoạt động)
+  // 2. Internal SQLite Event Store (zero cost, always active)
   if (typeof fetch !== 'undefined') {
     try {
       const token = typeof localStorage !== 'undefined' ? localStorage.getItem('carmate_auth_token') : null;
@@ -63,7 +63,7 @@ export function trackEvent(eventName, properties = {}) {
           properties: enrichedProps
         })
       }).catch(() => {
-        // Silent fail để không ảnh hưởng trải nghiệm UX
+        // Silent fail so the UX is not affected
       });
     } catch {
       // Silent fail

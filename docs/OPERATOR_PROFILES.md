@@ -1,51 +1,51 @@
-# Hồ sơ nhà xe và quyền quản lý
+# Operator profiles and management rights
 
-## Ba việc khác nhau
+## Three different things
 
-1. **Hồ sơ tham khảo:** ghi nhà xe/chủ xe, khu vực phục vụ, lịch và giá công bố, nguồn và ngày rà soát. Không tạo tài khoản, chuyến đang chạy, ghế còn trống hay cuộc hẹn.
-2. **Quyền quản lý:** một tài khoản thật gửi yêu cầu đại diện. CarMate đối chiếu quyền qua kênh liên hệ đã được kiểm tra độc lập rồi duyệt. Đăng nhập Google/Telegram và nhập số điện thoại không tự chứng minh quyền đại diện.
-3. **Chuyến cụ thể:** người quản lý đã duyệt đăng ngày, giờ, xe, ghế, giá hoặc Liên hệ và điều kiện đón. Nhập hộ chuyến phải lưu sự đồng ý cho chính chuyến đó. Hai bên vẫn xác nhận điều kiện theo luồng kết nối hiện hành.
+1. **Reference profile:** records the bus operator/driver, service area, published schedule and price, source and review date. It does not create an account, a running trip, free seats or an appointment.
+2. **Management rights:** a real account submits a claim to represent the operator. CarMate verifies the authority through an independently checked contact channel and then approves. Logging in with Google/Telegram and entering a phone number do not by themselves prove the right to represent the operator.
+3. **A specific trip:** the approved manager posts the date, time, vehicle, seats, price or Liên hệ (Contact) and pickup conditions. Entering a trip on behalf of an operator must store consent for that specific trip. The two parties still confirm the conditions through the current connection flow.
 
-## Khách dùng ngay
+## Passengers can use it right away
 
-Khách xem danh bạ và liên hệ không cần đăng nhập. Mỗi hồ sơ công khai có nguồn, thời điểm kiểm tra và hạn rà soát lại. Lịch công bố không được dùng làm nguồn ghế cho bộ ghép chuyến. Giá quá hạn hoặc chưa được rà soát phải được trình bày kèm cảnh báo, không đưa vào xếp hạng chuyến như giá hiện hành.
+Passengers can view the directory and make contact without logging in. Each public profile has a source, a verification time and a deadline for re-review. A published schedule must not be used as a seat source for the trip matcher. A price that is overdue or has not been reviewed must be presented with a warning and must not be included in trip ranking as a current price.
 
-Khách có thể báo sai hoặc yêu cầu gỡ thông tin mà không đăng nhập. Mã phản ánh và mã tra cứu riêng cho phép xem tiến độ; giữ mã này như thông tin riêng tư. Máy chủ chỉ lưu bản băm của mã tra cứu. Liên hệ người phản ánh và bằng chứng nội bộ không xuất hiện trong danh bạ hoặc kết quả tra cứu công khai.
+Passengers can report errors or request removal of information without logging in. A report code and a separate lookup code allow them to view progress; keep this code as private information. The server stores only the hash of the lookup code. The reporter's contact and internal evidence do not appear in the public directory or in public lookup results.
 
-## Nhập hồ sơ trong quản trị
+## Entering profiles in admin
 
-- Hồ sơ mới mặc định là bản nháp. Không tạo tài khoản đứng tên nhà xe.
-- Nguồn gồm website, Facebook, trao đổi với chủ xe hoặc nguồn khác. Đường dẫn chỉ nhận HTTP(S). Người nhập phải ghi đúng nguồn đã kiểm tra; hệ thống không tự xác thực nội dung website.
-- Số liên hệ doanh nghiệp cần căn cứ nguồn kinh doanh chính thức hoặc sự đồng ý của chủ thể. Số cá nhân cần bằng chứng chủ số đồng ý công khai. Ghi chú bằng chứng là nội bộ.
-- Công khai cần ngày kiểm tra thực tế và hạn rà soát lại; không được ghi ngày đã kiểm tra ở tương lai.
-- Danh bạ cũ được nhập một lần thành bản nháp, giữ thông tin để rà soát. Cờ `verified` cũ không được chuyển thành bằng chứng mới.
-- Đổi danh tính, số hoặc nguồn khi đã xuất bản phải nhập lại bằng chứng và mốc rà soát. Có thể ẩn hồ sơ để xử lý phản ánh.
+- A new profile is a draft by default. Do not create an account in the operator's name.
+- Sources include a website, Facebook, a conversation with the driver, or another source. Links accept HTTP(S) only. The person entering the data must record the source they actually checked; the system does not automatically verify website content.
+- A business contact number needs an official business source or the consent of the entity. A personal number needs evidence that the number's owner consents to publishing. The evidence note is internal.
+- Publishing requires the actual verification date and a deadline for re-review; the verification date must not be in the future.
+- The legacy directory is imported once as drafts, keeping its information for review. The old `verified` flag must not be carried over as new evidence.
+- Changing the identity, number or source of an already published profile requires re-entering the evidence and review milestones. A profile can be hidden to handle a report.
 
-## Nhận quyền quản lý
+## Claiming management rights
 
-Khách đăng nhập chỉ ở bước gửi yêu cầu nhận quyền. Nội dung yêu cầu và xác nhận có thẩm quyền được lưu vào hàng chờ. Quản trị đối chiếu với kênh đã có của nhà xe, ghi số đã đối chiếu, kênh, thời điểm và bằng chứng đại diện. Không lấy một số mới do người xin quyền đưa ra làm bằng chứng độc lập.
+A passenger logs in only at the step of submitting a claim request. The content of the request and the authoritative confirmation are stored in a queue. Admin verifies against the operator's existing channel and records the verified number, the channel, the time and the evidence of representation. A new number supplied by the claimant is not taken as independent evidence.
 
-Mỗi hồ sơ hiện hỗ trợ một tài khoản quản lý. Hai yêu cầu không thể cùng được duyệt cho hai tài khoản. Các quyết định đã kết luận có tính lặp an toàn và không bị đổi kết luận qua cùng yêu cầu.
+Each profile currently supports one management account. Two requests cannot both be approved for two accounts. Decisions that have been concluded are safely repeatable and cannot have their outcome changed through the same request.
 
-Người đã nhận quyền có thể sửa khu vực phục vụ, lịch, giá và ghi chú đón. Những sửa đổi này làm ngày kiểm tra hết hiệu lực để yêu cầu rà soát lại; không tự gia hạn nhãn thông tin còn mới. Đổi số, tên và nguồn thực hiện qua yêu cầu sửa để quản trị đối chiếu.
+A person who has claimed rights can edit the service area, schedule, price and pickup notes. These edits invalidate the verification date so that a re-review is requested; they do not automatically renew the fresh-information label. Changing the number, name and source is done through an edit request for admin to verify.
 
-## Nhập hộ chuyến
+## Entering trips on behalf of an operator
 
-Chỉ hồ sơ đã xuất bản và có tài khoản quản lý còn hợp lệ mới có thể nhập hộ chuyến. Bản ghi chuyến thuộc tài khoản đó, để chủ xe tiếp tục quản lý liên hệ và cuộc hẹn. Quản trị cần ghi nhận sự đồng ý trong 7 ngày gần nhất cho đúng nội dung chuyến và việc công khai liên hệ. Đây là giới hạn nghiệp vụ của sản phẩm, không phải chứng nhận pháp lý.
+Only a published profile with a still-valid management account can have trips entered on its behalf. The trip record belongs to that account, so the driver can continue managing contacts and appointments. Admin must record consent within the last 7 days for the exact trip content and for publishing the contact. This is a business limit of the product, not a legal certification.
 
-API lưu bằng chứng riêng trong `operator_trip_authorizations`, không trộn vào dữ liệu chuyến công khai. Gửi lại cùng `requestId` và nội dung trả về cùng chuyến; thay nội dung cần mã thao tác mới. Chuyến vẫn phải thỏa các điều kiện ngày giờ, sức chứa, xe thực tế và giá do chủ xe cung cấp. Không tự sinh chuyến hằng ngày từ lịch tham khảo.
+The API stores the evidence separately in `operator_trip_authorizations`, not mixed into public trip data. Resubmitting the same `requestId` and content returns the same trip; changing the content requires a new operation ID. The trip must still satisfy the conditions on date/time, capacity, the actual vehicle and the price provided by the driver. Do not auto-generate daily trips from the reference schedule.
 
-## Báo sai và yêu cầu gỡ
+## Reporting errors and takedown requests
 
-Phản ánh đi qua `pending → reviewing → resolved/rejected`; có thể kết luận trực tiếp từ pending nếu đã xử lý. Mỗi lần xử lý cần ghi chú, lưu lịch sử. Đánh dấu đã xử lý không tự sửa hoặc ẩn hồ sơ: quản trị phải thực hiện thay đổi tương ứng và ghi rõ kết quả. Người phản ánh có thể tra cứu kết quả bằng mã riêng kể cả sau khi hồ sơ bị ẩn.
+A report moves through `pending → reviewing → resolved/rejected`; it can be concluded directly from pending if it has been handled. Each handling step needs a note and is stored in the history. Marking a report as handled does not by itself edit or hide the profile: admin must make the corresponding change and record the result. The reporter can look up the result with their private code even after the profile has been hidden.
 
-## Ranh giới vận hành
+## Operational boundaries
 
-- Xác minh quyền quản lý không phải chứng nhận tài xế an toàn, giấy phép hay bảo đảm đón khách.
-- Giai đoạn này duyệt quyền và xử lý phản ánh là công việc vận hành thủ công; chưa có người trực thì không nên hứa thời gian xử lý.
-- Chưa có nguồn đủ bằng chứng thì danh bạ công khai có thể trống. Không dùng tài khoản, đối tác hoặc số ghế giả để lấp chỗ trống.
-- Thay đổi này không thu thập bài đăng Facebook, không liên hệ nhà xe, không xuất bản dữ liệu doanh nghiệp mới và không triển khai lên dịch vụ thật.
+- Verifying management rights is not a certification of a safe driver, a license or a guarantee of pickup.
+- At this stage, approving rights and handling reports are manual operational work; without someone on duty, do not promise a handling time.
+- When there is no source with enough evidence, the public directory may be empty. Do not use fake accounts, partners or seat counts to fill the gap.
+- This change does not collect Facebook posts, does not contact operators, does not publish new business data and does not deploy to a real service.
 
-## Kiểm chứng
+## Verification
 
-`npm run test:operator-profiles` kiểm tra dữ liệu, quyền, độ mới, hàng chờ và khôi phục SQLite. `npm run test:operator-http` kiểm tra API thực qua cổng nội bộ với dữ liệu tạm, gồm nhập hộ chuyến, xác thực và giới hạn phản ánh. Bộ HTTP chặn kết nối ra ngoài; không gửi OTP hay tin nhắn thật.
+`npm run test:operator-profiles` checks data, permissions, freshness, the queue and SQLite recovery. `npm run test:operator-http` checks the real API through an internal port with temporary data, including entering trips on behalf of an operator, authentication and report limits. The HTTP suite blocks outgoing connections; it does not send real OTPs or messages.

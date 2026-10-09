@@ -1,26 +1,26 @@
 /**
- * Tiện ích xử lý Ngày/Tháng dương lịch thực tế cho Chuyến đi CarMate
+ * Utilities for handling real calendar Dates/Months for CarMate Trips
  */
 
 const WEEKDAY_NAMES = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 
-/** Đệm 2 chữ số (vd: 8 -> "08") */
+/** Pad to 2 digits (e.g. 8 -> "08") */
 const pad2 = (n) => String(n).padStart(2, '0');
 
-/** Định dạng ngày thành dd/mm */
+/** Format a date as dd/mm */
 const formatDateDayMonth = (date) => {
   const d = date instanceof Date ? date : new Date(date);
   return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
 };
 
-/** Định dạng ngày thành YYYY-MM-DD */
+/** Format a date as YYYY-MM-DD */
 const formatDateISO = (date) => {
   const d = date instanceof Date ? date : new Date(date);
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 };
 
 /**
- * Tìm ngày tiếp theo khớp với thứ trong tuần (1 = Thứ 2, ..., 6 = Thứ 7, 0 = Chủ nhật)
+ * Find the next date matching a day of the week (1 = Monday, ..., 6 = Saturday, 0 = Sunday)
  */
 const getNextWeekdayDate = (targetDay, baseDate = new Date()) => {
   const date = new Date(baseDate);
@@ -32,13 +32,13 @@ const getNextWeekdayDate = (targetDay, baseDate = new Date()) => {
 };
 
 /**
- * Định dạng nhãn ngày chính xác, chuẩn xác 100% cho Thẻ Chuyến Đi và Modal:
- * - Luôn hiển thị chính xác Thứ và Ngày/Tháng: "Thứ 4, 09/09", "Thứ 5, 10/09", "Thứ 6, 11/09"...
- * - Không để "Hôm nay", "Ngày mai" mơ hồ trên thẻ giúp người dùng và chủ xe biết chuẩn xác lịch trình.
- * - Chuyến lặp lại: hiển thị đúng ngày của đợt chạy cụ thể như bình thường, không chèn chữ "Lặp lại hàng tuần" làm rối thẻ dashboard.
- * - Cơ chế tự phục hồi (Self-healing Invariant):
- *   Nếu bài đăng cũ lưu chuỗi tương đối như "Ngày mai (09/09)" mà hôm nay là 09/09,
- *   hệ thống tự động phát hiện 09/09 là ngày hôm nay và hiển thị chính xác "Thứ 4, 09/09"!
+ * Format an exact date label, 100% accurate, for Trip Cards and Modals:
+ * - Always show the exact weekday and Day/Month: "Thứ 4, 09/09", "Thứ 5, 10/09", "Thứ 6, 11/09"...
+ * - Do not show an ambiguous "Hôm nay" (today) / "Ngày mai" (tomorrow) on the card, so users and drivers know the exact schedule.
+ * - Recurring trips: show the date of the specific run as usual, without inserting the text "Lặp lại hàng tuần" (repeats weekly) that clutters the dashboard card.
+ * - Self-healing mechanism (Self-healing Invariant):
+ *   If an old post stored a relative string such as "Ngày mai (09/09)" and today is 09/09,
+ *   the system automatically detects that 09/09 is today and displays exactly "Thứ 4, 09/09"!
  */
 export const formatCleanDateLabel = (dateStr, baseDate = new Date()) => {
   const base = new Date(baseDate);
@@ -64,11 +64,11 @@ export const formatCleanDateLabel = (dateStr, baseDate = new Date()) => {
   return `${weekday}, ${dm}`;
 };
 
-/** Dung sai sau giờ khởi hành trước khi bài đăng hết hạn (30 phút) */
+/** Tolerance after departure time before a post expires (30 minutes) */
 const EXPIRY_TOLERANCE_MS = 30 * 60 * 1000;
 
 /**
- * Trích xuất ngày khởi hành (Date object) từ thuộc tính `date` của chuyến
+ * Extract the departure date (Date object) from the trip's `date` property
  */
 export const parseTripDate = (dateStr, baseDate = new Date()) => {
   const base = new Date(baseDate);
@@ -77,52 +77,52 @@ export const parseTripDate = (dateStr, baseDate = new Date()) => {
   const str = String(dateStr).trim();
   const lower = str.toLowerCase();
 
-  // 1. Chuỗi ISO: YYYY-MM-DD
+  // 1. ISO string: YYYY-MM-DD
   const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
     return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
   }
 
-  // 2. Định dạng dd/mm (ví dụ: "07/09" hoặc "Thứ 2 (07/09)" hoặc "Ngày mai (09/09)")
-  // Calendar date cụ thể luôn có độ ưu tiên cao nhất, tránh từ khóa tương đối bị cũ
+  // 2. dd/mm format (e.g. "07/09" or "Thứ 2 (07/09)" or "Ngày mai (09/09)")
+  // A specific calendar date always has the highest priority, to avoid stale relative keywords
   const dmMatch = str.match(/(\d{1,2})\/(\d{1,2})/);
   if (dmMatch) {
     const day = Number(dmMatch[1]);
     const month = Number(dmMatch[2]) - 1;
     let year = base.getFullYear();
-    // Nếu tháng nhỏ hơn tháng hiện tại hơn 2 tháng, giả định là năm sau
+    // If the month is more than 2 months earlier than the current month, assume next year
     if (month < base.getMonth() - 2) {
       year += 1;
     }
     return new Date(year, month, day);
   }
 
-  // 3. Chứa "Hôm nay" (khi không có dd/mm đi kèm)
+  // 3. Contains "Hôm nay" (today) (when there is no accompanying dd/mm)
   if (lower.includes('hôm nay')) {
     return new Date(base.getFullYear(), base.getMonth(), base.getDate());
   }
 
-  // 4. Chứa "Ngày mai" hoặc "mai" (khi không có dd/mm đi kèm)
+  // 4. Contains "Ngày mai" (tomorrow) or "mai" (when there is no accompanying dd/mm)
   if (lower.includes('ngày mai') || lower.includes('mai')) {
     const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
     d.setDate(d.getDate() + 1);
     return d;
   }
 
-  // 5. Chứa "Hôm qua" (khi không có dd/mm đi kèm)
+  // 5. Contains "Hôm qua" (yesterday) (when there is no accompanying dd/mm)
   if (lower.includes('hôm qua')) {
     const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
     d.setDate(d.getDate() - 1);
     return d;
   }
 
-  // 6. Chứa "cuối tuần"
+  // 6. Contains "cuối tuần" (weekend)
   if (lower.includes('cuối tuần')) {
     const sat = getNextWeekdayDate(6, base);
     return new Date(sat.getFullYear(), sat.getMonth(), sat.getDate());
   }
 
-  // 7. Thứ trong tuần (vd "Thứ 2", "Thứ 3"...)
+  // 7. Day of the week (e.g. "Thứ 2", "Thứ 3"...)
   const dayMap = [
     { regex: /chủ nhật|cn/i, day: 0 },
     { regex: /thứ 2|thứ hai|t2/i, day: 1 },
@@ -143,7 +143,7 @@ export const parseTripDate = (dateStr, baseDate = new Date()) => {
 };
 
 /**
- * Tính toán mốc thời gian kết thúc xuất phát của chuyến xe (Timestamp ms)
+ * Compute the end-of-departure timestamp of the trip (Timestamp ms)
  */
 export const getTripEndTimestamp = (trip, baseDate = new Date()) => {
   if (!trip) return 0;
@@ -152,19 +152,19 @@ export const getTripEndTimestamp = (trip, baseDate = new Date()) => {
   const month = tripDate.getMonth();
   const day = tripDate.getDate();
 
-  // 1. Phân tích giờ từ timeSlot hoặc exactTime
+  // 1. Parse the hour from timeSlot or exactTime
   let endHour = 23;
   let endMinute = 59;
   let crossMidnight = false;
 
   const rawSlot = trip.timeSlot || '';
-  // Khớp định dạng HH:MM-HH:MM hoặc HH:MM – HH:MM
+  // Match the format HH:MM-HH:MM or HH:MM – HH:MM
   const slotMatch = rawSlot.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
   if (slotMatch) {
     const startH = Number(slotMatch[1]);
     endHour = Number(slotMatch[3]);
     endMinute = Number(slotMatch[4]);
-    // Nếu giờ kết thúc < giờ bắt đầu (ví dụ: 23:00 - 03:00) thì chuyến kéo dài qua nửa đêm
+    // If the end hour < the start hour (e.g. 23:00 - 03:00) the trip spans midnight
     if (endHour < startH) {
       crossMidnight = true;
     }
@@ -217,19 +217,19 @@ export const getTripEndTimestamp = (trip, baseDate = new Date()) => {
 };
 
 /**
- * Kiểm tra xem một chuyến đi đã quá giờ (Hết hạn hiển thị công khai) hay chưa.
- * - Có dung sai 30 phút sau khi khung giờ khởi hành kết thúc.
- * - Các chuyến lặp hàng tuần (isRecurringWeekly) không bao giờ hết hạn.
+ * Check whether a trip is past its time (no longer shown publicly) or not.
+ * - Has a 30-minute tolerance after the departure time window ends.
+ * - Weekly recurring trips (isRecurringWeekly) never expire.
  */
 export const isTripExpired = (trip, now = new Date()) => {
   if (!trip) return false;
 
-  // Nếu đã chủ động đóng / hoàn thành / hủy
+  // If it was actively closed / completed / cancelled
   if (trip.status === 'completed' || trip.status === 'cancelled') {
     return true;
   }
 
-  // Chuyến định kỳ lặp lại hàng tuần không hết hạn
+  // Weekly recurring trips never expire
   const isRecurring = Boolean(
     trip.isRecurringWeekly ||
     (trip.date && (String(trip.date).includes('hàng tuần') || String(trip.date).includes('Lặp lại')))
@@ -241,12 +241,12 @@ export const isTripExpired = (trip, now = new Date()) => {
   const endTimestamp = getTripEndTimestamp(trip, now);
   const nowMs = (now instanceof Date ? now : new Date(now)).getTime();
 
-  // Quá giờ khởi hành + 30 phút dung sai
+  // Past departure time + 30-minute tolerance
   return nowMs > endTimestamp + EXPIRY_TOLERANCE_MS;
 };
 
 /**
- * Lấy chuỗi ngày mai định dạng YYYY-MM-DD
+ * Get tomorrow's date as a YYYY-MM-DD string
  */
 export const getTomorrowISO = (baseDate = new Date()) => {
   const d = new Date(baseDate);
@@ -255,11 +255,11 @@ export const getTomorrowISO = (baseDate = new Date()) => {
 };
 
 /**
- * Phân nhóm các chuyến xe thành các cửa sổ thời gian (Temporal Windowing) chuẩn Apple:
- * - Hôm nay (Today)
- * - Ngày mai (Tomorrow)
- * - Sắp tới (Upcoming)
- * - Đã kết thúc / Hết hạn (Expired)
+ * Group trips into time windows (Temporal Windowing), Apple-style:
+ * - Today
+ * - Tomorrow
+ * - Upcoming
+ * - Finished / Expired
  */
 export const groupTripsByTemporalWindow = (trips = [], now = new Date()) => {
   const today = new Date(now);

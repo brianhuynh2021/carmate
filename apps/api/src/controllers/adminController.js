@@ -76,7 +76,7 @@ function verifyAdminPasscode(inputPasscode) {
     }
   }
 
-  // Trong môi trường development: Chấp nhận cả 'admin123' lẫn 'AdminCarmate2026!' để developer test local thuận tiện
+  // In the development environment: accept both 'admin123' and 'AdminCarmate2026!' so developers can conveniently test locally
   if (!isProduction) {
     const devPasscodes = ['admin123', 'AdminCarmate2026!'];
     for (const devPass of devPasscodes) {
@@ -91,17 +91,17 @@ function verifyAdminPasscode(inputPasscode) {
   return false;
 }
 
-// Bộ nhớ đệm giới hạn tần suất đăng nhập (Chống Brute-Force mật mã Admin)
+// In-memory cache limiting login attempt frequency (anti brute-force for the Admin password)
 const failedAttemptsMap = new Map(); // ip -> { count, lockedUntil }
 
-// Bộ nhớ đệm quản lý các phiên OTP xác thực 2 lớp (MFA Telegram)
+// In-memory cache managing two-factor OTP sessions (Telegram MFA)
 // sessionId -> { otp, expiresAt, attempts, clientIp }
 const pendingMfaSessions = new Map();
-const MFA_TTL_MS = 3 * 60 * 1000; // 3 phút
+const MFA_TTL_MS = 3 * 60 * 1000; // 3 minutes
 
 /**
- * Middleware kiểm tra quyền Quản trị viên (Strict Cryptographic JWT Verification)
- * Không chấp nhận passcode làm bearer token, bắt buộc token ký bởi secret
+ * Middleware checking Admin permission (Strict Cryptographic JWT Verification)
+ * Does not accept the passcode as a bearer token; a token signed with the secret is required
  */
 export function requireAdmin(req, res, next) {
   const authHeader = req.headers['x-admin-key'] || req.headers.authorization;
@@ -111,7 +111,7 @@ export function requireAdmin(req, res, next) {
 
   const token = authHeader.replace('Bearer ', '').trim();
 
-  // Xác thực cryptographic JWT Token có chữ ký bí mật
+  // Cryptographically verify the JWT token signed with the secret
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded && (decoded.role === 'super_admin' || decoded.role === 'admin')) {
@@ -119,14 +119,14 @@ export function requireAdmin(req, res, next) {
       return next();
     }
   } catch {
-    // Token không hợp lệ hoặc hết hạn
+    // Token is invalid or expired
   }
 
   return res.status(403).json({ success: false, error: 'Mã xác thực Admin không hợp lệ hoặc phiên đã hết hạn' });
 }
 
 /**
- * POST /api/admin/auth - Đăng nhập quản trị viên với Brute-force Shield & MFA Support
+ * POST /api/admin/auth - Admin login with Brute-force Shield & MFA Support
  */
 export async function adminAuth(req, res) {
   try {
@@ -134,7 +134,7 @@ export async function adminAuth(req, res) {
     const now = Date.now();
     const tracker = failedAttemptsMap.get(clientIp);
 
-    // 1. Kiểm tra khóa IP nếu đã thử sai quá 5 lần (không khóa nếu là request từ test suite)
+    // 1. Check the IP lock if it has failed more than 5 times (no lock for requests from the test suite)
     const isTestReq = req.headers['x-carmate-testing'] === 'true' || req.isAutomatedTest;
     if (tracker && tracker.lockedUntil > now && !isTestReq) {
       const waitMinutes = Math.ceil((tracker.lockedUntil - now) / 60000);
@@ -146,7 +146,7 @@ export async function adminAuth(req, res) {
 
     const { passcode, mfaCode, mfaSessionId, action } = req.body || {};
 
-    // ── HÀNH ĐỘNG GỬI LẠI MÃ OTP (RESEND OTP) ──
+    // ── RESEND OTP ACTION ──
     if (action === 'resend' && mfaSessionId) {
       const session = pendingMfaSessions.get(mfaSessionId);
       if (!session) {
@@ -187,7 +187,7 @@ export async function adminAuth(req, res) {
       });
     }
 
-    // ── BƯỚC 2: XÁC THỰC MÃ OTP (NẾU CÓ mfaSessionId) ──
+    // ── STEP 2: VERIFY THE OTP (IF mfaSessionId IS PRESENT) ──
     if (mfaSessionId) {
       const session = pendingMfaSessions.get(mfaSessionId);
       if (!session) {
@@ -207,20 +207,20 @@ export async function adminAuth(req, res) {
 
       session.attempts = (session.attempts || 0) + 1;
       const rawInput = typeof mfaCode === 'string' ? mfaCode.trim() : '';
-      // Ở môi trường local dev: Mặc định 123456 để test nhanh 0 gõ phím
+      // In the local dev environment: defaults to 123456 so tests run fast with 0 keystrokes
       const inputMfa = rawInput || (!isProduction ? '123456' : '');
 
       let isValidMfa = false;
-      // 1) Khớp mã OTP Telegram động
+      // 1) Match the dynamic Telegram OTP
       if (inputMfa && session.otp && inputMfa === session.otp) {
         isValidMfa = true;
       }
-      // 2) Khớp mã PIN tĩnh env (nếu có cấu hình)
+      // 2) Match the static PIN from env (if configured)
       const staticMfa = process.env.CARMATE_ADMIN_MFA_CODE || '';
       if (staticMfa && inputMfa === staticMfa.trim()) {
         isValidMfa = true;
       }
-      // 3) Chế độ test/dev local fallback: luôn chấp nhận 123456 làm mặc định
+      // 3) Local test/dev fallback mode: always accept 123456 as the default
       if (!isProduction && inputMfa === '123456') {
         isValidMfa = true;
       }
@@ -239,7 +239,7 @@ export async function adminAuth(req, res) {
         });
       }
 
-      // MFA HỢP LỆ -> Hủy session MFA
+      // MFA VALID -> Destroy the MFA session
       pendingMfaSessions.delete(mfaSessionId);
       failedAttemptsMap.delete(clientIp);
 
@@ -247,7 +247,7 @@ export async function adminAuth(req, res) {
         expiresIn: '2h'
       });
 
-      // Bắn thông báo an ninh vào Telegram (chỉ khi production hoặc dev có bật cờ, và không phải request test)
+      // Send a security notification to Telegram (only in production or dev with the flag enabled, and not for test requests)
       const enableDevAlerts = process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true';
       if ((isProduction || enableDevAlerts) && !isTestReq) {
         const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
@@ -271,7 +271,7 @@ export async function adminAuth(req, res) {
       });
     }
 
-    // ── BƯỚC 1: KIỂM TRA MẬT MÃ CHÍNH ──
+    // ── STEP 1: CHECK THE MAIN PASSWORD ──
     const isPasscodeValid = verifyAdminPasscode(passcode);
 
     if (!isPasscodeValid) {
@@ -293,10 +293,10 @@ export async function adminAuth(req, res) {
       }
     }
 
-    // Mật mã ĐÚNG! Xóa đếm thất bại
+    // Password is CORRECT! Clear the failure count
     failedAttemptsMap.delete(clientIp);
 
-    // Nếu client truyền sẵn mfaCode hợp lệ cùng lúc (Single-call flow cho automated test / scripts):
+    // If the client already supplies a valid mfaCode at the same time (single-call flow for automated tests / scripts):
     const inputDirectMfa = typeof mfaCode === 'string' ? mfaCode.trim() : '';
     const staticMfa = process.env.CARMATE_ADMIN_MFA_CODE || '';
     if (inputDirectMfa && (inputDirectMfa === staticMfa || (!isProduction && inputDirectMfa === '123456'))) {
@@ -311,7 +311,7 @@ export async function adminAuth(req, res) {
       });
     }
 
-    // Khởi tạo phiên MFA 2 bước
+    // Initialize the 2-step MFA session
     const otp = crypto.randomInt(100000, 999999).toString();
     const newSessionId = `mfa_${crypto.randomBytes(16).toString('hex')}`;
 
@@ -322,7 +322,7 @@ export async function adminAuth(req, res) {
       clientIp
     });
 
-    // Dọn dẹp cache quá hạn nếu kích thước lớn
+    // Clean up expired cache entries if the size is large
     if (pendingMfaSessions.size > 100) {
       for (const [sId, sData] of pendingMfaSessions.entries()) {
         if (now > sData.expiresAt) {
@@ -331,7 +331,7 @@ export async function adminAuth(req, res) {
       }
     }
 
-    // Gửi tin nhắn chứa mã OTP qua Telegram
+    // Send the message containing the OTP via Telegram
     const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
     const hasTelegram = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_LOG_CHAT_ID);
 
@@ -379,7 +379,7 @@ export async function adminAuth(req, res) {
 }
 
 /**
- * GET /api/admin/metrics - Lấy số liệu đo lường nền tảng & sức khoẻ máy chủ
+ * GET /api/admin/metrics - Get platform metrics & server health
  */
 export function getMetrics(req, res) {
   try {
@@ -391,7 +391,7 @@ export function getMetrics(req, res) {
 }
 
 /**
- * GET /api/admin/trips - Toàn bộ chuyến xe (kể cả bài bị ẩn/bị khoá)
+ * GET /api/admin/trips - All trips (including hidden/locked posts)
  */
 export function listAdminTrips(req, res) {
   try {
@@ -407,7 +407,7 @@ export function listAdminTrips(req, res) {
 }
 
 /**
- * PATCH /api/admin/trips/:id/toggle-hide - Ẩn hoặc hiện bài đăng
+ * PATCH /api/admin/trips/:id/toggle-hide - Hide or show a post
  */
 export async function toggleHideTripHandler(req, res) {
   try {
@@ -430,7 +430,7 @@ export async function toggleHideTripHandler(req, res) {
 }
 
 /**
- * DELETE /api/admin/trips/:id - Xoá vĩnh viễn bài đăng vi phạm
+ * DELETE /api/admin/trips/:id - Permanently delete a violating post
  */
 export async function deleteTripAdminHandler(req, res) {
   try {
@@ -451,7 +451,7 @@ export async function deleteTripAdminHandler(req, res) {
 }
 
 /**
- * GET /api/admin/users - Danh sách thành viên (Chủ xe & Người đi cùng)
+ * GET /api/admin/users - List of members (drivers & passengers)
  */
 export function listAdminUsers(req, res) {
   try {
@@ -467,7 +467,7 @@ export function listAdminUsers(req, res) {
 }
 
 /**
- * PATCH /api/admin/users/:id - Cập nhật trạng thái xác thực / Cấm tài khoản
+ * PATCH /api/admin/users/:id - Update verification status / ban an account
  */
 export async function updateUserStatusHandler(req, res) {
   try {
@@ -486,19 +486,19 @@ export async function updateUserStatusHandler(req, res) {
 }
 
 /**
- * GET /api/admin/reports - Báo cáo sự cố, huỷ chuyến & khiếu nại
+ * GET /api/admin/reports - Reports of incidents, trip cancellations & complaints
  */
 export function getAdminReports(req, res) {
   try {
     const db = getDB();
     const bookings = db.bookings || [];
 
-    // Thu thập các sự cố hủy chuyến hoặc báo trễ
+    // Collect trip cancellation incidents or late reports
     const delayed = bookings.filter((b) => b.status === 'delayed' || b.delayedMinutes);
     const cancelled = bookings.filter((b) => b.status === 'cancelled');
     const reviewsWithFlags = bookings.filter((b) => Array.isArray(b.reviews) && b.reviews.some((r) => r.rating <= 2));
 
-    // Thu thập các báo cáo sai lệch xe biển vàng / biển trắng
+    // Collect reports of yellow-plate / white-plate vehicle mismatches
     const vehicleMismatchReports = bookings
       .filter((b) => b.vehicleMismatchReport)
       .map((b) => ({
@@ -511,7 +511,7 @@ export function getAdminReports(req, res) {
         date: b.date
       }));
 
-    // Thu thập các báo cáo số điện thoại ảo / không liên lạc được
+    // Collect reports of fake / unreachable phone numbers
     const unreachablePhoneReports = bookings
       .filter((b) => b.unreachablePhoneReport)
       .map((b) => ({
@@ -547,7 +547,7 @@ export function getAdminReports(req, res) {
 }
 
 /**
- * PATCH /api/admin/trips/:id/convert-car-category - 1-Chạm chuyển đổi loại xe (Biển vàng / Biển trắng)
+ * PATCH /api/admin/trips/:id/convert-car-category - 1-tap conversion of vehicle type (yellow plate / white plate)
  */
 export async function convertTripCarCategoryHandler(req, res) {
   try {
@@ -564,7 +564,7 @@ export async function convertTripCarCategoryHandler(req, res) {
       carType: carCategory === 'convenient_trip' ? 'Xe tiện chuyến (Biển vàng)' : trip.carType
     });
 
-    // Nếu có bookingId gắn kèm, cập nhật trạng thái của vehicleMismatchReport thành 'resolved_converted'
+    // If a bookingId is attached, update the vehicleMismatchReport status to 'resolved_converted'
     if (bookingId) {
       const booking = getBookingById(bookingId);
       if (booking && booking.vehicleMismatchReport) {
@@ -590,7 +590,7 @@ export async function convertTripCarCategoryHandler(req, res) {
 }
 
 /**
- * PATCH /api/admin/bookings/:id/resolve-mismatch - Xử lý hoặc bỏ qua báo cáo sai lệch xe
+ * PATCH /api/admin/bookings/:id/resolve-mismatch - Resolve or dismiss a vehicle mismatch report
  */
 export async function resolveMismatchReportHandler(req, res) {
   try {
@@ -622,7 +622,7 @@ export async function resolveMismatchReportHandler(req, res) {
 }
 
 /**
- * GET /api/admin/ai-intelligence - Báo cáo Telemetry & Hộp đen Quỹ đạo AI (MIT & Stanford)
+ * GET /api/admin/ai-intelligence - AI Telemetry report & Trajectory Black Box (MIT & Stanford)
  */
 export function getAdminAiIntelligence(req, res) {
   try {
@@ -637,7 +637,7 @@ export function getAdminAiIntelligence(req, res) {
 }
 
 /**
- * GET /api/admin/trust-rules - Lấy toàn bộ danh sách quy tắc tín nhiệm (Admin Engine)
+ * GET /api/admin/trust-rules - Get the full list of trust rules (Admin Engine)
  */
 export function getAdminTrustRulesHandler(req, res) {
   try {
@@ -652,7 +652,7 @@ export function getAdminTrustRulesHandler(req, res) {
 }
 
 /**
- * PUT /api/admin/trust-rules - Cập nhật danh sách quy tắc tín nhiệm & trọng số điểm (Admin Engine)
+ * PUT /api/admin/trust-rules - Update the trust rule list & score weights (Admin Engine)
  */
 export function updateAdminTrustRulesHandler(req, res) {
   try {
@@ -675,7 +675,7 @@ export function updateAdminTrustRulesHandler(req, res) {
 }
 
 /**
- * POST /api/admin/trust-rules/reset - Khôi phục cấu hình quy tắc gốc
+ * POST /api/admin/trust-rules/reset - Restore the original rule configuration
  */
 export function resetAdminTrustRulesHandler(req, res) {
   try {
@@ -692,12 +692,12 @@ export function resetAdminTrustRulesHandler(req, res) {
 
 /**
  * =============================================================================
- * QUẢN TRỊ GIÁ XĂNG DẦU HÀNG NGÀY (DAILY FUEL PRICE CONTROLLER)
+ * DAILY FUEL PRICE CONTROLLER
  * =============================================================================
  */
 
 /**
- * GET /api/fuel-price - Lấy giá xăng hiện tại (Công khai, Zero Auth)
+ * GET /api/fuel-price - Get the current fuel price (Public, Zero Auth)
  */
 export function getPublicFuelPriceHandler(req, res) {
   try {
@@ -712,7 +712,7 @@ export function getPublicFuelPriceHandler(req, res) {
 }
 
 /**
- * GET /api/admin/fuel-price - Lấy cấu hình giá xăng dầu (Admin Engine)
+ * GET /api/admin/fuel-price - Get the fuel price configuration (Admin Engine)
  */
 export function getAdminFuelPriceHandler(req, res) {
   try {
@@ -727,7 +727,7 @@ export function getAdminFuelPriceHandler(req, res) {
 }
 
 /**
- * PUT /api/admin/fuel-price - Admin tự cập nhật giá xăng RON 95-III
+ * PUT /api/admin/fuel-price - Admin manually updates the RON 95-III fuel price
  */
 export function updateAdminFuelPriceHandler(req, res) {
   try {
@@ -756,7 +756,7 @@ export function updateAdminFuelPriceHandler(req, res) {
 }
 
 /**
- * POST /api/admin/fuel-price/reset - Khôi phục giá xăng về mức tham chiếu mặc định (24.120đ)
+ * POST /api/admin/fuel-price/reset - Restore the fuel price to the default reference level (24,120 VND)
  */
 export function resetAdminFuelPriceHandler(req, res) {
   try {
@@ -773,14 +773,14 @@ export function resetAdminFuelPriceHandler(req, res) {
 
 /**
  * =============================================================================
- * QUẢN TRỊ CÔNG THỨC ĐỊNH GIÁ (PRICING FORMULA CONTROLLER)
+ * PRICING FORMULA CONTROLLER
  * =============================================================================
- * Giá vé trên sàn là ĐẦU RA của công thức, không phải con số Chủ xe tự gõ.
- * Chỉ Quản trị viên mới được nâng/sửa tham số công thức tại đây, và thay đổi
- * áp dụng ngay cho mọi chặng của toàn sàn.
+ * The fare on the platform is the OUTPUT of a formula, not a number the driver types in.
+ * Only the admin may raise/edit the formula parameters here, and changes
+ * apply immediately to every leg across the whole platform.
  */
 
-/** Dựng bảng giá xem trước cho một bộ tham số, giúp Admin thấy hệ quả trước khi lưu. */
+/** Builds a preview price table for a parameter set, so the Admin sees the consequences before saving. */
 function buildTariffPreview(params = null) {
   const samples = [
     { distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },
@@ -811,12 +811,12 @@ function buildTariffPreview(params = null) {
 }
 
 /**
- * GET /api/tariff-params - Công thức định giá đang áp dụng (Công khai, Zero Auth)
+ * GET /api/tariff-params - The pricing formula currently in effect (Public, Zero Auth)
  *
- * Engine định giá là biến cấp module nên mỗi tiến trình giữ một bản riêng: máy
- * chủ và trình duyệt không tự đồng bộ. Thiếu endpoint này, Chủ xe nhìn thấy giá
- * tính theo tham số MẶC ĐỊNH trong khi máy chủ tạo chuyến bằng tham số Admin đã
- * chỉnh — hai con số lệch nhau mà không ai biết. Giá xăng đã có kênh tương tự.
+ * The pricing engine is a module-level variable, so each process keeps its own copy: the server
+ * and the browser do not sync on their own. Without this endpoint, the driver sees a price
+ * computed from the DEFAULT parameters while the server creates the trip with the parameters the Admin
+ * has adjusted — the two numbers differ and nobody knows. Fuel price already has a similar channel.
  */
 export function getPublicTariffParamsHandler(req, res) {
   try {
@@ -828,7 +828,7 @@ export function getPublicTariffParamsHandler(req, res) {
 }
 
 /**
- * GET /api/admin/tariff-params - Lấy công thức định giá hiện hành + bảng giá xem trước
+ * GET /api/admin/tariff-params - Get the current pricing formula + preview price table
  */
 export function getAdminTariffParamsHandler(req, res) {
   try {
@@ -849,7 +849,7 @@ export function getAdminTariffParamsHandler(req, res) {
 }
 
 /**
- * POST /api/admin/tariff-params/preview - Xem trước hệ quả của bộ tham số mới (không lưu)
+ * POST /api/admin/tariff-params/preview - Preview the consequences of a new parameter set (not saved)
  */
 export function previewAdminTariffParamsHandler(req, res) {
   try {
@@ -872,7 +872,7 @@ export function previewAdminTariffParamsHandler(req, res) {
 }
 
 /**
- * PUT /api/admin/tariff-params - Nâng công thức định giá (áp dụng ngay toàn sàn)
+ * PUT /api/admin/tariff-params - Raise the pricing formula (applies immediately platform-wide)
  */
 export function updateAdminTariffParamsHandler(req, res) {
   try {
@@ -901,7 +901,7 @@ export function updateAdminTariffParamsHandler(req, res) {
 }
 
 /**
- * POST /api/admin/tariff-params/reset - Khôi phục công thức về bộ tham số mặc định
+ * POST /api/admin/tariff-params/reset - Restore the formula to the default parameter set
  */
 export function resetAdminTariffParamsHandler(req, res) {
   try {
@@ -917,7 +917,7 @@ export function resetAdminTariffParamsHandler(req, res) {
 }
 
 /**
- * GET /api/admin/deletion-requests - Lấy danh sách các yêu cầu xóa tài khoản
+ * GET /api/admin/deletion-requests - Get the list of account deletion requests
  */
 export function listDeletionRequestsHandler(req, res) {
   try {
@@ -934,7 +934,7 @@ export function listDeletionRequestsHandler(req, res) {
 }
 
 /**
- * POST /api/admin/deletion-requests/:id/process - Quản trị viên xử lý yêu cầu xóa (Duyệt hoặc Từ chối)
+ * POST /api/admin/deletion-requests/:id/process - Admin processes a deletion request (Approve or Reject)
  */
 export async function processDeletionRequestHandler(req, res) {
   try {
@@ -959,7 +959,7 @@ export async function processDeletionRequestHandler(req, res) {
 }
 
 /**
- * DELETE /api/admin/users/:id - Quản trị viên chủ động xóa tài khoản thành viên
+ * DELETE /api/admin/users/:id - Admin proactively deletes a member account
  */
 export async function deleteUserAdminHandler(req, res) {
   try {
@@ -976,7 +976,7 @@ export async function deleteUserAdminHandler(req, res) {
 }
 
 /**
- * DELETE /api/admin/ai-trajectories - Xóa toàn bộ quỹ đạo AI để làm sạch telemetry
+ * DELETE /api/admin/ai-trajectories - Delete all AI trajectories to clean up telemetry
  */
 export function clearAdminAiTrajectories(req, res) {
   try {
@@ -992,7 +992,7 @@ export function clearAdminAiTrajectories(req, res) {
 }
 
 /**
- * DELETE /api/admin/test-data - Dọn sạch toàn bộ dữ liệu kiểm thử (Analytics, AI Trajectories, Support Messages, Bookings)
+ * DELETE /api/admin/test-data - Clean up all test data (Analytics, AI Trajectories, Support Messages, Bookings)
  */
 export function clearAdminTestData(req, res) {
   try {
@@ -1008,7 +1008,7 @@ export function clearAdminTestData(req, res) {
     const exchangeCount = clearAllSeatExchangeOrders();
     const usersCount = clearNonAdminUsers();
 
-    // Đồng bộ file carmate_db.json về trạng thái sạch chuẩn
+    // Sync the carmate_db.json file back to a clean baseline state
     try {
       if (fs.existsSync(LEGACY_JSON_FILE)) {
         const cleanJson = {
@@ -1068,7 +1068,7 @@ export function clearAdminTestData(req, res) {
 }
 
 /**
- * DELETE /api/admin/bookings - Dọn sạch toàn bộ lịch hẹn chuyến xe
+ * DELETE /api/admin/bookings - Clean up all trip bookings
  */
 export function clearAdminBookings(req, res) {
   try {
@@ -1088,7 +1088,7 @@ export function clearAdminBookings(req, res) {
 }
 
 /**
- * Hỗ trợ Test Suite kiểm tra MFA
+ * Helper for the MFA test suite
  */
 export function _getPendingMfaSession(sessionId) {
   return pendingMfaSessions.get(sessionId);
@@ -1098,11 +1098,11 @@ export function _clearPendingMfaSessions() {
 }
 
 /**
- * POST /api/admin/drivers — Tạo hồ sơ Chủ xe (và chuyến đầu tiên) thay cho bác tài.
+ * POST /api/admin/drivers — Create a driver profile (and the first trip) on the driver's behalf.
  *
- * Giai đoạn mời Chủ xe tham gia: đội vận hành gặp trực tiếp, xem giấy tờ tận nơi
- * rồi nhập hộ. Bác tài chưa cần cài ứng dụng; khi nào họ đăng nhập bằng chính số
- * điện thoại này qua OTP thì nhận lại nguyên hồ sơ và các chuyến đã đăng.
+ * Driver-invitation phase: the operations team meets them in person, checks the documents on site
+ * and then enters the details for them. The driver does not need to install the app yet; once they sign in with
+ * this same phone number via OTP they get back the complete profile and the trips already posted.
  */
 export async function createDriverProfileHandler(_req, res) {
   return res.status(410).json({ success: false, error: 'Dùng Hồ sơ nhà xe để nhập thông tin có nguồn. Không tạo tài khoản và đánh dấu xác minh hộ.' });

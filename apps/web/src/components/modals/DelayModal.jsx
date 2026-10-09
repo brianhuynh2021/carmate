@@ -68,7 +68,7 @@ export default function DelayModal({ record, onClose, onSendDelay }) {
           />
         </Field>
 
-        {/* Khung xem trước tin nhắn Zalo gửi đối tác */}
+        {/* Preview frame of the Zalo message sent to the partner */}
         <div className="p-3 rounded-2xl bg-slate-900 text-slate-200 border border-slate-800 space-y-1.5 text-left">
           <span className="type-caption text-slate-400 flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-400" />

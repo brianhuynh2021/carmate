@@ -1,16 +1,16 @@
 /**
- * corridors.js — SỔ ĐĂNG KÝ HÀNH LANG (CORRIDOR REGISTRY)
+ * corridors.js — CORRIDOR REGISTRY
  *
- * BẤT BIẾN SCALE: Giao diện TUYỆT ĐỐI không được biết "QL13" là gì.
+ * SCALE INVARIANT: The UI must ABSOLUTELY NOT know what "QL13" is.
  *
- * Trước đây trang chủ rẽ nhánh cứng theo TO_SAIGON / TO_BINH_PHUOC ở 19 chỗ,
- * nên thêm tuyến thứ ba đồng nghĩa phải sửa cả 19 nhánh đó và mọi chuỗi hiển
- * thị đi kèm. Nay mỗi hành lang chỉ là MỘT object khai báo ở đây; UI đọc từ
- * registry và tự dựng. Thêm tuyến mới = thêm một object, 0 dòng code UI.
+ * Previously the homepage hard-branched on TO_SAIGON / TO_BINH_PHUOC in 19 places,
+ * so adding a third route meant editing all 19 branches and every accompanying
+ * display string. Now each corridor is just ONE object declared here; the UI reads
+ * from the registry and builds itself. Adding a new route = adding one object, 0 lines of UI code.
  *
- * Mỗi hành lang có đúng hai đầu (endpoint A và B). "Chiều đi" chỉ là câu hỏi
- * đang đi từ đầu nào sang đầu nào — không còn khái niệm "về Sài Gòn" gắn chết
- * vào mã nguồn.
+ * Each corridor has exactly two endpoints (endpoint A and B). "Heading" is just the question of
+ * which endpoint you are travelling from and to — there is no longer a "to Sài Gòn" notion
+ * hard-wired into the source code.
  */
 
 import { VIRTUAL_HUBS } from './routes.js';
@@ -18,14 +18,14 @@ import { VIRTUAL_HUBS } from './routes.js';
 export const CORRIDORS = [
   {
     id: 'ql13',
-    // Khớp với trường `corridor` trong VIRTUAL_HUBS
+    // Matches the `corridor` field in VIRTUAL_HUBS
     dataKey: 'Tuyến QL13',
     shortName: 'QL13',
     name: 'Hành lang Quốc lộ 13',
     isDefault: true,
     status: 'live',
     endpoints: {
-      // Đầu A: cụm đô thị (điểm đến của chiều "lên thành phố")
+      // Endpoint A: the urban cluster (destination of the "up to the city" heading)
       a: {
         id: 'saigon',
         label: 'Sài Gòn',
@@ -39,12 +39,12 @@ export const CORRIDORS = [
           'hub_ql13_nga4_binh_phuoc'
         ]
       },
-      // Đầu B: cụm tỉnh (điểm xuất phát của chiều "lên thành phố")
+      // Endpoint B: the provincial cluster (origin of the "up to the city" heading)
       b: {
         id: 'binhphuoc',
         label: 'Bình Phước',
         fullLabel: 'Bình Phước & Bình Dương',
-        hubIds: null // null = mọi hub còn lại của hành lang
+        hubIds: null // null = all remaining hubs of the corridor
       }
     }
   },
@@ -60,7 +60,7 @@ export const CORRIDORS = [
         id: 'saigon',
         label: 'Sài Gòn',
         fullLabel: 'TP. Hồ Chí Minh',
-        hubIds: null // suy ra theo vĩ độ: cụm phía Bắc hành lang
+        hubIds: null // derived from latitude: the northern cluster of the corridor
       },
       b: {
         id: 'kiengiang',
@@ -72,7 +72,7 @@ export const CORRIDORS = [
   }
 ];
 
-/** Lấy toàn bộ hành lang đang phục vụ (chỉ tuyến live đang chạy thực tế). */
+/** Gets all corridors currently in service (only live routes that are actually running). */
 export function getActiveCorridors() {
   return CORRIDORS.filter((c) => c.status === 'live');
 }
@@ -85,7 +85,7 @@ export function getDefaultCorridor() {
   return CORRIDORS.find((c) => c.isDefault) || CORRIDORS[0];
 }
 
-/** Toàn bộ trạm ảo thuộc một hành lang. */
+/** All virtual hubs belonging to a corridor. */
 function getCorridorHubs(corridorId) {
   const c = getCorridorById(corridorId);
   if (!c) return [];
@@ -93,12 +93,12 @@ function getCorridorHubs(corridorId) {
 }
 
 /**
- * Phân trạm của hành lang về hai đầu A / B.
+ * Assigns the corridor's stations to the two endpoints A / B.
  *
- * Ưu tiên danh sách hubIds khai báo tường minh; nếu không có thì suy ra theo
- * vĩ độ (đầu A luôn là cụm gần cực Nam hơn với QL13, nên dùng mốc trung vị
- * để chia — cách này áp dụng được cho mọi hành lang chạy theo trục Bắc-Nam mà
- * không cần liệt kê tay từng trạm).
+ * An explicitly declared hubIds list takes priority; otherwise infer from
+ * latitude (endpoint A is always the cluster closer to the southern end for QL13, so the median
+ * is used as the split point — this works for any corridor running along a North-South axis
+ * without having to list each station by hand).
  */
 export function getEndpointHubs(corridorId, endpointKey, heading = null) {
   const c = getCorridorById(corridorId);
@@ -112,7 +112,7 @@ export function getEndpointHubs(corridorId, endpointKey, heading = null) {
   if (Array.isArray(ep.hubIds)) {
     result = hubs.filter((h) => ep.hubIds.includes(h.id));
   } else {
-    // Suy luận theo vĩ độ: đầu A = nửa gần thành phố (vĩ độ thấp hơn với QL13).
+    // Infer from latitude: endpoint A = the half closer to the city (lower latitude for QL13).
     const other = endpointKey === 'a' ? 'b' : 'a';
     const otherIds = c.endpoints[other]?.hubIds;
     if (Array.isArray(otherIds)) {
@@ -124,11 +124,11 @@ export function getEndpointHubs(corridorId, endpointKey, heading = null) {
     }
   }
 
-  // Sắp xếp thứ tự trạm hợp lý theo hướng tuyến (Stanford Ergonomics & MIT Invariants):
-  // Tuyến QL13 chạy dọc trục Bắc-Nam (Đầu B = Bình Phước ở phía Bắc, Đầu A = Sài Gòn ở phía Nam).
-  // - Nếu là đầu B (Bình Phước):
-  //   + Khi heading === 'a_to_b' (Sài Gòn đi Bình Phước): xe chạy từ Nam ra Bắc, trả khách từ Lái Thiêu xuôi về Bù Đốp (lat tăng dần).
-  //   + Khi heading === 'b_to_a' hoặc mặc định (Bình Phước về Sài Gòn): xe đón khách từ đầu tuyến Bù Đốp xuôi về Lái Thiêu (lat giảm dần).
+  // Order the stations sensibly along the route direction (Stanford Ergonomics & MIT Invariants):
+  // The QL13 route runs along the North-South axis (Endpoint B = Bình Phước in the North, Endpoint A = Sài Gòn in the South).
+  // - If it is endpoint B (Bình Phước):
+  //   + When heading === 'a_to_b' (Sài Gòn to Bình Phước): the vehicle runs from South to North, dropping passengers from Lái Thiêu on toward Bù Đốp (lat ascending).
+  //   + When heading === 'b_to_a' or by default (Bình Phước to Sài Gòn): the vehicle picks passengers up from the start of the route at Bù Đốp on toward Lái Thiêu (lat descending).
   if (endpointKey === 'b') {
     if (heading === 'a_to_b') {
       result = [...result].sort((h1, h2) => (h1.lat || 0) - (h2.lat || 0));
@@ -140,12 +140,12 @@ export function getEndpointHubs(corridorId, endpointKey, heading = null) {
   return result;
 }
 
-/** Chiều ngược lại. */
+/** The opposite heading. */
 export function flipHeading(heading) {
   return heading === 'a_to_b' ? 'b_to_a' : 'a_to_b';
 }
 
-/** Tìm hành lang phù hợp nhất với một toạ độ GPS (dùng để tự chọn tuyến). */
+/** Finds the corridor that best matches a GPS coordinate (used to auto-select the route). */
 export function detectCorridorByCoords(lat, lng) {
   if (typeof lat !== 'number' || typeof lng !== 'number') return getDefaultCorridor();
 
@@ -163,7 +163,7 @@ export function detectCorridorByCoords(lat, lng) {
   return best || getDefaultCorridor();
 }
 
-/** Xác định một hub thuộc đầu nào của hành lang. */
+/** Determines which endpoint of the corridor a hub belongs to. */
 export function getHubEndpoint(corridorId, hubId) {
   if (getEndpointHubs(corridorId, 'a').some((h) => h.id === hubId)) return 'a';
   if (getEndpointHubs(corridorId, 'b').some((h) => h.id === hubId)) return 'b';

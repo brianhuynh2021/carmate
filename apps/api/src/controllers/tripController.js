@@ -17,13 +17,13 @@ import { cancelAppointment } from '../services/bookingCommitment.js';
 import { assertOperatorManager, getTripOperatorAttribution } from '../services/operatorProfiles.js';
 
 /**
- * Che giấu thông tin định danh cá nhân (PII Protection - Nghị định 13/2023/NĐ-CP)
- * Chỉ trả SĐT thật (phoneReal) cho chính chủ sở hữu bài đăng hoặc Quản trị viên.
+ * Mask personally identifiable information (PII Protection - Decree 13/2023/ND-CP)
+ * Only return the real phone number (phoneReal) to the post's owner or an Admin.
  */
 /**
- * Tổng hợp sao trung bình THẬT của người đăng chuyến từ các đánh giá đã gửi
- * sau chuyến đi (booking.reviews). Chỉ trả về khi có ít nhất 1 đánh giá thật —
- * không bịa 5 sao mặc định cho người chưa ai chấm điểm.
+ * Aggregate the trip poster's REAL average star rating from the reviews submitted
+ * after the trip (booking.reviews). Only returned when there is at least 1 real review —
+ * do not fabricate a default 5 stars for someone nobody has rated.
  */
 function resolveRating(trip) {
   try {
@@ -31,7 +31,7 @@ function resolveRating(trip) {
     const bookings = db.bookings || [];
     const tripPhone = cleanPhoneNumber(trip.phoneReal || trip.phone || '');
     const isDriverTrip = trip.type === 'driver_offer';
-    // Chuyến của chủ xe -> lấy đánh giá mà khách chấm cho chủ xe, và ngược lại
+    // A driver's trip -> take the rating passengers gave the driver, and vice versa
     const wantedTargetRole = isDriverTrip ? 'driver' : 'passenger';
 
     const scores = [];
@@ -63,9 +63,9 @@ function resolveRating(trip) {
 }
 
 /**
- * Tính điểm tín nhiệm của người đăng chuyến để hiển thị ngoài feed.
- * Điểm suy ra từ hồ sơ thật (CCCD, GPLX, biển số, ảnh xe, số chuyến đã đi,
- * số lần bị báo trễ/huỷ) — không phải số sao mặc định.
+ * Compute the trip poster's trust score to display on the feed.
+ * The score is derived from the real profile (citizen ID card (CCCD), driver's license (GPLX), license plate, vehicle photos, number of trips taken,
+ * number of times reported late/cancelled) — not a default star count.
  */
 function resolveTrustScore(trip) {
   try {
@@ -110,17 +110,17 @@ export function sanitizeTripForPublic(trip, reqUser) {
   const sanitized = { ...trip };
   Object.assign(sanitized, getTripOperatorAttribution(trip));
 
-  // Chuẩn hóa phoneMasked dạng 098***2233
+  // Normalize phoneMasked in the form 098***2233
   const rawPhone = trip.phoneReal || trip.phone || '';
   if (rawPhone && (!sanitized.phoneMasked || sanitized.phoneMasked === rawPhone)) {
     const cleaned = cleanPhoneNumber(rawPhone);
     sanitized.phoneMasked = cleaned.length >= 7 ? `${cleaned.slice(0, 3)}***${cleaned.slice(-4)}` : '098***2233';
   }
 
-  // Chuẩn hoá bí danh hiển thị công khai (Chủ xe CX-xxx / Khách KX-xxx)
+  // Normalize the public display alias (Driver CX-xxx / Passenger KX-xxx)
   sanitized.publicName = toPublicAlias(sanitized);
 
-  // Ẩn triệt để phoneReal nếu không phải chủ sở hữu hoặc admin
+  // Thoroughly hide phoneReal if the viewer is not the owner or an admin
   if (!isOwner) {
     delete sanitized.phoneReal;
     delete sanitized.phone;
@@ -128,8 +128,8 @@ export function sanitizeTripForPublic(trip, reqUser) {
       sanitized.licensePlate = sanitized.licensePlate.replace(/\d{2}$/, 'xx');
     }
 
-    // Ẩn danh tính thật: feed công khai chỉ được thấy bí danh dạng "Chủ xe CX-xxx".
-    // Tên thật chỉ lộ cho hai bên sau khi ghép chuyến thành công (qua booking).
+    // Hide real identity: the public feed may only see an alias in the form "Chủ xe CX-xxx" (driver CX-xxx).
+    // The real name is only revealed to the two parties after the trip is successfully matched (via booking).
     delete sanitized.driverName;
     delete sanitized.contactName;
     delete sanitized.author;
@@ -148,7 +148,7 @@ export function sanitizeTripForPublic(trip, reqUser) {
   sanitized.lastUpdatedAt = trip.updatedAt || trip.createdAt || null;
   Object.assign(sanitized, normalizeConnectionTerms(trip));
 
-  // Điểm tín nhiệm hiển thị ngoài feed (thay cho số sao mặc định)
+  // Trust score displayed on the feed (in place of the default star count)
   const trust = resolveTrustScore(trip);
   if (trust) {
     sanitized.trustScore = trust.score;
@@ -160,7 +160,7 @@ export function sanitizeTripForPublic(trip, reqUser) {
 }
 
 /**
- * GET /api/trips - Lấy danh sách chuyến xe kèm bộ lọc
+ * GET /api/trips - Get the list of trips with filters
  */
 export function listTrips(req, res) {
   try {
@@ -205,7 +205,7 @@ export function listTrips(req, res) {
 }
 
 /**
- * GET /api/trips/:id - Chi tiết chuyến xe
+ * GET /api/trips/:id - Trip details
  */
 export function getTrip(req, res) {
   try {
@@ -218,7 +218,7 @@ export function getTrip(req, res) {
 
     const sanitized = sanitizeTripForPublic(trip, req.user);
 
-    // Nếu là chính Chủ xe sở hữu chuyến hoặc Quản trị viên: nạp danh sách hành khách đã đặt (Seat Manifest)
+    // If the viewer is the driver who owns the trip or an Admin: load the list of booked passengers (Seat Manifest)
     const isOwner = Boolean(
       (req.user && (req.user.role === 'admin' || req.user.role === 'super_admin')) ||
       (req.user && req.user.id && (req.user.id === trip.userId || req.user.id === trip.creatorId))
@@ -255,7 +255,7 @@ export function getTrip(req, res) {
 }
 
 /**
- * POST /api/trips - Tạo mới chuyến đi (Chủ xe hoặc Khách)
+ * POST /api/trips - Create a new trip (driver or passenger)
  */
 export async function createTrip(req, res) {
   try {
@@ -276,7 +276,7 @@ export async function createTrip(req, res) {
       delete body.operatorId;
     }
 
-    // Validate cơ bản
+    // Basic validation
     if (!body || !body.from || !body.to) {
       return res.status(400).json({
         success: false,
@@ -326,7 +326,7 @@ export async function createTrip(req, res) {
       }
     }
 
-    // Kiểm tra tài khoản có bị hạn chế đăng bài hoặc bị vô hiệu hóa hay không (Quy tắc Ân hạn 3 ngày)
+    // Check whether the account is restricted from posting or has been disabled (3-day Grace Period rule)
     const posterPhone = cleanPhoneNumber(body.phoneReal || '');
     const posterUser = (req.user?.id ? getUserById(req.user.id) : null) || (posterPhone ? getUserByPhone(posterPhone) : null);
     if (posterUser) {
@@ -346,7 +346,7 @@ export async function createTrip(req, res) {
       }
     }
 
-    // BẤT BIẾN MIT: Giới hạn ghế an toàn theo quy định đăng kiểm (chống chở quá tải)
+    // MIT INVARIANT: safe seat limit per vehicle inspection regulations (prevents overloading)
     if (body.type === 'driver_offer' && body.availableSeats) {
       const isTruck =
         body.vehicleType === 'truck_light' ||
@@ -360,7 +360,7 @@ export async function createTrip(req, res) {
       }
     }
 
-    // Chuẩn hóa tải trọng xe và số ghế khách hợp lệ (Kháng chở quá tải Nghị định 100/2019)
+    // Normalize the vehicle payload and valid passenger seat count (overload prevention, Decree 100/2019)
     if (body.type === 'driver_offer' || body.availableSeats) {
       const rawCapacity =
         body.vehicleType === 'truck_light' || body.isCargoVehicle
@@ -391,7 +391,7 @@ export async function createTrip(req, res) {
       if (req.user.telegramId) body.telegramId = req.user.telegramId;
     }
 
-    // BẤT BIẾN KHÔNG TRÙNG LỊCH: Chủ xe không được đăng chuyến trùng khung giờ đã có
+    // NO-SCHEDULE-OVERLAP INVARIANT: a driver may not post a trip overlapping a time slot they already have
     if (body.type === 'driver_offer') {
       const existingActiveTrips = getTrips({ type: 'drivers', includeHidden: false }).filter((t) => {
         if (t.status && t.status !== 'active') return false;
@@ -438,7 +438,7 @@ export async function createTrip(req, res) {
 }
 
 /**
- * PATCH /api/trips/:id/status - Cập nhật trạng thái chuyến xe
+ * PATCH /api/trips/:id/status - Update the trip status
  */
 export async function updateStatus(req, res) {
   const status = req.body?.status;
@@ -456,7 +456,7 @@ export async function updateStatus(req, res) {
 }
 
 /**
- * PUT /api/trips/:id - Cập nhật thông tin chuyến đi
+ * PUT /api/trips/:id - Update trip information
  */
 // Listing details may change before agreement. Confirmed appointments retain
 // their route, vehicle, pickup conditions and their own immutable price snapshot.
@@ -472,7 +472,7 @@ const MATRIX_COORDINATE_FIELDS = Object.freeze([
   { key: 'time', label: 'giờ khởi hành' }
 ]);
 
-/** Hai giá trị có thực sự khác nhau không (bỏ qua khác biệt hoa thường / khoảng trắng). */
+/** Whether two values are actually different (ignoring case / whitespace differences). */
 function isMeaningfulChange(before, after) {
   if (after === undefined) return false;
   const a = String(before ?? '').trim().toLowerCase();
@@ -481,8 +481,8 @@ function isMeaningfulChange(before, after) {
 }
 
 /**
- * Áp bất biến tọa độ + bất biến giá lên một yêu cầu cập nhật chuyến.
- * Trả về { error } nếu phải từ chối, hoặc { updates } đã được làm sạch.
+ * Apply the coordinate invariant + price invariant to a trip update request.
+ * Returns { error } if it must be rejected, or { updates } once sanitized.
  */
 function enforceTripInvariants(existingTrip, rawUpdates) {
   const updates = { ...rawUpdates };
@@ -493,7 +493,7 @@ function enforceTripInvariants(existingTrip, rawUpdates) {
   );
   const hasPassengers = activeBookings.length > 0;
 
-  // 1. TỌA ĐỘ MA TRẬN: khoá cứng khi chuyến đã có khách đặt.
+  // 1. COORDINATE MATRIX: hard-locked once the trip has bookings.
   if (hasPassengers) {
     const changed = MATRIX_COORDINATE_FIELDS.filter((f) => isMeaningfulChange(existingTrip[f.key], updates[f.key]));
     if (changed.length > 0) {
@@ -588,11 +588,11 @@ export async function updateTripHandler(req, res) {
 }
 
 /**
- * DELETE /api/trips/:id - Xóa hoặc hủy chuyến đi
- * Tuân thủ Công trình 4 (Time-Decay Penalty) & Công trình 6 (Standby Rescue Buffer):
- * - Nếu chuyến chưa có khách đặt: xóa an toàn (Idempotent 100%).
- * - Nếu chuyến đã có khách đặt vé: tính toán deltaMinutes, áp dụng chế tài dốc thời gian,
- *   kích hoạt xe cứu hộ đệm (Standby Buffer) giải cứu hành khách và chuyển trạng thái chuyến sang cancelled.
+ * DELETE /api/trips/:id - Delete or cancel a trip
+ * Complies with Project 4 (Time-Decay Penalty) & Project 6 (Standby Rescue Buffer):
+ * - If the trip has no bookings: delete safely (100% Idempotent).
+ * - If the trip has booked passengers: compute deltaMinutes, apply the time-sloped sanction,
+ *   activate the Standby Buffer rescue vehicle to rescue the passengers and switch the trip status to cancelled.
  */
 export async function deleteTripHandler(req, res) {
   try {
@@ -608,7 +608,7 @@ export async function deleteTripHandler(req, res) {
 }
 
 /**
- * POST /api/trips/:id/republish - Tái đăng 1 chạm chuyến cũ cho ngày mai
+ * POST /api/trips/:id/republish - 1-tap republish of an old trip for tomorrow
  */
 export async function republishTripHandler(req, res) {
   const existing = getTripById(req.params.id);

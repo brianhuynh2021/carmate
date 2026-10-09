@@ -25,17 +25,17 @@ export default class ErrorBoundary extends React.Component {
             reg.unregister().catch(() => {});
           }
         }).finally(() => {
-          // Tải lại bằng reload() thay vì gắn ?_r=<timestamp> vào URL.
-          // Param đó chỉ để phá cache nhưng không bao giờ được dọn, nên nó bám lại
-          // trên thanh địa chỉ, đi theo mọi liên kết người dùng chia sẻ và lộ ra rằng
-          // ứng dụng vừa gặp sự cố. Huỷ đăng ký service worker ở trên đã đủ để lấy
-          // bản mới; reload(true-style) qua location.reload() không cần đổi URL.
+          // Reload via reload() instead of attaching ?_r=<timestamp> to the URL.
+          // That param only exists to bust the cache but is never cleaned up, so it sticks
+          // in the address bar, follows every link the user shares and reveals that the
+          // app just hit an error. Unregistering the service worker above is already enough to get
+          // the fresh build; reload(true-style) via location.reload() needs no URL change.
           window.location.reload();
         });
         return;
       }
     } catch {
-      // Fallback nếu có lỗi
+      // Fallback if there is an error
     }
     window.location.reload();
   };

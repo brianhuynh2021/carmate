@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { isTripExpired, groupTripsByTemporalWindow } from '@carmate/shared';
 import { trackSearchRoute } from '../utils/analytics.js';
 
-// Đối chiếu địa danh thông minh chuẩn Đi Chung Xe Liên Tỉnh (Hai chiều & Hành lang Tỉnh / Bến xe)
+// Smart place-name matching for intercity ride-sharing (bidirectional & Province / Bus-station corridors)
 export function matchLocationFuzzy(fieldValue, query) {
   if (!query || !query.trim()) return true;
   if (!fieldValue) return false;
@@ -10,12 +10,12 @@ export function matchLocationFuzzy(fieldValue, query) {
   const normField = String(fieldValue).toLowerCase().trim();
   const normQuery = String(query).toLowerCase().trim();
 
-  // 1. So khớp 2 chiều
+  // 1. Two-way matching
   if (normField.includes(normQuery) || normQuery.includes(normField)) {
     return true;
   }
 
-  // 2. Nhóm hành lang & đô thị liên tỉnh trọng điểm
+  // 2. Groups of key intercity corridors & urban areas
   const corridorGroups = [
     [
       'sài gòn',
@@ -103,7 +103,7 @@ export function matchLocationFuzzy(fieldValue, query) {
     }
   }
 
-  // 3. Khớp cụm từ khóa (Token matching: nếu có từ định danh >= 3 ký tự trùng nhau)
+  // 3. Keyword-phrase matching (token matching: if an identifying word of >= 3 characters overlaps)
   const queryTokens = normQuery.split(/[\s,–—\-/]+/).filter((t) => t.length >= 3);
   const fieldTokens = normField.split(/[\s,–—\-/]+/).filter((t) => t.length >= 3);
   const common = queryTokens.filter((t) => fieldTokens.includes(t));
@@ -115,7 +115,7 @@ export function matchLocationFuzzy(fieldValue, query) {
 }
 
 /**
- * Custom Hook quản lý bộ lọc tìm kiếm & phân nhóm dữ liệu thị trường
+ * Custom Hook that manages search filters & grouping of marketplace data
  */
 export default function useMarketFilters({ driverOffers = [], passengerRequests = [] }) {
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -128,7 +128,7 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
   const [temporalFilter, setTemporalFilter] = useState('all');
   const [visibleCount, setVisibleCount] = useState(9);
 
-  // Theo dõi sự kiện tìm kiếm tuyến đường vào Funnel Analytics
+  // Track route-search events into Funnel Analytics
   useEffect(() => {
     if (searchFrom || searchTo || searchKeyword) {
       const timer = setTimeout(() => {
@@ -208,7 +208,7 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
         if (selectedCarCategory === 'convenient_trip' && !isConvenient) return false;
       }
 
-      // Tự động loại bỏ các chuyến đã quá giờ (>30 phút sau khi khung giờ kết thúc) khỏi sàn công khai
+      // Automatically drop trips that are past due (>30 minutes after the time slot ends) from the public marketplace
       if (isTripExpired(item)) return false;
 
       return true;
@@ -225,7 +225,7 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
     selectedCarCategory
   ]);
 
-  // Phân nhóm thời gian (Hôm nay / Ngày mai / Sắp tới) chuẩn Apple
+  // Apple-standard time grouping (Today / Tomorrow / Upcoming)
   const temporalGroups = useMemo(() => {
     return groupTripsByTemporalWindow(filteredItems);
   }, [filteredItems]);
@@ -242,7 +242,7 @@ export default function useMarketFilters({ driverOffers = [], passengerRequests 
     return displayedMarketItems.slice(0, visibleCount);
   }, [displayedMarketItems, visibleCount]);
 
-  // Tự động reset số lượng chuyến hiển thị về 9 khi thay đổi bất kỳ bộ lọc nào
+  // Automatically reset the number of displayed trips to 9 when any filter changes
   useEffect(() => {
     setVisibleCount(9);
   }, [

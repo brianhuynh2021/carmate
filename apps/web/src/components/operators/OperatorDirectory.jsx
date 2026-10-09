@@ -9,18 +9,18 @@ import {
 } from './operatorPresentation.js';
 
 const cardClass = 'rounded-2xl border border-slate-300/70 dark:border-white/10 bg-white dark:bg-[#1a2232] p-4 shadow-sm';
-// Hàng danh bạ dùng nền và viền của CorridorTripCard để liền mạch với phần còn
-// lại của app, nhưng bỏ bóng đổ và hiệu ứng nâng: một danh sách dài mà hàng nào
-// cũng nổi lên thì rối mắt hơn là dễ đọc.
+// Directory rows use CorridorTripCard's background and border to blend in with the rest
+// of the app, but drop the shadow and lift effect: in a long list where every row
+// pops up, it is harder on the eyes than easy to read.
 const rowClass = 'overflow-hidden rounded-2xl border border-slate-200 dark:border-white/15 bg-white dark:bg-[#1c1c1e] transition-colors hover:border-slate-300 dark:hover:border-white/25';
 const inputClass = 'mt-1 w-full min-h-11 rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#1a2232] px-3 py-2 text-slate-900 dark:text-white type-input';
 const primaryClass = 'min-h-11 rounded-xl bg-[#0071e3] px-4 py-2.5 text-white disabled:opacity-50 type-button';
 const secondaryClass = 'min-h-11 rounded-xl border border-slate-300 dark:border-white/15 px-3 py-2 hover:bg-slate-50 dark:hover:bg-white/5 disabled:opacity-50 type-button';
 
-// Số thẻ hiện trước khi bấm xem tất cả: đủ để thấy danh bạ có nội dung thật,
-// vẫn gọn trên một màn hình điện thoại.
+// Number of cards shown before tapping view all: enough to see the directory has real content,
+// still compact on a phone screen.
 const PREVIEW_COUNT = 8;
-// Bỏ dấu để gõ "thanh cong" vẫn tìm ra "Thành Công".
+// Strip diacritics so typing "thanh cong" still finds "Thành Công".
 const searchText = value => String(value || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
 
 function ErrorNote({ children }) {
@@ -147,8 +147,8 @@ function ReportForm({ operator, onReceipt, onBusyChange }) {
   </form>;
 }
 
-// Danh bạ là danh sách để lướt, không phải một chồng thẻ đặc chữ: mỗi nhà xe thu
-// về một hàng đọc lướt được, bấm mới xổ ra phần cần cho cuộc gọi.
+// The directory is a list to skim, not a stack of text-heavy cards: each bus operator collapses
+// into one skimmable row, and tapping expands the parts needed for a call.
 function OperatorRow({ operator, open, onToggle, onOpenDetail }) {
   const badge = freshnessBadge(operator);
   const phone = operatorPhone(operator.contactPhone);
@@ -338,8 +338,8 @@ export default function OperatorDirectory({ corridor, currentUser, onRequireAuth
     if (!onRequireAuth) { setError('Chưa mở được đăng nhập. Hãy thử lại.'); return; }
     onRequireAuth({ title: 'Đăng nhập để xem hồ sơ quản lý', subtitle: 'Danh bạ và liên hệ vẫn mở cho mọi người.', onSuccess: async () => { setShowMine(true); } });
   };
-  // Một tuyến thực tế chỉ có vài chục nhà xe, nên lọc ngay trên danh sách đã tải:
-  // gõ vài chữ là ra, không phải cuộn và không cần gọi lại máy chủ.
+  // A real route only has a few dozen bus operators, so filter right on the already-loaded list:
+  // type a few letters and it appears, no scrolling and no need to call the server again.
   const needle = searchText(query);
   const matches = needle ? operators.filter(operator => searchText([operator.name, operator.corridor, ...(operator.coverage || [])].join(' ')).includes(needle)) : operators;
   const visible = expanded ? matches : matches.slice(0, PREVIEW_COUNT);

@@ -1,20 +1,20 @@
 /**
  * =============================================================================
- * NHÂN BẢN HOÁ TRẠM ẢO (HUMANIZED MEETING POINTS)
+ * HUMANIZING VIRTUAL STATIONS (HUMANIZED MEETING POINTS)
  * =============================================================================
- * Toán học điểm hẹn chỉ phát huy tác dụng khi khách thấy AN TOÀN và DỄ NHẬN
- * DIỆN. Một ghim đỏ giữa QL13 lúc 4 giờ sáng là nỗi sợ, không phải điểm đón.
+ * Meeting-point math only pays off when passengers feel SAFE and can EASILY RECOGNIZE
+ * the place. A red pin in the middle of QL13 at 4 a.m. is a source of fear, not a pickup point.
  *
- * Tiện ích được SUY RA từ `category` của trạm thay vì gõ tay vào 26 trạm: một
- * nguồn sự thật duy nhất, thêm trạm mới là tự có tiện ích đúng loại, không ai
- * phải nhớ cập nhật hai chỗ.
+ * Amenities are DERIVED from the station's `category` instead of being typed by hand into 26 stations: a
+ * single source of truth, so a new station automatically gets the right kind of amenities, and nobody
+ * has to remember to update two places.
  *
- * Chỉ liệt kê tiện ích ĐÚNG VỚI BẢN CHẤT loại địa điểm — cây xăng thì chắc chắn
- * có mái che và đèn sáng, còn "camera an ninh" thì không dám khẳng định cho mọi
- * cây xăng. Thà nói ít mà đúng.
+ * Only list amenities that are TRUE BY THE NATURE of the place type — a gas station certainly
+ * has a roof and lights, but "camera an ninh" (security camera) cannot be claimed for every
+ * gas station. Better to say less and be right.
  */
 
-/** Các tiện ích quan trọng với người đứng đợi xe ven quốc lộ. */
+/** Amenities that matter to someone waiting for a ride at the roadside of a highway. */
 const AMENITY_TYPES = Object.freeze({
   SHELTER: { id: 'SHELTER', icon: '🏠', label: 'Có mái che' },
   LIGHTING: { id: 'LIGHTING', icon: '💡', label: 'Đèn sáng ban đêm' },
@@ -28,7 +28,7 @@ const AMENITY_TYPES = Object.freeze({
 
 const A = AMENITY_TYPES;
 
-/** Bản đồ loại địa điểm -> tiện ích chắc chắn có. */
+/** Map of place type -> amenities that are certain to be present. */
 const CATEGORY_AMENITIES = Object.freeze({
   GAS_STATION: [A.SHELTER, A.LIGHTING, A.RESTROOM, A.DRINKS, A.PARKING, A.OPEN_24H],
   AIRPORT: [A.SHELTER, A.LIGHTING, A.RESTROOM, A.DRINKS, A.SECURITY, A.OPEN_24H, A.CROWDED],
@@ -39,7 +39,7 @@ const CATEGORY_AMENITIES = Object.freeze({
   URBAN_AREA: [A.LIGHTING, A.DRINKS, A.CROWDED]
 });
 
-/** Mô tả một câu về mức độ an toàn khi đứng đợi, dùng ngay dưới tên trạm. */
+/** One-sentence description of how safe it is to wait there, used right below the station name. */
 const CATEGORY_SAFETY_NOTE = Object.freeze({
   GAS_STATION: 'Đứng trong sân cây xăng, có mái che và đèn sáng suốt đêm.',
   AIRPORT: 'Khu vực sân bay đông người và có an ninh thường trực.',
@@ -51,13 +51,13 @@ const CATEGORY_SAFETY_NOTE = Object.freeze({
 });
 
 /**
- * Lấy danh sách tiện ích của một trạm.
- * @param {object} hub - Một phần tử VIRTUAL_HUBS
+ * Get the list of amenities of a station.
+ * @param {object} hub - An element of VIRTUAL_HUBS
  * @returns {Array<{id, icon, label}>}
  */
 export function getHubAmenities(hub) {
   if (!hub) return [];
-  // Trạm có thể tự khai đè nếu khảo sát thực địa cho kết quả khác
+  // A station may override this with its own declaration if a field survey gives different results
   if (Array.isArray(hub.amenities) && hub.amenities.length > 0) {
     return hub.amenities
       .map((id) => AMENITY_TYPES[id])
@@ -66,7 +66,7 @@ export function getHubAmenities(hub) {
   return CATEGORY_AMENITIES[hub.category] || [A.LIGHTING];
 }
 
-/** Câu mô tả an toàn ngắn gọn cho trạm. */
+/** Short safety description sentence for a station. */
 function getHubSafetyNote(hub) {
   if (!hub) return '';
   if (hub.safetyNote) return hub.safetyNote;
@@ -74,8 +74,8 @@ function getHubSafetyNote(hub) {
 }
 
 /**
- * Gói đầy đủ thông tin "nhân bản hoá" của một trạm để trả về cho giao diện.
- * `landmark` là thứ khách dùng để tìm đúng chỗ đứng — quan trọng hơn toạ độ GPS.
+ * Full "humanization" info bundle of a station to return to the UI.
+ * `landmark` is what passengers use to find the right place to stand — more important than GPS coordinates.
  */
 export function describeHub(hub) {
   if (!hub) return null;

@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-// Không import dữ liệu mẫu vào đây: sàn chỉ được hiển thị chuyến từ máy chủ.
-// Bỏ hẳn đường import khiến dữ liệu mẫu không thể vô tình quay lại giao diện.
+// Do not import sample data here: the marketplace may only display trips from the server.
+// Removing the import path entirely makes it impossible for sample data to accidentally return to the UI.
 import { getTomorrowISO, normalizePhoneNumber, setDailyFuelPrice, setTariffParams } from '@carmate/shared';
 import api from '../api/client.js';
 import { trackInitiateBooking } from '../utils/analytics.js';
 import { triggerMacNotification } from '../components/common/AppleMacNotification.jsx';
 
 /**
- * Custom Hook quản lý dữ liệu chuyến đi, kết nối Zalo / Escrow và đồng bộ Backend
+ * Custom Hook that manages trip data, Zalo / Escrow connections and Backend synchronization
  */
 export default function useTripsData({
   currentUser,
@@ -21,11 +21,11 @@ export default function useTripsData({
   onSaveProfile,
   t
 }) {
-  // BẤT BIẾN SÀN THẬT: sàn chỉ hiển thị chuyến do máy chủ trả về.
-  // Trước đây state khởi tạo bằng dữ liệu mẫu nên người dùng thấy ngay 13 chuyến
-  // ảo khi mở trang (kể cả khi máy chủ không có chuyến nào), và dữ liệu mẫu đó
-  // không bao giờ bị xoá vì nhánh cập nhật chỉ chạy khi mảng trả về > 0.
-  // Khởi tạo rỗng: sàn trống là sự thật, và empty state sẽ mời đăng chuyến.
+  // REAL MARKETPLACE INVARIANT: the marketplace only shows trips returned by the server.
+  // Previously the state was initialized with sample data, so users immediately saw 13 fake
+  // trips on page load (even when the server had no trips at all), and that sample data
+  // was never cleared because the update branch only ran when the returned array was > 0.
+  // Initialize empty: an empty marketplace is the truth, and the empty state invites posting a trip.
   const [driverOffers, setDriverOffers] = useState([]);
   const [passengerRequests, setPassengerRequests] = useState([]);
   const [bookedEscrows, setBookedEscrows] = useState(() => {
@@ -48,19 +48,19 @@ export default function useTripsData({
     setTimeout(() => setToastMessage(null), 4000);
   }, []);
 
-  // Helper đồng bộ cache bền vững vé điện tử (MIT Invariant & Zero-Blocking)
+  // Helper that syncs the durable e-ticket cache (MIT Invariant & Zero-Blocking)
   const syncBookingsCache = useCallback((serverBookings) => {
     if (!Array.isArray(serverBookings)) return serverBookings;
     try {
       if (typeof localStorage !== 'undefined') {
         const local = JSON.parse(localStorage.getItem('carmate_cached_bookings') || '[]');
         const map = new Map();
-        // Nạp dữ liệu từ server (Source of Truth)
+        // Load data from the server (Source of Truth)
         serverBookings.forEach((b) => {
           const id = b.escrowId || b.id;
           if (id) map.set(id, b);
         });
-        // Chỉ giữ lại các booking vừa tạo cục bộ lạc quan dưới 60s chưa kịp lên server
+        // Only keep bookings that were just created locally and optimistically (under 60s) and have not reached the server yet
         const now = Date.now();
         local.forEach((b) => {
           const id = b.escrowId || b.id;
@@ -78,7 +78,7 @@ export default function useTripsData({
     return serverBookings;
   }, []);
 
-  // Đồng bộ dữ liệu từ CarMate Backend API
+  // Sync data from the CarMate Backend API
   useEffect(() => {
     let active = true;
     async function fetchBackendData() {
@@ -96,8 +96,8 @@ export default function useTripsData({
 
         if (tripsRes.status === 'fulfilled' && tripsRes.value?.success) {
           const { driverOffers: drivers, passengerRequests: passengers } = tripsRes.value.data || {};
-          // Nhận cả mảng rỗng: "máy chủ không có chuyến nào" là một câu trả lời
-          // hợp lệ và phải được phản ánh đúng trên sàn.
+          // Accept empty arrays too: "the server has no trips" is a valid
+          // answer and must be reflected accurately on the marketplace.
           if (Array.isArray(drivers)) setDriverOffers(drivers);
           if (Array.isArray(passengers)) setPassengerRequests(passengers);
         }
@@ -121,9 +121,9 @@ export default function useTripsData({
           }
         }
 
-        // Đồng bộ tham số công thức định giá: engine là biến cấp module nên mỗi
-        // tiến trình giữ bản riêng. Không kéo về, giá hiện trên máy Chủ xe sẽ
-        // lệch với giá máy chủ dùng để tạo chuyến.
+        // Sync the pricing-formula parameters: the engine is a module-level variable so each
+        // process keeps its own copy. If they are not pulled down, the price shown on the driver's device would
+        // differ from the price the server uses to create the trip.
         if (tariffRes.status === 'fulfilled' && tariffRes.value?.success && tariffRes.value.data) {
           try {
             const cfg = tariffRes.value.data;
@@ -143,13 +143,13 @@ export default function useTripsData({
     return () => {
       active = false;
     };
-    // Cố ý chỉ chạy MỘT LẦN khi mount: đây là cú nạp dữ liệu khởi động.
-    // Thêm currentUser.phone / syncBookingsCache vào deps sẽ khiến effect chạy lại
-    // mỗi lần các giá trị đó đổi tham chiếu -> gọi API lặp vô hạn.
+    // Intentionally runs only ONCE on mount: this is the startup data load.
+    // Adding currentUser.phone / syncBookingsCache to the deps would make the effect re-run
+    // every time those values change reference -> infinite repeated API calls.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tái đăng 1 chạm (1-Tap Re-publish) chuyến cũ cho ngày mai
+  // 1-Tap Re-publish of an old trip for tomorrow
   const handleRePublishTrip = useCallback(
     async (trip) => {
       try {
@@ -204,7 +204,7 @@ export default function useTripsData({
     [currentUser, showToast, updateMyTripsCount]
   );
 
-  // Đăng chuyến mới
+  // Post a new trip
   // Cache a server-confirmed trip; this function never creates a second copy.
   const recordPostedTrip = useCallback((trip, owner = currentUser) => {
     if (!trip?.id) return;
@@ -291,9 +291,9 @@ export default function useTripsData({
 
   const handleDeleteTrip = useCallback(
     async (tripId) => {
-      // Giữ bản sao để khôi phục nếu máy chủ không xóa được: một chuyến chỉ biến mất
-      // khỏi máy người đăng nhưng vẫn hiển thị trên sàn là tình huống nguy hiểm nhất
-      // (khách vẫn đặt chỗ vào chuyến mà chủ xe tin rằng đã hủy).
+      // Keep a copy to restore if the server fails to delete: a trip that disappears
+      // from the poster's device but is still shown on the marketplace is the most dangerous situation
+      // (passengers still book seats on a trip the driver believes is cancelled).
       const removedDriverTrip = (driverOffers || []).find((t) => t.id === tripId);
       const removedPassengerTrip = (passengerRequests || []).find((t) => t.id === tripId);
 
@@ -314,7 +314,7 @@ export default function useTripsData({
         showToast('Đã xóa bài đăng chuyến đi thành công.');
       } catch (err) {
         console.warn('Lỗi xóa chuyến đi:', err);
-        // Khôi phục lại bài đăng và danh sách id cục bộ: chuyến vẫn còn trên máy chủ
+        // Restore the post and the local id list: the trip still exists on the server
         if (removedDriverTrip) {
           setDriverOffers((prev) => (prev.some((t) => t.id === tripId) ? prev : [removedDriverTrip, ...prev]));
         }
@@ -459,7 +459,7 @@ export default function useTripsData({
     }
   }, [currentUser, syncBookingsCache]);
 
-  // Tiếp nhận booking tạo mới tức thì từ giao diện (Zero-Blocking & MIT Invariant)
+  // Instantly accept a newly created booking from the UI (Zero-Blocking & MIT Invariant)
   const handleBookingCreated = useCallback((newBooking) => {
     if (!newBooking) return;
     setBookedEscrows((prev) => {
@@ -473,11 +473,11 @@ export default function useTripsData({
       } catch {}
       return updated;
     });
-    // Kích hoạt đồng bộ ngầm
+    // Trigger a background sync
     refreshBookings();
   }, [refreshBookings]);
 
-  // Polling đồng bộ ngầm & Bắn thông báo In-app (AppleMacNotification) cho Chủ xe khi có khách đặt
+  // Background sync polling & firing an In-app notification (AppleMacNotification) to the driver when a passenger books
   useEffect(() => {
     const knownIds = new Set(bookedEscrows.map((b) => b.escrowId || b.id));
 
@@ -494,7 +494,7 @@ export default function useTripsData({
             const bId = b.escrowId || b.id;
             if (!knownIds.has(bId)) {
               knownIds.add(bId);
-              // Kiểm tra xem người đăng nhập hiện tại có phải Chủ xe nhận yêu cầu không:
+              // Check whether the currently logged-in user is the driver receiving the request:
               const bDriverPhone = b.driverPhone ? normalizePhoneNumber(b.driverPhone) : '';
               const isTargetDriver = (userPhone && bDriverPhone && userPhone === bDriverPhone) ||
                                      (userId && b.driverId && userId === b.driverId);
@@ -517,7 +517,7 @@ export default function useTripsData({
           setBookedEscrows(merged || newBookings);
         }
       } catch {
-        // Bỏ qua lỗi ngầm nếu mất mạng thoáng qua
+        // Ignore background errors if the network drops briefly
       }
     }, 6000);
 

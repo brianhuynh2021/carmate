@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * CarMate — Sao lưu SQLite an toàn khi server vẫn đang chạy.
+ * CarMate — Safe SQLite backup while the server is still running.
  *
- * Dùng SQLite Online Backup API (db.backup) thay vì `cp`:
- * copy file thường trong lúc có giao dịch đang ghi sẽ tạo ra bản sao
- * hỏng hoặc thiếu phần dữ liệu còn nằm trong WAL.
+ * Uses the SQLite Online Backup API (db.backup) instead of `cp`:
+ * a plain file copy made while a transaction is writing produces a
+ * corrupt copy, or one missing data that is still in the WAL.
  *
- * Cách dùng:
- *   node scripts/backup-db.js                 # sao lưu vào apps/api/data/backups
- *   node scripts/backup-db.js --out /mnt/bak  # chỉ định thư mục khác
- *   node scripts/backup-db.js --keep 30       # giữ lại 30 bản gần nhất
+ * Usage:
+ *   node scripts/backup-db.js                 # back up to apps/api/data/backups
+ *   node scripts/backup-db.js --out /mnt/bak  # use a different directory
+ *   node scripts/backup-db.js --keep 30       # keep the 30 most recent backups
  *
- * Biến môi trường tương đương: CARMATE_BACKUP_DIR, CARMATE_BACKUP_KEEP
+ * Equivalent environment variables: CARMATE_BACKUP_DIR, CARMATE_BACKUP_KEEP
  */
 
 import Database from 'better-sqlite3';
@@ -64,7 +64,7 @@ async function main() {
 
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-  // Dấu thời gian dạng 2026-09-06T12-30-00 để tên file sắp xếp đúng thứ tự
+  // Timestamp like 2026-09-06T12-30-00 so file names sort in the right order
   const stamp = new Date()
     .toISOString()
     .replace(/\.\d{3}Z$/, '')
@@ -72,12 +72,12 @@ async function main() {
   const rawPath = path.join(BACKUP_DIR, `carmate-${stamp}.sqlite`);
   const gzPath = `${rawPath}.gz`;
 
-  // Mở chế độ chỉ đọc: tuyệt đối không ghi gì vào DB đang phục vụ.
+  // Open read-only: never write anything to the DB that is serving traffic.
   const db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
 
   try {
-    // backup() gộp cả phần dữ liệu đang nằm trong WAL và giữ nguyên
-    // tính nhất quán giao dịch, kể cả khi server vẫn đang ghi.
+    // backup() merges the data still in the WAL and preserves
+    // transactional consistency, even while the server keeps writing.
     await db.backup(rawPath);
 
     const integrity = new Database(rawPath, { readonly: true });
@@ -86,8 +86,8 @@ async function main() {
     const userCount = integrity.prepare('SELECT COUNT(*) AS c FROM users').get().c;
     integrity.close();
 
-    // Mở file để kiểm tra sinh ra -wal/-shm bên cạnh; dọn ngay để thư mục
-    // sao lưu chỉ còn các file .gz.
+    // Opening the file for verification creates -wal/-shm files next to it;
+    // clean them up right away so the backup directory only contains .gz files.
     for (const suffix of ['-wal', '-shm']) {
       const sidecar = `${rawPath}${suffix}`;
       if (fs.existsSync(sidecar)) fs.unlinkSync(sidecar);
@@ -109,7 +109,7 @@ async function main() {
     db.close();
   }
 
-  // Dọn bản cũ, chỉ giữ KEEP bản gần nhất
+  // Prune old backups, keeping only the most recent KEEP
   if (KEEP > 0) {
     const files = fs
       .readdirSync(BACKUP_DIR)
@@ -122,7 +122,7 @@ async function main() {
       console.log(`[backup] · đã xoá bản cũ ${stale}`);
     }
 
-    // Dọn sidecar mồ côi (từ các phiên bản script cũ hoặc lần chạy bị ngắt)
+    // Clean up orphaned sidecar files (from older script versions or interrupted runs)
     for (const orphan of fs.readdirSync(BACKUP_DIR)) {
       if (orphan.endsWith('-wal') || orphan.endsWith('-shm')) {
         fs.unlinkSync(path.join(BACKUP_DIR, orphan));

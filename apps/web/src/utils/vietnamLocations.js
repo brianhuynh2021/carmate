@@ -1,10 +1,10 @@
 /**
  * VIETNAM TRANSPORTATION HUBS & LOCATION PRESETS
- * Cung cấp dữ liệu chuẩn mực cho tính năng Location Suggestion theo chuẩn Grab / Google Maps
+ * Provides standard data for the Location Suggestion feature, following Grab / Google Maps conventions
  */
 
 export const POPULAR_LOCATIONS = [
-  // ── BÌNH PHƯỚC & ĐÔNG NAM BỘ (TUYẾN QL13 & QL14) ──
+  // ── BÌNH PHƯỚC & SOUTHEAST REGION (QL13 & QL14 ROUTES) ──
   {
     name: 'Chợ Bù Đốp / Bến xe Bù Đốp (TT. Thanh Bình)',
     category: 'station',
@@ -111,7 +111,7 @@ export const POPULAR_LOCATIONS = [
     keywords: ['binh phuoc']
   },
 
-  // ── TP. HỒ CHÍ MINH (ĐIỂM ĐÓN TRẢ TRỌNG ĐIỂM) ──
+  // ── TP. HỒ CHÍ MINH (KEY PICKUP / DROP-OFF POINTS) ──
   {
     name: 'Nhà khách Quân đội (Cống Quỳnh)',
     category: 'building',
@@ -197,7 +197,7 @@ export const POPULAR_LOCATIONS = [
     keywords: ['sai gon', 'tp.hcm', 'tp hcm', 'ho chi minh']
   },
 
-  // ── MIỀN BẮC ──
+  // ── NORTHERN REGION ──
   {
     name: 'Hà Nội',
     category: 'city',
@@ -290,7 +290,7 @@ export const POPULAR_LOCATIONS = [
     keywords: ['ben xe bai chay', 'bai chay', 'ha long', 'quang ninh']
   },
 
-  // ── ĐỒNG NAI & TRỤC QL20 (DẦU GIÂY, GIA KIỆM, ĐỊNH QUÁN) ──
+  // ── ĐỒNG NAI & QL20 AXIS (DẦU GIÂY, GIA KIỆM, ĐỊNH QUÁN) ──
   {
     name: 'Chợ Gia Kiệm (Huyện Thống Nhất)',
     category: 'building',
@@ -348,7 +348,7 @@ export const POPULAR_LOCATIONS = [
     keywords: ['nam dinh']
   },
 
-  // ── MIỀN TRUNG ──
+  // ── CENTRAL REGION ──
   {
     name: 'Đà Nẵng',
     category: 'city',
@@ -399,7 +399,7 @@ export const POPULAR_LOCATIONS = [
     keywords: ['nha trang', 'khanh hoa']
   },
 
-  // ── MIỀN ĐÔNG & TÂY NGUYÊN ──
+  // ── EASTERN REGION & TÂY NGUYÊN (CENTRAL HIGHLANDS) ──
   {
     name: 'Vũng Tàu',
     category: 'city',
@@ -535,9 +535,9 @@ function removeAccents(str = '') {
 }
 
 /**
- * TOP ĐẦU MỐI GIAO THÔNG & BẾN XE TRỌNG ĐIỂM TOÀN QUỐC (MIT & STANFORD HCI GOLD STANDARD)
- * Khi ô tìm kiếm rỗng, hiển thị các Hubs lớn nhất toàn quốc (Sân bay, Bến xe liên tỉnh, Thành phố lớn)
- * thay vì các địa danh cấp huyện nhỏ lẻ để tránh gây hiểu lầm.
+ * TOP NATIONWIDE TRANSIT HUBS & KEY BUS STATIONS (MIT & STANFORD HCI GOLD STANDARD)
+ * When the search box is empty, show the largest Hubs nationwide (airports, intercity bus stations, major cities)
+ * instead of small district-level place names, to avoid confusion.
  */
 export const TOP_TRANSIT_HUBS = [
   {
@@ -613,7 +613,7 @@ export const TOP_TRANSIT_HUBS = [
 ];
 
 /**
- * Tìm gợi ý địa điểm cục bộ tức thời 0ms (Fuzzy token matching)
+ * Instant local place-suggestion search in 0ms (fuzzy token matching)
  */
 export function searchLocations(query = '', limit = 8) {
   const clean = removeAccents(query);
@@ -635,7 +635,7 @@ export function searchLocations(query = '', limit = 8) {
     else if (normDetail.includes(clean)) score += 100;
 
     if (tokens.length >= 2) {
-      // Khi gõ từ 2 từ trở lên: bắt buộc phải xuất hiện đầy đủ các từ
+      // When typing 2 or more words: all of the words must be present
       const matchedCount = tokens.filter((t) => allWords.some((w) => w === t || w.startsWith(t))).length;
       if (matchedCount === tokens.length) {
         score += 80;
@@ -657,7 +657,7 @@ export function searchLocations(query = '', limit = 8) {
     return scored.slice(0, limit);
   }
 
-  // Fallback nếu không có kết quả khớp: Trả về tuỳ chọn chính xác từ khoá người dùng
+  // Fallback if there is no matching result: return an option that is exactly the user's keyword
   return [
     {
       name: query,
@@ -669,7 +669,7 @@ export function searchLocations(query = '', limit = 8) {
 }
 
 /**
- * Gọi API gợi ý địa chỉ trực tuyến (OpenStreetMap / Backend API)
+ * Calls the online address-suggestion API (OpenStreetMap / Backend API)
  */
 export async function fetchLocationSuggestions(query = '', limit = 8) {
   if (!query || query.trim().length < 2) {
@@ -692,7 +692,7 @@ export async function fetchLocationSuggestions(query = '', limit = 8) {
 }
 
 /**
- * Lấy danh sách điểm mốc đề xuất cho tuyến đường cụ thể
+ * Gets the list of suggested waypoints for a specific route
  */
 export function getSuggestedWaypoints(from = '', to = '') {
   const cleanFrom = removeAccents(from);

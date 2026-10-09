@@ -38,8 +38,8 @@ const LEGACY_JSON_FILE = path.join(DATA_DIR, 'carmate_db.json');
 let db = null;
 
 /**
- * Khởi tạo Database SQLite với WAL Mode (Write-Ahead Logging)
- * Chuẩn Production: Chịu tải hàng ngàn truy vấn đồng thời, an toàn tuyệt đối, không lock file.
+ * Initializes the SQLite database in WAL Mode (Write-Ahead Logging)
+ * Production standard: handles thousands of concurrent queries, absolutely safe, no file locking.
  */
 export async function initDB() {
   if (db) return db;
@@ -50,16 +50,16 @@ export async function initDB() {
 
   db = new Database(DB_PATH);
 
-  // Kích hoạt WAL Mode & Tối ưu hiệu năng
+  // Enable WAL Mode & performance tuning
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
-  // Gộp WAL về file chính sau mỗi ~1000 trang (~4MB) để WAL không phình vô hạn.
-  // Không có mốc này, carmate.sqlite-wal có thể lớn hơn cả DB chính.
+  // Merge the WAL back into the main file after every ~1000 pages (~4MB) so the WAL does not grow without bound.
+  // Without this mark, carmate.sqlite-wal can grow larger than the main DB.
   db.pragma('wal_autocheckpoint = 1000');
   db.pragma('cache_size = -64000'); // 64MB cache
   db.pragma('foreign_keys = ON');
 
-  // 1. Tạo bảng Chuyến Đi (trips)
+  // 1. Create the Trips table (trips)
   db.exec(`
     CREATE TABLE IF NOT EXISTS trips (
       id TEXT PRIMARY KEY,
@@ -89,7 +89,7 @@ export async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_trips_hidden ON trips(isHidden);
   `);
 
-  // 2. Tạo bảng Thành Viên (users)
+  // 2. Create the Members table (users)
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -109,7 +109,7 @@ export async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
   `);
 
-  // Migration an toàn cho database hiện hữu nếu chưa có cột email
+  // Safe migration for existing databases that do not yet have the email column
   try {
     const userColumns = db.pragma('table_info(users)').map((col) => col.name);
     if (!userColumns.includes('email')) {
@@ -117,10 +117,10 @@ export async function initDB() {
     }
     db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
   } catch {
-    // Bỏ qua nếu đã tồn tại hoặc đang chạy trong transaction
+    // Ignore if it already exists or is running inside a transaction
   }
 
-  // 3. Tạo bảng Ghép & Đặt Chuyến (bookings)
+  // 3. Create the Matching & Trip Booking table (bookings)
   db.exec(`
     CREATE TABLE IF NOT EXISTS bookings (
       escrowId TEXT PRIMARY KEY,
@@ -133,7 +133,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_bookings_trip ON bookings(tripId);
     `);
 
-    // Migration bổ sung các cột Cấp độ 3 cho bookings nếu chưa có
+    // Migration adding the Level 3 columns to bookings if they are not present yet
     try {
       const bookingCols = db.pragma('table_info(bookings)').map((c) => c.name);
       if (!bookingCols.includes('standbyOfferId')) {
@@ -158,10 +158,10 @@ export async function initDB() {
         db.exec('ALTER TABLE bookings ADD COLUMN cancellationReason TEXT');
       }
     } catch {
-      // Bỏ qua nếu đã tồn tại
+      // Ignore if it already exists
     }
 
-    // 4. Bảng Siêu dữ liệu & Cấu hình (key_values)
+    // 4. Metadata & Configuration table (key_values)
     db.exec(`
       CREATE TABLE IF NOT EXISTS key_values (
         key TEXT PRIMARY KEY,
@@ -169,7 +169,7 @@ export async function initDB() {
       );
     `);
 
-    // 5. Bảng Lưu Trữ Quỹ Đạo AI (ai_trajectories - MIT & Stanford Observability)
+    // 5. AI Trajectory Storage table (ai_trajectories - MIT & Stanford Observability)
     db.exec(`
       CREATE TABLE IF NOT EXISTS ai_trajectories (
         id TEXT PRIMARY KEY,
@@ -185,7 +185,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_ai_traj_unmet ON ai_trajectories(unmetDemand);
     `);
 
-    // 6. Bảng Phân Tích Hành Vi & Funnel (analytics_events)
+    // 6. Behavior Analytics & Funnel table (analytics_events)
     db.exec(`
       CREATE TABLE IF NOT EXISTS analytics_events (
         id TEXT PRIMARY KEY,
@@ -198,7 +198,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
     `);
 
-    // 7. Bảng Trò Chuyện & Khiếu Nại Với Platform CSKH (support_messages)
+    // 7. Chat & Complaints table with Platform Customer Support (support_messages)
     db.exec(`
       CREATE TABLE IF NOT EXISTS support_messages (
         id TEXT PRIMARY KEY,
@@ -219,7 +219,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_support_created ON support_messages(createdAt);
     `);
 
-    // 8. Bảng Yêu Cầu Xóa Tài Khoản Gửi Tới Quản Trị Viên (account_deletion_requests)
+    // 8. Account Deletion Requests Sent to the Admin table (account_deletion_requests)
     db.exec(`
       CREATE TABLE IF NOT EXISTS account_deletion_requests (
         id TEXT PRIMARY KEY,
@@ -239,7 +239,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_del_req_created ON account_deletion_requests(createdAt);
     `);
 
-    // 9. Bảng Khai Báo Ý Định Di Chuyển (intents - Zero-Search Autonomous Engine)
+    // 9. Movement Intent Declarations table (intents - Zero-Search Autonomous Engine)
     db.exec(`
       CREATE TABLE IF NOT EXISTS intents (
         id TEXT PRIMARY KEY,
@@ -271,7 +271,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_intents_role ON intents(role);
     `);
 
-    // 10. Bảng Lưu Trữ Phiên Khớp Lệnh (matching_epochs)
+    // 10. Matching Session Storage table (matching_epochs)
     db.exec(`
       CREATE TABLE IF NOT EXISTS matching_epochs (
         id TEXT PRIMARY KEY,
@@ -286,7 +286,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_epochs_created ON matching_epochs(createdAt);
     `);
 
-    // 11. Bảng Gom Yêu Cầu Mở Trạm Ảo Mới (station_requests - Hard Whitelist & Zero Roadside Stops)
+    // 11. New Virtual Station Request Aggregation table (station_requests - Hard Whitelist & Zero Roadside Stops)
     db.exec(`
       CREATE TABLE IF NOT EXISTS station_requests (
         id TEXT PRIMARY KEY,
@@ -308,7 +308,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_stn_req_count ON station_requests(requestCount);
     `);
 
-    // 12. Bảng Sổ Lệnh Hai Chiều & Khớp Lệnh Liên Tục (seat_exchange_orders - LOB & CDA Spot Market)
+    // 12. Two-Sided Order Book & Continuous Matching table (seat_exchange_orders - LOB & CDA Spot Market)
     db.exec(`
       CREATE TABLE IF NOT EXISTS seat_exchange_orders (
         id TEXT PRIMARY KEY,
@@ -352,7 +352,7 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_exchange_type ON seat_exchange_orders(orderType);
     `);
 
-    // 13. Bảng Quản Lý Sự Cố Tuyến & Chế Tài Unhappy Cases (trip_incidents)
+    // 13. Route Incident Management & Unhappy Cases Penalties table (trip_incidents)
     db.exec(`
       CREATE TABLE IF NOT EXISTS trip_incidents (
         id TEXT PRIMARY KEY,
@@ -377,14 +377,14 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_incident_driver ON trip_incidents(driverPhone);
     `);
 
-  // 9. Nạp dữ liệu khởi tạo (Seed) — chỉ dành cho môi trường phát triển
+  // 9. Seed initial data (Seed) — development environment only
   //
-  // BẤT BIẾN SÀN GIAO DỊCH: mọi chuyến hiển thị trên sàn phải liên hệ được với
-  // một người thật. Dữ liệu mẫu vi phạm bất biến này — khách bấm đặt chỗ sẽ gọi
-  // vào số không có người nhận, phá vỡ niềm tin ngay lần dùng đầu tiên.
+  // MARKETPLACE INVARIANT: every trip displayed on the marketplace must be reachable by
+  // a real person. The sample data violates this invariant — a passenger who taps to book would call
+  // a number with no one answering, destroying trust on the very first use.
   //
-  // Dữ liệu mẫu bị tắt mặc định ở mọi môi trường. Chỉ nạp khi chủ động
-  // đặt SEED_DEMO_DATA=true để bản xem thử không vô tình tạo nguồn xe.
+  // Sample data is disabled by default in every environment. It is only loaded when
+  // SEED_DEMO_DATA=true is deliberately set, so that a preview does not accidentally create a source of vehicles.
   const tripCount = db.prepare('SELECT COUNT(*) as count FROM trips').get().count;
   const demoSeedAllowed = process.env.SEED_DEMO_DATA === 'true';
 
@@ -462,7 +462,7 @@ export async function initDB() {
     insertManyTrips(initialDrivers, 'driver_offer');
     insertManyTrips(initialPassengers, 'passenger_request');
 
-    // Nạp bookings
+    // Load bookings
     const insertBooking = db.prepare(`
       INSERT OR REPLACE INTO bookings (escrowId, tripId, passengerPhone, status, createdAt, payload)
       VALUES (@escrowId, @tripId, @passengerPhone, @status, @createdAt, @payload)
@@ -483,7 +483,7 @@ export async function initDB() {
 
     insertManyBookings(initialBookings);
 
-    // Nạp users
+    // Load users
     const insertUser = db.prepare(`
       INSERT OR REPLACE INTO users (id, phone, name, role, avatar, trustScore, isCccdVerified, isGplxVerified, isBanned, createdAt, updatedAt, payload)
       VALUES (@id, @phone, @name, @role, @avatar, @trustScore, @isCccdVerified, @isGplxVerified, @isBanned, @createdAt, @updatedAt, @payload)
@@ -514,7 +514,7 @@ export async function initDB() {
     console.log('[SQLite DB] Hoàn tất di chuyển sang SQLite Database!');
   }
 
-  // Tự động dọn dẹp các thực thể HTML cũ (như &#x2F;) trong DB nếu có
+  // Automatically clean up old HTML entities (such as &#x2F;) in the DB if any
   try {
     db.exec(`
       UPDATE trips SET 
@@ -527,7 +527,7 @@ export async function initDB() {
     console.warn('[SQLite DB] Bỏ qua dọn dẹp thực thể:', err.message);
   }
 
-  // Đồng bộ lại ngày khởi hành & thuộc tính định kỳ cho các chuyến xe mẫu (DRV-101, REQ-201...)
+  // Resync the departure date & recurring attributes for the sample trips (DRV-101, REQ-201...)
   try {
     const allSeeds = [...INITIAL_DRIVER_OFFERS, ...INITIAL_PASSENGER_REQUESTS];
     const updateStmt = db.prepare(`
@@ -535,13 +535,13 @@ export async function initDB() {
       SET date = ?, timeSlot = ?, price = ?, payload = ?
       WHERE id = ?
     `);
-    // Chuyến mẫu của tuyến đã gỡ khỏi mockData (ngoài hành lang có trạm ảo thật)
-    // phải biến mất khỏi sàn, nếu không chúng nằm lại vĩnh viễn trong SQLite và
-    // hiển thị như chuyến thật mà nền tảng không phục vụ được.
-    // CHỈ xoá đúng những mã seed ĐÃ TỪNG có trong mockData và nay đã bị gỡ.
-    // Tuyệt đối không dò theo dạng mã: chuyến thật do Admin tạo cũng mang dạng
-    // `DRV-<timestamp>` (adminController.js), nên một GLOB 'DRV-[0-9]*' sẽ quét
-    // sạch chuyến thật của người dùng ở mỗi lần khởi động máy chủ.
+    // Sample trips of routes that were removed from mockData (outside the corridor with real virtual stations)
+    // must disappear from the marketplace, otherwise they stay forever in SQLite and
+    // display like real trips that the platform cannot serve.
+    // ONLY delete the exact seed IDs that HAVE ONCE been in mockData and have now been removed.
+    // Absolutely do not detect by ID pattern: real trips created by an Admin also carry the form
+    // `DRV-<timestamp>` (adminController.js), so a GLOB 'DRV-[0-9]*' would sweep
+    // away users' real trips on every server start.
     const liveSeedIds = new Set(allSeeds.map((s) => s.id));
     const RETIRED_SEED_IDS = [
       'DRV-103', 'DRV-104', 'DRV-106', 'DRV-108', 'DRV-110', 'DRV-111',
@@ -550,8 +550,8 @@ export async function initDB() {
     const staleSeeds = RETIRED_SEED_IDS.filter((id) => !liveSeedIds.has(id));
 
     const deleteTripStmt = db.prepare('DELETE FROM trips WHERE id = ?');
-    // Cột targetTripId chỉ có ở một số bản CSDL: dò trước, vì prepare() với cột
-    // không tồn tại ném lỗi ngay chứ không đợi tới lúc chạy.
+    // The targetTripId column only exists in some DB versions: probe first, because prepare() with a column
+    // that does not exist throws immediately rather than waiting until run time.
     const bookingCols = db.prepare('PRAGMA table_info(bookings)').all().map((c) => c.name);
     const hasTargetTripId = bookingCols.includes('targetTripId');
     const deleteBookingStmt = hasTargetTripId
@@ -577,7 +577,7 @@ export async function initDB() {
     console.warn('[SQLite DB] Bỏ qua đồng bộ seed:', err.message);
   }
 
-  // Đồng bộ giá xăng dầu đã lưu trong key_values vào dynamicTariff in-memory engine
+  // Sync the fuel price stored in key_values into the dynamicTariff in-memory engine
   try {
     const fuelConfig = getDailyFuelPriceConfig();
     if (fuelConfig && fuelConfig.ron95Price) {
@@ -595,7 +595,7 @@ export async function initDB() {
     console.warn('[SQLite DB] Không thể nạp daily_fuel_price ban đầu:', err.message);
   }
 
-  // Nạp bộ tham số công thức định giá do Quản trị viên cấu hình
+  // Load the pricing formula parameter set configured by the admin
   try {
     const tariffConfig = getTariffParamsConfig();
     if (tariffConfig && !tariffConfig.isDefault) {
@@ -612,9 +612,9 @@ export async function initDB() {
 }
 
 /**
- * Gộp toàn bộ WAL vào file chính rồi đóng kết nối.
- * Gọi khi tắt server để dữ liệu nằm trọn trong carmate.sqlite,
- * tránh mất giao dịch còn kẹt trong WAL nếu volume bị huỷ.
+ * Merges the whole WAL into the main file and then closes the connection.
+ * Call when shutting down the server so data sits fully in carmate.sqlite,
+ * avoiding the loss of transactions stuck in the WAL if the volume is destroyed.
  */
 export function closeDB() {
   if (!db) return;
@@ -639,8 +639,8 @@ export function getRawDB() {
 }
 
 /**
- * Compatibility getDB() cho các controller:
- * Cung cấp getter động để truy cập db.driverOffers, db.passengerRequests, db.bookings, db.users
+ * Compatibility getDB() for the controllers:
+ * Provides a dynamic getter to access db.driverOffers, db.passengerRequests, db.bookings, db.users
  */
 export function getDB() {
   const database = getRawDB();
@@ -668,7 +668,7 @@ export function getDB() {
 }
 
 // -------------------------------------------------------------
-// CÁC HÀM CRUD BẤT ĐỒNG BỘ DÀNH CHO NGHIỆP VỤ (COMPATIBLE API)
+// ASYNC CRUD FUNCTIONS FOR BUSINESS LOGIC (COMPATIBLE API)
 // -------------------------------------------------------------
 
 function rowToTrip(row) {
@@ -744,7 +744,7 @@ export function getPaginatedTrips(filters = {}) {
   const allRows = database.prepare(`SELECT * ${baseSql} ORDER BY createdAt DESC`).all(...params);
   let trips = allRows.map(rowToTrip).filter(Boolean);
 
-  // Mặc định tự động loại bỏ các chuyến đã hết hạn (>30 phút sau giờ khởi hành)
+  // By default, automatically drop trips that have expired (>30 minutes after departure time)
   if (!filters.includeExpired) {
     trips = trips.filter((t) => !isTripExpired(t));
   }
@@ -762,10 +762,10 @@ export function getTrips(filters = {}) {
   let sql = 'SELECT * FROM trips WHERE 1=1';
   const params = [];
 
-  // `status` từng bị nuốt im lặng: caller truyền vào, SQL không đọc, không lỗi
-  // không cảnh báo — nên mọi lời gọi lọc theo status đều nhận cả chuyến đã huỷ
-  // lẫn chuyến đầy mà tưởng đã lọc.
-  // (isHidden đã có nhánh `includeHidden` riêng bên dưới, không thêm ở đây.)
+  // `status` used to be silently swallowed: the caller passes it in, the SQL does not read it, no error
+  // and no warning — so every call filtering by status received cancelled trips
+  // and full trips as well while believing it had filtered.
+  // (isHidden already has its own `includeHidden` branch below, so it is not added here.)
   if (filters.status) {
     sql += ' AND status = ?';
     params.push(filters.status);
@@ -810,7 +810,7 @@ export function getTrips(filters = {}) {
   const rows = database.prepare(sql).all(...params);
   let trips = rows.map(rowToTrip).filter(Boolean);
 
-  // Mặc định lọc bỏ các chuyến quá giờ để đảm bảo dữ liệu sàn luôn tươi mới
+  // By default, filter out trips past their time so marketplace data always stays fresh
   if (!filters.includeExpired) {
     trips = trips.filter((t) => !isTripExpired(t));
   }
@@ -891,9 +891,9 @@ export async function addTrip(tripData) {
     timeSlot: completeTrip.timeSlot,
     date: completeTrip.date,
     price: Number(completeTrip.basePricePerSeat || completeTrip.expectedPrice || 150000),
-    // Dùng ?? chứ KHÔNG dùng ||: số ghế 0 (chuyến đã hết chỗ) là giá trị hợp lệ,
-    // với || nó bị coi là falsy và ghi đè thành 1, khiến chuyến đầy vẫn hiện còn ghế
-    // và nhận thêm booking không giới hạn.
+    // Use ?? and NOT ||: a seat count of 0 (a trip that is full) is a valid value,
+    // with || it is treated as falsy and overwritten to 1, so a full trip would still show seats left
+    // and accept unlimited extra bookings.
     seats: Number(completeTrip.availableSeats ?? completeTrip.seatsNeeded ?? 1),
     carCategory: completeTrip.carCategory || 'family_car',
     carType: completeTrip.carType || 'Xe 7 chỗ',
@@ -906,8 +906,8 @@ export async function addTrip(tripData) {
   return completeTrip;
 }
 
-// Các trường định danh / quyền sở hữu KHÔNG bao giờ được nhận từ client qua updateTrip.
-// Ngăn Mass-Assignment: chủ bài đổi phoneReal sang số người khác, chiếm userId, tự nâng trustScore...
+// Identity / ownership fields must NEVER be accepted from the client via updateTrip.
+// Prevents Mass-Assignment: a post owner changing phoneReal to someone else's number, taking over userId, self-raising trustScore...
 const IMMUTABLE_TRIP_FIELDS = new Set([
   'id',
   'phoneReal',
@@ -924,7 +924,7 @@ export async function updateTrip(id, updates) {
   const existing = getTripById(id);
   if (!existing) return null;
 
-  // Lọc bỏ mọi trường bất biến khỏi payload client trước khi hợp nhất.
+  // Strip every immutable field from the client payload before merging.
   const safeUpdates = {};
   for (const key of Object.keys(updates || {})) {
     if (!IMMUTABLE_TRIP_FIELDS.has(key)) {
@@ -935,7 +935,7 @@ export async function updateTrip(id, updates) {
   const merged = {
     ...existing,
     ...safeUpdates,
-    // Quyền sở hữu & định danh luôn kế thừa từ bản ghi gốc trong DB.
+    // Ownership & identity are always inherited from the original record in the DB.
     id: existing.id,
     phoneReal: existing.phoneReal,
     phone: existing.phone,
@@ -949,33 +949,33 @@ export async function updateTrip(id, updates) {
 }
 
 /**
- * Tái đăng 1 chạm (1-Tap Re-publish) chuyến xe sang ngày mới
- * Giúp Chủ xe nhân bản toàn bộ thông tin lộ trình, xe, giá sang ngày mai chỉ trong 1 chạm.
+ * 1-Tap Re-publish of a trip to a new date
+ * Lets the driver clone all route, vehicle and price information to tomorrow in just 1 tap.
  */
 /**
  * =============================================================================
- * ĐÓNG SỔ CHUYẾN ĐÃ CHẠY XONG (TRIP LIFECYCLE SWEEP)
+ * CLOSING OUT TRIPS THAT HAVE FINISHED (TRIP LIFECYCLE SWEEP)
  * =============================================================================
- * Trước đây hệ thống thay việc "đóng chuyến" bằng việc "ẩn chuyến": getTrips()
- * lọc isTripExpired() ở tầng đọc nên giao diện trông sạch, còn trong CSDL mọi
- * chuyến ở lại `active` vĩnh viễn. Hệ quả không nhìn thấy bằng mắt:
+ * Previously the system replaced "closing a trip" with "hiding a trip": getTrips()
+ * filters isTripExpired() at the read layer so the UI looks clean, while in the DB every
+ * trip stays `active` forever. Consequences that cannot be seen by eye:
  *
- *   - Mọi truy vấn `WHERE status = 'active'` đều đếm cả chuyến đã chạy xong,
- *     nên xe cứu hộ có thể được điều từ một chuyến của tháng trước.
- *   - Chuyến định kỳ hàng tuần được isTripExpired() miễn trừ, nên thoát cả bộ
- *     lọc hiển thị lẫn vòng đời — hiện mãi trên sàn với ngày của tuần trước.
+ *   - Every `WHERE status = 'active'` query also counts trips that have already finished,
+ *     so a rescue vehicle could be dispatched from a trip from last month.
+ *   - Weekly recurring trips are exempted by isTripExpired(), so they escape both the display
+ *     filter and the lifecycle — showing on the marketplace forever with last week's date.
  *
- * Hàm này là tác nhân DUY NHẤT đóng sổ chuyến theo thời gian:
- *   - Quá giờ kết thúc + GRACE_HOURS mà có khách đặt  ➔ completed
- *   - Quá giờ kết thúc + GRACE_HOURS mà không ai đặt  ➔ expired
- *   - Chuyến định kỳ hàng tuần                        ➔ đẩy sang tuần sau
+ * This function is the ONLY actor that closes out trips by time:
+ *   - Past end time + GRACE_HOURS with passengers booked  ➔ completed
+ *   - Past end time + GRACE_HOURS with no one booked      ➔ expired
+ *   - Weekly recurring trip                               ➔ pushed to next week
  *
- * Dung sai 6 tiếng để Chủ xe chạy chuyến chiều vẫn kịp về, và để chuyến khởi
- * hành lúc nửa đêm không bị đóng ngay khi vừa lăn bánh.
+ * A 6-hour tolerance so that a driver running an afternoon trip can still make it back, and so that a trip
+ * departing at midnight is not closed right as it starts rolling.
  */
 export const TRIP_CLOSE_GRACE_HOURS = 6;
 
-/** Một chuyến có phải chuyến lặp hàng tuần không (cùng quy tắc với isTripExpired). */
+/** Whether a trip is a weekly recurring trip (same rule as isTripExpired). */
 function isRecurringTrip(trip) {
   return Boolean(
     trip.isRecurringWeekly ||
@@ -984,20 +984,20 @@ function isRecurringTrip(trip) {
 }
 
 /**
- * Quét và đóng sổ mọi chuyến đã quá giờ.
+ * Scans and closes out every trip that is past its time.
  * @param {object} options
- * @param {number} options.nowMs - Mốc thời gian coi là "bây giờ" (cho kiểm thử)
- * @param {number} options.graceHours - Dung sai sau giờ kết thúc
- * @param {boolean} options.dryRun - Chỉ liệt kê, không ghi
+ * @param {number} options.nowMs - The timestamp treated as "now" (for testing)
+ * @param {number} options.graceHours - Tolerance after the end time
+ * @param {boolean} options.dryRun - Only list, do not write
  * @returns {{completed: string[], expired: string[], rolled: string[]}}
  */
 export function sweepFinishedTrips({ nowMs = Date.now(), graceHours = TRIP_CLOSE_GRACE_HOURS, dryRun = false } = {}) {
   const database = getRawDB();
   const result = { completed: [], expired: [], rolled: [] };
 
-  // Chỉ xét chuyến còn đang mở: đã cancelled/completed/expired thì thôi.
-  // So sánh không phân biệt hoa thường vì dữ liệu cũ có cả 'OPEN' lẫn 'active'
-  // — một chuyến ghi hoa mà lọt lưới sẽ kẹt lại vĩnh viễn, đúng lỗi đang sửa.
+  // Only consider trips that are still open: those already cancelled/completed/expired are left alone.
+  // The comparison is case-insensitive because old data contains both 'OPEN' and 'active'
+  // — a trip written in upper case that slipped through would be stuck forever, exactly the bug being fixed.
   const rows = database
     .prepare("SELECT * FROM trips WHERE LOWER(status) IN ('active', 'full', 'open')")
     .all()
@@ -1027,20 +1027,20 @@ export function sweepFinishedTrips({ nowMs = Date.now(), graceHours = TRIP_CLOSE
     const endMs = getTripEndTimestamp(trip, new Date(nowMs));
     if (!Number.isFinite(endMs) || nowMs <= endMs + graceMs) continue;
 
-    // Chuyến định kỳ: đẩy sang tuần sau thay vì đóng, nếu không Chủ xe chạy đều
-    // mỗi tuần sẽ mất chuyến quen và phải đăng lại bằng tay.
+    // Recurring trip: push to next week instead of closing, otherwise a driver who runs the same trip
+    // every week would lose the familiar trip and have to repost it by hand.
     if (isRecurringTrip(trip)) {
       const nextDate = new Date(endMs);
-      // Nhảy từng tuần cho tới khi vượt qua hiện tại (chuyến bỏ quên nhiều tuần)
+      // Jump week by week until past the present (a trip neglected for several weeks)
       while (nextDate.getTime() + graceMs <= nowMs) {
         nextDate.setDate(nextDate.getDate() + 7);
       }
       const isoDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(
         nextDate.getDate()
       ).padStart(2, '0')}`;
-      // Giữ lại dấu định kỳ: có chuyến chỉ được nhận diện qua chuỗi "Lặp lại hàng
-      // tuần" nằm trong chính trường date. Ghi đè date bằng ngày cụ thể sẽ xoá
-      // dấu đó, và lần quét sau chuyến bị đóng luôn thay vì tiếp tục lăn.
+      // Keep the recurrence marker: some trips are only recognized through the string "Lặp lại hàng
+      // tuần" ("Repeats weekly") inside the date field itself. Overwriting date with a concrete date would erase
+      // that marker, and on the next sweep the trip would be closed outright instead of continuing to roll.
       const payload = {
         ...trip,
         date: isoDate,
@@ -1078,9 +1078,9 @@ export async function republishTrip(id, updates = {}) {
   const newId = `${prefix}-${Date.now()}`;
   const newMaskedCode = `${codePrefix}-${Math.floor(100 + Math.random() * 900)}`;
 
-  // Chỉ cho phép đổi các trường lịch trình khi tái đăng. Không lấy nguyên
-  // `updates` để tránh ghi đè quyền sở hữu (phoneReal/userId) — nếu không,
-  // chủ bài có thể tái đăng thành chuyến đứng tên số điện thoại người khác.
+  // Only allow schedule fields to be changed on re-publish. Do not take `updates`
+  // wholesale, to avoid overwriting ownership (phoneReal/userId) — otherwise
+  // a post owner could re-publish as a trip under someone else's phone number.
   const ALLOWED_REPUBLISH_FIELDS = [
     'date',
     'timeSlot',
@@ -1101,7 +1101,7 @@ export async function republishTrip(id, updates = {}) {
   const duplicatedData = {
     ...existing,
     ...safeUpdates,
-    // Quyền sở hữu luôn kế thừa từ bài gốc, không nhận từ client
+    // Ownership is always inherited from the original post, never accepted from the client
     phoneReal: existing.phoneReal,
     phone: existing.phone,
     userId: existing.userId,
@@ -1143,9 +1143,9 @@ export async function addBooking(bookingData) {
   const database = getRawDB();
   const escrowId = bookingData.escrowId || bookingData.id || `ESC-${Date.now()}`;
 
-  // Access token bí mật (128-bit) cho Magic Link chủ xe xác nhận / xem tóm tắt mà không cần đăng nhập.
-  // escrowId (CX-xxxx) dễ đoán -> token này ngăn IDOR enumerate booking người khác.
-  // Giữ nguyên token nếu booking đã tồn tại (tránh vô hiệu hoá link cũ khi cập nhật).
+  // Secret access token (128-bit) for the driver's Magic Link to confirm / view the summary without logging in.
+  // escrowId (CX-xxxx) is guessable -> this token prevents IDOR enumeration of other people's bookings.
+  // Keep the token unchanged if the booking already exists (to avoid invalidating the old link on update).
   const existing = getBookingById(escrowId);
   const accessToken = bookingData.accessToken || existing?.accessToken || crypto.randomBytes(16).toString('hex');
 
@@ -1264,7 +1264,7 @@ export function getUserByEmail(email) {
   const database = getRawDB();
   if (!email) return null;
   const cleanEmail = email.trim().toLowerCase();
-  // Ưu tiên truy vấn qua Index cột email O(1), fallback quét payload nếu là dữ liệu cũ
+  // Prefer querying via the email column's Index O(1), fall back to scanning the payload for legacy data
   const row =
     database.prepare('SELECT payload FROM users WHERE email = ?').get(cleanEmail) ||
     database.prepare('SELECT payload FROM users WHERE payload LIKE ?').get(`%"email":"${cleanEmail}"%`);
@@ -1355,8 +1355,8 @@ export async function saveUser(user) {
 }
 
 /**
- * Xóa vĩnh viễn tài khoản người dùng & thanh tẩy dữ liệu cá nhân (PII Cleanse)
- * Tuân thủ Apple App Store Guideline 5.1.1 (v) & Nghị định 13/2023/NĐ-CP (Điều 16)
+ * Permanently deletes a user account & cleanses personal data (PII Cleanse)
+ * Complies with Apple App Store Guideline 5.1.1 (v) & Decree 13/2023/ND-CP (Article 16)
  */
 export async function deleteUserAccount(userId, phone) {
   const database = getRawDB();
@@ -1368,12 +1368,12 @@ export async function deleteUserAccount(userId, phone) {
   const effectiveUserId = user?.id || userId;
   const effectivePhone = user?.phone || (phone ? cleanPhoneNumber(phone) : null);
 
-  // MIT Invariant Guard: Không bao giờ xoá tài khoản Admin (bảo toàn hệ thống luôn có chủ quản)
+  // MIT Invariant Guard: never delete an Admin account (ensures the system always has an owner)
   if (user?.role === 'admin' || (effectivePhone && isAdminPhone(effectivePhone))) {
     throw new Error('Tài khoản Quản trị viên (Admin) được bảo vệ bởi luật bất biến MIT, không thể tự xoá vĩnh viễn.');
   }
 
-  // 1. Xóa các bài đăng của người dùng này (để không còn xuất hiện trên sàn)
+  // 1. Delete this user's posts (so they no longer appear on the marketplace)
   if (effectiveUserId) {
     database.prepare('DELETE FROM trips WHERE userId = ?').run(effectiveUserId);
   }
@@ -1381,7 +1381,7 @@ export async function deleteUserAccount(userId, phone) {
     database.prepare('DELETE FROM trips WHERE phoneReal = ?').run(effectivePhone);
   }
 
-  // 1b. Xóa các ý định di chuyển (intents) của người dùng này
+  // 1b. Delete this user's movement intents (intents)
   try {
     if (effectiveUserId) {
       database.prepare('DELETE FROM intents WHERE userId = ?').run(effectiveUserId);
@@ -1391,7 +1391,7 @@ export async function deleteUserAccount(userId, phone) {
     }
   } catch {}
 
-  // 2. Ẩn danh hóa các cuốc ghép trong lịch sử để không làm hỏng dữ liệu của người đi cùng
+  // 2. Anonymize the matched rides in history so the fellow riders' data is not corrupted
   if (effectivePhone) {
     const userBookings = database
       .prepare('SELECT escrowId, payload FROM bookings WHERE passengerPhone = ?')
@@ -1408,7 +1408,7 @@ export async function deleteUserAccount(userId, phone) {
     }
   }
 
-  // 3. Xóa vĩnh viễn khỏi bảng users
+  // 3. Permanently delete from the users table
   let deleted = false;
   if (effectiveUserId) {
     const info = database.prepare('DELETE FROM users WHERE id = ?').run(effectiveUserId);
@@ -1681,7 +1681,7 @@ export function getAiIntelligenceStats() {
     .prepare('SELECT COUNT(*) as count FROM ai_trajectories WHERE unmetDemand = 1')
     .get().count;
 
-  // Nhóm các tuyến xe chưa được đáp ứng nhiều nhất (Unmet Demand)
+  // Group the routes with the most unmet demand (Unmet Demand)
   const unmetRoutes = database
     .prepare(
       `
@@ -1857,7 +1857,7 @@ export function clearNonAdminUsers() {
 }
 
 /**
- * Lấy cấu hình quy tắc tính điểm tín nhiệm (Dynamic Trust Policy Rules)
+ * Gets the trust score calculation rule configuration (Dynamic Trust Policy Rules)
  */
 export function getTrustRules() {
   const database = getRawDB();
@@ -1876,7 +1876,7 @@ export function getTrustRules() {
 }
 
 /**
- * Lưu cấu hình quy tắc tính điểm tín nhiệm (Admin Update)
+ * Saves the trust score calculation rule configuration (Admin Update)
  */
 export function saveTrustRules(rules) {
   if (!Array.isArray(rules)) {
@@ -1897,14 +1897,14 @@ export function saveTrustRules(rules) {
 
 /**
  * =============================================================================
- * DANH BẠ NHÀ XE TUYẾN CỐ ĐỊNH (TRANSIT FALLBACK DIRECTORY)
+ * FIXED-ROUTE BUS OPERATOR DIRECTORY (TRANSIT FALLBACK DIRECTORY)
  * =============================================================================
- * Lưu trong key_values để Cổng Quản Trị sửa được mà không phải deploy lại.
+ * Stored in key_values so the Admin Portal can edit it without a redeploy.
  *
- * BẤT BIẾN: mỗi số phải có `verified: true` kèm `verifiedAt` thì giao diện mới
- * hiện nút gọi. Số chưa kiểm chứng vẫn lưu được (để đội vận hành theo dõi) nhưng
- * KHÔNG bao giờ lộ ra cho khách — khách bấm gọi đúng lúc gấp nhất mà gặp số sai
- * thì mất niềm tin vĩnh viễn, tệ hơn hẳn việc không có số nào.
+ * INVARIANT: each number must have `verified: true` together with `verifiedAt` before the UI
+ * shows the call button. Unverified numbers can still be stored (so the operations team can track them) but
+ * must NEVER be exposed to passengers — a passenger who taps call at the most urgent moment and reaches a wrong
+ * number loses trust permanently, far worse than there being no number at all.
  */
 export function getTransitDirectory() {
   const database = getRawDB();
@@ -1926,7 +1926,7 @@ export function resetTransitDirectory() {
   return [...VERIFIED_HOTLINES];
 }
 
-/** Lưu danh bạ nhà xe (Admin cập nhật). */
+/** Saves the bus operator directory (updated by Admin). */
 export function saveTransitDirectory(providers) {
   if (!Array.isArray(providers)) {
     throw new Error('Danh bạ phải là một danh sách mảng');
@@ -1944,7 +1944,7 @@ export function saveTransitDirectory(providers) {
 }
 
 /**
- * Khôi phục cấu hình quy tắc tính điểm tín nhiệm về mặc định
+ * Restores the trust score calculation rule configuration to the default
  */
 export function resetTrustRules() {
   const database = getRawDB();
@@ -1954,14 +1954,14 @@ export function resetTrustRules() {
 
 /**
  * =============================================================================
- * CHỈ SỐ NHIÊN LIỆU HÀNG NGÀY (DAILY PETROLIMEX FUEL INDEX)
+ * DAILY FUEL INDEX (DAILY PETROLIMEX FUEL INDEX)
  * =============================================================================
- * Quản trị viên cập nhật thủ công mức giá xăng RON 95-III.
- * Lưu trữ bền vững trong bảng key_values để sống sót qua các lần khởi động lại máy chủ.
+ * An admin manually updates the RON 95-III gasoline price.
+ * Persisted in the key_values table so it survives server restarts.
  */
 
 /**
- * Lấy cấu hình giá xăng dầu hàng ngày đã lưu trong SQLite
+ * Gets the daily fuel price configuration saved in SQLite
  */
 export function getDailyFuelPriceConfig() {
   const database = getRawDB();
@@ -1993,7 +1993,7 @@ export function getDailyFuelPriceConfig() {
 }
 
 /**
- * Lưu cấu hình giá xăng dầu hàng ngày (Admin Manual Update)
+ * Saves the daily fuel price configuration (Admin Manual Update)
  */
 export function saveDailyFuelPriceConfig({ ron95Price, updatedBy = 'admin', note = '' }) {
   const priceNum = Number(ron95Price);
@@ -2022,7 +2022,7 @@ export function saveDailyFuelPriceConfig({ ron95Price, updatedBy = 'admin', note
     )
     .run(JSON.stringify(config));
 
-  // Cập nhật ngay vào dynamicTariff in-memory engine của @carmate/shared
+  // Apply immediately to the in-memory dynamicTariff engine of @carmate/shared
   setDailyFuelPrice(roundedPrice, nowISO, config.updatedBy, 'admin');
 
   return {
@@ -2032,8 +2032,8 @@ export function saveDailyFuelPriceConfig({ ron95Price, updatedBy = 'admin', note
 }
 
 /**
- * Đọc bộ tham số công thức định giá đang lưu trong SQLite.
- * Không có bản ghi nào thì trả về bộ mặc định của nền tảng.
+ * Reads the pricing formula parameter set currently stored in SQLite.
+ * If there is no record, returns the platform's default set.
  */
 export function getTariffParamsConfig() {
   const database = getRawDB();
@@ -2041,8 +2041,8 @@ export function getTariffParamsConfig() {
     const row = database.prepare('SELECT value FROM key_values WHERE key = ?').get('tariff_params');
     if (row && row.value) {
       const parsed = JSON.parse(row.value);
-      // Đọc lại từ CSDL: đây là bản ghi ĐẦY ĐỦ, nên gộp lên bộ mặc định để bản
-      // lưu là nguồn sự thật duy nhất, không lẫn tham số của phiên đang chạy.
+      // Re-read from the DB: this is the FULL record, so merge it onto the default set so that the
+      // stored copy is the single source of truth, not mixed with the running session's parameters.
       const { params, errors } = validateTariffParams(parsed, DEFAULT_TARIFF_PARAMS);
       if (errors.length === 0) {
         return {
@@ -2071,9 +2071,9 @@ export function getTariffParamsConfig() {
 }
 
 /**
- * Lưu bộ tham số công thức định giá (chỉ Quản trị viên).
- * Ghi vào SQLite rồi áp ngay vào engine in-memory của @carmate/shared,
- * để giá mọi chuyến trên sàn đổi theo tức thì.
+ * Saves the pricing formula parameter set (admins only).
+ * Writes to SQLite then applies immediately to the in-memory engine of @carmate/shared,
+ * so the price of every trip on the marketplace changes instantly.
  */
 export function saveTariffParamsConfig({ params, updatedBy = 'admin', note = '' }) {
   const { params: cleanParams, errors } = validateTariffParams(params || {});
@@ -2105,7 +2105,7 @@ export function saveTariffParamsConfig({ params, updatedBy = 'admin', note = '' 
 }
 
 /**
- * Khôi phục công thức định giá về bộ tham số mặc định của nền tảng.
+ * Restores the pricing formula to the platform's default parameter set.
  */
 export function resetTariffParamsConfig() {
   const database = getRawDB();
@@ -2119,7 +2119,7 @@ export function resetTariffParamsConfig() {
 }
 
 /**
- * Khôi phục giá xăng dầu về mức tham chiếu mặc định (24.120đ)
+ * Restores the fuel price to the default reference level (24,120 VND)
  */
 export function resetDailyFuelPriceConfig() {
   const database = getRawDB();
@@ -2138,7 +2138,7 @@ export function resetDailyFuelPriceConfig() {
 }
 
 /**
- * Kiểm tra xem người dùng có bị vô hiệu hóa hoàn toàn hay không (hết hạn ân hạn 3 ngày)
+ * Checks whether a user is completely disabled (the 3-day grace period has expired)
  */
 export function isUserDeactivated(user) {
   if (!user) return false;
@@ -2150,7 +2150,7 @@ export function isUserDeactivated(user) {
 }
 
 /**
- * Lưu tin nhắn hỗ trợ giữa Người dùng và Platform Support / CSKH CarMate
+ * Saves support messages between a User and Platform Support / CarMate Customer Support
  */
 export function saveSupportMessage({
   id = `SUP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -2192,7 +2192,7 @@ export function saveSupportMessage({
 }
 
 /**
- * Lấy lịch sử tin nhắn trò chuyện với Platform Support
+ * Gets the chat history with Platform Support
  */
 export function getSupportMessages({ bookingId, userId, phone, limit = 50 } = {}) {
   const database = getRawDB();
@@ -2227,11 +2227,11 @@ export function getSupportMessages({ bookingId, userId, phone, limit = 50 } = {}
 }
 
 /**
- * Xử lý khiếu nại (Dispute) và gỡ khóa tài khoản (Unban) tự động hoặc theo phê duyệt
+ * Handles a complaint (Dispute) and unbans the account (Unban), automatically or upon approval
  */
 export async function resolveDisputeAndUnban({ bookingId, userId, phone } = {}) {
   const database = getRawDB();
-  // 1. Mở khóa booking nếu có
+  // 1. Unlock the booking if there is one
   if (bookingId) {
     const booking = getBookingById(bookingId);
     if (booking) {
@@ -2244,7 +2244,7 @@ export async function resolveDisputeAndUnban({ bookingId, userId, phone } = {}) 
     }
   }
 
-  // 2. Mở khóa người dùng
+  // 2. Unlock the user
   const targetKey = userId || phone;
   if (targetKey) {
     await updateUserStatus(targetKey, {
@@ -2253,11 +2253,11 @@ export async function resolveDisputeAndUnban({ bookingId, userId, phone } = {}) 
       piiStrikes: 0,
       bannedAt: null,
       deactivateAt: null,
-      trustScore: 98 // Phục hồi điểm tín nhiệm an toàn
+      trustScore: 98 // Restore a safe trust score
     });
   }
 
-  // 3. Đánh dấu các tin nhắn khiếu nại liên quan là resolved
+  // 3. Mark the related complaint messages as resolved
   if (bookingId || userId || phone) {
     database
       .prepare(
@@ -2273,15 +2273,15 @@ export async function resolveDisputeAndUnban({ bookingId, userId, phone } = {}) 
 }
 
 /**
- * Gửi yêu cầu xóa tài khoản tới Quản trị viên CarMate
- * Bất biến & Công thái học: Không xóa tức thì, yêu cầu được tiếp nhận để đối soát nghĩa vụ & chuyến đi
+ * Sends a request to delete an account to the CarMate Admin
+ * Invariant & Ergonomics: not deleted instantly; the request is received so obligations & trips can be reconciled
  */
 export async function createDeletionRequest({ userId, phone, name, email, reason = '' }) {
   const database = getRawDB();
   const id = `DEL-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const now = Date.now();
 
-  // Kiểm tra nếu đã có yêu cầu xóa đang chờ xử lý (pending)
+  // Check whether there is already a deletion request awaiting processing (pending)
   const existingPending = database.prepare(
     `SELECT * FROM account_deletion_requests WHERE (userId = ? OR (phone = ? AND phone != '')) AND status = 'pending'`
   ).get(userId || '', phone || '');
@@ -2305,7 +2305,7 @@ export async function createDeletionRequest({ userId, phone, name, email, reason
 }
 
 /**
- * Lấy danh sách các yêu cầu xóa tài khoản dành cho Quản trị viên
+ * Gets the list of account deletion requests for the Admin
  */
 export function getDeletionRequests(status = '') {
   const database = getRawDB();
@@ -2316,8 +2316,8 @@ export function getDeletionRequests(status = '') {
 }
 
 /**
- * Quản trị viên phê duyệt hoặc từ chối yêu cầu xóa tài khoản
- * Khi phê duyệt (action: 'approved'): Thực hiện xóa tài khoản, gỡ bài đăng và anonymize dữ liệu theo Nghị định 13/2023
+ * An admin approves or rejects an account deletion request
+ * On approval (action: 'approved'): performs the account deletion, removes posts and anonymizes data per Decree 13/2023
  */
 export async function processDeletionRequest(requestId, action, adminInfo = 'Admin') {
   const database = getRawDB();
@@ -2328,10 +2328,10 @@ export async function processDeletionRequest(requestId, action, adminInfo = 'Adm
 
   const now = Date.now();
   if (action === 'approved') {
-    // 1. Thực hiện xóa vĩnh viễn dữ liệu cá nhân theo Nghị định 13/2023/NĐ-CP
+    // 1. Permanently delete personal data per Decree 13/2023/ND-CP
     await deleteUserAccount(req.userId, req.phone);
 
-    // 2. Cập nhật trạng thái yêu cầu
+    // 2. Update the request status
     database.prepare(`
       UPDATE account_deletion_requests 
       SET status = 'approved', processedAt = ?, processedBy = ? 
@@ -2362,12 +2362,12 @@ export async function processDeletionRequest(requestId, action, adminInfo = 'Adm
 
 /**
  * =========================================================================
- * KHỐI CHỨC NĂNG LEVEL 3: AUTONOMOUS ZERO-SEARCH MATCHING & GAME THEORY
+ * LEVEL 3 FEATURE BLOCK: AUTONOMOUS ZERO-SEARCH MATCHING & GAME THEORY
  * =========================================================================
  */
 
 /**
- * Tạo mới một Khai báo Ý định Di chuyển (Intent)
+ * Creates a new Movement Intent Declaration (Intent)
  */
 export async function createIntent(intentData) {
   const database = getRawDB();
@@ -2429,7 +2429,7 @@ export async function createIntent(intentData) {
 }
 
 /**
- * Lấy danh sách các Intent theo bộ lọc (status, role, corridor, date)
+ * Gets the list of Intents by filter (status, role, corridor, date)
  */
 export function getIntents(filters = {}) {
   const database = getRawDB();
@@ -2473,7 +2473,7 @@ export function getIntents(filters = {}) {
 }
 
 /**
- * Lấy chi tiết một Intent theo ID
+ * Gets the details of one Intent by ID
  */
 export function getIntentById(id) {
   const database = getRawDB();
@@ -2487,7 +2487,7 @@ export function getIntentById(id) {
 }
 
 /**
- * Cập nhật trạng thái và dữ liệu Intent
+ * Updates the status and data of an Intent
  */
 export async function updateIntent(id, updates = {}) {
   const database = getRawDB();
@@ -2524,7 +2524,7 @@ export async function updateIntent(id, updates = {}) {
 }
 
 /**
- * Xóa một Intent
+ * Deletes an Intent
  */
 export async function deleteIntent(id) {
   const database = getRawDB();
@@ -2533,7 +2533,7 @@ export async function deleteIntent(id) {
 }
 
 /**
- * Lưu trữ nhật ký một Phiên Khớp Lệnh (Matching Epoch)
+ * Stores the log of one Matching Session (Matching Epoch)
  */
 export async function createMatchingEpoch(epochData) {
   const database = getRawDB();
@@ -2565,7 +2565,7 @@ export async function createMatchingEpoch(epochData) {
 }
 
 /**
- * Lấy lịch sử các phiên khớp lệnh gần nhất
+ * Gets the history of the most recent matching sessions
  */
 export function getMatchingEpochs(limit = 20) {
   const database = getRawDB();
@@ -2574,12 +2574,12 @@ export function getMatchingEpochs(limit = 20) {
 
 /**
  * =========================================================================
- * KHỐI CHỨC NĂNG LEVEL 3.5: SÀN GIAO DỊCH GHẾ TRỐNG (SEAT EXCHANGE - LOB & CDA)
+ * LEVEL 3.5 FEATURE BLOCK: EMPTY-SEAT EXCHANGE MARKETPLACE (SEAT EXCHANGE - LOB & CDA)
  * =========================================================================
  */
 
 /**
- * Tạo mới một Lệnh trên Sàn Giao Dịch Ghế Trống (Ask hoặc Bid)
+ * Creates a new Order on the Empty-Seat Exchange (Ask or Bid)
  */
 export async function createExchangeOrderDb(orderData) {
   const database = getRawDB();
@@ -2654,7 +2654,7 @@ export async function createExchangeOrderDb(orderData) {
 }
 
 /**
- * Lấy danh sách lệnh trên sàn giao dịch theo bộ lọc
+ * Gets the list of orders on the exchange by filter
  */
 export function getExchangeOrdersDb(filters = {}) {
   const database = getRawDB();
@@ -2706,7 +2706,7 @@ export function getExchangeOrdersDb(filters = {}) {
 }
 
 /**
- * Lấy chi tiết lệnh theo ID
+ * Gets the details of an order by ID
  */
 export function getExchangeOrderByIdDb(id) {
   const database = getRawDB();
@@ -2720,7 +2720,7 @@ export function getExchangeOrderByIdDb(id) {
 }
 
 /**
- * Cập nhật trạng thái lệnh (FILLED, PARTIALLY_FILLED, EXPIRED, CANCELLED)
+ * Updates the order status (FILLED, PARTIALLY_FILLED, EXPIRED, CANCELLED)
  */
 export async function updateExchangeOrderDb(id, updates = {}) {
   const current = getExchangeOrderByIdDb(id);
@@ -2755,7 +2755,7 @@ export async function updateExchangeOrderDb(id, updates = {}) {
 }
 
 /**
- * Quét các lệnh OPEN trên sàn đã vượt quá TTL trượt động và chuyển sang EXPIRED
+ * Scans the OPEN orders on the exchange that have exceeded the dynamic sliding TTL and moves them to EXPIRED
  */
 export async function expireSlidingTTLOrdersDb(currentTimestamp = Date.now()) {
   const database = getRawDB();
@@ -2780,7 +2780,7 @@ export async function expireSlidingTTLOrdersDb(currentTimestamp = Date.now()) {
       });
       expiredList.push(order);
     } catch {
-      // Bỏ qua lỗi parse nếu có
+      // Ignore the parse error if any
     }
   }
 
@@ -2789,21 +2789,21 @@ export async function expireSlidingTTLOrdersDb(currentTimestamp = Date.now()) {
 
 
 /**
- * KHỚP LỆNH NGUYÊN TỬ (ATOMIC MATCH COMMIT — MIT INVARIANT)
+ * ATOMIC ORDER MATCHING (ATOMIC MATCH COMMIT — MIT INVARIANT)
  *
- * Một lần khớp lệnh gồm 3 thao tác ghi: cập nhật lệnh ASK, cập nhật lệnh BID và
- * tạo booking. Nếu ghi rời rạc, sự cố giữa chừng sẽ để lại ghế đã bị trừ mà KHÔNG
- * có booking — sàn rơi vào trạng thái mâu thuẫn (khách mất ghế nhưng không có vé).
+ * One match consists of 3 write operations: updating the ASK order, updating the BID order, and
+ * creating the booking. If written separately, a failure midway would leave a seat already deducted but NO
+ * booking — the exchange ends up in a contradictory state (the passenger loses the seat but has no ticket).
  *
- * Hàm này gói cả 3 trong MỘT transaction SQLite: hoặc cả 3 cùng được ghi, hoặc
- * không gì được ghi. better-sqlite3 tự ROLLBACK khi callback ném lỗi.
+ * This function wraps all 3 in ONE SQLite transaction: either all 3 are written, or
+ * nothing is. better-sqlite3 automatically ROLLBACKs when the callback throws.
  */
 export function commitExchangeMatchDb({ askOrder, bidOrder, booking, isNewOrderAsk = false }) {
   const database = getRawDB();
 
   const run = database.transaction(() => {
-    // Lệnh mới (chưa có trong DB) phải INSERT; lệnh đã nằm trên sàn thì UPDATE
-    // để không xoá mất các trường không được truyền vào.
+    // A new order (not yet in the DB) must be INSERTed; an order already on the exchange is UPDATEd
+    // so that fields not passed in are not erased.
     if (isNewOrderAsk) {
       upsertExchangeOrderRow(database, askOrder);
       updateExchangeOrderRow(database, bidOrder.id, bidOrder);
@@ -2854,7 +2854,7 @@ export function commitExchangeMatchDb({ askOrder, bidOrder, booking, isNewOrderA
 }
 
 /**
- * Ghi đè trọn vẹn một dòng lệnh (dùng cho lệnh MỚI vào sàn).
+ * Fully overwrites an order row (used for a NEW order entering the exchange).
  */
 function upsertExchangeOrderRow(database, order) {
   const full = {
@@ -2923,8 +2923,8 @@ function upsertExchangeOrderRow(database, order) {
 }
 
 /**
- * Cập nhật một lệnh ĐANG NẰM trên sàn — hợp nhất với payload cũ để không
- * xoá mất các trường không được truyền vào (khác hẳn INSERT OR REPLACE).
+ * Updates an order that is CURRENTLY on the exchange — merges with the old payload so
+ * fields not passed in are not erased (very different from INSERT OR REPLACE).
  */
 function updateExchangeOrderRow(database, id, updates = {}) {
   const row = database.prepare('SELECT payload FROM seat_exchange_orders WHERE id = ?').get(id);
@@ -2964,17 +2964,17 @@ function updateExchangeOrderRow(database, id, updates = {}) {
 }
 
 /**
- * Lấy hồ sơ người dùng để GHI CHẾ TÀI, tự tạo hồ sơ tối thiểu nếu chưa có.
+ * Gets a user profile in order to RECORD A SANCTION, auto-creating a minimal profile if none exists.
  *
- * CarMate cho phép đăng chuyến mà không cần đăng ký trước (Unified Auth /
- * Upsert Flow) — đó là chủ ý sản phẩm để giảm ma sát. Nhưng hệ quả là mọi
- * đường trừ điểm đều bọc `if (user) {...}`, nên chủ xe chưa có tài khoản
- * THOÁT TOÀN BỘ chế tài: huỷ sát giờ, bị tố giác nhồi nhét, bỏ bom khách —
- * không gì bám được vào họ. Ai muốn né phạt chỉ cần đừng bấm đăng nhập.
+ * CarMate allows posting a trip without registering first (Unified Auth /
+ * Upsert Flow) — that is a deliberate product choice to reduce friction. But the consequence is that every
+ * point-deduction path is wrapped in `if (user) {...}`, so a driver without an account
+ * ESCAPES ALL sanctions: last-minute cancellations, being reported for overloading, ditching passengers —
+ * nothing can attach to them. Anyone who wants to dodge penalties just needs to not tap log in.
  *
- * Hàm này khép lỗ hổng đó mà không thêm bước đăng ký nào: khi cần ghi chế tài
- * cho một số điện thoại chưa có hồ sơ, tạo hồ sơ tối thiểu ngay tại chỗ. Lần
- * sau người đó đăng nhập bằng số ấy sẽ nhận đúng lịch sử tín nhiệm của mình.
+ * This function closes that hole without adding any registration step: when a sanction needs to be recorded
+ * for a phone number with no profile, a minimal profile is created on the spot. The next
+ * time that person logs in with that number they will receive their own trust history.
  */
 export async function getOrCreateUserForPenalty(phone, seed = {}) {
   const clean = cleanPhoneNumber(phone || '');
@@ -2989,7 +2989,7 @@ export async function getOrCreateUserForPenalty(phone, seed = {}) {
     name: seed.name || '',
     role: seed.role || 'member',
     trustScore: 98,
-    // Đánh dấu hồ sơ sinh tự động do chế tài, chưa từng đăng nhập.
+    // Mark the profile as auto-generated by a sanction, never logged in.
     isAutoCreated: 1,
     createdAt: Date.now()
   });
@@ -2998,10 +2998,10 @@ export async function getOrCreateUserForPenalty(phone, seed = {}) {
 }
 
 /**
- * Áp dụng kỷ luật hủy chuyến theo hàm suy giảm thời gian (Time-Decay Penalty Engine)
- * - deltaMinutes > 120: An toàn 0đ, không phạt.
- * - 30 <= deltaMinutes <= 120: Cảnh cáo, trừ 15 điểm tín nhiệm.
- * - deltaMinutes < 30 hoặc sau khởi hành: Vi phạm nặng, trừ 40 điểm tín nhiệm, khoá 7 ngày.
+ * Applies cancellation discipline via a time-decay function (Time-Decay Penalty Engine)
+ * - deltaMinutes > 120: Safe (0 VND), no penalty.
+ * - 30 <= deltaMinutes <= 120: Warning, deduct 15 trust points.
+ * - deltaMinutes < 30 or after departure: Severe violation, deduct 40 trust points, 7-day lock.
  */
 export async function applyCancellationPenalty(booking, cancellingUserPhone, deltaMinutes, cancellingRole = null) {
   const cleanPhone = cleanPhoneNumber(cancellingUserPhone);
@@ -3015,8 +3015,8 @@ export async function applyCancellationPenalty(booking, cancellingUserPhone, del
   let message = 'Huỷ chuyến an toàn trước > 2 tiếng. Không bị trừ điểm tín nhiệm.';
 
   if (deltaMinutes < 45) {
-    // 1. GRIM TRIGGER (ĐÒN BẨY THẶNG DƯ TƯƠNG LAI):
-    // Tước quyền tiếp cận dòng tiền thặng dư 4-5 triệu/tháng trong 30 ngày nếu chủ xe huỷ sát giờ
+    // 1. GRIM TRIGGER (FUTURE SURPLUS LEVERAGE):
+    // Strip access to the surplus income stream of 4-5 million VND/month for 30 days if the driver cancels at the last minute
     penaltyTier = isDriver ? 'grim_trigger_freeze' : 'severe_freeze';
     penaltyPoints = isDriver ? 35 : 30;
     freezeDays = isDriver ? 30 : 7;
@@ -3032,9 +3032,9 @@ export async function applyCancellationPenalty(booking, cancellingUserPhone, del
       : 'Cảnh cáo huỷ chuyến cận giờ (45 phút - 2 tiếng). Trừ 15 điểm tín nhiệm và giãn cách ưu tiên 24h.';
   }
 
-  // Khấu trừ điểm tín nhiệm nếu có người dùng
+  // Deduct trust points if there is a user
   if (cleanPhone && penaltyPoints > 0) {
-    // Tạo hồ sơ nếu chưa có, để chủ xe chưa đăng ký KHÔNG thoát chế tài.
+    // Create the profile if none exists, so that an unregistered driver does NOT escape sanctions.
     const user = await getOrCreateUserForPenalty(cleanPhone, { role: isDriver ? 'driver' : 'passenger' });
     if (user) {
       const currentScore = Number(user.trustScore ?? 98);
@@ -3068,7 +3068,7 @@ export async function applyCancellationPenalty(booking, cancellingUserPhone, del
 }
 
 /**
- * Chuẩn hóa tên trạm để gom nhóm các yêu cầu trùng hoặc gần trùng
+ * Normalizes station names to group duplicate or near-duplicate requests
  */
 function normalizeStationRequestName(name) {
   if (!name) return '';
@@ -3083,10 +3083,10 @@ function normalizeStationRequestName(name) {
 }
 
 /**
- * Thêm hoặc gộp yêu cầu mở trạm ảo mới (Station Request Pool)
- * - Tự động gom nhóm dựa trên tên chuẩn hóa
- * - Tăng số lượt đề xuất (requestCount) khi có nhiều người cùng đề xuất
- * - Ngưỡng kích hoạt khảo sát: >= 50 lượt
+ * Adds or merges a new virtual station opening request (Station Request Pool)
+ * - Automatically groups based on the normalized name
+ * - Increments the proposal count (requestCount) when several people propose the same
+ * - Survey trigger threshold: >= 50 proposals
  */
 export async function addStationRequest({ stationName, note = '', lat = null, lng = null, userPhone = '' }) {
   const database = getRawDB();
@@ -3099,7 +3099,7 @@ export async function addStationRequest({ stationName, note = '', lat = null, ln
   const normName = normalizeStationRequestName(rawName);
   const now = Date.now();
 
-  // Kiểm tra xem đã có trạm tương tự trong pool chưa
+  // Check whether a similar station already exists in the pool
   const existing = database
     .prepare('SELECT * FROM station_requests WHERE normalizedName = ? OR stationName LIKE ? LIMIT 1')
     .get(normName, rawName);
@@ -3151,7 +3151,7 @@ export async function addStationRequest({ stationName, note = '', lat = null, ln
     };
   }
 
-  // Tạo yêu cầu mới
+  // Create a new request
   const id = `STR-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
   const payloadStr = JSON.stringify({
     phones: cleanPhone ? [cleanPhone] : [],
@@ -3195,7 +3195,7 @@ export async function addStationRequest({ stationName, note = '', lat = null, ln
 }
 
 /**
- * Lấy danh sách các đề xuất mở trạm mới
+ * Gets the list of proposals to open new stations
  */
 export function getStationRequests(status = '') {
   const database = getRawDB();
@@ -3210,7 +3210,7 @@ export function getStationRequests(status = '') {
 }
 
 /**
- * Cập nhật trạng thái đề xuất trạm (pending, surveying, approved, rejected)
+ * Updates the station proposal status (pending, surveying, approved, rejected)
  */
 export async function updateStationRequestStatus(id, status, adminNote = '') {
   const database = getRawDB();
@@ -3222,16 +3222,16 @@ export async function updateStationRequestStatus(id, status, adminNote = '') {
 }
 
 /**
- * Thông báo chuẩn về giới hạn 2 lượt di chuyển/ngày
+ * Standard notice about the limit of 2 trips per day
  */
 export const DRIVER_DAILY_CAP_NOTICE =
   '⛔ Giới hạn 2 lượt di chuyển/ngày: Theo Nghị định 10/2020/NĐ-CP và Điều 3 Bộ Luật Dân sự 2015, CarMate là nền tảng chia sẻ chi phí hành trình cá nhân (sáng đi làm - chiều về nhà). Mỗi chủ xe chỉ được tạo tối đa 2 chuyến/ngày để bảo đảm bản chất dân sự phi thương mại. Xe chạy tần suất cao bị từ chối để tránh biến tướng thành xe vận tải chuyên nghiệp.';
 
 /**
- * Đếm số chuyến chủ xe đã đăng hoặc thực hiện trong ngày (Anti-Commercial Capping)
- * @param {string} phone - Số điện thoại chủ xe
- * @param {string} targetDate - Ngày mục tiêu (mặc định hôm nay)
- * @returns {number} Số chuyến trong ngày
+ * Counts the number of trips a driver has posted or made in the day (Anti-Commercial Capping)
+ * @param {string} phone - The driver's phone number
+ * @param {string} targetDate - Target date (defaults to today)
+ * @returns {number} Number of trips in the day
  */
 export function getDailyDriverTripCount(phone, targetDate = '') {
   const database = getRawDB();
@@ -3273,15 +3273,15 @@ export function getDailyDriverTripCount(phone, targetDate = '') {
 }
 
 /**
- * Kiểm tra xem chủ xe có bị giới hạn chuyến hay không.
- * Theo yêu cầu: CarMate không giới hạn số chuyến, chủ xe tự chịu trách nhiệm dân sự về tần suất di chuyển.
+ * Checks whether a driver is restricted in trip count.
+ * Per requirement: CarMate does not limit the number of trips; the driver bears civil liability for their travel frequency.
  */
 export function isDriverDailyTripCapped(_phone, _targetDate = '') {
   return false;
 }
 
 /**
- * Ghi nhận sự cố chuyến đi (Unhappy Cases) vào cơ sở dữ liệu
+ * Records a trip incident (Unhappy Cases) into the database
  */
 export async function reportTripIncidentDb(incident) {
   const db = getRawDB();
@@ -3323,7 +3323,7 @@ export async function reportTripIncidentDb(incident) {
 }
 
 /**
- * Truy vấn danh sách sự cố chuyến đi
+ * Queries the list of trip incidents
  */
 export function getTripIncidents({ riderPhone, driverPhone, incidentType, limit = 50 } = {}) {
   const db = getRawDB();
@@ -3357,7 +3357,7 @@ export function getTripIncidents({ riderPhone, driverPhone, incidentType, limit 
 }
 
 /**
- * Permaban vĩnh viễn người dùng (áp dụng cho hành vi quỵt tiền phụ xăng UNPAID_FARE_FRAUD)
+ * Permanently bans a user (applied to the behavior of evading the fuel-cost contribution, UNPAID_FARE_FRAUD)
  */
 export async function permabanUser(phone, reason = 'UNPAID_FARE_FRAUD') {
   if (!phone) return null;

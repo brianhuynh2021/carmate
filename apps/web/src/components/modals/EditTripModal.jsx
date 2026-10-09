@@ -41,9 +41,9 @@ import { useI18n } from '../../i18n/index.jsx';
 const DEFAULT_CORRIDOR = getDefaultCorridor();
 
 /**
- * Dò một chuyến cũ (lưu điểm đi/đến bằng chữ tự do) về mã trạm ảo.
- * Ưu tiên mã trạm đã lưu; không có thì so khớp tên trạm với chuỗi người dùng gõ.
- * Dò không ra trả về chuỗi rỗng để form buộc Chủ xe chọn lại đúng trạm.
+ * Resolve an old trip (which stored origin/destination as free text) back to a virtual station code.
+ * Prefer the saved station code; otherwise match station names against the string the user typed.
+ * If no match is found, return an empty string so the form forces the driver to pick the right station again.
  */
 function resolveHubId(explicitHubId, freeText) {
   if (explicitHubId && getVirtualHubById(explicitHubId)) return explicitHubId;
@@ -51,7 +51,7 @@ function resolveHubId(explicitHubId, freeText) {
   const raw = String(freeText || '').trim().toLowerCase();
   if (!raw) return '';
 
-  // So khớp tên dài trước để "ngã 4 bình phước" không bị "bình phước" nuốt mất
+  // Match longer names first so "ngã 4 bình phước" is not swallowed by "bình phước"
   const candidates = [...VIRTUAL_HUBS]
     .map((h) => ({ hub: h, key: String(h.shortName || h.name || '').toLowerCase() }))
     .filter((c) => c.key)
@@ -63,14 +63,14 @@ function resolveHubId(explicitHubId, freeText) {
 
 export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
   const { t } = useI18n();
-  // Hook phải gọi trước mọi early return (Rules of Hooks)
+  // Hooks must be called before any early return (Rules of Hooks)
 
   const isDriver = trip?.type === 'driver_offer';
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // ── TỌA ĐỘ MA TRẬN: trạm đón/trả là lựa chọn từ danh mục trạm ảo, không gõ tay ──
-  // Chuyến cũ lưu điểm đi/đến bằng chữ tự do, nên phải dò ngược về mã trạm một lần
-  // khi mở form. Dò không ra thì để trống và bắt Chủ xe chọn lại cho đúng trạm.
+  // ── MATRIX COORDINATES: pickup/drop-off stations are chosen from the virtual station catalog, not typed by hand ──
+  // An old trip stored origin/destination as free text, so it has to be resolved back to a station code once
+  // when the form opens. If no match is found, leave it blank and force the driver to pick the right station again.
   const [originHubId, setOriginHubId] = useState(() => resolveHubId(trip?.originHubId, trip?.from));
   const [destHubId, setDestHubId] = useState(() => resolveHubId(trip?.destinationHubId, trip?.to));
 
@@ -124,8 +124,8 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
   });
   const [editingMaskIndex, setEditingMaskIndex] = useState(null);
 
-  // Bài đăng gốc vốn có ảnh hay không, và người dùng có chủ động thêm/bớt ảnh trong phiên này không.
-  // Dùng để không gửi carPhotos rỗng (xóa sạch ảnh trên máy chủ) khi form chỉ đơn giản là không đọc được ảnh cũ.
+  // Whether the original post had photos, and whether the user actively added/removed photos in this session.
+  // Used to avoid sending an empty carPhotos (which would wipe all photos on the server) when the form simply could not read the old photos.
   const hadOriginalPhotos = useRef(Array.isArray(trip?.carPhotos) && trip.carPhotos.length > 0).current;
   const photosTouchedRef = useRef(false);
 
@@ -160,7 +160,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
     setCarPhotos((prev) => prev.filter((_, idx) => idx !== slotIndex));
   };
 
-  // Thực thi xoá chuyến an toàn
+  // Perform safe trip deletion
   const handleExecuteDelete = async () => {
     if (!onDelete || deleting) return;
     setDeleting(true);
@@ -177,24 +177,24 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
   const originHub = useMemo(() => getVirtualHubById(originHubId) || null, [originHubId]);
   const destHub = useMemo(() => getVirtualHubById(destHubId) || null, [destHubId]);
 
-  // Danh mục trạm ảo của hành lang, dùng cho cả hai ô chọn trạm
+  // Virtual station catalog of the corridor, used for both station pickers
   const corridorHubs = useMemo(() => {
     return VIRTUAL_HUBS.filter((h) => h.corridor === DEFAULT_CORRIDOR.dataKey);
   }, []);
 
-  // Đảo chiều trạm đón ⇄ trạm trả
+  // Swap pickup station ⇄ drop-off station
   const handleSwapRoute = () => {
     if (isMatrixLocked) return;
     setOriginHubId(destHubId);
     setDestHubId(originHubId);
   };
 
-  // Tính toán gợi ý mốc đón trả thông minh theo tuyến hiện tại
+  // Compute smart pickup/drop-off waypoint suggestions for the current route
   const suggestedWaypoints = useMemo(() => {
     return getSuggestedWaypoints(originHub?.shortName || '', destHub?.shortName || '');
   }, [originHub, destHub]);
 
-  // Thêm nhanh mốc đón trả vào ô ghi chú
+  // Quickly add a pickup/drop-off waypoint to the notes field
   const handleAddWaypoint = (wp) => {
     if (!waypointNote.trim()) {
       setWaypointNote(wp);
@@ -309,7 +309,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-left">
         {saveError && <p role="alert" className="type-body rounded-xl bg-red-50 p-3 text-red-700">{saveError}</p>}
-        {/* ── BANNER XÁC NHẬN XOÁ BÀI ĐĂNG (ZERO BLOCKING MODAL) ── */}
+        {/* ── POST DELETION CONFIRMATION BANNER (ZERO BLOCKING MODAL) ── */}
         {confirmDelete && (
           <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 space-y-2.5 shadow-2xs">
             <div className="type-caption flex items-center gap-2 text-rose-800 dark:text-rose-200">
@@ -339,7 +339,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
             </div>
           </div>
         )}
-        {/* ── 1. LỘ TRÌNH ĐIỀU CHỈNH ĐƯỢC + GỢI Ý ĐỊA ĐIỂM ── */}
+        {/* ── 1. ADJUSTABLE ROUTE + LOCATION SUGGESTIONS ── */}
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] space-y-4 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="type-caption text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -438,7 +438,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
           </div>
         </div>
 
-        {/* ── 2. TRỤC ĐƯỜNG ĐÓN TRẢ + GỢI Ý THÔNG MINH THEO TUYẾN ── */}
+        {/* ── 2. PICKUP/DROP-OFF ROAD AXIS + SMART SUGGESTIONS BY ROUTE ── */}
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] space-y-3 shadow-2xs">
           <div className="flex items-center justify-between">
             <label className="type-label block text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -489,7 +489,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
           </div>
         </div>
 
-        {/* ── 2.5. QUY MÔ, DÒNG XE & HÌNH ẢNH XE THỰC TẾ ── */}
+        {/* ── 2.5. SCALE, VEHICLE MODEL & ACTUAL VEHICLE PHOTOS ── */}
         {isDriver && (
           <fieldset disabled={isMatrixLocked} className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] space-y-4 shadow-2xs">
             <div className="type-caption flex items-center justify-between">
@@ -508,7 +508,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
               </span>
             </div>
 
-            {/* Quy mô 4-5 chỗ vs 7 chỗ vs Bán tải vs Xe tải nhẹ */}
+            {/* Scale: 4-5 seats vs 7 seats vs pickup truck vs light truck */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-[#e5e5ea] dark:bg-slate-800/80 border border-black/[0.06] dark:border-white/[0.06]">
               <button
                 type="button"
@@ -572,7 +572,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
             <label className="type-label block">Sức chứa xe, gồm người lái
               <input type="number" min="2" max="55" value={vehicleCapacity === 'truck_light' ? 2 : vehicleCapacity === 'pickup' ? 5 : vehicleCapacity} onChange={(event) => setVehicleCapacity(event.target.value)} className="type-input mt-1 w-full rounded-xl border p-3 dark:bg-slate-800" />
             </label>
-            {/* Dòng xe cụ thể + Biển số */}
+            {/* Specific vehicle model + license plate */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div className="space-y-1.5">
                 <label className="type-label text-slate-800 dark:text-slate-200">
@@ -627,7 +627,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
               ))}
             </div>
 
-            {/* Nhận chở đồ / Thùng hàng bán tải */}
+            {/* Accepts cargo / pickup truck cargo bed */}
             <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 space-y-2.5">
               <label className="type-label flex items-center gap-2 cursor-pointer select-none">
                 <input
@@ -657,7 +657,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
               )}
             </div>
 
-            {/* Quản lý ảnh xe thật */}
+            {/* Manage real vehicle photos */}
             <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.06] space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="type-caption text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -669,7 +669,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
                 </span>
               </div>
 
-              {/* Danh sách ảnh hiện tại & Nút tải thêm */}
+              {/* Current photo list & add-more button */}
               <div className="flex items-center gap-2.5 flex-wrap">
                 {carPhotos.map((photo, idx) => {
                   if (!photo) return null;
@@ -684,7 +684,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
                         alt={`Ảnh xe ${idx + 1}`}
                         className="w-full h-full object-cover"
                       />
-                      {/* Badge che biển */}
+                      {/* Plate-mask badge */}
                       <span className="type-caption absolute bottom-0 inset-x-0 bg-black/75 text-white text-center truncate px-0.5 py-0.5">
                         {photo.label ? photo.label.replace('Góc ', '') : `${idx + 1}`}
                       </span>
@@ -753,7 +753,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
           <div className="grid grid-cols-1 xs:grid-cols-2 gap-3"><label className="type-label block">Ngày khởi hành<input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="type-input mt-1 w-full rounded-xl border p-3 dark:bg-slate-800" /></label><label className="type-label block">Giờ khởi hành<input type="time" value={exactTime} onChange={(event) => setExactTime(event.target.value)} className="type-input mt-1 w-full rounded-xl border p-3 dark:bg-slate-800" /></label></div>
         </fieldset>
 
-        {/* ── 5. GHI CHÚ THÊM ── */}
+        {/* ── 5. ADDITIONAL NOTES ── */}
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#f5f5f7] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] space-y-2 shadow-2xs">
           <label className="type-label block text-slate-900 dark:text-white flex items-center gap-1.5">
             <FileText className="w-3.5 h-3.5 text-[#0071e3]" />
@@ -770,7 +770,7 @@ export default function EditTripModal({ trip, onClose, onSave, onDelete }) {
       </form>
     </Modal>
 
-    {/* Modal chỉnh sửa vị trí che biển số xe tương tác */}
+    {/* Interactive license plate mask position editing modal */}
     {editingMaskIndex !== null && carPhotos[editingMaskIndex] && (
       <PlateMaskModal
         isOpen={true}

@@ -20,8 +20,8 @@ import { triggerMacNotification } from './AppleMacNotification.jsx';
 import { useI18n } from '../../i18n/index.jsx';
 
 /**
- * Định dạng thời gian tương đối kiểu YouTube tiếng Việt:
- * "vừa xong", "5 phút trước", "2 giờ trước", "Hôm qua", "09/09"
+ * YouTube-style relative time format in Vietnamese:
+ * "vừa xong" (just now), "5 phút trước" (5 minutes ago), "2 giờ trước" (2 hours ago), "Hôm qua" (yesterday), "09/09"
  */
 export function formatRelativeTimeVi(timestamp) {
   if (!timestamp) return 'vừa xong';
@@ -83,13 +83,13 @@ export default function NotificationDropdown({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [activeMenuId]);
 
-  // Tổng hợp toàn bộ danh sách thông báo phong cách YouTube
+  // Aggregate the full notification list, YouTube style
   const allNotifications = useMemo(() => {
     const list = [];
     const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
     const userId = currentUser?.id || currentUser?.userId || '';
 
-    // 1. Duyệt danh sách các booking chuyến xe
+    // 1. Browse the list of trip bookings
     (bookedEscrows || []).forEach((b) => {
       const bId = b.escrowId || b.id;
       if (!bId) return;
@@ -180,7 +180,7 @@ export default function NotificationDropdown({
       });
     });
 
-    // 2. Gợi ý ghép xe tức thì (Social Smart Match)
+    // 2. Instant match suggestions (Social Smart Match)
     (socialMatches || []).slice(0, 3).forEach((item) => {
       if (!item?.trip?.id) return;
       const mTrip = item.trip;
@@ -205,7 +205,7 @@ export default function NotificationDropdown({
       });
     });
 
-    // 3. Thông báo từ CSKH CarMate 24/7
+    // 3. Notifications from CarMate 24/7 customer support
     list.push({
       id: 'notif-support-desk',
       targetType: 'support',
@@ -222,7 +222,7 @@ export default function NotificationDropdown({
       isUnread: false
     });
 
-    // Sắp xếp thời gian mới nhất lên đầu
+    // Sort newest first
     list.sort((a, b) => {
       const tA = typeof a.time === 'string' ? new Date(a.time).getTime() : a.time;
       const tB = typeof b.time === 'string' ? new Date(b.time).getTime() : b.time;
@@ -232,7 +232,7 @@ export default function NotificationDropdown({
     return list.filter((item) => !dismissedIds.includes(item.id));
   }, [bookedEscrows, currentUser, readBookingTimestamps, unreadBookingIds, dismissedIds, socialMatches]);
 
-  // Lọc theo Tab (Tất cả / Chưa đọc)
+  // Filter by Tab (All / Unread)
   const displayedNotifications = useMemo(() => {
     if (filterTab === 'unread') {
       return allNotifications.filter((n) => n.isUnread);
@@ -244,7 +244,7 @@ export default function NotificationDropdown({
     return allNotifications.filter((n) => n.isUnread).length;
   }, [allNotifications]);
 
-  // Hành động khi nhấp vào thông báo ("muốn xem kỹ gì thì nhấp vô là xem như hiện tại")
+  // Action when a notification is clicked ("muốn xem kỹ gì thì nhấp vô là xem như hiện tại" — click whatever you want to look at closely, same as it works today)
   const handleItemClick = (item) => {
     if (item.isUnread && item.bookingId && item.bookingId !== 'support') {
       onMarkAsRead?.(item.bookingId);
@@ -366,7 +366,7 @@ export default function NotificationDropdown({
         </div>
       </div>
 
-      {/* ── 2. YouTube Filter Chips (Tất cả / Chưa đọc) ── */}
+      {/* ── 2. YouTube Filter Chips ("Tất cả" / "Chưa đọc" = All / Unread) ── */}
       <div className="flex items-center gap-1.5 px-4 py-2 bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.04] dark:border-white/[0.04]">
         <button
           type="button"
@@ -407,7 +407,7 @@ export default function NotificationDropdown({
                 item.isUnread ? 'bg-[#0071e3]/[0.03] dark:bg-[#0071e3]/[0.05]' : ''
               }`}
             >
-              {/* Cột trái: Avatar + Mini Event Badge */}
+              {/* Left column: Avatar + Mini Event Badge */}
               <div className="relative shrink-0 mt-0.5">
                 {item.avatar ? (
                   <img
@@ -421,7 +421,7 @@ export default function NotificationDropdown({
                   </div>
                 )}
 
-                {/* Event Badge ở góc avatar */}
+                {/* Event Badge at the avatar corner */}
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-[#1c1c1e] shadow-xs flex items-center justify-center p-0.5">
                   <div className={`w-full h-full rounded-full flex items-center justify-center ${getBadgeBg(item.type)}`}>
                     {renderEventIcon(item.type)}
@@ -429,7 +429,7 @@ export default function NotificationDropdown({
                 </div>
               </div>
 
-              {/* Cột giữa: Nội dung chi tiết phong cách YouTube */}
+              {/* Middle column: Detailed content, YouTube style */}
               <div className="flex-1 min-w-0 pr-1">
                 <p className="type-caption text-slate-800 dark:text-slate-200 line-clamp-2">
                   <span className="font-bold text-slate-900 dark:text-white mr-1">
@@ -458,7 +458,7 @@ export default function NotificationDropdown({
                 </div>
               </div>
 
-              {/* Cột phải: Thumbnail xe / Lộ trình + Chấm xanh unread + Menu 3 chấm */}
+              {/* Right column: Vehicle thumbnail / Route + Blue unread dot + 3-dot menu */}
               <div className="flex items-center gap-2 shrink-0 self-center">
                 {item.thumbnail ? (
                   <div className="w-12 h-9 rounded-lg overflow-hidden border border-black/10 dark:border-white/10 shrink-0 bg-slate-100 dark:bg-slate-800 shadow-2xs">
@@ -470,7 +470,7 @@ export default function NotificationDropdown({
                   </div>
                 ) : null}
 
-                {/* Chấm xanh chưa đọc chuẩn YouTube */}
+                {/* YouTube-standard blue unread dot */}
                 {item.isUnread && (
                   <span
                     title={t('notifDrop.s004')}
@@ -478,7 +478,7 @@ export default function NotificationDropdown({
                   />
                 )}
 
-                {/* Nút 3 chấm tùy chọn YouTube */}
+                {/* YouTube 3-dot options button */}
                 <div className="relative">
                   <button
                     type="button"
@@ -492,7 +492,7 @@ export default function NotificationDropdown({
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
 
-                  {/* Popover menu 3 chấm */}
+                  {/* 3-dot popover menu */}
                   {activeMenuId === item.id && (
                     <div
                       ref={menuRef}
@@ -524,7 +524,7 @@ export default function NotificationDropdown({
             </div>
           ))
         ) : (
-          /* Empty State phong cách YouTube */
+          /* YouTube-style Empty State */
           <div className="py-12 px-6 text-center">
             <div className="w-14 h-14 rounded-full bg-black/[0.03] dark:bg-white/[0.05] flex items-center justify-center mx-auto mb-3 text-slate-400">
               <Bell className="w-7 h-7 opacity-50" />

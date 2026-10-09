@@ -1,2 +1,2 @@
-// QUY CHẾ HOẠT ĐỘNG NỀN TẢNG KẾT NỐI CARMATE
-// CarMate cung cấp công cụ kết nối chủ xe và người đi cùng.
+// OPERATING RULES OF THE CARMATE CONNECTION PLATFORM
+// CarMate provides tools that connect drivers and passengers.

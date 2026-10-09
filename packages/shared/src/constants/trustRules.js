@@ -1,5 +1,5 @@
-// CARMATE TRUST & REPUTATION POLICY RULES (Quy chuẩn Tín nhiệm & Uy tín Động)
-// Tuân thủ triệt để 4 trụ cột: MIT (Invariants), Stanford (B=MAP), Cursor (Edge AI 0ms), Apple (Liquid Aesthetics)
+// CARMATE TRUST & REPUTATION POLICY RULES (Trust & Dynamic Reputation Standards)
+// Strictly adheres to the 4 pillars: MIT (Invariants), Stanford (B=MAP), Cursor (Edge AI 0ms), Apple (Liquid Aesthetics)
 
 export const DEFAULT_TRUST_RULES = [
   {
@@ -11,7 +11,7 @@ export const DEFAULT_TRUST_RULES = [
     role: 'all', // 'all' | 'driver' | 'passenger'
     category: 'identity',
     enabled: true,
-    isLocked: true // Tiêu chí gốc bất biến
+    isLocked: true // Root criterion, invariant
   },
   {
     id: 'avatar_photo',

@@ -193,41 +193,41 @@ export const TIME_SLOTS = [
 ];
 
 /**
- * Chuẩn hóa và làm sạch nhãn thời gian theo chuẩn 24h đồng nhất (Zero Fluff, First Principles)
- * Triệt tiêu các từ ngữ chỉ buổi dư thừa ("Sáng", "Chiều", "Tối", "AM", "PM") khi đã dùng chuẩn 24h (VD: 05:00, 17:00)
+ * Normalizes and cleans time labels to a uniform 24h standard (Zero Fluff, First Principles)
+ * Eliminates redundant part-of-day words ("Sáng" morning, "Chiều" afternoon, "Tối" evening, "AM", "PM") once the 24h standard is used (e.g. 05:00, 17:00)
  */
 export const sanitizeTimeLabel = (str) => {
   if (!str || typeof str !== 'string') return '';
   let cleaned = str.trim();
 
-  // Chuẩn hóa ký hiệu 'h' sang ':' (VD: "7h" -> "7:00", "7h30" -> "7:30", "7h-8h" -> "7:00 - 8:00")
+  // Normalizes the 'h' notation to ':' (e.g. "7h" -> "7:00", "7h30" -> "7:30", "7h-8h" -> "7:00 - 8:00")
   cleaned = cleaned.replace(/(\d{1,2})h(\d{2})?/gi, (m, h, min) => `${h}:${min || '00'}`);
 
-  // Chuẩn hóa dấu gạch ngang sang en-dash chuẩn: " – "
+  // Normalizes hyphens to the standard en-dash: " – "
   cleaned = cleaned.replace(/(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})/, '$1 – $2');
 
-  // Chuẩn hóa giờ 1 chữ số thành 2 chữ số (vd: "7:00" -> "07:00", "7:00 – 8:00" -> "07:00 – 08:00")
+  // Normalizes 1-digit hours to 2 digits (e.g. "7:00" -> "07:00", "7:00 – 8:00" -> "07:00 – 08:00")
   cleaned = cleaned.replace(/^(\d):(\d{2})/, '0$1:$2').replace(/–\s*(\d):(\d{2})/, '– 0$1:$2');
 
-  // Bỏ toàn bộ từ chỉ buổi dư thừa trong chuẩn 24h: Sáng, Chiều, Trưa, Tối, Đêm, AM, PM
+  // Strips all redundant part-of-day words under the 24h standard: Sáng (morning), Chiều (afternoon), Trưa (noon), Tối (evening), Đêm (night), AM, PM
   cleaned = cleaned.replace(/\s*(?:sáng|chiều|trưa|tối|đêm|am|pm)(?:\s+mai|\s+hôm nay)?\b/gi, '').trim();
 
   return cleaned;
 };
 
-/** Kiểm tra giờ đón cụ thể có nằm trong khung giờ hay không */
+/** Checks whether a specific pickup time falls within a time slot */
 export const isTimeInSlot = (timeStr, slotId) => {
   if (!timeStr || !slotId || slotId === 'all') return true;
   return mapTimeToSlot(timeStr) === slotId;
 };
 
-/** Lấy nhãn khung giờ theo ngôn ngữ, fallback về chuỗi thô của item. Hỗ trợ hiển thị giờ chính xác nếu có (ví dụ: 04:30). */
+/** Gets the time slot label by language, falling back to the item's raw string. Supports showing the exact time if available (e.g. 04:30). */
 export const getTimeSlotLabel = (idOrItem, lang = 'vi', variant = 'short') => {
   const exactTime = typeof idOrItem === 'object' ? idOrItem?.exactTime : null;
   const id = typeof idOrItem === 'string' ? idOrItem : idOrItem?.timeSlot || idOrItem?.timeSlotId;
   const slot = TIME_SLOTS.find((s) => s.id === id);
 
-  // Chỉ gắn exactTime nếu nó thực sự thuộc khung giờ tương ứng
+  // Only attach exactTime if it really belongs to the corresponding time slot
   const isValidExactTime = exactTime && (!slot || slot.id === 'all' || isTimeInSlot(exactTime, slot.id));
 
   if (isValidExactTime) {
@@ -249,7 +249,7 @@ export const getTimeSlotLabel = (idOrItem, lang = 'vi', variant = 'short') => {
 
   if (typeof idOrItem === 'object') {
     const rawLabel = idOrItem?.timeSlotLabel || idOrItem?.timeSlot || '';
-    // Tự động làm sạch nếu nhãn lưu cũ bị dính lỗi lệch giờ ví dụ "17:00 (03:00 – 05:00)"
+    // Automatically clean up if an old stored label has the time-mismatch bug, e.g. "17:00 (03:00 – 05:00)"
     const mismatchMatch = String(rawLabel).match(/^(\d{1,2}:\d{2})\s*\((.*)\)$/);
     if (mismatchMatch) {
       const extractedTime = mismatchMatch[1];
@@ -264,7 +264,7 @@ export const getTimeSlotLabel = (idOrItem, lang = 'vi', variant = 'short') => {
   return sanitizeTimeLabel(idOrItem || '');
 };
 
-/** Tự động ánh xạ giờ chính xác (vd: 04:30) vào khung giờ 24/7 tương ứng */
+/** Automatically maps an exact time (e.g. 04:30) to the corresponding 24/7 time slot */
 export const mapTimeToSlot = (timeStr) => {
   if (!timeStr) return '07:00-09:00';
   const match = String(timeStr).match(/(\d{1,2})[:h](\d{2})?/i);
@@ -285,22 +285,22 @@ export const mapTimeToSlot = (timeStr) => {
 
 /**
  * =============================================================================
- * CHIP CHỌN NHANH KHUNG KHỞI HÀNH (SMART DEPARTURE CHIPS)
+ * QUICK-PICK DEPARTURE WINDOW CHIPS (SMART DEPARTURE CHIPS)
  * =============================================================================
- * Trên tuyến liên tỉnh, THỜI GIAN là dữ liệu cấp 1 — ngang hàng Nơi đi và Nơi
- * đến, không phải một dòng phụ "đặt cho lúc khác" nằm nép bên dưới. Đẩy nó
- * xuống hàng phụ chính là thứ khiến người dùng mặc định app chạy theo kiểu
- * "gọi xe tới ngay" của taxi nội đô.
+ * On intercity routes, TIME is first-class data — on par with Origin and
+ * Destination, not a secondary line "book for another time" tucked away below. Pushing it
+ * down to a secondary row is exactly what makes users assume the app works like the
+ * "get a ride right now" model of an urban taxi.
  *
- * Người đi xe liên tỉnh thực tế chỉ xoay quanh vài ý định: chiều nay về, tối
- * nay đi, hoặc sáng mai đi sớm. Cho chọn bằng MỘT CHẠM thay vì bắt mở lịch.
+ * Real intercity riders only revolve around a few intents: heading home this afternoon, leaving
+ * this evening, or leaving early tomorrow morning. Let them choose with ONE TAP instead of making them open a calendar.
  *
- * Danh sách chip được TÍNH THEO GIỜ HIỆN TẠI: 20h tối mà vẫn chìa ra chip
- * "Chiều nay" thì vô nghĩa. Khung đã trôi qua sẽ tự biến mất.
+ * The chip list is COMPUTED FROM THE CURRENT TIME: at 20h in the evening, still showing the
+ * "Chiều nay" (this afternoon) chip is meaningless. Windows that have already passed disappear automatically.
  */
 export const DEPARTURE_WINDOWS = Object.freeze([
-  // `label` là cách người Việt nói hằng ngày, ghép thẳng với "nay"/"mai" thành
-  // "Sáng mai", "Chiều nay" — đọc là hiểu, không cần dịch trong đầu.
+  // `label` is how Vietnamese people say it day to day, joined directly with "nay"/"mai" (today/tomorrow) to form
+  // "Sáng mai" (tomorrow morning), "Chiều nay" (this afternoon) — understood at a glance, no mental translation needed.
   { id: 'early_morning', fromHour: 4, toHour: 8, label: 'Sáng sớm', labelEn: 'Early morning', hint: '04:00 – 08:00' },
   { id: 'morning', fromHour: 8, toHour: 11, label: 'Sáng', labelEn: 'Morning', hint: '08:00 – 11:00' },
   { id: 'noon', fromHour: 11, toHour: 14, label: 'Trưa', labelEn: 'Midday', hint: '11:00 – 14:00' },
@@ -310,17 +310,17 @@ export const DEPARTURE_WINDOWS = Object.freeze([
 ]);
 
 /**
- * Dựng danh sách chip phù hợp với thời điểm hiện tại.
+ * Builds the list of chips suited to the current moment.
  *
- * Quy tắc: một khung chỉ còn ý nghĩa nếu vẫn còn ít nhất `minLeadMinutes` phút
- * trước khi nó kết thúc — không ai đặt được chuyến cho khung sắp đóng trong 10
- * phút nữa. Hết khung hôm nay thì chuyển sang khung của ngày mai.
+ * Rule: a window is only meaningful if at least `minLeadMinutes` minutes remain
+ * before it ends — nobody can book a trip for a window that closes in 10
+ * minutes. Once today's windows are used up, switch to tomorrow's windows.
  *
  * @param {object} [opts]
- * @param {Date|number} [opts.now] - Mốc hiện tại
- * @param {number} [opts.limit] - Số chip tối đa (mặc định 3, nhường ô thứ 4 cho
- *   nút "Chọn ngày khác" — lưới 2x2 chỉ có 4 ô, chip thứ 4 sẽ đẩy nút xuống hàng lẻ)
- * @param {number} [opts.minLeadMinutes] - Phải còn ít nhất bao nhiêu phút
+ * @param {Date|number} [opts.now] - The current point in time
+ * @param {number} [opts.limit] - Max number of chips (default 3, leaving the 4th slot for the
+ *   "Chọn ngày khác" (pick another date) button — a 2x2 grid has only 4 cells, a 4th chip would push the button onto an odd row)
+ * @param {number} [opts.minLeadMinutes] - At least how many minutes must remain
  * @returns {Array<{id, label, hint, dayOffset, dayLabel, timeSlot, fromHour, toHour}>}
  */
 export function buildDepartureChips({ now = new Date(), limit = 3, minLeadMinutes = 45 } = {}) {
@@ -334,12 +334,12 @@ export function buildDepartureChips({ now = new Date(), limit = 3, minLeadMinute
       const startMinutes = w.fromHour * 60;
       const endMinutes = w.toHour * 60;
 
-      // Khung hôm nay chỉ còn ý nghĩa nếu vẫn đủ thời gian đặt trước khi nó đóng
+      // Today's window is only meaningful if there is still enough time to book before it closes
       if (dayOffset === 0 && endMinutes - nowMinutes < minLeadMinutes) continue;
 
-      // CẮT PHẦN GIỜ ĐÃ TRÔI QUA: 16h30 thì "Chiều nay" phải là (16h30-18h),
-      // không phải (14h-18h) — nửa đầu khung đã không còn đặt được nữa, ghi
-      // nguyên khung là nói sai với khách.
+      // CUT OFF THE PART OF THE WINDOW THAT HAS ALREADY PASSED: at 16h30, "Chiều nay" (this afternoon) must be (16h30-18h),
+      // not (14h-18h) — the first half of the window can no longer be booked, so showing
+      // the whole window would be telling the passenger something wrong.
       const isPartial = dayOffset === 0 && nowMinutes > startMinutes;
       const effectiveStart = isPartial ? nowMinutes : startMinutes;
 
@@ -362,14 +362,14 @@ export function buildDepartureChips({ now = new Date(), limit = 3, minLeadMinute
       const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
       const label = isOvernight ? cap(dayWord) : `${w.label} ${dayWord}`;
 
-      // ƯU TIÊN THEO NHU CẦU THẬT CỦA TUYẾN LIÊN TỈNH.
-      // Người Bù Đốp / Lái Thiêu chiều tối tìm xe là để đi làm, đi khám bệnh
-      // SÁNG MAI — rất ít ai đi xe gia đình khung 22h-4h. Nên sau 16h, khung
-      // đêm bị đẩy xuống sau các khung sáng mai, dù nó đến sớm hơn về thời gian.
-      // Phạt phải đủ lớn để vượt qua ranh giới NGÀY (mỗi ngày cách nhau 10000),
-      // nếu không khung đêm hôm nay (key ~6000) vẫn luôn thắng mọi khung sáng
-      // mai (key >10000) và việc hạ ưu tiên trở thành vô nghĩa.
-      // +10000 đẩy nó xuống ngang ngày mai, +720 để nằm SAU khung sáng mai.
+      // PRIORITIZE BY THE REAL NEEDS OF INTERCITY ROUTES.
+      // People in Bù Đốp / Lái Thiêu looking for a ride in the late afternoon are going to work or to see
+      // a doctor TOMORROW MORNING — very few take a family car in the 22h-4h window. So after 16h, the
+      // night window is pushed behind tomorrow's morning windows, even though it comes earlier in time.
+      // The penalty must be large enough to cross the DAY boundary (each day is 10000 apart),
+      // otherwise today's night window (key ~6000) would still always beat every tomorrow
+      // morning window (key >10000) and the deprioritization would be meaningless.
+      // +10000 pushes it down to tomorrow's level, +720 places it AFTER tomorrow's morning windows.
       const deprioritizeOvernight = isOvernight && nowMinutes >= 16 * 60;
       const sortKey =
         dayOffset * 10000 + effectiveStart + (deprioritizeOvernight ? 10000 + 720 : 0);
@@ -386,7 +386,7 @@ export function buildDepartureChips({ now = new Date(), limit = 3, minLeadMinute
         fromHour: w.fromHour,
         toHour: w.toHour,
         isPartial,
-        // Khung giờ gửi lên máy chủ: nếu đã cắt thì dò từ đúng mốc còn lại
+        // Time slot sent to the server: if the window was cut, search from exactly the remaining start point
         timeSlot: `${String(Math.floor(effectiveStart / 60) % 24).padStart(2, '0')}:${String(
           effectiveStart % 60
         ).padStart(2, '0')}`,
@@ -396,19 +396,19 @@ export function buildDepartureChips({ now = new Date(), limit = 3, minLeadMinute
   }
 
   candidates.sort((a, b) => a.sortKey - b.sortKey);
-  // Bỏ sortKey khỏi kết quả: nó là chi tiết nội bộ của việc xếp hạng,
-  // không phải dữ liệu mà giao diện cần biết.
+  // Drop sortKey from the result: it is an internal detail of the ranking,
+  // not data the UI needs to know about.
   return candidates.slice(0, limit).map(({ sortKey: _sortKey, ...chip }) => chip);
 }
 
-/** Ngày (YYYY-MM-DD) tương ứng với một chip. */
+/** The date (YYYY-MM-DD) corresponding to a chip. */
 export function getChipDate(chip, now = new Date()) {
   const d = now instanceof Date ? new Date(now) : new Date(now);
   d.setDate(d.getDate() + (chip?.dayOffset || 0));
   return toLocalIsoDate(d);
 }
 
-/** Định dạng YYYY-MM-DD theo lịch ĐỊA PHƯƠNG, không qua UTC. */
+/** Formats YYYY-MM-DD by the LOCAL calendar, without going through UTC. */
 export function toLocalIsoDate(d) {
   const dt = d instanceof Date ? d : new Date(d);
   if (isNaN(dt.getTime())) return null;
@@ -419,8 +419,8 @@ export function toLocalIsoDate(d) {
 }
 
 /**
- * Dựng chip từ một ngày và khung giờ do khách tự chọn trong bảng lịch.
- * Trả về cùng hình dạng với chip tự sinh, nên giao diện dùng chung một lối vẽ.
+ * Builds a chip from a date and time window that the passenger picks themselves in the calendar picker.
+ * Returns the same shape as an auto-generated chip, so the UI shares a single rendering path.
  */
 export function buildCustomChip({ date, windowId = 'morning' }) {
   const w = DEPARTURE_WINDOWS.find((x) => x.id === windowId) || DEPARTURE_WINDOWS[1];
@@ -448,8 +448,8 @@ export function buildCustomChip({ date, windowId = 'morning' }) {
     dayLabel,
     fromHour: w.fromHour,
     toHour: w.toHour,
-    // KHÔNG dùng toISOString(): nó quy về UTC, mà nửa đêm giờ Việt Nam (UTC+7)
-    // rơi vào 17h hôm TRƯỚC theo UTC — khách chọn 25/12 lại đi tìm chuyến 24/12.
+    // Do NOT use toISOString(): it converts to UTC, and midnight in Vietnam time (UTC+7)
+    // falls at 17h of the PREVIOUS day in UTC — a passenger who picks 25/12 would end up looking for trips on 24/12.
     date: toLocalIsoDate(target),
     timeSlot: `${String(w.fromHour % 24).padStart(2, '0')}:00`
   };

@@ -1,7 +1,7 @@
-# CarMate — cấu hình triển khai Fly.io
-# Region: Singapore (sin) — gần Việt Nam nhất, độ trễ ~30ms.
+# CarMate — Fly.io deployment configuration
+# Region: Singapore (sin) — closest to Vietnam, ~30ms latency.
 #
-# Lần đầu triển khai, xem hướng dẫn trong README mục 6.
+# For the first deployment, see the guide in README section 6.
 
 app = 'carmate'
 primary_region = 'sin'
@@ -12,14 +12,14 @@ primary_region = 'sin'
 [env]
   NODE_ENV = 'production'
   PORT = '8080'
-  # Có proxy của Fly đứng trước, cần bật để rate limiter đọc đúng IP thật
-  # từ X-Forwarded-For thay vì thấy mọi request đến từ một IP nội bộ.
+  # Fly's proxy sits in front, so this must be enabled for the rate limiter to read the real IP
+  # from X-Forwarded-For instead of seeing every request come from one internal IP.
   TRUST_PROXY = 'true'
-  # Domain được phép gọi API. Thêm domain thật khi trỏ tên miền.
+  # Domains allowed to call the API. Add the real domain when pointing the domain name.
   ALLOWED_ORIGINS = 'https://carmate.vn,https://www.carmate.vn,https://admin.carmate.vn,https://ops.carmate.vn,https://carmate.fly.dev'
 
-# Ổ đĩa bền cho SQLite. KHÔNG bỏ mục này — thiếu nó, dữ liệu nằm trong
-# lớp ghi tạm của container và mất sạch sau mỗi lần deploy.
+# Persistent disk for SQLite. DO NOT remove this section — without it, data lives in the
+# container's ephemeral write layer and is wiped after every deploy.
 [[mounts]]
   source = 'carmate_data'
   destination = '/app/apps/api/data'
@@ -28,8 +28,8 @@ primary_region = 'sin'
   internal_port = 8080
   force_https = true
 
-  # SQLite ghi vào một file trên volume: chỉ được chạy DUY NHẤT 1 máy.
-  # Hai instance ghi song song sẽ làm hỏng dữ liệu.
+  # SQLite writes to a single file on the volume: only ONE machine may run.
+  # Two instances writing in parallel would corrupt the data.
   auto_stop_machines = false
   auto_start_machines = false
   min_machines_running = 1
@@ -39,7 +39,7 @@ primary_region = 'sin'
     soft_limit = 200
     hard_limit = 250
 
-  # Fly chỉ định tuyến traffic tới máy đã qua kiểm tra sức khoẻ.
+  # Fly only routes traffic to machines that have passed the health check.
   [[http_service.checks]]
     interval = '30s'
     timeout = '5s'

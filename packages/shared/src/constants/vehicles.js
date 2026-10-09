@@ -1,7 +1,7 @@
 /**
- * Cấu hình quy chuẩn các dòng xe & giới hạn số ghế chở khách hợp pháp (Nghị định 100/2019/NĐ-CP)
- * - Xe 4–5 chỗ (Sedan/Hatchback/CUV): 1 Chủ xe cầm lái + tối đa 4 Người đi cùng (khuyên chọn 3 để êm ái hàng sau)
- * - Xe 7 chỗ (MPV/SUV): 1 Chủ xe cầm lái + tối đa 6 Người đi cùng (để trống 1 ghế lái)
+ * Standard configuration of vehicle types & legal passenger seat limits (Decree 100/2019/NĐ-CP)
+ * - 4–5 seat vehicles (Sedan/Hatchback/CUV): 1 driver at the wheel + at most 4 passengers (3 recommended for a comfortable back row)
+ * - 7 seat vehicles (MPV/SUV): 1 driver at the wheel + at most 6 passengers (leaving 1 driver seat empty)
  */
 export const VEHICLE_SEAT_CONFIGS = {
   5: {
@@ -64,7 +64,7 @@ export const VEHICLE_SEAT_CONFIGS = {
 };
 
 /**
- * 6 Nhóm thể tích gửi đồ tiện tuyến bản địa (Không cân đo kg / cm³ phức tạp - Cognitive Load = 0)
+ * 6 volume groups for local along-the-route cargo shipping (no complicated kg / cm³ weighing - Cognitive Load = 0)
  */
 export const CARGO_TYPES = {
   compact_parcel: {
@@ -136,7 +136,7 @@ export const CARGO_TYPES = {
 };
 
 /**
- * Tính mức tiền phụ xăng gợi ý cho việc gửi đồ tiện chuyến
+ * Calculates the suggested fuel contribution for sending cargo on a passing trip
  * @param {string} cargoTypeId - 'compact_parcel' | 'produce_box' | 'bulky_cargo' | 'motorcycle' | 'half_truck' | 'full_truck'
  * @param {number} [distanceKm=120]
  * @returns {number}
@@ -144,16 +144,16 @@ export const CARGO_TYPES = {
 export function getRecommendedCargoPrice(cargoTypeId, distanceKm = 120) {
   const cargo = CARGO_TYPES[cargoTypeId] || CARGO_TYPES.compact_parcel;
   const dist = Number(distanceKm) > 0 ? Number(distanceKm) : 120;
-  // Cự ly chuẩn 100km, dao động nhẹ theo quãng đường thực tế
+  // Baseline distance of 100km, varying slightly with the actual distance
   const factor = Math.max(0.8, Math.min(1.8, dist / 100));
   const calculated = Math.round((cargo.basePrice * factor) / 5000) * 5000;
   return calculated;
 }
 
 /**
- * Chuẩn hóa số ghế nhận khách theo dung tích xe
- * @param {number|string} capacity - 5, 7, 'pickup', hoặc 'truck_light'
- * @param {number|string} requestedSeats - Số ghế muốn nhận
+ * Normalizes the number of seats offered to passengers according to vehicle capacity
+ * @param {number|string} capacity - 5, 7, 'pickup', or 'truck_light'
+ * @param {number|string} requestedSeats - Number of seats to accept
  * @returns {{ capacity: number, seats: number, vehicleType: string, hasCargoBed: boolean, isCargoVehicle: boolean }}
  */
 export function sanitizeVehicleCapacityAndSeats(capacity, requestedSeats) {

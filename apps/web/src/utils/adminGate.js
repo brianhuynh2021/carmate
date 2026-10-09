@@ -1,19 +1,19 @@
 /**
- * adminGate.js — NHẬN DIỆN QUẢN TRỊ VIÊN Ở PHÍA GIAO DIỆN
+ * adminGate.js — ADMIN IDENTIFICATION ON THE FRONTEND SIDE
  *
- * Số điện thoại admin trước đây bị viết cứng RẢI RÁC trong 4 component
- * (Header, UserProfileModal, DeleteAccountModal...) dưới dạng
- * `currentUser.phone?.includes('0984...')`. Hai vấn đề:
- *   1. Muốn đổi/chuyển giao admin phải đi sửa từng chỗ, sót một chỗ là lệch.
- *   2. Số cá nhân nằm rải trong bundle công khai.
+ * The admin phone number used to be hard-coded SCATTERED across 4 components
+ * (Header, UserProfileModal, DeleteAccountModal...) in the form
+ * `currentUser.phone?.includes('0984...')`. Two problems:
+ *   1. Changing/handing over the admin meant editing each place, and missing one caused drift.
+ *   2. A personal phone number was spread across the public bundle.
  *
- * Nay gom về MỘT nơi và ưu tiên vai trò do MÁY CHỦ cấp (`role`), vì đó mới là
- * nguồn sự thật. Số điện thoại chỉ là lối dự phòng cho môi trường phát triển,
- * và đọc từ biến môi trường VITE_ADMIN_PHONE.
+ * It is now consolidated in ONE place and prefers the role granted by the SERVER (`role`), since that is the
+ * source of truth. The phone number is only a fallback for the development environment,
+ * and is read from the VITE_ADMIN_PHONE environment variable.
  *
- * LƯU Ý BẢO MẬT: hàm này CHỈ quyết định hiện hay ẩn nút trên giao diện.
- * Mọi endpoint quản trị đều được máy chủ chặn bằng JWT ký (requireAdmin),
- * nên sửa biến ở trình duyệt không cấp thêm quyền gì.
+ * SECURITY NOTE: this function ONLY decides whether to show or hide a button in the UI.
+ * Every admin endpoint is guarded on the server by a signed JWT (requireAdmin),
+ * so tampering with the variable in the browser grants no extra privileges.
  */
 
 const ENV_ADMIN_PHONES = (import.meta.env?.VITE_ADMIN_PHONE || '')
@@ -24,10 +24,10 @@ const ENV_ADMIN_PHONES = (import.meta.env?.VITE_ADMIN_PHONE || '')
 export function isAdminUser(currentUser) {
   if (!currentUser) return false;
 
-  // 1. Vai trò do máy chủ cấp — nguồn sự thật
+  // 1. Role granted by the server — the source of truth
   if (currentUser.role === 'admin' || currentUser.role === 'super_admin') return true;
 
-  // 2. Dự phòng theo số điện thoại (chỉ khi đã cấu hình VITE_ADMIN_PHONE)
+  // 2. Phone-number fallback (only when VITE_ADMIN_PHONE is configured)
   if (ENV_ADMIN_PHONES.length === 0) return false;
   const phone = String(currentUser.phone || '').replace(/\D/g, '');
   return Boolean(phone) && ENV_ADMIN_PHONES.includes(phone);

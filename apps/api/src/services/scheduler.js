@@ -1,29 +1,29 @@
 /**
  * =============================================================================
- * CARMATE SCHEDULER — NHỊP TIM CỦA HỆ THỐNG
+ * CARMATE SCHEDULER — THE SYSTEM'S HEARTBEAT
  * =============================================================================
- * Trước khi có file này, toàn bộ thuật toán điều vận chỉ chạy khi có người mở
- * app và gọi API. Nghĩa là chuyến Shadow, radar rủi ro và micro-batch đều là mã
- * chết trong đúng khoảng thời gian chúng cần thiết nhất: đêm hôm trước và rạng
- * sáng, lúc khách đang ngủ và không ai gửi request nào.
+ * Before this file existed, the entire dispatch algorithm only ran when someone opened the
+ * app and called the API. That means Shadow trips, the risk radar and micro-batch were all
+ * dead code during exactly the periods they are needed most: the night before and the early
+ * morning, when passengers are asleep and no one sends any request.
  *
- * Đây là "recourse trigger" trong mô hình Stochastic VRP with Recourse: hành
- * động khắc phục chỉ có giá trị nếu có thứ gì đó đánh thức nó.
+ * This is the "recourse trigger" in the Stochastic VRP with Recourse model: a remedial
+ * action is only worth anything if something wakes it up.
  *
- * Tám nhịp quét, mỗi nhịp một chu kỳ riêng theo tính cấp bách:
+ * Eight sweep ticks, each with its own cycle according to urgency:
  *
- *   T30_TICK      60s   Hội tụ không-thời gian, bắn báo trước 30 phút
- *   HANDSHAKE     60s   Nhắc xác nhận đang ra điểm đón
- *   DEPARTURE     60s   Canh T-40/T-30/T-20 theo giờ khởi hành THẬT của chuyến
- *   LATENESS      90s   Báo nguy cơ trễ và đề xuất phương án cần xác nhận
- *   MICRO_BATCH  180s   Phiên gom khớp lệnh (đúng cửa sổ 3 phút đã khai báo)
- *   RADAR_SWEEP  300s   4 chốt đêm T-8h/T-6h/T-1.5h/T-45m
- *   TRIP_LIFECYCLE 15m  Đóng sổ chuyến đã chạy xong, đẩy chuyến định kỳ sang tuần sau
- *   HOUSEKEEPING  1h    Dọn nhật ký thông báo cũ
+ *   T30_TICK      60s   Spatio-temporal convergence, fires the 30-minute advance alert
+ *   HANDSHAKE     60s   Reminds passengers to confirm they are heading to the pickup point
+ *   DEPARTURE     60s   Watches T-40/T-30/T-20 against the trip's REAL departure time
+ *   LATENESS      90s   Reports lateness risk and proposes options that need confirmation
+ *   MICRO_BATCH  180s   Order-matching batch session (exactly the declared 3-minute window)
+ *   RADAR_SWEEP  300s   4 night checkpoints T-8h/T-6h/T-1.5h/T-45m
+ *   TRIP_LIFECYCLE 15m  Closes out trips that have finished, rolls recurring trips over to next week
+ *   HOUSEKEEPING  1h    Cleans up old notification logs
  *
- * NGUYÊN TẮC AN TOÀN: mỗi nhịp được bọc try/catch riêng và dùng khoá chống
- * chồng lấn. Một nhịp lỗi hoặc chạy lâu không bao giờ được phép giết cả
- * scheduler hoặc làm hai bản sao cùng chạy đè lên nhau.
+ * SAFETY PRINCIPLE: each tick is wrapped in its own try/catch and uses an anti-overlap lock.
+ * A failing or long-running tick must never be allowed to kill the whole
+ * scheduler or make two copies run on top of each other.
  * =============================================================================
  */
 
@@ -63,10 +63,10 @@ export const SCHEDULER_INTERVALS = Object.freeze({
 });
 
 const timers = [];
-const running = new Set(); // khoá chống chồng lấn theo tên nhịp
+const running = new Set(); // anti-overlap lock by tick name
 let started = false;
 
-/** Số liệu vận hành, phục vụ /api/admin/scheduler-status. */
+/** Operational metrics, serving /api/admin/scheduler-status. */
 const stats = {
   startedAt: null,
   ticks: {},
@@ -86,12 +86,12 @@ const stats = {
 };
 
 /**
- * Bọc một nhịp quét: chống chồng lấn, đếm lượt, nuốt lỗi.
- * Nuốt lỗi là cố ý — scheduler phải sống sót qua mọi sự cố nghiệp vụ.
+ * Wraps a sweep tick: prevents overlap, counts runs, swallows errors.
+ * Swallowing errors is deliberate — the scheduler must survive any business-logic failure.
  */
 async function guard(name, fn) {
   if (running.has(name)) {
-    // Nhịp trước còn chưa xong: bỏ qua lượt này thay vì xếp chồng
+    // The previous tick has not finished yet: skip this round instead of stacking
     return;
   }
   running.add(name);
@@ -119,7 +119,7 @@ async function guard(name, fn) {
   }
 }
 
-/** Định dạng mốc giờ theo múi giờ Việt Nam cho nội dung thông báo. */
+/** Formats a time mark in Vietnam time zone for notification content. */
 function formatClock(ms) {
   try {
     return new Date(ms).toLocaleTimeString('vi-VN', {
@@ -133,10 +133,10 @@ function formatClock(ms) {
 }
 
 /**
- * NHỊP 1 — CHỐT T-30: HỘI TỤ KHÔNG - THỜI GIAN
+ * TICK 1 — T-30 CHECKPOINT: SPATIO-TEMPORAL CONVERGENCE
  *
- * Bắn thông báo cho khách khi P(25 <= T_arrive <= 35 phút) >= 0.90, đồng thời
- * mở cửa sổ 10 phút để khách bấm "Tôi đang ra trạm".
+ * Fires a notification to the passenger when P(25 <= T_arrive <= 35 minutes) >= 0.90, and also
+ * opens a 10-minute window for the passenger to tap "Tôi đang ra trạm" ("I'm heading to the station").
  */
 async function tickT30() {
   const triggers = evaluateT30Triggers(Date.now());
@@ -162,7 +162,7 @@ async function tickT30() {
         confidence: probability,
         requiresHandshake: true
       },
-      // Một khách chỉ nhận đúng một báo T-30 cho mỗi chuyến xe
+      // A passenger receives exactly one T-30 alert per vehicle
       dedupeKey: `T30:${rider.intentId}:${session.tripId}:${trig.attempt}`
     });
 
@@ -174,7 +174,7 @@ async function tickT30() {
       });
       stats.actions.t30Sent += 1;
 
-      // Báo cho chủ xe biết có khách đang được huy động ra trạm
+      // Tell the driver that a passenger is being mobilized to the station
       await sendNotification({
         phone: session.driverPhone,
         kind: NOTIFICATION_KINDS.RIDER_READY,
@@ -188,10 +188,10 @@ async function tickT30() {
 }
 
 /**
- * NHỊP 2 — BẮT TAY: NHẮC LẦN 2 VÀ THU HỒI CHỖ
+ * TICK 2 — HANDSHAKE: SECOND REMINDER AND SEAT REVOCATION
  *
- * Khách không phản hồi sau 10 phút thì chỗ được trả lại cho người khác đón dọc
- * đường. Khách vẫn ở trong hàng đợi, chỉ mất quyền ưu tiên với chiếc xe này.
+ * If the passenger does not respond after 10 minutes, the seat is released so someone else can
+ * be picked up along the way. The passenger stays in the queue and only loses priority for this vehicle.
  */
 async function tickHandshake() {
   const { needReminder, expired } = sweepHandshakeDeadlines(Date.now());
@@ -222,11 +222,11 @@ async function tickHandshake() {
 }
 
 /**
- * NHỊP 3 — RADAR TRỄ HẸN & HOÁN ĐỔI CHUYẾN SHADOW
+ * TICK 3 — LATENESS RADAR & SHADOW TRIP SWAP
  *
- * Đây là Recourse Action của mô hình. Hệ thống KHÔNG đợi xe trễ thật: ngay khi
- * xác suất trễ vượt ngưỡng, nó quét hành lang tìm một xe khác kịp mốc đã cam
- * kết và hoán đổi. Mốc giờ hứa với khách giữ nguyên.
+ * This is the model's Recourse Action. The system does NOT wait for the vehicle to actually be late: as soon as the
+ * lateness probability exceeds the threshold, it scans the corridor for another vehicle that can make the committed
+ * time and swaps. The time promised to the passenger stays the same.
  */
 async function tickLateness() {
   for (const { rider, hubId, session, lateness, committedAt } of evaluateLatenessRisk(Date.now())) {
@@ -243,14 +243,14 @@ async function tickLateness() {
 }
 
 /**
- * NHỊP — CANH CHUYẾN THEO GIỜ KHỞI HÀNH (T-40 / T-30 / T-20)
+ * TICK — DEPARTURE WATCH BY DEPARTURE TIME (T-40 / T-30 / T-20)
  *
- * Bốn chốt đêm là giờ treo cứng, chỉ phủ được chuyến sáng sớm. Nhịp này bám mốc
- * tương đối so với giờ chạy thật nên mọi khung giờ đều được canh như nhau.
+ * The four night checkpoints are hard-coded times and only cover early-morning trips. This tick
+ * follows relative marks against the real departure time so every time slot is watched equally.
  *
- * Điểm quyết định là T-20: nếu chủ xe vẫn im lặng, khách được đẩy thẳng Chế độ
- * Cứu hộ kèm hotline xe khách QL13 — lúc đó họ vẫn còn 20 phút để gọi xe Thành
- * Công và ra kịp mặt đường, thay vì ra trạm đứng đợi rồi mới biết mình bị bỏ rơi.
+ * The decisive point is T-20: if the driver is still silent, the passenger is pushed straight into
+ * Rescue Mode along with the QL13 coach hotline — they still have 20 minutes to call a Thành
+ * Công coach and reach the roadside in time, instead of going to the station to wait and only then finding out they were abandoned.
  */
 async function tickDeparture() {
   await expireUnansweredInquiries();
@@ -297,7 +297,7 @@ async function tickDeparture() {
       if (!result.success || result.alreadyActive) continue;
       stats.actions.rescueActivations += 1;
 
-      // Khách: nói thẳng sự thật kèm phương án cụ thể, không hứa hão
+      // Passenger: state the truth plainly with a concrete option, no empty promises
       const busLine = (item.lifebuoys || [])
         .slice(0, 2)
         .map((b) => `${b.operator} (${b.hotline})`)
@@ -319,7 +319,7 @@ async function tickDeparture() {
         dedupeKey: `RESCUE:${booking.escrowId}`
       });
 
-      // Chủ xe: cảnh báo cuối, chuyến VẪN CÒN nếu kịp xuất hiện
+      // Driver: final warning, the trip STILL STANDS if they show up in time
       await sendNotification({
         phone: driverPhone,
         kind: NOTIFICATION_KINDS.TRIP_AT_RISK,
@@ -338,10 +338,10 @@ async function tickDeparture() {
 }
 
 /**
- * NHỊP 4 — PHIÊN GOM KHỚP LỆNH VI MÔ (WATTER MICRO-BATCHING)
+ * TICK 4 — MICRO-BATCH ORDER-MATCHING SESSION (WATTER MICRO-BATCHING)
  *
- * Gom 3 phút rồi giải một lần cho tỷ lệ ghép cao hơn hẳn so với ghép tham lam
- * từng người một (Didi Chuxing 2018). Trước đây chỉ chạy khi có người POST thủ công.
+ * Batching for 3 minutes and solving once gives a much higher match rate than greedy
+ * one-by-one matching (Didi Chuxing 2018). Previously this only ran when someone POSTed manually.
  */
 async function tickMicroBatch() {
   const result = await runBatchMatchingEpoch({ epochType: 'micro_batch' });
@@ -354,10 +354,10 @@ async function tickMicroBatch() {
 }
 
 /**
- * NHỊP 5 — QUÉT RADAR 4 CHỐT ĐÊM
+ * TICK 5 — RADAR SWEEP AT THE 4 NIGHT CHECKPOINTS
  *
- * Chốt T-8h (21:15), T-6h (23:15), T-1.5h (03:45), T-45m (04:30). Đây chính là
- * những khoảnh khắc mà trước đây hoàn toàn không có gì chạy vì khách đang ngủ.
+ * Checkpoints T-8h (21:15), T-6h (23:15), T-1.5h (03:45), T-45m (04:30). These are exactly
+ * the moments when nothing used to run because passengers were asleep.
  */
 async function tickRadarSweep() {
   const bookings = getBookings().filter((b) =>
@@ -368,7 +368,7 @@ async function tickRadarSweep() {
 
   const now = new Date();
   const checkpoint = resolveCheckpointForClock(now);
-  if (!checkpoint) return; // ngoài các khung chốt, không làm phiền ai
+  if (!checkpoint) return; // outside the checkpoint windows, do not bother anyone
 
   const sessions = getActiveCockpitSessions();
 
@@ -419,13 +419,13 @@ async function tickRadarSweep() {
 }
 
 /**
- * Xác định đang ở trong khung chốt nào. Mỗi chốt có dung sai ±4 phút để nhịp
- * quét 5 phút không bao giờ bỏ lỡ, nhưng dedupeKey đảm bảo chỉ bắn đúng một lần.
+ * Determines which checkpoint window we are in. Each checkpoint has a ±4 minute tolerance so the
+ * 5-minute sweep tick never misses one, but dedupeKey ensures it only fires exactly once.
  */
 function resolveCheckpointForClock(date) {
-  // Bốn chốt đêm là giờ Việt Nam. Máy chủ chạy trên Fly.io theo UTC, dùng giờ
-  // cục bộ sẽ đẩy cả bốn mốc lệch 7 tiếng sang nửa kia của ngày — quét lúc khách
-  // đang đi làm và im lặng đúng lúc họ đang ngủ.
+  // The four night checkpoints are in Vietnam time. The server runs on Fly.io in UTC; using local
+  // time would shift all four marks 7 hours to the other half of the day — sweeping while passengers
+  // are at work and staying silent exactly when they are asleep.
   const vnNow = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
   const minutes = vnNow.getHours() * 60 + vnNow.getMinutes();
   const marks = [
@@ -439,12 +439,11 @@ function resolveCheckpointForClock(date) {
 }
 
 /**
- * NHỊP 7 — ĐÓNG SỔ CHUYẾN ĐÃ CHẠY XONG.
+ * TICK 7 — CLOSING OUT TRIPS THAT HAVE FINISHED.
  *
- * Đây là tác nhân duy nhất đưa một chuyến ra khỏi trạng thái đang mở. Trước khi
- * có nhịp này, mọi vòng quét đều dừng ở mốc T+2 phút (departureWatchdog.js) nên
- * chuyến ở lại `active` vĩnh viễn trong CSDL: xe cứu hộ có thể được điều từ một
- * chuyến của tháng trước, và chuyến định kỳ thì hiện mãi trên sàn.
+ * This is the only actor that moves a trip out of the open state. Before this tick existed, every
+ * sweep stopped at the T+2 minute mark (departureWatchdog.js), so trips stayed `active` forever in
+ * the DB: a rescue vehicle could be dispatched from a trip from last month, and recurring trips kept showing on the marketplace.
  */
 async function tickTripLifecycle() {
   const { completed, expired, rolled } = sweepFinishedTrips();
@@ -460,17 +459,17 @@ async function tickTripLifecycle() {
   );
 }
 
-/** NHỊP 8 — DỌN DẸP: nhật ký thông báo cũ hơn 30 ngày. */
+/** TICK 8 — HOUSEKEEPING: notification logs older than 30 days. */
 async function tickHousekeeping() {
   const removed = pruneOldNotifications(30);
   if (removed > 0) console.log(`[Scheduler:housekeeping] Đã dọn ${removed} thông báo cũ.`);
 }
 
 /**
- * KHỞI ĐỘNG SCHEDULER.
+ * STARTING THE SCHEDULER.
  *
- * `unref()` trên mọi timer là bắt buộc: nếu không, tiến trình Node sẽ không bao
- * giờ tự thoát và các bài kiểm thử sẽ treo vô hạn sau khi chạy xong.
+ * `unref()` on every timer is mandatory: otherwise the Node process would never exit on its
+ * own and tests would hang forever after finishing.
  */
 export function startScheduler({ enabled = true } = {}) {
   if (started) return { started: true, alreadyRunning: true };
@@ -509,7 +508,7 @@ export function startScheduler({ enabled = true } = {}) {
   return { started: true, jobs: jobs.map(([n]) => n) };
 }
 
-/** Dừng scheduler (dùng khi tắt máy chủ và trong kiểm thử). */
+/** Stops the scheduler (used when shutting down the server and in tests). */
 export function stopScheduler() {
   for (const t of timers) clearInterval(t);
   timers.length = 0;
@@ -518,7 +517,7 @@ export function stopScheduler() {
   return { stopped: true };
 }
 
-/** Trạng thái vận hành cho Cổng Quản Trị. */
+/** Operational status for the Admin Portal. */
 export function getSchedulerStatus() {
   return {
     started,
@@ -533,8 +532,8 @@ export function getSchedulerStatus() {
 }
 
 /**
- * Chạy tay một nhịp bất kỳ — phục vụ kiểm thử và nút "chạy ngay" ở Cổng Quản Trị.
- * Không phụ thuộc scheduler có đang chạy hay không.
+ * Manually runs any tick — serves testing and the "run now" button in the Admin Portal.
+ * Does not depend on whether the scheduler is running.
  */
 export async function runTickNow(name) {
   const map = {
@@ -549,8 +548,8 @@ export async function runTickNow(name) {
   const fn = map[name];
   if (!fn) return { success: false, error: `Không có nhịp quét tên '${name}'` };
 
-  // Nhịp đang chạy dở: guard sẽ bỏ qua lượt này. Báo rõ ra ngoài, nếu không người
-  // gọi nhận số liệu của lần chạy trước và tưởng nhịp vừa chạy xong.
+  // A tick is already running: guard will skip this round. Report it explicitly, otherwise the
+  // caller receives the previous run's metrics and thinks the tick has just finished.
   if (running.has(name)) {
     return { success: false, name, skipped: true, error: 'Nhịp quét này đang chạy, hãy thử lại sau' };
   }

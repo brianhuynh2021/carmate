@@ -1,7 +1,7 @@
 #!/bin/sh
 # CarMate pre-push guard
-# Chặn push trực tiếp lên main từ local.
-# Chỉ cho phép qua quy trình release chính thức (ALLOW_MAIN_RELEASE=1).
+# Blocks direct pushes to main from local.
+# Only allowed through the official release process (ALLOW_MAIN_RELEASE=1).
 
 REMOTE_REF_PREFIX="refs/heads/"
 PROTECTED="main"
@@ -11,7 +11,7 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
   branch="${remote_ref#$REMOTE_REF_PREFIX}"
   [ "$branch" = "$PROTECTED" ] || continue
 
-  # 1. Chặn cứng push trực tiếp trừ khi có biến môi trường cho phép
+  # 1. Hard-block direct pushes unless the allowing environment variable is set
   if [ "$ALLOW_MAIN_RELEASE" != "1" ]; then
     echo ""
     echo "================================================================="
@@ -48,7 +48,7 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
     node apps/api/src/index.js > "$LOG" 2>&1 &
   SERVER_PID=$!
 
-  # Chờ server sẵn sàng (tối đa 30s)
+  # Wait for the server to be ready (up to 30s)
   ready=0
   i=1
   while [ $i -le 30 ]; do

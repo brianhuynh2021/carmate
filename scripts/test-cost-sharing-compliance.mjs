@@ -3,10 +3,10 @@
  * CARMATE STATUTORY COST-SHARING COMPLIANCE TEST SUITE
  * ============================================================================
  * 
- * Tests the "3 Không" and "3 Có" statutory civil positioning:
+ * Tests the "3 Không" ("3 Nos") and "3 Có" ("3 Yeses") statutory civil positioning:
  * 1. Self-Responsible Civil Commute: Platform does not technically block/cap trips (driver self-responsible)
  * 2. Unblocked Multi-Trip Flow: Trips 1, 2, 3 create smoothly without 400 rejection
- * 3. Fuel & BOT Cost Guardrail Invariant: P <= Xăng + BOT (Phi thương mại, tự do dân sự)
+ * 3. Fuel & BOT Cost Guardrail Invariant: P <= Fuel + BOT (non-commercial, civil freedom)
  * 4. Station Queue & Telemetry: Unblocked radar access for valid drivers
  * 5. Commercial Terminology Purge: No "tài xế", "bác tài" in customer-facing core
  */
@@ -61,22 +61,22 @@ async function main() {
   console.log('🧪 INITIALIZING DATABASE & RUNNING COST-SHARING COMPLIANCE TESTS...\n');
   await initDB();
 
-  // --- 1. UNBLOCKED CIVIL COMMUTE (CHỦ XE TỰ CHỦ & TỰ CHỊU TRÁCH NHIỆM) ---
+  // --- 1. UNBLOCKED CIVIL COMMUTE (THE DRIVER IS SELF-DIRECTED & SELF-RESPONSIBLE) ---
   console.log('── 1. Civil Commute Flow (No Hard Block, Driver Self-Responsible) ──');
 
   const testPhone = '0988776655';
   const testDate = '2026-09-12';
 
-  // Dọn dẹp trước nếu có
+  // Clean up first if needed
   const existing = getTrips().filter(t => t.phoneReal === testPhone);
   for (const t of existing) {
     await deleteTrip(t.id);
   }
 
-  // getDailyDriverTripCount đếm theo createdAt của NGÀY HÔM NAY, nên mọi chuyến
-  // seed vừa nạp cũng lọt vào bộ đếm. Vì thế không thể giả định DB trống — đo
-  // theo MỨC NỀN rồi kiểm tra số tăng thêm, để bộ test chạy độc lập với dữ liệu
-  // có sẵn (trước đây assert count === 0 và hỏng ngay khi DB có chuyến khác).
+  // getDailyDriverTripCount counts by createdAt of TODAY, so any seed trips that were just
+  // loaded also fall into the counter. So we cannot assume the DB is empty — measure
+  // against a BASELINE and then check the increment, so the suite runs independently of existing
+  // data (previously it asserted count === 0 and broke as soon as the DB had other trips).
   const baselineCount = getDailyDriverTripCount(testPhone, testDate);
 
   it('Chủ xe chưa có chuyến nào: count = mức nền, isDriverDailyTripCapped = false', () => {
@@ -125,7 +125,7 @@ async function main() {
     const count = getDailyDriverTripCount(testPhone, testDate);
     const capped = isDriverDailyTripCapped(testPhone, testDate);
     assert.equal(count, baselineCount + 2);
-    assert.equal(capped, false); // Không khóa cứng kỹ thuật
+    assert.equal(capped, false); // No technical hard lock
   });
 
   await runAsyncTest('Tạo chuyến thứ 3 (chuyến phát sinh): thành công 100%, không chặn 400', async () => {
@@ -146,7 +146,7 @@ async function main() {
     const count = getDailyDriverTripCount(testPhone, testDate);
     const capped = isDriverDailyTripCapped(testPhone, testDate);
     assert.equal(count, baselineCount + 3);
-    assert.equal(capped, false); // Chủ xe tự chủ, nền tảng không chặn
+    assert.equal(capped, false); // The driver is self-directed, the platform does not block
   });
 
   // --- 2. STATION QUEUE & COCKPIT TELEMETRY ACCESS ---
@@ -177,7 +177,7 @@ async function main() {
     assert.equal(pingRes.session?.status, 'ACTIVE_SCANNING');
   });
 
-  // --- 3. COST GUARDRAIL INVARIANT: P <= XĂNG + BOT ---
+  // --- 3. COST GUARDRAIL INVARIANT: P <= FUEL + BOT ---
   console.log('\n── 3. Fuel & BOT Civil Cost Guardrail Invariant ──');
 
   it('Mức giá tính toán tuân thủ định mức chi phí xăng + trạm BOT thực tế', () => {
@@ -188,7 +188,7 @@ async function main() {
     assert.ok(guardrail.suggestedPrice >= guardrail.minSafePrice);
     assert.ok(guardrail.suggestedPrice <= guardrail.maxSafePrice);
 
-    // Mức chi phí chia sẻ cho 1 người đi cùng trên chặng Tân Khai - Hàng Xanh dao động 90k - 200k (không bị thổi giá taxi)
+    // The shared cost for 1 co-rider on the Tân Khai - Hàng Xanh leg ranges from 90k to 200k (no taxi-style price inflation)
     assert.ok(guardrail.suggestedPrice >= 90000 && guardrail.suggestedPrice <= 200000);
   });
 

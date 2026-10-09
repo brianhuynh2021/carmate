@@ -71,7 +71,7 @@ export default function EscrowBookingModal({
   const [bookingCode] = useState(() => `CX-${Math.floor(1000 + Math.random() * 9000)}`);
   const [showLegalShield, setShowLegalShield] = useState(false);
 
-  // BẤT BIẾN MIT: Kiểm tra quyền sở hữu bài đăng để ngăn chặn 100% việc tự ghép chuyến cho chính mình
+  // MIT INVARIANT: Check post ownership to block 100% of cases where a user matches a trip with themselves
   const isTripOwner = useMemo(() => {
     if (isOwner) return true;
     if (!item) return false;
@@ -97,7 +97,7 @@ export default function EscrowBookingModal({
     return false;
   }, [isOwner, item, currentUser]);
 
-  // Kiểm tra xe có nhận gửi hàng / xe bán tải / xe tải tiện chuyến / chuyến gửi đồ không
+  // Check whether the vehicle accepts cargo / is a pickup truck / a passing truck / a cargo trip
   const acceptsCargo = Boolean(
     item?.acceptsParcel ||
     item?.vehicleType === 'truck_light' ||
@@ -113,7 +113,7 @@ export default function EscrowBookingModal({
   const cargoPreset = CARGO_TYPES[selectedCargoPreset];
   const [cargoDescription, setCargoDescription] = useState('');
 
-  // Giá phụ xăng gửi hàng theo cự ly
+  // Cargo fuel surcharge by distance
   const recommendedCargoPrice = useMemo(() => {
     return getRecommendedCargoPrice(selectedCargoPreset, item?.distanceKm || 120);
   }, [selectedCargoPreset, item?.distanceKm]);
@@ -166,7 +166,7 @@ export default function EscrowBookingModal({
     let effectivePhone = currentUser?.phone;
     let effectiveName = currentUser?.name;
 
-    // UNIFIED AUTH: Kiểm tra SĐT nếu khách chưa đăng nhập tài khoản từ trước
+    // UNIFIED AUTH: Validate the phone number if the passenger was not already logged in to an account
     if (!currentUser) {
       const cleaned = cleanPhoneNumber(guestPhone);
       if (!isValidVietnamesePhone(cleaned)) {
@@ -247,7 +247,7 @@ export default function EscrowBookingModal({
         throw new Error(res?.error || 'Không thể chốt chuyến đi');
       }
 
-      // Lưu phiên đăng nhập tự động cho khách (Unified Auth)
+      // Save an automatic login session for the passenger (Unified Auth)
       if (res?.token && res?.user) {
         try {
           setStoredAuthToken(res.token);
@@ -270,7 +270,7 @@ export default function EscrowBookingModal({
         duration: 6000
       });
 
-      // Hiển thị ngay thẻ thông tin để khách theo dõi mã giữ chỗ #CX-xxxx
+      // Show the info card immediately so the passenger can track reservation code #CX-xxxx
       setIsSubmitted(true);
     } catch (apiErr) {
       const errMsg = apiErr?.data?.error || apiErr?.message || 'Không thể chốt chuyến đi';
@@ -282,7 +282,7 @@ export default function EscrowBookingModal({
   };
 
   // -------------------------------------------------------------
-  // TRẠNG THÁI 2: ĐÃ XÁC NHẬN KẾT NỐI (THẺ THÔNG TIN ĐÓN XE & CHAT TRỰC TIẾP)
+  // STATE 2: CONNECTION CONFIRMED (PICKUP INFO CARD & LIVE CHAT)
   // -------------------------------------------------------------
   if (isSubmitted) {
     const partnerAlias = toPublicAlias(item);
@@ -292,25 +292,25 @@ export default function EscrowBookingModal({
     const plateDisplay = item.plateMask || item.licensePlate || '93A-385XX';
     const rawDate = item.targetItem?.date || item.date || item.tripDate || item.createdAt;
 
-    // Khung giờ & thời điểm
+    // Time window & timing
     const isToday = !rawDate || /hôm\s*nay/i.test(String(rawDate));
     const isTomorrow = /ngày\s*mai|mai/i.test(String(rawDate));
     const dateText = isToday ? 'hôm nay' : isTomorrow ? 'sáng mai' : formatCleanDateLabel(rawDate);
     const timeDisplay = `${item.timeSlotLabel || item.timeSlot || '05:00 – 06:00'} ${dateText}`;
 
-    // Chi tiết xe
+    // Vehicle details
     const vehicleDetails = isDriverItem
       ? `${carDisplay}${colorStr ? ` ${colorStr.toLowerCase()}` : ''} (${partnerAlias}) - Biển số ${plateDisplay}`
       : `Chuyến đón khách (${partnerAlias}) · ${seats} người đi cùng`;
 
-    // Hành lý
+    // Luggage
     const luggageDisplay = passengerNote
       ? passengerNote
       : bookingMode === 'cargo'
       ? `Gói gửi đồ: ${cargoPreset?.name || 'Hàng tiện chuyến'}`
       : '1 Ba lô gọn nhẹ';
 
-    // Lộ trình
+    // Route
     const routeFrom = pickupPoint || item.from;
     const routeTo = item.to;
 
@@ -339,11 +339,11 @@ export default function EscrowBookingModal({
         }
       >
         <div className="space-y-4">
-          {/* 📋 1. THẺ CHI TIẾT CHUYẾN ĐI (Thẻ thông tin hành trình) */}
+          {/* 📋 1. TRIP DETAILS CARD (Trip itinerary info card) */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-white via-slate-50/90 to-slate-100/90 dark:from-slate-850 dark:via-slate-900 dark:to-slate-950 border border-black/[0.08] dark:border-white/[0.1] shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-            {/* Header của thẻ thông tin */}
+            {/* Header of the info card */}
             <div className="p-4 sm:p-5 border-b border-dashed border-black/10 dark:border-white/10 relative">
-              {/* Rãnh khuyết thẻ thông tin (Card notches) phong cách Apple Wallet */}
+              {/* Info card notch cutouts (Card notches) in Apple Wallet style */}
               <span className="absolute -bottom-3 -left-3 w-6 h-6 rounded-full bg-[#f2f2f7] dark:bg-[#1c1c1e] border-r border-black/[0.08] dark:border-white/[0.1]" />
               <span className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-[#f2f2f7] dark:bg-[#1c1c1e] border-l border-black/[0.08] dark:border-white/[0.1]" />
 
@@ -369,9 +369,9 @@ export default function EscrowBookingModal({
               </div>
             </div>
 
-            {/* Nội dung chi tiết các dòng thông tin (Bullet items) */}
+            {/* Detailed content of the info rows (Bullet items) */}
             <div className="p-4 sm:p-5 space-y-3.5 text-xs sm:text-[13px] leading-relaxed">
-              {/* • Lộ trình */}
+              {/* • Route */}
               <div className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
                   •
@@ -384,7 +384,7 @@ export default function EscrowBookingModal({
                 </div>
               </div>
 
-              {/* • Khung giờ */}
+              {/* • Time window */}
               <div className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
                   •
@@ -397,7 +397,7 @@ export default function EscrowBookingModal({
                 </div>
               </div>
 
-              {/* • Xe */}
+              {/* • Vehicle */}
               <div className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
                   •
@@ -410,7 +410,7 @@ export default function EscrowBookingModal({
                 </div>
               </div>
 
-              {/* • Chi phí */}
+              {/* • Cost */}
               <div className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
                   •
@@ -426,7 +426,7 @@ export default function EscrowBookingModal({
                 </div>
               </div>
 
-              {/* • Hành lý */}
+              {/* • Luggage */}
               <div className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm">
                   •
@@ -440,7 +440,7 @@ export default function EscrowBookingModal({
               </div>
             </div>
 
-            {/* 🛡️ NÚT THẺ PHÁP LÝ HÀNH TRÌNH DÂN SỰ (1-CHẠM TRÌNH CSGT) */}
+            {/* 🛡️ CIVIL TRIP LEGAL CARD BUTTON (1-TAP PRESENT TO TRAFFIC POLICE / CSGT) */}
             <div className="px-4 sm:px-5 pb-4 pt-1">
               <button
                 type="button"
@@ -453,7 +453,7 @@ export default function EscrowBookingModal({
             </div>
           </div>
 
-          {/* 💬 2. LIÊN HỆ TRỰC TIẾP TRONG APP (0Đ CƯỚC · BẢO MẬT SĐT) */}
+          {/* 💬 2. DIRECT IN-APP CONTACT (0 VND CHARGES · PHONE NUMBER PRIVACY) */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-1.5 px-1">
               <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -465,7 +465,7 @@ export default function EscrowBookingModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Nút 1: Nhắn tin trong App */}
+              {/* Button 1: In-app messaging */}
               <button
                 type="button"
                 onClick={() => {
@@ -478,7 +478,7 @@ export default function EscrowBookingModal({
                 <span>Nhắn tin với {partnerRoleTitle}</span>
               </button>
 
-              {/* Nút 2: Gọi thoại qua App */}
+              {/* Button 2: In-app voice call */}
               <button
                 type="button"
                 onClick={() => {
@@ -493,7 +493,7 @@ export default function EscrowBookingModal({
             </div>
           </div>
 
-          {/* 🔒 BẢO MẬT & NGUYÊN TẮC DỨT KHOÁT */}
+          {/* 🔒 SECURITY & STRICT PRINCIPLES */}
           <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 space-y-1.5 text-xs text-amber-950 dark:text-amber-200">
             <div className="flex items-start gap-2">
               <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -526,7 +526,7 @@ export default function EscrowBookingModal({
   }
 
   // -------------------------------------------------------------
-  // TRẠNG THÁI 1: FORM GỬI LỜI NHẮN HỎI GHÉP CHUYẾN
+  // STATE 1: FORM FOR SENDING A TRIP-MATCH INQUIRY MESSAGE
   // -------------------------------------------------------------
   const footer = isTripOwner ? (
     <div className="space-y-2 w-full">
@@ -590,7 +590,7 @@ export default function EscrowBookingModal({
       footer={footer}
     >
       <div className="space-y-4">
-        {/* Cảnh báo nếu mở nhầm chuyến của chính mình */}
+        {/* Warning if the user opened their own trip by mistake */}
         {isTripOwner && (
           <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-600 shrink-0" />
@@ -598,7 +598,7 @@ export default function EscrowBookingModal({
           </div>
         )}
 
-        {/* Tóm tắt chuyến đi */}
+        {/* Trip summary */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div>
@@ -623,7 +623,7 @@ export default function EscrowBookingModal({
           <RouteTimeline from={item.from} to={item.to} compact />
         </div>
 
-        {/* Nhập SĐT để giữ chỗ (Zero Registration / Unified Auth cho khách vãng lai) */}
+        {/* Enter phone number to reserve (Zero Registration / Unified Auth for guest passengers) */}
         {!currentUser && !isTripOwner && (
           <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-200/80 dark:border-blue-900/40 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
@@ -671,7 +671,7 @@ export default function EscrowBookingModal({
           </div>
         )}
 
-        {/* Lựa chọn Ghép Ghế vs Gửi Đồ (Nếu xe nhận chở đồ hoặc xe bán tải) */}
+        {/* Choose Seat Matching vs Cargo Delivery (if the vehicle accepts cargo or is a pickup truck) */}
         {acceptsCargo && isDriverItem && !item.isCargoOnly && !isTripOwner && (
           <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/5">
             <button
@@ -701,7 +701,7 @@ export default function EscrowBookingModal({
           </div>
         )}
 
-        {/* Chọn số lượng người cùng đi hoặc Chọn gói thể tích gửi đồ */}
+        {/* Choose the number of people traveling together or choose the cargo volume package */}
         {bookingMode === 'cargo' ? (
           <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 space-y-2.5">
             <div className="flex items-center justify-between">
@@ -747,7 +747,7 @@ export default function EscrowBookingModal({
               })}
             </div>
 
-            {/* Mô tả chi tiết đồ gửi */}
+            {/* Detailed description of the cargo */}
             <div className="pt-1 space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
@@ -764,7 +764,7 @@ export default function EscrowBookingModal({
                 )}
               </div>
 
-              {/* Quick chips 1-chạm */}
+              {/* 1-tap quick chips */}
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                 {[
                   '🛵 Xe máy chằng buộc',
@@ -828,7 +828,7 @@ export default function EscrowBookingModal({
           )
         )}
 
-        {/* Điểm đón tiện đường: Thống nhất trực tiếp qua Chat */}
+        {/* On-the-way pickup point: agree directly via Chat */}
         <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-800/40 flex items-start gap-2.5">
           <MessageSquare className="w-4 h-4 text-[#0071e3] shrink-0 mt-0.5" />
           <div className="text-xs text-blue-950 dark:text-blue-200 leading-relaxed">
@@ -839,7 +839,7 @@ export default function EscrowBookingModal({
           </div>
         </div>
 
-        {/* Ghi chú thêm cho Chủ xe (Hành lý / Yêu cầu riêng) */}
+        {/* Additional notes for the driver (Luggage / Special requests) */}
         <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
@@ -857,7 +857,7 @@ export default function EscrowBookingModal({
             )}
           </div>
 
-          {/* Quick Note Chips (1-chạm) */}
+          {/* Quick Note Chips (1-tap) */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             {[
               '🧳 1 Vali nhỏ size 20',
@@ -907,7 +907,7 @@ export default function EscrowBookingModal({
           />
         </div>
 
-        {/* Đề xuất mức chia sẻ chi phí (Thương lượng văn minh có dải giá an toàn) */}
+        {/* Proposed cost-sharing level (Civil negotiation within a safe price band) */}
         {isDriverItem && bookingMode === 'passenger' && (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
             <div className="flex items-center justify-between">
@@ -979,7 +979,7 @@ export default function EscrowBookingModal({
           </div>
         )}
 
-        {/* Chi phí chia sẻ minh bạch - 0% phí sàn, KHÔNG THU CỌC */}
+        {/* Transparent cost sharing - 0% platform fee, NO DEPOSIT COLLECTED */}
         {bookingMode === 'cargo' ? (
           <div className="p-3.5 rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/60 to-white dark:from-amber-950/20 dark:to-slate-900 flex items-center justify-between shadow-2xs">
             <div>

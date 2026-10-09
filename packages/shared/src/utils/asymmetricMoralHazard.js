@@ -1,22 +1,22 @@
 /**
  * asymmetricMoralHazard.js
  *
- * MÔ HÌNH TOÁN HỌC & THIẾT KẾ CƠ CHẾ (MECHANISM DESIGN & SYSTEM RELIABILITY)
- * Giải quyết triệt để "Nguy cơ đạo đức bất đối xứng" (Asymmetric Moral Hazard)
- * khi nền tảng không thu tiền cọc và không dùng tiền phạt tức thì.
+ * MATHEMATICAL MODELS & MECHANISM DESIGN (MECHANISM DESIGN & SYSTEM RELIABILITY)
+ * Thoroughly addresses the "Asymmetric Moral Hazard"
+ * when the platform neither collects deposits nor uses instant penalties.
  *
- * Áp dụng 3 công cụ toán học:
- * 1. Folk Theorem & Grim Trigger (Đòn bẩy thặng dư tương lai)
- * 2. k-out-of-n Reliability Model (Độ tin cậy dự phòng theo hàm mũ)
- * 3. Optimal Stopping Time T* (Thời điểm dừng tối ưu & Dead Man's Switch Heartbeat)
+ * Applies 3 mathematical tools:
+ * 1. Folk Theorem & Grim Trigger (leverage of future surplus)
+ * 2. k-out-of-n Reliability Model (exponential redundancy reliability)
+ * 3. Optimal Stopping Time T* (optimal stopping time & Dead Man's Switch Heartbeat)
  */
 
 /**
- * 2. K-OUT-OF-N RELIABILITY MODEL (ĐỘ TIN CẬY DỰ PHÒNG THEO HÀM MŨ)
+ * 2. K-OUT-OF-N RELIABILITY MODEL (EXPONENTIAL REDUNDANCY RELIABILITY)
  *
- * Tính xác suất rủi ro toàn hệ thống đứt gãy khi gom thành Chùm xe song song:
+ * Computes the probability that the whole system fails when vehicles are grouped into a parallel cluster:
  * P_system_fail = p^m
- * Với p là xác suất bùng đơn lẻ (vd: 10% = 0.1), m là số xe cùng chùm hành lang.
+ * Where p is the probability that a single vehicle flakes out (e.g. 10% = 0.1), m is the number of vehicles in the same corridor cluster.
  */
 export function calculateSystemFailureProbability(individualFailureRate = 0.1, fleetSize = 3) {
   const p = Math.max(0.01, Math.min(0.5, Number(individualFailureRate) || 0.1));
@@ -29,13 +29,13 @@ export function calculateSystemFailureProbability(individualFailureRate = 0.1, f
     individualFailureRate: p,
     fleetSize: m,
     systemFailureProbability: pFail,
-    reliabilityPercentage: Math.round(reliability * 10000) / 100, // vd: 99.9%
-    riskReductionFactor: Math.round(p / pFail) // vd: giảm 100 lần rủi ro
+    reliabilityPercentage: Math.round(reliability * 10000) / 100, // e.g. 99.9%
+    riskReductionFactor: Math.round(p / pFail) // e.g. 100x lower risk
   };
 }
 
 /**
- * Tiện ích chuyển đổi giờ "HH:mm" sang số phút tính từ 00:00
+ * Utility to convert a "HH:mm" time into minutes since 00:00
  */
 export function parseTimeToMinutes(timeStr = '06:15') {
   if (!timeStr || typeof timeStr !== 'string') return 375;
@@ -44,7 +44,7 @@ export function parseTimeToMinutes(timeStr = '06:15') {
 }
 
 /**
- * Tiện ích chuyển đổi số phút sang chuỗi "HH:mm"
+ * Utility to convert a number of minutes into an "HH:mm" string
  */
 export function formatMinutesToTime(totalMinutes = 375) {
   const norm = ((totalMinutes % 1440) + 1440) % 1440;

@@ -3,7 +3,7 @@ import { getTripById, getBookings } from '../db/sqliteStore.js';
 import { cleanPhoneNumber } from '@carmate/shared';
 
 /**
- * Middleware bắt buộc đăng nhập (Require Authenticated Session)
+ * Middleware requiring login (Require Authenticated Session)
  */
 export function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -31,7 +31,7 @@ export function requireAuth(req, res, next) {
 }
 
 /**
- * Middleware tùy chọn xác thực (Gắn user nếu có token)
+ * Optional authentication middleware (attaches the user if there is a token)
  */
 export function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -48,8 +48,8 @@ export function optionalAuth(req, res, next) {
 }
 
 /**
- * Middleware siết chặt phân quyền sở hữu bài đăng (Anti-IDOR)
- * Ngăn chặn tuyệt đối việc người dùng A sửa/xóa bài đăng của người dùng B.
+ * Middleware tightening post-ownership authorization (Anti-IDOR)
+ * Absolutely prevents user A from editing/deleting user B's post.
  */
 export function requireTripOwnership(req, res, next) {
   const tripId = req.params.id;
@@ -62,20 +62,20 @@ export function requireTripOwnership(req, res, next) {
     return res.status(404).json({ success: false, error: 'Không tìm thấy bài đăng chuyến đi' });
   }
 
-  // Quản trị viên hệ thống có toàn quyền
+  // The system admin has full permissions
   if (req.user && req.user.role === 'admin') {
     req.targetTrip = trip;
     return next();
   }
 
-  // Nếu người dùng không phải chủ sở hữu bài đăng
+  // If the user is not the post's owner
   const isOwnerById = Boolean(req.user && trip.userId && req.user.userId === trip.userId);
 
-  // Bài đăng cũ lưu userId dạng `USR-<sđt>`, trong khi phiên đăng nhập Google/Telegram
-  // cấp id `USR-GG-*` / `USR-TG-*`, khiến chính chủ bị khóa khỏi bài của mình. Chỉ
-  // mở lại đúng trường hợp đó: userId của bài ĐÚNG BẰNG `USR-<sđt của phiên>`.
-  // Không đối chiếu theo phoneReal/phone hiển thị — số tổng đài nhà xe là số công
-  // khai, ai đăng ký bằng số đó cũng sẽ sửa được chuyến của nhà xe.
+  // Old posts store userId in the form `USR-<phone>`, whereas Google/Telegram login sessions
+  // issue ids `USR-GG-*` / `USR-TG-*`, which locks the owner out of their own post. Only
+  // that exact case is reopened: the post's userId EQUALS `USR-<phone of the session>`.
+  // Do not match against the displayed phoneReal/phone — an operator's switchboard number is a public
+  // number, so anyone who registered with that number could edit the operator's trips.
   const userPhone = cleanPhoneNumber(req.user?.phone || '');
   const isLegacyPhoneOwner = Boolean(
     userPhone && !trip.operatorId && trip.userId === `USR-${userPhone}`
@@ -93,8 +93,8 @@ export function requireTripOwnership(req, res, next) {
 }
 
 /**
- * Middleware siết chặt phân quyền trên Booking (Anti-IDOR trên Lịch hẹn / Đặt chỗ)
- * Ngăn chặn tuyệt đối việc người dùng A huỷ, báo trễ, hoặc review chuyến đi của người dùng B.
+ * Middleware tightening authorization on Bookings (Anti-IDOR on Appointments / Reservations)
+ * Absolutely prevents user A from cancelling, reporting a delay, or reviewing user B's trip.
  */
 export function requireBookingParty(req, res, next) {
   const bookingId = req.params.id;
@@ -102,7 +102,7 @@ export function requireBookingParty(req, res, next) {
     return res.status(400).json({ success: false, error: 'Thiếu mã đặt chuyến' });
   }
 
-  // 1. Từ chối ngay nếu chưa đăng nhập
+  // 1. Reject immediately if not logged in
   if (!req.user) {
     return res.status(401).json({
       success: false,
@@ -116,7 +116,7 @@ export function requireBookingParty(req, res, next) {
     return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi đã kết nối' });
   }
 
-  // 2. Quản trị viên hệ thống có toàn quyền
+  // 2. The system admin has full permissions
   if (req.user && (req.user.role === 'admin' || req.user.role === 'super_admin')) {
     req.targetBooking = booking;
     return next();

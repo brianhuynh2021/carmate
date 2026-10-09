@@ -46,27 +46,27 @@ const CORRIDOR_KEY = 'carmate_last_corridor';
 const WINDOW_KEY = 'carmate_last_departure_window';
 
 /**
- * ── FEATURE FLAG: BỘ LỌC KHUNG GIỜ (COLD START CRO) ───────────────────
- * Giai đoạn Cold Start (1-2 xe/ngày): Tắt bộ lọc giờ để tránh bẫy Click-to-Empty.
- * Khách thấy ngay toàn bộ chuyến sẵn có (hôm nay & ngày mai) mà không bị lọc rớt.
- * TUYỆT ĐỐI KHÔNG XÓA code chips: Bật lại (true) khi mỗi buổi (Sáng - Trưa - Chiều)
- * đều có ít nhất 1 chuyến ổn định.
+ * ── FEATURE FLAG: TIME-SLOT FILTER (COLD START CRO) ───────────────────
+ * Cold Start phase (1-2 vehicles/day): Turn off the time filter to avoid the Click-to-Empty trap.
+ * Passengers immediately see all available trips (today & tomorrow) without any being filtered out.
+ * ABSOLUTELY DO NOT DELETE the chips code: Turn it back on (true) once each period (Morning - Noon - Afternoon)
+ * has at least 1 stable trip.
  */
 export const ENABLE_DEPARTURE_CHIPS = true;
 
 /**
- * ── FEATURE FLAG: ACCORDION LỊCH CHẠY TOÀN TUYẾN (COLD START CRO) ──────
- * Giai đoạn Cold Start (1-2 xe/ngày): Ẩn thanh accordion "Xem lịch chạy toàn tuyến"
- * để:
- * 1. Tránh số lượng ảo ("6 chuyến có sẵn") gây nghi ngờ dữ liệu mẫu (mock data).
- * 2. Triệt tiêu 1 cú click thừa (Click Friction): Show thẳng chuyến xe thật ra giữa màn hình.
- * 3. Tránh việc chưa tìm kiếm mà đã ghi "trên chặng này".
- * TUYỆT ĐỐI KHÔNG XÓA code timeline/accordion: Bật lại (true) khi hệ thống đã có mạng lưới
- * xe chạy cố định nhiều chuyến/ngày trên toàn tuyến.
+ * ── FEATURE FLAG: FULL-ROUTE SCHEDULE ACCORDION (COLD START CRO) ──────
+ * Cold Start phase (1-2 vehicles/day): Hide the accordion bar "Xem lịch chạy toàn tuyến" (View full-route schedule)
+ * in order to:
+ * 1. Avoid inflated counts ("6 chuyến có sẵn" (6 trips available)) that raise suspicion of mock data.
+ * 2. Eliminate one redundant click (Click Friction): Show the real trip right in the middle of the screen.
+ * 3. Avoid saying "trên chặng này" (on this leg) before any search has been made.
+ * ABSOLUTELY DO NOT DELETE the timeline/accordion code: Turn it back on (true) once the system has a network of
+ * fixed-schedule vehicles with many trips/day along the whole route.
  */
 export const ENABLE_TIMELINE_ACCORDION = false;
 
-/** Đọc localStorage an toàn (chế độ riêng tư / bị chặn đều không được ném lỗi). */
+/** Safely read localStorage (private mode / blocked storage must never throw). */
 function readStore(key, fallback = null) {
   try {
     return localStorage.getItem(key) ?? fallback;
@@ -79,20 +79,20 @@ function writeStore(key, value) {
   try {
     localStorage.setItem(key, value);
   } catch {
-    /* bỏ qua: lưu tiện ích, không phải dữ liệu bắt buộc */
+    /* ignore: saving a convenience, not mandatory data */
   }
 }
 
 /**
- * MÀN HÌNH CHÍNH: MỘT Ô TÌM KIẾM DUY NHẤT
+ * MAIN SCREEN: A SINGLE SEARCH BOX
  *
- * Nguyên tắc:
- * - Elon: xoá trước, tối ưu sau. Không còn Hero quảng cáo, không 2 thẻ vai trò,
- *   không băng lên lịch riêng. Người dùng vào là thấy đúng một việc cần làm.
- * - MIT: không nhánh if theo tuyến cứng. Mọi thứ đọc từ CORRIDORS registry,
- *   thêm tuyến mới là thêm một object dữ liệu.
- * - Cursor: giá và tuyến tính ngầm tại máy (<1ms), không thông báo, không chờ.
- * - Apple: một cột, squircle, phân tầng rõ, chạm được bằng ngón cái trên mobile.
+ * Principles:
+ * - Elon: delete first, optimize later. No advertising Hero, no 2 role cards,
+ *   no separate scheduling strip. The user arrives and sees exactly one thing to do.
+ * - MIT: no hard-coded per-route if branches. Everything is read from the CORRIDORS registry,
+ *   adding a new route means adding one data object.
+ * - Cursor: price and route are computed silently on-device (<1ms), no notification, no waiting.
+ * - Apple: one column, squircle, clear layering, reachable with a thumb on mobile.
  */
 export default function CorridorSearchBoard({
   currentUser,
@@ -110,7 +110,7 @@ export default function CorridorSearchBoard({
   const { t } = useI18n();
   const corridors = useMemo(() => getActiveCorridors(), []);
 
-  // ── Hành lang đang xem ─────────────────────────────────────────────────
+  // ── Corridor being viewed ──────────────────────────────────────────────
   const [corridorId, setCorridorId] = useState(() => {
     const saved = readStore(CORRIDOR_KEY);
     return corridors.some((c) => c.id === saved) ? saved : getDefaultCorridor().id;
@@ -120,7 +120,7 @@ export default function CorridorSearchBoard({
     [corridors, corridorId]
   );
 
-  // ── Chiều đi: Đọc thông minh từ URL hoặc mặc định từ tỉnh lên thành phố ───
+  // ── Direction of travel: Smartly read from the URL, or default to province → city ───
   const [heading, setHeading] = useState(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search);
@@ -140,10 +140,10 @@ export default function CorridorSearchBoard({
         if (ep === 'b') return 'a_to_b';
       }
     }
-    return 'b_to_a'; // mặc định: từ tỉnh lên thành phố
+    return 'b_to_a'; // default: from the province up to the city
   });
 
-  // ── Điểm đi / điểm đến ─────────────────────────────────────────────────
+  // ── Origin / destination ───────────────────────────────────────────────
   const fromKey = heading === 'b_to_a' ? 'b' : 'a';
   const toKey = heading === 'b_to_a' ? 'a' : 'b';
   const fromHubs = useMemo(() => getEndpointHubs(corridor.id, fromKey, heading), [corridor.id, fromKey, heading]);
@@ -168,7 +168,7 @@ export default function CorridorSearchBoard({
     return hasChoRay ? hasChoRay.id : (toHubs[0]?.id || '');
   });
 
-  // Giữ lựa chọn luôn hợp lệ khi đổi tuyến hoặc đảo chiều
+  // Keep the selection valid when switching routes or reversing direction
   useEffect(() => {
     if (!fromHubs.some((h) => h.id === fromHubId)) {
       const hasTanKhai = fromHubs.find((h) => h.id === 'hub_ql13_tan_khai');
@@ -186,7 +186,7 @@ export default function CorridorSearchBoard({
   const toHub = useMemo(() => toHubs.find((h) => h.id === toHubId), [toHubs, toHubId]);
   const [isEditingRoute, setIsEditingRoute] = useState(false);
 
-  // ── Trí tuệ bản địa: tự chọn tuyến + chiều theo GPS, im lặng ──────────
+  // ── Local intelligence: auto-pick route + direction by GPS, silently ───
   const [isDetectingGPS, setIsDetectingGPS] = useState(false);
 
   const handleAutoDetectGPS = useCallback((e) => {
@@ -238,26 +238,26 @@ export default function CorridorSearchBoard({
     );
   }, [onShowToast]);
 
-  // ── Thời gian khởi hành: DỮ LIỆU CẤP 1 ────────────────────────────────
-  // Ngang hàng Nơi đi / Nơi đến, không phải một dòng phụ. Mặc định chọn sẵn
-  // khung gần nhất còn kịp đặt, để khách không phải nghĩ mà vẫn ra kết quả đúng.
-  // 3 chip tự sinh + ô thứ 4 luôn là "Chọn ngày khác" (lưới 2x2 vừa đúng 4 ô)
+  // ── Departure time: TIER-1 DATA ───────────────────────────────────────
+  // On par with Origin / Destination, not a secondary line. By default the
+  // nearest slot that can still be booked is preselected, so the passenger does not have to think and still gets the right result.
+  // 3 auto-generated chips + a 4th cell that is always "Chọn ngày khác" (Pick another date) (a 2x2 grid fits exactly 4 cells)
   const departureChips = useMemo(() => buildDepartureChips({ limit: 3 }), []);
 
-  // TRÍ TUỆ BẢN ĐỊA (<1ms, không gọi máy chủ): người đi tuyến này gần như luôn
-  // lặp lại một khung giờ — ai quen chuyến 4h sáng thì lần sau vẫn 4h sáng. Nhớ
-  // khung họ chọn lần trước và tự bật sẵn, để họ không phải chọn lại mỗi lần.
+  // LOCAL INTELLIGENCE (<1ms, no server call): people on this route almost always
+  // repeat one time slot — someone used to the 4 AM trip will still take 4 AM next time. Remember
+  // the slot they picked last time and preselect it, so they do not have to choose again each time.
   const [chipId, setChipId] = useState(() => {
-    // LUÔN chọn sẵn khung GẦN NHẤT (chip 1), không để thói quen nhảy cóc.
+    // ALWAYS preselect the NEAREST slot (chip 1), do not let habit jump ahead.
     //
-    // Trước đây ưu tiên khung khách hay đi, nhưng đo ra một kịch bản hỏng thật:
-    // lúc 14h49, khách từng chọn "Đêm nay" hôm trước thì chip active lại là
-    // "Đêm nay (22h-4h)" — trong khi "Chiều nay (14h49-18h)" đang nằm ngay đó.
-    // Khách bấm TÌM CHUYẾN XE liền sẽ ra kết quả lúc nửa đêm, phải bấm lại chip
-    // mới đúng ý. Mục tiêu một-chạm bị phá.
+    // Previously the slot the passenger usually takes was prioritized, but a real broken scenario was measured:
+    // at 14:49, a passenger who had picked "Đêm nay" (Tonight) the day before gets the active chip as
+    // "Đêm nay (22h-4h)" (Tonight (22:00-04:00)) — while "Chiều nay (14h49-18h)" (This afternoon (14:49-18:00)) is sitting right there.
+    // A passenger who immediately taps FIND A TRIP gets results for midnight and has to tap the
+    // right chip again. The one-tap goal is broken.
     //
-    // Thói quen chỉ được áp dụng khi nó TRÙNG chip 1 hoặc chip 2 — tức vẫn là
-    // khung sắp tới gần. Xa hơn thì rơi về chip 1.
+    // The habit is only applied when it MATCHES chip 1 or chip 2 — i.e. it is still
+    // an upcoming near slot. Anything further away falls back to chip 1.
     const remembered = readStore(WINDOW_KEY);
     const idx = remembered ? departureChips.findIndex((c) => c.windowId === remembered) : -1;
     const pick = idx >= 0 && idx <= 1 ? departureChips[idx] : departureChips[0];
@@ -275,9 +275,9 @@ export default function CorridorSearchBoard({
     [allChips, chipId]
   );
 
-  // Ngày tối thiểu = hôm nay; không cho chọn ngày đã qua
-  // toISOString() quy về UTC nên buổi tối giờ Việt Nam sẽ trả về NGÀY HÔM QUA,
-  // khiến ô chọn ngày cho phép đặt lùi về quá khứ. Phải lấy theo lịch địa phương.
+  // Minimum date = today; past dates cannot be selected
+  // toISOString() converts to UTC so a Vietnam-time evening will return YESTERDAY'S DATE,
+  // letting the date picker allow booking back into the past. Must use the local calendar.
   const todayIso = useMemo(() => toLocalIsoDate(new Date()), []);
   const [pickDate, setPickDate] = useState(todayIso);
   const [pickWindow, setPickWindow] = useState(
@@ -293,7 +293,7 @@ export default function CorridorSearchBoard({
     writeStore(WINDOW_KEY, chip.windowId);
   }, [pickDate, pickWindow]);
 
-  // Giữ ngày và khung giờ mà khách đã chọn khi gửi yêu cầu tìm chuyến.
+  // Keep the date and time slot the passenger picked when submitting the trip search request.
   const targetDepartureDate = useMemo(() => {
     if (selectedChip?.date) return selectedChip.date;
     return getChipDate(selectedChip, new Date());
@@ -303,9 +303,9 @@ export default function CorridorSearchBoard({
     return departureChipTimeRange(selectedChip);
   }, [selectedChip]);
 
-  // ── Tìm chuyến: MA TRẬN KHE THỜI GIAN ─────────────────────────────────
-  // Khách liên tỉnh cần thấy NGAY cả khung lân cận ±30 phút, không chỉ đúng
-  // giờ mình gõ. Màn hình trống là mất khách, nên backend luôn bù khe dự phòng.
+  // ── Trip search: TIME-SLOT MATRIX ─────────────────────────────────────
+  // Intercity passengers need to see neighboring slots of ±30 minutes IMMEDIATELY, not only exactly
+  // the time they typed. An empty screen loses the customer, so the backend always pads with fallback slots.
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [seatsNeeded, setSeatsNeeded] = useState(1);
@@ -345,14 +345,14 @@ export default function CorridorSearchBoard({
     }
   }, [fromHubId, toHubId, targetDepartureTimeSlot, corridor.dataKey, targetDepartureDate, seatsNeeded]);
 
-  // ── State xem chi tiết chuyến xe (Progressive Disclosure) ─────────────────
+  // ── State for viewing trip details (Progressive Disclosure) ───────────────
   const [selectedDetailTrip, setSelectedDetailTrip] = useState(null);
   const [selectedBookingTrip, setSelectedBookingTrip] = useState(null);
 
-  // Quản lý tải kết quả tìm kiếm:
-  // - Ở chế độ Cold Start (!ENABLE_DEPARTURE_CHIPS): Tự động tải chuyến sẵn có ngay khi mở trang
-  //   hoặc khi khách đổi trạm đón/trả, không bắt bấm thêm nút (Zero-Click discovery).
-  // - Khi bật chips (ENABLE_DEPARTURE_CHIPS): Xóa kết quả cũ khi đổi trạm/khung giờ để người dùng bấm tìm.
+  // Manage search result loading:
+  // - In Cold Start mode (!ENABLE_DEPARTURE_CHIPS): Automatically load available trips as soon as the page opens
+  //   or when the passenger changes pickup/drop-off station, no extra button press needed (Zero-Click discovery).
+  // - When chips are enabled (ENABLE_DEPARTURE_CHIPS): Clear old results when the station/time slot changes so the user taps search.
   useEffect(() => {
     if (!ENABLE_DEPARTURE_CHIPS) {
       if (fromHubId && toHubId) {
@@ -365,7 +365,7 @@ export default function CorridorSearchBoard({
     }
   }, [fromHubId, toHubId, chipId, corridorId, handleSearchNow]);
 
-  // Danh sách chuyến xe thật hoặc chuyến khớp theo hành lang (ORDER BY date ASC, time ASC)
+  // List of real trips or trips matched by corridor (ORDER BY date ASC, time ASC)
   const carmateDisplayTrips = useMemo(() => {
     const slots = matrix?.slots || [];
     const real = slots.filter((s) => s.tier !== 'SHADOW');
@@ -395,16 +395,16 @@ export default function CorridorSearchBoard({
         .sort((a, b) => getTripSortWeight(a) - getTripSortWeight(b))
         ;
     }
-    // Tuyệt đối KHÔNG hiển thị xe ảo khi chưa có chuyến thật
+    // ABSOLUTELY DO NOT show virtual vehicles when there are no real trips
     return [];
   }, [matrix]);
 
-  // ── MẬT ĐỘ CUNG QUYẾT ĐỊNH NÚT NÀY ĐỔI MẶT ────────────────────────────
-  // Tuyến ít xe: hiện ô gom nhu cầu (một trang "lịch chạy toàn tuyến" chỉ có
-  // 2-3 dòng thì phơi bày sự trống trải, phản tác dụng).
-  // Tuyến đủ xe: hiện lịch chạy toàn tuyến — đúng thứ khách liên tỉnh cần khi
-  // chọn một khung hẹp mà không thấy xe, thay vì bấm back đổi từng giờ để dò.
-  // Ngưỡng đọc từ chính dữ liệu nên khi tuyến đông lên, app TỰ chuyển.
+  // ── SUPPLY DENSITY DECIDES WHAT THIS BUTTON LOOKS LIKE ────────────────
+  // Route with few vehicles: show the demand-collection box (a "lịch chạy toàn tuyến" (full-route schedule) page with only
+  // 2-3 rows exposes the emptiness, which is counterproductive).
+  // Route with enough vehicles: show the full-route schedule — exactly what an intercity passenger needs when
+  // picking a narrow slot and seeing no vehicle, instead of pressing back to change hours one by one to probe.
+  // The threshold is read from the data itself so when the route gets busier, the app switches BY ITSELF.
   const [timeline, setTimeline] = useState(null);
   const [showTimeline, setShowTimeline] = useState(false);
 
@@ -417,7 +417,7 @@ export default function CorridorSearchBoard({
         if (alive && res?.success) setTimeline(res);
       })
       .catch(() => {
-        /* mất mạng: giữ mặc định ô gom nhu cầu, không chặn luồng tìm chuyến */
+        /* network lost: keep the default demand-collection box, do not block the trip search flow */
       });
     return () => {
       alive = false;
@@ -436,7 +436,7 @@ export default function CorridorSearchBoard({
 
   const hubLabel = (h) => h.shortName || h.name;
 
-  // Bảng định danh vĩ mô cấp tỉnh / huyện (Macro-level Landmarks - Airbnb / Google Maps style)
+  // Province / district-level macro identification table (Macro-level Landmarks - Airbnb / Google Maps style)
   const macroFromLabel = useMemo(() => {
     if (!fromHub) return 'Tân Khai';
     const MACRO_HUB_LABELS = {
@@ -507,7 +507,7 @@ export default function CorridorSearchBoard({
 
   return (
     <div className="w-full max-w-2xl mx-auto min-w-0 space-y-3 animate-fade-in pb-28 sm:pb-32">
-      {/* ── CHỌN TUYẾN (chỉ hiện khi có từ 2 tuyến trở lên để tối ưu không gian) ── */}
+      {/* ── ROUTE PICKER (only shown when there are 2 or more routes, to optimize space) ── */}
       {corridors.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {corridors.map((c) => (
@@ -533,7 +533,7 @@ export default function CorridorSearchBoard({
         </div>
       )}
 
-      {/* ── THANH CHẶNG TINH GỌN (CLICKABLE PILL - AIRBNB / GOOGLE MAPS STYLE) ── */}
+      {/* ── COMPACT LEG BAR (CLICKABLE PILL - AIRBNB / GOOGLE MAPS STYLE) ── */}
       {!ENABLE_DEPARTURE_CHIPS && !isEditingRoute ? (
         <div
           onClick={() => setIsEditingRoute(true)}
@@ -548,7 +548,7 @@ export default function CorridorSearchBoard({
           title="Chạm vào để đổi tuyến đón / trả"
           className="group flex items-center justify-between max-w-xl mx-auto px-4 py-2.5 bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/15 rounded-full shadow-xs cursor-pointer transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500/60 hover:shadow-md hover:bg-slate-50/60 dark:hover:bg-white/5 active:scale-[0.99] select-none"
         >
-          {/* Khu vực text (Chạm vào đâu cũng mở chọn tuyến) */}
+          {/* Text area (tapping anywhere opens the route picker) */}
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 shrink-0" />
 
@@ -559,7 +559,7 @@ export default function CorridorSearchBoard({
             </div>
           </div>
 
-          {/* Nút đảo chiều duy nhất bên phải */}
+          {/* The single reverse-direction button on the right */}
           <button
             type="button"
             title="Đảo chiều tuyến"
@@ -589,7 +589,7 @@ export default function CorridorSearchBoard({
               <X className="w-4 h-4" />
             </button>
           </div>
-        {/* Điểm đi — chừa lề phải để tên trạm dài không chui xuống dưới nút đảo chiều */}
+        {/* Origin — leave a right margin so long station names do not slide under the reverse-direction button */}
         <div className="group/from py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-start gap-3 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10 cursor-pointer transition-all rounded-2xl type-body">
           <MapPin className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5 group-hover/from:scale-115 transition-transform" />
           <div className="flex-1 min-w-0 type-body">
@@ -612,7 +612,7 @@ export default function CorridorSearchBoard({
               <ChevronDown className="w-4 h-4 text-slate-400 group-hover/from:text-emerald-600 dark:group-hover/from:text-emerald-400 transition-all pointer-events-none absolute right-1 group-hover/from:translate-y-0.5 shrink-0" />
             </div>
             
-            {/* Lấy vị trí GPS thủ công */}
+            {/* Manual GPS location fetch */}
             <button
               type="button"
               onClick={handleAutoDetectGPS}
@@ -629,11 +629,11 @@ export default function CorridorSearchBoard({
           </div>
         </div>
 
-        {/* Đảo chiều.
-            Nút nổi trên đường kẻ nên phải tự tách mình khỏi nền: vòng viền trắng
-            (ring) cắt đường kẻ chạy qua phía sau, tránh cảm giác bị dính vào vạch.
-            Vùng chạm 44px theo Apple HIG (icon vẫn 14px), và hover phải đổi CẢ nền
-            lẫn viền — chỉ đổi màu icon thì gần như không thấy gì. */}
+        {/* Reverse direction.
+            The button floats over the divider line so it has to separate itself from the background: a white
+            ring cuts the line running behind it, avoiding the feeling of being stuck to the stroke.
+            44px touch target per Apple HIG (the icon stays 14px), and hover must change BOTH the background
+            and the border — changing only the icon color is barely noticeable. */}
         <div className="relative h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5">
           <button
             type="button"
@@ -646,7 +646,7 @@ export default function CorridorSearchBoard({
           </button>
         </div>
 
-        {/* Điểm đến */}
+        {/* Destination */}
         <div className="group/to py-3 px-4 pr-16 sm:py-3.5 sm:px-5 sm:pr-16 flex items-center gap-3 hover:bg-blue-50/60 dark:hover:bg-blue-500/10 cursor-pointer transition-all rounded-2xl type-body">
           <MapPin className="w-5 h-5 text-[#0071e3] shrink-0 group-hover/to:scale-115 transition-transform" />
           <div className="flex-1 min-w-0 type-body">
@@ -671,12 +671,12 @@ export default function CorridorSearchBoard({
           </div>
         </div>
 
-        {/* ── THỜI GIAN KHỞI HÀNH: dữ liệu cấp 1, ngang hàng Nơi đi / Nơi đến ──
-            Chip chạm một phát thay cho lịch picker: người đi liên tỉnh thực tế
-            chỉ xoay quanh "chiều nay về", "tối nay đi", "sáng mai đi sớm".
-            [FEATURE FLAG COLD START - CRO]: Chỉ ẨN giao diện, TUYỆT ĐỐI KHÔNG XÓA.
-            Tránh bẫy "Click-to-Empty" khi ít nguồn cung (1-2 xe/ngày).
-            Bật lại (ENABLE_DEPARTURE_CHIPS = true) khi mỗi buổi (Sáng-Trưa-Chiều) có ít nhất 1 chuyến ổn định. */}
+        {/* ── DEPARTURE TIME: tier-1 data, on par with Origin / Destination ──
+            One-tap chips replace the date picker: intercity travelers in practice
+            only revolve around "chiều nay về" (back this afternoon), "tối nay đi" (leaving tonight), "sáng mai đi sớm" (leaving early tomorrow morning).
+            [FEATURE FLAG COLD START - CRO]: Only HIDE the UI, ABSOLUTELY DO NOT DELETE.
+            Avoids the "Click-to-Empty" trap when supply is low (1-2 vehicles/day).
+            Re-enable (ENABLE_DEPARTURE_CHIPS = true) when each period (Morning-Noon-Afternoon) has at least 1 stable trip. */}
         {ENABLE_DEPARTURE_CHIPS && (
           <>
             <div className="h-px bg-slate-200 dark:bg-white/10 mx-4 sm:mx-5" />
@@ -696,7 +696,7 @@ export default function CorridorSearchBoard({
                       onClick={() => {
                         setChipId(chip.id);
                         setShowDatePanel(false);
-                        // Học im lặng, không hỏi, không thông báo
+                        // Learn silently, no asking, no notification
                         if (chip.windowId) writeStore(WINDOW_KEY, chip.windowId);
                       }}
                       aria-pressed={active}
@@ -706,9 +706,9 @@ export default function CorridorSearchBoard({
                           : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:border-[#0071e3] hover:bg-blue-50/70 dark:hover:bg-blue-500/15 hover:text-[#0071e3] hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.01]'
                       }`}
                     >
-                      {/* Tách nhãn và giờ thành hai dòng: gộp một dòng thì ở máy 360px
-                          (Android phổ thông) chuỗi "Chiều nay (16h30-18h)" bị cắt cụt
-                          đúng phần giờ — mất chính thông tin quan trọng nhất. */}
+                      {/* Split label and time into two lines: on one line, on a 360px device
+                          (common Android) the string "Chiều nay (16h30-18h)" (This afternoon (16:30-18:00)) gets truncated
+                          exactly at the time part — losing the most important information itself. */}
                       <span className="truncate max-w-full type-button-sm">{chip.label}</span>
                       <span
                         className={`truncate max-w-full tabular type-caption ${
@@ -721,8 +721,8 @@ export default function CorridorSearchBoard({
                   );
                 })}
 
-                {/* Ô thứ 4 luôn là lối mở lịch. Bảng chọn hiện NGAY TẠI CHỖ bên dưới,
-                    tuyệt đối không dùng popup hệ thống — tinh thần Cursor: zero blocking. */}
+                {/* The 4th cell is always the way into the calendar. The picker appears RIGHT IN PLACE below,
+                    absolutely no system popup — the Cursor spirit: zero blocking. */}
                 <button
                   type="button"
                   onClick={() => setShowDatePanel((v) => !v)}
@@ -738,7 +738,7 @@ export default function CorridorSearchBoard({
                 </button>
               </div>
 
-              {/* BẢNG CHỌN NGÀY TẠI CHỖ — mở xuống mượt, không chặn luồng */}
+              {/* IN-PLACE DATE PICKER — opens downward smoothly, does not block the flow */}
               {showDatePanel && (
                 <div className="mt-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/20 space-y-2.5 animate-fade-in shadow-2xs">
                   <div>
@@ -776,8 +776,8 @@ export default function CorridorSearchBoard({
                           }`}
                         >
                           <span>{w.label}</span>
-                          {/* Kèm giờ ngay dưới nhãn: "Sáng" một mình là mơ hồ, mà
-                              các chip phía trên đều có giờ nên thiếu ở đây thành lệch. */}
+                          {/* Time right below the label: "Sáng" (Morning) alone is ambiguous, and
+                              the chips above all have times, so missing it here makes it inconsistent. */}
                           <span
                             className={`tabular type-caption ${
                               w.id === pickWindow ? 'text-white/75' : 'text-slate-400'
@@ -810,7 +810,7 @@ export default function CorridorSearchBoard({
           </select>
         </div>
         <p className="px-4 pb-3 text-slate-500 type-caption">Trạm là mốc tìm chuyến. Hai bên có thể hẹn điểm đón khác. Tìm kiếm không tự đăng nhu cầu.</p>
-        {/* ── THANH HÀNH ĐỘNG ── */}
+        {/* ── ACTION BAR ── */}
         {ENABLE_DEPARTURE_CHIPS ? (
           <>
             <div className="h-px bg-slate-200 dark:bg-white/10" />
@@ -856,7 +856,7 @@ export default function CorridorSearchBoard({
     )}
 
       {searchError && <p role="alert" className="p-3 text-rose-700 dark:text-rose-300 type-body">{searchError}</p>}
-      {/* ── ACCORDION LỊCH CHẠY TOÀN TUYẾN (BẢO LƯU CODE - ẨN Ở GIAI ĐOẠN COLD START CRO) ── */}
+      {/* ── FULL-ROUTE SCHEDULE ACCORDION (CODE KEPT - HIDDEN DURING THE COLD START CRO PHASE) ── */}
       {ENABLE_TIMELINE_ACCORDION && !matrix && (
         <button
           type="button"
@@ -892,7 +892,7 @@ export default function CorridorSearchBoard({
         </button>
       )}
 
-      {/* BẢNG LỊCH CHẠY TOÀN TUYẾN — mở tại chỗ khi chưa tìm kiếm */}
+      {/* FULL-ROUTE SCHEDULE TABLE — opens in place before any search */}
       {ENABLE_TIMELINE_ACCORDION && !matrix && isDense && showTimeline && timeline && (
         <section className="space-y-2.5 animate-fade-in">
           {timeline.periods.map((p) => (
@@ -949,7 +949,7 @@ export default function CorridorSearchBoard({
         </section>
       )}
 
-      {/* ── SKELETON TRẠNG THÁI TẢI CHUYẾN XE (Zero Layout Shift & Mượt mà) ── */}
+      {/* ── TRIP LOADING-STATE SKELETON (Zero Layout Shift & Smooth) ── */}
       {isSearching && !matrix && (
         <div className="p-4 rounded-3xl bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-md border border-slate-200 dark:border-white/10 animate-pulse space-y-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
@@ -964,10 +964,10 @@ export default function CorridorSearchBoard({
         </div>
       )}
 
-      {/* ── BẢNG SO SÁNH 3 TẦNG VẬN TẢI (DẠNG LINE LIẾC NGANG) ── */}
+      {/* ── 3-TIER TRANSPORT COMPARISON TABLE (HORIZONTAL GLANCEABLE-LINE STYLE) ── */}
       {matrix && (
         <section ref={resultsRef} className="space-y-3 pt-1 animate-fade-in">
-          {/* Header tóm tắt: Tiêu đề gọn gàng & Badge Thông tin chủ xe đăng */}
+          {/* Summary header: Tidy title & Badge with the posting driver's info */}
           <div className="flex items-center justify-between gap-1.5 px-1 pb-0.5">
             <p className="text-slate-800 dark:text-slate-200 truncate type-caption">
               {carmateDisplayTrips.length > 0 ? `${carmateDisplayTrips.length} chuyến phù hợp` : 'Chưa có chuyến phù hợp'}
@@ -978,7 +978,7 @@ export default function CorridorSearchBoard({
             </span>
           </div>
 
-          {/* NHÓM 1: XE GHÉP TIỆN CHUYẾN CARMATE (DANH SÁCH RÚT GỌN SCANNABLE) */}
+          {/* GROUP 1: CARMATE PASSING-VEHICLE MATCHES (CONDENSED SCANNABLE LIST) */}
           {carmateDisplayTrips.length > 0 ? (
             <div className="space-y-2 sm:space-y-2.5">
               {carmateDisplayTrips.map((trip, idx) => {
@@ -1003,7 +1003,7 @@ export default function CorridorSearchBoard({
                 );
               })}
 
-              {/* ⭐️ ƯU TIÊN #1: GOM NHU CẦU LỆCH GIỜ (ĐẶT LỊCH TRƯỚC - BẢO TOÀN PHỄU CHUYỂN ĐỔI) */}
+              {/* ⭐️ PRIORITY #1: COLLECT OFF-TIME DEMAND (PRE-BOOKING - PRESERVES THE CONVERSION FUNNEL) */}
               <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 text-center space-y-2 shadow-sm">
                 <p className="text-slate-700 dark:text-slate-300 type-caption">
                   Chưa tìm thấy giờ phù hợp lịch trình?
@@ -1021,7 +1021,7 @@ export default function CorridorSearchBoard({
             <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-50/40 via-white to-slate-50/40 dark:from-amber-950/20 dark:via-[#1c1c1e] dark:to-[#1c1c1e] border border-amber-300/60 dark:border-amber-500/30 ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_12px_36px_rgba(245,158,11,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] text-center space-y-4">
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 bg-amber-500/10 dark:bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
 
-              {/* Badge trên cùng theo State 2: ⚡ Ghép xe theo giờ của bạn (Màu cam) */}
+              {/* Top badge per State 2: ⚡ "Ghép xe theo giờ của bạn" (Match a ride by your time) (Orange) */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 dark:bg-amber-400/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 select-none shadow-2xs type-caption">
                 <span className="text-amber-600 dark:text-amber-400">⚡</span>
                 <span>{heading === 'a_to_b' ? 'Báo giờ bạn cần về Bình Phước' : 'Ghép xe theo giờ của bạn'}</span>
@@ -1047,7 +1047,7 @@ export default function CorridorSearchBoard({
                   </span>
                 </button>
 
-                {/* Huy hiệu uy tín thực tế & Social Proof */}
+                {/* Real reputation badges & Social Proof */}
                 <div className="pt-1 space-y-1">
                   <p className="text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5 type-body">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -1074,7 +1074,7 @@ export default function CorridorSearchBoard({
         onRequireAuth={onRequireAuth}
       />
 
-      {/* ── BOTTOM SHEET CHI TIẾT CHUYẾN XE (PROGRESSIVE DISCLOSURE) ── */}
+      {/* ── TRIP DETAIL BOTTOM SHEET (PROGRESSIVE DISCLOSURE) ── */}
       {selectedDetailTrip && (
         <TripDetailBottomSheet
           isOpen={Boolean(selectedDetailTrip)}
@@ -1096,7 +1096,7 @@ export default function CorridorSearchBoard({
         />
       )}
 
-      {/* ── MODAL GIỮ CHỖ TỨC THÌ (MATCH & REVEAL 3 BƯỚC) ── */}
+      {/* ── INSTANT RESERVATION MODAL (3-STEP MATCH & REVEAL) ── */}
       {selectedBookingTrip && (
         <InstantBookingModal
           onRequireAuth={onRequireAuth}

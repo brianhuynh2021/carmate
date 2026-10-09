@@ -27,7 +27,7 @@ import { computeTrustScore, DEFAULT_TRUST_RULES } from '@carmate/shared';
 import { processCarPhotoUpload } from '../../utils/plateMasker.js';
 import { isAdminUser } from '../../utils/adminGate.js';
 
-// Danh sách hãng xe phổ biến tại Việt Nam
+// List of common car makes in Vietnam
 const POPULAR_BRANDS = [
   'Toyota',
   'Hyundai',
@@ -40,7 +40,7 @@ const POPULAR_BRANDS = [
   'Khác'
 ];
 
-// Danh sách mẫu xe phổ biến
+// List of common car models
 const POPULAR_MODELS = {
   Toyota: ['Vios', 'Veloz Cross', 'Corolla Cross', 'Fortuner', 'Innova', 'Camry', 'Raize'],
   Hyundai: ['Accent', 'Creta', 'Tucson', 'Santa Fe', 'Custin', 'Grand i10'],
@@ -52,10 +52,10 @@ const POPULAR_MODELS = {
   Ford: ['Everest', 'Ranger', 'Territory', 'Explorer']
 };
 
-// Màu xe phổ biến
+// Common vehicle colors
 const POPULAR_COLORS = ['Trắng', 'Đen', 'Bạc / Xám', 'Đỏ', 'Xanh dương', 'Vàng cát / Nâu'];
 
-// Tiện nghi xe phổ biến
+// Common vehicle amenities
 const VEHICLE_PERKS = [
   'Không hút thuốc',
   'Máy lạnh mát mẻ',
@@ -65,7 +65,7 @@ const VEHICLE_PERKS = [
   'Nhận chở thú cưng nhỏ'
 ];
 
-// Các vị trí ảnh xe tiêu chuẩn
+// Standard vehicle photo positions
 const PHOTO_SLOTS = [
   { id: 0, label: 'Mặt trước xe', sub: 'Rõ biển số', required: true },
   { id: 1, label: 'Góc nghiêng thân xe', sub: 'Tổng thể xe', required: true },
@@ -75,8 +75,8 @@ const PHOTO_SLOTS = [
 ];
 
 /**
- * Nén ảnh sang chuẩn WebP trực tiếp trên Client (Canvas API)
- * Tốc độ ~15ms, kích thước giảm từ 5MB xuống ~120KB mà giữ nguyên độ nét
+ * Compress the image to WebP directly on the Client (Canvas API)
+ * ~15ms speed, size reduced from 5MB to ~120KB while keeping the sharpness
  */
 function compressImageToWebP(file, maxDimension = 1200, quality = 0.82) {
   return new Promise((resolve, reject) => {
@@ -117,7 +117,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
   const [isSaved, setIsSaved] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // 1. State Thông tin cá nhân
+  // 1. Personal info State
   const [name, setName] = useState(() => currentUser?.name || '');
   const [phone, setPhone] = useState(() => currentUser?.phone || '');
   const [email, setEmail] = useState(() => currentUser?.email || '');
@@ -129,7 +129,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
   const [isCompressingAvatar, setIsCompressingAvatar] = useState(false);
   const avatarInputRef = useRef(null);
 
-  // 2. State Garage xe
+  // 2. Vehicle Garage State
   const existingVehicle = currentUser?.vehicle || {};
   const [hasCar, setHasCar] = useState(() => Boolean(existingVehicle.brand || existingVehicle.plate));
   const [brand, setBrand] = useState(() => existingVehicle.brand || 'Toyota');
@@ -150,18 +150,18 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
 
   const fileInputRefs = useRef([]);
 
-  // Đếm số ảnh hợp lệ
+  // Count valid photos
   const validPhotosCount = useMemo(() => photos.filter(Boolean).length, [photos]);
   const isVerifiedCar = validPhotosCount >= 3;
 
-  // Toggle tiện nghi xe
+  // Toggle vehicle amenities
   const togglePerk = (perk) => {
     setSelectedPerks((prev) =>
       prev.includes(perk) ? prev.filter((p) => p !== perk) : [...prev, perk]
     );
   };
 
-  // Nạp quy tắc tín nhiệm công khai từ máy chủ
+  // Load public trust rules from the server
   const [publicRules, setPublicRules] = useState(DEFAULT_TRUST_RULES);
 
   React.useEffect(() => {
@@ -180,7 +180,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     };
   }, []);
 
-  // Tính toán Tín nhiệm động theo 4 trụ cột (MIT & Stanford)
+  // Compute dynamic Trust by 4 pillars (MIT & Stanford)
   const trustCalc = useMemo(() => {
     const vehicleData = hasCar
       ? {
@@ -212,7 +212,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     return computeTrustScore(activeUser, vehicleData, historyData, publicRules);
   }, [currentUser, avatar, gender, hasCar, brand, model, plate, photos, isVerifiedCar, publicRules]);
 
-  // Upload & Nén ảnh WebP
+  // Upload & compress to WebP
   const handlePhotoUpload = async (index, event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -241,14 +241,14 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     }
   };
 
-  // Xử lý nén và cập nhật ảnh đại diện cá nhân
+  // Handle compression and update the personal avatar
   const handleAvatarFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsCompressingAvatar(true);
     setFormError('');
     try {
-      // Nén ảnh vuông 400x400 WebP chuẩn avatar chất lượng cao (~25KB, tải 0ms)
+      // Compress to a square 400x400 WebP, high-quality avatar standard (~25KB, 0ms load)
       const compressed = await compressImageToWebP(file, 400, 0.85);
       setAvatar(compressed);
       onShowToast?.('Đã tải ảnh đại diện thành công!');
@@ -261,7 +261,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     }
   };
 
-  // Xóa ảnh ở slot
+  // Delete the photo in the slot
   const handleRemovePhoto = (index) => {
     setPhotos((prev) => {
       const next = [...prev];
@@ -270,19 +270,19 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
     });
   };
 
-  // Validate & Lưu thông tin
+  // Validate & Save info
   const handleSave = async (e) => {
     e?.preventDefault();
     setFormError('');
 
-    // Kiểm tra tên
+    // Check name
     if (!name.trim()) {
       setFormError('Vui lòng nhập họ và tên hiển thị');
       setActiveTab('profile');
       return;
     }
 
-    // Kiểm tra số điện thoại nếu có nhập
+    // Check phone number if entered
     if (phone.trim()) {
       const rawP = phone.trim().replace(/\D/g, '');
       if (rawP.length < 9 || rawP.length > 11) {
@@ -292,7 +292,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
       }
     }
 
-    // Kiểm tra email nếu có nhập
+    // Check email if entered
     if (email.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
@@ -302,7 +302,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
       }
     }
 
-    // Kiểm tra biển số xe nếu bật có xe
+    // Check license plate if the has-a-vehicle toggle is on
     let cleanPlate = plate.trim().toUpperCase();
     if (hasCar) {
       if (cleanPlate) {
@@ -316,7 +316,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
       }
     }
 
-    // Đóng gói payload cập nhật
+    // Package the update payload
     const payload = {
       name: name.trim(),
       phone: phone.trim() || undefined,
@@ -404,7 +404,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
       }
     >
       <div className="space-y-4">
-        {/* Lỗi Form nếu có */}
+        {/* Form error if any */}
         {formError && (
           <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-800/40 flex items-center gap-2.5 text-rose-600 dark:text-rose-400 type-caption">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -412,7 +412,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           </div>
         )}
 
-        {/* Thông báo đã lưu thành công tại chỗ */}
+        {/* Success notification saved in place */}
         {isSaved && (
           <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 flex items-center gap-2 transition-all type-caption">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -420,7 +420,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           </div>
         )}
 
-        {/* Apple Segmented Capsule Tab Control - Ghim cố định khi cuộn */}
+        {/* Apple Segmented Capsule Tab Control - Pinned in place on scroll */}
         <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md pb-2 -mt-1 pt-0.5">
           <div className="p-1 rounded-2xl bg-[#e8e8ed] dark:bg-slate-800/80 border border-black/[0.05] dark:border-white/[0.06] flex items-center gap-1 shadow-xs">
             <button
@@ -467,10 +467,10 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           </div>
         </div>
 
-        {/* TAB 1: THÔNG TIN CÁ NHÂN */}
+        {/* TAB 1: PERSONAL INFO */}
         {activeTab === 'profile' && (
           <div className="space-y-4 pt-1">
-            {/* Header Thẻ đại diện với tính năng cập nhật ảnh chân dung/avatar */}
+            {/* Profile card header with portrait/avatar photo update feature */}
             <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.06]">
               <div
                 className="relative group/avatar cursor-pointer shrink-0"
@@ -489,7 +489,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   </div>
                 )}
 
-                {/* Overlay camera khi hover hoặc đang nén ảnh */}
+                {/* Camera overlay on hover or while compressing the photo */}
                 <div
                   className={`absolute inset-0 rounded-full bg-black/45 transition-opacity flex items-center justify-center text-white ${
                     isCompressingAvatar ? 'opacity-100' : 'opacity-0 group-hover/avatar:opacity-100'
@@ -502,13 +502,13 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   )}
                 </div>
 
-                {/* Huy hiệu camera mini góc dưới */}
+                {/* Mini camera badge at the bottom corner */}
                 <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#0071e3] text-white border-2 border-white dark:border-[#1c1c1e] flex items-center justify-center shadow-xs cursor-pointer hover:bg-[#0077ed] transition-transform active:scale-90">
                   <Camera className="w-2.5 h-2.5" />
                 </span>
               </div>
 
-              {/* Input file ẩn */}
+              {/* Hidden file input */}
               <input
                 ref={avatarInputRef}
                 type="file"
@@ -530,7 +530,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   {phone || currentUser?.phone || currentUser?.email || 'Chưa liên kết SĐT'}
                 </p>
 
-                {/* Nút hành động ảnh đại diện */}
+                {/* Avatar action buttons */}
                 <div className="flex items-center gap-2.5 mt-1.5">
                   <button
                     type="button"
@@ -557,7 +557,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
             </div>
 
-            {/* Trường 1: Tên hiển thị */}
+            {/* Field 1: Display name */}
             <div>
               <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 type-label">
                 {t('profile2.s009')} <span className="text-rose-500">*</span>
@@ -588,7 +588,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               )}
             </div>
 
-            {/* Trường 1b: Giới tính (Apple Segmented Control) */}
+            {/* Field 1b: Gender (Apple Segmented Control) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[#1d1d1f] dark:text-slate-200 type-label">
@@ -628,7 +628,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </p>
             </div>
 
-            {/* Trường 1b: Số điện thoại liên hệ */}
+            {/* Field 1b: Contact phone number */}
             <div>
               <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 type-label">
                 {t('profile2.s014')} <span className="text-[#86868b] type-caption">{t('profile2.s015')}</span>
@@ -648,7 +648,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </p>
             </div>
 
-            {/* Trường 2: Email nhận thông báo lịch hẹn */}
+            {/* Field 2: Email for appointment notifications */}
             <div>
               <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 type-label">
                 {t('profile2.s017')} <span className="text-[#86868b] type-caption">{t('profile2.s018')}</span>
@@ -665,7 +665,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
             </div>
 
-            {/* Trường 3: Khu vực sinh sống & Điểm đón thường xuyên */}
+            {/* Field 3: Area of residence & Frequent pickup points */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 type-label">
@@ -700,7 +700,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
             </div>
 
-            {/* Trường 4: Giới thiệu / Lưu ý */}
+            {/* Field 4: Bio / Notes */}
             <div>
               <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 type-label">
                 {t('profile2.s021')}
@@ -714,7 +714,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               />
             </div>
 
-            {/* ── TÀI KHOẢN ĐỊNH DANH ĐÃ LIÊN KẾT (ACCOUNT LINKING & MERGING) ── */}
+            {/* ── LINKED IDENTITY ACCOUNTS (ACCOUNT LINKING & MERGING) ── */}
             <div className="pt-2.5 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[#1d1d1f] dark:text-slate-200 flex items-center gap-1.5 type-caption">
@@ -725,7 +725,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {/* Thẻ Google */}
+                {/* Google Card */}
                 <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <GoogleIcon className="w-4 h-4 shrink-0" />
@@ -745,7 +745,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   </span>
                 </div>
 
-                {/* Thẻ Telegram */}
+                {/* Telegram Card */}
                 <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <TelegramIcon className="w-4 h-4 text-[#229ED9] shrink-0" />
@@ -773,7 +773,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </p>
             </div>
 
-            {/* ── QUYỀN RIÊNG TƯ & QUẢN LÝ DỮ LIỆU TÀI KHOẢN (APPLE PRIVACY & STANFORD ERGONOMICS) ── */}
+            {/* ── PRIVACY & ACCOUNT DATA MANAGEMENT (APPLE PRIVACY & STANFORD ERGONOMICS) ── */}
             <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
               <div className="space-y-0.5">
                 <p className="text-slate-700 dark:text-slate-300 type-caption">
@@ -802,10 +802,10 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           </div>
         )}
 
-        {/* TAB 2: GARAGE XE CỦA TÔI (MY GARAGE) */}
+        {/* TAB 2: MY VEHICLE GARAGE (MY GARAGE) */}
         {activeTab === 'garage' && (
           <div className="space-y-4 pt-1">
-            {/* Toggle Sở hữu xe */}
+            {/* Vehicle ownership toggle */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.06]">
               <div className="flex items-center gap-2.5">
                 <span className="w-8 h-8 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center">
@@ -831,7 +831,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
 
             {hasCar ? (
               <div className="space-y-4">
-                {/* Hãng xe & Mẫu xe */}
+                {/* Car make & Car model */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 type-label">
@@ -868,7 +868,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   </div>
                 </div>
 
-                {/* Biển số xe & Màu sơn */}
+                {/* License plate & Paint color */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 flex items-center justify-between type-label">
@@ -905,7 +905,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   </div>
                 </div>
 
-                {/* Phân loại xe & Bất biến MIT Invariant số ghế */}
+                {/* Vehicle classification & MIT Invariant on seat count */}
                 <div>
                   <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 type-label">
                     {t('profile2.s035')} <span className="text-rose-500 type-body-strong">*</span>
@@ -955,7 +955,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   </div>
                 </div>
 
-                {/* Tiện nghi trên xe */}
+                {/* Amenities in the vehicle */}
                 <div>
                   <label className="block text-[#1d1d1f] dark:text-slate-200 mb-1.5 type-label">
                     {t('profile2.s041')}
@@ -981,7 +981,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                   </div>
                 </div>
 
-                {/* BỘ ẢNH XE THẬT CHÍNH CHỦ (3 - 5 ẢNH) */}
+                {/* SET OF GENUINE OWNER'S REAL VEHICLE PHOTOS (3 - 5 PHOTOS) */}
                 <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
                   <div className="flex items-center justify-between mb-2">
                     <div>
@@ -1008,7 +1008,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
                     )}
                   </div>
 
-                  {/* Lưới 5 ô ảnh Squircle */}
+                  {/* 5-cell Squircle photo grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {PHOTO_SLOTS.map((slot, index) => {
                       const photoUrl = photos[index];
@@ -1087,10 +1087,10 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
           </div>
         )}
 
-        {/* TAB 3: TÍN NHIỆM & GIẤY TỜ (DYNAMIC TRUST & REPUTATION ENGINE) */}
+        {/* TAB 3: TRUST & DOCUMENTS (DYNAMIC TRUST & REPUTATION ENGINE) */}
         {activeTab === 'trust' && (
           <div className="space-y-4 pt-1 type-body">
-            {/* Điểm Tín nhiệm Gauge */}
+            {/* Trust Score Gauge */}
             <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -1151,7 +1151,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
             </div>
 
-            {/* Cảnh báo trần điểm khi thiếu ảnh đại diện (Missing Avatar Invariant) */}
+            {/* Score ceiling warning when the avatar is missing (Missing Avatar Invariant) */}
             {trustCalc.isCapApplied && (
               <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 flex items-start gap-3.5">
                 <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -1177,7 +1177,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
             )}
 
-            {/* Danh sách tiêu chí đã đạt */}
+            {/* List of criteria achieved */}
             <div className="space-y-2">
               <span className="text-slate-400 tabular type-caption">
                 Tiêu chí đã tích lũy ({trustCalc.earnedCriteria.length})
@@ -1204,7 +1204,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
             </div>
 
-            {/* Gợi ý hành vi kế tiếp để tăng điểm (Stanford B=MAP) */}
+            {/* Suggestions for next behaviors to earn points (Stanford B=MAP) */}
             {trustCalc.pendingCriteria.length > 0 && (
               <div className="space-y-2 pt-1">
                 <span className="text-slate-400 tabular type-caption">
@@ -1258,7 +1258,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
             )}
 
-            {/* Các khoản khấu trừ phạt (nếu có) */}
+            {/* Penalty deductions (if any) */}
             {trustCalc.penalties.length > 0 && (
               <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 space-y-1.5">
                 <span className="text-rose-800 dark:text-rose-300 type-caption">
@@ -1275,7 +1275,7 @@ export default function UserProfileModal({ currentUser, onClose, onSave, onShowT
               </div>
             )}
 
-            {/* Tôn chỉ văn hóa CarMate */}
+            {/* CarMate cultural creed */}
             <div className="p-3.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.06] text-[#515154] dark:text-slate-400 space-y-1 type-caption">
               <p className="type-body">
                 💡 <strong className="type-body-strong">{t('profile2.s058')}</strong> {t('profile2.s059')}

@@ -16,7 +16,7 @@ function getAudioContext() {
 }
 
 /**
- * Âm thanh tin nhắn nhẹ nhàng (Soft Apple Bell)
+ * Gentle message sound (Soft Apple Bell)
  */
 export function playMessageChime() {
   try {
@@ -24,7 +24,7 @@ export function playMessageChime() {
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    // Nốt 1: 880Hz (A5)
+    // Note 1: 880Hz (A5)
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
     osc1.type = 'sine';
@@ -36,7 +36,7 @@ export function playMessageChime() {
     osc1.start(now);
     osc1.stop(now + 0.12);
 
-    // Nốt 2: 1320Hz (E6)
+    // Note 2: 1320Hz (E6)
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
@@ -48,12 +48,12 @@ export function playMessageChime() {
     osc2.start(now + 0.05);
     osc2.stop(now + 0.22);
   } catch {
-    // Không bao giờ throw error nếu browser chặn autoplay
+    // Never throw an error if the browser blocks autoplay
   }
 }
 
 /**
- * Âm thanh chốt chuyến thành công (Harmonic Apple Triad Chord)
+ * Sound for successfully confirming a trip (Harmonic Apple Triad Chord)
  */
 export function playSuccessChime() {
   try {

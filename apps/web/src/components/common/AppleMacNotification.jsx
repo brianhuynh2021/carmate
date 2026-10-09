@@ -14,7 +14,7 @@ import { playMessageChime } from '../../utils/audioFeedback.js';
 import { useI18n } from '../../i18n/index.jsx';
 
 /**
- * Event emitter đơn giản cho Apple macOS In-App Notification
+ * Simple event emitter for Apple macOS In-App Notification
  */
 export function triggerMacNotification({
   title = 'Thông báo mới',
@@ -55,7 +55,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
       if (!data) return;
       setIsClosing(false);
       setNotification(data);
-      // Phát âm thanh chuông Apple nhẹ nhàng
+      // Play a gentle Apple chime sound
       playMessageChime();
     };
 
@@ -65,7 +65,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
     };
   }, []);
 
-  // Tự động đóng sau `duration` nếu không hover chuột
+  // Auto-close after `duration` unless the mouse is hovering
   useEffect(() => {
     if (!notification || isHovered) return;
 
@@ -125,12 +125,12 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
           : 'opacity-100 translate-x-0 scale-100'
       }`}
     >
-      {/* Khung kính mờ Apple macOS Liquid Banner */}
+      {/* Apple macOS Liquid Banner frosted glass frame */}
       <div
         onClick={handleAction}
         className="group relative overflow-hidden rounded-2xl bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-2xl border border-black/10 dark:border-white/12 shadow-[0_20px_50px_rgba(0,0,0,0.22)] p-3 sm:p-3.5 cursor-pointer transition-all hover:shadow-[0_25px_60px_rgba(0,0,0,0.28)] hover:bg-white/95 dark:hover:bg-[#242426]/95"
       >
-        {/* Thanh tiêu đề Apple macOS Style */}
+        {/* Apple macOS Style title bar */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 min-w-0">
             {/* App Icon Squircle */}
@@ -158,7 +158,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
           </button>
         </div>
 
-        {/* Nội dung thông báo */}
+        {/* Notification content */}
         <div className="space-y-1 pr-1">
           <h4 className="type-heading text-slate-900 dark:text-white line-clamp-1 group-hover:text-[#0071e3] transition-colors">
             {notification.title}
@@ -168,7 +168,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
           </p>
         </div>
 
-        {/* Nút hành động chuẩn macOS */}
+        {/* Standard macOS action button */}
         <div className="mt-2.5 pt-2 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-end gap-2">
           <button
             type="button"
@@ -193,7 +193,7 @@ export default function AppleMacNotification({ onOpenInbox, onSelectBooking }) {
           </button>
         </div>
 
-        {/* Thanh đếm thời gian mờ Apple */}
+        {/* Apple translucent countdown bar */}
         {!isHovered && (
           <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black/5 dark:bg-white/5">
             <div

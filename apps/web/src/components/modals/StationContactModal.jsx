@@ -24,7 +24,7 @@ import { detectPiiLeak } from '@carmate/shared';
 import { playMessageChime, playSuccessChime } from '../../utils/audioFeedback.js';
 import { useI18n } from '../../i18n/index.jsx';
 
-// Danh sách các mẫu tin nhắn nhanh 1-chạm tại trạm (Curbside Quick Chips - Stanford Ergonomics)
+// List of 1-tap quick message templates at the station (Curbside Quick Chips - Stanford Ergonomics)
 const CURBSIDE_QUICK_CHIPS = [
   '📍 Tôi đã đứng sẵn ở sảnh đón trạm xăng',
   '⛽ Tôi đang đứng gần cột bơm xăng số 2',
@@ -56,7 +56,7 @@ export default function StationContactModal({
     }
   ]);
 
-  // Trạng thái cuộc gọi nội bộ (In-App VoIP Audio Call)
+  // In-app call state (In-App VoIP Audio Call)
   const [callState, setCallState] = useState('idle'); // 'idle' | 'ringing' | 'connected' | 'ended'
   const [callSeconds, setCallSeconds] = useState(0);
   const [ringSeconds, setRingSeconds] = useState(0);
@@ -65,7 +65,7 @@ export default function StationContactModal({
 
   const messagesEndRef = useRef(null);
 
-  // Cuộn xuống cuối tin nhắn khi có tin mới
+  // Scroll to the bottom of the messages when a new message arrives
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -76,13 +76,13 @@ export default function StationContactModal({
     }
   }, [messages, activeTab]);
 
-  // Bộ lọc chặn rò rỉ thông tin cá nhân (PII Leak Guard)
+  // Filter that blocks personal information leaks (PII Leak Guard)
   const piiCheck = useMemo(() => {
     if (!inputText.trim()) return { hasLeak: false };
     return detectPiiLeak(inputText);
   }, [inputText]);
 
-  // Bộ đếm thời gian đổ chuông & đàm thoại cuộc gọi
+  // Timer for call ringing & call duration
   useEffect(() => {
     let timer = null;
     if (callState === 'ringing') {
@@ -106,7 +106,7 @@ export default function StationContactModal({
     };
   }, [callState, onShowToast]);
 
-  // Khóa cuộn trang khi modal mở
+  // Lock page scrolling while the modal is open
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -127,7 +127,7 @@ export default function StationContactModal({
   const carDisplayPlate = boardingPass?.carInfo?.plate || 'Đang chờ kết nối';
   const stationName = currentHub?.name || boardingPass?.hubName || 'Trạm đón QL13';
 
-  // Gửi tin nhắn tự do
+  // Send a free-form message
   const handleSendMessage = (e) => {
     e?.preventDefault();
     if (!inputText.trim() || piiCheck.hasLeak) return;
@@ -143,7 +143,7 @@ export default function StationContactModal({
     setInputText('');
     playMessageChime();
 
-    // Phản hồi thông minh tự động từ Chủ xe (giả lập xe đang tiếp cận trạm)
+    // Automatic smart reply from the driver (simulates the vehicle approaching the station)
     setTimeout(() => {
       const driverReplies = [
         'Chủ xe: Đã nhận được thông tin! Xe tôi đang rà phanh tấp vào mép sân trạm, bạn chuẩn bị sẵn mã PIN nhé!',
@@ -164,7 +164,7 @@ export default function StationContactModal({
     }, 1200);
   };
 
-  // Gửi tin nhắn nhanh 1-chạm (Curbside Quick Chip)
+  // Send a 1-tap quick message (Curbside Quick Chip)
   const handleSendQuickChip = (chipText) => {
     const cleanText = chipText.replace(/^[^\w\sÀ-ỹ]+/i, '').trim();
     const newMsg = {
@@ -178,7 +178,7 @@ export default function StationContactModal({
     playMessageChime();
     onShowToast?.(`Đã gửi: "${cleanText}"`);
 
-    // Phản hồi từ Chủ xe
+    // Reply from the driver
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
@@ -193,7 +193,7 @@ export default function StationContactModal({
     }, 1100);
   };
 
-  // Bắt đầu gọi thoại trong App
+  // Start an in-app voice call
   const handleStartCall = () => {
     setCallState('ringing');
     setRingSeconds(0);
@@ -203,7 +203,7 @@ export default function StationContactModal({
     playMessageChime();
   };
 
-  // Giả lập đối tác bắt máy (hỗ trợ kiểm thử/demo nhanh)
+  // Simulate the partner picking up (supports quick testing/demo)
   const handleSimulateAnswer = () => {
     setCallState('connected');
     setCallSeconds(0);
@@ -211,7 +211,7 @@ export default function StationContactModal({
     onShowToast?.('Chủ xe đã kết nối cuộc gọi thoại an toàn!');
   };
 
-  // Kết thúc cuộc gọi
+  // End the call
   const handleEndCall = () => {
     setCallState('ended');
     playMessageChime();
@@ -228,7 +228,7 @@ export default function StationContactModal({
       aria-modal="true"
     >
       <div className="w-full max-w-lg bg-[#0d0f18] text-white rounded-t-3xl sm:rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in zoom-in-95 duration-200">
-        {/* ── HEADER MODAL ── */}
+        {/* ── MODAL HEADER ── */}
         <header className="p-4 sm:p-5 border-b border-white/[0.08] bg-white/[0.02] flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center shrink-0 shadow-xs">
@@ -257,7 +257,7 @@ export default function StationContactModal({
           </button>
         </header>
 
-        {/* ── APPLE SEGMENTED TAB CAPSULE (CHAT vs GỌI THOẠI) ── */}
+        {/* ── APPLE SEGMENTED TAB CAPSULE (CHAT vs VOICE CALL) ── */}
         <div className="p-2.5 border-b border-white/[0.06] bg-black/30">
           <div className="p-1 rounded-2xl bg-white/[0.05] border border-white/[0.06] flex items-center gap-1">
             <button
@@ -291,10 +291,10 @@ export default function StationContactModal({
           </div>
         </div>
 
-        {/* ── NỘI DUNG TAB 1: TIN NHẮN 1-CHẠM & CHAT BẢO MẬT ── */}
+        {/* ── TAB 1 CONTENT: 1-TAP MESSAGES & SECURE CHAT ── */}
         {activeTab === 'chat' && (
           <div className="flex-1 flex flex-col min-h-0 bg-[#0a0c14]">
-            {/* Cảnh báo bảo mật PII Header */}
+            {/* PII security warning header */}
             <div className="type-caption px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between text-emerald-300">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -303,7 +303,7 @@ export default function StationContactModal({
               <span className="type-caption text-emerald-400/80">{t('stationContact.s004')}</span>
             </div>
 
-            {/* Dòng lịch sử tin nhắn */}
+            {/* Message history lines */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map((msg) => {
                 if (msg.sender === 'system') {
@@ -344,7 +344,7 @@ export default function StationContactModal({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Khung chip tin nhắn nhanh 1-chạm (Curbside Quick Presets - Stanford 0-Typing) */}
+            {/* 1-tap quick message chip frame (Curbside Quick Presets - Stanford 0-Typing) */}
             <div className="p-3 border-t border-white/[0.06] bg-black/20 space-y-2">
               <div className="type-caption flex items-center justify-between text-slate-400 px-0.5">
                 <span className="flex items-center gap-1 text-sky-400">
@@ -367,7 +367,7 @@ export default function StationContactModal({
               </div>
             </div>
 
-            {/* Cảnh báo vi phạm PII nếu người dùng gõ SĐT/Zalo */}
+            {/* PII violation warning if the user types a phone number/Zalo */}
             {piiCheck.hasLeak && (
               <div className="type-caption mx-3 mb-2 p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 flex items-start gap-2 animate-in fade-in">
                 <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
@@ -380,7 +380,7 @@ export default function StationContactModal({
               </div>
             )}
 
-            {/* Form nhập tin nhắn */}
+            {/* Message input form */}
             <form onSubmit={handleSendMessage} className="p-3 border-t border-white/[0.08] bg-black/40 flex items-center gap-2">
               <input
                 type="text"
@@ -401,16 +401,16 @@ export default function StationContactModal({
           </div>
         )}
 
-        {/* ── NỘI DUNG TAB 2: GỌI THOẠI NỘI BỘ (IN-APP VOIP CALL) ── */}
+        {/* ── TAB 2 CONTENT: IN-APP VOICE CALL (IN-APP VOIP CALL) ── */}
         {activeTab === 'call' && (
           <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 bg-[#0a0c14] text-center space-y-6 min-h-[380px]">
-            {/* Huy hiệu an toàn */}
+            {/* Safety badge */}
             <div className="type-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>{t('stationContact.s007')}</span>
             </div>
 
-            {/* Avatar & Hiệu ứng sóng âm đổ chuông */}
+            {/* Avatar & ringing sound-wave effect */}
             <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
               {callState === 'ringing' && (
                 <>
@@ -426,7 +426,7 @@ export default function StationContactModal({
               </div>
             </div>
 
-            {/* Thông tin đối tác & Thời gian đàm thoại */}
+            {/* Partner info & call duration */}
             <div className="space-y-1 max-w-xs">
               <h4 className="type-heading text-white">{driverDisplayName}</h4>
               <p className="type-caption text-slate-400">
@@ -475,7 +475,7 @@ export default function StationContactModal({
               </div>
             </div>
 
-            {/* Bàn phím điều khiển cuộc gọi */}
+            {/* Call control keypad */}
             <div className="pt-2 w-full max-w-xs flex items-center justify-center gap-4">
               {callState === 'idle' || callState === 'ended' ? (
                 <button
@@ -488,7 +488,7 @@ export default function StationContactModal({
                 </button>
               ) : (
                 <>
-                  {/* Tắt / Mở mic */}
+                  {/* Mute / unmute mic */}
                   <button
                     type="button"
                     onClick={() => setIsMuted(!isMuted)}
@@ -502,7 +502,7 @@ export default function StationContactModal({
                     {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </button>
 
-                  {/* Tắt / Mở loa ngoài */}
+                  {/* Turn speakerphone off / on */}
                   <button
                     type="button"
                     onClick={() => setIsSpeaker(!isSpeaker)}
@@ -516,7 +516,7 @@ export default function StationContactModal({
                     {isSpeaker ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                   </button>
 
-                  {/* Nút gác máy đỏ to */}
+                  {/* Large red hang-up button */}
                   <button
                     type="button"
                     onClick={handleEndCall}
@@ -529,7 +529,7 @@ export default function StationContactModal({
               )}
             </div>
 
-            {/* Nút mô phỏng đối tác bắt máy (chỉ hiện ở dev) */}
+            {/* Button to simulate the partner picking up (dev only) */}
             {callState === 'ringing' && import.meta.env.DEV && (
               <div className="pt-1">
                 <button
@@ -544,7 +544,7 @@ export default function StationContactModal({
           </div>
         )}
 
-        {/* ── FOOTER MODAL ── */}
+        {/* ── MODAL FOOTER ── */}
         <footer className="type-caption p-3 bg-black/40 border-t border-white/[0.06] text-center text-slate-500">
           {t('stationContact.s015')}
         </footer>

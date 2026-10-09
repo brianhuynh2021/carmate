@@ -1,6 +1,6 @@
 /**
  * CarMate Email Notification Service
- * Gửi email thông báo tức thì cho Chủ xe khi có Người đi cùng gửi yêu cầu ghép chuyến
+ * Sends an instant email notification to the driver when a passenger submits a trip-matching request
  */
 
 export async function sendEmailNotification({ to, subject, html, text }) {
@@ -10,7 +10,7 @@ export async function sendEmailNotification({ to, subject, html, text }) {
 
   const cleanTo = to.trim();
 
-  // 1. Gửi qua Resend API nếu có cấu hình
+  // 1. Send via the Resend API if configured
   const resendApiKey = process.env.RESEND_API_KEY;
   if (resendApiKey) {
     try {
@@ -41,7 +41,7 @@ export async function sendEmailNotification({ to, subject, html, text }) {
     }
   }
 
-  // 2. Ghi nhận log audit môi trường server
+  // 2. Record an audit log in the server environment
   console.log(`[Email Service Audit] Thông báo gửi tới <${cleanTo}>: "${subject}"`);
   return true;
 }

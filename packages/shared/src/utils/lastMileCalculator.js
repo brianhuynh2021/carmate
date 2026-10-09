@@ -1,17 +1,17 @@
 /**
  * ============================================================================
- * BỘ GIẢ LẬP CHẶNG CUỐI NỘI BỘ (LAST-MILE TRANSIT CALCULATOR - ZERO EXTERNAL API)
+ * INTERNAL LAST-MILE SIMULATOR (LAST-MILE TRANSIT CALCULATOR - ZERO EXTERNAL API)
  * ============================================================================
  * 
- * Giải quyết bài toán tâm lý: "Xe không đưa tận cửa, từ trạm về nhà thế nào?"
- * - Tự động đối chiếu điểm đến ngõ ngách với Trạm Hub tối ưu trên hành lang QL13.
- * - Tính toán cự ly chặng cuối, dự toán chi phí GrabBike / Xe ôm / Đi bộ.
- * - Đưa ra bảng phân tích tổng chi phí và mức tiết kiệm so với taxi đường dài liên tỉnh.
+ * Solves a psychological problem: "The car does not take me to my door, how do I get home from the station?"
+ * - Automatically matches alleyway destinations to the optimal station (Hub) on the QL13 corridor.
+ * - Computes the last-mile distance, estimates the cost of GrabBike / motorbike taxi ("xe ôm") / walking.
+ * - Produces a table analyzing total cost and savings compared with an intercity long-distance taxi.
  */
 
 import { getFixedSegmentTariff } from '../constants/routes.js';
 
-// DANH MỤC CÁC ĐỊA DANH PHỔ BIẾN TẠI TP.HCM & BÌNH PHƯỚC KÈM TRẠM HUB TỐI ƯU
+// CATALOG OF POPULAR PLACES IN TP.HCM & BÌNH PHƯỚC WITH THEIR OPTIMAL STATION (HUB)
 export const POPULAR_LAST_MILE_DESTINATIONS = [
   {
     id: 'cho_ba_chieu',
@@ -121,15 +121,15 @@ export const POPULAR_LAST_MILE_DESTINATIONS = [
 ];
 
 /**
- * Tính toán giải pháp chặng cuối dựa trên điểm đến mong muốn của hành khách
- * @param {string} destinationKeyword - Tên hoặc từ khoá điểm đến (VD: "Chợ Bà Chiểu", "Quận 1", "Chợ Rẫy")
- * @param {string} originHubId - Trạm xuất phát của khách (Mặc định: 'hub_ql13_tan_khai')
- * @returns {object} Kết quả phân tích chi phí và gợi ý di chuyển
+ * Compute a last-mile solution based on the passenger's desired destination
+ * @param {string} destinationKeyword - Destination name or keyword (e.g. "Chợ Bà Chiểu", "Quận 1", "Chợ Rẫy")
+ * @param {string} originHubId - The passenger's departure station (default: 'hub_ql13_tan_khai')
+ * @returns {object} Cost analysis result and travel suggestions
  */
 export function calculateLastMileOption(destinationKeyword = '', originHubId = 'hub_ql13_tan_khai') {
   const cleanInput = String(destinationKeyword || '').trim().toLowerCase();
 
-  // 1. Tìm điểm đến khớp trong danh mục hoặc lấy điểm đầu tiên làm mặc định
+  // 1. Find a matching destination in the catalog or take the first one as the default
   let matchedDestination = POPULAR_LAST_MILE_DESTINATIONS.find((dest) => {
     return (
       dest.id.toLowerCase().includes(cleanInput) ||
@@ -140,7 +140,7 @@ export function calculateLastMileOption(destinationKeyword = '', originHubId = '
   });
 
   if (!matchedDestination) {
-    // Nếu gõ tự do, ước lượng thông minh: mặc định trạm Ngã tư Hàng Xanh
+    // If typed freely, estimate smartly: default to the Ngã tư Hàng Xanh station
     matchedDestination = {
       id: 'custom_dest',
       name: destinationKeyword || 'Điểm đến nội thành TP.HCM',
@@ -157,15 +157,15 @@ export function calculateLastMileOption(destinationKeyword = '', originHubId = '
     };
   }
 
-  // 2. Tra cứu cước cố định CarMate Metro từ điểm đón tới Hub tối ưu
+  // 2. Look up the CarMate Metro fixed fare from the pickup point to the optimal Hub
   const carmateTariff = getFixedSegmentTariff(originHubId, matchedDestination.bestHubId);
   const carmateFareVND = carmateTariff.pricePerSeat;
 
-  // 3. Tính toán tổng chi phí và mức tiết kiệm
+  // 3. Compute total cost and savings
   const grabBikeVND = matchedDestination.grabBikeEstimateVND;
   const totalCostVND = carmateFareVND + grabBikeVND;
 
-  // Taxi truyền thống / GrabCar liên tỉnh cùng chặng đường (thường 8.000đ - 9.000đ/km trọn gói ~ 850.000đ)
+  // Traditional taxi / intercity GrabCar over the same route (usually 8.000đ - 9.000đ/km, ~850.000đ all-inclusive)
   const taxiEstimatedFareVND = Math.round(Math.max(650000, (carmateTariff.distanceKm + matchedDestination.distanceToHubKm) * 8500) / 10000) * 10000;
   const savingsVND = Math.max(0, taxiEstimatedFareVND - totalCostVND);
 

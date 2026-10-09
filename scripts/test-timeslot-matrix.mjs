@@ -1,8 +1,8 @@
 /**
- * KIỂM THỬ MA TRẬN KHE THỜI GIAN (TIME-SLOTTED CORRIDOR MATRIX)
+ * TIME-SLOTTED CORRIDOR MATRIX TEST
  *
- * Bất biến quan trọng nhất được kiểm ở đây: MÀN HÌNH KHÔNG BAO GIỜ TRỐNG.
- * Khách liên tỉnh bấm tìm chuyến mà nhận về danh sách rỗng là mất khách vĩnh viễn.
+ * The most important invariant checked here: THE SCREEN IS NEVER EMPTY.
+ * An intercity passenger who searches for a trip and gets back an empty list is lost for good.
  */
 
 import assert from 'node:assert';
@@ -22,13 +22,13 @@ console.log('\n🧪 KIỂM THỬ MA TRẬN KHE THỜI GIAN\n');
 await initDB();
 resetAllStationData();
 
-// ── 1. Bất biến: không bao giờ trống ───────────────────────────────────
+// ── 1. Invariant: never empty ─────────────────────────────────────────
 console.log('── 1. BẤT BIẾN "KHÔNG BAO GIỜ TRỐNG" ──');
 
 const oddHour = buildTimeSlotMatrix({
   originHubId: 'hub_ql13_bau_bang',
   destinationHubId: 'hub_ql13_hang_xanh',
-  timeSlot: '02:47', // giờ chắc chắn không có chuyến nào
+  timeSlot: '02:47', // an hour that surely has no trips
   seatsNeeded: 1
 });
 
@@ -37,7 +37,7 @@ ok(oddHour.slots.length > 0, 'Giờ không ai chạy vẫn trả về khe — m�
 ok(oddHour.isEmpty === false, 'Cờ isEmpty luôn false theo thiết kế');
 ok(oddHour.counts.shadow > 0, 'Thiếu chuyến thật thì bù bằng khe dự phòng');
 
-// ── 2. Tầng CONFIRMED ──────────────────────────────────────────────────
+// ── 2. CONFIRMED tier ─────────────────────────────────────────────────
 console.log('\n── 2. TẦNG 🟢 CONFIRMED ──');
 
 const early = buildTimeSlotMatrix({
@@ -54,7 +54,7 @@ ok(conf.action === 'CONFIRM_NOW', 'Hành động là xác nhận đi ngay, khôn
 ok(conf.seatsAvailable > 0, 'Đọc đúng số ghế còn trống (availableSeats, không phải seats)');
 ok(conf.pricePerSeat > 0, 'Đọc đúng giá mỗi ghế (basePricePerSeat)');
 
-// Cửa sổ ±30 phút phải loại chuyến quá xa giờ khách muốn
+// The ±30-minute window must exclude trips too far from the passenger's desired time
 const noon = buildTimeSlotMatrix({
   originHubId: 'hub_ql13_bau_bang',
   destinationHubId: 'hub_ql13_hang_xanh',
@@ -64,7 +64,7 @@ const noon = buildTimeSlotMatrix({
 const noonHas5am = noon.slots.some((s) => s.tier === 'CONFIRMED' && s.departureLabel === '05:00');
 ok(!noonHas5am, 'Chuyến 05:00 KHÔNG lọt vào kết quả cho giờ muốn 12:00 (cửa sổ ±30 phút)');
 
-// Yêu cầu nhiều ghế hơn số còn trống -> phải loại
+// A request for more seats than remain available -> must be excluded
 const bigGroup = buildTimeSlotMatrix({
   originHubId: 'hub_ql13_bau_bang',
   destinationHubId: 'hub_ql13_hang_xanh',
@@ -74,7 +74,7 @@ const bigGroup = buildTimeSlotMatrix({
 ok(bigGroup.counts.confirmed < early.counts.confirmed || bigGroup.counts.confirmed === 0,
    'Nhóm 4 người không được ghép vào xe chỉ còn 1 ghế');
 
-// ── 3. Tầng FORMING ────────────────────────────────────────────────────
+// ── 3. FORMING tier ───────────────────────────────────────────────────
 console.log('\n── 3. TẦNG 🔵 FORMING (xe đang lăn bánh) ──');
 
 const before = buildTimeSlotMatrix({
@@ -84,10 +84,10 @@ const before = buildTimeSlotMatrix({
 });
 ok(before.counts.forming === 0, 'Chưa có xe nào chạy -> chưa có tầng FORMING');
 
-// Xe đang ở Chơn Thành (s=56.5), cách Bàu Bàng (s=84.5) khoảng 28km
-// Phiên Buồng lái chỉ lên sàn khi gắn với một bài đăng CÓ THẬT: mã chuyến bịa
-// từng dựng ra "xe ma" mà khách không tra cứu hay đặt chỗ được. Vì vậy kiểm thử
-// phải tạo chuyến thật trước, y như luồng của Chủ xe ngoài đời.
+// The vehicle is at Chơn Thành (s=56.5), about 28km from Bàu Bàng (s=84.5)
+// A Cockpit session only appears on the marketplace when tied to a REAL post: a made-up trip id
+// once produced a "ghost vehicle" that passengers could neither look up nor book. So the test
+// must create a real trip first, just like the driver's flow in real life.
 const liveTripId = `DRV-TEST-LIVE-${Date.now()}`;
 const passedTripId = `DRV-TEST-PASSED-${Date.now()}`;
 await addTrip({
@@ -139,7 +139,7 @@ ok(forming.distanceKm > 20 && forming.distanceKm < 35, `Cự ly ${forming.distan
 ok(forming.action === 'RESERVE_PRIORITY', 'Hành động là đặt chỗ ưu tiên, hệ thống tự khoá');
 ok(forming.certainty < 1.0, 'Độ chắc chắn thấp hơn chuyến đã có thật');
 
-// Xe đã VƯỢT QUA trạm thì không được tính
+// A vehicle that has already PASSED the station must not be counted
 telemetryPing({
   tripId: passedTripId, driverPhone: '0913000002', plate: '61A-888.88',
   seatsAvailable: 3, lat: 10.8525, lng: 106.7214, speed: 45 // Ngã 4 Bình Phước, s=132.5
@@ -151,7 +151,7 @@ const afterPass = buildTimeSlotMatrix({
 });
 ok(afterPass.counts.forming === 1, 'Xe đã vượt qua trạm KHÔNG được đưa vào kết quả');
 
-// ── 4. Giá & thông tin kèm theo ────────────────────────────────────────
+// ── 4. Price & accompanying info ──────────────────────────────────────
 console.log('\n── 4. GIÁ VÀ THÔNG TIN TRẠM ──');
 
 ok(withLive.tariff && withLive.tariff.pricePerSeat > 0, 'Trả kèm giá vé, giao diện không cần gọi thêm lượt');
@@ -159,17 +159,17 @@ ok(withLive.tariff.total === withLive.tariff.pricePerSeat * withLive.seatsNeeded
 ok(withLive.station != null, 'Trả kèm tình trạng hàng đợi tại trạm');
 ok(withLive.windowMinutes === MATRIX_CONFIG.NEIGHBOR_WINDOW_MINUTES, 'Công khai cửa sổ ±30 phút đang dùng');
 
-// ── 5. Đầu vào sai ─────────────────────────────────────────────────────
+// ── 5. Invalid input ──────────────────────────────────────────────────
 console.log('\n── 5. ĐẦU VÀO KHÔNG HỢP LỆ ──');
 
 const bad = buildTimeSlotMatrix({ originHubId: 'hub_khong_ton_tai', destinationHubId: 'hub_ql13_hang_xanh' });
 ok(bad.success === false, 'Trạm không tồn tại -> báo lỗi rõ ràng, không ném exception');
 
-// ── 6. CHỐNG TÁI PHÁT: LỌC CHẶNG VÀ CHIỀU ĐI ──────────────────────────
+// ── 6. REGRESSION GUARD: LEG AND DIRECTION FILTER ────────────────────
 console.log('\n── 6. LỌC ĐÚNG CHẶNG VÀ CHIỀU ĐI ──');
 
-// Lỗi cũ: tầng CONFIRMED không lọc theo cặp trạm, nên MỌI chuyến trên sàn đều
-// hiện ra như "🟢 chắc chắn 100%" cho bất kỳ chặng nào khách tìm.
+// Old bug: the CONFIRMED tier did not filter by station pair, so EVERY trip on the marketplace
+// showed up as "🟢 chắc chắn 100%" ("100% certain") for whichever leg the passenger searched.
 const southbound = buildTimeSlotMatrix({
   originHubId: 'hub_ql13_bau_bang',
   destinationHubId: 'hub_ql13_hang_xanh',
@@ -190,12 +190,12 @@ ok(!southIds.some((id) => northIds.includes(id)),
 ok(northIds.every((id) => id.includes('RETURN')),
    'Chiều ngược chỉ còn đúng chuyến khứ hồi Sài Gòn → Bình Phước');
 
-// Chuyến ngoài hành lang (Vũng Tàu, Phan Thiết) không được lọt vào tầng đáng tin nhất
+// Trips outside the corridor (Vũng Tàu, Phan Thiết) must not leak into the most trusted tier
 const allConfirmed = [...southIds, ...northIds];
 ok(allConfirmed.length > 0 && !allConfirmed.includes('DRV-104') && !allConfirmed.includes('DRV-103'),
    'Chuyến Vũng Tàu / Phan Thiết KHÔNG hiện ở tầng "chắc chắn 100%" của tuyến QL13');
 
-// ── 7. LỊCH CHẠY TOÀN TUYẾN & NGƯỠNG MẬT ĐỘ ───────────────────────────
+// ── 7. FULL-ROUTE SCHEDULE & DENSITY THRESHOLD ───────────────────────
 console.log('\n── 7. LỊCH CHẠY TOÀN TUYẾN ──');
 
 resetAllStationData();
@@ -213,18 +213,18 @@ ok(tl.periods.every((p) => p.label && p.hint && Array.isArray(p.trips)),
 ok(tl.periods.some((p) => p.count === 0),
    'Buổi không có chuyến VẪN được giữ lại — chính khoảng trống là nơi cần gom nhu cầu');
 
-// Ngưỡng mật độ: đây là thứ quyết định nút đổi mặt giữa "xem lịch" và "đăng nhu cầu"
+// Density threshold: this is what decides the button's face-swap between "xem lịch" (view schedule) and "đăng nhu cầu" (post a request)
 ok(typeof tl.isDense === 'boolean', 'Trả về cờ isDense để giao diện tự quyết định');
 ok(tl.isDense === tl.totalTrips >= tl.minTripsForTimeline,
    `isDense khớp ngưỡng: ${tl.totalTrips} chuyến vs ngưỡng ${tl.minTripsForTimeline}`);
-// Kiểm QUAN HỆ giữa mật độ và cờ, không kiểm một trạng thái nhất thời:
-// dữ liệu seed thay đổi thì số chuyến đổi theo, nhưng quy tắc phải luôn đúng.
+// Check the RELATIONSHIP between density and the flag, not a transient state:
+// when the seed data changes the trip count changes with it, but the rule must always hold.
 ok(
   tl.totalTrips >= tl.minTripsForTimeline ? tl.isDense === true : tl.isDense === false,
   `Quy tắc ngưỡng luôn đúng: ${tl.totalTrips} chuyến -> isDense=${tl.isDense} (mở màn lịch chạy khi và chỉ khi đủ dày)`
 );
 
-// Không lọc theo giờ: tổng chuyến phải >= số chuyến của một khung hẹp
+// Not filtered by time: the total trips must be >= the trip count of a narrow slot
 const narrow = buildTimeSlotMatrix({
   originHubId: 'hub_ql13_bau_bang',
   destinationHubId: 'hub_ql13_hang_xanh',
@@ -238,7 +238,7 @@ const badTl = buildCorridorTimeline({ originHubId: 'hub_khong_co', destinationHu
 ok(badTl.success === false, 'Trạm không tồn tại -> báo lỗi, không ném exception');
 
 resetAllStationData();
-// Dọn chuyến dựng riêng cho kiểm thử để sàn không còn dữ liệu thừa
+// Clean up the trips built specifically for the test so the marketplace has no leftover data
 await deleteTrip(liveTripId);
 await deleteTrip(passedTripId);
 console.log(`\n🎉 TẤT CẢ ${passed} KIỂM THỬ ĐỀU ĐẠT\n`);

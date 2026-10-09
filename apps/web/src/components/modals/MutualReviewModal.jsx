@@ -37,9 +37,9 @@ const PASSENGER_WARNING_TAGS = [
 
 export default function MutualReviewModal({ booking, onClose, onSubmitReview }) {
   const { t } = useI18n();
-  // Hook phải gọi trước mọi early return (Rules of Hooks)
+  // Hooks must be called before any early return (Rules of Hooks)
 
-  // Tự động nhận diện vai trò mặc định (hoặc cho phép hoán đổi)
+  // Automatically detect the default role (or allow swapping)
   const defaultIsDriver = booking?.partyRole?.includes('Chủ xe đón') || false;
   const [reviewerRole, setReviewerRole] = useState(defaultIsDriver ? 'driver' : 'passenger');
   const [rating, setRating] = useState(5);
@@ -114,7 +114,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
       }
     >
       <div className="space-y-5">
-        {/* Bộ chuyển đổi vai trò người đánh giá */}
+        {/* Reviewer role switcher */}
         <div className="p-1 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center gap-1">
           <button
             type="button"
@@ -142,14 +142,14 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
           </button>
         </div>
 
-        {/* Thông tin đối tác cần đánh giá */}
+        {/* Info of the partner being reviewed */}
         <div className="text-center space-y-2 py-1">
           <p className="type-caption text-slate-500 dark:text-slate-400">
             Bạn đang đánh giá {isDriverReviewing ? 'hành khách' : 'chủ xe'}:
           </p>
           <h4 className="type-heading text-slate-900 dark:text-white">{targetName}</h4>
 
-          {/* Chấm sao tương tác */}
+          {/* Interactive star rating */}
           <div className="flex items-center justify-center gap-2 pt-1">
             {[1, 2, 3, 4, 5].map((s) => {
               const isFilled = (hoverRating || rating) >= s;
@@ -181,7 +181,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
           </p>
         </div>
 
-        {/* Cảnh báo bảo vệ cộng đồng nếu chấm sao thấp hoặc chọn cảnh báo */}
+        {/* Community protection warning if the star rating is low or a warning is selected */}
         {(isLowRating || hasWarningTag) && (
           <div className="type-caption p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 flex items-start gap-2.5 text-amber-900 dark:text-amber-200">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -197,7 +197,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
           </div>
         )}
 
-        {/* Thẻ tiêu chí tích cực */}
+        {/* Positive criteria card */}
         <div className="space-y-2">
           <p className="type-caption text-slate-700 dark:text-slate-300">{t('review2.s004')}</p>
           <div className="flex flex-wrap gap-1.5">
@@ -221,7 +221,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
           </div>
         </div>
 
-        {/* Thẻ tiêu chí cảnh báo / góp ý */}
+        {/* Warning / feedback criteria card */}
         <div className="space-y-2">
           <p className="type-caption text-rose-700 dark:text-rose-400">{t('review2.s005')}</p>
           <div className="flex flex-wrap gap-1.5">
@@ -245,7 +245,7 @@ export default function MutualReviewModal({ booking, onClose, onSubmitReview }) 
           </div>
         </div>
 
-        {/* Nhận xét cụ thể */}
+        {/* Specific comment */}
         <div className="space-y-1.5">
           <label className="type-label text-slate-700 dark:text-slate-300">
             {t('review2.s006')}

@@ -85,7 +85,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onShowToast }
           </div>
         )}
 
-        {/* Hộp thông tin tài khoản hiện tại */}
+        {/* Current account info box */}
         <div className="type-caption p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/60 border border-black/[0.06] space-y-1">
           <p className="type-body-strong text-slate-500">{t('delAccount.s002')}</p>
           <p className="type-body-strong text-slate-900 dark:text-white">
@@ -94,7 +94,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onShowToast }
           </p>
         </div>
 
-        {/* Quy trình tiếp nhận an toàn */}
+        {/* Safe intake process */}
         <div className="type-caption p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-2 text-slate-600 dark:text-slate-300">
           <div className="type-body-strong flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
             <ShieldCheck className="w-4 h-4 text-[#0071e3] shrink-0" />
@@ -106,7 +106,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onShowToast }
           </p>
         </div>
 
-        {/* Chọn lý do muốn đóng tài khoản */}
+        {/* Select the reason for closing the account */}
         <div className="space-y-2">
           <label className="type-label block text-slate-700 dark:text-slate-300">
             {t('delAccount.s004')}
@@ -136,7 +136,7 @@ export default function DeleteAccountModal({ currentUser, onClose, onShowToast }
           />
         </div>
 
-        {/* Checkbox xác nhận */}
+        {/* Confirmation checkbox */}
         <label className="type-label flex items-start gap-3 p-3 rounded-2xl bg-[#f5f5f7] dark:bg-slate-800/40 border border-black/[0.06] cursor-pointer group">
           <input
             type="checkbox"

@@ -23,7 +23,7 @@ export default function PlateMaskModal({
   const [isRendering, setIsRendering] = useState(false);
   const imgRef = useRef(null);
 
-  // Đồng bộ khi prop photo thay đổi
+  // Sync when the photo prop changes
   useEffect(() => {
     if (photo) {
       setIsMasked(photo.isMasked !== false);
@@ -34,7 +34,7 @@ export default function PlateMaskModal({
     }
   }, [photo]);
 
-  // Cập nhật preview canvas khi vị trí hoặc trạng thái che thay đổi
+  // Update the preview canvas when the position or mask state changes
   useEffect(() => {
     if (!originalUrl) return;
     let cancelled = false;
@@ -68,7 +68,7 @@ export default function PlateMaskModal({
 
   if (!isOpen || !photo) return null;
 
-  // Xử lý khi người dùng chạm hoặc click vào bất kỳ điểm nào trên ảnh
+  // Handle when the user taps or clicks any point on the photo
   const handleImageClick = (e) => {
     if (!imgRef.current) return;
     const rect = imgRef.current.getBoundingClientRect();
@@ -143,7 +143,7 @@ export default function PlateMaskModal({
       }
     >
       <div className="space-y-3">
-        {/* Banner hướng dẫn 1-chạm */}
+        {/* 1-tap guide banner */}
         <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 flex items-center justify-between gap-2">
           <div className="type-caption flex items-center gap-2 text-blue-900 dark:text-blue-200">
             <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -172,7 +172,7 @@ export default function PlateMaskModal({
           </button>
         </div>
 
-        {/* Khung ảnh tương tác Tap-to-Mask */}
+        {/* Interactive Tap-to-Mask photo frame */}
         <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950/80 shadow-inner group select-none min-h-[260px] sm:min-h-[320px] flex items-center justify-center">
           {previewUrl ? (
             <img
@@ -190,7 +190,7 @@ export default function PlateMaskModal({
             </div>
           )}
 
-          {/* Loading indicator overlay khi đang render preview */}
+          {/* Loading indicator overlay while the preview is rendering */}
           {isRendering && previewUrl && (
             <div className="type-badge absolute top-2 right-2 px-2 py-1 rounded-md bg-black/60 backdrop-blur-xs text-white flex items-center gap-1.5 pointer-events-none">
               <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -198,7 +198,7 @@ export default function PlateMaskModal({
             </div>
           )}
 
-          {/* Vị trí chạm hint overlay */}
+          {/* Tap position hint overlay */}
           {isMasked && (
             <div className="type-badge absolute top-2 left-2 px-2 py-1 rounded-md bg-black/70 backdrop-blur-xs text-white pointer-events-none flex items-center gap-1.5 shadow-sm">
               <ShieldCheck className="w-3 h-3 text-emerald-400" />

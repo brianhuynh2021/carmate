@@ -1,10 +1,10 @@
 import React from 'react';
 
 /**
- * PresenceDot — Chấm chỉ báo trạng thái trực tuyến (Live Online / Offline Telemetry)
- * Tuân thủ triệt để nguyên lý Apple HIG & Stanford Ergonomics:
- * - Đèn xanh / Green dot (Đang online): Màu xanh emerald-500 rực rỡ, có sóng phát xung nhấp nháy tỏa ra (Liveness broadcast pulse).
- * - Đèn đỏ / Red dot (Ngoại tuyến): Màu đỏ sẫm rose-700/rose-600 (hoặc rose-500), chìm xuống, hoàn toàn đứng im không hiệu ứng.
+ * PresenceDot — Online status indicator dot (Live Online / Offline Telemetry)
+ * Strictly follows Apple HIG & Stanford Ergonomics principles:
+ * - Green light / Green dot (Online): Vivid emerald-500 green, with a blinking pulse wave radiating outward (Liveness broadcast pulse).
+ * - Red light / Red dot (Offline): Dark rose-700/rose-600 (or rose-500) red, sunk down, completely still with no effect.
  */
 export default function PresenceDot({
   isOnline = false,

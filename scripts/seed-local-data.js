@@ -1,15 +1,15 @@
 /**
- * CarMate — Bộ Dữ Liệu Kiểm Thử Local Chuẩn Chỉnh (Curated Local Test Dataset)
+ * CarMate — Curated Local Test Dataset
  *
- * Chuẩn bị môi trường dữ liệu phong phú, sống động và thực tế 100%:
- * - Đầy đủ các chuyến của tài khoản chính (0984883750) ở mọi trạng thái: đang nhận khách, đã đủ người, đã qua giờ (để test tái đăng), khứ hồi.
- * - Đầy đủ các đơn ghép xe (Bookings): đang hẹn Zalo, đã đặt cọc, đã hoàn thành, có đánh giá 5 sao, trễ hẹn, huỷ.
- * - Chỉ gieo dữ liệu thuộc các hành lang CarMate thực sự vận hành: Tuyến QL13 và QL14.
- *   Không gieo chuyến thuộc tuyến chưa phục vụ (Vũng Tàu, Phan Thiết...) vì chúng lọt vào
- *   kết quả tìm kiếm và làm sai lệch bức tranh nguồn cung thật của hành lang.
- * - Đồng bộ 100% giữa SQLite (apps/api/data/carmate.sqlite) và JSON (apps/api/data/carmate_db.json).
+ * Prepares a rich, lively and 100% realistic data environment:
+ * - Complete set of trips from the main account (0984883750) in every state: accepting passengers, full, past departure time (to test re-posting), round trip.
+ * - Complete set of ride-match bookings (Bookings): arranging via Zalo, deposit paid, completed, with a 5-star rating, late for the appointment, cancelled.
+ * - Only seeds data from corridors CarMate actually operates: the QL13 and QL14 routes.
+ *   Does not seed trips on routes that are not served (Vũng Tàu, Phan Thiết...) because they leak into
+ *   search results and distort the picture of the corridor's real supply.
+ * - 100% in sync between SQLite (apps/api/data/carmate.sqlite) and JSON (apps/api/data/carmate_db.json).
  *
- * Cách chạy:
+ * How to run:
  *   node scripts/seed-local-data.js
  */
 
@@ -78,7 +78,7 @@ const CAR_PHOTOS_VIOS = [
   }
 ];
 
-// 1. TÀI KHOẢN NGƯỜI DÙNG
+// 1. USER ACCOUNTS
 const USERS = [
   {
     id: 'USR-0984883750',
@@ -143,9 +143,9 @@ const USERS = [
   }
 ];
 
-// 2. DANH SÁCH BÀI ĐĂNG CHUYẾN XE (TRIPS)
+// 2. LIST OF TRIP POSTS (TRIPS)
 const TRIPS = [
-  // ── NHÓM A: CHUYẾN CỦA CHÍNH BẠN (0984883750) ──
+  // ── GROUP A: YOUR OWN TRIPS (0984883750) ──
   {
     id: 'DRV-2928',
     maskedCode: 'CX-483',
@@ -317,7 +317,7 @@ const TRIPS = [
     createdAt: Date.now() - 1000 * 3600 * 30
   },
 
-  // ── NHÓM B: CÁC CHUYẾN XE KHÁC ĐỂ TEST SÀN & BỘ LỌC ──
+  // ── GROUP B: OTHER TRIPS TO TEST THE MARKETPLACE & FILTERS ──
   {
     id: 'DRV-101',
     maskedCode: 'CX-101',
@@ -419,7 +419,7 @@ const TRIPS = [
     createdAt: Date.now() - 3600000 * 6
   },
 
-  // ── NHÓM C: NHU CẦU TÌM XE CỦA KHÁCH (PASSENGER REQUESTS - PHỤC VỤ RADAR) ──
+  // ── GROUP C: PASSENGER RIDE REQUESTS (PASSENGER REQUESTS - FOR THE RADAR) ──
   {
     id: 'REQ-201',
     maskedCode: 'KX-201',
@@ -468,17 +468,17 @@ const TRIPS = [
   },
 
   // ───────────────────────────────────────────────────────────────────────
-  // CỤM CHUYẾN TRẢI ĐỀU TRONG NGÀY (QL13)
+  // CLUSTER OF TRIPS SPREAD EVENLY THROUGH THE DAY (QL13)
   //
-  // Trước đây 6 chuyến seed đều dồn vào sáng sớm (05-08h) và chiều tối
-  // (16-19h), nên bấm tìm vào giữa trưa hay đầu giờ chiều là trả về rỗng —
-  // cửa sổ tìm ±30 phút không với tới chuyến nào. Người thử nghiệm tưởng hệ
-  // thống hỏng, trong khi thực ra nó chạy đúng.
+  // Previously the 6 seed trips were all bunched into the early morning (05-08h) and the evening
+  // (16-19h), so searching at midday or early afternoon returned nothing —
+  // the ±30-minute search window did not reach any trip. Testers thought the system
+  // was broken, when in fact it was working correctly.
   //
-  // Cụm này rải chuyến mỗi 60-90 phút suốt 04h-22h để mọi khung giờ đều có
-  // kết quả, và đủ dày (>= 5 chuyến/chặng) để thấy luôn màn "Lịch chạy toàn
-  // tuyến". Địa danh đặt khớp từ điển gazetteer của timeSlotMatrix nên chúng
-  // lọt đúng chặng khi tra cứu.
+  // This cluster spreads trips every 60-90 minutes across 04h-22h so every time slot has
+  // results, and is dense enough (>= 5 trips per leg) to also show the "Lịch chạy toàn
+  // tuyến" (full-route schedule) screen. Place names match the timeSlotMatrix gazetteer dictionary so they
+  // land on the right leg when looked up.
   ...[
     ['04:30', 'Chợ Lộc Ninh (Ngã 3 Lộc Tấn)', 'Sài Gòn (Sân bay Tân Sơn Nhất)', 'Toyota Vios', 3, 170000],
     ['06:30', 'Chơn Thành (Ngã 4 QL13)', 'Sài Gòn (Ngã tư Hàng Xanh)', 'Honda City', 2, 140000],
@@ -516,7 +516,7 @@ const TRIPS = [
     depositPerSeat: 0,
     carCategory: 'family_car',
     isVip: false,
-    // Lịch sử thật khác nhau để chỉ số an tâm phân tầng rõ, không đồng loạt
+    // Realistically varied histories so the assurance score is clearly tiered, not uniform
     rating: 4.7 + (i % 4) * 0.1,
     completedCount: 8 + i * 7,
     perks: ['Không khói thuốc', 'Trọn gói xăng & cầu đường'],
@@ -527,7 +527,7 @@ const TRIPS = [
   }))
 ];
 
-// 3. DANH SÁCH ĐƠN GHÉP XE (BOOKINGS / ESCROWS)
+// 3. LIST OF RIDE-MATCH BOOKINGS (BOOKINGS / ESCROWS)
 const BOOKINGS = [
   {
     escrowId: 'ESC-ZALO-483-01',
@@ -624,7 +624,7 @@ export async function seedLocalData() {
   const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
 
-  // 1. Nạp Users
+  // 1. Load Users
   const insertUser = db.prepare(`
     INSERT OR REPLACE INTO users (
       id, phone, email, name, role, avatar, trustScore, isCccdVerified,
@@ -657,7 +657,7 @@ export async function seedLocalData() {
   insertUsersTx(USERS);
   console.log(`✅ Đã nạp thành công ${USERS.length} tài khoản thành viên (gồm Root Admin 0984883750).`);
 
-  // 2. Nạp Trips
+  // 2. Load Trips
   const insertTrip = db.prepare(`
     INSERT OR REPLACE INTO trips (
       id, type, status, maskedCode, phoneReal, userId, fromLocation, toLocation,
@@ -699,7 +699,7 @@ export async function seedLocalData() {
   insertTripsTx(TRIPS);
   console.log(`✅ Đã nạp thành công ${TRIPS.length} chuyến xe chất lượng cao vào SQLite.`);
 
-  // 3. Nạp Bookings
+  // 3. Load Bookings
   const insertBooking = db.prepare(`
     INSERT OR REPLACE INTO bookings (
       escrowId, tripId, passengerPhone, status, createdAt, payload
@@ -723,7 +723,7 @@ export async function seedLocalData() {
   insertBookingsTx(BOOKINGS);
   console.log(`✅ Đã nạp thành công ${BOOKINGS.length} đơn ghép xe (Bookings) đủ trạng thái.`);
 
-  // 4. Đồng bộ ra file carmate_db.json
+  // 4. Sync out to the carmate_db.json file
   const currentJson = fs.existsSync(JSON_PATH) ? JSON.parse(fs.readFileSync(JSON_PATH, 'utf8')) : {};
   currentJson.users = USERS;
   currentJson.driverOffers = TRIPS.filter((t) => t.type === 'driver_offer');

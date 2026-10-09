@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * CarMate — Khôi phục database từ bản sao lưu.
+ * CarMate — Restore the database from a backup.
  *
- * DỪNG SERVER TRƯỚC KHI CHẠY. Ghi đè DB trong lúc server đang mở
- * kết nối sẽ làm hỏng dữ liệu.
+ * STOP THE SERVER BEFORE RUNNING. Overwriting the DB while the server has
+ * connections open will corrupt the data.
  *
- * Cách dùng:
- *   node scripts/restore-db.js --list              # liệt kê các bản sao lưu
- *   node scripts/restore-db.js --latest            # khôi phục bản mới nhất
- *   node scripts/restore-db.js <đường-dẫn.gz>      # khôi phục bản chỉ định
+ * Usage:
+ *   node scripts/restore-db.js --list              # list the backups
+ *   node scripts/restore-db.js --latest            # restore the most recent backup
+ *   node scripts/restore-db.js <path.gz>           # restore the specified backup
  */
 
 import Database from 'better-sqlite3';
@@ -72,7 +72,7 @@ async function main() {
   if (!source) fail('Không có bản sao lưu nào để khôi phục.');
   if (!fs.existsSync(source)) fail(`Không tìm thấy file ${source}`);
 
-  // Giải nén ra file tạm rồi kiểm tra trước khi động vào DB thật
+  // Decompress to a temp file and verify it before touching the real DB
   const tmpPath = path.join(DATA_DIR, `.restore-${Date.now()}.sqlite`);
   await pipeline(fs.createReadStream(source), zlib.createGunzip(), fs.createWriteStream(tmpPath));
 
@@ -107,14 +107,14 @@ async function main() {
     }
   }
 
-  // Giữ lại DB hiện tại phòng khi cần quay lui
+  // Keep the current DB in case we need to roll back
   if (fs.existsSync(DB_PATH)) {
     const safety = `${DB_PATH}.before-restore-${Date.now()}`;
     fs.copyFileSync(DB_PATH, safety);
     console.log(`[restore] · DB cũ được giữ tại ${path.basename(safety)}`);
   }
 
-  // Xoá WAL/SHM cũ, nếu không SQLite sẽ áp WAL của DB cũ lên DB mới
+  // Remove the old WAL/SHM, otherwise SQLite would apply the old DB's WAL onto the new DB
   for (const suffix of ['-wal', '-shm']) {
     const sidecar = `${DB_PATH}${suffix}`;
     if (fs.existsSync(sidecar)) fs.unlinkSync(sidecar);

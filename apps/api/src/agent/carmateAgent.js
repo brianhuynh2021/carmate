@@ -1,6 +1,6 @@
 /**
  * CarMate Agentic AI Core (Stanford Inner Loop & Tool Calling)
- * Vòng lặp tư duy: Understand -> Retrieve -> Plan -> Act (Tools) -> Observe -> Verify -> Reflect
+ * Reasoning loop: Understand -> Retrieve -> Plan -> Act (Tools) -> Observe -> Verify -> Reflect
  */
 
 import { GoogleGenAI, Type } from '@google/genai';
@@ -15,7 +15,7 @@ import {
   suggestBenchmarkRoute
 } from '@carmate/shared';
 
-// Khai báo 5 Công Cụ (Function Calling Declarations)
+// Declaration of the 5 Tools (Function Calling Declarations)
 export const toolDeclarations = [
   {
     name: 'searchTrips',
@@ -98,7 +98,7 @@ export const toolDeclarations = [
   }
 ];
 
-// ── CÁC HÀM THỰC THI TOOL THỰC TẾ (REAL-WORLD TOOL EXECUTION) ──
+// ── REAL-WORLD TOOL EXECUTION FUNCTIONS ──
 
 export function executeSearchTrips(args = {}) {
   const allTrips = getTrips({
@@ -148,15 +148,15 @@ export function executeSearchTrips(args = {}) {
       hasRelatives: Boolean(t.hasRelatives),
       note: t.note || '',
       perks: t.perks || [],
-      // PII Guard (Nghị định 13/2023): TUYỆT ĐỐI không trả số điện thoại thật ra client.
-      // Kết nối Zalo được cấp qua POST /bookings với tripId — server tự tra phoneReal từ DB.
+      // PII Guard (Decree 13/2023): NEVER return the real phone number to the client.
+      // The Zalo connection is issued via POST /bookings with tripId — the server looks up phoneReal from the DB itself.
       phoneMasked: maskPhoneForPublic(t.phoneReal)
     }))
   };
 }
 
 /**
- * Che số điện thoại thật thành dạng công khai an toàn: 098***2233
+ * Masks the real phone number into a safe public form: 098***2233
  */
 function maskPhoneForPublic(raw) {
   const cleaned = cleanPhoneNumber(raw || '');
@@ -235,7 +235,7 @@ export function executeCheckMemberTrust(args = {}) {
 
 export function executeCalculateEstimatedFare(args = {}) {
   const km = Number(args.distanceKm) || 100;
-  // Xăng trung bình 8L/100km (~22.000đ/L) = ~176.000đ + vé cầu đường (~70.000đ)
+  // Average fuel 8L/100km (~22,000 VND/L) = ~176,000 VND + toll fees (~70,000 VND)
   const totalCost = km * 1800 + 70000;
   const fairPerSeat = Math.round(totalCost / 3 / 10000) * 10000;
 
@@ -263,12 +263,12 @@ export function executeDraftZaloMessage(args = {}) {
 
 /**
  * Stanford Inner Loop: Verify -> Reflect -> Replan
- * Áp dụng giải quyết các tình huống thực tế giao thông & xe gia đình Việt Nam
+ * Applied to real-world situations of Vietnamese traffic & family cars
  */
 export function runStanfordInnerLoop({ to = '', seatsRequested = 1, rawTrips = [], benchmark = null }) {
   const innerLoopLog = [];
 
-  // 1. [VERIFY] Xác minh số ghế thực tế và ngữ cảnh gia đình
+  // 1. [VERIFY] Verify actual seats and family context
   innerLoopLog.push(`[VERIFY] Thẩm tra tính khả dụng của ${rawTrips.length} chuyến xe.`);
 
   const verifiedTrips = rawTrips.map((trip) => {
@@ -276,7 +276,7 @@ export function runStanfordInnerLoop({ to = '', seatsRequested = 1, rawTrips = [
       Boolean(trip.hasRelatives) ||
       /(vợ con|người nhà|con nhỏ|chở vợ|gia đình)/i.test(`${trip.note || ''} ${trip.carType || ''}`);
 
-    // Nếu xe chở người thân (vợ con), chỉ nhận 1 khách
+    // If the car carries relatives (wife and kids), it accepts only 1 passenger
     const actualAvailableSeats = isFamilyWithRelatives ? 1 : trip.seats || 1;
     const isCompatible = actualAvailableSeats >= seatsRequested;
 
@@ -305,7 +305,7 @@ export function runStanfordInnerLoop({ to = '', seatsRequested = 1, rawTrips = [
     );
   }
 
-  // 2. [REFLECT] Tự phản tư tính công bằng & so sánh định mức
+  // 2. [REFLECT] Self-reflect on fairness & compare against the benchmark rate
   const evaluatedTrips = (compatibleTrips.length > 0 ? compatibleTrips : verifiedTrips).map((trip) => {
     const tripPrice = trip.price || 150000;
     const benchRate = benchmark?.suggestedRate || 140000;
@@ -331,14 +331,14 @@ export function runStanfordInnerLoop({ to = '', seatsRequested = 1, rawTrips = [
     );
   }
 
-  // 3. [REPLAN] Tái lập kế hoạch hành lang di chuyển khi chưa có xe trùng điểm đón chính xác
+  // 3. [REPLAN] Re-plan the travel corridor when no car matches the exact pickup point
   let replannedTrips = evaluatedTrips;
   if (evaluatedTrips.length === 0) {
     innerLoopLog.push(
       `[REPLAN] Không tìm thấy chuyến trùng khớp điểm đón chính xác. Đang tái lập quét mở rộng hành lang trục chính...`
     );
 
-    // Kiểm tra tính tương thích hành lang: Chỉ Replan xe có cùng hướng di chuyển
+    // Check corridor compatibility: only Replan cars heading in the same direction
     const toLower = (to || '').toLowerCase();
     const isHeadingSouth = /sài gòn|tp|hcm|bình dương|đồng nai|miền đông|hàng xanh/i.test(toLower);
     const isHeadingBinhPhuoc = /bình phước|đồng xoài|chơn thành|bù đốp|lộc ninh/i.test(toLower);
@@ -387,7 +387,7 @@ export function runStanfordInnerLoop({ to = '', seatsRequested = 1, rawTrips = [
         carCategory: t.carCategory,
         hasRelatives: Boolean(t.hasRelatives),
         perks: t.perks || [],
-        // PII Guard: che số điện thoại thật, kết nối cấp qua tripId ở server.
+        // PII Guard: mask the real phone number; the connection is issued via tripId on the server.
         phoneMasked: maskPhoneForPublic(t.phoneReal),
         isCorridorFallback: true
       }));
@@ -404,7 +404,7 @@ export function runStanfordInnerLoop({ to = '', seatsRequested = 1, rawTrips = [
   };
 }
 
-// ── BỘ SUY LUẬN HEURISTIC CỤC BỘ (ZERO-DOWNTIME STANFORD INNER LOOP) ──
+// ── LOCAL HEURISTIC REASONER (ZERO-DOWNTIME STANFORD INNER LOOP) ──
 function runLocalHeuristicAgent(userPrompt) {
   const prompt = String(userPrompt || '').toLowerCase();
   const native = parseUserMessage(userPrompt);
@@ -412,7 +412,7 @@ function runLocalHeuristicAgent(userPrompt) {
 
   reasoningSteps.push('[PLAN] Tiếp nhận & Phân tích ý định bản địa của bạn.');
 
-  // 1. Nhánh kiểm tra hồ sơ uy tín & an toàn
+  // 1. Branch: check reputation & safety profile
   if (native.intent === INTENTS.CHECK_TRUST) {
     reasoningSteps.push('[ACT] Rà soát hồ sơ an toàn và đánh giá 2 chiều trong cộng đồng.');
     let identifier = 'Tuấn';
@@ -443,7 +443,7 @@ function runLocalHeuristicAgent(userPrompt) {
     };
   }
 
-  // 2. Nhánh tra cứu bảng giá định mức & chi phí xăng / cầu đường
+  // 2. Branch: look up benchmark rates & fuel / toll costs
   if (native.intent === INTENTS.ASK_PRICE) {
     reasoningSteps.push('[ACT] Tra cứu bảng định mức tiền xăng & vé trạm thu phí cầu đường.');
     const benchmark = suggestBenchmarkRoute(userPrompt);
@@ -471,12 +471,12 @@ function runLocalHeuristicAgent(userPrompt) {
     };
   }
 
-  // 3. Nhánh tìm chuyến xe: Kích hoạt đầy đủ Stanford Inner Loop (Verify -> Reflect -> Replan)
+  // 3. Branch: trip search: fully activates the Stanford Inner Loop (Verify -> Reflect -> Replan)
   let from = native.slots.fromMatch || '';
   let to = native.slots.toMatch || '';
   const seatsRequested = native.slots.seats;
 
-  // Giữ lại cú pháp tuyến tự do khi địa danh chưa nằm trong danh mục hub/tỉnh.
+  // Keep the free-form route syntax when the place name is not in the hub/province catalog.
   const naturalRouteMatch = String(userPrompt || '').match(/từ\s+([^,]+?)\s+(?:đi|đến|về|sang)\s+([^,?.!]+)/i);
   if (!from && !to && naturalRouteMatch) {
     from = naturalRouteMatch[1].trim();
@@ -495,12 +495,12 @@ function runLocalHeuristicAgent(userPrompt) {
     noSmoking: native.slots.noSmoking
   });
 
-  // Lấy benchmark của tuyến để phục vụ bước [REFLECT]
+  // Get the route benchmark to serve the [REFLECT] step
   const benchmarkHint = suggestBenchmarkRoute(userPrompt);
   const benchRes = executeGetRouteBenchmarks({ routeName: benchmarkHint?.key || from || to || 'QL13' });
   const benchmark = benchRes.matches?.[0] || null;
 
-  // Kích hoạt Stanford Inner Loop
+  // Activate the Stanford Inner Loop
   const { innerLoopLog, finalTrips } = runStanfordInnerLoop({
     to,
     seatsRequested,
@@ -508,7 +508,7 @@ function runLocalHeuristicAgent(userPrompt) {
     benchmark
   });
 
-  // Tích hợp nhật ký tư duy Stanford vào danh sách bước
+  // Merge the Stanford reasoning log into the step list
   reasoningSteps.push(...innerLoopLog);
 
   let textResponse = '';
@@ -547,11 +547,11 @@ function runLocalHeuristicAgent(userPrompt) {
   };
 }
 
-// ── VÒNG LẶP STANFORD INNER LOOP ĐIỀU PHỐI QUA GEMINI API ──
+// ── STANFORD INNER LOOP ORCHESTRATED VIA THE GEMINI API ──
 export async function runCarMateAgent({ message, history: _history = [] }) {
   const apiKey = process.env.GEMINI_API_KEY;
 
-  // Nếu không có API Key, fallback sang bộ suy luận cục bộ cực nhạy
+  // If there is no API key, fall back to the highly responsive local reasoner
   if (!apiKey || apiKey.includes('your_gemini') || apiKey.trim() === '') {
     return runLocalHeuristicAgent(message);
   }
@@ -584,7 +584,7 @@ Nhiệm vụ của bạn:
     const reasoningSteps = ['[PLAN] Tiếp nhận: Phân tích yêu cầu và hành trình mong muốn của bạn.'];
     let suggestedTrips = [];
 
-    // Kiểm tra và thực thi Function Calling nếu Gemini yêu cầu
+    // Check and execute Function Calling if Gemini requests it
     if (response.functionCalls && response.functionCalls.length > 0) {
       for (const call of response.functionCalls) {
         if (call.name === 'searchTrips') {

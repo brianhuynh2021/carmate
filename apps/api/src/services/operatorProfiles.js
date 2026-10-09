@@ -230,17 +230,18 @@ export function createOperator(input, admin, { now = Date.now() } = {}) {
   return record;
 }
 /**
- * Công khai nhanh một hồ sơ danh bạ mà không bắt nhập lại nguồn, căn cứ và mốc
- * kiểm tra.
+ * Quickly publishes a directory profile without requiring the source, basis and
+ * review date to be re-entered.
  *
- * Đây là đường dành riêng cho giai đoạn đầu, khi danh bạ tham khảo cần lên sóng
- * nhanh hơn tốc độ đối chiếu từng nguồn. Nó KHÔNG bỏ việc ghi vết: hồ sơ vẫn lưu
- * số này lấy từ đâu (`quickPublish`) và ai bấm, để khi nhà xe đề nghị sửa hoặc gỡ
- * thì còn căn cứ trả lời. Hồ sơ công khai theo đường này mang `freshness` khác
- * hồ sơ đã đối chiếu, nên giao diện vẫn nói đúng mức tin cậy của thông tin.
+ * This is a path reserved for the early phase, when the reference directory needs to go live
+ * faster than sources can be cross-checked one by one. It does NOT skip the audit trail: the profile
+ * still records where this number came from (`quickPublish`) and who clicked, so that when the bus
+ * operator asks for a correction or removal there is a basis for answering. A profile published via
+ * this path carries a different `freshness` from a cross-checked profile, so the UI still states
+ * the correct level of confidence in the information.
  *
- * Số cá nhân không đi đường này: công khai số của một người khi họ chưa biết là
- * chuyện khác hẳn với đăng số tổng đài doanh nghiệp.
+ * Individual numbers do not go through this path: publishing a person's number when they do not
+ * know about it is a very different matter from posting a business switchboard number.
  */
 export function quickPublishOperator(id, input, admin, { now = Date.now() } = {}) {
   const actorId = adminActor(admin), database = ensureStore();
@@ -250,8 +251,8 @@ export function quickPublishOperator(id, input, admin, { now = Date.now() } = {}
     if (!current.name || !current.contactPhone) fail('Cần tên hồ sơ và số liên hệ trước khi công khai.');
     if (current.kind === 'individual') fail('Số cá nhân chỉ được công khai khi có bằng chứng chủ số đồng ý; hãy dùng luồng duyệt đầy đủ.');
     if (current.status === 'published') return current;
-    // Nguồn gốc số ghi theo thực tế thu thập. Không có gì truyền lên thì ghi đúng
-    // nơi bản ghi này sinh ra, chứ không để trống rồi sau không ai biết số ở đâu ra.
+    // The origin of the number is recorded as actually collected. If nothing is passed in, record exactly
+    // where this record came from, rather than leaving it blank so that later nobody knows where the number came from.
     const basis = text(input?.sourceOfRecord, 'Nguồn thu thập', 200)
       || (current.importedFrom?.kind === 'transit_directory' ? 'danh bạ nội bộ đã nhập trước đó' : 'hồ sơ do quản trị nhập');
     const record = { ...current, status: 'published', updatedAt: nowIso(now),
@@ -369,8 +370,8 @@ export function createOperatorReport(operatorId, input, { now = Date.now() } = {
   const type = enumValue(input?.type, ['correction', 'removal'], 'Loại phản ánh');
   const message = text(input.message, 'Nội dung phản ánh', 3000, true);
   const reporterContact = text(input.reporterContact, 'Liên hệ người phản ánh', 200);
-  // Người xem đề xuất số đúng ngay trong phản ánh. Đây mới là đề xuất: số chỉ
-  // vào hồ sơ khi quản trị bấm duyệt, nên không ai đổi được số nhà xe sau lưng.
+  // The viewer suggests the correct number right in the report. This is only a suggestion: the number
+  // enters the profile only when an admin clicks approve, so nobody can change a bus operator's number behind its back.
   const suggestedPhone = type === 'correction' ? phone(input.suggestedPhone, true) : '';
   if (suggestedPhone && suggestedPhone === profile.contactPhone) fail('Số đề xuất trùng với số đang hiển thị.');
   const report = { id: `report-${crypto.randomUUID()}`, operatorId, operatorName: profile.name, type, message, reporterContact,
@@ -394,14 +395,14 @@ export function adminListReports(query = {}, admin) {
   adminActor(admin); return reviewList(allRecords('operator_reports'), query, ['pending', 'reviewing']);
 }
 /**
- * Duyệt một chạm số do người xem đề xuất: ghi số mới vào hồ sơ và kết luận phản ánh
- * trong cùng một giao dịch.
+ * One-tap approval of a number suggested by a viewer: writes the new number into the profile and
+ * concludes the report in the same transaction.
  *
- * Đổi số liên hệ là thay đổi nhạy cảm, nên hồ sơ mất căn cứ công khai đã duyệt và
- * rơi về `draft`: số mới chưa được đối chiếu với nguồn chính thức của nhà xe, và
- * một danh bạ công khai không được để số chưa kiểm chứng hiển thị như số đã kiểm.
- * Quản trị đối chiếu nguồn rồi công khai lại, hoặc chờ nhà xe nhận quyền quản lý
- * và tự xác nhận số của họ.
+ * Changing the contact number is a sensitive change, so the profile loses its approved publication
+ * basis and falls back to `draft`: the new number has not been cross-checked against the bus operator's
+ * official source, and a public directory must not display an unverified number as if it were verified.
+ * An admin cross-checks the source and republishes, or waits for the bus operator to claim
+ * management and confirm their own number.
  */
 export function applyReportedPhone(id, input, admin, { now = Date.now() } = {}) {
   const actorId = adminActor(admin), database = ensureStore();

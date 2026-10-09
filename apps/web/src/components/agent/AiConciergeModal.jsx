@@ -197,7 +197,7 @@ export default function AiConciergeModal({ isOpen, onClose, onSelectTrip }) {
                               </span>
                             </div>
 
-                            {/* Tags: Xe chở người thân / Đón dọc hành lang */}
+                            {/* Tags: "Xe chở người thân" (vehicle carrying relatives) / "Đón dọc hành lang" (pickup along the corridor)*/}
                             <div className="flex flex-wrap gap-1.5">
                               {trip.hasRelatives && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 type-body">

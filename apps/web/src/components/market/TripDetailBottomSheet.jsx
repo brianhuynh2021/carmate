@@ -17,7 +17,7 @@ import { priceLabel, publicContactPhone, pickupLabel, freshnessLabel } from './t
 import { CarMateBadge } from '../ui/Logo.jsx';
 
 /**
- * Trả về chuỗi Thứ và Ngày/Tháng/Năm theo định dạng Việt Nam (ví dụ: "Thứ 2 (14/09/2026)")
+ * Returns the weekday and Day/Month/Year string in the Vietnamese format (e.g. "Thứ 2 (14/09/2026)")
  */
 function formatTripTimeHeader(_departureLabel = '', departureDate = null) {
   if (!departureDate) return 'Chưa rõ ngày đi';
@@ -51,12 +51,12 @@ function formatTripTimeHeader(_departureLabel = '', departureDate = null) {
 }
 
 /**
- * BOTTOM SHEET / MODAL CHI TIẾT CHUYẾN XE (PROGRESSIVE DISCLOSURE)
+ * TRIP DETAIL BOTTOM SHEET / MODAL (PROGRESSIVE DISCLOSURE)
  *
- * Chuẩn Apple HIG & Liquid Aesthetics:
- * - Mobile: Trượt mượt mà từ đáy (Bottom Sheet) với thanh kéo tròn, bo góc trên rounded-t-3xl.
- * - Desktop: Modal căn giữa màn hình với bo góc squircle rounded-3xl.
- * - Sticky Bottom Bar: Nút giữ chỗ 0đ cọc to, rõ, bám đáy.
+ * Apple HIG & Liquid Aesthetics standard:
+ * - Mobile: Slides smoothly up from the bottom (Bottom Sheet) with a round drag handle, rounded-t-3xl top corners.
+ * - Desktop: Modal centered on the screen with rounded-3xl squircle corners.
+ * - Sticky Bottom Bar: Large, clear 0đ-deposit reserve button, stuck to the bottom.
  */
 export default function TripDetailBottomSheet({
   isOpen,
@@ -84,17 +84,17 @@ export default function TripDetailBottomSheet({
       list = single ? [single] : [];
     }
 
-    // Tuyệt đối chỉ dùng ảnh xe thực tế (loại bỏ ảnh gia đình/con người)
+    // Use only real vehicle photos (remove family/people photos)
     list = list.filter((p) => !p.includes('hero_family_ride') && !p.includes('passenger_comfort'));
 
-    // Chỉ hiển thị ảnh THẬT do Chủ xe đăng. Trước đây, chuyến có dưới 2 ảnh sẽ bị
-    // thay bằng 5 ảnh stock Unsplash gắn nhãn "Ảnh chủ xe đăng" — vừa bịa, vừa vứt
-    // bỏ cả ảnh thật khi Chủ xe mới chỉ đăng được một tấm.
-    // Chủ xe chưa có ảnh thì không hiện ảnh nào.
+    // Only show REAL photos posted by the driver. Previously, a trip with fewer than 2 photos would be
+    // replaced with 5 Unsplash stock photos labeled "Ảnh chủ xe đăng" (Photo posted by the driver) — both fabricated and throwing
+    // away the real photo when the driver had only posted one.
+    // If the driver has no photos, show none.
     return list;
   })();
 
-  // Đóng bằng phím ESC
+  // Close with the ESC key
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e) => {
@@ -104,7 +104,7 @@ export default function TripDetailBottomSheet({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Ngăn cuộn trang phía sau khi mở sheet
+  // Prevent the page behind from scrolling while the sheet is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -122,17 +122,17 @@ export default function TripDetailBottomSheet({
   const isSoldOut = seatsAvailable !== null && seatsAvailable <= 0;
   const publicPhone = publicContactPhone(trip);
   const timeHeader = formatTripTimeHeader(trip.departureLabel, trip.departureDate);
-  // Không bịa dòng xe / biển số khi Chủ xe chưa khai. Chuỗi rỗng => giao diện ẩn dòng.
+  // Do not make up a vehicle model / license plate when the driver has not declared one. Empty string => the UI hides the line.
   const vehicleModel = trip.vehicleModel || '';
   const maskedPlate = trip.plateMasked || '';
 
-  // Thông tin chủ xe & danh xưng văn minh CarMate: "Chủ xe: H. (#102)"
+  // Driver info & CarMate's civilized alias: "Chủ xe: H. (#102)" (Driver: H. (#102))
   const driverDisplayName = trip.operatorName || trip.publicContactName || trip.publicName || trip.driverName || 'Chủ xe chưa công khai tên';
   const driverRating = trip.rating == null ? null : Number(trip.rating).toFixed(1);
   const rawDriverTrips = Number(trip.completedCount ?? trip.assurance?.completedTrips ?? 0);
   const driverTrips = Number.isFinite(rawDriverTrips) ? rawDriverTrips : 0;
 
-  // Tiện ích xe
+  // Vehicle amenities
   const amenitiesText = Array.isArray(trip.amenities) && trip.amenities.length > 0
     ? trip.amenities.join(' · ')
     : '';
@@ -148,12 +148,12 @@ export default function TripDetailBottomSheet({
         className="w-full max-h-[96vh] sm:max-h-[95vh] sm:max-w-lg bg-white dark:bg-[#1c1c1e] rounded-t-3xl sm:rounded-3xl border-t sm:border border-slate-200/70 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Thanh kéo trên mobile (Apple Pull Handle) */}
+        {/* Mobile drag handle (Apple Pull Handle) */}
         <div className="pt-2 pb-0.5 flex justify-center sm:hidden shrink-0">
           <div className="w-12 h-1.5 bg-slate-300 dark:bg-white/20 rounded-full" />
         </div>
 
-        {/* ── HEADER MODAL ── */}
+        {/* ── MODAL HEADER ── */}
         <div className="px-5 py-3 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <CarMateBadge size="xs" />
@@ -173,9 +173,9 @@ export default function TripDetailBottomSheet({
           </button>
         </div>
 
-        {/* ── NỘI DUNG CUỘN (SCROLLABLE BODY - CHUẨN MIT TRANSIT CANVAS #DFE5EC) ── */}
+        {/* ── SCROLLABLE BODY (MIT TRANSIT CANVAS #DFE5EC STANDARD) ── */}
         <div className="overflow-y-auto px-4 sm:px-5 py-3.5 space-y-3 text-slate-900 dark:text-white bg-[#DFE5EC] dark:bg-[#121721] transition-colors">
-          {/* BANNER DÀNH CHO CHỦ XE (STANFORD ERGONOMICS) */}
+          {/* BANNER FOR DRIVERS (STANFORD ERGONOMICS) */}
           {isMyTrip && (
             <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-2.5 text-emerald-900 dark:text-emerald-100 shadow-xs type-caption">
               <span className="shrink-0 type-heading">🚗</span>
@@ -188,7 +188,7 @@ export default function TripDetailBottomSheet({
             </div>
           )}
 
-          {/* 1. KHỐI THỜI GIAN & TÌNH TRẠNG CHỖ */}
+          {/* 1. TIME & SEAT AVAILABILITY BLOCK */}
           <div className="flex items-center justify-between gap-2.5 p-3 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex items-center gap-2.5 min-w-0 flex-1 type-body">
               <span className="px-2.5 py-1 rounded-xl bg-slate-950 dark:bg-black text-white shrink-0 shadow-2xs border border-blue-500/20 tabular type-heading">
@@ -221,7 +221,7 @@ export default function TripDetailBottomSheet({
             </div>
           </div>
 
-          {/* 2. LỘ TRÌNH THỰC TẾ (ĐÓN / TRẢ) */}
+          {/* 2. ACTUAL ROUTE (PICKUP / DROP-OFF) */}
           <div className="p-3 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 space-y-1.5">
             <div className="flex items-start gap-2.5">
               <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs type-badge">
@@ -250,9 +250,9 @@ export default function TripDetailBottomSheet({
             </div>
           </div>
 
-          {/* 3. THÔNG TIN CHỦ XE & PHƯƠNG TIỆN */}
+          {/* 3. DRIVER & VEHICLE INFO */}
           <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md hover:border-slate-400/80 dark:hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 space-y-2.5 relative">
-            {/* Banner Ảnh Xe Thực Tế Trải Rộng Toàn Khung (Đa góc chụp) */}
+            {/* Real Vehicle Photo Banner Spanning the Full Frame (Multiple angles) */}
             {allPhotos.length > 0 && (
               <div className="space-y-1.5">
                 <div
@@ -269,24 +269,24 @@ export default function TripDetailBottomSheet({
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 pointer-events-none" />
 
-                  {/* Badge định danh ảnh xe thật */}
+                  {/* Badge identifying a real vehicle photo */}
                   <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center gap-1.5 shadow-sm type-caption">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span>Ảnh chủ xe đăng ({selectedPhotoIndex + 1}/{allPhotos.length})</span>
                   </div>
 
-                  {/* Nút gợi ý xem ảnh lớn */}
+                  {/* Hint button to view the large photo */}
                   <div className="absolute bottom-2 left-auto right-2.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center gap-1 shadow-sm type-body">
                     <span>Chạm để phóng to</span>
                   </div>
                 </div>
 
-                {/* Dải thumbnails phụ bên dưới để chuyển góc chụp xe thực tế */}
+                {/* Secondary thumbnail strip below to switch between real vehicle photo angles */}
                 {allPhotos.length > 1 && (
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
                     {allPhotos.map((photo, idx) => {
-                      // Không gán tên góc chụp cho ảnh bất kỳ: Chủ xe đăng ảnh nào thì
-                      // đánh số ảnh đó, hệ thống không biết đó là đầu xe hay nội thất.
+                      // Do not assign a shooting-angle name to any photo: whichever photos the driver posts are
+                      // simply numbered; the system does not know whether it is the front or the interior.
                       const label = `Ảnh ${idx + 1}`;
                       return (
                         <button
@@ -328,14 +328,14 @@ export default function TripDetailBottomSheet({
               <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 type-caption">
                 <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                 <span>{driverRating ?? 'Chưa có đánh giá'}</span>
-                {/* Chưa chạy chuyến nào thì nói thẳng là Chủ xe mới, không bịa số chuyến */}
+                {/* If no trips have been run yet, say plainly that the driver is new; do not make up a trip count */}
                 <span className="text-slate-400 type-body">
                   {driverTrips > 0 ? `(${driverTrips} chuyến)` : '(Chủ xe mới)'}
                 </span>
               </div>
             </div>
 
-            {/* Chỉ hiện dòng xe / biển số khi Chủ xe đã khai thật */}
+            {/* Only show the vehicle model / license plate line when the driver has truly declared it */}
             {(vehicleModel || maskedPlate) && (
               <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 dark:border-white/10">
                 {vehicleModel ? (
@@ -377,7 +377,7 @@ export default function TripDetailBottomSheet({
           </div>
         </div>
 
-        {/* ── STICKY BOTTOM ACTION BAR (CỐ ĐỊNH Ở ĐÁY) ── */}
+        {/* ── STICKY BOTTOM ACTION BAR (FIXED AT THE BOTTOM) ── */}
         <div className="p-3 sm:p-3.5 border-t border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md shrink-0 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-slate-400 type-caption">

@@ -1,8 +1,8 @@
 /**
- * presence.js — Quản lý trạng thái hiện diện trực tuyến (Live Presence Telemetry)
- * Tuân thủ triết lý MIT Invariants & Stanford Ergonomics:
- * - Đèn xanh / Green dot: Đang online (sẵn sàng phản hồi ngay).
- * - Đèn đỏ / Red dot: Ngoại tuyến (offline).
+ * presence.js — Manages online presence status (Live Presence Telemetry)
+ * Follows the MIT Invariants & Stanford Ergonomics philosophy:
+ * - Green light / Green dot: Online (ready to respond immediately).
+ * - Red light / Red dot: Offline.
  */
 
 export function getUserOnlineStatus(entity, currentUserIdentifier) {
@@ -16,7 +16,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     };
   }
 
-  // 1. Chính chủ (người đang đăng nhập viewing trang): Luôn luôn Online
+  // 1. The owner themselves (the logged-in person viewing the page): always Online
   const cleanId = (v) => String(v || '').replace(/\D/g, '').slice(-9);
   const currentClean = cleanId(currentUserIdentifier);
   const entityPhone = cleanId(
@@ -43,7 +43,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     };
   }
 
-  // 2. Thuộc tính chỉ định rõ ràng nếu có
+  // 2. Explicitly specified property, if present
   if (typeof entity.isOnline === 'boolean') {
     return {
       isOnline: entity.isOnline,
@@ -54,7 +54,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     };
   }
 
-  // 3. Nếu có dấu thời gian hoạt động gần nhất (lastActiveAt hoặc message gần nhất)
+  // 3. If there is a most-recent activity timestamp (lastActiveAt or the latest message)
   const now = Date.now();
   const lastActive = entity.lastActiveAt || entity.updatedAt || entity.lastMessageTime;
   if (typeof lastActive === 'number' && Number.isFinite(lastActive)) {
@@ -80,7 +80,7 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     }
   }
 
-  // 4. Nếu vừa mới đăng chuyến (trong vòng 30 phút)
+  // 4. If a trip was just posted (within 30 minutes)
   if (typeof entity.createdAt === 'number' && Number.isFinite(entity.createdAt)) {
     const diffMins = (now - entity.createdAt) / (60 * 1000);
     if (diffMins <= 30) {
@@ -94,8 +94,8 @@ export function getUserOnlineStatus(entity, currentUserIdentifier) {
     }
   }
 
-  // 5. Tính toán tất định (Deterministic Edge Invariant) cho dữ liệu trên sàn
-  // Dựa vào mã định danh để tạo sự phong phú chân thực giữa Chủ xe/Khách đang online và offline
+  // 5. Deterministic computation (Deterministic Edge Invariant) for data on the platform
+  // Based on the identifier, to create realistic variety between drivers/passengers who are online and offline
   const seedStr = String(entity.id || entity.maskedCode || entity.escrowId || entity.phone || '0');
   let hash = 0;
   for (let i = 0; i < seedStr.length; i++) {

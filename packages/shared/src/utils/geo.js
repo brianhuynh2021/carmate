@@ -1,14 +1,14 @@
 /**
- * TIỆN ÍCH ĐỊNH VỊ ĐỊA LÝ & HÀNH LANG TUYẾN ĐƯỜNG LIÊN TỈNH (GEO & CORRIDORS)
- * Phục vụ trải nghiệm trực quan hóa bản đồ, điểm đón mốc thực tế và tính năng "Có gần tôi không?"
+ * GEOLOCATION & INTERCITY ROUTE CORRIDOR UTILITIES (GEO & CORRIDORS)
+ * Supports map visualization, real-world pickup landmarks and the "Có gần tôi không?" ("Is it near me?") feature
  */
 
 import { ROUTE_BENCHMARKS } from '../constants/routes.js';
 
-// Công thức Haversine tính khoảng cách giữa 2 toạ độ GPS (đơn vị km)
+// Haversine formula for the distance between 2 GPS coordinates (unit: km)
 export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
-  const R = 6371; // Bán kính trái đất (km)
+  const R = 6371; // Earth's radius (km)
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -18,7 +18,7 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   return Math.round(R * c * 10) / 10;
 }
 
-// Danh mục hành lang tuyến và các điểm mốc vàng (Cây xăng, Ngã tư, Bến xe, Cổng chào)
+// Catalog of route corridors and golden landmarks (gas stations, intersections, bus stations, welcome arches)
 const ROUTE_CORRIDORS = {
   'Tuyến QL13': {
     name: 'Bình Phước ⇄ Sài Gòn (QL13)',
@@ -472,8 +472,8 @@ export function getRouteCorridor(routeCategory) {
 }
 
 /**
- * Kiểm tra xem chuỗi có phải link Google Maps hay không
- * Hỗ trợ các định dạng:
+ * Check whether a string is a Google Maps link
+ * Supported formats:
  * - maps.app.goo.gl/...
  * - goo.gl/maps/...
  * - google.com/maps/...
@@ -487,7 +487,7 @@ export function isGoogleMapsUrl(str) {
 }
 
 /**
- * Giải mã các thực thể HTML cũ nếu bị dính trong dữ liệu (VD: &#x2F; -> /)
+ * Decode legacy HTML entities if they are stuck in the data (e.g. &#x2F; -> /)
  */
 export function decodeHtmlEntities(str) {
   if (!str || typeof str !== 'string') return '';
@@ -506,12 +506,12 @@ export function parseLocation(str) {
   if (!str || typeof str !== 'string') return { main: '', sub: '' };
   const rawClean = decodeHtmlEntities(str).trim();
 
-  // Kháng dữ liệu pentest / HTML tags: không hiển thị thô ra giao diện người dùng
+  // Resist pentest data / HTML tags: do not render them raw in the user interface
   if (/<[a-z]|onerror|onload|script|&lt;|&gt;/i.test(rawClean)) {
     return { main: 'Điểm hẹn đón dọc tuyến', sub: 'Thoả thuận điểm đón qua Zalo' };
   }
 
-  // 0. Khử rò rỉ từ khoá xe, số ghế thừa thãi bám vào địa danh (VD: "Hớn Quản xe Mazda 2 chỗ" -> "Hớn Quản")
+  // 0. Strip leaked vehicle keywords and redundant seat counts clinging to place names (e.g. "Hớn Quản xe Mazda 2 chỗ" -> "Hớn Quản")
   const VEHICLE_LEAK_REGEX =
     /(?:\s+|-|,|\/)?\s*(?:xe\s*)?(?:mazda\s*\d*|vios|xpander|innova|veloz|kia\s*\w*|hyundai\s*\w*|honda\s*\w*|toyota\s*\w*|ford\s*\w*|vinfast\s*\w*|carnival|accent|city|cerato|k3|cx-?\d+|sedan|suv|mpv|nhà|oto|ô tô|hơi|ghép|gia đình|\d+\s*chỗ|chỗ|còn\s*\d*|giá|sđt|zalo|lúc|khoảng|đón|phụ|ai tiện|ai có).*/i;
 
@@ -527,13 +527,13 @@ export function parseLocation(str) {
     );
   const isBinhPhuoc = (s) => /bình phước|binh phuoc/i.test(s);
 
-  // 1. Phân tích ngoặc đơn: e.g. "Đường Cống Quỳnh (Quận 1)" hoặc "Bù Đốp (Cây xăng Petrolimex 17)"
+  // 1. Parse parentheses: e.g. "Đường Cống Quỳnh (Quận 1)" or "Bù Đốp (Cây xăng Petrolimex 17)"
   const parenMatch = cleanStr.match(/^(.*?)\s*\((.*?)\)$/);
   if (parenMatch) {
     const partA = parenMatch[1].trim();
     const partB = parenMatch[2].trim();
 
-    // Nếu partA là tên đường/địa điểm chi tiết ở Sài Gòn kèm Quận (VD: "Đường Cống Quỳnh (Quận 1)")
+    // If partA is a detailed street/place name in Sài Gòn together with a District (e.g. "Đường Cống Quỳnh (Quận 1)")
     if (isSaigon(partB) || isSaigon(partA)) {
       if (
         /^(?:đường|phố|hẻm|ngõ|số|cây xăng|chợ|bệnh viện|bv|trường|kcn|tòa|toà|chung cư|nhà khách|khách sạn)(?:\s+|$|[.,;])/i.test(
@@ -557,7 +557,7 @@ export function parseLocation(str) {
       };
     }
 
-    // Nếu partA là địa điểm chi tiết kèm Huyện/Tỉnh ở partB (VD: "Cây xăng 17 (Bù Đốp)", "Chợ Tân Khai (Hớn Quản)")
+    // If partA is a detailed place with the District/Province in partB (e.g. "Cây xăng 17 (Bù Đốp)", "Chợ Tân Khai (Hớn Quản)")
     if (
       /^(?:đường|phố|hẻm|ngõ|số|cây xăng|chợ|bệnh viện|bv|trường|kcn|trung tâm|tt\.?|ubnd)(?:\s+|$|[.,;])/i.test(
         partA
@@ -572,7 +572,7 @@ export function parseLocation(str) {
     return { main: partA, sub: partB };
   }
 
-  // 2. Phân tích dấu phẩy hành chính: e.g. "trung tâm hành chính Tân Khai, Hớn Quản, Bình Phước"
+  // 2. Parse administrative commas: e.g. "trung tâm hành chính Tân Khai, Hớn Quản, Bình Phước"
   if (cleanStr.includes(',')) {
     const parts = cleanStr.split(',').map((s) => s.trim()).filter(Boolean);
     const last = parts[parts.length - 1];
@@ -598,7 +598,7 @@ export function parseLocation(str) {
       };
     }
 
-    // Các tỉnh thành khác có từ 2 cấp trở lên (VD: "Mũi Né, Phan Thiết")
+    // Other provinces/cities with 2 or more levels (e.g. "Mũi Né, Phan Thiết")
     if (parts.length >= 2) {
       return {
         main: last,
@@ -607,19 +607,19 @@ export function parseLocation(str) {
     }
   }
 
-  // 3. Phân tích dấu gạch chéo e.g. "Bù Đốp / Lộc Ninh"
+  // 3. Parse the slash separator e.g. "Bù Đốp / Lộc Ninh"
   if (cleanStr.includes(' / ')) {
     const parts = cleanStr.split(' / ');
     return { main: parts[0].trim(), sub: parts.slice(1).join(' / ').trim() };
   }
 
-  // 4. Phân tích dấu chấm phẩy "; "
+  // 4. Parse the semicolon "; "
   if (cleanStr.includes('; ')) {
     const parts = cleanStr.split('; ');
     return { main: parts[0].trim(), sub: parts.slice(1).join('; ').trim() };
   }
 
-  // 5. Phân tích Mốc địa danh + Quận/Huyện/Thị xã không có dấu phẩy (VD: "trung tâm hành chính Hớn Quản", "UBND Huyện Hớn Quản", "Chợ Tân Khai Hớn Quản")
+  // 5. Parse Landmark + District/County/Town with no comma (e.g. "trung tâm hành chính Hớn Quản", "UBND Huyện Hớn Quản", "Chợ Tân Khai Hớn Quản")
   const LANDMARK_PREFIX_REGEX =
     /(?:trung tâm hành chính|tt\.?\s*hành chính|ubnd|ủy ban nhân dân|bệnh viện|bv|trung tâm y tế|chợ|cây xăng|bến xe|bx|cổng chào|ngã 3|ngã ba|ngã 4|ngã tư|vòng xoay|bùng binh|kcn|khu công nghiệp|trường|đại học|cao đẳng|toà nhà|tòa nhà|chung cư|siêu thị|khách sạn|nhà ga|ga|sân bay|cầu|nút giao)/i;
 
@@ -664,7 +664,7 @@ export function parseLocation(str) {
     }
   }
 
-  // 6. Địa danh con thuộc Sài Gòn (VD: "Bến xe Miền Đông", "Ngã tư Hàng Xanh")
+  // 6. Sub-places belonging to Sài Gòn (e.g. "Bến xe Miền Đông", "Ngã tư Hàng Xanh")
   if (isSaigon(cleanStr) && !/^(sài gòn|tp\.hcm|hồ chí minh|tp\s*hồ chí minh)$/i.test(cleanStr)) {
     return {
       main: 'Sài Gòn',
@@ -676,9 +676,9 @@ export function parseLocation(str) {
 }
 
 /**
- * Định dạng biển số xe bảo mật (Privacy Masked Plate)
- * Chuẩn MIT Invariants: Che toàn bộ số phía sau (VD: "93A - xxxxx") để giữ kín danh tính chủ xe trên sàn công khai.
- * VD: "93A - 541.86" -> "93A - xxxxx"
+ * Format a privacy-masked license plate (Privacy Masked Plate)
+ * MIT Invariants standard: mask the entire trailing part (e.g. "93A - xxxxx") to keep the driver's identity hidden on the public platform.
+ * e.g.: "93A - 541.86" -> "93A - xxxxx"
  *     "51K-123.45"   -> "51K - xxxxx"
  *     "60B-9876"     -> "60B - xxxxx"
  *     "93A - ***.86" -> "93A - xxxxx"
@@ -692,7 +692,7 @@ export function maskLicensePlate(plateStr, fallbackLocation = '') {
   if (!s) {
     return fallback;
   }
-  // Bóc tách tiền tố biển số: 2 số tỉnh + 1-2 chữ cái (VD: 93A, 51K, 60B, 29LD)
+  // Extract the license plate prefix: 2 province digits + 1-2 letters (e.g. 93A, 51K, 60B, 29LD)
   const matchSeries = s.match(/^([0-9]{2}\s*[A-Z]{1,2})/i);
   if (matchSeries) {
     const series = matchSeries[1].replace(/\s+/g, '').toUpperCase();
@@ -707,14 +707,14 @@ export function maskLicensePlate(plateStr, fallbackLocation = '') {
 }
 
 /**
- * Trích xuất địa danh đô thị/tỉnh thành lớn để làm tiêu đề hành trình chuẩn Apple Wallet & Fly.io
- * Tuyệt đối KHÔNG cắt đôi từ ghép tiếng Việt (như "Phan Thiết" thành "Phan", "Bến Tre" thành "Bến")
+ * Extract the major urban/province place name to use as the trip title, Apple Wallet & Fly.io style
+ * Absolutely do NOT split Vietnamese compound words in half (e.g. "Phan Thiết" into "Phan", "Bến Tre" into "Bến")
  */
 export function getCorridorDisplay(item, fromParsed, toParsed) {
   const extractTerritory = (parsed, raw) => {
     const text = ((parsed.sub || '') + ' ' + (parsed.main || '') + ' ' + (raw || '')).toLowerCase();
 
-    // Tuyến Sài Gòn / TP.HCM
+    // Sài Gòn / TP.HCM route
     if (/sài gòn|tp\.hcm|hồ chí minh|hàng xanh|miền đông|thủ đức|quận\s*\d+|tân bình|bình tân|an phú/i.test(text)) {
       return { city: 'Sài Gòn', code: 'SGN', region: 'TP. Hồ Chí Minh', point: parsed.main || 'TP.HCM' };
     }
@@ -730,7 +730,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
       return { city: 'Phan Rang', code: 'PR', region: 'Ninh Thuận (QL1A)', point: parsed.main || 'Phan Rang' };
     }
 
-    // Khánh Hòa & Nam Trung Bộ
+    // Khánh Hòa & the South Central Coast
     if (/nha trang|cam ranh|khánh hòa|khánh hoà/i.test(text)) {
       return { city: 'Nha Trang', code: 'NTR', region: 'Khánh Hòa (QL1A)', point: parsed.main || 'Nha Trang' };
     }
@@ -750,7 +750,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
       return { city: 'Huế', code: 'HUI', region: 'Thừa Thiên Huế', point: parsed.main || 'Huế' };
     }
 
-    // Miền Bắc
+    // Northern region
     if (/hà nội|thủ đô/i.test(text)) {
       return { city: 'Hà Nội', code: 'HAN', region: 'Thủ đô Hà Nội', point: parsed.main || 'Hà Nội' };
     }
@@ -767,7 +767,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
       return { city: 'Thanh Hóa', code: 'TH', region: 'Tỉnh Thanh Hóa', point: parsed.main || 'Thanh Hóa' };
     }
 
-    // Bình Phước & Các Huyện Trục QL13, QL14
+    // Bình Phước & the districts along the QL13, QL14 axes
     if (/bù đốp/i.test(text)) return { city: 'Bù Đốp', code: 'BĐ', region: 'Bình Phước (QL13)', point: parsed.main };
     if (/lộc ninh/i.test(text))
       return { city: 'Lộc Ninh', code: 'LN', region: 'Bình Phước (QL13)', point: parsed.main };
@@ -785,7 +785,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
     if (/bình phước/i.test(text))
       return { city: 'Bình Phước', code: 'BP', region: 'Tỉnh Bình Phước', point: parsed.main };
 
-    // Đồng Nai & Trục QL20
+    // Đồng Nai & the QL20 axis
     if (/gia kiệm/i.test(text)) return { city: 'Gia Kiệm', code: 'GK', region: 'Đồng Nai (QL20)', point: parsed.main };
     if (/dầu giây/i.test(text))
       return { city: 'Dầu Giây', code: 'DG', region: 'Đồng Nai (QL1A/20)', point: parsed.main };
@@ -797,7 +797,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
       return { city: 'Biên Hòa', code: 'BH', region: 'Tỉnh Đồng Nai', point: parsed.main };
     if (/đồng nai/i.test(text)) return { city: 'Đồng Nai', code: 'ĐN', region: 'Tỉnh Đồng Nai', point: parsed.main };
 
-    // Tây Nguyên & Lâm Đồng
+    // Central Highlands (Tây Nguyên) & Lâm Đồng
     if (/đà lạt/i.test(text)) return { city: 'Đà Lạt', code: 'DLI', region: 'Lâm Đồng (QL20)', point: parsed.main };
     if (/bảo lộc/i.test(text)) return { city: 'Bảo Lộc', code: 'BL', region: 'Lâm Đồng (QL20)', point: parsed.main };
     if (/buôn ma thuột|đắk lắk/i.test(text))
@@ -821,7 +821,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
     if (/bà rịa/i.test(text)) return { city: 'Bà Rịa', code: 'BR', region: 'Bà Rịa - Vũng Tàu', point: parsed.main };
     if (/tây ninh/i.test(text)) return { city: 'Tây Ninh', code: 'TN', region: 'Tỉnh Tây Ninh', point: parsed.main };
 
-    // Đồng Bằng Sông Cửu Long (Miền Tây)
+    // Mekong Delta (the Western region)
     if (/bến tre/i.test(text)) return { city: 'Bến Tre', code: 'BTR', region: 'Bến Tre (QL60)', point: parsed.main };
     if (/mỹ tho|tiền giang/i.test(text))
       return { city: 'Mỹ Tho', code: 'MT', region: 'Tiền Giang (QL1A)', point: parsed.main };
@@ -833,7 +833,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
       return { city: 'Rạch Giá', code: 'VKG', region: 'Kiên Giang', point: parsed.main };
     if (/phú quốc/i.test(text)) return { city: 'Phú Quốc', code: 'PQC', region: 'Kiên Giang', point: parsed.main };
 
-    // Rút gọn địa danh fallback THÔNG MINH (Tuyệt đối KHÔNG cắt đôi từ ghép tiếng Việt)
+    // SMART fallback shortening of place names (Absolutely do NOT split Vietnamese compound words in half)
     let cleanWord = (parsed.main || raw || '')
       .replace(
         /^(Cây xăng|Bến xe|Ngã 4|Ngã tư|Ngã ba|Ngã 3|Trạm thu phí|KCN|Chợ|Cổng chào|UBND|BV|Bệnh viện|Trường|Công viên)\s+/i,
@@ -849,7 +849,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
     let displayCity = words.length > 2 ? words.slice(0, 2).join(' ') : cleanWord;
     if (!displayCity) displayCity = 'Điểm đón';
 
-    // Tạo mã code 3 chữ cái chuẩn IATA từ các chữ cái đầu
+    // Generate a 3-letter IATA-style code from the initial letters
     let code = 'LOT';
     if (words.length >= 2) {
       const w1 = words[0]
@@ -882,7 +882,7 @@ export function getCorridorDisplay(item, fromParsed, toParsed) {
   const fromInfo = extractTerritory(fromParsed, item.from);
   const toInfo = extractTerritory(toParsed, item.to);
 
-  // Fallback từ benchmark nếu cần
+  // Fallback from the benchmark if needed
   const benchmark = ROUTE_BENCHMARKS[item.routeCategory];
   if (benchmark?.name && (fromInfo.city === toInfo.city || !fromInfo.city || !toInfo.city)) {
     const parts = benchmark.name.split('⇄');

@@ -85,9 +85,9 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '', title
       googleContainer.current.replaceChildren();
       window.google.accounts.id.renderButton(googleContainer.current, { type: 'standard', size: 'large', text: 'continue_with', shape: 'pill', width: 280 });
     };
-    // SDK của Google chỉ được tải khi người dùng thực sự chọn đăng nhập Google.
-    // Nạp sẵn ở mọi lượt vào trang khiến ai cũng phải tải thư viện bên thứ ba, và
-    // trên localhost nó còn dò cổng nội bộ nên trình duyệt hỏi quyền mỗi lần tải lại.
+    // The Google SDK is only loaded when the user actually chooses Google sign-in.
+    // Preloading it on every page visit forces everyone to download a third-party library, and
+    // on localhost it also probes internal ports, so the browser asks for permission on every reload.
     let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
     if (window.google?.accounts?.id) render();
     else if (script) script.addEventListener('load', render);
@@ -111,9 +111,9 @@ export default function AuthModal({ onClose, onSuccess, initialPhone = '', title
     script.async = true;
     script.setAttribute('data-telegram-login', config.telegramBotUsername);
     script.setAttribute('data-size', 'large');
-    // Iframe của Telegram tự vẽ nền tối lộ ra ngoài mép bo tròn của nút. Hai thuộc
-    // tính dưới đây vốn có từ bản đầu, bị rơi trong lần refactor — khôi phục đúng
-    // giá trị cũ để widget tự bo góc và xin quyền nhắn tin như trước.
+    // Telegram's iframe draws its own dark background that shows past the button's rounded edge. The two
+    // attributes below were there from the first version and got dropped in a refactor — restoring the exact
+    // old values so the widget rounds its own corners and requests messaging permission as before.
     script.setAttribute('data-radius', '14');
     script.setAttribute('data-request-access', 'write');
     script.setAttribute('data-onauth', `${callbackName}(user)`);

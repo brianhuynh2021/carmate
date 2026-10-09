@@ -1,25 +1,25 @@
-# CarMate — Nguyên tắc triển khai
+# CarMate — Implementation principles
 
-Hợp đồng sản phẩm hiện hành nằm trong `AGENTS.md` và `docs/CONNECTION_FLOW.md`. Những giả định của mô hình chia sẻ chi phí trước đây không được ghi đè hướng kết nối hiện tại.
+The current product contract lives in `AGENTS.md` and `docs/CONNECTION_FLOW.md`. The assumptions of the earlier cost-sharing model must not override the current connection direction.
 
-## Dữ liệu và toán học
+## Data and mathematics
 
-- Chiếu hành trình vào hành lang và thời gian để tìm giao nhau khả thi; kiểm tra hướng đi, cửa sổ đón, sức chứa từng đoạn và điều kiện đi vòng trước khi xếp hạng.
-- Giá do chủ xe niêm yết hoặc để “Liên hệ”. Công thức chi phí cũ chỉ là tham khảo, không đặt giá hay chứng minh cơ chế không thể bị thao túng.
-- Chỉ chốt khi hai bên xác nhận cùng phiên bản điểm, giờ, xe, số người và tổng giá. Bảo vệ cuộc hẹn đã chốt khi chèn khách mới.
-- Hủy, xác nhận và nhả ghế phải an toàn khi gọi lặp lại; giữ thời gian yêu cầu và hạn ban đầu khi tìm thay thế.
-- Xếp hạng ứng viên hiện tại không chứng minh rằng lúc nào cũng có xe, không kẹt xe hoặc phương án tương lai luôn tệ hơn.
+- Project routes onto the corridor and time to find feasible intersections; check direction, pickup window, per-segment capacity and detour conditions before ranking.
+- Prices are listed by the driver or left as “Liên hệ” (Contact). The legacy cost formulas are reference only; they do not set prices or prove that the mechanism cannot be manipulated.
+- Only confirm when both parties confirm the same version of the point, time, vehicle, number of people and total price. Protect an already confirmed appointment when inserting a new passenger.
+- Cancel, confirm and seat-release must be safe when called repeatedly; keep the original request time and deadline when searching for a replacement.
+- The current candidate ranking does not prove that a vehicle is always available, that there is no congestion, or that a future alternative is never worse.
 
-## Trải nghiệm
+## Experience
 
-- Cho xem và nhập trước khi đăng nhập. Đăng nhập để xuất bản, lưu cuộc hẹn và theo dõi phản hồi; giữ nguyên bản nháp.
-- Tìm kiếm không tự đăng nhu cầu. Chỉ công khai liên hệ khi người sở hữu đồng ý.
-- Trạm là mốc, hỗ trợ đón tại trạm, tận nơi hoặc kết hợp sau khi hai bên thống nhất.
-- Không dữ liệu thì nói rõ; lỗi mạng không được chuyển thành khách, xe, giá, PIN hay trạng thái giả.
-- Hành động hủy phải nêu cuộc hẹn bị ảnh hưởng. Dùng thông báo và hộp thoại trong ứng dụng, không dùng `window.alert`, `window.confirm`, `window.prompt`.
+- Allow viewing and entering data before login. Log in to publish, save an appointment and follow responses; keep the draft intact.
+- A search does not automatically post a ride request. Only publish contact details when the owner consents.
+- Stations are reference points, supporting pickup at a station, at the door, or a combination once both parties agree.
+- If there is no data, say so clearly; a network error must not be turned into fake passengers, vehicles, prices, PINs or statuses.
+- A cancel action must name the affected appointment. Use in-app notifications and dialogs; do not use `window.alert`, `window.confirm`, `window.prompt`.
 
-## Giao diện
+## UI
 
-- Giữ màu chính `#0071e3`, bo góc và bố cục sáng/tối hiện hành; phân tầng chữ và trạng thái rõ ràng.
-- Hộp thoại dùng portal, thứ tự lớp bảo đảm biểu mẫu vẫn còn khi mở đăng nhập.
-- Gọi vai trò là “Chủ xe” và “Khách”; cách gọi không thay thế việc đánh giá hoạt động thực tế.
+- Keep the primary color `#0071e3`, the rounded corners and the current light/dark layout; keep a clear hierarchy of text and status.
+- Dialogs use a portal, and layer ordering ensures the form remains when login is opened.
+- Call the roles “Chủ xe” (driver) and “Khách” (passenger); the naming does not replace an assessment of the actual activity.

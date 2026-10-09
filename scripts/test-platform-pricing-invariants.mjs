@@ -1,14 +1,14 @@
 /**
  * =============================================================================
- * KIỂM THỬ BẤT BIẾN ĐỊNH GIÁ NỀN TẢNG & TỌA ĐỘ MA TRẬN
+ * TESTS FOR THE PLATFORM PRICING INVARIANTS & MATRIX COORDINATES
  * =============================================================================
- * Hai bất biến được kiểm ở đây:
+ * The two invariants checked here:
  *
- *  1. GIÁ LÀ ĐẦU RA CỦA CÔNG THỨC — Chủ xe không tự đặt giá. Chỉ Quản trị viên
- *     mới đổi được giá toàn sàn, và chỉ bằng cách nâng tham số công thức.
+ *  1. PRICE IS A FORMULA OUTPUT — Drivers do not set prices themselves. Only the Admin
+ *     can change the marketplace-wide price, and only by raising a formula parameter.
  *
- *  2. TỌA ĐỘ MA TRẬN BẤT BIẾN — trạm đón/trả và khe giờ là tọa độ trong ma trận
- *     thời gian - không gian, khoá cứng khi chuyến đã có khách đặt.
+ *  2. MATRIX COORDINATES ARE INVARIANT — pickup/drop-off stations and the time slot are coordinates in the
+ *     space-time matrix, hard-locked once the trip has passengers booked.
  * =============================================================================
  */
 import assert from 'node:assert/strict';
@@ -34,7 +34,7 @@ const check = (name, fn) => {
   console.log(`  ✓ ${name}`);
 };
 
-// ── 1. GIÁ LÀ HÀM CỦA CẶP TRẠM ───────────────────────────────────────────────
+// ── 1. PRICE IS A FUNCTION OF THE STATION PAIR ──────────────────────────────
 console.log('1. Giá là hàm thuần của cặp trạm ảo:');
 
 check('Cùng một cặp trạm luôn cho cùng một giá', () => {
@@ -56,7 +56,7 @@ check('Cự ly càng dài giá càng cao (đơn điệu tăng)', () => {
   }
 });
 
-// ── 2. BẤT BIẾN CẬN SÀN / CẬN TRẦN ───────────────────────────────────────────
+// ── 2. FLOOR / CEILING INVARIANT ────────────────────────────────────────────
 console.log('\n2. Bất biến cận sàn (Chủ xe không lỗ) & cận trần (rẻ hơn Limousine):');
 
 check('Mọi chặng đều bù đắp được chi phí xăng + BOT', () => {
@@ -83,7 +83,7 @@ check('Không có tăng giá sốc: cầu tăng gấp 3 vẫn trong biên Nash',
   assert.equal(surge.noSurge, true);
 });
 
-// ── 3. CHỈ ADMIN ĐỔI ĐƯỢC GIÁ, VÀ CHỈ QUA CÔNG THỨC ─────────────────────────
+// ── 3. ONLY THE ADMIN CAN CHANGE THE PRICE, AND ONLY VIA THE FORMULA ───────
 console.log('\n3. Chỉ Quản trị viên đổi được giá toàn sàn, qua tham số công thức:');
 
 const before = calculateDynamicTariffByDistance(110).pricePerSeat;
@@ -108,8 +108,8 @@ check('Tham số vượt biên an toàn bị từ chối', () => {
 });
 
 check('Sửa một tham số không làm reset các tham số khác', () => {
-  // Admin chỉnh định mức rồi lưu: tám ô còn lại phải giữ nguyên. Gộp lên bộ MẶC
-  // ĐỊNH thay vì bộ đang chạy khiến mọi tinh chỉnh trước đó âm thầm quay về gốc.
+  // Admin tweaks a rate and saves: the other eight fields must stay unchanged. Merging onto the
+  // DEFAULT set instead of the running set silently reverts every earlier tweak to the baseline.
   setTariffParams({ ...DEFAULT_TARIFF_PARAMS, limoRatePerKm: 2500 }, null, 'admin-test');
   const { params } = validateTariffParams({ avgConsumptionLper100km: 10 });
   assert.equal(params.limoRatePerKm, 2500, 'tham số không gửi lên phải giữ giá trị đang áp dụng');
@@ -128,14 +128,14 @@ check('Tham số sai không làm hỏng cấu hình đang chạy', () => {
   try {
     setTariffParams({ driverPayoutRatio: 99 });
   } catch {
-    /* mong đợi bị chặn */
+    /* expected to be blocked */
   }
   assert.equal(calculateDynamicTariffByDistance(110).pricePerSeat, stable);
 });
 
 resetTariffParams();
 
-// ── 4. DỮ LIỆU MẪU PHẢI SỐNG ĐƯỢC TRONG MA TRẬN ─────────────────────────────
+// ── 4. SEED DATA MUST BE VIABLE IN THE MATRIX ──────────────────────────────
 console.log('\n4. Chuyến mẫu neo đúng trạm ảo và giá khớp công thức:');
 
 const SEEDS = [...INITIAL_DRIVER_OFFERS, ...INITIAL_PASSENGER_REQUESTS];

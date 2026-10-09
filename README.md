@@ -1,72 +1,72 @@
-# CarMate — Tìm chuyến phù hợp, kết nối trực tiếp
+# CarMate — Find the right trip, connect directly
 
 [CarMate.vn](https://carmate.vn) · Monorepo `@carmate/shared`, `@carmate/web`, `@carmate/api`
 
-CarMate giúp khách và chủ xe tìm thấy nhau trên cùng hành lang theo hướng đi, thời gian và số chỗ. Trạm là mốc tra cứu; đón tại trạm, tận nơi hoặc kết hợp theo điều kiện của chủ xe và xác nhận của hai bên.
+CarMate helps passengers and drivers find each other on the same corridor by direction, time and number of seats. Stations are lookup reference points; pickup can be at a station, at the door, or a combination, depending on the driver's conditions and confirmation from both parties.
 
-**Đăng chuyến, tìm kiếm và kết nối miễn phí.** Chủ xe niêm yết giá hoặc để “Liên hệ”. Hai bên trực tiếp quyết định và xử lý tiền chuyến đi. CarMate không áp bảng cước, giữ cọc, thu hoa hồng hoặc phân chia tiền.
+**Posting trips, searching and connecting are free.** Drivers list a price or leave it as “Liên hệ” (Contact). The two parties decide on and handle the trip payment directly. CarMate does not impose a fare table, hold deposits, take commission or split money.
 
-Luồng mới đang được tích hợp trên `dev`. Mô tả trong repo không đồng nghĩa bản production đã cập nhật hoặc việc đón ngoài thực địa đã được kiểm chứng.
+The new flow is being integrated on `dev`. The descriptions in this repo do not mean the production build has been updated or that pickups in the field have been verified.
 
-## Luồng sản phẩm
+## Product flow
 
-### Khách
+### Passengers
 
-- Tìm và xem chuyến trước khi đăng nhập.
-- Liên hệ trực tiếp nếu chủ xe đã đồng ý công khai số; bấm gọi chưa phải được nhận đón.
-- Chủ động đăng nhu cầu khi muốn chủ xe tìm thấy mình. Tìm kiếm riêng tư không tự tạo nhu cầu công khai.
-- Đăng nhập tại lúc đăng nhu cầu hoặc gửi yêu cầu trong CarMate; giữ nguyên nội dung đã nhập.
-- Nếu ghi nhận cuộc hẹn trong nền tảng, hai bên xác nhận cùng điểm, giờ, số người và giá trước khi giữ chỗ.
+- Search and view trips before logging in.
+- Contact the driver directly if they have agreed to publish their number; tapping call does not mean being accepted for pickup.
+- Proactively post a ride request when you want drivers to find you. A private search does not automatically create a public request.
+- Log in at the moment of posting a request or sending a request in CarMate; the content already entered is preserved.
+- If an appointment is recorded on the platform, both parties confirm the same point, time, number of people and price before seats are reserved.
 
-### Chủ xe
+### Drivers
 
-- Nhập hành trình, giờ, số chỗ, giá/“Liên hệ”, cách đón và xe thật.
-- Xem trước chuyến và các nhu cầu đang tìm xe có thể phù hợp, không lộ thông tin riêng của khách.
-- Nếu không có nhu cầu, hiển thị đúng kết quả trống. Lỗi tải dữ liệu không được coi là không có khách.
-- Nhập số liên hệ và đồng ý công khai, đăng nhập rồi xuất bản đúng một lần.
-- Desktop và mobile cùng một luồng đăng chuyến. Chế độ quản lý xe đang chạy có lối riêng cho chủ xe quay lại.
+- Enter the route, time, number of seats, price/“Liên hệ” (Contact), pickup method and the actual vehicle.
+- Preview the trip and any ride requests looking for a vehicle that may fit, without exposing passengers' private information.
+- If there are no ride requests, show the empty result accurately. A data-loading error must not be treated as having no passengers.
+- Enter a contact number and consent to publish it, log in, then publish exactly once.
+- Desktop and mobile share the same trip-posting flow. The mode for managing a vehicle that is currently running has its own entry point for returning drivers.
 
-Chi tiết: [Luồng kết nối](docs/CONNECTION_FLOW.md) · [Quy trình vận hành](docs/OPERATIONAL_WORKFLOW.md).
+Details: [Connection flow](docs/CONNECTION_FLOW.md) · [Operational workflow](docs/OPERATIONAL_WORKFLOW.md).
 
-## Toán học phục vụ tìm chuyến
+## Mathematics behind trip search
 
-Lõi hiện có gồm chiếu vị trí lên hành lang, dự báo thời gian tới trạm, giao khoảng thời gian, đánh giá tương thích và sức chứa trên từng đoạn. Các mô-đun này giúp tạo ứng viên phù hợp; chúng không tự chứng minh luôn có xe hoặc thay thế sự đồng ý của hai bên.
+The current core consists of projecting positions onto the corridor, forecasting the time to reach a station, intersecting time windows, evaluating compatibility, and per-segment capacity. These modules help generate suitable candidates; they do not by themselves prove that a vehicle is always available or replace the consent of both parties.
 
-Công thức chi phí, Shapley/Nash và bảng giá trong các mô-đun cũ chỉ là phần nghiên cứu/ước tính cần tách khỏi giá chủ xe. Kết quả xếp hạng là đề xuất trên dữ liệu hiện có, không phải bằng chứng tối ưu toàn cục.
+The cost formulas, Shapley/Nash and price tables in the legacy modules are research/estimation only and must be kept separate from the driver's price. Ranking results are suggestions based on the available data, not evidence of global optimality.
 
-Xem [Kiến trúc và phạm vi mô hình](ARCHITECTURE.md). Luồng trợ lý có tài liệu riêng tại [NATIVE_INTENT_FLOW.md](docs/NATIVE_INTENT_FLOW.md); trợ lý không cần thiết để dùng các luồng tìm/đăng chuyến.
+See [Architecture and model scope](ARCHITECTURE.md). The assistant flow has its own document at [NATIVE_INTENT_FLOW.md](docs/NATIVE_INTENT_FLOW.md); the assistant is not required to use the search/post-trip flows.
 
-## Cấu trúc
+## Structure
 
 ```text
 apps/web/src/
-  App.jsx                       Điều hướng và xác thực theo hành động
+  App.jsx                       Navigation and action-triggered authentication
   api/client.js                 API client
-  components/market/            Tìm chuyến theo hành lang
-  components/intent/            Đăng nhu cầu chủ động
-  components/modals/            Xem trước, đăng chuyến, đăng nhập, cuộc hẹn
-  components/station/           Tra cứu và xử lý nhu cầu theo trạm
-  hooks/                        State và đồng bộ dữ liệu
+  components/market/            Corridor-based trip search
+  components/intent/            Proactively posting a ride request
+  components/modals/            Preview, post trip, login, appointment
+  components/station/           Station-based lookup and handling of ride requests
+  hooks/                        State and data synchronization
 apps/api/src/
-  routes/api.js                 Quyền truy cập endpoint
+  routes/api.js                 Endpoint access control
   controllers/                  Trip, intent, booking, auth
-  services/connectionMatching.js Đánh giá ứng viên
-  services/bookingCommitment.js  Cam kết hai bên và sức chứa theo đoạn
+  services/connectionMatching.js Candidate evaluation
+  services/bookingCommitment.js  Two-party commitment and per-segment capacity
   db/sqliteStore.js             SQLite
-packages/shared/src/            Hành lang, trạm, mô hình thời gian và tiện ích chung
-scripts/                        Kiểm thử, sao lưu và công cụ vận hành
+packages/shared/src/            Corridors, stations, time model and shared utilities
+scripts/                        Tests, backups and operations tooling
 ```
 
-## Chạy cục bộ
+## Running locally
 
-Yêu cầu Node.js từ phiên bản 22 theo `package.json`. Dùng bản dữ liệu phát triển riêng.
+Requires Node.js version 22 or later per `package.json`. Use a separate development dataset.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Máy chủ hợp nhất phục vụ web và API; xem địa chỉ/cổng thực tế trong thông báo khởi động. Không ghi khóa bí mật vào biến `VITE_*` vì chúng được đưa vào mã phía trình duyệt. Xác thực Google, Telegram và Firebase cần cấu hình phù hợp; giao diện không cung cấp tài khoản giả để bỏ qua bước này.
+A single unified server serves the web app and the API; see the startup message for the actual address/port. Do not put secret keys in `VITE_*` variables because they are bundled into browser-side code. Google, Telegram and Firebase authentication need appropriate configuration; the UI does not provide fake accounts to bypass this step.
 
 ```bash
 npm run build
@@ -74,23 +74,23 @@ npm run lint
 node scripts/test-driver-activation.mjs
 ```
 
-`test-driver-activation.mjs` kiểm tra dữ liệu xem trước không mang thông tin liên hệ, giá do chủ xe chọn, sức chứa, thời gian và callback tiếp tục sau đăng nhập. Các suite API và nghiệp vụ khác nằm trong `scripts/`; một số cần máy chủ hoặc cơ sở dữ liệu riêng. Không chạy chúng trên dữ liệu người dùng thật.
+`test-driver-activation.mjs` checks that preview data carries no contact information, the driver-chosen price, capacity, time, and the resume-after-login callback. The other API and business-logic suites are in `scripts/`; some need a dedicated server or database. Do not run them against real user data.
 
-## Kiểm tra luồng mới
+## Verifying the new flow
 
-- Khách tìm được kết quả thật hoặc thấy trạng thái trống rõ ràng; liên hệ công khai không bị khóa bởi đăng nhập.
-- Khách/chủ xe nhập trước đăng nhập; đóng xác thực giữ draft; đăng nhập thành công tiếp tục một lần.
-- Chủ xe chỉ thấy số nhu cầu thật trong bản xem trước; API lỗi không hiện số 0 giả.
-- Giá `null` hiển thị “Liên hệ”; giá chủ xe không bị công thức cũ ghi đè.
-- Cuộc hẹn chỉ giữ chỗ sau xác nhận đúng phiên bản, có kiểm tra sức chứa của đoạn đi.
-- Hủy lặp lại không nhả chỗ nhiều lần; tìm lại giữ thời hạn ban đầu; xe mới cần xác nhận mới.
+- Passengers find real results or see a clear empty state; public contact is not locked behind login.
+- Passengers/drivers can enter data before logging in; closing authentication keeps the draft; a successful login resumes exactly once.
+- Drivers see only the real number of ride requests in the preview; an API error does not display a fake 0.
+- A `null` price displays “Liên hệ” (Contact); the driver's price is not overwritten by the legacy formula.
+- An appointment reserves seats only after confirmation of the exact version, with a capacity check on the travelled segment.
+- Repeated cancellation does not release seats multiple times; searching again keeps the original deadline; a new vehicle requires new confirmation.
 
-Kiểm thử mã, kiểm tra trình duyệt, thử cấu hình đăng nhập và đo vận hành thật là các lớp kiểm chứng riêng. Không dùng số lượng test đạt để công bố tỷ lệ đón thành công.
+Code tests, browser checks, login configuration trials and real operational measurements are separate layers of verification. Do not use the number of passing tests to claim a pickup success rate.
 
-## Dữ liệu, triển khai và Git
+## Data, deployment and Git
 
-Luồng hồ sơ tham khảo, nhập hộ, nhận quyền quản lý và báo sai/gỡ thông tin được mô tả tại [docs/OPERATOR_PROFILES.md](docs/OPERATOR_PROFILES.md). Danh bạ cũ được chuyển thành bản nháp chờ rà soát; hồ sơ tham khảo không tạo nguồn ghế hay tài khoản đại diện tự động.
+The flows for reference profiles, entering trips on an operator's behalf, claiming management rights, and reporting incorrect information/requesting removal are described in [docs/OPERATOR_PROFILES.md](docs/OPERATOR_PROFILES.md). The legacy directory is converted into drafts awaiting review; a reference profile does not create a seat source or an automatic representative account.
 
-SQLite cần lưu trữ bền vững và quy trình sao lưu/khôi phục đã kiểm tra. Repo có `scripts/backup-db.js`, `scripts/restore-db.js`, `Dockerfile` và `fly.toml`; xem cấu hình đích trước khi chạy công cụ vận hành. Không ghi dữ liệu production hoặc nội dung riêng của người dùng vào test, log mẫu hay tài liệu.
+SQLite needs persistent storage and a tested backup/restore procedure. The repo has `scripts/backup-db.js`, `scripts/restore-db.js`, `Dockerfile` and `fly.toml`; check the target configuration before running operational tools. Do not write production data or users' private content into tests, sample logs or documentation.
 
-Phát triển trên `dev`. Không commit/push thẳng `main`; chỉ merge hoặc triển khai khi người dùng yêu cầu. Quy chuẩn giao diện và bất biến dữ liệu tại [AGENTS.md](AGENTS.md).
+Develop on `dev`. Do not commit/push directly to `main`; only merge or deploy when the user asks. UI conventions and data invariants are in [AGENTS.md](AGENTS.md).

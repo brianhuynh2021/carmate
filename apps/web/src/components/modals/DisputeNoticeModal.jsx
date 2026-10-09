@@ -48,7 +48,7 @@ export default function DisputeNoticeModal({
     setSubmitting(true);
 
     try {
-      const cleanReason = selectedReason.replace(/^[^\s]+\s/, ''); // Bỏ emoji đầu
+      const cleanReason = selectedReason.replace(/^[^\s]+\s/, ''); // Strip the leading emoji
       const res = await api.disputeBooking(bId, {
         reason: cleanReason,
         note: customNote.trim(),
@@ -75,7 +75,7 @@ export default function DisputeNoticeModal({
         className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-[#1c1c1e] border border-black/10 dark:border-white/10 shadow-2xl p-6 text-slate-800 dark:text-slate-100 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Nút đóng */}
+        {/* Close button */}
         <button
           type="button"
           onClick={onClose}
@@ -84,7 +84,7 @@ export default function DisputeNoticeModal({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Tiêu đề & Biểu tượng */}
+        {/* Title & icon */}
         <div className="flex items-start gap-3.5 mb-5">
           <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
             {strike >= 3 ? <Ban className="w-6 h-6 text-rose-600" /> : <ShieldAlert className="w-6 h-6" />}
@@ -102,7 +102,7 @@ export default function DisputeNoticeModal({
           </div>
         </div>
 
-        {/* Thẻ ngữ cảnh vi phạm */}
+        {/* Violation context card */}
         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.06] mb-4 space-y-1.5 text-xs">
           <div className="flex items-center justify-between text-[11px] text-slate-500">
             <span>{t('dispute2.s003')}</span>
@@ -118,7 +118,7 @@ export default function DisputeNoticeModal({
           )}
         </div>
 
-        {/* Lựa chọn lý do 1-chạm */}
+        {/* 1-tap reason selection */}
         <div className="mb-4">
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
             {t('dispute2.s005')}
@@ -145,7 +145,7 @@ export default function DisputeNoticeModal({
           </div>
         </div>
 
-        {/* Ghi chú giải trình bổ sung */}
+        {/* Additional explanation note */}
         <div className="mb-5">
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
             {t('dispute2.s006')}
@@ -159,7 +159,7 @@ export default function DisputeNoticeModal({
           />
         </div>
 
-        {/* Hàng nút hành động */}
+        {/* Action button row */}
         <div className="flex items-center justify-between gap-2.5 pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
           <button
             type="button"

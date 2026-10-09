@@ -1,13 +1,13 @@
 /**
- * Xử lý số điện thoại sang định dạng chỉ gồm chữ số
+ * Convert a phone number into a digits-only format
  */
 export const cleanPhoneNumber = (phone = '') => {
   return String(phone || '').replace(/[^0-9]/g, '');
 };
 
 /**
- * Chuẩn hóa số điện thoại di động Việt Nam về dạng thống nhất 10 số bắt đầu bằng 0 (VD: 0912345678)
- * Xử lý các tiền tố: +84, 84, hoặc 9 chữ số thiếu số 0 ở đầu.
+ * Normalize a Vietnamese mobile number to a uniform 10-digit form starting with 0 (e.g. 0912345678)
+ * Handles the prefixes: +84, 84, or 9 digits missing the leading 0.
  */
 export const normalizePhoneNumber = (phone = '') => {
   const cleaned = cleanPhoneNumber(phone);
@@ -22,8 +22,8 @@ export const normalizePhoneNumber = (phone = '') => {
 };
 
 /**
- * Kiểm tra số điện thoại di động hợp lệ theo các nhà mạng chính thống Việt Nam
- * Hỗ trợ các đầu số: Viettel (03x, 086, 096-098), Vinaphone (081-085, 088, 091, 094),
+ * Validate a mobile phone number against the main legitimate Vietnamese carriers
+ * Supported prefixes: Viettel (03x, 086, 096-098), Vinaphone (081-085, 088, 091, 094),
  * Mobifone (070-079, 089, 090, 093), Vietnamobile/Wintel/Itelecom/Gmobile (052-059, 087, 092, 099)
  */
 export const isValidVietnamesePhone = (phone = '') => {
@@ -32,17 +32,17 @@ export const isValidVietnamesePhone = (phone = '') => {
 };
 
 /**
- * Nhận diện các số điện thoại có dấu hiệu giả mạo / số rác hiển nhiên:
- * - Không đúng định dạng mạng viễn thông Việt Nam
- * - Số dummy phổ biến (0123456789, 0987654321, 0900000000, ...)
- * - Đuôi có từ 6 chữ số giống hệt nhau (VD: 0900000000, 0911111111, 0988888888)
- * - Đuôi dãy số tuần tự tiến / lùi
+ * Detect phone numbers that show signs of being fake / obvious junk numbers:
+ * - Not in the format of a Vietnamese telecom network
+ * - Common dummy numbers (0123456789, 0987654321, 0900000000, ...)
+ * - Ending with 6 or more identical digits (e.g. 0900000000, 0911111111, 0988888888)
+ * - Ending with an ascending / descending sequential run of digits
  */
 export const isLikelyFakePhone = (phone = '') => {
   const normalized = normalizePhoneNumber(phone);
   if (!isValidVietnamesePhone(normalized)) return true;
 
-  // Danh sách các số ảo / số thử nghiệm hiển nhiên
+  // List of obvious fake / test numbers
   const obviousDummies = [
     '0123456789',
     '0987654321',
@@ -58,10 +58,10 @@ export const isLikelyFakePhone = (phone = '') => {
   if (obviousDummies.includes(normalized)) return true;
 
   const last7 = normalized.slice(3);
-  // Đuôi kết thúc bằng >= 6 chữ số giống hệt nhau (VD: 000000, 111111, 888888)
+  // Ending with >= 6 identical digits (e.g. 000000, 111111, 888888)
   if (/(\d)\1{5,}$/.test(last7)) return true;
 
-  // Dãy tuần tự 7 số tiến / lùi
+  // 7-digit sequential run, ascending / descending
   const fakeSequences = ['1234567', '7654321', '9876543', '2345678', '8765432', '0123456', '6543210'];
   if (fakeSequences.some((seq) => last7.includes(seq))) return true;
 
@@ -69,7 +69,7 @@ export const isLikelyFakePhone = (phone = '') => {
 };
 
 /**
- * Xử lý số điện thoại sang định dạng quốc tế (ví dụ: 84988234567 cho WhatsApp / Telegram)
+ * Convert a phone number into international format (e.g. 84988234567 for WhatsApp / Telegram)
  */
 const toInternationalPhone = (phone = '') => {
   let digits = cleanPhoneNumber(phone);
@@ -82,9 +82,9 @@ const toInternationalPhone = (phone = '') => {
 };
 
 /**
- * Tạo liên kết mở trực tiếp cuộc trò chuyện trên Zalo.
- * Trả về chuỗi rỗng khi không có số hợp lệ, để nơi gọi tự quyết định
- * hiển thị gì thay thế (không dùng '#' vì nó nhảy về đầu trang).
+ * Create a link that opens a Zalo conversation directly.
+ * Returns an empty string when there is no valid number, so the caller decides
+ * what to display instead (do not use '#' because it jumps to the top of the page).
  */
 export const getZaloChatUrl = (phone = '', text = '') => {
   const cleaned = cleanPhoneNumber(phone);
@@ -96,7 +96,7 @@ export const getZaloChatUrl = (phone = '', text = '') => {
 export const getZaloChatLink = getZaloChatUrl;
 
 /**
- * Tạo liên kết mở trực tiếp cuộc trò chuyện trên Telegram
+ * Create a link that opens a Telegram conversation directly
  */
 export const getTelegramChatUrl = (phoneOrUsername = '') => {
   if (!phoneOrUsername) return '#';
@@ -108,8 +108,8 @@ export const getTelegramChatUrl = (phoneOrUsername = '') => {
 };
 
 /**
- * Sinh nội dung đăng tin chia sẻ nhanh lên các Hội Nhóm Zalo / Facebook / Telegram
- * (Công cụ Product-Led Growth giúp Chủ xe kết nối Người đi cùng)
+ * Generate post content for quickly sharing to Zalo / Facebook / Telegram Groups
+ * (A Product-Led Growth tool that helps Drivers connect with fellow passengers)
  */
 export const generateSocialShareText = (trip) => {
   if (!trip) return '';

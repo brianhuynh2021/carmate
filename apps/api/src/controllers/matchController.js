@@ -13,13 +13,13 @@ export function calculateFuelSavings(routeCategory, seats = 1) {
   };
 }
 
-// Cache kết quả tìm kiếm so khớp trong 5 giây để giảm tải truy vấn đồng thời
+// Cache the matching search results for 5 seconds to reduce concurrent query load
 const matchCache = new Map();
 const MATCH_CACHE_TTL_MS = 5000;
 
 /**
- * GET /api/matches - Thuật toán Radar so khớp 2 chiều tối ưu O(N+M)
- * Sử dụng Route-Direction Hash Bucket Lookup thay vì lặp lồng O(N*M)
+ * GET /api/matches - Optimal O(N+M) two-way Radar matching algorithm
+ * Uses Route-Direction Hash Bucket Lookup instead of a nested O(N*M) loop
  */
 export function getMatches(req, res) {
   try {
@@ -29,7 +29,7 @@ export function getMatches(req, res) {
 
     const cached = matchCache.get(cacheKey);
     if (cached && now - cached.timestamp < MATCH_CACHE_TTL_MS) {
-      // Bảo đảm sanitize PII theo người dùng hiện tại
+      // Ensure PII is sanitized per current user
       const sanitizedMatches = cached.data.matches.map((m) => ({
         ...m,
         driver: sanitizeTripForPublic(m.driver, req.user),
@@ -46,7 +46,7 @@ export function getMatches(req, res) {
       });
     }
 
-    // 1. Lọc từ SQL với giới hạn tải (Tối đa 150 bài đăng gần nhất mỗi vai trò)
+    // 1. Filter from SQL with a load limit (max 150 most recent posts per role)
     const rawDrivers = getTrips({
       type: 'drivers',
       routeCategory: route && route !== 'all' ? route : undefined,
@@ -64,7 +64,7 @@ export function getMatches(req, res) {
     const drivers = rawDrivers.filter((d) => !d.status || (d.status !== 'cancelled' && d.status !== 'completed'));
     const passengers = rawPassengers.filter((p) => !p.status || (p.status !== 'cancelled' && p.status !== 'completed'));
 
-    // 2. Gom nhóm hành khách vào Hash Map theo [routeCategory#direction] -> O(M)
+    // 2. Group passengers into a Hash Map by [routeCategory#direction] -> O(M)
     const passengerBucketMap = new Map();
     for (const pass of passengers) {
       const bucketKey = `${pass.routeCategory || ''}#${pass.direction || ''}`;
@@ -74,7 +74,7 @@ export function getMatches(req, res) {
       passengerBucketMap.get(bucketKey).push(pass);
     }
 
-    // 3. Quét qua Chủ xe và tra cứu O(1) vào bucket tương ứng -> O(N)
+    // 3. Iterate over drivers and do an O(1) lookup into the corresponding bucket -> O(N)
     const matchedPairs = [];
 
     for (const driver of drivers) {
@@ -83,7 +83,7 @@ export function getMatches(req, res) {
       if (!candidates || candidates.length === 0) continue;
 
       for (const pass of candidates) {
-        let score = 70; // Tuyến đường và chiều di chuyển khớp nhau
+        let score = 70; // Route and direction of travel match
         const reasons = ['Cùng tuyến quốc lộ'];
 
         if (driver.timeSlot && pass.timeSlot && driver.timeSlot === pass.timeSlot) {
@@ -105,7 +105,7 @@ export function getMatches(req, res) {
           reasons.push(`Đồng hương ${driver.hometown}`);
         }
 
-        // Tối ưu hoá ghép đồ: Khách gửi đồ tiện tuyến & Chủ xe có thùng bán tải / cốp rộng
+        // Parcel-matching optimization: a passenger sending an item along the route & a driver with a pickup-truck bed / large trunk
         const isDriverCargoReady = driver.acceptsParcel || driver.hasCargoBed || driver.vehicleType === 'pickup';
         const isPassCargo = pass.isCargoOnly || pass.cargoType || pass.notes?.toLowerCase().includes('gửi đồ') || pass.notes?.toLowerCase().includes('thùng xốp');
         if (isPassCargo && isDriverCargoReady) {
@@ -126,7 +126,7 @@ export function getMatches(req, res) {
       }
     }
 
-    // 4. Sắp xếp điểm tương thích cao nhất và giới hạn tối đa 50 cặp tốt nhất
+    // 4. Sort by highest compatibility score and cap at the 50 best pairs
     matchedPairs.sort((a, b) => b.score - a.score);
     const topMatches = matchedPairs.slice(0, 50);
 
@@ -136,19 +136,19 @@ export function getMatches(req, res) {
       totalPassengersWaiting: passengers.length
     };
 
-    // Lưu cache ngắn hạn
+    // Store short-term cache
     matchCache.set(cacheKey, {
       timestamp: now,
       data: responsePayload
     });
 
-    // Dọn dẹp cache nếu vượt quá 100 queries
+    // Clean up the cache if it exceeds 100 queries
     if (matchCache.size > 100) {
       const oldestKey = matchCache.keys().next().value;
       matchCache.delete(oldestKey);
     }
 
-    // 5. Sanitize PII trước khi trả về client
+    // 5. Sanitize PII before returning to the client
     const sanitizedMatches = topMatches.map((m) => ({
       ...m,
       driver: sanitizeTripForPublic(m.driver, req.user),
@@ -171,8 +171,8 @@ export function getMatches(req, res) {
 
 /**
  * GET /api/matches/social-suggestions
- * Gợi ý bạn đồng hành thông minh cho feed mạng xã hội (Kiểu TikTok / Facebook Reels)
- * Tự động tìm kiếm bạn đồng hành đối ứng phù hợp nhất cho chuyến của người dùng.
+ * Smart travel-companion suggestions for the social feed (TikTok / Facebook Reels style)
+ * Automatically finds the best matching counterpart companion for the user's trip.
  */
 export function getSocialSuggestions(req, res) {
   try {
@@ -191,7 +191,7 @@ export function getSocialSuggestions(req, res) {
       anchorTrip = getTripById(tripId);
     }
 
-    // Nếu không có tripId cụ thể nhưng có user đăng nhập, lấy chuyến mới nhất của user làm mỏ neo
+    // If there is no specific tripId but there is a logged-in user, take the user's latest trip as the anchor
     if (!anchorTrip && req.user) {
       const userTrips = getTripsForUser(req.user);
       if (userTrips && userTrips.length > 0) {
@@ -209,7 +209,7 @@ export function getSocialSuggestions(req, res) {
       targetDirection = anchorTrip.direction;
     }
 
-    // Lấy danh sách ứng viên đối ứng
+    // Get the list of counterpart candidates
     const candidateType = targetRole === 'passengers' ? 'passengers' : (targetRole === 'drivers' ? 'drivers' : undefined);
     const candidates = getTrips({
       type: candidateType,
@@ -220,7 +220,7 @@ export function getSocialSuggestions(req, res) {
       .filter((c) => !c.status || (c.status !== 'cancelled' && c.status !== 'completed'))
       .filter((c) => !excludedSet.has(c.id))
       .filter((c) => {
-        // Loại trừ chính mình
+        // Exclude oneself
         if (anchorTrip && c.id === anchorTrip.id) return false;
         if (req.user) {
           const userPhone = cleanPhoneNumber(req.user.phone || '');
@@ -231,9 +231,9 @@ export function getSocialSuggestions(req, res) {
         return true;
       });
 
-    // Tính điểm tương đồng & Gắn thẻ Social
+    // Compute the similarity score & attach the Social tag
     const suggestions = candidates.map((item) => {
-      let score = 75; // Cùng tuyến đường
+      let score = 75; // Same route
       const socialTags = [];
 
       if (anchorTrip) {
@@ -269,7 +269,7 @@ export function getSocialSuggestions(req, res) {
       };
     });
 
-    // Sắp xếp điểm cao nhất
+    // Sort by highest score
     suggestions.sort((a, b) => b.score - a.score);
     const limitedSuggestions = suggestions.slice(0, Number(limit) || 10);
 

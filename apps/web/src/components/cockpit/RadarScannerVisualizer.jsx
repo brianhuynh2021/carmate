@@ -10,16 +10,16 @@ import {
 import { formatVND } from '@carmate/shared';
 
 /**
- * RadarScannerVisualizer — Trực quan hóa sóng Radar 360° chuyên dụng cho Buồng lái Ô tô.
+ * RadarScannerVisualizer — Dedicated 360° Radar wave visualization for the Car Cockpit.
  *
- * Tuân thủ triệt để 4 trụ cột CarMate:
- * 1. MIT Invariants: Vùng tiếp cận Geofence 3.5 km chính xác theo toán học Geodesic.
- * 2. Stanford Ergonomics: Đọc nhanh trong 0.5 giây liếc mắt trên giá đỡ Taplo, độ tương phản cao.
- * 3. Cursor Zero Blocking: Hoạt ảnh CSS phần cứng mượt mà 60fps, không block UI luồng chính.
- * 4. Apple Liquid Aesthetics: Squircle bo góc bo viền mờ, sóng quét conic gradient chân thực.
+ * Strictly follows the 4 CarMate pillars:
+ * 1. MIT Invariants: 3.5 km Geofence approach zone, mathematically exact per Geodesic.
+ * 2. Stanford Ergonomics: Readable in a 0.5-second glance on a dashboard mount, high contrast.
+ * 3. Cursor Zero Blocking: Smooth hardware-accelerated 60fps CSS animation, does not block the main UI thread.
+ * 4. Apple Liquid Aesthetics: Squircle rounded corners with soft blurred borders, realistic conic-gradient sweep.
  */
 
-// Danh sách 5 Trạm đón ảo trọng điểm trên Hành lang QL13
+// List of 5 key virtual pickup stations on the QL13 Corridor
 const QL13_STATIONS = [
   {
     id: 'tan_khai',
@@ -27,11 +27,11 @@ const QL13_STATIONS = [
     shortName: 'Tân Khai',
     kmMarker: 'KM 0',
     relativeDistKm: 3.4,
-    zone: 'APPROACHING', // Trạm đang trong tầm quét tiếp cận
+    zone: 'APPROACHING', // Stations currently within approach scan range
     waitingRiders: 2,
     payoutEst: 270000,
-    angleDeg: 345, // Góc hiển thị trên radar dish
-    radialPercent: 28 // Tỉ lệ % từ tâm ra mép (nằm trong vòng 3.5km ~ 29%)
+    angleDeg: 345, // Display angle on the radar dish
+    radialPercent: 28 // Percentage from the center to the edge (within the 3.5km ring ~ 29%)
   },
   {
     id: 'chon_thanh',
@@ -94,11 +94,11 @@ export default function RadarScannerVisualizer({
 
   return (
     <div className="w-full bg-[#080d16] border border-emerald-500/25 rounded-3xl p-4 sm:p-6 relative overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.12)] flex flex-col justify-between select-none">
-      {/* ── HIỆU ỨNG ÁNH SÁNG NỀN HUD ── */}
+      {/* ── HUD BACKGROUND LIGHTING EFFECT ── */}
       <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* ── HEADER TELEMETRY RADAR ── */}
+      {/* ── RADAR TELEMETRY HEADER ── */}
       <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5 mb-4 z-10">
         <div className="flex items-center gap-3">
           <div
@@ -129,7 +129,7 @@ export default function RadarScannerVisualizer({
           </div>
         </div>
 
-        {/* THÔNG SỐ HUD GÓC PHẢI */}
+        {/* RIGHT-CORNER HUD PARAMETERS */}
         <div className="flex items-center gap-2">
           <div className="px-2.5 py-1 rounded-xl bg-white/[0.04] border border-white/[0.08] text-right font-mono hidden sm:block">
             <span className="text-[9px] uppercase text-slate-400 block">DẢI TẦN QUÉT</span>
@@ -144,15 +144,15 @@ export default function RadarScannerVisualizer({
         </div>
       </div>
 
-      {/* ── MẶT BÀN QUÉT RADAR 360° CHUYÊN DỤNG (RADAR DISH) ── */}
+      {/* ── DEDICATED 360° RADAR SCAN SURFACE (RADAR DISH) ── */}
       <div className="relative w-full max-w-[360px] sm:max-w-[420px] aspect-square mx-auto my-2 flex items-center justify-center">
-        {/* VÒNG TRÒN NGOÀI CÙNG (12 KM RANGE) */}
+        {/* OUTERMOST CIRCLE (12 KM RANGE) */}
         <div className="absolute inset-0 rounded-full border border-emerald-500/20 bg-emerald-950/[0.08]" />
 
-        {/* VÒNG TRÒN GIỮA (7.0 KM RANGE) */}
+        {/* MIDDLE CIRCLE (7.0 KM RANGE) */}
         <div className="absolute inset-[18%] rounded-full border border-emerald-500/25 border-dashed" />
 
-        {/* VÒNG TRÒN TIẾP CẬN GEOFENCE TRỌNG YẾU (3.5 KM ZONE - NƠI KÍCH HOẠT DOCKING) */}
+        {/* CRITICAL GEOFENCE APPROACH CIRCLE (3.5 KM ZONE - WHERE DOCKING IS TRIGGERED) */}
         <div
           className={`absolute inset-[36%] rounded-full border-2 transition-all duration-700 ${
             isReceivingGuests
@@ -165,18 +165,18 @@ export default function RadarScannerVisualizer({
           )}
         </div>
 
-        {/* VÒNG BẢO VỆ XE TRUNG TÂM (1.0 KM SAFETY BUFFER) */}
+        {/* CENTRAL VEHICLE SAFETY RING (1.0 KM SAFETY BUFFER) */}
         <div className="absolute inset-[46%] rounded-full border border-emerald-500/30" />
 
-        {/* TRỤC TỌA ĐỘ CHỮ THẬP (CROSSHAIR HUD) */}
+        {/* CROSS-SHAPED COORDINATE AXES (CROSSHAIR HUD) */}
         <div className="absolute w-full h-[1px] bg-emerald-500/15 pointer-events-none" />
         <div className="absolute h-full w-[1px] bg-emerald-500/15 pointer-events-none" />
 
-        {/* CÁC ĐƯỜNG CHÉO PHỤ 45° */}
+        {/* SECONDARY 45° DIAGONALS */}
         <div className="absolute w-full h-[1px] bg-emerald-500/10 rotate-45 pointer-events-none" />
         <div className="absolute w-full h-[1px] bg-emerald-500/10 -rotate-45 pointer-events-none" />
 
-        {/* CÁC NHÃN KHOẢNG CÁCH DỌC TRỤC BẮC - NAM */}
+        {/* DISTANCE LABELS ALONG THE NORTH - SOUTH AXIS */}
         <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[9.5px] font-mono text-emerald-400/70 font-bold pointer-events-none whitespace-nowrap">
           000° · BÌNH PHƯỚC (12 KM)
         </div>
@@ -190,7 +190,7 @@ export default function RadarScannerVisualizer({
           180° · SÀI GÒN
         </div>
 
-        {/* ── CHÙM SÓNG QUÉT RADAR XOAY 360° (SWEEP BEAM) ── */}
+        {/* ── 360° ROTATING RADAR SWEEP BEAM (SWEEP BEAM) ── */}
         {isReceivingGuests && (
           <div
             className="absolute inset-0 rounded-full pointer-events-none animate-spin"
@@ -201,7 +201,7 @@ export default function RadarScannerVisualizer({
                 'conic-gradient(from 0deg, rgba(16, 185, 129, 0.45) 0deg, rgba(16, 185, 129, 0.12) 35deg, rgba(16, 185, 129, 0.02) 65deg, transparent 75deg, transparent 360deg)'
             }}
           >
-            {/* TIA SÁNG ĐẦU MÚT CHÙM QUÉT */}
+            {/* LIGHT RAY AT THE TIP OF THE SWEEP BEAM */}
             <div
               className="absolute top-1/2 right-0 w-1/2 h-[1.5px] bg-emerald-300 shadow-[0_0_12px_#34d399] origin-left"
               style={{ transform: 'translateY(-50%)' }}
@@ -209,11 +209,11 @@ export default function RadarScannerVisualizer({
           </div>
         )}
 
-        {/* ── CÁC TRẠM ĐÓN ẢO TRÊN MẶT QUÉT (RADAR BLIPS) ── */}
+        {/* ── VIRTUAL PICKUP STATIONS ON THE SCAN SURFACE (RADAR BLIPS) ── */}
         {QL13_STATIONS.map((station) => {
-          // Quy đổi tọa độ cực (polar coordinates) sang vị trí tuyệt đối (%)
+          // Convert polar coordinates to absolute position (%)
           const rad = (station.angleDeg - 90) * (Math.PI / 180);
-          const r = station.radialPercent * 0.5; // Bán kính % từ tâm (max 50%)
+          const r = station.radialPercent * 0.5; // Radius as % from the center (max 50%)
           const posX = 50 + r * Math.cos(rad);
           const posY = 50 + r * Math.sin(rad);
 
@@ -231,12 +231,12 @@ export default function RadarScannerVisualizer({
               className="z-20 cursor-pointer group"
               onClick={() => setSelectedStation(station)}
             >
-              {/* VÒNG XUNG HÀNH TIẾP CẬN CỦA TRẠM */}
+              {/* STATION APPROACH PULSE RING */}
               {isApproaching && isReceivingGuests && (
                 <div className="absolute -inset-2.5 rounded-full bg-amber-400/30 animate-ping [animation-duration:1.8s]" />
               )}
 
-              {/* CHẤM TÍN HIỆU TRẠM (RADAR BLIP DOT) */}
+              {/* STATION SIGNAL DOT (RADAR BLIP DOT) */}
               <div
                 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 flex items-center justify-center transition-all ${
                   isApproaching
@@ -253,7 +253,7 @@ export default function RadarScannerVisualizer({
                 />
               </div>
 
-              {/* NHÃN TRẠM THẢ NỔI TRỰC TIẾP TRÊN MẶT RADAR */}
+              {/* STATION LABEL FLOATING DIRECTLY ON THE RADAR SURFACE */}
               <div
                 className={`absolute left-1/2 -translate-x-1/2 top-5 whitespace-nowrap px-2 py-0.5 rounded-md font-mono text-[9px] font-bold border transition-all pointer-events-none ${
                   isApproaching
@@ -272,10 +272,10 @@ export default function RadarScannerVisualizer({
           );
         })}
 
-        {/* ── XE CỦA BẠN TẠI TRUNG TÂM RADAR (CENTER BLIP) ── */}
+        {/* ── YOUR VEHICLE AT THE RADAR CENTER (CENTER BLIP) ── */}
         <div className="relative z-30 flex flex-col items-center pointer-events-none">
           <div className="relative">
-            {/* Vòng hào quang xe */}
+            {/* Vehicle halo ring */}
             <div className="absolute -inset-2 rounded-full bg-cyan-400/30 animate-pulse" />
             <div className="w-8 h-8 rounded-full bg-cyan-500 border-2 border-white shadow-[0_0_20px_#06b6d4] flex items-center justify-center text-slate-950">
               <Car className="w-4 h-4" />
@@ -287,7 +287,7 @@ export default function RadarScannerVisualizer({
         </div>
       </div>
 
-      {/* ── THẺ CHI TIẾT ĐIỂM TIẾP CẬN ĐANG CHỌN HOẶC TRẠM KẾ TIẾP ── */}
+      {/* ── DETAIL CARD FOR THE SELECTED APPROACH POINT OR THE NEXT STATION ── */}
       <div className="mt-2 p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 z-10">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div
@@ -319,7 +319,7 @@ export default function RadarScannerVisualizer({
           </div>
         </div>
 
-        {/* NÚT THỬ NGHIỆM TIẾP CẬN NHANH (NẾU DEV) HOẶC GIÁ TIỀN PHỤ XĂNG */}
+        {/* QUICK APPROACH TEST BUTTON (IF DEV) OR FUEL SURCHARGE AMOUNT */}
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           {onTriggerApproach && (
             <button
@@ -342,7 +342,7 @@ export default function RadarScannerVisualizer({
         </div>
       </div>
 
-      {/* ── CHUỖI HÀNH LANG 5 TRẠM TRỌNG ĐIỂM TRÊN TRỤC QL13 (CORRIDOR PIPELINE) ── */}
+      {/* ── 5-STATION KEY CORRIDOR CHAIN ON THE QL13 AXIS (CORRIDOR PIPELINE) ── */}
       <div className="mt-3 pt-3 border-t border-white/[0.06] z-10">
         <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
           <span className="flex items-center gap-1.5 uppercase font-bold text-slate-300">

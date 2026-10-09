@@ -1,62 +1,62 @@
-# Luồng Trợ Lý & Hiểu Ý Định Bản Địa
+# Assistant & Native Intent Understanding Flow
 
-> Nguồn sự thật cho cách CarMate xử lý câu hỏi tự nhiên về chuyến đi. Tài liệu này mô tả đúng luồng đang chạy trong `apps/api/src/agent/carmateAgent.js` và các hàm dùng chung tại `@carmate/shared`.
+> Source of truth for how CarMate handles natural-language questions about trips. This document describes the flow that actually runs in `apps/api/src/agent/carmateAgent.js` and the shared functions in `@carmate/shared`.
 
-## Hai đường xử lý, một tập công cụ
+## Two processing paths, one set of tools
 
 ```mermaid
 flowchart TD
-    A[Người đi cùng gửi tin nhắn] --> B{Gemini API khả dụng?}
-    B -->|Có| C[Gemini function calling]
-    B -->|Không / lỗi gọi API| D[Native Intent Engine]
-    C --> E[Công cụ CarMate đã kiểm soát]
-    D --> F[Chuẩn hoá tiếng Việt]
-    F --> G[Phân loại ý định và trích xuất slot]
+    A[Passenger sends a message] --> B{Gemini API available?}
+    B -->|Yes| C[Gemini function calling]
+    B -->|No / API call error| D[Native Intent Engine]
+    C --> E[Controlled CarMate tools]
+    D --> F[Normalize Vietnamese]
+    F --> G[Classify intent and extract slots]
     G --> E
-    E --> H[Tra cứu chuyến / định mức / hồ sơ tín nhiệm]
-    H --> I[Phản hồi đã che dữ liệu cá nhân]
+    E --> H[Look up trips / benchmarks / trust profile]
+    H --> I[Response with personal data masked]
 ```
 
-Cả hai nhánh chỉ dùng các executor phía máy chủ (`searchTrips`, `getRouteBenchmarks`, `checkMemberTrust`, `calculateEstimatedFare`, `draftZaloMessage`). Không nhánh nào được trả số điện thoại thật, mã PIN, hay dữ liệu nhận dạng ngoài phạm vi quyền truy cập.
+Both branches use only the server-side executors (`searchTrips`, `getRouteBenchmarks`, `checkMemberTrust`, `calculateEstimatedFare`, `draftZaloMessage`). Neither branch may return a real phone number, a PIN, or identifying data outside the scope of the caller's access rights.
 
 ## Native Intent Engine
 
-Khi không có `GEMINI_API_KEY`, hoặc khi lớp Gemini lỗi, `runCarMateAgent` gọi `parseUserMessage`. Engine xác định, không dùng mô hình sinh, và thực hiện theo thứ tự sau:
+When `GEMINI_API_KEY` is absent, or when the Gemini layer fails, `runCarMateAgent` calls `parseUserMessage`. The engine is deterministic, uses no generative model, and works in the following order:
 
-1. Khử dấu, chuẩn hoá Unicode, mở rộng viết tắt bản địa như `sg`, `bp`, `dx`.
-2. Nhận diện ý định: tìm chuyến, hỏi định mức, kiểm tra tín nhiệm, huỷ chuyến, trạng thái chuyến, chính sách, hoặc chào hỏi.
-3. Đối chiếu điểm đi/đến với hub và tỉnh có trong hệ thống; không tạo địa danh từ văn bản tự do.
-4. Trích xuất ngày, giờ, số ghế, ngân sách và ràng buộc. Giờ luôn được đổi sang một ID có thật trong `TIME_SLOTS`; ngày lịch không hợp lệ bị loại bỏ.
-5. Chuyển cụm địa danh đã khớp (`fromMatch`, `toMatch`) sang lớp tra cứu để vẫn tìm được chuyến khi tên hiển thị của hub dài hơn cách người dùng nói.
+1. Strip diacritics, normalize Unicode, expand local colloquial abbreviations such as `sg`, `bp`, `dx`.
+2. Recognize the intent: find a trip, ask for a benchmark, check trust, cancel a trip, trip status, policy, or greeting.
+3. Match the origin/destination against the stations (hubs) and provinces in the system; do not create place names from free text.
+4. Extract date, time, number of seats, budget and constraints. The time is always mapped to a real ID in `TIME_SLOTS`; invalid calendar dates are discarded.
+5. Pass the matched place phrases (`fromMatch`, `toMatch`) to the lookup layer so trips can still be found when a station's display name is longer than the way the user says it.
 
 ```mermaid
 flowchart LR
-    A[Tin nhắn thô] --> B[foldDiacritics + expandColloquial]
-    B --> C[Route index: hub/tỉnh có thật]
+    A[Raw message] --> B[foldDiacritics + expandColloquial]
+    B --> C[Route index: real stations/provinces]
     B --> D[Intent classifier]
     B --> E[Time, seats, budget, perks]
     C --> F[parseUserMessage]
     D --> F
     E --> F
-    F --> G{Ý định}
-    G -->|Hỏi định mức| H[suggestBenchmarkRoute]
-    G -->|Kiểm tra tín nhiệm| I[checkMemberTrust]
-    G -->|Tìm chuyến| J[searchTrips + Stanford inner loop]
+    F --> G{Intent}
+    G -->|Ask for benchmark| H[suggestBenchmarkRoute]
+    G -->|Check trust| I[checkMemberTrust]
+    G -->|Find a trip| J[searchTrips + Stanford inner loop]
 ```
 
-## Bất biến dữ liệu
+## Data invariants
 
-- Chỉ trả điểm đi/đến thuộc danh mục hub hoặc tỉnh đã biết.
-- `timeSlot` phải là ID trong `TIME_SLOTS`; không tự ghép khoảng giờ mới.
-- Ngày `31/02` và các ngày không tồn tại trả về `null`, không được tự tràn sang tháng kế tiếp.
-- Lỗi đảo hai ký tự kề như `hnag xanh` được hỗ trợ mà không hạ ngưỡng fuzzy chung.
-- Từ khoá tìm chuyến được chuẩn hoá không dấu, nhưng tên hiển thị vẫn giữ nguyên tiếng Việt cho Người đi cùng.
+- Only return an origin/destination that belongs to the known catalog of stations (hubs) or provinces.
+- `timeSlot` must be an ID in `TIME_SLOTS`; never compose a new time window.
+- The date `31/02` and other non-existent dates return `null`; they must not overflow into the following month.
+- Adjacent-character transposition typos such as `hnag xanh` are supported without lowering the global fuzzy threshold.
+- Trip-search keywords are normalized without diacritics, but display names keep their original Vietnamese for the passenger.
 
-## Kiểm chứng
+## Verification
 
 ```bash
-npm run test:intent  # Unit + invariant + hiệu năng Native Intent Engine
-npm test             # Bao gồm intent, E2E và các engine nghiệp vụ khác
+npm run test:intent  # Unit + invariant + performance tests for the Native Intent Engine
+npm test             # Includes intent, E2E and the other business engines
 ```
 
-`scripts/test-intent-engine.mjs` kiểm tra các bất biến về địa danh, ngày lịch, ID khung giờ, lỗi gõ, đầu vào độc hại và mục tiêu hiệu năng dưới 1ms/câu trên tập kiểm thử chuẩn.
+`scripts/test-intent-engine.mjs` checks the invariants for place names, calendar dates, time-slot IDs, typos and malicious input, as well as the performance target of under 1ms per sentence on the standard test set.

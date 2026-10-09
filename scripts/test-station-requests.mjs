@@ -5,16 +5,16 @@ import { findNearestVirtualHub, calculateDistanceKm } from '@carmate/shared';
 async function runTests() {
   console.log('🧪 Bắt đầu kiểm thử Station Request Pool & Snap-to-Station...');
 
-  // 1. Khởi tạo DB
+  // 1. Initialize the DB
   await initDB();
   const db = getRawDB();
   assert.ok(db, 'SQLite Database phải sẵn sàng');
   console.log('✅ 1. Database SQLite khởi tạo thành công');
 
-  // Xóa các đề xuất test cũ
+  // Delete old test proposals
   db.prepare("DELETE FROM station_requests WHERE stationName LIKE 'Test%' OR normalizedName LIKE '%dong tam%'").run();
 
-  // 2. Thêm đề xuất mở trạm mới
+  // 2. Add a proposal to open a new station
   const req1 = await addStationRequest({
     stationName: 'Ngã ba Đồng Tâm (Bình Long)',
     note: 'Có bãi đất trống ngoài làn xe ô tô, cách ngã 3 khoảng 50m',
@@ -29,7 +29,7 @@ async function runTests() {
   assert.strictEqual(req1.userPhone, '0988112233', 'Số điện thoại phải được làm sạch');
   console.log('✅ 2. Tạo đề xuất mở trạm mới thành công (requestCount = 1)');
 
-  // 3. Gom nhóm khi có người khác đề xuất cùng điểm (tên gõ không dấu / biến thể)
+  // 3. Grouping when someone else proposes the same location (name typed without diacritics / variants)
   const req2 = await addStationRequest({
     stationName: 'Nga ba Dong Tam (Binh Long)',
     note: 'Đông công nhân chờ xe mỗi sáng',
@@ -40,7 +40,7 @@ async function runTests() {
   assert.strictEqual(req2.requestCount, 2, 'Số lượt yêu cầu phải tăng lên 2');
   console.log('✅ 3. Tự động gom nhóm các đề xuất cùng điểm thành công (requestCount = 2)');
 
-  // 4. Kiểm tra ngưỡng kích hoạt khảo sát (>= 50 đề xuất)
+  // 4. Check the survey activation threshold (>= 50 proposals)
   const stmt = db.prepare('UPDATE station_requests SET requestCount = 49 WHERE id = ?');
   stmt.run(req1.id);
 
@@ -54,7 +54,7 @@ async function runTests() {
   assert.strictEqual(req50.status, 'threshold_met', 'Trạng thái phải tự động chuyển sang threshold_met khi đạt 50 đề xuất');
   console.log('✅ 4. Tự động chuyển trạng thái threshold_met khi đạt đủ 50 đề xuất');
 
-  // 5. Lấy danh sách đề xuất sắp xếp theo độ nóng
+  // 5. Get the list of proposals sorted by hotness
   const list = getStationRequests();
   assert.ok(Array.isArray(list), 'getStationRequests phải trả về danh sách');
   const found = list.find((item) => item.id === req1.id);
@@ -62,13 +62,13 @@ async function runTests() {
   assert.strictEqual(found.requestCount, 50, 'Số lượt đề xuất hiển thị chính xác');
   console.log(`✅ 5. Lấy danh sách đề xuất thành công (tìm thấy trạm có ${found.requestCount} lượt)`);
 
-  // 6. Cập nhật trạng thái đề xuất (admin khảo sát thực địa)
+  // 6. Update proposal status (admin field survey)
   const updated = await updateStationRequestStatus(req1.id, 'surveying', 'Đang cử đội ngũ đi khảo sát bãi đỗ an toàn ngoài hành lang');
   assert.strictEqual(updated.status, 'surveying', 'Trạng thái phải là surveying');
   console.log('✅ 6. Admin cập nhật trạng thái khảo sát thành công');
 
-  // 7. Kiểm thử Toán học Snap-to-Station (Geodesic Nearest Hub)
-  // Tọa độ giả lập người dùng đứng gần Cây xăng Petrolimex Tân Khai: (lat: 11.5622, lng: 106.6341)
+  // 7. Test Snap-to-Station Mathematics (Geodesic Nearest Hub)
+  // Simulated coordinates of a user standing near the Petrolimex Tân Khai gas station: (lat: 11.5622, lng: 106.6341)
   const riderLat = 11.5622;
   const riderLng = 106.6341;
   const nearest = findNearestVirtualHub(riderLat, riderLng, 'Tuyến QL13');
@@ -81,12 +81,12 @@ async function runTests() {
   assert.ok(distMeters < 500, `Khoảng cách phải dưới 500m (thực tế: ${distMeters}m)`);
   console.log(`✅ 7. Snap-to-Station chuẩn xác: Kéo về ${nearest.name} (cách ${distMeters}m)`);
 
-  // 8. Kiểm thử trạm xa hơn: Khách đứng ở Bến Cát (lat: 11.1500, lng: 106.6000)
+  // 8. Test a farther station: Passenger standing at Bến Cát (lat: 11.1500, lng: 106.6000)
   const bcNearest = findNearestVirtualHub(11.1500, 106.6000, 'Tuyến QL13');
   assert.ok(bcNearest, 'Phải tìm thấy trạm gần Bến Cát');
   console.log(`✅ 8. Khách ở khu vực khác kéo về trạm: ${bcNearest.name} (${bcNearest.distanceKm} km)`);
 
-  // 9. Kiểm thử REST API endpoints (Express app router)
+  // 9. Test the REST API endpoints (Express app router)
   const express = (await import('express')).default;
   const apiRouter = (await import('../apps/api/src/routes/api.js')).default;
   const app = express();
@@ -98,7 +98,7 @@ async function runTests() {
   const baseUrl = `http://127.0.0.1:${port}/api`;
 
   try {
-    // 9a. Test POST /api/station-requests thành công
+    // 9a. Test POST /api/station-requests succeeds
     const postRes = await fetch(`${baseUrl}/station-requests`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -115,7 +115,7 @@ async function runTests() {
     assert.strictEqual(postData.threshold, 50);
     console.log('✅ 9. REST API POST /api/station-requests thành công 201');
 
-    // 9b. Test POST /api/station-requests với tên trạm quá ngắn (< 2 ký tự)
+    // 9b. Test POST /api/station-requests with a station name that is too short (< 2 characters)
     const errRes = await fetch(`${baseUrl}/station-requests`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -137,7 +137,7 @@ async function runTests() {
     server.close();
   }
 
-  // Dọn dẹp test data
+  // Clean up test data
   db.prepare("DELETE FROM station_requests WHERE stationName LIKE 'Test%' OR normalizedName LIKE '%dong tam%' OR normalizedName LIKE '%tan hiep%'").run();
   console.log('\n🎉 TẤT CẢ 11 BÀI KIỂM THỬ STATION REQUEST POOL & SNAP-TO-STATION ĐỀU ĐẠT 100%!\n');
 }

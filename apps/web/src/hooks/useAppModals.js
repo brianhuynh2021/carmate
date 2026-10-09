@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { createAuthContinuation } from '../utils/driverTripDraft.js';
 
 /**
- * Custom Hook quản lý trạng thái hiển thị của các Modals trong toàn ứng dụng CarMate
+ * Custom Hook that manages the visibility state of all Modals across the CarMate app
  */
 export default function useAppModals() {
   const authContinuation = useRef(createAuthContinuation());

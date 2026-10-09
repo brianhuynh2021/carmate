@@ -1,10 +1,10 @@
 /**
- * Sinh và chuẩn hoá bí danh công khai (Public Alias) theo chuẩn CarMate:
- * - Chủ xe: "Chủ xe CX-{số}" (ví dụ: Chủ xe CX-101)
- * - Xe tiện chuyến: "Xe tiện chuyến CX-{số}"
- * - Khách đi cùng / Người tìm xe: "Khách KX-{số}" (ví dụ: Khách KX-201)
+ * Generate and normalize the public alias (Public Alias) following the CarMate standard:
+ * - Driver ("Chủ xe"): "Chủ xe CX-{số}" ({số} = number; e.g. Chủ xe CX-101)
+ * - Passing vehicle ("Xe tiện chuyến"): "Xe tiện chuyến CX-{số}"
+ * - Fellow passenger / vehicle seeker ("Khách"): "Khách KX-{số}" (e.g. Khách KX-201)
  *
- * Triệt tiêu hoàn toàn các định dạng lộn xộn, dài dòng, lộ địa danh/mục đích cá nhân:
+ * Completely eliminates messy, verbose formats that reveal place names / personal purposes:
  * - "Chủ xe Lộc Ninh #101" -> "Chủ xe CX-101"
  * - "Chủ xe Phan Thiết #103" -> "Chủ xe CX-103"
  * - "Khách đi khám Chợ Rẫy #201" -> "Khách KX-201"
@@ -13,23 +13,23 @@
 export function toPublicAlias(trip) {
   if (!trip) return 'Thành viên CarMate';
 
-  // 1. Kiểm tra chuỗi nguyên thủy trước
+  // 1. Check the raw string first
   if (typeof trip === 'string') {
     const s = trip.trim();
     if (!s) return 'Thành viên CarMate';
     if (s.includes('Test E2E')) return s;
 
-    // Đã là định dạng chuẩn
+    // Already in the standard format
     if (/^(?:Chủ xe|Xe tiện chuyến)\s+CX-\d+/i.test(s)) return s;
     if (/^Khách\s+KX-\d+/i.test(s)) return s;
 
-    // Nếu chỉ là mã rút gọn CX-xxx hoặc KX-xxx / KH-xxx
+    // If it is only a short code CX-xxx or KX-xxx / KH-xxx
     const codeOnly = s.match(/^(?:CX|KX|KH)[-_]?\s*(\d+)/i);
     if (codeOnly) {
       return s.toUpperCase().startsWith('CX') ? `Chủ xe CX-${codeOnly[1]}` : `Khách KX-${codeOnly[1]}`;
     }
 
-    // Các chuỗi cũ có chứa vai trò và số hiệu: "Chủ xe Lộc Ninh #101", "Xe tiện chuyến #102"
+    // Legacy strings containing a role and a number: "Chủ xe Lộc Ninh #101", "Xe tiện chuyến #102"
     const cxMatch = s.match(/^(?:Chủ xe|Xe tiện chuyến).*?(?:CX|#)?[-#]?\s*(\d+)/i);
     if (cxMatch) {
       const role = s.startsWith('Xe tiện chuyến') ? 'Xe tiện chuyến' : 'Chủ xe';
@@ -41,7 +41,7 @@ export function toPublicAlias(trip) {
     if (kxMatch) return `Khách KX-${kxMatch[1]}`;
   }
 
-  // 2. Xử lý đối tượng trip / user
+  // 2. Handle a trip / user object
   const isDriver = typeof trip === 'object'
     ? (trip.type === 'driver_offer' || trip.role === 'driver' || String(trip.id || '').startsWith('DRV-'))
     : true;
@@ -50,12 +50,12 @@ export function toPublicAlias(trip) {
 
   const rawCandidate = typeof trip === 'object' ? String(trip.publicName || trip.name || '').trim() : '';
 
-  // Giữ nguyên nếu là test E2E
+  // Keep as is if it is an E2E test
   if (rawCandidate && rawCandidate.includes('Test E2E')) {
     return rawCandidate;
   }
 
-  // Chuẩn hóa từ rawCandidate nếu có số hiệu
+  // Normalize from rawCandidate if it has a number
   if (rawCandidate) {
     if (/^(?:Chủ xe|Xe tiện chuyến)\s+CX-\d+/i.test(rawCandidate)) return rawCandidate;
     if (/^Khách\s+KX-\d+/i.test(rawCandidate)) return rawCandidate;
@@ -67,7 +67,7 @@ export function toPublicAlias(trip) {
     if (kxMatch) return `Khách KX-${kxMatch[1]}`;
   }
 
-  // 3. Sử dụng maskedCode nếu có
+  // 3. Use maskedCode if present
   const masked = typeof trip === 'object' ? String(trip.maskedCode || '').trim() : '';
   if (masked) {
     const num = masked.replace(/^[^\d]+/, '');
@@ -77,7 +77,7 @@ export function toPublicAlias(trip) {
     return isDriver ? `${role} CX-${masked}` : `Khách KX-${masked}`;
   }
 
-  // 4. Nếu ID có tiền tố DRV-xxx hoặc REQ-xxx
+  // 4. If the ID has a DRV-xxx or REQ-xxx prefix
   if (typeof trip === 'object' && trip.id) {
     const idMatch = String(trip.id).match(/^(?:DRV|REQ)-(\d+)/i);
     if (idMatch) {
@@ -85,7 +85,7 @@ export function toPublicAlias(trip) {
     }
   }
 
-  // 5. Sinh mã băm ổn định từ ID chuyến/User
+  // 5. Generate a stable hash from the trip/user ID
   const seed = typeof trip === 'object' ? String(trip.id || trip.userId || '') : String(trip);
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 900;
@@ -93,8 +93,8 @@ export function toPublicAlias(trip) {
 }
 
 /**
- * Chuẩn hóa URL ảnh xe: Tự động khôi phục tiền tố data: nếu chuỗi base64
- * bị strip mất data: (chữa lành dữ liệu cũ trên database an toàn).
+ * Normalize a vehicle photo URL: automatically restore the data: prefix if the base64 string
+ * lost its data: prefix (safely heals legacy data in the database).
  */
 export function normalizePhotoUrl(photo) {
   if (!photo) return null;
@@ -108,7 +108,7 @@ export function normalizePhotoUrl(photo) {
 }
 
 const KNOWN_DRIVER_NAMES = {
-  // SĐT định danh tài xế/chủ xe thực tế
+  // Phone numbers identifying real drivers / vehicle owners
   '0984883750': 'Nguyễn Thành Huỳnh',
   '0900000013': 'Anh Hùng',
   '0900000019': 'Anh Tuấn',
@@ -133,7 +133,7 @@ const KNOWN_DRIVER_NAMES = {
   '0901100010': 'Anh Toàn',
   '0901100011': 'Anh Long',
   '0901100012': 'Anh Phong',
-  // Mã chuyến/chủ xe tiện chuyến
+  // Trip codes / passing-vehicle driver codes
   'CX-101': 'Anh Tuấn',
   'CX-102': 'Anh Hùng',
   'CX-103': 'Anh Hoàng',
@@ -150,13 +150,13 @@ const KNOWN_DRIVER_NAMES = {
 };
 
 /**
- * Phục hồi và hiển thị TÊN THẬT của Chủ xe sau khi đặt chỗ thành công (Match & Reveal):
- * Tuyệt đối không để lộ mã định danh kỹ thuật (như "Chủ xe CX-102") sau khi đã chốt chuyến.
+ * Restore and display the driver's REAL NAME after a seat is successfully booked (Match & Reveal):
+ * Never expose a technical identifier (such as "Chủ xe CX-102") once the trip is confirmed.
  */
 export function resolveDriverRealName(tripOrBooking, fallbackName = '') {
   if (!tripOrBooking) return fallbackName || 'Chủ xe';
 
-  // 1. Kiểm tra qua số điện thoại của Chủ xe
+  // 1. Look up by the driver's phone number
   const rawPhone = typeof tripOrBooking === 'object'
     ? (tripOrBooking.driverPhoneDirect || tripOrBooking.driverPhone || tripOrBooking.phoneReal || tripOrBooking.phone || '')
     : '';
@@ -165,7 +165,7 @@ export function resolveDriverRealName(tripOrBooking, fallbackName = '') {
     return KNOWN_DRIVER_NAMES[cleanPhone];
   }
 
-  // 2. Kiểm tra qua mã định danh chuyến hoặc mã chủ xe (CX-xxx)
+  // 2. Look up by trip identifier or driver code (CX-xxx)
   const rawCode = typeof tripOrBooking === 'object'
     ? (tripOrBooking.maskedCode || tripOrBooking.tripMaskedCode || tripOrBooking.driverCode || tripOrBooking.escrowId || '')
     : String(tripOrBooking);
@@ -174,7 +174,7 @@ export function resolveDriverRealName(tripOrBooking, fallbackName = '') {
     return KNOWN_DRIVER_NAMES[codeMatch[0].toUpperCase()];
   }
 
-  // 3. Nếu đối tượng đã có trường tên thật (driverRealName, authorName, realName, driverName, contactName, name)
+  // 3. If the object already has a real-name field (driverRealName, authorName, realName, driverName, contactName, name)
   const candidateNames = typeof tripOrBooking === 'object'
     ? [
         tripOrBooking.driverRealName,
@@ -191,12 +191,12 @@ export function resolveDriverRealName(tripOrBooking, fallbackName = '') {
     const trimmed = raw.trim();
     if (!trimmed) continue;
 
-    // Bỏ qua nếu vẫn là dạng bí danh kỹ thuật "Chủ xe CX-xxx", "Khách KX-xxx"
+    // Skip if it is still a technical alias such as "Chủ xe CX-xxx", "Khách KX-xxx"
     if (/^(?:Chủ xe|Xe tiện chuyến)\s+CX-\d+/i.test(trimmed)) continue;
     if (/^Khách\s+KX-\d+/i.test(trimmed)) continue;
     if (/^CX-\d+/i.test(trimmed)) continue;
 
-    // Làm sạch các hậu tố chú thích như (Bình Long), (Chủ xe), (#102)
+    // Strip annotation suffixes such as (Bình Long), (Chủ xe), (#102)
     const cleaned = trimmed.replace(/\s*\([^)]*\)/g, '').trim();
     if (cleaned && cleaned !== 'Chủ xe' && cleaned !== 'Xe tiện chuyến') {
       return cleaned;
@@ -207,7 +207,7 @@ export function resolveDriverRealName(tripOrBooking, fallbackName = '') {
 }
 
 const KNOWN_PLATES = {
-  // SĐT chủ xe
+  // Driver phone numbers
   '0984883750': '93A - 568.89',
   '0900000019': '93A - 541.86', // CX-101
   '0900000013': '93A - 283.52', // CX-102
@@ -225,7 +225,7 @@ const KNOWN_PLATES = {
   '0901100010': '93A - 384.95',
   '0901100011': '93A - 495.16',
   '0901100012': '93A - 516.37',
-  // Mã chuyến/chủ xe
+  // Trip / driver codes
   'CX-101': '93A - 541.86',
   'CX-102': '93A - 283.52',
   'CX-103': '93A - 719.45',
@@ -242,7 +242,7 @@ const KNOWN_PLATES = {
 };
 
 /**
- * Chuẩn hóa biển số xe thành format chuẩn Việt Nam: "93A - 541.86" (93 - 3 số . 2 số)
+ * Normalize a license plate to the standard Vietnamese format: "93A - 541.86" (93 - 3 digits . 2 digits)
  */
 function formatVietnamesePlate(rawPlate) {
   if (!rawPlate || typeof rawPlate !== 'string') return '93A - 541.86';
@@ -255,13 +255,13 @@ function formatVietnamesePlate(rawPlate) {
 }
 
 /**
- * Định dạng biển số xe đầy đủ, thật 100% chuẩn Việt Nam (93A - 3 số . 2 số, VD: 93A - 541.86, 93A - 283.52):
- * Tuyệt đối không che dấu hoa thị (***) khi hiển thị vé cho khách đã đặt chỗ.
+ * Format the full license plate, 100% genuine standard Vietnamese format (93A - 3 digits . 2 digits, e.g. 93A - 541.86, 93A - 283.52):
+ * Never mask with asterisks (***) when displaying the ticket to a passenger who has booked a seat.
  */
 export function resolveFullPlate(tripOrBooking, fallbackPlate = '93A - 541.86') {
   if (!tripOrBooking) return fallbackPlate;
 
-  // 1. Nếu là chuỗi trực tiếp
+  // 1. If it is a direct string
   if (typeof tripOrBooking === 'string') {
     const s = tripOrBooking.trim();
     if (KNOWN_PLATES[s]) return KNOWN_PLATES[s];
@@ -270,7 +270,7 @@ export function resolveFullPlate(tripOrBooking, fallbackPlate = '93A - 541.86') 
     }
   }
 
-  // 2. Tra cứu theo số điện thoại của Chủ xe
+  // 2. Look up by the driver's phone number
   const rawPhone = typeof tripOrBooking === 'object'
     ? (tripOrBooking.driverPhoneDirect || tripOrBooking.driverPhone || tripOrBooking.phoneReal || tripOrBooking.phone || '')
     : '';
@@ -279,7 +279,7 @@ export function resolveFullPlate(tripOrBooking, fallbackPlate = '93A - 541.86') 
     return KNOWN_PLATES[cleanPhone];
   }
 
-  // 3. Tra cứu theo mã CX-xxx hoặc escrowId
+  // 3. Look up by CX-xxx code or escrowId
   const rawCode = typeof tripOrBooking === 'object'
     ? (tripOrBooking.maskedCode || tripOrBooking.tripMaskedCode || tripOrBooking.driverCode || tripOrBooking.escrowId || '')
     : '';
@@ -288,7 +288,7 @@ export function resolveFullPlate(tripOrBooking, fallbackPlate = '93A - 541.86') 
     return KNOWN_PLATES[codeMatch[0].toUpperCase()];
   }
 
-  // 4. Kiểm tra các trường biển số đã có trong đối tượng
+  // 4. Check plate fields already present on the object
   if (typeof tripOrBooking === 'object') {
     const candidatePlates = [
       tripOrBooking.fullPlate,
@@ -306,7 +306,7 @@ export function resolveFullPlate(tripOrBooking, fallbackPlate = '93A - 541.86') 
       }
     }
 
-    // 5. Nếu đối tượng có plateMask (VD: "93A - ***.52" hoặc "93A - ***.86")
+    // 5. If the object has a plateMask (e.g. "93A - ***.52" or "93A - ***.86")
     const mask = tripOrBooking.plateMask || tripOrBooking.plate;
     if (typeof mask === 'string' && mask.trim()) {
       const matchMask = mask.match(/^([0-9]{2}\s*[A-Z]{1,2})\s*[-–.]?\s*[*xX]{3}[.]([0-9]{2})/i);
@@ -333,14 +333,14 @@ export function resolveFullPlate(tripOrBooking, fallbackPlate = '93A - 541.86') 
 }
 
 /**
- * Che 2 số đuôi biển số xe cho khách hàng (VD: "93A - 568.XX"):
- * Giữ 3 số đầu để khách dễ nhận diện dòng xe, giấu 2 số đuôi thành .XX để bảo vệ quyền riêng tư của Chủ xe.
+ * Mask the last 2 digits of the license plate for passengers (e.g. "93A - 568.XX"):
+ * Keep the first 3 digits so passengers can recognize the vehicle, hide the last 2 digits as .XX to protect the driver's privacy.
  */
 export function maskCustomerPlate(tripOrBooking, fallbackPlate = '93A - 568.XX') {
   const full = resolveFullPlate(tripOrBooking, '93A - 568.89');
   if (!full || typeof full !== 'string') return fallbackPlate;
 
-  // Khớp định dạng chuẩn: 93A - 568.89 hoặc 93A-568.89
+  // Match the standard format: 93A - 568.89 or 93A-568.89
   const m = full.match(/^([0-9]{2}\s*[A-Z]{1,2})\s*[-–.]?\s*([0-9]{3})[.]([0-9]{2}|[xX]{2})/i);
   if (m) {
     const series = m[1].replace(/\s+/g, '').toUpperCase();
@@ -348,7 +348,7 @@ export function maskCustomerPlate(tripOrBooking, fallbackPlate = '93A - 568.XX')
     return `${series} - ${mid}.XX`;
   }
 
-  // Khớp định dạng 4 số cũ: 93A - 5689 -> 93A - 56.XX
+  // Match the legacy 4-digit format: 93A - 5689 -> 93A - 56.XX
   const m4 = full.match(/^([0-9]{2}\s*[A-Z]{1,2})\s*[-–.]?\s*([0-9]{2})([0-9]{2})/i);
   if (m4) {
     const series = m4[1].replace(/\s+/g, '').toUpperCase();

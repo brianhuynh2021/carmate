@@ -20,7 +20,7 @@ export default function Badge({ tone = 'neutral', icon: Icon, children, classNam
   );
 }
 
-/** Avatar chữ cái đầu chuẩn Apple Profile Avatar */
+/** Initial-letter avatar following the Apple Profile Avatar standard */
 export function Avatar({ label = '', tone = 'primary', size = 'md', className = '' }) {
   const dims = size === 'sm' ? 'w-8 h-8 type-badge' : size === 'lg' ? 'w-12 h-12 type-heading' : 'w-10 h-10 type-body-strong';
   const tones = {
@@ -46,7 +46,7 @@ export function Avatar({ label = '', tone = 'primary', size = 'md', className = 
   );
 }
 
-/** Icon vuông bo mềm Google Material Tile (dùng cho tiêu đề section) */
+/** Soft-rounded square icon, Google Material Tile (used for section titles) */
 export function IconTile({ icon, tone = 'primary', size = 'md', className = '' }) {
   const Icon = icon;
   const dims = size === 'sm' ? 'w-8 h-8 rounded-xl' : size === 'lg' ? 'w-12 h-12 rounded-2xl' : 'w-10 h-10 rounded-2xl';

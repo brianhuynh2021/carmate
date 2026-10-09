@@ -45,14 +45,14 @@ export default function RouteDetailModal({
   const tripTo = decodeHtmlEntities(trip?.to);
   const waypointNote = decodeHtmlEntities(trip?.waypointNote);
 
-  // Mọi hook đã được gọi ở trên — an toàn để early return tại đây
+  // All hooks have been called above — safe to early return here
   if (!trip) return null;
 
-  // Trạng thái trực tuyến của người đăng bài (Live Presence Telemetry: Đèn xanh / Đèn đỏ)
+  // Online status of the poster (Live Presence Telemetry: green light / red light)
   const onlineStatus = getUserOnlineStatus({ ...trip, isOwner });
 
-  // Nhận diện chiều di chuyển thực tế (Sài Gòn ➔ Tỉnh vs Tỉnh ➔ Sài Gòn)
-  // để đảo chiều mốc địa danh và trạm dừng chính xác 100%
+  // Detect the actual direction of travel (Sài Gòn ➔ Province vs Province ➔ Sài Gòn)
+  // to reverse the landmark and stop order with 100% accuracy
   const isReverse =
     trip.direction === 'sg_to_province' ||
     (/sài gòn|tp\.?\s*hcm|hồ chí minh/i.test(tripFrom) && !/sài gòn|tp\.?\s*hcm|hồ chí minh/i.test(tripTo));
@@ -60,24 +60,24 @@ export default function RouteDetailModal({
   const defaultStart = isReverse ? corridor?.endLandmark : corridor?.startLandmark;
   const defaultEnd = isReverse ? corridor?.startLandmark : corridor?.endLandmark;
 
-  // Điểm đón & Điểm trả chuẩn hóa
+  // Normalized pickup point & drop-off point
   const pickupTitle = isGoogleMapsUrl(tripFrom) ? 'Vị trí ghim trên Google Maps' : tripFrom || defaultStart?.name;
   const pickupAddress = trip?.pickupSpot || defaultStart?.address || (isReverse ? '' : waypointNote);
 
   const dropoffTitle = isGoogleMapsUrl(tripTo) ? 'Vị trí ghim trên Google Maps' : tripTo || defaultEnd?.name;
   const dropoffAddress = trip?.dropoffSpot || defaultEnd?.address || (isReverse ? waypointNote : '');
 
-  // Trạm dừng dọc tuyến theo chiều di chuyển thực tế
+  // Stops along the route in the actual direction of travel
   const rawWaypoints = corridor?.waypoints || [];
   const orderedWaypoints = isReverse ? rawWaypoints.slice().reverse() : rawWaypoints;
   const transitWaypoints = orderedWaypoints.length > 2 ? orderedWaypoints.slice(1, -1) : orderedWaypoints;
 
-  // Lịch trình gọn gàng, chuẩn công thái học
+  // Tidy, ergonomically sound schedule
   const dateLabel = formatCleanDateLabel(trip.date);
   const rawTime = getTimeSlotLabel(trip, lang) || '';
   const timeLabel = (rawTime.match(/^([^()]+)\s*\(/)?.[1] || rawTime).trim() || 'Linh hoạt';
 
-  // Nhu cầu ghế (Stanford Ergonomics: "Nhận ghép X ghế" / "Cần ghép X ghế")
+  // Seat demand (Stanford Ergonomics: "Nhận ghép X ghế" (accepts X seats) / "Cần ghép X ghế" (needs X seats))
   const seatsCount = isDriver ? Number(trip.availableSeats) || 0 : Number(trip.seatsNeeded) || 1;
   const isTripFull = trip.status === 'full' || Boolean(trip.isFull) || (isDriver && seatsCount === 0);
   const seatsLabel = isTripFull
@@ -86,7 +86,7 @@ export default function RouteDetailModal({
       ? `Nhận ghép ${seatsCount} ghế`
       : `Cần ghép ${seatsCount} ghế`;
 
-  // Phương tiện: Chuẩn hóa hiển thị dòng xe và số chỗ ngồi
+  // Vehicle: normalize the display of the vehicle model and seat count
   const rawCar = trip.carType || '';
   const cap = Number(trip.capacity) || Number(rawCar.match(/(\d+)\s*chỗ/i)?.[1]) || 5;
   const isGenericCar =
@@ -111,13 +111,13 @@ export default function RouteDetailModal({
     }
   }
 
-  // Đánh giá & uy tín
+  // Ratings & reputation
   const rawRating = Number(trip.rating);
   const ratingValue = Number.isFinite(rawRating) && rawRating > 0 ? Math.round(rawRating * 10) / 10 : 5.0;
   const rating = ratingValue % 1 === 0 ? `${ratingValue}.0` : String(ratingValue);
   const completedTrips = Number(trip.completedCount) || 0;
 
-  // Ảnh xe thật
+  // Real vehicle photos
   const photos = (trip.carPhotos || []).filter(Boolean);
 
   return (
@@ -177,7 +177,7 @@ export default function RouteDetailModal({
       }
     >
       <div className="space-y-3.5">
-        {/* ── 1. THÔNG TIN ĐỐI TÁC (APPLE LIQUID CARD + LIVE PRESENCE + RATING) ── */}
+        {/* ── 1. PARTNER INFO (APPLE LIQUID CARD + LIVE PRESENCE + RATING) ── */}
         <div className="p-3 sm:p-3.5 rounded-2xl bg-white/80 dark:bg-white/[0.04] backdrop-blur-md border border-slate-200/80 dark:border-white/[0.08] shadow-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10 shadow-2xs">
@@ -213,9 +213,9 @@ export default function RouteDetailModal({
           </div>
         </div>
 
-        {/* ── 2. BENTO GLANCE BAR: LỊCH TRÌNH · NHU CẦU · PHƯƠNG TIỆN ── */}
+        {/* ── 2. BENTO GLANCE BAR: SCHEDULE · RIDE REQUEST · VEHICLE ── */}
         <div className="grid grid-cols-3 gap-2">
-          {/* Lịch khởi hành */}
+          {/* Departure schedule */}
           <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] flex flex-col items-center text-center justify-center min-w-0">
             <div className="type-caption flex items-center gap-1 text-slate-400 dark:text-slate-500 uppercase">
               <Calendar className="w-3 h-3 text-[#0071e3]" />
@@ -229,7 +229,7 @@ export default function RouteDetailModal({
             </span>
           </div>
 
-          {/* Nhu cầu ghế */}
+          {/* Seat demand */}
           <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] flex flex-col items-center text-center justify-center min-w-0">
             <div className="type-caption flex items-center gap-1 text-slate-400 dark:text-slate-500 uppercase">
               <Users className="w-3 h-3 text-emerald-500" />
@@ -243,7 +243,7 @@ export default function RouteDetailModal({
             </span>
           </div>
 
-          {/* Phương tiện */}
+          {/* Vehicle */}
           <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] flex flex-col items-center text-center justify-center min-w-0">
             <div className="type-caption flex items-center gap-1 text-slate-400 dark:text-slate-500 uppercase">
               <Car className="w-3 h-3 text-indigo-500" />
@@ -258,9 +258,9 @@ export default function RouteDetailModal({
           </div>
         </div>
 
-        {/* ── 3. TRỤC LỘ TRÌNH APPLE TRANSIT METRO: ĐÓN ➔ TRẠM DỌC TUYẾN ➔ TRẢ ── */}
+        {/* ── 3. APPLE TRANSIT METRO ROUTE AXIS: PICKUP ➔ STOPS ALONG THE ROUTE ➔ DROP-OFF ── */}
         <div className="rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.08] p-4 relative overflow-hidden">
-          {/* Điểm đón */}
+          {/* Pickup point */}
           <div className="flex items-start gap-3">
             <div className="flex flex-col items-center mt-1 shrink-0">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />
@@ -281,7 +281,7 @@ export default function RouteDetailModal({
             </div>
           </div>
 
-          {/* Điểm trả */}
+          {/* Drop-off point */}
           <div className="flex items-start gap-3">
             <div className="flex flex-col items-center mt-1 shrink-0">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-4 ring-rose-500/20" />
@@ -301,7 +301,7 @@ export default function RouteDetailModal({
             </div>
           </div>
 
-          {/* Trạm đón/trả dọc tuyến */}
+          {/* Pickup/drop-off stations along the route */}
           {transitWaypoints.length > 0 && (
             <div className="mt-3.5 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
               <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -328,7 +328,7 @@ export default function RouteDetailModal({
           )}
         </div>
 
-        {/* ── 4. XEM TRƯỚC ẢNH XE THỰC TẾ (NẾU CHỦ XE ĐÃ TẢI ẢNH LÊN) ── */}
+        {/* ── 4. PREVIEW OF ACTUAL VEHICLE PHOTOS (IF THE DRIVER HAS UPLOADED PHOTOS) ── */}
         {photos.length > 0 && (
           <div className="p-3 rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.08] shadow-xs">
             <div className="flex items-center justify-between mb-2">
@@ -370,7 +370,7 @@ export default function RouteDetailModal({
           </div>
         )}
 
-        {/* ── 5. TIỆN ÍCH GỬI ĐỒ & GHI CHÚ ── */}
+        {/* ── 5. CARGO AMENITIES & NOTES ── */}
         {trip.acceptsParcel && (
           <div className="type-caption inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/[0.06]">
             <Package className="w-3.5 h-3.5 text-[#0071e3]" />
@@ -389,7 +389,7 @@ export default function RouteDetailModal({
           </div>
         )}
 
-        {/* ── 6. DÒNG CAM KẾT VĂN MINH CHÂN TRANG ── */}
+        {/* ── 6. FOOTER COURTEOUS-CONDUCT PLEDGE LINE ── */}
         <p className="type-caption text-slate-400 dark:text-slate-500 text-center flex items-center justify-center gap-1 pt-1">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
           <span>

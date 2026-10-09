@@ -32,7 +32,7 @@ import { priceLabel, pickupLabel } from './tripPresentation.js';
 export { parseLocation, getCorridorDisplay };
 
 /**
- * RouteTimeline — Trục lộ trình trực quan dùng trong Modal hoặc xem nhanh
+ * RouteTimeline — Visual route axis used in a Modal or quick view
  */
 export function RouteTimeline({ from, to, compact = false }) {
   const { t } = useI18n();
@@ -43,7 +43,7 @@ export function RouteTimeline({ from, to, compact = false }) {
 
   return (
     <div className={`relative flex flex-col ${compact ? 'gap-2' : 'gap-2.5'} select-none`}>
-      {/* Điểm xuất phát */}
+      {/* Starting point */}
       <div className="flex items-start gap-3 min-w-0">
         <div className="flex flex-col items-center mt-1 shrink-0">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 shrink-0" />
@@ -73,7 +73,7 @@ export function RouteTimeline({ from, to, compact = false }) {
         </div>
       </div>
 
-      {/* Điểm đích đến */}
+      {/* Destination point */}
       <div className="flex items-start gap-3 min-w-0 -mt-1">
         <div className="flex items-center justify-center mt-1 shrink-0">
           <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-4 ring-rose-500/20 shrink-0" />
@@ -104,16 +104,16 @@ export function RouteTimeline({ from, to, compact = false }) {
 }
 
 /**
- * TripCard — Phân cấp thị giác 1-2 giây: WHEN → WHERE → PRICE → SEAT → TRUST
- * - Khi nào? Giờ + Ngày nổi bật dòng 1
- * - Đi đâu? Tuyến đường ngang với mũi tên ở cuối thanh lộ trình
- * - Giá & Chỗ còn lại: Song hành ở dòng 3 thoáng đạt
- * - Điểm đón / trả cụ thể: Dòng 4
- * - Uy tín, Chủ xe, Phương tiện & Nút hành động: Dòng 5 & 6
+ * TripCard — 1-2 second visual hierarchy: WHEN → WHERE → PRICE → SEAT → TRUST
+ * - When? Time + Date prominent on line 1
+ * - Where to? Route aligned with the arrow at the end of the route axis
+ * - Price & Seats left: Side by side on the airy line 3
+ * - Specific pickup / drop-off point: Line 4
+ * - Reputation, Driver, Vehicle & Action buttons: Lines 5 & 6
  */
 
 /**
- * Chuẩn hoá hiển thị dòng xe kèm số chỗ ngồi (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
+ * Normalize the display of a vehicle model with seat count (e.g. "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ")
  */
 export function getCarDisplay(carType, capacity, vehicleType) {
   const isTruck =
@@ -136,7 +136,7 @@ export function getCarDisplay(carType, capacity, vehicleType) {
     return cleanModel ? `${cleanModel} · Bán tải` : 'Xe bán tải';
   }
 
-  // Danh mục các dòng xe 7 chỗ phổ biến ở VN (tránh hiển thị sai "Xpander 4 chỗ")
+  // Catalog of common 7-seat models in VN (avoid wrongly showing "Xpander 4 chỗ")
   const is7Seater =
     Number(capacity) === 7 ||
     /7\s*chỗ/i.test(carType || '') ||
@@ -146,17 +146,17 @@ export function getCarDisplay(carType, capacity, vehicleType) {
 
   if (!carType || !carType.trim()) return `Xe ${standardCap} chỗ`;
 
-  // Tách phần trong ngoặc đơn nếu có (vd "(Xe 7 chỗ)" hoặc "(Xe 5 chỗ gầm cao)")
+  // Split out the parenthesized part if present (e.g. "(Xe 7 chỗ)" or "(Xe 5 chỗ gầm cao)")
   let raw = carType.split('(')[0].trim();
-  // Bỏ các từ khoá phụ thừa
+  // Remove redundant extra keywords
   raw = raw.replace(/\s*(du\s*lịch|cá nhân|gia đình|tiện chuyến|biển vàng|biển trắng)\b/gi, '').trim();
 
-  // Kiểm tra nếu chuỗi chỉ là "Xe 7 chỗ", "7 chỗ", "Xe 5 chỗ"
+  // Check whether the string is just "Xe 7 chỗ", "7 chỗ" or "Xe 5 chỗ"
   if (!raw || /^(?:xe\s*)?\d+\s*chỗ$/i.test(raw) || raw.toLowerCase() === 'xe') {
     return `Xe ${standardCap} chỗ`;
   }
 
-  // Khử phần "... 5 chỗ" hoặc "xe 5 chỗ" ở cuối chuỗi nếu người dùng gõ liền (vd "Mazda 2 5 chỗ")
+  // Strip the "... 5 chỗ" or "xe 5 chỗ" part at the end of the string if the user typed it run together (e.g. "Mazda 2 5 chỗ")
   let cleanModel = raw.replace(/\s+(?:xe\s*)?\d+\s*chỗ.*$/i, '').trim();
   if (!cleanModel || cleanModel.toLowerCase() === 'xe') {
     return `Xe ${standardCap} chỗ`;
@@ -183,16 +183,16 @@ export default function TripCard({
   const isDriver = item.type === 'driver_offer';
   const formattedPrice = priceLabel(item);
 
-  // Danh tính công khai: chỉ hiển thị bí danh vai trò + mã định danh chuẩn (Chủ xe CX-xxx / Khách KX-xxx)
+  // Public identity: only show the role alias + standard identifier ("Chủ xe" CX-xxx (driver) / "Khách" KX-xxx (passenger))
   const driverDisplayName = toPublicAlias(item);
 
-  // Trạng thái trực tuyến (Live Presence Telemetry: Đèn xanh online / Đèn đỏ offline)
+  // Online status (Live Presence Telemetry: green light online / red light offline)
   const onlineStatus = getUserOnlineStatus({ ...item, isOwner });
 
   const fromParsed = parseLocation(item.from);
   const toParsed = parseLocation(item.to);
 
-  // Điểm hẹn cụ thể rút gọn
+  // Shortened specific meeting point
   const briefSpot = (sub) => {
     if (!sub) return '';
     const s = String(sub).trim();
@@ -206,7 +206,7 @@ export default function TripCard({
     item.dropoffSpot || toParsed.sub || (item.waypointNote?.toLowerCase().includes('trả') ? item.waypointNote.replace(/^trả\s*(?:tại)?\s*/i, '') : '')
   );
 
-  // Khử lặp tên tỉnh/thành đã có ở tiêu đề trục lộ trình và từ khoá xe thừa
+  // Remove the province/city name already in the route axis title, and redundant vehicle keywords
   const cleanSpot = (spot, city) => {
     if (!spot) return '';
     const VEHICLE_LEAK_REGEX =
@@ -222,7 +222,7 @@ export default function TripCard({
   const toSpot = cleanSpot(rawToSpot, toParsed.main);
   const isTripFull = item.status === 'full' || Boolean(item.isFull);
 
-  // Sao trung bình đánh giá chuẩn (luôn giữ dạng * 5.0 hoặc * 4.9)
+  // Standard average star rating (always keep the form * 5.0 or * 4.9)
   const rawRating = Number(item.rating);
   const ratingValue = Number.isFinite(rawRating) && rawRating > 0
     ? Math.round(rawRating * 10) / 10
@@ -230,23 +230,23 @@ export default function TripCard({
   const rating = ratingValue == null ? 'Chưa có đánh giá' : ratingValue.toFixed(1);
   const completedTrips = Number(item.completedCount) || 0;
 
-  // "5 chỗ" (sức chứa) khác hẳn "còn 5 chỗ" (đặt được). Luôn hiện dạng còn/tổng.
+  // "5 chỗ" (capacity) is entirely different from "còn 5 chỗ" (bookable). Always show the form remaining/total.
   const seatsLeft = isDriver ? Number(item.availableSeats) || 0 : Number(item.seatsNeeded) || 1;
   const seatsTotal = isDriver ? Number(item.vehicleSeatCount || item.capacity) || null : null;
 
-  // Ngày hiển thị gọn gàng, tinh tế (Stanford Ergonomics & Apple HIG: triệt tiêu hậu tố dd/mm dư thừa)
+  // Date shown tidy and refined (Stanford Ergonomics & Apple HIG: eliminate the redundant dd/mm suffix)
   const dateLabel = formatCleanDateLabel(item.date);
 
-  // Giờ: định dạng giờ chính xác (buổi sáng giữ chữ Sáng để phân biệt, buổi chiều/tối lược bỏ chữ thừa)
+  // Time: precise time format (morning keeps the word "Sáng" (Morning) to distinguish, afternoon/evening drops the redundant word)
   const rawTime = getTimeSlotLabel(item, lang) || '';
   const timeLabel = sanitizeTimeLabel((rawTime.match(/^([^()]+)\s*\(/)?.[1] || rawTime).trim());
 
-  // Ảnh xe thật — hiển thị thumbnail thanh lịch nếu có
+  // Real vehicle photo — show an elegant thumbnail if available
   const photos = (item.carPhotos || []).filter(Boolean);
   const rawCover = photos.length > 0 ? normalizePhotoUrl(photos[0]) : null;
   const coverPhoto = coverFailed ? null : rawCover;
 
-  // Hiển thị tên xe & số chỗ ngồi đồng nhất (VD: "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ", "Ford Ranger · Bán tải")
+  // Show vehicle name & seat count consistently (e.g. "Mazda 2 · 5 chỗ", "Mitsubishi Xpander · 7 chỗ", "Xe 5 chỗ", "Ford Ranger · Bán tải")
   const carDisplay = getCarDisplay(item.carType, item.capacity, item.vehicleType);
 
   return (
@@ -255,7 +255,7 @@ export default function TripCard({
       onClick={() => onViewRoute?.(item)}
       className="flex flex-col h-full relative overflow-hidden rounded-3xl bg-white dark:bg-[#151b26] border border-slate-300 dark:border-white/15 hover:border-[#0071e3] dark:hover:border-sky-400 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_10px_24px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_32px_rgba(0,113,227,0.12),0_20px_48px_rgba(0,0,0,0.08)] hover:-translate-y-1 active:scale-[0.99] transition-all duration-200 ease-out group select-none cursor-pointer"
     >
-      {/* ── 1. KHI NÀO? (WHEN) + BADGE NGỮ CẢNH TINH TẾ ── */}
+      {/* ── 1. WHEN? (WHEN) + REFINED CONTEXT BADGE ── */}
       <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-1">
         <div className="flex items-baseline gap-1.5 min-w-0">
           <span className="text-slate-900 dark:text-white tabular shrink-0 type-body-strong">
@@ -271,7 +271,7 @@ export default function TripCard({
         </div>
       </div>
 
-      {/* ── 2. ĐI ĐÂU → ĐÂU? (WHERE - LỘ TRÌNH CHUẨN APPLE HIG & KHÔNG GÃY/DÃN) ── */}
+      {/* ── 2. FROM WHERE → TO WHERE? (WHERE - APPLE HIG-STANDARD ROUTE, NO BREAKING/STRETCHING) ── */}
       <div className="px-5 pt-2 pb-1.5">
         <div className="flex items-center gap-2 text-slate-900 dark:text-white">
           <span className="truncate max-w-[44%] type-body-strong">
@@ -297,7 +297,7 @@ export default function TripCard({
         </div>
       </div>
 
-      {/* ── 3. GIÁ BAO NHIÊU? (PRICE) ── VÀ ── CÒN CHỖ KHÔNG? (SEAT) ── */}
+      {/* ── 3. HOW MUCH? (PRICE) ── AND ── ANY SEATS LEFT? (SEAT) ── */}
       <div className="flex items-center justify-between gap-3 px-5 py-2">
         <div className="flex flex-col gap-0.5 type-body">
           <div className="flex items-baseline gap-0.5 type-body">
@@ -356,7 +356,7 @@ export default function TripCard({
         )}
       </div>
 
-      {/* ── 4. ĐIỂM ĐÓN / TRẢ CỤ THỂ (SECONDARY CONTEXT) ── */}
+      {/* ── 4. SPECIFIC PICKUP / DROP-OFF POINT (SECONDARY CONTEXT) ── */}
       <div className="px-5 pb-2 pt-0.5 space-y-1">
         <div className="flex items-center gap-2 min-w-0 text-slate-600 dark:text-slate-300 type-body-strong">
           <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -375,11 +375,11 @@ export default function TripCard({
         </div>
       </div>
 
-      {/* ── 5. NIỀM TIN, PHƯƠNG TIỆN & HÀNH ĐỘNG (TRUST & ACTION) ── */}
+      {/* ── 5. TRUST, VEHICLE & ACTION (TRUST & ACTION) ── */}
       <div className="mt-auto px-5 pt-2.5 pb-4 flex flex-col gap-2.5 border-t border-slate-100 dark:border-white/[0.04]">
-        {/* Hàng: Người lái & Phương tiện */}
+        {/* Row: Driver & Vehicle */}
         <div className="flex items-center justify-between gap-2">
-          {/* Người lái & Tín nhiệm */}
+          {/* Driver & Trust */}
           <button
             type="button"
             onClick={(e) => {
@@ -415,7 +415,7 @@ export default function TripCard({
             </div>
           </button>
 
-          {/* Xe & Thumbnail ảnh thật — Bấm vào xem Thông tin & Hình ảnh xe */}
+          {/* Vehicle & Real photo thumbnail — Tap to view Vehicle info & Photos */}
           {isDriver ? (
             <button
               type="button"
@@ -463,7 +463,7 @@ export default function TripCard({
           )}
         </div>
 
-        {/* Hàng: Tiện ích & Nút CTA */}
+        {/* Row: Amenities & CTA Button */}
         <div className="pt-2 border-t border-slate-100 dark:border-white/[0.04] flex items-center justify-between gap-2">
           {item.vehicleType === 'truck_light' || item.isCargoVehicle ? (
             <span

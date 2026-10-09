@@ -20,7 +20,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
   const currentPhoto = photos[activeIndex] || photos[0];
   const currentPhotoUrl = normalizePhotoUrl(currentPhoto);
 
-  // Đóng bằng phím Escape & điều hướng bằng phím mũi tên
+  // Close with the Escape key & navigate with the arrow keys
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e) => {
@@ -47,7 +47,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
     setActiveIndex((prev) => (prev < total - 1 ? prev + 1 : 0));
   };
 
-  // Trích xuất mã biển số che bảo mật (VD: 93A - ***.86 hoặc 51K - ***.24)
+  // Extract the privacy-masked license plate code (e.g. 93A - ***.86 or 51K - ***.24)
   const plateMask = maskLicensePlate(trip.plateMask || trip.plate || trip.licensePlate, trip.from);
   const effectiveCapacity = (trip.carType && trip.carType.includes('7')) ? 7 : (trip.capacity || 5);
   const cleanCarName = trip.carType
@@ -63,7 +63,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
         className="relative w-full max-w-2xl bg-[#161720] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] select-none"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── 1. HEADER: CHỈ THÔNG TIN XE & HÌNH ẢNH ── */}
+        {/* ── 1. HEADER: VEHICLE INFO & PHOTOS ONLY ── */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-white/[0.02]">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center text-primary-400 shrink-0">
@@ -92,7 +92,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
           </button>
         </div>
 
-        {/* ── 2. BODY: ẢNH XE HOẶC CARD MINH HOẠ THÔNG SỐ XE ── */}
+        {/* ── 2. BODY: VEHICLE PHOTOS OR VEHICLE SPEC ILLUSTRATION CARD ── */}
         {total > 0 ? (
           <>
             {/* Main Photo Display Area */}
@@ -201,7 +201,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
             )}
           </>
         ) : (
-          /* Trường hợp xe chưa tải ảnh: Hiện Card thông số chuẩn Apple */
+          /* Case where the vehicle has no photos uploaded: show the Apple-standard spec card */
           <div className="p-8 flex flex-col items-center justify-center text-center space-y-4 bg-white/[0.02]">
             <div className="w-20 h-20 rounded-3xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center text-primary-400">
               <Car className="w-10 h-10" />
@@ -215,7 +215,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
           </div>
         )}
 
-        {/* ── 3. SPECS BAR: CÁC THÔNG SỐ XE MINH BẠCH ── */}
+        {/* ── 3. SPECS BAR: TRANSPARENT VEHICLE SPECS ── */}
         <div className="grid grid-cols-3 gap-2 px-5 py-3 border-t border-white/5 bg-white/[0.01]">
           <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center text-center">
             <span className="text-slate-400">{t('carPhotos.s004')}</span>
@@ -233,7 +233,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Tiện nghi kèm theo (nếu có) */}
+        {/* Included amenities (if any) */}
         {trip.acceptsParcel && (
           <div className="type-caption px-5 py-2 border-t border-white/5 flex items-center gap-2 text-amber-300/90 bg-amber-500/5">
             <Package className="w-3.5 h-3.5 shrink-0 text-amber-400" />
@@ -241,7 +241,7 @@ export default function CarPhotosModal({ trip, isOpen, onClose }) {
           </div>
         )}
 
-        {/* ── 4. FOOTER: REASSURANCE & NÚT ĐÓNG ── */}
+        {/* ── 4. FOOTER: REASSURANCE & CLOSE BUTTON ── */}
         <div className="type-caption px-5 py-3.5 border-t border-white/10 flex items-center justify-between text-slate-400 bg-white/[0.02]">
           <div className="flex items-center gap-1.5 text-emerald-400">
             <Check className="w-3.5 h-3.5 shrink-0" />

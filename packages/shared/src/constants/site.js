@@ -1,5 +1,5 @@
-// THÔNG TIN PHÁP LÝ & LIÊN HỆ NỀN TẢNG (hiển thị ở Footer, Quy chế, Meta)
-// ⚠️ Cập nhật lại các trường dưới đây bằng thông tin thật trước khi go-live.
+// PLATFORM LEGAL & CONTACT INFORMATION (shown in the Footer, Operating Rules, Meta)
+// ⚠️ Update the fields below with real information before go-live.
 export const SITE_INFO = {
   brand: 'CarMate',
   domain: 'carmate.vn',
@@ -21,7 +21,7 @@ export const SITE_INFO = {
   },
   telegram: 'https://t.me/brianhuynh91',
   telegramSupport: 'https://t.me/brianhuynh91',
-  email: '', // Hỗ trợ trực tiếp qua Telegram 1-chạm
+  email: '', // Direct support via one-tap Telegram
   zaloOA: '',
   zaloGroup: 'https://zalo.me/g/carmate',
   facebook: 'https://www.facebook.com/profile.php?id=61593891160413',

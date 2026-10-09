@@ -21,7 +21,7 @@ import { sendBusinessAlert, sendDirectBookingTelegramAlert, sendNewBookingTelegr
 import { sendEmailNotification } from '../utils/emailAlert.js';
 
 /**
- * So khớp access token thời gian hằng định (chống timing attack).
+ * Constant-time comparison of the access token (anti timing attack).
  */
 function tokenMatches(provided, expected) {
   if (!provided || !expected || typeof provided !== 'string' || typeof expected !== 'string') return false;
@@ -32,9 +32,9 @@ function tokenMatches(provided, expected) {
 }
 
 /**
- * Kiểm quyền truy cập booking cho các endpoint Magic Link (không đăng nhập).
- * Cho phép khi: (1) access token khớp, HOẶC (2) người dùng đã đăng nhập là thành viên chuyến,
- * HOẶC (3) là Quản trị viên. Ngăn IDOR enumerate booking bằng cách đoán escrowId (CX-xxxx).
+ * Check booking access rights for the Magic Link endpoints (no login).
+ * Allowed when: (1) the access token matches, OR (2) the logged-in user is a member of the trip,
+ * OR (3) is an Admin. Prevents IDOR enumeration of bookings by guessing the escrowId (CX-xxxx).
  */
 function canAccessBooking(req, booking) {
   const provided = req.query.t || req.query.token || req.body?.accessToken || req.headers['x-booking-token'] || '';
@@ -52,13 +52,13 @@ function canAccessBooking(req, booking) {
 }
 
 /**
- * GET /api/bookings - Lấy danh sách chuyến đi đã kết nối (Chuyến của tôi)
- * Chống rò rỉ PII: Chỉ trả về các booking của chính người dùng đã đăng nhập hoặc Admin
+ * GET /api/bookings - Get the list of connected trips (My trips)
+ * Prevent PII leakage: only return bookings of the logged-in user themselves, or Admin
  */
 export function listBookings(req, res) {
   try {
     let user = req.user;
-    // Nếu chưa đăng nhập: Không bao giờ trả về danh sách booking công khai
+    // If not logged in: never return a public booking list
     if (!user) {
       return res.status(200).json({
         success: true,
@@ -70,7 +70,7 @@ export function listBookings(req, res) {
     const allBookings = getBookings();
     let userBookings = [];
 
-    // Quản trị viên hệ thống: Xem toàn bộ
+    // System admin: view everything
     if (user.role === 'admin' || user.role === 'super_admin') {
       userBookings = allBookings;
     } else {
@@ -80,7 +80,7 @@ export function listBookings(req, res) {
 
     const now = Date.now();
     const sanitizedBookings = userBookings.map((b) => {
-      // 1. Kiểm tra nếu đang ở pre_confirmed mà quá 15 phút -> tự động chuyển sang expired
+      // 1. Check if it is in pre_confirmed for more than 15 minutes -> automatically switch to expired
       if (b.status === 'pre_confirmed' && b.preConfirmedExpiresAt) {
         const expiresTime = new Date(b.preConfirmedExpiresAt).getTime();
         if (now > expiresTime) {
@@ -105,7 +105,7 @@ export function listBookings(req, res) {
 }
 
 /**
- * POST /api/bookings - Tạo kết nối chuyến mới (Trạng thái ban đầu: inquiring)
+ * POST /api/bookings - Create a new trip connection (Initial status: inquiring)
  */
 export async function createBooking(req, res) {
   try {
@@ -120,7 +120,7 @@ export async function createBooking(req, res) {
       });
     }
 
-    // Gắn thông tin người dùng đang đăng nhập
+    // Attach the logged-in user's info
     if (req.user) {
       body.userId = req.user.id || body.userId;
       body.userPhone = req.user.phone || body.userPhone;
@@ -128,7 +128,7 @@ export async function createBooking(req, res) {
       body.creatorPhone = req.user.phone || '';
     }
 
-    // Nếu có tripId, truy vấn SĐT thật của chuyến xe từ DB
+    // If there is a tripId, query the real phone number of the trip from the DB
     const targetTripId = body.tripId || body.targetTripId || body.targetId || (body.targetItem && body.targetItem.id);
     let targetTrip = null;
     if (!targetTripId) return res.status(400).json({ success: false, error: 'Cần chọn một chuyến xe thật để gửi đề nghị.' });
@@ -142,7 +142,7 @@ export async function createBooking(req, res) {
       body.originHubId = body.originHubId || body.hubId || targetTrip.originHubId;
       body.destinationHubId = body.destinationHubId || targetTrip.destinationHubId;
       if (targetTrip) {
-        // BẤT BIẾN MIT: Chặn tự đặt/gửi yêu cầu cho chuyến của chính mình
+        // MIT INVARIANT: block self-booking / sending a request to one's own trip
         const reqUserId = req.user?.id || req.user?.userId || body.userId;
         const reqPhone = normalizePhoneNumber(req.user?.phone || body.passengerPhone || body.userPhone || body.phone || '');
         const tripPhone = normalizePhoneNumber(targetTrip.phoneReal || targetTrip.phone || '');
@@ -157,11 +157,11 @@ export async function createBooking(req, res) {
           });
         }
 
-        // BẤT BIẾN SỨC CHỨA (MIT): số ghế đặt phải nằm trong giới hạn thật của xe.
-        // Trước đây không kiểm gì cả — đặt 99 ghế trên xe 2 ghế vẫn trả 201 và
-        // ghi thẳng vào sổ, khiến sàn rơi vào trạng thái mâu thuẫn.
-        // seats = 0 là HỢP LỆ với ghép hàng / chở xe máy: món hàng đi cùng chuyến
-        // nhưng không chiếm ghế người ngồi nào.
+        // CAPACITY INVARIANT (MIT): the number of seats booked must be within the vehicle's real limit.
+        // Previously nothing was checked — booking 99 seats on a 2-seat vehicle still returned 201 and
+        // was written straight into the ledger, leaving the platform in a contradictory state.
+        // seats = 0 is VALID for cargo matching / motorbike carriage: the item rides along with the trip
+        // but does not take up any passenger's seat.
         const requestedSeats = Number(body.seats ?? body.seatsNeeded ?? 1);
         if (!Number.isInteger(requestedSeats) || requestedSeats < 1) {
           return res.status(400).json({
@@ -171,10 +171,10 @@ export async function createBooking(req, res) {
         }
 
         const seatsOnOffer = getTripAvailableSeatsForSegment(targetTrip, body);
-        // requestedSeats === 0 là ghép hàng (không chiếm ghế) nên luôn được đi tiếp.
-        // Với yêu cầu CÓ chiếm ghế thì chuyến hết chỗ phải bị từ chối: điều kiện cũ
-        // `seatsOnOffer > 0 && ...` vô hiệu hoá chính nó khi seatsOnOffer === 0,
-        // nên chuyến 2 ghế vẫn nhận được booking thứ 3.
+        // requestedSeats === 0 is cargo matching (takes no seat), so it is always allowed to proceed.
+        // For requests that DO take a seat, a trip with no seats left must be rejected: the old condition
+        // `seatsOnOffer > 0 && ...` disabled itself when seatsOnOffer === 0,
+        // so a 2-seat trip still accepted a 3rd booking.
         if (requestedSeats > 0 && requestedSeats > seatsOnOffer) {
           return res.status(400).json({
             success: false,
@@ -189,7 +189,7 @@ export async function createBooking(req, res) {
         const tripPhoneFinal = targetTrip.phoneReal || targetTrip.phone;
 
         if (isTargetPassenger) {
-          // Bên ra kèo là Người đi cùng đăng tìm xe
+          // The proposing party is the passenger posting a ride request
           body.passengerPhone = tripPhoneFinal;
           body.passengerName = targetTrip.publicName || targetTrip.name || 'Người đi cùng';
           body.passengerId = targetTrip.userId;
@@ -197,7 +197,7 @@ export async function createBooking(req, res) {
           body.driverName = req.user?.name || body.driverName || 'Chủ xe';
           body.driverId = req.user?.id || body.driverId || '';
         } else {
-          // Bên ra kèo là Chủ xe đăng xe trống
+          // The proposing party is the driver posting an empty vehicle
           body.driverPhone = tripPhoneFinal;
           const driverUser = (targetTrip?.userId && getUserById(targetTrip.userId)) ||
                              (tripPhoneFinal && getUserByPhone(tripPhoneFinal));
@@ -221,12 +221,12 @@ export async function createBooking(req, res) {
       }
     }
 
-    // Chuẩn hóa danh tính Người đi cùng và Chủ xe dự phòng nếu chưa có
+    // Normalize the passenger and fallback driver identities if not present yet
     body.passengerPhone = body.passengerPhone || body.userPhone || body.phone || req.user?.phone || '';
     body.passengerName = body.passengerName || body.userName || body.contactName || req.user?.name || 'Người đi cùng';
     body.driverName = body.driverName || 'Chủ xe';
 
-    // Giá do chủ xe niêm yết hoặc hai bên thống nhất, không có khung phụ xăng.
+    // The price is listed by the driver or agreed by both parties; there is no fuel-surcharge bracket.
     const rawPrice = body.totalDeal ?? body.price ??
       (targetTrip?.pricingMode === 'listed' && targetTrip.basePricePerSeat != null
         ? Number(targetTrip.basePricePerSeat) * Number(body.seats ?? 1) : null);
@@ -247,25 +247,25 @@ export async function createBooking(req, res) {
     body.seatReserved = false;
     body.bothConfirmed = false;
 
-    // Mã vé do MÁY CHỦ sinh, không nhận từ client. Client cũ tự sinh CX-1000..9999
-    // (chỉ 9000 giá trị) và addBooking dùng INSERT OR REPLACE với escrowId là khoá
-    // chính — hai khách trùng mã thì vé người sau GHI ĐÈ vé người trước, ghế vẫn
-    // bị trừ hai lần. Nghịch lý ngày sinh: ~50% va chạm sau khoảng 112 vé.
+    // The ticket code is generated by the SERVER, not accepted from the client. The old client generated CX-1000..9999 itself
+    // (only 9000 values) and addBooking uses INSERT OR REPLACE with escrowId as the primary
+    // key — when two passengers collide on a code, the later ticket OVERWRITES the earlier one, and seats
+    // are still deducted twice. Birthday paradox: ~50% collision after about 112 tickets.
     body.escrowId = `ESC-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     delete body.id;
 
-    // Trạng thái do MÁY CHỦ quyết, không nhận từ client. Trước đây client gửi kèm
-    // `status: 'confirmed'` là đủ để mở khoá SĐT thật của Chủ xe (xem isInstantConfirmed
-    // bên dưới) — bất kỳ ai cũng moi được số của mọi Chủ xe chỉ bằng một request POST,
-    // không cần đăng nhập và không cần Chủ xe đồng ý.
-    // Mọi booking bắt đầu ở 'inquiring'; chỉ luồng chốt hai chiều (confirmBooking) mới
-    // được nâng lên 'confirmed'.
+    // The status is decided by the SERVER, not accepted from the client. Previously the client sent
+    // `status: 'confirmed'` and that was enough to unlock the driver's real phone number (see isInstantConfirmed
+    // below) — anyone could extract every driver's number with a single POST request,
+    // without logging in and without the driver's consent.
+    // Every booking starts at 'inquiring'; only the two-way confirmation flow (confirmBooking) may
+    // promote it to 'confirmed'.
     body.status = 'inquiring';
     body.createdAt = Date.now();
     body.commitmentType = body.commitmentType || 'inquiry_chat';
     body.messages = Array.isArray(body.messages) ? body.messages : [];
 
-    // Nếu có lời nhắn từ khách, khởi tạo tin nhắn đầu tiên trong khung chat
+    // If the passenger left a message, initialize the first message in the chat thread
     if (body.passengerNote && body.messages.length === 0) {
       body.messages.push({
         id: `MSG-${Date.now()}`,
@@ -276,13 +276,13 @@ export async function createBooking(req, res) {
       });
     }
 
-    // Một yêu cầu đang trao đổi chưa chiếm ghế. Giữ ghế nguyên tử khi bên
-    // còn lại xác nhận đúng phiên bản điểm–giờ–giá trong confirmAppointment.
+    // A request under discussion does not take a seat yet. The seat is held atomically when the
+    // other party confirms the exact point–time–price version in confirmAppointment.
     const remainingSeatsAfterBooking = targetTrip ? getTripAvailableSeatsForSegment(targetTrip, body) : null;
 
     const booking = await addBooking(body);
 
-    // Mở khoá thông tin 2 chiều cho luồng Match & Reveal (Biển số thật & SĐT Chủ xe)
+    // Unlock two-way information for the Match & Reveal flow (real license plate & driver's phone number)
     if (targetTrip) {
       const driverUser = (targetTrip.userId && getUserById(targetTrip.userId)) ||
                          (targetTrip.phoneReal && getUserByPhone(targetTrip.phoneReal)) ||
@@ -294,7 +294,7 @@ export async function createBooking(req, res) {
       booking.availableSeats = remainingSeatsAfterBooking;
     }
 
-    // 1. Bắn tin nhắn đẩy Telegram rung chuông sau 0.5s về máy Admin / Chủ xe (Concierge MVP)
+    // 1. Fire a Telegram push notification that rings after 0.5s on the Admin / driver's device (Concierge MVP)
     sendNewBookingTelegramAlert({
       timeLabel: body.timeLabel || body.timeSlot || `${body.time || '04:30'} ${body.date || ''}`.trim(),
       passengerPhone: body.passengerPhone,
@@ -307,7 +307,7 @@ export async function createBooking(req, res) {
       req
     }).catch(() => {});
 
-    // 2. Gửi thông báo Telegram trực tiếp đến Chủ Xe cá nhân (nếu có liên kết Telegram ID riêng)
+    // 2. Send a Telegram notification directly to the individual driver (if they have a separate linked Telegram ID)
     const driverUser = (targetTrip?.userId && getUserById(targetTrip.userId)) ||
                        (targetTrip?.phoneReal && getUserByPhone(targetTrip.phoneReal)) ||
                        (body.driverPhone && getUserByPhone(body.driverPhone));
@@ -322,7 +322,7 @@ export async function createBooking(req, res) {
       }).catch(() => {});
     }
 
-    // 2. Gửi Email thông báo trực tiếp đến Chủ Xe (nếu có Email)
+    // 2. Send an Email notification directly to the driver (if they have an Email)
     const driverEmail = targetTrip?.email || driverUser?.email;
     if (driverEmail) {
       const emailSubject = `[CarMate] Có yêu cầu ghép chuyến mới tuyến ${booking.from} ➔ ${booking.to}`;
@@ -352,7 +352,7 @@ export async function createBooking(req, res) {
       }).catch(() => {});
     }
 
-    // 3. Bắn thông báo Telegram về điện thoại của founder (0 chi phí)
+    // 3. Fire a Telegram notification to the founder's phone (zero cost)
     sendBusinessAlert({
       title: '💬 Yêu cầu ghép chuyến mới từ Người đi cùng',
       details: {
@@ -380,7 +380,7 @@ export async function createBooking(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/delay - Báo trễ hẹn chuyến đi
+ * POST /api/bookings/:id/delay - Report a delay for the trip appointment
  */
 export async function reportDelay(req, res) {
   try {
@@ -397,7 +397,7 @@ export async function reportDelay(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/cancel - Huỷ kết nối chuyến đi (Thang phạt dốc thời gian & Radar cứu hộ)
+ * POST /api/bookings/:id/cancel - Cancel the trip connection (time-sloped penalty scale & rescue Radar)
  */
 export async function cancelBooking(req, res) {
   try {
@@ -424,7 +424,7 @@ export async function cancelBooking(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/complete - Hoàn tất chuyến đi an toàn
+ * POST /api/bookings/:id/complete - Safely complete the trip
  */
 export async function completeBooking(req, res) {
   try {
@@ -434,7 +434,7 @@ export async function completeBooking(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/review - Đánh giá 2 chiều (Chủ xe đánh giá Khách hoặc Khách đánh giá Chủ xe)
+ * POST /api/bookings/:id/review - Two-way review (driver reviews passenger or passenger reviews driver)
  */
 export async function submitReview(req, res) {
   try {
@@ -450,7 +450,7 @@ export async function submitReview(req, res) {
     const reviewEntry = {
       id: `REV-${Date.now()}`,
       bookingId: id,
-      reviewerRole, // 'driver' (Chủ xe đánh giá Khách) hoặc 'passenger' (Khách đánh giá Chủ xe)
+      reviewerRole, // 'driver' (driver reviews passenger) or 'passenger' (passenger reviews driver)
       targetRole: reviewerRole === 'driver' ? 'passenger' : 'driver',
       rating: Number(rating) || 5,
       tags: Array.isArray(tags) ? tags : [],
@@ -459,11 +459,11 @@ export async function submitReview(req, res) {
     };
 
     const existingReviews = Array.isArray(booking.reviews) ? booking.reviews : [];
-    // Cập nhật hoặc thêm mới review của role này
+    // Update or add a new review for this role
     const filteredReviews = existingReviews.filter((r) => r.reviewerRole !== reviewerRole);
     const updatedReviews = [...filteredReviews, reviewEntry];
 
-    // Kiểm tra cờ an toàn / cảnh báo nếu có vi phạm (Ví dụ: Bom xe, trễ hẹn, thô lỗ)
+    // Check the safety flag / warning if there is a violation (e.g. no-show, late arrival, rudeness)
     const existingFlags = Array.isArray(booking.safetyFlags) ? booking.safetyFlags : [];
     const isNegative =
       Number(rating) <= 2 ||
@@ -501,8 +501,8 @@ export async function submitReview(req, res) {
 }
 
 /**
- * GET /api/bookings/:id/public-summary - Tóm tắt thông tin công khai không nhạy cảm
- * Dùng cho Chủ xe mở Magic Link từ Zalo (Không cần đăng nhập, bảo vệ PII)
+ * GET /api/bookings/:id/public-summary - Non-sensitive public information summary
+ * Used for the driver opening the Magic Link from Zalo (no login required, PII protected)
  */
 export function getBookingPublicSummary(req, res) {
   try {
@@ -515,8 +515,8 @@ export function getBookingPublicSummary(req, res) {
       });
     }
 
-    // Chống IDOR: chỉ trả tóm tắt (chứa tên khách/chủ xe, lộ trình, số tiền) cho ai có
-    // access token hợp lệ hoặc là thành viên chuyến/Admin. escrowId (CX-xxxx) dễ đoán.
+    // Anti-IDOR: only return the summary (containing passenger/driver names, route, amount) to whoever has a
+    // valid access token or is a trip member/Admin. The escrowId (CX-xxxx) is easy to guess.
     if (!canAccessBooking(req, booking)) {
       return res.status(403).json({
         success: false,
@@ -551,7 +551,7 @@ export function getBookingPublicSummary(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/driver-confirm - Chủ xe xác nhận đón 1 chạm từ Magic link Zalo (Không cần đăng nhập)
+ * POST /api/bookings/:id/driver-confirm - Driver confirms the pickup in 1 tap from the Zalo Magic link (no login required)
  */
 export async function driverConfirmBooking(req, res) {
   try {
@@ -567,8 +567,8 @@ export async function driverConfirmBooking(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/messages - Gửi tin nhắn trao đổi trong khung chat ẩn danh
- * Bảo vệ AI PII: Tự động phát hiện và chặn lách số điện thoại / từ khóa ngoài nền tảng
+ * POST /api/bookings/:id/messages - Send a message in the anonymous chat thread
+ * AI PII protection: automatically detect and block attempts to bypass with phone numbers / off-platform keywords
  */
 export async function addBookingMessageHandler(req, res) {
   try {
@@ -585,7 +585,7 @@ export async function addBookingMessageHandler(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/pre-confirm - Đề xuất chốt chuyến & Khóa mềm ghế có thời hạn (15 phút TTL)
+ * POST /api/bookings/:id/pre-confirm - Propose to confirm the trip & soft-lock the seat for a limited time (15 minute TTL)
  */
 export async function preConfirmBookingHandler(req, res) {
   try {
@@ -596,8 +596,8 @@ export async function preConfirmBookingHandler(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/final-confirm - Xác nhận chốt chuyến chính thức (Mutual Commitment - 2PC)
- * Trừ ghế cứng và chính thức mở khóa số điện thoại thật của 2 bên
+ * POST /api/bookings/:id/final-confirm - Officially confirm the trip (Mutual Commitment - 2PC)
+ * Hard-deducts the seat and officially unlocks both parties' real phone numbers
  */
 export async function finalConfirmBookingHandler(req, res) {
   try {
@@ -607,8 +607,8 @@ export async function finalConfirmBookingHandler(req, res) {
 }
 
 /**
- * Đặt lại trạng thái vi phạm và gỡ bỏ khóa (Unban / Reset Strikes)
- * Dành cho người dùng khôi phục tài khoản hoặc môi trường thử nghiệm
+ * Reset the violation status and remove the lock (Unban / Reset Strikes)
+ * For users recovering their account or for the test environment
  */
 export async function resetBanHandler(req, res) {
   try {
@@ -652,7 +652,7 @@ export async function resetBanHandler(req, res) {
 }
 
 /**
- * POST /api/bookings/:id/dispute - Tiếp nhận khiếu nại (Dispute) cảnh báo hoặc ban
+ * POST /api/bookings/:id/dispute - Receive a dispute (Dispute) against a warning or ban
  */
 export async function disputeBookingHandler(req, res) {
   try {
@@ -666,7 +666,7 @@ export async function disputeBookingHandler(req, res) {
 
     const senderKey = req.user?.id || req.user?.phone || booking.passengerPhone || booking.driverPhone || booking.contactPhone;
 
-    // 1. Lưu vào support_messages
+    // 1. Save into support_messages
     saveSupportMessage({
       bookingId: id,
       userId: req.user?.id || booking.userId || booking.driverId,
@@ -678,7 +678,7 @@ export async function disputeBookingHandler(req, res) {
       status: 'resolved'
     });
 
-    // 2. Mở khóa và gỡ bỏ vi phạm ngay lập tức (Stanford Ergonomics & Instant Relief)
+    // 2. Unlock and remove the violation immediately (Stanford Ergonomics & Instant Relief)
     await resolveDisputeAndUnban({
       bookingId: id,
       userId: req.user?.id || booking.userId || booking.driverId,
@@ -687,7 +687,7 @@ export async function disputeBookingHandler(req, res) {
       note
     });
 
-    // 3. Tạo tin nhắn xác nhận giải quyết từ Ban Quản Trị trong chat
+    // 3. Create a resolution confirmation message from the Admin Team in the chat
     const resolutionMsg = {
       id: `SYS-DISPUTE-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       senderRole: 'system',
@@ -706,7 +706,7 @@ export async function disputeBookingHandler(req, res) {
       lastMessageAt: resolutionMsg.createdAt
     });
 
-    // 4. Gửi thông báo Telegram cho Admin
+    // 4. Send a Telegram notification to the Admin
     sendBusinessAlert({
       title: '✅ KHIẾU NẠI PII THÀNH CÔNG: Đã gỡ cảnh báo / mở khóa tài khoản',
       details: {
@@ -731,17 +731,17 @@ export async function disputeBookingHandler(req, res) {
 
 /**
  * =========================================================================
- * BÁO CÁO VI PHẠM AN TOÀN & CAM KẾT (SAFETY INVARIANTS)
+ * SAFETY VIOLATION REPORTS & COMMITMENTS (SAFETY INVARIANTS)
  * =========================================================================
  *
- * Màn hình quản trị `resolve-mismatch` vốn đã tồn tại và chờ xử lý
- * `booking.vehicleMismatchReport`, nhưng endpoint để KHÁCH gửi báo cáo thì
- * chưa từng được hiện thực (trả 404). Nghĩa là người đi cùng không có bất kỳ
- * cách nào tố giác xe nhồi nhét, bị bán khách giữa đường hay bị chặt chém —
- * còn quản trị viên thì ngồi chờ những báo cáo không bao giờ tới.
+ * The admin screen `resolve-mismatch` already existed and waited to handle
+ * `booking.vehicleMismatchReport`, but the endpoint for PASSENGERS to submit a report
+ * was never implemented (it returned 404). That means a passenger had no way
+ * to report an overcrowded vehicle, being handed off to another vehicle mid-route, or price gouging —
+ * while the admin sat waiting for reports that never arrived.
  */
 
-/** Ba nhóm vi phạm an toàn được ghi nhận, kèm mức trừ điểm tín nhiệm. */
+/** Three categories of safety violation that are recorded, with the trust-score deduction for each. */
 const VEHICLE_MISMATCH_TYPES = {
   overcrowded: {
     title: 'Xe nhồi nhét khách / Chở quá tải',
@@ -767,7 +767,7 @@ const VEHICLE_MISMATCH_TYPES = {
 
 /**
  * POST /api/bookings/:id/report-vehicle-mismatch
- * Người đi cùng tố giác hành vi vi phạm cam kết an toàn của chuyến xe.
+ * A passenger reports behavior that violates the trip's safety commitments.
  */
 export async function reportVehicleMismatchHandler(req, res) {
   try {
@@ -793,7 +793,7 @@ export async function reportVehicleMismatchHandler(req, res) {
       severity: rule.severity,
       actualPlate: actualPlate || '',
       declaredPlate: booking.licensePlate || booking.plate || '',
-      // Ghi chú do khách tự gõ nên có thể lọt SĐT/danh tính; che trước khi lưu.
+      // The note is typed by the passenger so it may leak a phone number/identity; mask it before saving.
       passengerNote: detectPiiLeak(String(passengerNote).slice(0, 1000)).maskedText,
       reportedBy: maskPhoneNumber(req.user?.phone || booking.passengerPhone || ''),
       reportedAt: new Date().toISOString(),
@@ -809,12 +809,12 @@ export async function reportVehicleMismatchHandler(req, res) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
     }
 
-    // Trừ điểm tín nhiệm chủ xe và đếm số lần bị tố giác.
-    // Cố ý KHÔNG khoá tài khoản tự động: một báo cáo một phía chưa đủ căn cứ,
-    // quản trị viên xác minh qua `resolve-mismatch` rồi mới ra chế tài nặng.
+    // Deduct the driver's trust score and count the number of times reported.
+    // Deliberately do NOT auto-lock the account: a one-sided report is not enough grounds,
+    // the admin verifies via `resolve-mismatch` before imposing a heavy sanction.
     const driverPhone = cleanPhoneNumber(booking.driverPhone || '');
     if (driverPhone) {
-      // Tạo hồ sơ nếu chủ xe chưa đăng ký, để họ không thoát chế tài.
+      // Create a profile if the driver has not registered, so they cannot escape the sanction.
       const driver = await getOrCreateUserForPenalty(driverPhone, { role: 'driver' });
       if (driver) {
         await saveUser({
@@ -850,7 +850,7 @@ export async function reportVehicleMismatchHandler(req, res) {
 
 /**
  * POST /api/bookings/:id/report-unreachable-phone
- * Báo số điện thoại ảo / gọi mãi không nghe máy.
+ * Report a fake phone number / one that is never answered when called.
  */
 export async function reportUnreachablePhoneHandler(req, res) {
   try {
@@ -884,8 +884,8 @@ export async function reportUnreachablePhoneHandler(req, res) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
     }
 
-    // Số bị báo không liên lạc được làm giảm độ tin cậy, nhưng chưa khoá ngay:
-    // mất sóng hay hết pin cũng cho ra cùng hiện tượng.
+    // A number reported as unreachable lowers trust, but is not locked right away:
+    // losing signal or a dead battery produces the same symptom.
     const reported = await getOrCreateUserForPenalty(clean);
     if (reported) {
       await saveUser({

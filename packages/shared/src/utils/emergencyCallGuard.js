@@ -1,18 +1,18 @@
 /**
  * CarMate Emergency Call Guard - MIT Invariant Logic
  * 
- * BẤT BIẾN LOGIC:
- * 1. Mặc định 100% bảo mật: Không hiển thị SĐT, Gmail, Telegram giữa 2 bên.
- * 2. Cuộc gọi hợp lệ: Thời gian đổ chuông phải >= 25 giây (MIN_CALL_DURATION_FOR_EMERGENCY = 25).
- * 3. Ngưỡng mở khoá: Phải đạt tối thiểu 2 cuộc gọi nhỡ hợp lệ (REQUIRED_UNANSWERED_CALLS = 2).
- * 4. Bất đối xứng (Asymmetric Privacy): Chỉ mở khoá cho DUY NHẤT người đã thực hiện 2 cuộc gọi.
- *    Người nhận (không nghe máy) và bên thứ ba tuyệt đối không được xem số.
+ * LOGIC INVARIANTS:
+ * 1. 100% private by default: Do not show phone number (SĐT), Gmail, Telegram between the 2 parties.
+ * 2. Valid call: ring time must be >= 25 seconds (MIN_CALL_DURATION_FOR_EMERGENCY = 25).
+ * 3. Unlock threshold: at least 2 valid missed calls are required (REQUIRED_UNANSWERED_CALLS = 2).
+ * 4. Asymmetric Privacy: unlocks ONLY for the person who made the 2 calls.
+ *    The recipient (who did not answer) and third parties must absolutely not see the number.
  */
 
-export const MIN_CALL_DURATION_FOR_EMERGENCY = 25; // giây
-export const REQUIRED_UNANSWERED_CALLS = 2; // lần
+export const MIN_CALL_DURATION_FOR_EMERGENCY = 25; // seconds
+export const REQUIRED_UNANSWERED_CALLS = 2; // times
 
-// Bộ nhớ đệm fallback cho môi trường Node.js / SSR
+// Fallback in-memory cache for Node.js / SSR environments
 const memoryStore = new Map();
 
 function getStorageKey(bookingId, callerId) {
@@ -39,16 +39,16 @@ function setRawData(key, data) {
       globalThis.localStorage.setItem(key, JSON.stringify(data));
     }
   } catch {
-    // Bỏ qua lỗi quota storage nếu có
+    // Ignore storage quota errors if any
   }
   memoryStore.set(key, data);
 }
 
 /**
- * Lấy trạng thái cuộc gọi khẩn cấp của người gọi đối với chuyến đi cụ thể
+ * Get the emergency call status of the caller for a specific trip
  * @param {Object} params
- * @param {string} params.bookingId - Mã chuyến đi / mã ký quỹ
- * @param {string} params.callerId - ID hoặc SĐT của người gọi
+ * @param {string} params.bookingId - Trip ID / escrow ID
+ * @param {string} params.callerId - ID or phone number of the caller
  * @returns {{ isUnlocked: boolean, attempts: number, remainingAttempts: number, qualifiedAttempts: Array }}
  */
 export function getEmergencyCallStatus({ bookingId, callerId }) {
@@ -76,12 +76,12 @@ export function getEmergencyCallStatus({ bookingId, callerId }) {
 }
 
 /**
- * Ghi nhận một lần gọi thoại trong App
+ * Record one voice call made in the App
  * @param {Object} params
- * @param {string} params.bookingId - Mã chuyến đi / mã ký quỹ
- * @param {string} params.callerId - ID hoặc SĐT của người gọi
- * @param {number} params.durationSeconds - Số giây đổ chuông
- * @param {boolean} [params.answered=false] - Đối tác có nghe máy hay không
+ * @param {string} params.bookingId - Trip ID / escrow ID
+ * @param {string} params.callerId - ID or phone number of the caller
+ * @param {number} params.durationSeconds - Number of seconds the phone rang
+ * @param {boolean} [params.answered=false] - Whether the counterparty answered
  * @returns {{ qualified: boolean, durationSeconds: number, attempts: number, remainingAttempts: number, isUnlocked: boolean, reason?: string }}
  */
 export function recordCallAttempt({ bookingId, callerId, durationSeconds = 0, answered = false }) {
@@ -99,7 +99,7 @@ export function recordCallAttempt({ bookingId, callerId, durationSeconds = 0, an
   const key = getStorageKey(bookingId, callerId);
   const data = getRawData(key) || { attempts: 0, qualifiedAttempts: [], isUnlocked: false };
 
-  // Nếu cuộc gọi đã được nghe máy -> Không tính là cuộc gọi nhỡ
+  // If the call was answered -> it does not count as a missed call
   if (answered) {
     return {
       qualified: false,
@@ -111,7 +111,7 @@ export function recordCallAttempt({ bookingId, callerId, durationSeconds = 0, an
     };
   }
 
-  // Kiểm tra thời lượng đổ chuông tối thiểu >= 25 giây
+  // Check the minimum ring duration >= 25 seconds
   if (durationSeconds < MIN_CALL_DURATION_FOR_EMERGENCY) {
     return {
       qualified: false,
@@ -123,7 +123,7 @@ export function recordCallAttempt({ bookingId, callerId, durationSeconds = 0, an
     };
   }
 
-  // Cuộc gọi hợp lệ: Không nghe máy và đổ chuông >= 25s
+  // Valid call: not answered and rang >= 25s
   const now = new Date().toISOString();
   const updatedQualified = [
     ...(data.qualifiedAttempts || []),
@@ -153,7 +153,7 @@ export function recordCallAttempt({ bookingId, callerId, durationSeconds = 0, an
 }
 
 /**
- * Kiểm tra nhanh xem SĐT đối tác đã được mở khoá cho người gọi hay chưa
+ * Quick check of whether the counterparty's phone number (SĐT) has been unlocked for the caller
  * @param {Object} params
  * @param {string} params.bookingId
  * @param {string} params.callerId
@@ -165,7 +165,7 @@ export function isEmergencyPhoneUnlocked({ bookingId, callerId }) {
 }
 
 /**
- * Đặt lại trạng thái cuộc gọi khẩn cấp (khi hoàn thành hoặc huỷ chuyến)
+ * Reset the emergency call status (when the trip is completed or cancelled)
  * @param {Object} params
  * @param {string} params.bookingId
  * @param {string} params.callerId

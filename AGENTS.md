@@ -1,43 +1,43 @@
 # CarMate Engineering & Design Guidelines
 
-## 1. Hợp đồng sản phẩm
+## 1. Product contract
 
-- CarMate kết nối khách và chủ xe theo hành trình, hướng đi và khoảng thời gian. Đăng tin, tìm kiếm và kết nối miễn phí; không giữ tiền, thu hoa hồng hoặc tự chia tiền chuyến đi.
-- Chủ xe được niêm yết giá (`pricingMode: listed`) hoặc chọn “Liên hệ” (`contact`, giá `null`). Không áp giá sàn/trần, biểu cước bắt buộc hoặc tỷ lệ chủ xe nhận 90%.
-- Trạm là mốc tìm kiếm. Hỗ trợ `station`, `doorstep`, `hybrid`; điểm đón cuối cùng và thay đổi điều kiện do hai bên xác nhận.
-- Khách xem và liên hệ số đã được chủ tin đồng ý công khai mà không cần đăng nhập. Chỉ chủ động đăng nhu cầu/gửi yêu cầu mới tạo dữ liệu tương ứng; không biến lượt tìm thành nguồn cầu.
-- Cho nhập và xem giá trị trước đăng nhập. Đăng nhập tại thao tác xuất bản/ghi nhận có quyền sở hữu; giữ bản nháp và tiếp tục hành động đúng một lần.
-- Đề xuất ghép không phải cam kết nhận đón. Không tự chuyển xe hoặc sửa cuộc hẹn đã được hai bên chốt.
-- Dùng “Chủ xe” và “Khách” trong giao diện. Tên gọi hay việc miễn phí không tự xác lập phân loại pháp lý cho hoạt động thực tế.
-- Chi tiết tại [docs/CONNECTION_FLOW.md](docs/CONNECTION_FLOW.md).
-- Hồ sơ nhà xe tham khảo là thực thể riêng, không phải tài khoản, chuyến đang nhận khách hoặc ghế trống. Công khai cần nguồn, căn cứ liên hệ và mốc rà soát; danh bạ cũ vào bản nháp chờ kiểm tra.
-- Quyền quản lý hồ sơ phải được duyệt theo tài khoản thực và bằng chứng qua kênh đã biết. Không dùng trùng số điện thoại, Google/Telegram hoặc cờ `verified` cũ làm bằng chứng quyền đại diện.
-- Nhập hộ chuyến cần người quản lý đã được duyệt và sự đồng ý cho chính chuyến đó; không tạo tài khoản hay giấy tờ xác minh hộ. Báo sai/gỡ thông tin có tiến độ và mã tra cứu riêng. Chi tiết tại [docs/OPERATOR_PROFILES.md](docs/OPERATOR_PROFILES.md).
+- CarMate connects passengers and drivers by route, direction and time window. Posting, searching and connecting are free; it does not hold money, take commission or split trip payments.
+- Drivers may list a price (`pricingMode: listed`) or choose “Liên hệ” (Contact) (`contact`, price `null`). No price floor/ceiling, mandatory fare schedule or 90% driver share is imposed.
+- Stations are search reference points. `station`, `doorstep` and `hybrid` are supported; the final pickup point and any changes to conditions are confirmed by both parties.
+- Passengers can view and contact numbers that the listing owner has agreed to publish, without logging in. Only a proactive ride-request post or a submitted request creates the corresponding data; do not turn searches into demand.
+- Allow entering and viewing values before login. Require login at the publish/record action that carries ownership; keep the draft and resume the action exactly once.
+- A match suggestion is not a commitment to pick up. Do not automatically switch vehicles or modify an appointment that both parties have confirmed.
+- Use “Chủ xe” (driver) and “Khách” (passenger) in the UI. Neither the naming nor the fact that the service is free establishes a legal classification for the actual activity.
+- Details in [docs/CONNECTION_FLOW.md](docs/CONNECTION_FLOW.md).
+- A reference operator profile is a separate entity, not an account, a trip currently accepting passengers or an empty seat. Publishing requires a source, a basis for contact and a review date; the legacy directory goes into drafts awaiting verification.
+- Management rights over a profile must be approved against a real account and evidence via a known channel. Do not use a matching phone number, Google/Telegram, or the legacy `verified` flag as proof of representation rights.
+- Entering a trip on an operator's behalf requires an approved manager and consent for that specific trip; do not create accounts or verification documents on their behalf. Reporting incorrect information/requesting removal has its own progress tracking and lookup code. Details in [docs/OPERATOR_PROFILES.md](docs/OPERATOR_PROFILES.md).
 
-## 2. Bất biến toán học và dữ liệu
+## 2. Mathematical and data invariants
 
-- Giữ lõi chiếu hành lang, giao khoảng thời gian, ETA và sức chứa theo đoạn. Tổng khách trên mỗi đoạn không vượt chỗ nhận khách và sức chứa xe trừ ghế người lái.
-- Idempotent: cập nhật, chốt, hủy, nhả ghế không được nhân đôi tác dụng khi gọi lặp lại. Phiên xác nhận phải khớp cùng phiên bản điều kiện.
-- Khi mở lại nhu cầu còn hiệu lực, giữ thời điểm yêu cầu và hạn ban đầu. Không tự kéo dài `x` để làm đẹp kết quả.
-- Chỉ hiển thị xe, khách, số lượng, giờ và trạng thái từ dữ liệu thật. Không dùng fallback giả, lời hứa chưa chứng minh hoặc coi lỗi mạng là không có dữ liệu.
-- Công thức Haversine/chi phí lăn bánh còn lưu là ước tính tham khảo của mô hình cũ; không được ghi đè giá chủ xe hay điều kiện hiện hành.
-- Xác thực từ máy chủ; bảo vệ quyền sở hữu và thông tin liên hệ. Không tạo danh tính/token giả trong giao diện.
+- Keep the core of corridor projection, time-window intersection, ETA and per-segment capacity. The total passengers on each segment must not exceed the declared passenger seats or the vehicle capacity minus the driver's seat.
+- Idempotent: update, confirm, cancel and seat-release must not double their effect when called repeatedly. A confirmation session must match the same version of the conditions.
+- When reopening a ride request that is still valid, keep the original request time and deadline. Do not extend `x` on your own to make results look better.
+- Only display vehicles, passengers, counts, times and statuses from real data. Do not use fake fallbacks or unproven promises, and do not treat a network error as no data.
+- The Haversine/running-cost formulas that remain are reference estimates from the legacy model; they must not override the driver's price or the current conditions.
+- Authenticate on the server; protect ownership and contact information. Do not create fake identities/tokens in the UI.
 
-## 3. Trải nghiệm và hiển thị
+## 3. Experience and display
 
-- Giảm nhập lại; dùng lựa chọn nhanh, đảo chiều và tái sử dụng thông tin thật đã có.
-- Thao tác hủy/xóa/đổi điều kiện phải cho thấy chuyến, người liên quan và tác động trước khi xác nhận.
-- Không dùng `window.alert`, `window.confirm`, `window.prompt`. Dùng thông báo không chặn và phản hồi tại chỗ.
-- Nền toàn hệ thống `#DFE5EC`; dark mode `#0b0f19`. Thẻ trắng `#FFFFFF`, dark `#1a2232`, viền `border-slate-300/70` / `dark:border-white/10`, bóng nhẹ.
-- Bo góc `rounded-2xl` / `rounded-3xl`, typography rõ, vùng chạm dễ thao tác. Màu chính `#0071e3`; đỏ cho lỗi/hủy, cam cho chờ/cảnh báo, xanh lá cho trạng thái đã được xác nhận.
-- Modal dùng React Portal vào `document.body`, lớp thông thường `z-[9999]`; xác thực nằm trên biểu mẫu đang nhập. Đóng xác thực không làm mất bản nháp.
-- Giữ thuật ngữ kỹ thuật và tên nghiên cứu ngoài luồng thao tác phổ thông trừ khi chúng giúp người dùng quyết định.
+- Reduce re-entry; use quick choices, direction reversal and reuse of real information already available.
+- Cancel/delete/change-of-conditions actions must show the trip, the people involved and the impact before confirmation.
+- Do not use `window.alert`, `window.confirm`, `window.prompt`. Use non-blocking notifications and inline feedback.
+- System-wide background `#DFE5EC`; dark mode `#0b0f19`. White cards `#FFFFFF`, dark `#1a2232`, border `border-slate-300/70` / `dark:border-white/10`, light shadow.
+- Rounded corners `rounded-2xl` / `rounded-3xl`, clear typography, easy-to-tap touch targets. Primary color `#0071e3`; red for errors/cancellation, orange for pending/warnings, green for confirmed status.
+- Modals use a React Portal into `document.body`, with a regular layer of `z-[9999]`; authentication sits above the form being filled in. Closing authentication does not lose the draft.
+- Keep technical terms and research names out of the mainstream user flow unless they help users make a decision.
 
-- Typography dùng các class `type-*` trong `apps/web/src/index.css`; xem `docs/UI_TYPOGRAPHY.md`. Một họ chữ Inter, nhãn/nút/nội dung 14px, ô nhập 16px; không tạo cỡ chữ riêng hoặc trộn class ghi đè vai trò.
+- Typography uses the `type-*` classes in `apps/web/src/index.css`; see `docs/UI_TYPOGRAPHY.md`. A single Inter font family, labels/buttons/body text 14px, inputs 16px; do not create custom font sizes or mix classes that override a role.
 
-## 4. Kỷ luật Git và kiểm chứng
+## 4. Git discipline and verification
 
-- Không commit hoặc push thẳng lên `main`.
-- Phát triển và kiểm thử trên nhánh `dev`; chỉ merge sang `main` khi người dùng yêu cầu trực tiếp.
-- Kiểm thử phù hợp với thay đổi; phân biệt bài kiểm thử thuần, API với dữ liệu cô lập, trình duyệt và vận hành thật.
-- Không tuyên bố kiểm thử mã chứng minh luôn có xe, xác suất ngoài thực địa hoặc tính hợp pháp của mọi hoạt động.
+- Do not commit or push directly to `main`.
+- Develop and test on the `dev` branch; only merge into `main` when the user explicitly asks.
+- Test appropriately for the change; distinguish pure tests, API tests with isolated data, browser tests and real operations.
+- Do not claim that code tests prove a vehicle is always available, a field probability, or the legality of every activity.
