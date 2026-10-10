@@ -16,7 +16,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 auth.useDeviceLanguage();
 
-// Tự động bỏ qua xác thực reCAPTCHA cho số điện thoại test trên môi trường Local / Dev
+// Automatically skip reCAPTCHA verification for test phone numbers in Local / Dev environments
 const isLocalhost =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' ||
@@ -37,7 +37,7 @@ if (typeof window !== 'undefined') {
   }).catch(() => {});
 }
 
-// Khởi tạo Firebase App Check bảo vệ Production khi có cấu hình VITE_RECAPTCHA_ENTERPRISE_KEY
+// Initialize Firebase App Check to protect Production when VITE_RECAPTCHA_ENTERPRISE_KEY is configured
 export let appCheck = null;
 if (typeof window !== 'undefined') {
   const enterpriseSiteKey = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_KEY;

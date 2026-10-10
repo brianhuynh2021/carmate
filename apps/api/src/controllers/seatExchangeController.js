@@ -1,9 +1,9 @@
 /**
  * seatExchangeController.js
  *
- * CONTROLLER: SÀN GIAO DỊCH GHẾ TRỐNG (SEAT EXCHANGE)
- * Sổ Lệnh Hai Chiều (Limit Order Book - LOB) & Khớp Lệnh Liên Tục (Continuous Double Auction - CDA)
- * Thị trường giao ngay 24/7 (Continuous Spot Market) & Dynamic Sliding TTL.
+ * CONTROLLER: EMPTY-SEAT TRADING EXCHANGE (SEAT EXCHANGE)
+ * Two-Sided Order Book (Limit Order Book - LOB) & Continuous Order Matching (Continuous Double Auction - CDA)
+ * 24/7 spot market (Continuous Spot Market) & Dynamic Sliding TTL.
  */
 
 import {
@@ -29,11 +29,11 @@ import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
  * =========================================================================
- * LỚP CHẮN PII (NGHỊ ĐỊNH 13/2023/NĐ-CP) CHO SỔ LỆNH CÔNG KHAI
+ * PII SHIELD (DECREE 13/2023/ND-CP) FOR THE PUBLIC ORDER BOOK
  * =========================================================================
- * Sàn công khai TUYỆT ĐỐI không được lộ số điện thoại thật, tên thật hay
- * biển số đầy đủ. Danh tính thật chỉ hiện ra cho đúng 2 bên SAU khi khớp lệnh
- * (qua booking + mã PIN), đồng bộ với `sanitizeTripForPublic` của /api/trips.
+ * The public exchange must ABSOLUTELY NOT expose real phone numbers, real names or
+ * full license plates. Real identities are only revealed to the 2 parties AFTER an order match
+ * (via booking + PIN code), in sync with `sanitizeTripForPublic` of /api/trips.
  */
 export function sanitizeOrderForPublic(order, reqUser) {
   if (!order) return null;
@@ -50,7 +50,7 @@ export function sanitizeOrderForPublic(order, reqUser) {
 
   const safe = { ...order };
 
-  // 1. Che số điện thoại: 098***2233
+  // 1. Mask the phone number: 098***2233
   safe.phoneMasked =
     orderPhone.length >= 7
       ? `${orderPhone.slice(0, 3)}***${orderPhone.slice(-4)}`
@@ -58,17 +58,17 @@ export function sanitizeOrderForPublic(order, reqUser) {
   delete safe.phone;
   delete safe.phoneReal;
 
-  // 2. Bí danh công khai thay cho tên thật
+  // 2. Public alias in place of the real name
   const tail = String(order.id || '').slice(-3).toUpperCase() || 'XXX';
   safe.publicName = order.orderType === 'ASK' ? `Chủ xe CX-${tail}` : `Người đi cùng KX-${tail}`;
   delete safe.contactName;
 
-  // 3. Che 2 số cuối biển số
+  // 3. Mask the last 2 digits of the license plate
   if (safe.plate && typeof safe.plate === 'string') {
     safe.plate = safe.plate.replace(/\d{2}$/, 'xx');
   }
 
-  // 4. Bí mật vận hành: PIN & danh tính đối ứng không bao giờ ra sàn công khai
+  // 4. Operational secret: the PIN & counterpart identity never go onto the public exchange
   delete safe.pinCode;
   delete safe.userId;
   delete safe.matchedBookingId;
@@ -80,12 +80,12 @@ export function sanitizeOrderForPublic(order, reqUser) {
 
 /**
  * POST /api/seat-exchange/order
- * Ném lệnh vào sàn (Ask hoặc Bid) -> Khớp liên tục CDA ngay lập tức!
+ * Place an order on the exchange (Ask or Bid) -> Continuous CDA matching happens immediately!
  */
 export async function placeOrderHandler(req, res) {
   try {
     const {
-      orderType = 'BID', // 'ASK' (Chủ xe bán ghế) | 'BID' (Người đi cùng mua ghế)
+      orderType = 'BID', // 'ASK' (driver selling a seat) | 'BID' (passenger buying a seat)
       stationId = '',
       stationName = '',
       corridor = 'Tuyến QL13',
@@ -100,10 +100,10 @@ export async function placeOrderHandler(req, res) {
       vehicleModel = ''
     } = req.body || {};
 
-    // BẤT BIẾN DANH TÍNH (ANTI-SPOOFING):
-    // Khi đã đăng nhập, SĐT trong token LUÔN thắng SĐT gửi từ body — nếu không
-    // kẻ tấn công có thể ném lệnh mang danh người khác. Chỉ khách vãng lai
-    // (chưa đăng nhập) mới được tự khai SĐT của chính mình.
+    // IDENTITY INVARIANT (ANTI-SPOOFING):
+    // When logged in, the phone number in the token ALWAYS wins over the phone number sent from the body — otherwise
+    // an attacker could place orders in someone else's name. Only anonymous guests
+    // (not logged in) may declare their own phone number.
     const tokenPhone = cleanPhoneNumber(req.user?.phone || '');
     const clean = tokenPhone || cleanPhoneNumber(phone);
 
@@ -114,7 +114,7 @@ export async function placeOrderHandler(req, res) {
       });
     }
 
-    // Chuẩn hóa trạm đón nếu có id trong Virtual Hubs
+    // Normalize the pickup station if there is an id in Virtual Hubs
     let resolvedStationId = stationId;
     let resolvedStationName = stationName;
     if (resolvedStationId && !resolvedStationName) {
@@ -126,7 +126,7 @@ export async function placeOrderHandler(req, res) {
     const timeInterval = buildInterval(targetTimeMinutes, deltaMinutes);
     const now = Date.now();
 
-    // Tính toán TTL hợp nhất: TTL = min(T_sleep, T_pickup - delta t_switch)
+    // Compute the unified TTL: TTL = min(T_sleep, T_pickup - delta t_switch)
     const ttlResult = calculateUnifiedOrderTTL({
       orderCreatedAt: now,
       targetPickupMinutes: targetTimeMinutes,
@@ -136,9 +136,9 @@ export async function placeOrderHandler(req, res) {
     const isAsk = orderType.toUpperCase() === 'ASK';
     const parsedSeats = Number(seats) || 1;
 
-    // BẤT BIẾN ĐIỂM TÍN NHIỆM: trustScore quyết định thứ tự ưu tiên khớp lệnh
-    // (candidates.sort) nên TUYỆT ĐỐI không được nhận từ client — nếu không kẻ
-    // tấn công tự cho mình 100 điểm để chiếm mọi cuốc. Luôn đọc từ hồ sơ DB.
+    // TRUST-SCORE INVARIANT: trustScore decides the order-matching priority
+    // (candidates.sort) so it must ABSOLUTELY NOT be accepted from the client — otherwise an
+    // attacker could give themselves 100 points to grab every ride. Always read it from the DB profile.
     const ownerProfile = getUserByPhone(clean);
     const resolvedTrustScore = Number(ownerProfile?.trustScore ?? 98);
 
@@ -173,7 +173,7 @@ export async function placeOrderHandler(req, res) {
       createdAt: now
     };
 
-    // 1. Quét các lệnh OPEN trên cùng hành lang để khớp liên tục (CDA)
+    // 1. Scan the OPEN orders on the same corridor for continuous matching (CDA)
     const openOrders = getExchangeOrdersDb({
       corridor,
       direction,
@@ -183,16 +183,16 @@ export async function placeOrderHandler(req, res) {
     const matchResult = matchOrderContinuous(newOrder, openOrders);
 
     if (matchResult.matched) {
-      // 2a. KHỚP LỆNH THÀNH CÔNG (FILLED)
+      // 2a. ORDER MATCH SUCCEEDED (FILLED)
       const askOrder = matchResult.askOrder;
       const bidOrder = matchResult.bidOrder;
       const escrowId = `CX-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
 
-      // BẤT BIẾN NGUYÊN TỬ (ATOMICITY — MIT INVARIANT):
-      // Khớp lệnh gồm 3 thao tác ghi (lệnh ASK + lệnh BID + booking). Nếu tách rời,
-      // một sự cố giữa chừng sẽ để lại ghế đã bị trừ mà KHÔNG có booking tương ứng —
-      // sàn rơi vào trạng thái mâu thuẫn. Gói toàn bộ trong MỘT transaction SQLite:
-      // hoặc cả 3 cùng thành công, hoặc không gì được ghi.
+      // ATOMICITY INVARIANT (MIT INVARIANT):
+      // An order match consists of 3 write operations (ASK order + BID order + booking). If separated,
+      // a mid-way failure would leave a seat already deducted with NO corresponding booking —
+      // the exchange falls into a contradictory state. Wrap everything in ONE SQLite transaction:
+      // either all 3 succeed together, or nothing is written.
       commitExchangeMatchDb({
         askOrder: { ...askOrder, matchedBookingId: escrowId, matchedAt: now },
         bidOrder: { ...bidOrder, matchedBookingId: escrowId, matchedAt: now },
@@ -213,7 +213,7 @@ export async function placeOrderHandler(req, res) {
         }
       });
 
-      // Bắn thông báo nghiệp vụ
+      // Fire a business notification
       sendBusinessAlert({
         title: `SÀN KHỚP LỆNH THÀNH CÔNG (${matchResult.rendezvousTime})`,
         details: {
@@ -240,7 +240,7 @@ export async function placeOrderHandler(req, res) {
       });
     }
 
-    // 2b. CHƯA CÓ ĐỐI ỨNG THỎA MÃN -> LƯU LỆNH TREO (RESTING ORDER / OPEN)
+    // 2b. NO SATISFYING COUNTERPART YET -> STORE A RESTING ORDER (RESTING ORDER / OPEN)
     const savedOrder = await createExchangeOrderDb(newOrder);
 
     return res.status(201).json({
@@ -258,7 +258,7 @@ export async function placeOrderHandler(req, res) {
 
 /**
  * GET /api/seat-exchange/order-book
- * Xem Sổ Lệnh Hai Chiều (LOB) theo từng trạm đón (Depth of Market)
+ * View the Two-Sided Order Book (LOB) per pickup station (Depth of Market)
  */
 export function getOrderBookHandler(req, res) {
   try {
@@ -269,7 +269,7 @@ export function getOrderBookHandler(req, res) {
 
     const openOrders = getExchangeOrdersDb(filters);
 
-    // Gom nhóm theo từng trạm đón
+    // Group by pickup station
     const stationMap = new Map();
     for (const order of openOrders) {
       const stnKey = order.stationId || order.stationName || 'Trạm chung';
@@ -277,12 +277,12 @@ export function getOrderBookHandler(req, res) {
         stationMap.set(stnKey, {
           stationId: order.stationId || '',
           stationName: order.stationName || stnKey,
-          asks: [], // Chủ xe bán ghế
-          bids: []  // Khách mua ghế
+          asks: [], // driver selling seats
+          bids: []  // passenger buying seats
         });
       }
       const stn = stationMap.get(stnKey);
-      // Mọi lệnh ra sàn công khai đều phải đi qua lớp chắn PII (Nghị định 13/2023)
+      // Every order that goes onto the public exchange must pass through the PII shield (Decree 13/2023)
       const publicOrder = sanitizeOrderForPublic(order, req.user);
       if (order.orderType === 'ASK') {
         stn.asks.push(publicOrder);
@@ -291,7 +291,7 @@ export function getOrderBookHandler(req, res) {
       }
     }
 
-    // Sắp xếp thứ tự thời gian trong từng trạm
+    // Sort in chronological order within each station
     for (const stn of stationMap.values()) {
       stn.asks.sort((a, b) => (a.targetTimeMinutes || 0) - (b.targetTimeMinutes || 0));
       stn.bids.sort((a, b) => (a.targetTimeMinutes || 0) - (b.targetTimeMinutes || 0));
@@ -310,13 +310,13 @@ export function getOrderBookHandler(req, res) {
 
 /**
  * GET /api/seat-exchange/my-orders
- * Lấy lịch sử lệnh của người dùng hiện tại
+ * Get the current user's order history
  */
 export function getMyOrdersHandler(req, res) {
   try {
-    // CHỐNG DÒ QUÉT (ANTI-ENUMERATION): danh tính CHỈ được lấy từ JWT.
-    // Trước đây handler nhận `?phone=` từ query — bất kỳ ai biết số điện thoại
-    // của người khác đều đọc được toàn bộ lịch sử lệnh của họ mà không cần đăng nhập.
+    // ANTI-ENUMERATION: identity is taken ONLY from the JWT.
+    // Previously the handler accepted `?phone=` from the query — anyone who knew another person's
+    // phone number could read that person's entire order history without logging in.
     const userId = req.user?.id;
     const clean = cleanPhoneNumber(req.user?.phone || '');
 
@@ -346,13 +346,13 @@ export function getMyOrdersHandler(req, res) {
 
 /**
  * POST /api/seat-exchange/expire-ttl
- * Kích hoạt phiên quét tự động hủy các lệnh OPEN đã quá hạn Dynamic Sliding TTL
+ * Trigger a sweep that automatically cancels OPEN orders that have passed the Dynamic Sliding TTL deadline
  */
 export async function expireSlidingTTLHandler(req, res) {
   try {
-    // CHỐNG DoS NGHIỆP VỤ: mốc thời gian quét TTL LUÔN là đồng hồ máy chủ.
-    // Trước đây handler nhận `timestamp` từ body — một POST ẩn danh với
-    // timestamp ở tương lai xa sẽ EXPIRE sạch toàn bộ sổ lệnh của cả sàn.
+    // BUSINESS-LOGIC DoS PROTECTION: the TTL sweep timestamp is ALWAYS the server clock.
+    // Previously the handler accepted `timestamp` from the body — an anonymous POST with a
+    // timestamp far in the future would EXPIRE the whole exchange's order book.
     const now = Date.now();
     const expiredOrders = await expireSlidingTTLOrdersDb(now);
 

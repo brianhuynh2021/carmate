@@ -1,25 +1,25 @@
 /**
  * =============================================================================
- * CANH CHUYẾN THEO GIỜ KHỞI HÀNH (DEPARTURE WATCHDOG)
+ * WATCHING TRIPS BY DEPARTURE TIME (DEPARTURE WATCHDOG)
  * =============================================================================
- * Bốn chốt radar đêm (21:15 / 23:15 / 03:45 / 04:30) là giờ TREO CỨNG, chỉ đúng
- * cho chuyến khởi hành khoảng 05:30. Chuyến 08:30 hay 14:00 rơi vào khoảng trống
- * hoàn toàn: không có gì canh chúng cả.
+ * The four night radar checkpoints (21:15 / 23:15 / 03:45 / 04:30) are HARD-CODED times, only
+ * correct for trips departing around 05:30. A 08:30 or 14:00 trip falls into a complete gap:
+ * nothing watches over it.
  *
- * File này canh theo mốc TƯƠNG ĐỐI so với giờ khởi hành thật của từng chuyến,
- * nên mọi khung giờ đều được bảo vệ như nhau:
+ * This file watches by RELATIVE marks against each trip's real departure time,
+ * so every time slot is protected equally:
  *
- *   T-40  Hỏi chủ xe: "Bạn đã sẵn sàng đón khách chưa?" (một chạm)
- *   T-30  Chưa trả lời -> nhắc lần 2, đồng thời soi tín hiệu GPS
- *   T-20  Vẫn im lặng -> cảnh báo và thông tin phương án cần xác nhận
+ *   T-40  Ask the driver: "Are you ready to pick up the passengers?" (one tap)
+ *   T-30  No answer -> second reminder, and also check the GPS signal
+ *   T-20  Still silent -> warn and provide the options that need confirmation
  *
- * Vì sao chốt cuối đặt ở T-20 chứ không phải T-5: khách phải còn đủ thời gian
- * thực tế để gọi một chuyến xe khách Thành Công (tần suất 30 phút/chuyến) và ra
- * kịp mặt đường. Báo lúc T-5 thì thông tin có cũng như không.
+ * Why the last checkpoint is at T-20 rather than T-5: the passenger still needs enough real
+ * time to call a Thành Công coach (one every 30 minutes) and get to the roadside in
+ * time. Alerting at T-5 makes the information as good as useless.
  *
- * NGUYÊN TẮC: chỉ CẢNH BÁO, KHÔNG tự huỷ chuyến. Chủ xe mất sóng giữa rừng cao
- * su Bình Phước vẫn có thể xuất hiện đúng giờ; tự huỷ là cướp mất cơ hội đó của
- * cả hai bên. Khách cầm đủ thông tin và tự quyết định.
+ * PRINCIPLE: only WARN, NEVER auto-cancel the trip. A driver who loses signal in the middle of
+ * the Bình Phước rubber forest may still show up on time; auto-cancelling would rob both
+ * parties of that chance. The passenger holds all the information and decides for themselves.
  * =============================================================================
  */
 
@@ -34,32 +34,32 @@ import {
 import { FIXED_CORRIDOR_COACH_SCHEDULES, getTravelWindow } from '@carmate/shared';
 
 export const WATCHDOG_CONFIG = Object.freeze({
-  // Các mốc tính bằng phút trước giờ khởi hành
+  // Marks measured in minutes before departure time
   ASK_READY_MINUTES: 40,
   REMIND_MINUTES: 30,
   RESCUE_MINUTES: 20,
-  // Dung sai mỗi mốc: nhịp quét 60s nên ±3 phút là thừa để không bỏ lỡ
+  // Tolerance per mark: the sweep ticks every 60s so ±3 minutes is more than enough not to miss one
   TOLERANCE_MINUTES: 3,
-  // Chủ xe im lặng quá mốc này (phút) coi như mất liên lạc
+  // A driver silent for longer than this (minutes) is considered out of contact
   HEARTBEAT_STALE_MINUTES: 45
 });
 
-/** Trạng thái booking còn "sống", cần được canh. */
+/** Booking statuses that are still "alive" and need to be watched. */
 const ACTIVE_BOOKING_STATUSES = new Set([
   'zalo_active',
   'confirmed',
   'pre_confirmed',
-  'driver_confirmed', // chủ xe đã bấm nhận đón — vẫn phải canh tới lúc lăn bánh
+  'driver_confirmed', // the driver has tapped to accept the pickup — must still be watched until the vehicle departs
   'reassigned'
 ]);
 
 /**
- * Suy ra mốc khởi hành (epoch ms) của một booking.
+ * Derives the departure time (epoch ms) of a booking.
  *
- * Dùng lại đúng cách hiểu dữ liệu của bookingController: ngày lấy từ booking
- * hoặc chuyến gốc, giờ dò trong chuỗi timeSlot ("07:00-09:00" -> 07:00).
- * Không có ngày hoặc không dò được giờ thì trả null — thà bỏ qua còn hơn đoán
- * bừa rồi bắn cảnh báo cứu hộ vào mặt khách giữa đêm.
+ * Reuses exactly how bookingController interprets the data: the date comes from the booking
+ * or the original trip, the time is detected in the timeSlot string ("07:00-09:00" -> 07:00).
+ * With no date or no detectable time, returns null — better to skip than to guess
+ * and fire a rescue alert at the passenger in the middle of the night.
  */
 export function resolveDepartureMs(booking, trip = null) {
   if (booking?.committedTerms?.pickupStartAt) {
@@ -72,21 +72,21 @@ export function resolveDepartureMs(booking, trip = null) {
   return getTravelWindow({ date, timeSlot })?.start ?? null;
 }
 
-/** Đang ở đúng cửa sổ quanh một mốc (phút trước giờ chạy) hay không. */
+/** Whether we are within the window around a mark (minutes before departure) or not. */
 function isAtMark(minutesUntilDeparture, markMinutes) {
   return Math.abs(minutesUntilDeparture - markMinutes) <= WATCHDOG_CONFIG.TOLERANCE_MINUTES;
 }
 
 /**
- * QUÉT TOÀN BỘ CHUYẾN SẮP KHỞI HÀNH.
+ * SCAN ALL TRIPS ABOUT TO DEPART.
  *
- * Hàm THUẦN đánh giá: chỉ đọc dữ liệu và trả về danh sách việc cần làm, không
- * tự gửi thông báo. Tách vậy để kiểm thử được toàn bộ logic mốc giờ mà không
- * cần mạng, và để scheduler giữ trọn quyền quyết định gửi gì.
+ * PURE evaluation function: only reads data and returns the list of things to do, never
+ * sends notifications itself. Split this way so all the checkpoint logic can be tested
+ * without a network, and so the scheduler keeps full authority over what gets sent.
  *
  * @param {object} params
- * @param {number} [params.nowMs] - Mốc hiện tại
- * @param {Array} [params.activeSessions] - Phiên cockpit đang chạy (để soi GPS)
+ * @param {number} [params.nowMs] - Current time
+ * @param {Array} [params.activeSessions] - Running cockpit sessions (to check GPS)
  * @returns {Array} [{ action, booking, departureMs, minutesUntil, driverPhone, ... }]
  */
 export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSessions = [] } = {}) {
@@ -100,8 +100,8 @@ export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSession
     if (departureMs == null) continue;
 
     const minutesUntil = (departureMs - nowMs) / 60000;
-    // Chỉ quan tâm cửa sổ từ T-45 tới giờ chạy. Ngoài khoảng này thì hoặc còn
-    // quá sớm (đã có 4 chốt đêm lo), hoặc xe đã lăn bánh rồi.
+    // Only care about the window from T-45 until departure. Outside this range it is either
+    // too early (the 4 night checkpoints handle it) or the vehicle has already left.
     if (minutesUntil > 45 || minutesUntil < -2) continue;
 
     const driverPhone = booking.driverPhone || booking.phoneReal;
@@ -112,8 +112,8 @@ export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSession
       ? (nowMs - session.lastPing) / 60000
       : Infinity;
 
-    // Chủ xe được coi là "đã sẵn sàng" khi bấm nút xác nhận, HOẶC khi xe đang
-    // thực sự lăn bánh và gửi tín hiệu đều — hành động thật đáng tin hơn nút bấm.
+    // The driver counts as "ready" when they tap the confirm button, OR when the vehicle is
+    // actually moving and sending a steady signal — real actions are more trustworthy than a button tap.
       const hasConfirmed =
       booking.driverConfirmed === true ||
       booking.readyConfirmedAt != null ||
@@ -131,7 +131,7 @@ export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSession
       hasConfirmed
     };
 
-    // ── T-40: hỏi chủ xe đã sẵn sàng chưa ──
+    // ── T-40: ask the driver whether they are ready ──
     if (isAtMark(minutesUntil, WATCHDOG_CONFIG.ASK_READY_MINUTES)) {
       if (!hasConfirmed && !booking.readyAskedAt) {
         actions.push({ ...base, action: 'ASK_READY' });
@@ -139,7 +139,7 @@ export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSession
       continue;
     }
 
-    // ── T-30: nhắc lần 2 ──
+    // ── T-30: second reminder ──
     if (isAtMark(minutesUntil, WATCHDOG_CONFIG.REMIND_MINUTES)) {
       if (!hasConfirmed && !booking.readyRemindedAt) {
         actions.push({ ...base, action: 'REMIND_READY' });
@@ -147,14 +147,14 @@ export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSession
       continue;
     }
 
-    // ── T-20: bật chế độ cứu hộ ──
+    // ── T-20: activate rescue mode ──
     if (isAtMark(minutesUntil, WATCHDOG_CONFIG.RESCUE_MINUTES)) {
       if (hasConfirmed || booking.rescueActivatedAt) continue;
 
       actions.push({
         ...base,
         action: 'ACTIVATE_RESCUE',
-        // Lý do cụ thể để hiển thị đúng sự thật cho khách, không nói chung chung
+        // Specific reason so the passenger is shown the actual truth, not something generic
         reason:
           heartbeatMinutesAgo === Infinity
             ? 'NO_GPS_SIGNAL'
@@ -170,11 +170,11 @@ export function evaluateDepartureCheckpoints({ nowMs = Date.now(), activeSession
 }
 
 /**
- * Chọn danh sách xe khách cứu hộ phù hợp nhất với chuyến của khách.
+ * Picks the list of rescue coaches best suited to the passenger's trip.
  *
- * Sắp xếp theo độ gần về giờ: một chuyến 04:45 không giúp được gì cho người cần
- * đi lúc 14:00. Luôn trả về ít nhất một phương án — danh sách rỗng đúng vào lúc
- * khách hoảng nhất là kịch bản tệ nhất có thể xảy ra.
+ * Sorted by closeness in time: a 04:45 trip is of no help to someone who needs to leave at
+ * 14:00. Always returns at least one option — an empty list at the exact moment the
+ * passenger is most panicked is the worst possible scenario.
  */
 export function pickRelevantLifebuoys(booking, trip = null, limit = 3) {
   const departureMs = resolveDepartureMs(booking, trip);
@@ -197,14 +197,14 @@ export function pickRelevantLifebuoys(booking, trip = null, limit = 3) {
   return withDistance.slice(0, limit).map((x) => x.bus);
 }
 
-/** Ghi mốc đã hỏi chủ xe sẵn sàng (chống hỏi lại nhiều lần). */
+/** Records the time the driver was asked if they are ready (prevents asking repeatedly). */
 export async function markReadyAsked(bookingId, nowMs = Date.now()) {
   return updateBookingStatus(bookingId, getBookingStatusSafe(bookingId), {
     readyAskedAt: new Date(nowMs).toISOString()
   });
 }
 
-/** Ghi mốc đã nhắc lần 2. */
+/** Records the time of the second reminder. */
 export async function markReadyReminded(bookingId, nowMs = Date.now()) {
   return updateBookingStatus(bookingId, getBookingStatusSafe(bookingId), {
     readyRemindedAt: new Date(nowMs).toISOString()
@@ -212,23 +212,24 @@ export async function markReadyReminded(bookingId, nowMs = Date.now()) {
 }
 
 /**
- * Giữ nguyên status hiện tại khi chỉ muốn ghi thêm trường phụ.
- * updateBookingStatus bắt buộc truyền status, mà các mốc canh chuyến tuyệt đối
- * không được phép làm đổi trạng thái nghiệp vụ của booking.
+ * Keeps the current status when only an extra field needs to be written.
+ * updateBookingStatus requires a status argument, and the trip-watch checkpoints must
+ * absolutely never change the booking's business status.
  */
 function getBookingStatusSafe(bookingId) {
   return getBookingById(bookingId)?.status || 'zalo_active';
 }
 
 /**
- * BẬT CHẾ ĐỘ CỨU HỘ cho một chuyến.
+ * ACTIVATE RESCUE MODE for a trip.
  *
- * Chuyến KHÔNG bị huỷ: chỉ gắn cờ `rescueMode` để giao diện khách đổi sang màn
- * hình cứu hộ. Chủ xe tới muộn vẫn đón được nếu khách chưa đi xe khác.
+ * The trip is NOT cancelled: it only sets the `rescueMode` flag so the passenger UI switches
+ * to the rescue screen. A driver who arrives late can still pick up the passenger if the
+ * passenger has not taken another vehicle.
  *
- * Đồng thời trừ điểm tín nhiệm chủ xe qua đúng thang `penalty_late` có sẵn:
- * tăng bộ đếm lateReports, để computeTrustScore tự áp -10 điểm. Không tự chế
- * quy tắc phạt mới, không tự khoá tài khoản.
+ * It also deducts the driver's trust score through the existing `penalty_late` scale:
+ * increment the lateReports counter so computeTrustScore automatically applies -10 points. No
+ * new penalty rules are invented, and no account is locked automatically.
  */
 export async function activateRescueMode({ bookingId, reason, lifebuoys, nowMs = Date.now() }) {
   const booking = getBookingById(bookingId);
@@ -242,7 +243,7 @@ export async function activateRescueMode({ bookingId, reason, lifebuoys, nowMs =
     rescueActivatedAt: new Date(nowMs).toISOString(),
     rescueReason: reason,
     rescueLifebuoys: lifebuoys,
-    // Chuyến vẫn sống: chủ xe xuất hiện muộn vẫn đón được
+    // The trip stays alive: a driver who shows up late can still pick up the passenger
     isCancelled: false
   });
 
@@ -252,17 +253,17 @@ export async function activateRescueMode({ bookingId, reason, lifebuoys, nowMs =
 }
 
 /**
- * Tăng bộ đếm trễ hẹn của chủ xe.
+ * Increments the driver's late-arrival counter.
  *
- * Điểm tín nhiệm không lưu cứng mà được computeTrustScore tính lại từ các bộ
- * đếm này, nên chỉ cần tăng `lateReports` là toàn hệ thống tự phản ánh đúng.
+ * The trust score is not stored as a fixed value but recomputed by computeTrustScore from
+ * these counters, so incrementing `lateReports` is enough for the whole system to reflect it correctly.
  */
 export async function applyLatePenalty(driverPhone, bookingId, nowMs = Date.now()) {
   const user = getUserByPhone(String(driverPhone).replace(/\D/g, ''));
   if (!user) return null;
 
   const history = Array.isArray(user.rescueIncidents) ? user.rescueIncidents : [];
-  // Cùng một booking chỉ bị tính một lần, dù nhịp quét có chạy lại
+  // The same booking is only counted once, even if the sweep runs again
   if (history.some((h) => h.bookingId === bookingId)) {
     return { skipped: true, reason: 'already_penalized' };
   }

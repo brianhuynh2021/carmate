@@ -14,14 +14,14 @@ import {
 
 console.log('🧪 RUNNING ADMIN FUEL PRICE & INVARIANTS VERIFICATION TESTS...\n');
 
-// 1. Khởi tạo CSDL SQLite và kiểm tra giá khởi động
+// 1. Initialize the SQLite DB and check the startup price
 await initDB();
 const initialConfig = getDailyFuelPriceConfig();
 console.log('1. Giá xăng lúc khởi động CSDL:', initialConfig);
 assert.ok(initialConfig.ron95Price >= 15000 && initialConfig.ron95Price <= 45000, 'Giá ban đầu phải nằm trong biên độ an toàn');
 console.log('  ✓ CSDL khởi tạo và nạp mốc giá xăng hợp lệ thành công\n');
 
-// 2. Kiểm thử reset về mặc định
+// 2. Test reset to default
 resetDailyFuelPriceConfig();
 const defaultConfig = getDailyFuelPriceConfig();
 assert.equal(defaultConfig.ron95Price, DEFAULT_DAILY_FUEL_PRICE, `Giá mặc định phải là ${DEFAULT_DAILY_FUEL_PRICE}`);
@@ -29,7 +29,7 @@ assert.equal(defaultConfig.isDefault, true, 'isDefault phải là true khi reset
 console.log('2. Reset về mặc định:', defaultConfig);
 console.log('  ✓ Đặt lại về giá tham chiếu chuẩn 24.120đ thành công\n');
 
-// 3. Kiểm thử tính cước ban đầu với 24.120đ
+// 3. Test the initial fare calculation at 24.120đ
 const tariff24k = calculateDynamicTariffByDistance(110, {
   fuelPrice: defaultConfig.ron95Price,
   corridor: 'Tuyến QL13'
@@ -41,7 +41,7 @@ console.log(`   - Tổng chi phí trực tiếp: ${tariff24k.tripCost.totalDirec
 console.log(`   - Giá vé gợi ý / ghế: ${tariff24k.pricePerSeat.toLocaleString()}đ`);
 console.log('  ✓ Cước ban đầu tính toán chuẩn xác theo công thức Nash\n');
 
-// 4. Admin cập nhật giá xăng mới: 26.500đ/Lít
+// 4. Admin updates the fuel price to the new value: 26.500đ/Lít (litre)
 const updatedConfig = saveDailyFuelPriceConfig({
   ron95Price: 26500,
   updatedBy: 'Admin (Kỳ 15h 10/09/2026)',
@@ -51,12 +51,12 @@ assert.equal(updatedConfig.ron95Price, 26500);
 assert.equal(updatedConfig.isDefault, false);
 console.log('4. Admin cập nhật giá xăng lên 26.500đ:', updatedConfig);
 
-// Kiểm tra in-memory getDailyFuelPrice() đã sync
+// Check that the in-memory getDailyFuelPrice() has synced
 const memoryPrice = getDailyFuelPrice();
 assert.equal(memoryPrice.ron95Price, 26500);
 console.log('  ✓ In-memory shared package đã đồng bộ tức thì sang 26.500đ\n');
 
-// 5. Kiểm thử tính cước khi xăng tăng lên 26.500đ
+// 5. Test the fare calculation when fuel rises to 26.500đ
 const tariff26k = calculateDynamicTariffByDistance(110, {
   fuelPrice: getDailyFuelPrice().ron95Price,
   corridor: 'Tuyến QL13'
@@ -70,7 +70,7 @@ assert.ok(tariff26k.tripCost.fuelCost > tariff24k.tripCost.fuelCost, 'Chi phí x
 assert.ok(tariff26k.tripCost.totalDirectCost > tariff24k.tripCost.totalDirectCost, 'Tổng chi phí trực tiếp phải tăng tương ứng');
 console.log('  ✓ Cước phân đoạn phản ánh ngay lập tức giá xăng mới\n');
 
-// 6. Kiểm thử MIT Invariants: Chặn cận dưới < 15.000đ và cận trên > 45.000đ
+// 6. Test MIT Invariants: reject a lower bound < 15.000đ and an upper bound > 45.000đ
 console.log('6. Kiểm thử biên độ an toàn MIT Invariants [15.000đ, 45.000đ]:');
 assert.throws(() => {
   setDailyFuelPrice(10000);
@@ -89,7 +89,7 @@ assert.throws(() => {
 }, /hợp lệ/, 'DB store phải ném lỗi khi giá xăng > 45.000đ');
 console.log('  ✓ Biên độ an toàn bảo vệ 100% không cho phép giá phi lý\n');
 
-// 7. Khôi phục lại mặc định cho môi trường sạch
+// 7. Restore the default for a clean environment
 resetDailyFuelPriceConfig();
 const restoredConfig = getDailyFuelPriceConfig();
 assert.equal(restoredConfig.ron95Price, DEFAULT_DAILY_FUEL_PRICE);

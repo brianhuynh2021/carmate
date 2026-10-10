@@ -15,7 +15,7 @@ export default function TermsModal({ onClose, zIndex = 'z-[9999]' }) {
       subtitle="Định vị Nền tảng Công nghệ Kết nối Dân sự · Nguyên tắc '3 Không' & '3 Có'"
     >
       <div className="type-caption space-y-4 text-slate-600 dark:text-slate-300 max-h-[60vh] overflow-y-auto pr-1">
-        {/* Banner định vị pháp lý */}
+        {/* Legal positioning banner */}
         <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900 dark:text-emerald-200">
           <div className="type-body-strong flex items-center gap-2 text-emerald-800 dark:text-emerald-300 mb-1">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -26,7 +26,7 @@ export default function TermsModal({ onClose, zIndex = 'z-[9999]' }) {
           </p>
         </div>
 
-        {/* Phần 1: Trụ cột "3 Không" */}
+        {/* Part 1: The "3 Không" ("3 Nos") pillar */}
         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
           <div className="type-body-strong flex items-center gap-2 text-slate-900 dark:text-white">
             <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
@@ -45,7 +45,7 @@ export default function TermsModal({ onClose, zIndex = 'z-[9999]' }) {
           </ul>
         </div>
 
-        {/* Phần 2: Trụ cột "3 Có" */}
+        {/* Part 2: The "3 Có" ("3 Haves") pillar */}
         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
           <div className="type-body-strong flex items-center gap-2 text-slate-900 dark:text-white">
             <ShieldCheck className="w-4 h-4 text-primary-600 dark:text-primary-400 shrink-0" />
@@ -69,7 +69,7 @@ export default function TermsModal({ onClose, zIndex = 'z-[9999]' }) {
           </ul>
         </div>
 
-        {/* Điều 3: Trách nhiệm & An toàn */}
+        {/* Article 3: Responsibility & Safety */}
         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
           <div className="type-body-strong flex items-center gap-2 text-slate-900 dark:text-white">
             <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />

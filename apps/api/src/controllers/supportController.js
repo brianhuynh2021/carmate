@@ -6,7 +6,7 @@ import {
 import { sendBusinessAlert } from '../utils/telegramAlert.js';
 
 /**
- * GET /api/support/messages - Lấy danh sách tin nhắn trò chuyện với Platform CSKH CarMate
+ * GET /api/support/messages - Get the chat message list with CarMate Platform Support (CSKH)
  */
 export async function getSupportMessagesHandler(req, res) {
   try {
@@ -21,7 +21,7 @@ export async function getSupportMessagesHandler(req, res) {
       limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 50))
     });
 
-    // Nếu chưa có tin nhắn nào, gửi lời chào đầu tiên từ Platform Support
+    // If there are no messages yet, send the first greeting from Platform Support
     if (messages.length === 0) {
       const welcomeMsg = {
         id: 'SUP-WELCOME',
@@ -48,7 +48,7 @@ export async function getSupportMessagesHandler(req, res) {
 }
 
 /**
- * POST /api/support/messages - Gửi tin nhắn đến Platform CSKH & Tự động xử lý khiếu nại (Ambient Resolution)
+ * POST /api/support/messages - Send a message to Platform Support (CSKH) & automatically handle complaints (Ambient Resolution)
  */
 export async function sendSupportMessageHandler(req, res) {
   try {
@@ -62,7 +62,7 @@ export async function sendSupportMessageHandler(req, res) {
     const effectivePhone = req.user?.phone || phone;
     const effectiveName = req.user?.name || senderName || 'Thành viên';
 
-    // 1. Lưu tin nhắn của người dùng
+    // 1. Save the user's message
     const userMsg = saveSupportMessage({
       bookingId: bookingId || null,
       userId: effectiveUserId || null,
@@ -86,7 +86,7 @@ export async function sendSupportMessageHandler(req, res) {
     let isUnbanned = false;
 
     if (isUnbanIntent) {
-      // Tự động gỡ khóa và phục hồi điểm tín nhiệm tức thì (Instant Relief UX)
+      // Automatically unlock and instantly restore the trust score (Instant Relief UX)
       await resolveDisputeAndUnban({
         bookingId: bookingId || null,
         userId: effectiveUserId,
@@ -96,7 +96,7 @@ export async function sendSupportMessageHandler(req, res) {
       });
       isUnbanned = true;
 
-      // Phản hồi từ Platform Support
+      // Reply from Platform Support
       platformReply = saveSupportMessage({
         bookingId: bookingId || null,
         userId: effectiveUserId || null,
@@ -109,7 +109,7 @@ export async function sendSupportMessageHandler(req, res) {
         status: 'resolved'
       });
 
-      // Gửi báo động Telegram cho Admin
+      // Send a Telegram alarm to the Admin
       sendBusinessAlert({
         title: '🛡️ AUTO-UNBAN: Khôi phục tài khoản qua Kênh CSKH Platform',
         details: {
@@ -121,7 +121,7 @@ export async function sendSupportMessageHandler(req, res) {
         req
       }).catch(() => {});
     } else {
-      // Phản hồi hỗ trợ thành viên / người đi cùng thông thường
+      // Regular support reply for members / passengers
       platformReply = saveSupportMessage({
         bookingId: bookingId || null,
         userId: effectiveUserId || null,

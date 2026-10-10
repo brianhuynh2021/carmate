@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Dark mode điều khiển bằng class .dark trên <html> (không phụ thuộc hệ điều hành) */
+/* Dark mode is controlled by the .dark class on <html> (independent of the operating system) */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ────────────────────────────────────────────────────────────
@@ -116,10 +116,10 @@
   select,
   textarea,
   label {
-    touch-action: manipulation; /* Loại bỏ độ trễ 300ms double-tap zoom trên mobile */
+    touch-action: manipulation; /* Removes the 300ms double-tap zoom delay on mobile */
   }
 
-  /* Ngăn chặn iOS Safari tự động phóng to (auto-zoom) khi focus vào ô nhập liệu (< 16px) */
+  /* Prevents iOS Safari from auto-zooming when focusing an input field (< 16px) */
   @media screen and (max-width: 767px) {
     input,
     select,
@@ -128,15 +128,15 @@
     }
   }
 
-  /* ── PHẢN HỒI TƯƠNG TÁC NỀN (BASELINE INTERACTION FEEDBACK) ──
-     Toàn dự án có ~300 <button> viết tay, phần lớn chỉ đổi đúng MỘT thuộc tính
-     khi hover (thường là màu viền) nên gần như không thấy phản hồi gì. Sửa tay
-     từng nút vừa dễ sót vừa dễ hỏng, nên đặt một tầng nền ở đây: mọi nút đều có
-     phản hồi tối thiểu, còn nút nào khai báo hover riêng thì lớp utility của
-     Tailwind vẫn thắng (độ ưu tiên cao hơn) và giữ nguyên thiết kế riêng.
+  /* ── BASELINE INTERACTION FEEDBACK ──
+     The whole project has ~300 hand-written <button> elements, most of which change exactly ONE property
+     on hover (usually the border color), so there is almost no visible feedback. Fixing each button
+     by hand is easy to miss and easy to break, so a baseline layer is placed here: every button gets
+     minimal feedback, while any button that declares its own hover still wins through Tailwind's
+     utility classes (higher priority) and keeps its own design.
 
-     Chỉ áp dụng cho thiết bị có con trỏ thật — tránh trạng thái hover "dính"
-     trên màn hình cảm ứng sau khi chạm. */
+     Only applies to devices with a real pointer — avoids the "sticky" hover state
+     on touch screens after a tap. */
   @media (hover: hover) and (pointer: fine) {
     button:not(:disabled):not([aria-disabled='true']):hover,
     [role='button']:not([aria-disabled='true']):hover {
@@ -144,20 +144,20 @@
     }
   }
 
-  /* Nút bị vô hiệu hoá không được mời bấm */
+  /* Disabled buttons must not invite a click */
   button:disabled,
   button[aria-disabled='true'],
   [role='button'][aria-disabled='true'] {
     cursor: not-allowed;
   }
 
-  /* Phản hồi chạm trên mobile: thay cho hover mà cảm ứng không có */
+  /* Touch feedback on mobile: replaces hover, which touch screens do not have */
   button:not(:disabled):active,
   [role='button']:active {
     transform: scale(0.985);
   }
 
-  /* Tôn trọng người dùng tắt hiệu ứng chuyển động */
+  /* Respect users who have turned off motion effects */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -288,21 +288,21 @@
     letter-spacing: -0.02em;
   }
 
-  /* Vùng chạm tối thiểu 44px theo HIG, kể cả khi nội dung thấp hơn.
-     Dùng cho <select> và các nút nhỏ mà không phải phình chữ lên. */
+  /* Minimum 44px touch target per the HIG, even when the content is shorter.
+     Used for <select> and small buttons without having to enlarge the text. */
   .tap-44 {
     min-height: 44px;
     display: flex;
     align-items: center;
   }
 
-  /* VÙNG CHẠM VÔ HÌNH (Extended Hit Area)
-     Nút biểu tượng trên thanh tiêu đề chỉ cao 34px — dưới ngưỡng 44pt của HIG.
-     Phóng to nút lên 44px sẽ làm thanh tiêu đề nặng nề, nên thay vào đó nới
-     vùng chạm ra ngoài bằng pseudo-element: mắt vẫn thấy nút 34px, nhưng ngón
-     tay chạm được cả vùng 44px. Đây đúng cách Apple xử lý các nút nhỏ trong
-     thanh điều hướng iOS.
-     Lưu ý: nút cha phải có position:relative (class `relative`). */
+  /* INVISIBLE TOUCH TARGET (Extended Hit Area)
+     Icon buttons in the header bar are only 34px tall — below the HIG's 44pt threshold.
+     Enlarging the button to 44px would make the header bar heavy, so instead the
+     touch area is extended outward with a pseudo-element: the eye still sees a 34px button, but the
+     finger can tap the whole 44px area. This is exactly how Apple handles small buttons in the
+     iOS navigation bar.
+     Note: the parent button must have position:relative (class `relative`). */
   .tap-area-44::after {
     content: '';
     position: absolute;
@@ -311,7 +311,7 @@
     width: 44px;
     height: 44px;
     transform: translate(-50%, -50%);
-    /* Không vẽ gì, chỉ bắt sự kiện chạm */
+    /* Draws nothing, only captures touch events */
   }
 
   /* Apple Precision Craft Surface (Card & Container) */
@@ -380,7 +380,7 @@
   }
 }
 
-/* Scrollbar mượt mà */
+/* Smooth scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

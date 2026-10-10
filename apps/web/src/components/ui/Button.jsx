@@ -16,7 +16,7 @@ const VARIANTS = {
   warningGhost: 'text-[#b45309] hover:bg-amber-50 active:bg-amber-100'
 };
 
-// Chiều cao và bo góc chuẩn Apple Human Interface Guidelines (rounded-xl)
+// Height and corner radius per Apple Human Interface Guidelines (rounded-xl)
 const SIZES = {
   xs: 'h-8 px-3 type-button-sm gap-1.5 rounded-xl',
   sm: 'h-10 px-4 type-button gap-1.5 rounded-xl',
@@ -53,7 +53,7 @@ export default function Button({
   );
 }
 
-/** Nút tròn chỉ có icon — chuẩn 44px Google Mobile */
+/** Icon-only round button — Google Mobile 44px standard */
 export function IconButton({ icon, label, size = 'md', variant = 'ghost', className = '', ...rest }) {
   const Icon = icon;
   const dims = size === 'sm' ? 'w-9 h-9' : size === 'lg' ? 'w-12 h-12' : 'w-11 h-11';

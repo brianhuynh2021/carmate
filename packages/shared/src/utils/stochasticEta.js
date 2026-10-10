@@ -1,60 +1,60 @@
 /**
  * =============================================================================
- * CARMATE STOCHASTIC ETA — PHÂN PHỐI THỜI GIAN ĐẾN TRẠM
+ * CARMATE STOCHASTIC ETA — DISTRIBUTION OF TIME TO ARRIVE AT A STATION
  * =============================================================================
- * Thay thế phép chia `quãng đường / vận tốc tức thời` bằng một PHÂN PHỐI
- * xác suất. Lý do: vận tốc tức thời là biến nhiễu rất mạnh — xe dừng đèn đỏ
- * (v=0) làm ETA nhảy lên vô cực, xe đang đổ đèo (v=95) làm ETA lạc quan giả.
- * Cam kết giờ giấc với khách đi liên tỉnh không thể dựng trên một con số như vậy.
+ * Replaces the division `distance / instantaneous speed` with a probability
+ * DISTRIBUTION. Reason: instantaneous speed is an extremely noisy variable — a vehicle stopped at a red light
+ * (v=0) makes the ETA jump to infinity, a vehicle descending a mountain pass (v=95) gives a falsely optimistic ETA.
+ * A time commitment to intercity passengers cannot be built on a number like that.
  *
- * Mô hình: T_arrive ~ N(mu, sigma^2) trên trục cọc số s của hành lang.
+ * Model: T_arrive ~ N(mu, sigma^2) on the corridor's km-marker axis s.
  *
- *   mu    = t_now + SUM( d_k / v_k )   với mỗi phân đoạn k mà xe còn phải đi qua
- *   sigma = sqrt( SUM( (d_k * sigma_v_k / v_k^2)^2 ) ) + sàn bất định
+ *   mu    = t_now + SUM( d_k / v_k )   for each segment k the vehicle still has to pass through
+ *   sigma = sqrt( SUM( (d_k * sigma_v_k / v_k^2)^2 ) ) + uncertainty floor
  *
- * v_k là vận tốc HÀNH TRÌNH lịch sử của phân đoạn k (không phải vận tốc tức
- * thời), lấy từ SEGMENT_SPEED_PROFILE. Càng gần trạm, số phân đoạn còn lại
- * càng ít nên sigma -> 0, đúng trực giác: ETA 3 km chính xác hơn ETA 80 km.
+ * v_k is the historical JOURNEY speed of segment k (not the instantaneous
+ * speed), taken from SEGMENT_SPEED_PROFILE. The closer to the station, the fewer segments remain
+ * so sigma -> 0, matching intuition: an ETA of 3 km is more accurate than an ETA of 80 km.
  *
- * Tham chiếu khoa học:
+ * Scientific references:
  * - Stochastic Vehicle Routing with Recourse (Gendreau, Laporte & Séguin, 1996)
- * - Travel Time Reliability, Highway Capacity Manual (TRB), hệ số biến thiên CV
+ * - Travel Time Reliability, Highway Capacity Manual (TRB), coefficient of variation CV
  * =============================================================================
  */
 
 
 /**
- * Hồ sơ vận tốc hành trình theo từng phân đoạn hành lang QL13.
+ * Journey speed profile for each QL13 corridor segment.
  *
- * `vKmh` là vận tốc trung bình THỰC TẾ đã trừ đèn đỏ và giảm tốc qua khu dân cư
- * (không phải tốc độ tối đa cho phép). `cv` là hệ số biến thiên (Coefficient of
- * Variation = sigma_v / v): đoạn cao tốc thoáng cv thấp, đoạn nội đô cv cao vì
- * phương sai kẹt xe lớn.
+ * `vKmh` is the ACTUAL average speed after subtracting red lights and slowing through residential areas
+ * (not the maximum permitted speed). `cv` is the coefficient of variation (Coefficient of
+ * Variation = sigma_v / v): open highway sections have a low cv, urban sections have a high cv because
+ * the congestion variance is large.
  *
- * Dải s tính theo cọc số km của QL13_CORRIDOR_POLYLINE (0 = Lộc Ninh, 142.5 = TSN).
+ * The s range is measured on the km markers of QL13_CORRIDOR_POLYLINE (0 = Lộc Ninh, 142.5 = TSN).
  */
 const SEGMENT_SPEED_PROFILE = Object.freeze([
-  // Lộc Ninh -> Bình Long: tỉnh lộ thoáng, ít giao cắt
+  // Lộc Ninh -> Bình Long: open provincial road, few intersections
   { fromS: 0, toS: 24.5, vKmh: 58, cv: 0.14, name: 'Lộc Ninh - Bình Long' },
-  // Bình Long -> Tân Khai: qua thị xã, nhiều đèn và chợ
+  // Bình Long -> Tân Khai: passes through the town, many lights and markets
   { fromS: 24.5, toS: 44.5, vKmh: 48, cv: 0.20, name: 'Bình Long - Tân Khai' },
-  // Tân Khai -> Chơn Thành: quốc lộ thoáng xen khu công nghiệp
+  // Tân Khai -> Chơn Thành: open national highway interspersed with industrial parks
   { fromS: 44.5, toS: 56.5, vKmh: 55, cv: 0.18, name: 'Tân Khai - Chơn Thành' },
-  // Chơn Thành -> Bàu Bàng: đoạn chạy tốt nhất toàn tuyến
+  // Chơn Thành -> Bàu Bàng: the best-running stretch of the whole route
   { fromS: 56.5, toS: 84.5, vKmh: 62, cv: 0.15, name: 'Chơn Thành - Bàu Bàng' },
-  // Bàu Bàng -> Sở Sao: mật độ xe container tăng dần
+  // Bàu Bàng -> Sở Sao: container truck density gradually increases
   { fromS: 84.5, toS: 107.0, vKmh: 52, cv: 0.22, name: 'Bàu Bàng - Sở Sao' },
-  // Sở Sao -> VSIP/Lái Thiêu: vào vùng đô thị Bình Dương, kẹt giờ cao điểm
+  // Sở Sao -> VSIP/Lái Thiêu: enters the Bình Dương urban area, congested at peak hours
   { fromS: 107.0, toS: 126.0, vKmh: 38, cv: 0.30, name: 'Sở Sao - Lái Thiêu' },
-  // Lái Thiêu -> Ngã 4 Bình Phước: nút thắt cổ chai nổi tiếng của QL13
+  // Lái Thiêu -> Ngã 4 Bình Phước: the famous bottleneck of QL13
   { fromS: 126.0, toS: 132.5, vKmh: 28, cv: 0.38, name: 'Lái Thiêu - Ngã 4 Bình Phước' },
-  // Ngã 4 Bình Phước -> Hàng Xanh: nội đô TP.HCM, phương sai lớn nhất tuyến
+  // Ngã 4 Bình Phước -> Hàng Xanh: inner-city TP.HCM, the largest variance on the route
   { fromS: 132.5, toS: 139.5, vKmh: 24, cv: 0.42, name: 'Ngã 4 Bình Phước - Hàng Xanh' },
-  // Hàng Xanh -> Tân Sơn Nhất: xuyên tâm thành phố qua Phạm Văn Đồng
+  // Hàng Xanh -> Tân Sơn Nhất: crossing the city center via Phạm Văn Đồng
   { fromS: 139.5, toS: 142.5, vKmh: 26, cv: 0.40, name: 'Hàng Xanh - Tân Sơn Nhất' }
 ]);
 
-/** Hệ số nhân vận tốc theo khung giờ (giờ cao điểm chạy chậm hơn hồ sơ nền). */
+/** Speed multiplier by time slot (peak hours run slower than the baseline profile). */
 const PEAK_HOUR_FACTORS = Object.freeze([
   { fromHour: 6, toHour: 9, factor: 0.78, cvBoost: 0.10, label: 'Cao điểm sáng' },
   { fromHour: 11, toHour: 13, factor: 0.92, cvBoost: 0.03, label: 'Trưa' },
@@ -63,16 +63,16 @@ const PEAK_HOUR_FACTORS = Object.freeze([
   { fromHour: 0, toHour: 5, factor: 1.15, cvBoost: -0.04, label: 'Rạng sáng thoáng' }
 ]);
 
-/** Sàn bất định: dù xe sát trạm vẫn còn ±40s cho việc tấp lề, tìm chỗ đỗ. */
+/** Uncertainty floor: even when the vehicle is right next to the station there is still ±40s for pulling over and finding a place to park. */
 const SIGMA_FLOOR_SECONDS = 40;
 
-/** Trần vận tốc hiệu chỉnh, chặn trường hợp GPS nhiễu báo 200km/h. */
+/** Cap on the adjusted speed, blocking the case where a noisy GPS reports 200km/h. */
 const MAX_EFFECTIVE_KMH = 90;
 const MIN_EFFECTIVE_KMH = 8;
 
 /**
- * Tra hệ số giờ cao điểm cho một mốc thời gian.
- * @param {Date|number} at - Thời điểm cần tra
+ * Look up the peak-hour factor for a point in time.
+ * @param {Date|number} at - The point in time to look up
  * @returns {{factor: number, cvBoost: number, label: string}}
  */
 export function getPeakFactor(at = Date.now()) {
@@ -85,8 +85,8 @@ export function getPeakFactor(at = Date.now()) {
 }
 
 /**
- * Cắt dải [fromS, toS] thành các phân đoạn con theo SEGMENT_SPEED_PROFILE.
- * Trả về mảng { lengthKm, vKmh, cv } đã áp hệ số giờ cao điểm.
+ * Cut the range [fromS, toS] into sub-segments according to SEGMENT_SPEED_PROFILE.
+ * Returns an array of { lengthKm, vKmh, cv } with the peak-hour factor applied.
  */
 function sliceSegments(fromS, toS, at) {
   const peak = getPeakFactor(at);
@@ -107,19 +107,19 @@ function sliceSegments(fromS, toS, at) {
 }
 
 /**
- * TÍNH PHÂN PHỐI THỜI GIAN ĐẾN TRẠM: T_arrive ~ N(mu, sigma^2)
+ * COMPUTE THE TIME-TO-STATION DISTRIBUTION: T_arrive ~ N(mu, sigma^2)
  *
- * Vận tốc tức thời `currentSpeedKmh` KHÔNG dùng để chia quãng đường. Nó chỉ
- * dùng để hiệu chỉnh nhẹ hồ sơ nền (blend 30%) — nếu xe đang chạy chậm hơn hẳn
- * hồ sơ thì có lý do (mưa, tải nặng) và nên tin một phần, nhưng không để một
- * lần dừng đèn đỏ kéo sập toàn bộ dự báo.
+ * Instantaneous speed `currentSpeedKmh` is NOT used to divide the distance. It is only
+ * used to lightly adjust the baseline profile (30% blend) — if the vehicle is running clearly slower than
+ * the profile there is a reason (rain, heavy load) and it should be partly trusted, but a single
+ * red-light stop must not collapse the entire forecast.
  *
  * @param {object} params
- * @param {number} params.currentS - Cọc số km hiện tại của xe
- * @param {number} params.targetS - Cọc số km của trạm đón
- * @param {number} [params.currentSpeedKmh] - Vận tốc tức thời (chỉ để hiệu chỉnh)
- * @param {number} [params.nowMs] - Mốc thời gian hiện tại
- * @param {number} [params.dwellStopsAhead] - Số trạm phải dừng đón trước khi tới đích
+ * @param {number} params.currentS - The vehicle's current km marker
+ * @param {number} params.targetS - The km marker of the pickup station
+ * @param {number} [params.currentSpeedKmh] - Instantaneous speed (only for adjustment)
+ * @param {number} [params.nowMs] - The current timestamp
+ * @param {number} [params.dwellStopsAhead] - Number of pickup stops to make before reaching the destination
  * @returns {object} { muSeconds, sigmaSeconds, etaMs, distanceKm, segments, isBehind }
  */
 export function computeEtaDistribution({
@@ -144,7 +144,7 @@ export function computeEtaDistribution({
     };
   }
 
-  // Xe đã vượt qua trạm: không còn ETA hợp lệ cho chiều đang chạy
+  // The vehicle has passed the station: there is no longer a valid ETA for the current direction of travel
   const isBehind = sTarget < sNow;
   const fromS = Math.min(sNow, sTarget);
   const toS = Math.max(sNow, sTarget);
@@ -152,9 +152,9 @@ export function computeEtaDistribution({
 
   const segments = sliceSegments(fromS, toS, nowMs);
 
-  // Hiệu chỉnh bằng vận tốc tức thời: blend 30% để bám thực địa mà không nhiễu.
-  // Chỉ áp dụng khi xe thực sự đang lăn bánh (>15km/h) — xe đứng yên không
-  // mang thông tin gì về vận tốc hành trình sắp tới.
+  // Adjust with the instantaneous speed: 30% blend to stay close to reality without noise.
+  // Only applied when the vehicle is actually rolling (>15km/h) — a stationary vehicle carries no
+  // information about the upcoming journey speed.
   let speedBlend = 1.0;
   const inst = Number(currentSpeedKmh);
   if (Number.isFinite(inst) && inst > 15 && segments.length > 0) {
@@ -168,15 +168,15 @@ export function computeEtaDistribution({
 
   for (const seg of segments) {
     const v = Math.max(MIN_EFFECTIVE_KMH, seg.vKmh * speedBlend);
-    const tSeg = (seg.lengthKm / v) * 3600; // giây
+    const tSeg = (seg.lengthKm / v) * 3600; // seconds
     muSeconds += tSeg;
 
-    // Lan truyền sai số: t = d/v  =>  sigma_t = t * (sigma_v / v) = t * cv
+    // Error propagation: t = d/v  =>  sigma_t = t * (sigma_v / v) = t * cv
     const sigmaSeg = tSeg * seg.cv;
     varianceSeconds += sigmaSeg * sigmaSeg;
   }
 
-  // Mỗi trạm dừng đón trên đường cộng thêm 60s dwell + phương sai của chính nó
+  // Each pickup stop on the way adds 60s of dwell + its own variance
   const dwellSeconds = Math.max(0, Number(dwellStopsAhead) || 0) * 60;
   muSeconds += dwellSeconds;
   varianceSeconds += Math.pow(dwellSeconds * 0.25, 2);
@@ -196,8 +196,8 @@ export function computeEtaDistribution({
 }
 
 /**
- * Hàm phân phối tích lũy chuẩn Phi(z) — xấp xỉ Abramowitz & Stegun 26.2.17.
- * Sai số tuyệt đối < 7.5e-8, thừa đủ cho bài toán điều vận.
+ * Standard normal cumulative distribution function Phi(z) — Abramowitz & Stegun 26.2.17 approximation.
+ * Absolute error < 7.5e-8, more than enough for dispatching.
  */
 export function normalCdf(z) {
   if (!Number.isFinite(z)) return z > 0 ? 1 : 0;
@@ -218,16 +218,16 @@ export function normalCdf(z) {
 }
 
 /**
- * XÁC SUẤT XE ĐẾN TRẠM TRONG CỬA SỔ [lowSeconds, highSeconds] KỂ TỪ BÂY GIỜ.
+ * PROBABILITY THAT THE VEHICLE ARRIVES AT THE STATION WITHIN THE WINDOW [lowSeconds, highSeconds] FROM NOW.
  *
  *   P(low <= T_arrive - t_now <= high) = Phi((high - mu)/sigma) - Phi((low - mu)/sigma)
  *
- * Đây là biểu thức dùng để quyết định có bắn thông báo T-30 hay không.
+ * This is the expression used to decide whether to fire the T-30 notification.
  *
- * @param {object} distribution - Kết quả computeEtaDistribution()
- * @param {number} lowSeconds - Cận dưới cửa sổ (giây)
- * @param {number} highSeconds - Cận trên cửa sổ (giây)
- * @returns {number} Xác suất trong [0, 1]
+ * @param {object} distribution - Result of computeEtaDistribution()
+ * @param {number} lowSeconds - Lower bound of the window (seconds)
+ * @param {number} highSeconds - Upper bound of the window (seconds)
+ * @returns {number} Probability in [0, 1]
  */
 export function probabilityArrivalWithin(distribution, lowSeconds, highSeconds) {
   if (!distribution?.valid || distribution.sigmaSeconds == null) return 0;
@@ -240,16 +240,16 @@ export function probabilityArrivalWithin(distribution, lowSeconds, highSeconds) 
 }
 
 /**
- * PHÂN VỊ THỜI GIAN ĐẾN (Quantile) — dùng để hứa giờ AN TOÀN với khách.
+ * ARRIVAL-TIME QUANTILE (Quantile) — used to promise a SAFE time to the passenger.
  *
- * Hứa theo mu là hứa trượt 50% số lần. Hứa theo p80 nghĩa là 80% số chuyến sẽ
- * đến sớm hơn hoặc đúng mốc đã hứa — đây mới là con số nên hiển thị ra giao diện.
+ * Promising by mu means missing the promise 50% of the time. Promising by p80 means 80% of trips will
+ * arrive earlier than or exactly at the promised time — this is the number that should be shown in the UI.
  *
- * Dùng xấp xỉ nghịch đảo Phi của Beasley-Springer-Moro rút gọn.
+ * Uses a condensed Beasley-Springer-Moro inverse Phi approximation.
  *
- * @param {object} distribution - Kết quả computeEtaDistribution()
- * @param {number} p - Phân vị mong muốn (0..1), ví dụ 0.8
- * @returns {number|null} Số giây kể từ bây giờ
+ * @param {object} distribution - Result of computeEtaDistribution()
+ * @param {number} p - Desired quantile (0..1), e.g. 0.8
+ * @returns {number|null} Number of seconds from now
  */
 export function etaQuantileSeconds(distribution, p = 0.8) {
   if (!distribution?.valid) return null;
@@ -257,7 +257,7 @@ export function etaQuantileSeconds(distribution, p = 0.8) {
   return Math.round(distribution.muSeconds + z * distribution.sigmaSeconds);
 }
 
-/** Nghịch đảo Phi — xấp xỉ hữu tỉ Acklam, sai số < 1.15e-9. */
+/** Inverse Phi — Acklam rational approximation, error < 1.15e-9. */
 export function inverseNormalCdf(p) {
   const a = [-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.383577518672690e2, -3.066479806614716e1, 2.506628277459239];
   const b = [-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1, -1.328068155288572e1];
@@ -284,17 +284,17 @@ export function inverseNormalCdf(p) {
 }
 
 /**
- * XÁC SUẤT TRỄ HẸN SO VỚI MỐC ĐÃ CAM KẾT VỚI KHÁCH.
+ * PROBABILITY OF BEING LATE RELATIVE TO THE TIME COMMITTED TO THE PASSENGER.
  *
  *   P(T_arrive > t_committed + tolerance)
  *
- * Đây là đầu vào quyết định có kích hoạt chuyến Shadow hay không: không chờ
- * đến khi xe THỰC SỰ trễ mới xoay xở, mà hoán đổi ngay khi xác suất trễ vượt ngưỡng.
+ * This is the input for deciding whether to activate a Shadow trip: don't wait until the vehicle is
+ * ACTUALLY late before scrambling; swap immediately when the lateness probability exceeds the threshold.
  *
- * @param {object} distribution - Kết quả computeEtaDistribution()
- * @param {number} committedAtMs - Mốc giờ đã hứa với khách (epoch ms)
- * @param {number} [toleranceSeconds] - Dung sai chấp nhận được (mặc định 300s)
- * @param {number} [nowMs] - Mốc hiện tại
+ * @param {object} distribution - Result of computeEtaDistribution()
+ * @param {number} committedAtMs - The time promised to the passenger (epoch ms)
+ * @param {number} [toleranceSeconds] - Acceptable tolerance (default 300s)
+ * @param {number} [nowMs] - The current timestamp
  * @returns {{probability: number, expectedDelaySeconds: number, willBeLate: boolean}}
  */
 export function probabilityOfLateness(distribution, committedAtMs, toleranceSeconds = 300, nowMs = Date.now()) {

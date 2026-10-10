@@ -170,7 +170,7 @@ router.delete('/admin/analytics', requireAdmin, clearAnalyticsHandler);
 // --- Agentic AI Concierge & Dispatcher (Stanford Inner Loop & Tools) ---
 router.post('/agent/chat', optionalAuth, agentChatHandler);
 
-// --- Auth & Identity (Zero-Cost / Google & Zalo với Auth Limiter & JWT) ---
+// --- Auth & Identity (Zero-Cost / Google & Zalo with Auth Limiter & JWT) ---
 router.get('/auth/config', getAuthConfigHandler);
 router.post('/auth/firebase-login', authLimiter, firebaseLogin);
 router.post('/auth/google-login', googleLogin);
@@ -178,7 +178,7 @@ router.post('/auth/telegram-login', authLimiter, telegramLogin);
 router.post('/auth/zalo-login', zaloLogin);
 router.post('/auth/request-otp', authLimiter, requestOtp);
 router.post('/auth/verify-otp', authLimiter, verifyOtp);
-// Gắn số điện thoại đã xác thực OTP cho tài khoản đăng nhập qua Telegram/Google
+// Attach an OTP-verified phone number to an account logged in via Telegram/Google
 router.post('/auth/verify-phone', requireAuth, authLimiter, verifyPhoneForAccount);
 router.get('/auth/me', requireAuth, getMe);
 router.patch('/auth/profile', requireAuth, updateProfile);
@@ -196,7 +196,7 @@ router.get('/trust/:memberId', getTrustProfile);
 router.get('/trust-rules/public', getPublicTrustRulesHandler);
 router.get('/locations/suggest', suggestLocationsHandler);
 
-// --- Trips (với Post Limiter chống spam và bảo vệ quyền sở hữu Anti-IDOR & PII) ---
+// --- Trips (with Post Limiter against spam and Anti-IDOR & PII ownership protection) ---
 router.get('/trips', optionalAuth, listTrips);
 router.get('/trips/:id', optionalAuth, getTrip);
 router.post('/trips', requireAuth, postTripLimiter, createTrip);
@@ -215,30 +215,30 @@ router.get('/intents', optionalAuth, getMovementIntentsHandler);
 router.post('/intents', requireAuth, createMovementIntentHandler);
 router.post('/intents/match', requireAuth, runBatchMatchHandler);
 router.get('/intents/epochs', optionalAuth, getMatchingEpochsHandler);
-// Sửa / huỷ lịch trình: bốn thao tác "3 giây" của Taplo Chủ xe nay có hiệu lực thật
+// Edit / cancel schedule: the four "3 giây" ("3-second") actions of the driver's Taplo (dashboard) now take real effect
 router.patch('/intents/:id', requireAuth, updateMovementIntentHandler);
 router.delete('/intents/:id', requireAuth, cancelMovementIntentHandler);
 router.post('/intents/:id/checkpoint', requireAuth, confirmIntentCheckpointHandler);
 
-// --- Sàn Giao Dịch Ghế Trống (Seat Exchange - LOB, CDA 24/7 Spot Market & Dynamic Sliding TTL) ---
-// Đặt lệnh: chống spam bằng postTripLimiter; optionalAuth cho phép khách vãng lai
-// đặt lệnh, nhưng khi ĐÃ đăng nhập thì SĐT trong token luôn thắng SĐT gửi từ body.
+// --- Empty-Seat Trading Exchange (Seat Exchange - LOB, CDA 24/7 Spot Market & Dynamic Sliding TTL) ---
+// Place an order: spam protection via postTripLimiter; optionalAuth lets anonymous guests
+// place orders, but when ALREADY logged in the phone number in the token always wins over the phone number sent from the body.
 router.post('/seat-exchange/order', requireAuth, postTripLimiter, placeOrderHandler);
-// Sổ lệnh công khai: mọi lệnh trả ra đều đi qua lớp chắn PII (Nghị định 13/2023).
+// Public order book: every order returned passes through the PII shield (Decree 13/2023).
 router.get('/seat-exchange/order-book', optionalAuth, getOrderBookHandler);
-// Lịch sử lệnh cá nhân: BẮT BUỘC đăng nhập (chống dò quét bằng số điện thoại).
+// Personal order history: login REQUIRED (anti-enumeration by phone number).
 router.get('/seat-exchange/my-orders', requireAuth, getMyOrdersHandler);
-// Quét TTL là tác vụ vận hành nội bộ: chỉ Quản trị viên (chống DoS xoá sạch sổ lệnh).
+// The TTL sweep is an internal operations task: Admin only (anti-DoS that wipes the whole order book).
 router.post('/seat-exchange/expire-ttl', requireAdmin, expireSlidingTTLHandler);
 
 // --- Bookings / Connections (2-Phase Commit & In-app Chat) ---
 router.get('/bookings', requireAuth, listBookings);
-// Giữ chỗ BẮT BUỘC đăng nhập: booking gắn với một con người thật (SĐT đã xác thực),
-// và chỉ khi đó mới có cơ sở để mở khoá thông tin liên hệ hai chiều.
+// Seat reservation REQUIRES login: a booking is tied to a real person (verified phone number),
+// and only then is there a basis to unlock two-way contact information.
 router.post('/bookings', requireAuth, createBooking);
 router.get('/bookings/:id/public-summary', optionalAuth, getBookingPublicSummary);
 router.post('/bookings/:id/driver-confirm', requireAuth, driverConfirmBooking);
-// Chốt T-40/T-30: chủ xe bấm "Tôi đang đi", và khách tra cứu Chế độ Cứu hộ
+// T-40/T-30 checkpoint: the driver taps "Tôi đang đi" ("I'm on my way"), and the passenger looks up Rescue Mode
 router.post('/bookings/:id/driver-ready', requireAuth, driverReadyHandler);
 router.get('/bookings/:id/rescue-status', requireAuth, rescueStatusHandler);
 router.post('/bookings/:id/messages', requireAuth, addBookingMessageHandler);
@@ -249,12 +249,12 @@ router.post('/bookings/:id/cancel', requireAuth, requireBookingParty, cancelBook
 router.post('/bookings/:id/complete', requireAuth, requireBookingParty, completeBooking);
 router.post('/bookings/:id/review', requireAuth, requireBookingParty, submitReview);
 
-// --- Báo cáo vi phạm an toàn (chỉ hai bên trong chuyến mới được tố giác) ---
+// --- Safety violation reports (only the two parties in the trip may report) ---
 router.post('/bookings/:id/report-vehicle-mismatch', requireAuth, requireBookingParty, reportVehicleMismatchHandler);
 router.post('/bookings/:id/report-unreachable-phone', requireAuth, requireBookingParty, reportUnreachablePhoneHandler);
-// Gỡ khoá tài khoản là THAO TÁC CHẾ TÀI, chỉ Quản trị viên được làm.
-// Trước đây dùng optionalAuth: bất kỳ ai biết mã booking đều gọi ẩn danh để gỡ
-// ban cho CẢ HAI bên, vô hiệu hoá toàn bộ hệ thống kỷ luật (kể cả Grim Trigger).
+// Unlocking an account is a SANCTION OPERATION, only an Admin may do it.
+// Previously optionalAuth was used: anyone who knew a booking code could call anonymously to lift
+// the ban for BOTH parties, disabling the entire discipline system (including the Grim Trigger).
 router.post('/bookings/:id/reset-ban', requireAdmin, resetBanHandler);
 router.post('/bookings/:id/dispute', requireAuth, disputeBookingHandler);
 
@@ -274,7 +274,7 @@ router.post('/escrows/:id/report-unreachable-phone', requireAuth, requireBooking
 router.post('/escrows/:id/reset-ban', requireAdmin, resetBanHandler);
 router.post('/escrows/:id/dispute', requireAuth, disputeBookingHandler);
 
-// --- Kênh Hỗ Trợ & Kháng Nghị Trực Tiếp Platform CSKH CarMate ---
+// --- Direct Support & Appeals Channel with CarMate Platform Support (CSKH) ---
 router.get('/support/messages', optionalAuth, getSupportMessagesHandler);
 router.post('/support/messages', optionalAuth, sendSupportMessageHandler);
 
@@ -300,23 +300,23 @@ router.post('/cockpit/report-incident', requireAuth, cockpitReportIncidentHandle
 router.get('/cockpit/incidents', requireAuth, cockpitGetIncidentsHandler);
 router.delete('/station/reset', requireAdmin, resetStationDataHandler);
 
-// --- Station Requests Pool (Gom đề xuất mở trạm ảo mới - Hard Whitelist & Zero Roadside Stops) ---
+// --- Station Requests Pool (pooling proposals to open new virtual stations - Hard Whitelist & Zero Roadside Stops) ---
 router.post('/station-requests', optionalAuth, createStationRequestHandler);
 router.get('/station-requests', optionalAuth, listStationRequestsHandler);
 router.patch('/admin/station-requests/:id', requireAdmin, updateStationRequestStatusHandler);
 
-// --- Ma Trận Khe Thời Gian (Time-Slotted Corridor) ---
+// --- Time-Slot Matrix (Time-Slotted Corridor) ---
 router.get('/corridor/time-slots', timeSlotMatrixHandler);
 router.get('/corridor/timeline', corridorTimelineHandler);
 
-// --- Danh Bạ Nhà Xe Tuyến Cố Định (lưới đỡ khi chưa có chuyến CarMate) ---
+// --- Fixed-Route Bus Operator Directory (safety net when there are no CarMate trips yet) ---
 router.get('/transit-directory', getTransitDirectoryHandler);
 
-// --- Chỉ Số Nhiên Liệu Hàng Ngày (Daily Petrolimex Fuel Index) ---
+// --- Daily Fuel Index (Daily Petrolimex Fuel Index) ---
 router.get('/fuel-price', getPublicFuelPriceHandler);
 router.get('/tariff-params', getPublicTariffParamsHandler);
 
-// --- Thông Báo Đẩy & Hộp Thư In-App (Kênh đánh thức khách ngoài giờ mở app) ---
+// --- Push Notifications & In-App Inbox (channel to reach passengers outside the hours they have the app open) ---
 router.get('/notifications/vapid-key', getVapidKeyHandler);
 router.post('/notifications/subscribe', optionalAuth, subscribePushHandler);
 router.post('/notifications/unsubscribe', optionalAuth, unsubscribePushHandler);
@@ -335,7 +335,7 @@ router.patch('/admin/trips/:id/toggle-hide', requireAdmin, toggleHideTripHandler
 router.delete('/admin/trips/:id', requireAdmin, deleteTripAdminHandler);
 router.patch('/admin/trips/:id/convert-car-category', requireAdmin, convertTripCarCategoryHandler);
 router.get('/admin/users', requireAdmin, listAdminUsers);
-// Tạo hồ sơ Chủ xe (và chuyến đầu tiên) thay cho bác tài trong giai đoạn đi mời.
+// Create a driver profile (and the first trip) on the driver's behalf during the invitation phase.
 router.post('/admin/drivers', requireAdmin, (_req, res) => res.status(410).json({ success: false, error: 'Dùng Hồ sơ nhà xe để nhập thông tin có nguồn và nhận quyền quản lý. Luồng tạo tài khoản hộ đã ngừng.' }));
 router.patch('/admin/users/:id', requireAdmin, updateUserStatusHandler);
 router.patch('/admin/users/:id/status', requireAdmin, updateUserStatusHandler);
@@ -349,7 +349,7 @@ router.get('/admin/fuel-price', requireAdmin, getAdminFuelPriceHandler);
 router.put('/admin/fuel-price', requireAdmin, updateAdminFuelPriceHandler);
 router.post('/admin/fuel-price/reset', requireAdmin, resetAdminFuelPriceHandler);
 
-// --- Công thức định giá: chỉ Quản trị viên được nâng tham số, áp dụng ngay toàn sàn ---
+// --- Pricing formula: only the Admin may raise the parameters, applied immediately platform-wide ---
 router.get('/admin/tariff-params', requireAdmin, getAdminTariffParamsHandler);
 router.post('/admin/tariff-params/preview', requireAdmin, previewAdminTariffParamsHandler);
 router.put('/admin/tariff-params', requireAdmin, updateAdminTariffParamsHandler);

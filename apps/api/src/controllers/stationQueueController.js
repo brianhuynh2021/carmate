@@ -106,7 +106,7 @@ export function resetStationDataHandler(req, res) {
 
 /**
  * POST /api/cockpit/register-vehicle
- * Chủ xe khai báo xe (Biển số, Loại xe, Số ghế) -> Lưu PENDING và báo Telegram Solo Founder
+ * Driver registers a vehicle (License plate, Vehicle type, Number of seats) -> Save as PENDING and notify the Solo Founder via Telegram
  */
 export async function cockpitRegisterVehicleHandler(req, res) {
   try {
@@ -150,7 +150,7 @@ export async function cockpitRegisterVehicleHandler(req, res) {
 
     await saveUser(user);
 
-    // Bắn Webhook Telegram báo về điện thoại Solo Founder (0đ)
+    // Fire a Telegram Webhook to the Solo Founder's phone (zero cost)
     try {
       await sendBusinessAlert({
         title: '🚗 [CHỦ XE MỚI ĐĂNG KÝ COCKPIT QL13]',
@@ -183,7 +183,7 @@ export async function cockpitRegisterVehicleHandler(req, res) {
 
 /**
  * GET /api/cockpit/vehicle-status
- * Kiểm tra trạng thái duyệt xe của người dùng
+ * Check the user's vehicle approval status
  */
 export function cockpitVehicleStatusHandler(req, res) {
   try {
@@ -212,7 +212,7 @@ export function cockpitVehicleStatusHandler(req, res) {
 
 /**
  * POST /api/cockpit/approve-vehicle
- * Duyệt 1-chạm kích hoạt xe (Founder / Admin / Dev Demo)
+ * 1-tap approval to activate a vehicle (Founder / Admin / Dev Demo)
  */
 export async function cockpitApproveVehicleHandler(req, res) {
   try {
@@ -222,13 +222,13 @@ export async function cockpitApproveVehicleHandler(req, res) {
     if (!user && phone) user = getUserByPhone(cleanPhoneNumber(phone));
 
     if (!user) {
-      // Fallback: Tìm theo plate trong tất cả users
+      // Fallback: look up by plate across all users
       const all = getAllUsers();
       user = all.find((u) => u.vehicle?.plate === plate || u.licensePlate === plate);
     }
 
     if (!user) {
-      // Nếu là dev demo mà chưa có user, tạo mock user đã duyệt
+      // If it is a dev demo and there is no user yet, create an approved mock user
       user = {
         id: userId || `USR-${Date.now()}`,
         phone: phone || '0912345678',
@@ -271,8 +271,8 @@ export async function cockpitApproveVehicleHandler(req, res) {
 }
 
 /**
- * Báo cáo sự cố chuyến đi (Unhappy Cases) từ buồng lái Cockpit
- * Hỗ trợ 7 kịch bản: GHOST_PASSENGER, LUGGAGE_VIOLATION, MOTION_SICKNESS_SOILING,
+ * Report a trip incident (Unhappy Cases) from the Cockpit driver's seat
+ * Supports 7 scenarios: GHOST_PASSENGER, LUGGAGE_VIOLATION, MOTION_SICKNESS_SOILING,
  * OFF_CORRIDOR_DETOUR, EN_ROUTE_BREAKDOWN, UNPAID_FARE_FRAUD, RIDER_NO_SHOW
  */
 export async function cockpitReportIncidentHandler(req, res) {
@@ -293,10 +293,10 @@ export async function cockpitReportIncidentHandler(req, res) {
       return res.status(400).json({ success: false, error: 'Thiếu mã sự cố (incidentType)' });
     }
 
-    // 1. Đánh giá chế tài theo bất biến toán học
+    // 1. Evaluate the sanction based on the mathematical invariant
     const sanctions = evaluateIncidentSanctions(incidentType, context);
 
-    // 2. Chế tài đối với tài khoản khách hoặc chủ xe
+    // 2. Sanction applied to the passenger's or driver's account
     let bannedUserResult = null;
     let suspendedDriverResult = null;
     if (sanctions.isBanned && riderPhone) {
@@ -334,7 +334,7 @@ export async function cockpitReportIncidentHandler(req, res) {
       }
     }
 
-    // 3. Ghi nhật ký sự cố vào cơ sở dữ liệu
+    // 3. Record the incident in the database log
     const incidentRecord = await reportTripIncidentDb({
       bookingId,
       tripId,
@@ -353,7 +353,7 @@ export async function cockpitReportIncidentHandler(req, res) {
       sanctions
     });
 
-    // 4. Bắn thông báo Telegram nội bộ cho vận hành nếu có sự cố nghiêm trọng
+    // 4. Fire an internal Telegram notification to operations if there is a serious incident
     try {
       if (sanctions.isBanned || sanctions.isSuspended || sanctions.fareExempt || sanctions.action === 'ABSOLUTE_VETO_CANCEL') {
         await sendBusinessAlert(
@@ -383,7 +383,7 @@ export async function cockpitReportIncidentHandler(req, res) {
 }
 
 /**
- * Lấy lịch sử sự cố chuyến đi
+ * Get the trip incident history
  */
 export async function cockpitGetIncidentsHandler(req, res) {
   try {
@@ -397,7 +397,7 @@ export async function cockpitGetIncidentsHandler(req, res) {
 }
 
 /**
- * 11. NGƯỜI ĐI CÙNG BÁO CÁO VI PHẠM VĂN HÓA (HÚT THUỐC, BẮT KHÁCH DÙ, TĂNG GIÁ) -> GRIM TRIGGER 30 NGÀY
+ * 11. PASSENGER REPORTS A CULTURAL VIOLATION (SMOKING, ILLEGAL PICKUP SOLICITING, PRICE GOUGING) -> 30-DAY GRIM TRIGGER
  */
 export async function riderReportCultureViolationHandler(req, res) {
   try {
@@ -419,7 +419,7 @@ export async function riderReportCultureViolationHandler(req, res) {
 
     const sanctions = evaluateIncidentSanctions(incidentType, { violationType, note });
 
-    // Kích hoạt Grim Trigger: đình chỉ Chủ xe 30 ngày
+    // Activate the Grim Trigger: suspend the driver for 30 days
     let suspendedDriver = null;
     if (driverPhone) {
       const cleanDriver = cleanPhoneNumber(driverPhone);
@@ -478,7 +478,7 @@ export async function riderReportCultureViolationHandler(req, res) {
 }
 
 /**
- * 12. NGƯỜI ĐI CÙNG HỦY CHUYẾN MIỄN PHẠT DO CHỦ XE TRỄ QUÁ 5 PHÚT
+ * 12. PASSENGER CANCELS PENALTY-FREE BECAUSE THE DRIVER IS MORE THAN 5 MINUTES LATE
  */
 export async function riderCancelGraceHandler(req, res) {
   const result = getRiderPass(req.body?.intentId);
@@ -488,7 +488,7 @@ export async function riderCancelGraceHandler(req, res) {
 }
 
 /**
- * 13. TRA CỨU ĐIỂM RỦI RO BÙNG CHUYẾN SỚM (EARLY RISK & RADAR SWEEP)
+ * 13. EARLY NO-SHOW RISK SCORE LOOKUP (EARLY RISK & RADAR SWEEP)
  */
 export async function riderGetRadarRiskHandler(req, res) {
   try {

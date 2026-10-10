@@ -1,7 +1,7 @@
 #!/bin/bash
-# Cài lịch sao lưu CarMate tự động (macOS / Linux, dùng crontab).
-#   ./scripts/setup-backup-cron.sh            # 02:00 mỗi ngày
-#   ./scripts/setup-backup-cron.sh --remove   # gỡ lịch
+# Install the automatic CarMate backup schedule (macOS / Linux, using crontab).
+#   ./scripts/setup-backup-cron.sh            # 02:00 every day
+#   ./scripts/setup-backup-cron.sh --remove   # remove the schedule
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,7 +21,7 @@ if [ -z "$NODE_BIN" ]; then
   exit 1
 fi
 
-# Thay thế job cũ nếu đã có, tránh nhân bản khi chạy lại
+# Replace the old job if one exists, to avoid duplicates on re-runs
 ( crontab -l 2>/dev/null | grep -v "$MARKER" || true; echo "$JOB" ) | crontab -
 
 echo "✓ Đã cài lịch sao lưu: 02:00 hằng ngày"

@@ -1,7 +1,7 @@
 /**
  * jsonStore.js — Database Compatibility Layer
- * Giữ nguyên API cho toàn bộ các controller và test suite,
- * chuyển tiếp xử lý sang SQLite WAL Mode (sqliteStore.js) chuẩn Production.
+ * Keeps the API unchanged for all controllers and the test suite,
+ * delegating processing to SQLite WAL Mode (sqliteStore.js), production-grade.
  */
 
 export * from './sqliteStore.js';

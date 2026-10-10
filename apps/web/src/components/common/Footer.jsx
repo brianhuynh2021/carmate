@@ -39,7 +39,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
   return (
     <>
       {/* ── MOBILE NATIVE SUPPORT CARD (md:hidden) ── */}
-      {/* Thiết kế công thái học Stanford & Liquid Apple: Gọn nhẹ, tải nhận thức = 0, danh xưng 'Hỗ trợ bạn' chuẩn mực cộng đồng */}
+      {/* Stanford ergonomics & Liquid Apple design: lightweight, zero cognitive load, the 'Hỗ trợ bạn' ("Support you") label follows community standards */}
       <section className="md:hidden mt-8 px-4 pb-28 pt-2">
         <div className="rounded-3xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] p-5 shadow-xs text-center space-y-4">
           <div className="space-y-1.5">
@@ -57,7 +57,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
             </p>
           </div>
 
-          {/* Nút hỗ trợ trực tiếp 1-chạm (Telegram) */}
+          {/* Direct 1-tap support button (Telegram) */}
           <div className="pt-1">
             <a
               href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
@@ -70,7 +70,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
             </a>
           </div>
 
-          {/* Quy chế, Chính sách, Ngôn ngữ & Bản quyền */}
+          {/* Terms, Policies, Language & Copyright */}
           <div className="type-footnote pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[#86868b] flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <button
@@ -101,7 +101,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
       {/* ── DESKTOP FOOTER (hidden md:block) ── */}
       <footer className="hidden md:block mt-20 border-t border-black/[0.06] bg-[#f5f5f7] pb-8 transition-colors">
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
-        {/* ── TẦNG 1: TRẠNG THÁI & LIÊN HỆ TRỰC TIẾP ── */}
+        {/* ── TIER 1: STATUS & DIRECT CONTACT ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-black/[0.06]">
           {/* Brand + Status */}
           <div className="flex items-center gap-3">
@@ -148,7 +148,7 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
           </div>
         </div>
 
-        {/* ── TẦNG 2: NAVIGATION TINH GỌN (CHUẨN APPLE) ── */}
+        {/* ── TIER 2: STREAMLINED NAVIGATION (APPLE STANDARD) ── */}
         <div className="type-caption flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
           {/* Main Links */}
           <nav className="flex items-center gap-x-6 gap-y-2 flex-wrap">
@@ -164,13 +164,13 @@ export default function Footer({ onNavigate, onOpenTerms, onOpenPolicy }) {
             ))}
           </nav>
 
-          {/* Đổi ngôn ngữ kín đáo ở góc phải */}
+          {/* Discreet language switch in the right corner */}
           <div className="flex items-center gap-2 shrink-0">
             <LanguageToggle size="sm" />
           </div>
         </div>
 
-        {/* ── TẦNG 3: LEGAL & COPYRIGHT ── */}
+        {/* ── TIER 3: LEGAL & COPYRIGHT ── */}
         <div className="type-caption pt-2 border-t border-black/[0.04] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[#86868b]">
           <p className="leading-relaxed">
             {SITE_INFO.legalName[lang]} ·{' '}

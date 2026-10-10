@@ -7,13 +7,13 @@ import api from '../../api/client.js';
 import { useI18n } from '../../i18n/index.jsx';
 
 /**
- * DriverQuickConfirmModal — Magic Link 1-Chạm cho Chủ xe
- * Mở trực tiếp khi Chủ xe bấm link trong tin nhắn Zalo (#confirm-CX-XXXX)
- * Không cần đăng nhập, bảo vệ thông tin PII, xác nhận 1 chạm tức thì.
+ * DriverQuickConfirmModal — 1-Tap Magic Link for the driver
+ * Opens directly when the driver taps the link in the Zalo message (#confirm-CX-XXXX)
+ * No login required, protects PII, instant 1-tap confirmation.
  */
 export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowToast }) {
   const { t } = useI18n();
-  // bookingCode có thể là object { code, token } (Magic Link mới) hoặc string (tương thích cũ)
+  // bookingCode can be an object { code, token } (new Magic Link) or a string (legacy compatibility)
   const codeId = typeof bookingCode === 'object' && bookingCode ? bookingCode.code : bookingCode;
   const accessToken = typeof bookingCode === 'object' && bookingCode ? bookingCode.token || '' : '';
   const [loading, setLoading] = useState(true);
@@ -122,7 +122,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             </p>
           </div>
 
-          {/* Chi tiết tóm tắt */}
+          {/* Summary details */}
           <div className="type-caption p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-1.5 text-slate-700">
             <div className="type-body-strong flex items-center gap-1.5 text-slate-900">
               <MapPin className="w-3.5 h-3.5 text-emerald-600" />
@@ -158,7 +158,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Thẻ thông tin khách đặt */}
+          {/* Booking passenger info card */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             </div>
           </div>
 
-          {/* Lời nhắn kèm theo của chủ xe (Tùy chọn) */}
+          {/* Driver's accompanying message (Optional) */}
           <div className="space-y-1.5">
             <label className="type-label text-slate-800 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -217,7 +217,7 @@ export default function DriverQuickConfirmModal({ bookingCode, onClose, onShowTo
             />
           </div>
 
-          {/* Nút bấm hành động 1-chạm */}
+          {/* 1-tap action buttons */}
           <div className="space-y-2 pt-1">
             <Button
               fullWidth

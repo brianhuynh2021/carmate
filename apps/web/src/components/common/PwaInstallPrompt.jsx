@@ -33,7 +33,7 @@ export default function PwaInstallPrompt() {
       document.referrer.includes('android-app://');
     const dismissed = sessionStorage.getItem('carmate_pwa_dismissed');
 
-    // Không hiện popup làm phiền trên desktop trừ khi browser hỗ trợ install prompt
+    // Do not show a nuisance popup on desktop unless the browser supports the install prompt
     if (platform.isDesktop && !deferredPrompt) {
       setHidden(true);
     } else {

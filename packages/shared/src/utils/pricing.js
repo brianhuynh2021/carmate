@@ -6,8 +6,8 @@ export const formatVND = (num) => {
 };
 
 /**
- * Chuyển đổi an toàn chuỗi giá trị tham chiếu sang số nguyên (VND)
- * VD: '220.000đ - 250.000đ' -> 235.000, '180.000đ' -> 180.000
+ * Safely convert a reference price string into an integer (VND)
+ * e.g.: '220.000đ - 250.000đ' -> 235.000, '180.000đ' -> 180.000
  */
 function parsePriceNumber(val, fallback = 0) {
   if (typeof val === 'number') return Number.isFinite(val) ? val : fallback;
@@ -17,14 +17,14 @@ function parsePriceNumber(val, fallback = 0) {
   const parsed = nums.map((n) => Number(n.replace(/\./g, ''))).filter((n) => Number.isFinite(n) && n > 0);
   if (parsed.length === 0) return fallback;
   if (parsed.length === 1) return parsed[0];
-  // Giá trị trung bình của khoảng giá
+  // Average value of the price range
   return Math.round((parsed[0] + parsed[1]) / 2 / 1000) * 1000;
 }
 
 /**
- * Hệ thống Dải Biên Độ Giá Thông Minh (Price Guardrails)
- * Tính toán 3 mốc đối chiếu: Xe khách phổ thông — Điểm ngọt CarMate — Limousine dịch vụ
- * MIT Invariants: Dựa trên Geodesic Haversine x 1.28 + dữ liệu tuyến đường BOT thực tế
+ * Smart Price Range System (Price Guardrails)
+ * Computes 3 comparison anchors: ordinary coach bus — CarMate sweet spot — service Limousine
+ * MIT Invariants: based on Geodesic Haversine x 1.28 + real BOT route data
  */
 export function getPriceGuardrail(from, to, currentPrice = 0) {
   const cleanFrom = String(from || '').toLowerCase().trim();
@@ -44,7 +44,7 @@ export function getPriceGuardrail(from, to, currentPrice = 0) {
   let maxSafePrice = 280000;
   let quickPresets = [120000, 140000, 160000, 180000];
 
-  // 1. Kiểm tra kho benchmark chính thức theo danh mục tuyến
+  // 1. Check the official benchmark store by route category
   for (const key of Object.keys(ROUTE_BENCHMARKS)) {
     const bm = ROUTE_BENCHMARKS[key];
     const kw = (bm.keyword || '').toLowerCase();
@@ -77,7 +77,7 @@ export function getPriceGuardrail(from, to, currentPrice = 0) {
     }
   }
 
-  // 2. Nếu không thuộc tuyến cố định, tính toán dựa trên tọa độ thực tế Geodesic x 1.28
+  // 2. If not on a fixed route, compute from real Geodesic coordinates x 1.28
   if (!benchmark) {
     const c1 = findLocationCoords(cleanFrom);
     const c2 = findLocationCoords(cleanTo);
@@ -135,7 +135,7 @@ export function getPriceGuardrail(from, to, currentPrice = 0) {
     limoRefText = formatVND(limoPrice);
   }
 
-  // Đánh giá mức giá hiện tại (Evaluation & Cognitive Feedback)
+  // Evaluate the current price (Evaluation & Cognitive Feedback)
   const priceNum = Number(currentPrice) || 0;
   let status = 'sweet_spot';
   let statusTone = 'emerald';
@@ -182,7 +182,7 @@ export function getPriceGuardrail(from, to, currentPrice = 0) {
       comparisonBadge = 'Vượt khung chia sẻ';
     }
   } else {
-    // Mặc định ban đầu
+    // Initial default
     status = 'sweet_spot';
     statusTone = 'emerald';
     statusMessage = `Điểm ngọt đề xuất cho tuyến này là ${formatVND(suggestedPrice)}/ghế.`;

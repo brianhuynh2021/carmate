@@ -1,22 +1,22 @@
 /**
  * seatExchangeOrderBook.js
  *
- * MÔ HÌNH SÀN GIAO DỊCH GHẾ TRỐNG (SEAT EXCHANGE)
- * Sổ Lệnh Hai Chiều (Limit Order Book - LOB) & Khớp Lệnh Liên Tục (Continuous Double Auction - CDA)
- * Kết hợp Cơ Chế Thị Trường Giao Ngay (Continuous Spot Market 24/7) và Cửa Sổ Trượt Dynamic Sliding TTL.
+ * EMPTY-SEAT TRADING EXCHANGE MODEL (SEAT EXCHANGE)
+ * Two-Sided Order Book (Limit Order Book - LOB) & Continuous Order Matching (Continuous Double Auction - CDA)
+ * Combines the Continuous Spot Market mechanism (24/7) with a Dynamic Sliding TTL window.
  *
- * Nền tảng lý thuyết:
- * 1. Không gian khớp lệnh Đại số Khoảng thời gian (Interval Matching):
+ * Theoretical foundation:
+ * 1. Order-matching space of Time-Interval Algebra (Interval Matching):
  *    Station_D = Station_P && [t_D - dt, t_D + dt] ∩ [t_P - dt, t_P + dt] != ∅ && Seats >= 1
- * 2. Khớp liên tục CDA O(1) / O(log N) ngay khi lệnh ném vào sàn.
- * 3. Chuyển dịch Hai Pha:
- *    - Pha 1: Đặt trước 21:30 (Vé an tâm cao cấp) -> Hạn chốt 21:30 tối hôm trước.
- *    - Pha 2: Đặt sau 21:30 hoặc trong ngày (Giao ngay / Last-minute Spot) -> TTL = T_pickup - 45 phút.
- * 4. Phân tầng kỳ vọng (Tiered Expectation) & Kiến trúc Event-Driven "Đặt lệnh xong quên đi".
+ * 2. Continuous CDA matching in O(1) / O(log N) as soon as an order is thrown onto the exchange.
+ * 3. Two-Phase Transition:
+ *    - Phase 1: Book before 21:30 (premium peace-of-mind ticket) -> Confirmation deadline 21:30 the evening before.
+ *    - Phase 2: Book after 21:30 or on the same day (immediate / Last-minute Spot) -> TTL = T_pickup - 45 minutes.
+ * 4. Tiered Expectation & Event-Driven architecture "place the order and forget it".
  */
 
 /**
- * 1. ĐẠI SỐ KHOẢNG THỜI GIAN (INTERVAL ARITHMETIC)
+ * 1. TIME-INTERVAL ALGEBRA (INTERVAL ARITHMETIC)
  */
 
 import { parseTimeToMinutes, formatMinutesToTime } from './asymmetricMoralHazard.js';
@@ -24,7 +24,7 @@ import { parseTimeToMinutes, formatMinutesToTime } from './asymmetricMoralHazard
 const minutesToTimeString = formatMinutesToTime;
 
 /**
- * Tạo khoảng thời gian [t - delta, t + delta]
+ * Build the time interval [t - delta, t + delta]
  */
 export function buildInterval(centerMinutes, deltaMinutes = 10) {
   const c = Number(centerMinutes);
@@ -33,8 +33,8 @@ export function buildInterval(centerMinutes, deltaMinutes = 10) {
 }
 
 /**
- * Kiểm tra giao thoa giữa 2 khoảng thời gian [s1, e1] và [s2, e2]
- * Trả về khoảng giao thoa nếu có, hoặc null nếu rỗng
+ * Check the intersection of 2 time intervals [s1, e1] and [s2, e2]
+ * Returns the intersection interval if any, or null if empty
  */
 function checkIntervalIntersection(intervalA, intervalB) {
   if (!intervalA || !intervalB || intervalA.length < 2 || intervalB.length < 2) {
@@ -44,13 +44,13 @@ function checkIntervalIntersection(intervalA, intervalB) {
   const minEnd = Math.min(intervalA[1], intervalB[1]);
 
   if (maxStart <= minEnd) {
-    return [maxStart, minEnd]; // Giao thoa khác rỗng
+    return [maxStart, minEnd]; // Non-empty intersection
   }
-  return null; // Không giao nhau
+  return null; // No intersection
 }
 
 /**
- * Tính thời điểm đón tối ưu (Rendezvous Time) tại điểm giữa khoảng giao thoa
+ * Compute the optimal pickup time (Rendezvous Time) at the midpoint of the intersection interval
  */
 function calculateRendezvousTime(intervalA, intervalB) {
   const intersection = checkIntervalIntersection(intervalA, intervalB);
@@ -59,32 +59,32 @@ function calculateRendezvousTime(intervalA, intervalB) {
 }
 
 /**
- * 2. PHƯƠNG TRÌNH TTL HỢP NHẤT (UNIFIED TTL EQUATION)
+ * 2. UNIFIED TTL EQUATION
  *
- * Theo các công trình toán học:
+ * Following the mathematical works:
  * - Online Bipartite Matching with Deadlines (Karp, Vazirani & Vazirani, 1990)
  * - Perishable Asset Revenue Management
  * - Optimal Stopping & Switching Costs
  *
- * Mọi lệnh chỉ tuân theo đúng MỘT CÔNG THỨC DUY NHẤT:
+ * Every order obeys exactly ONE SINGLE FORMULA:
  * TTL = min(T_sleep, T_pickup - delta t_switch)
  *
- * Trong đó:
- * - T_pickup: Thời điểm xe đón khách tại trạm.
- * - delta t_switch: Khoảng đệm thời gian an toàn để chuyển sang xe khách/xe đò (45 phút).
- * - T_sleep: Giờ giới nghiêm sinh học (21:30 tối hôm trước — chỉ kích hoạt khi đặt trước 21:30
- *   cho các chuyến sáng sớm hôm sau). Các trường hợp còn lại (trong ngày hoặc đặt sau 21:30): T_sleep = Infinity.
+ * Where:
+ * - T_pickup: The time the vehicle picks up the passenger at the station.
+ * - delta t_switch: Safe time buffer to switch to a coach/intercity bus (45 minutes).
+ * - T_sleep: Biological curfew (21:30 the evening before — only triggered when booking before 21:30
+ *   for early-morning trips the next day). All other cases (same day or booking after 21:30): T_sleep = Infinity.
  */
 export function calculateUnifiedOrderTTL({
   orderCreatedAt = Date.now(),
   targetPickupMinutes = 375, // 06:15
   pickupDate = null, // 'YYYY-MM-DD'
-  switchBufferMinutes = 45, // delta t_switch = 45 phút
+  switchBufferMinutes = 45, // delta t_switch = 45 minutes
   sleepCutoffHourMinute = '21:30' // T_sleep
 } = {}) {
   const createdDate = new Date(orderCreatedAt);
 
-  // Xác định ngày đón khách
+  // Determine the pickup date
   let pickupDateObj;
   if (pickupDate && typeof pickupDate === 'string' && pickupDate.includes('-')) {
     const [y, m, d] = pickupDate.split('-').map((v) => parseInt(v, 10));
@@ -93,7 +93,7 @@ export function calculateUnifiedOrderTTL({
     pickupDateObj = new Date(createdDate);
   }
 
-  // Thời điểm đón khách chính xác T_pickup (timestamp)
+  // Exact pickup time T_pickup (timestamp)
   const pickupTimestamp = new Date(pickupDateObj).setHours(
     Math.floor(targetPickupMinutes / 60),
     targetPickupMinutes % 60,
@@ -101,10 +101,10 @@ export function calculateUnifiedOrderTTL({
     0
   );
 
-  // 1. T_switch = T_pickup - delta t_switch (trừ 45 phút)
+  // 1. T_switch = T_pickup - delta t_switch (minus 45 minutes)
   const switchTimestamp = pickupTimestamp - switchBufferMinutes * 60 * 1000;
 
-  // 2. T_sleep: Giờ giới nghiêm sinh học lúc 21:30 tối đêm hôm trước ngày đón
+  // 2. T_sleep: biological curfew at 21:30 on the night before the pickup day
   const createdDayStart = new Date(createdDate).setHours(0, 0, 0, 0);
   const pickupDayStart = new Date(pickupDateObj).setHours(0, 0, 0, 0);
   const isFutureDay = pickupDayStart > createdDayStart;
@@ -116,7 +116,7 @@ export function calculateUnifiedOrderTTL({
     nightBeforePickup.setHours(sleepCutoffParts[0] || 21, sleepCutoffParts[1] || 30, 0, 0);
     const cutoffMs = nightBeforePickup.getTime();
 
-    // Nếu lúc đặt lệnh chưa qua 21:30 đêm trước
+    // If the order was placed before 21:30 the night before
     if (orderCreatedAt < cutoffMs) {
       sleepTimestamp = cutoffMs;
     }
@@ -144,61 +144,61 @@ export function calculateUnifiedOrderTTL({
 }
 
 /**
- * 3. MÁY CHỦ KHỚP LỆNH LIÊN TỤC (CONTINUOUS DOUBLE AUCTION - CDA MATCHING ENGINE)
+ * 3. CONTINUOUS ORDER-MATCHING ENGINE (CONTINUOUS DOUBLE AUCTION - CDA MATCHING ENGINE)
  *
- * Thuật toán khớp tức thì O(1) qua Bucket trạm đón & O(M) giao thoa khoảng thời gian.
- * @param {object} incomingOrder - Lệnh mới vào sàn (Ask hoặc Bid)
- * @param {Array} orderBook - Danh sách các lệnh đang OPEN trên sàn
- * @returns {object} Kết quả khớp lệnh
+ * Instant O(1) matching via pickup-station Buckets & O(M) time-interval intersection.
+ * @param {object} incomingOrder - New order entering the exchange (Ask or Bid)
+ * @param {Array} orderBook - List of orders currently OPEN on the exchange
+ * @returns {object} Matching result
  */
 export function matchOrderContinuous(incomingOrder, orderBook = []) {
   if (!incomingOrder) return { matched: false, incomingOrder };
 
-  const isBid = incomingOrder.orderType === 'BID'; // Khách mua ghế
-  const oppositeType = isBid ? 'ASK' : 'BID'; // Phía đối ứng (Chủ xe bán ghế hoặc Khách mua)
+  const isBid = incomingOrder.orderType === 'BID'; // Passenger buys a seat
+  const oppositeType = isBid ? 'ASK' : 'BID'; // Counterparty (driver selling a seat or passenger buying)
 
-  // Chuẩn hóa khoảng thời gian của lệnh mới
+  // Normalize the time interval of the new order
   const incomingTargetMins = incomingOrder.targetTimeMinutes ?? parseTimeToMinutes(incomingOrder.targetTime);
   const incomingDelta = Number(incomingOrder.deltaMinutes) || 10;
   const incomingInterval = incomingOrder.timeInterval || buildInterval(incomingTargetMins, incomingDelta);
   const incomingSeats = Number(incomingOrder.seats || incomingOrder.seatsNeeded || 1);
 
-  // Lọc các lệnh đối ứng đang OPEN trên cùng hành lang, chiều đi và trạm đón
+  // Filter OPEN counter-orders on the same corridor, direction and pickup station
   const candidates = orderBook.filter((order) => {
     if (order.status !== 'OPEN' && order.status !== 'PARTIALLY_FILLED') return false;
     if (order.orderType !== oppositeType) return false;
 
-    // 1. Cùng ngày di chuyển (nếu có khai báo ngày)
+    // 1. Same travel date (if a date is declared)
     if (incomingOrder.date && order.date && incomingOrder.date !== order.date) {
       return false;
     }
 
-    // 2. Cùng chiều hành lang di chuyển
+    // 2. Same corridor travel direction
     if (incomingOrder.direction && order.direction && incomingOrder.direction !== order.direction) {
       return false;
     }
 
-    // 3. Khớp trạm đón (Station Matching) hoặc cùng hành lang trục QL13
+    // 3. Station matching (Station Matching) or same corridor along the QL13 axis
     const sameStation =
       (incomingOrder.stationId && order.stationId && incomingOrder.stationId === order.stationId) ||
       (incomingOrder.stationName && order.stationName && incomingOrder.stationName.trim().toLowerCase() === order.stationName.trim().toLowerCase()) ||
-      (!incomingOrder.stationId && !order.stationId); // Fallback nếu chưa gán trạm
+      (!incomingOrder.stationId && !order.stationId); // Fallback if no station is assigned yet
 
     if (!sameStation) return false;
 
-    // 4. Kiểm tra sức chứa ghế
+    // 4. Check seat capacity
     if (isBid) {
-      // Khách mua ghế: Xe chủ xe phải còn đủ số ghế khách cần
+      // Passenger buys a seat: the driver's vehicle must still have enough seats for what the passenger needs
       const available = Number(order.remainingSeats ?? order.availableSeats ?? order.seats ?? 1);
       if (available < incomingSeats) return false;
     } else {
-      // Chủ xe bán ghế: Ghế chủ xe cung cấp phải >= số ghế khách cần
+      // Driver sells a seat: the seats the driver offers must be >= the seats the passenger needs
       const needed = Number(order.seatsNeeded ?? order.seats ?? 1);
       const incomingAvailable = Number(incomingOrder.remainingSeats ?? incomingOrder.availableSeats ?? incomingSeats);
       if (incomingAvailable < needed) return false;
     }
 
-    // 5. Kiểm tra Giao thoa Khoảng thời gian: [t_D ± dt] ∩ [t_P ± dt] ≠ ∅
+    // 5. Check Time Interval Intersection: [t_D ± dt] ∩ [t_P ± dt] ≠ ∅
     const orderTargetMins = order.targetTimeMinutes ?? parseTimeToMinutes(order.targetTime);
     const orderDelta = Number(order.deltaMinutes) || 10;
     const orderInterval = order.timeInterval || buildInterval(orderTargetMins, orderDelta);
@@ -208,7 +208,7 @@ export function matchOrderContinuous(incomingOrder, orderBook = []) {
   });
 
   if (candidates.length === 0) {
-    // Không có đối ứng thỏa mãn -> Lệnh nằm lại sổ lệnh ở trạng thái OPEN
+    // No counterparty satisfies the conditions -> the order stays in the order book with status OPEN
     return {
       matched: false,
       incomingOrder: {
@@ -220,10 +220,10 @@ export function matchOrderContinuous(incomingOrder, orderBook = []) {
     };
   }
 
-  // Sắp xếp các ứng viên đối ứng tối ưu nhất:
-  // 1. Điểm tín nhiệm cao nhất
-  // 2. Khoảng cách thời gian gần nhất (|t_incoming - t_order|)
-  // 3. FIFO (ưu tiên lệnh ném vào sàn trước)
+  // Sort the candidate counterparties by best fit:
+  // 1. Highest trust score
+  // 2. Closest time distance (|t_incoming - t_order|)
+  // 3. FIFO (orders thrown onto the exchange earlier take priority)
   candidates.sort((a, b) => {
     const trustDiff = Number(b.trustScore || 98) - Number(a.trustScore || 98);
     if (trustDiff !== 0) return trustDiff;
@@ -241,11 +241,11 @@ export function matchOrderContinuous(incomingOrder, orderBook = []) {
   const bestTargetMins = bestMatch.targetTimeMinutes ?? parseTimeToMinutes(bestMatch.targetTime);
   const bestInterval = bestMatch.timeInterval || buildInterval(bestTargetMins, Number(bestMatch.deltaMinutes) || 10);
 
-  // Tính toán thời điểm đón thực tế tại điểm giữa giao thoa
+  // Compute the actual pickup time at the midpoint of the intersection
   const rendezvousMinutes = calculateRendezvousTime(incomingInterval, bestInterval);
   const rendezvousTimeStr = minutesToTimeString(rendezvousMinutes);
 
-  // Xác định rõ vai trò Chủ xe (Ask) và Khách (Bid)
+  // Clearly determine the roles of Driver (Ask) and Passenger (Bid)
   const askOrder = isBid ? bestMatch : incomingOrder;
   const bidOrder = isBid ? incomingOrder : bestMatch;
 
@@ -253,10 +253,10 @@ export function matchOrderContinuous(incomingOrder, orderBook = []) {
   const currentAskSeats = Number(askOrder.remainingSeats ?? askOrder.availableSeats ?? askOrder.seats ?? 3);
   const newRemainingSeats = Math.max(0, currentAskSeats - seatsTraded);
 
-  // Sinh mã PIN ngẫu nhiên 4 chữ số
+  // Generate a random 4-digit PIN code
   const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
 
-  // Cập nhật trạng thái lệnh
+  // Update order status
   const updatedBid = {
     ...bidOrder,
     status: 'FILLED',
@@ -278,7 +278,7 @@ export function matchOrderContinuous(incomingOrder, orderBook = []) {
     matchedAt: Date.now()
   };
 
-  // Tạo các bản tin thông báo Event-Driven
+  // Build the Event-Driven notification messages
   const notifications = {
     passenger: buildOrderMatchedNotification({
       role: 'passenger',
@@ -313,7 +313,7 @@ export function matchOrderContinuous(incomingOrder, orderBook = []) {
 }
 
 /**
- * 5. MẪU SỰ KIỆN EVENT-DRIVEN NOTIFICATIONS
+ * 5. EVENT-DRIVEN NOTIFICATION EVENT TEMPLATES
  */
 
 function buildOrderMatchedNotification({

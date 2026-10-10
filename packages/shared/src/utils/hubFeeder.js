@@ -1,16 +1,16 @@
 /**
  * ============================================================================
- * BỘ ĐIỀU PHỐI NỐI CHUYẾN VÙNG THƯA XE (HUB-HOPPING FEEDER ENGINE)
+ * FEEDER COORDINATOR FOR SPARSE-VEHICLE AREAS (HUB-HOPPING FEEDER ENGINE)
  * ============================================================================
  * 
- * Mô phỏng hiện tượng vận trù học: "Hiệu ứng phễu lưu lượng" (Watershed Funnel Effect)
- * - Vùng đầu nguồn (Bù Đốp, Lộc Ninh): Thanh khoản mỏng, xe cá nhân ít.
- * - Vùng trung lưu (Bình Long, Tân Khai, Chơn Thành): Thanh khoản dày đặc.
- * - Tự động cảnh báo và gợi ý hành khách di chuyển chặng ngắn ra trạm tập trung lớn.
+ * Simulates an operations research phenomenon: the "Watershed Funnel Effect"
+ * - Headwater area (Bù Đốp, Lộc Ninh): thin liquidity, few private cars.
+ * - Mid-stream area (Bình Long, Tân Khai, Chơn Thành): dense liquidity.
+ * - Automatically warns and suggests that passengers make a short hop to a major gathering station.
  */
 
 const HUB_LIQUIDITY_MAP = {
-  // ── VÙNG NHÁNH ĐẦU NGUỒN (THANH KHOẢN MỎNG - THIN) ──
+  // ── HEADWATER BRANCH AREA (THIN LIQUIDITY - THIN) ──
   hub_ql13_budop: {
     status: 'THIN',
     badgeLabel: 'VÙNG GOM ĐẶT TRƯỚC',
@@ -21,7 +21,7 @@ const HUB_LIQUIDITY_MAP = {
     densityRatio: 'gấp 4 lần'
   },
 
-  // ── ĐẦU TUYẾN QL13 & TRUNG LƯU (MẬT ĐỘ XE DỒI DÀO - DENSE) ──
+  // ── QL13 ROUTE START & MID-STREAM (ABUNDANT VEHICLE DENSITY - DENSE) ──
   hub_ql13_cho_loc_ninh: {
     status: 'DENSE',
     badgeLabel: 'ĐẦU TUYẾN QL13 - XE CHẠY THƯỜNG XUYÊN',
@@ -49,9 +49,9 @@ const HUB_LIQUIDITY_MAP = {
 };
 
 /**
- * Tra cứu trạng thái thanh khoản của trạm và đề xuất nối chuyến nếu trạm thưa xe
- * @param {string} hubId - Mã định danh trạm (VD: 'hub_ql13_budop', 'hub_ql13_binh_long')
- * @returns {object} Phân loại thanh khoản và gợi ý nối chuyến
+ * Look up a station's liquidity status and suggest a hop connection if the station has few vehicles
+ * @param {string} hubId - Station identifier (e.g. 'hub_ql13_budop', 'hub_ql13_binh_long')
+ * @returns {object} Liquidity classification and feeder suggestion
  */
 export function getHubLiquidityStatus(hubId) {
   const cleanId = String(hubId || '').trim();

@@ -8,9 +8,9 @@ import { buildAssistedTrip, buildClaimReview, buildOperatorPayload, dateTimeInpu
 
 const inputClass = "type-input w-full rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#1a2232] p-3";
 const cardClass = "type-body rounded-2xl border border-slate-300/70 dark:border-white/10 bg-white dark:bg-[#1a2232] p-4 space-y-3";
-// Số trong danh bạ tham khảo được tổng hợp từ trang và nhóm Facebook của nhà xe.
-// Ghi lại đúng nguồn này khi công khai nhanh, để còn căn cứ trả lời nếu nhà xe đề
-// nghị sửa hoặc gỡ.
+// The number in the reference directory is compiled from the operator's Facebook pages and groups.
+// Record exactly this source when publishing quickly, so there is a basis for replying if the operator asks
+// for a correction or removal.
 const QUICK_PUBLISH_SOURCE = 'tổng hợp từ trang/nhóm Facebook của nhà xe';
 const labels = { draft: 'Bản nháp', published: 'Công khai', hidden: 'Đã ẩn', pending: 'Chờ xử lý', approved: 'Đã duyệt', reviewing: 'Đang xử lý', resolved: 'Đã xử lý', rejected: 'Từ chối' };
 const sourceLabels = { website: 'Website', facebook: 'Facebook', owner_contact: 'Liên hệ trực tiếp chủ xe', legacy_directory: 'Danh bạ cũ, cần rà soát', other: 'Nguồn khác' };
@@ -19,8 +19,8 @@ const safeUrl = value => { try { const url = new URL(value); return ['http:', 'h
 function Field({ label, children }) { return <label className="type-label block space-y-1.5"><span className="type-label">{label}</span>{children}</label>; }
 function Channel({ value, onChange }) { return <select className={inputClass} value={value} onChange={event => onChange(event.target.value)}><option value="">Chọn kênh đã kiểm tra</option><option value="phone">Điện thoại</option><option value="zalo">Zalo</option><option value="email">Email</option><option value="in_person">Gặp trực tiếp</option></select>; }
 function EvidenceTime({ value, onChange, label }) { return <div><Field label={`${label} (giờ Việt Nam)`}><input type="datetime-local" step="1" className={inputClass} value={value} onChange={event => onChange(event.target.value)} /></Field><button type="button" onClick={() => onChange(dateTimeInput(new Date().toISOString()))} className="type-button text-[#0071e3] py-2">Ghi thời điểm hiện tại</button></div>; }
-// Hạn kiểm tra lại là ước lượng theo độ chắc của nguồn, không có đáp án cố định.
-// Ba mốc quen dùng đặt sẵn để khỏi tính tay; vẫn sửa được trực tiếp ở ô ngày.
+// The re-check deadline is an estimate based on how reliable the source is; there is no fixed answer.
+// Three commonly used milestones are preset to avoid manual calculation; they can still be edited directly in the date field.
 function FreshUntilField({ value, checkedAt, onChange }) {
   return <div><Field label="Cần kiểm tra lại trước (giờ Việt Nam)"><input type="datetime-local" step="1" className={inputClass} value={value} onChange={event => onChange(event.target.value)} /></Field>
     <div className="flex flex-wrap gap-3 py-2">{[['1 tháng', 30], ['3 tháng', 90], ['6 tháng', 180]].map(([label, days]) =>
@@ -89,8 +89,8 @@ function ReviewEditor({ item, type, profile, suspended, onClose, onEditProfile, 
       onSaved(response.data); onClose();
     } catch (err) { setError(err.message); } finally { lock.current = false; setBusy(false); }
   };
-  // Duyệt một chạm số do người xem đề xuất: máy chủ ghi số mới và kết luận phản ánh
-  // trong cùng một giao dịch, rồi hạ hồ sơ về bản nháp để đối chiếu nguồn lại.
+  // One-tap approval of a number suggested by a viewer: the server records the new number and the feedback conclusion
+  // in the same transaction, then returns the profile to draft so the source can be cross-checked again.
   const applyPhone = async () => {
     if (lock.current || closed) return;
     try {
@@ -176,10 +176,10 @@ export default function OperatorProfilesPanel({ onNotice }) {
     } catch (err) { if (version === generation.current) setError(err.message); } finally { if (version === generation.current) setLoading(false); }
   }, [tab, status, query, page]);
   useEffect(() => { setRows([]); load(); return () => { generation.current += 1; }; }, [load]);
-  // Công khai ngay từ danh sách: giai đoạn đầu danh bạ cần lên sóng nhanh hơn tốc
-  // độ đối chiếu từng nguồn. Hồ sơ vào danh bạ ở mức "chưa đối chiếu" nên giao diện
-  // vẫn nói đúng độ tin cậy, và máy chủ ghi lại số lấy từ đâu để còn căn cứ trả lời
-  // khi nhà xe đề nghị sửa hoặc gỡ.
+  // Publish immediately from the list: in the early stage the directory needs to go live faster than the pace
+  // of cross-checking each source. A profile enters the directory at the "chưa đối chiếu" (not yet cross-checked) level, so the UI
+  // still states the true reliability, and the server records where the number came from so there is a basis for replying
+  // when the operator asks for a correction or removal.
   const quickPublish = async row => {
     if (publishing) return;
     setPublishing(row.id);

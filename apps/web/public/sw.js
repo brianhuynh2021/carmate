@@ -79,10 +79,10 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// THÔNG BÁO ĐẨY (WEB PUSH)
+// PUSH NOTIFICATIONS (WEB PUSH)
 //
-// Đây là kênh duy nhất đánh thức được khách khi app đã đóng — chính là lúc
-// quan trọng nhất của bài toán liên tỉnh (đêm hôm trước và rạng sáng).
+// This is the only channel that can wake a passenger when the app is closed — which is exactly
+// the most critical moment for the intercity problem (the night before and the early morning).
 // ─────────────────────────────────────────────────────────────────────────
 
 self.addEventListener('push', (event) => {
@@ -96,8 +96,8 @@ self.addEventListener('push', (event) => {
   }
 
   const kind = payload.kind || '';
-  // Thông báo cần khách hành động ngay (ra trạm, đổi xe) phải ở lại màn hình
-  // cho tới khi được bấm, không được tự biến mất sau vài giây.
+  // Notifications that need the passenger to act right away (go to the station, swap vehicle) must stay on screen
+  // until clicked, and must not disappear on their own after a few seconds.
   const requireInteraction = ['T30_APPROACH', 'CHECKIN_REMINDER', 'SHADOW_SWAP'].includes(kind);
 
   const actions = [];
@@ -110,8 +110,8 @@ self.addEventListener('push', (event) => {
       body: payload.body || '',
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      // Gộp theo loại + mã yêu cầu: nhắc lần 2 THAY THẾ thông báo cũ thay vì
-      // chồng thêm một dòng nữa vào khay thông báo của khách.
+      // Group by kind + request ID: a second reminder REPLACES the old notification instead of
+      // stacking one more entry in the passenger's notification tray.
       tag: `${kind}:${payload.data?.intentId || payload.notificationId || ''}`,
       renotify: true,
       requireInteraction,
@@ -126,7 +126,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
 
-  // Bấm thẳng "Tôi đang ra trạm" từ khay thông báo, không cần mở app
+  // Tap "Tôi đang ra trạm" ("I'm heading to the station") straight from the notification tray, without opening the app
   if (event.action === 'on-the-way' && data.intentId) {
     event.waitUntil(
       fetch('/api/station/rider/on-the-way', {
@@ -135,8 +135,8 @@ self.addEventListener('notificationclick', (event) => {
         body: JSON.stringify({ intentId: data.intentId })
       })
         .then((res) => {
-          // fetch chỉ reject khi đứt mạng: 404/500 vẫn vào .then. Báo "đã xác nhận"
-          // ở đây là nói dối khách — họ yên tâm đứng đợi rồi mất chỗ sau 10 phút.
+          // fetch only rejects on a network failure: 404/500 still go into .then. Reporting "confirmed"
+          // here would be lying to the passenger — they would wait calmly and then lose their seat after 10 minutes.
           if (!res.ok) throw new Error('server_rejected');
           return self.registration.showNotification('Đã xác nhận', {
             body: 'Chủ xe đã được báo là bạn đang ra trạm.',
@@ -145,7 +145,7 @@ self.addEventListener('notificationclick', (event) => {
           });
         })
         .catch(() => {
-          // Thất bại thật: mở app để khách tự bấm lại, tuyệt đối không báo thành công
+          // Real failure: open the app so the passenger can tap again themselves, never report success
           return self.clients.openWindow('/?intent=' + encodeURIComponent(data.intentId));
         })
     );
@@ -156,7 +156,7 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Đã có tab CarMate đang mở thì dùng lại, đừng mở thêm tab mới
+      // If a CarMate tab is already open, reuse it instead of opening a new one
       for (const client of clientList) {
         if ('focus' in client) {
           client.postMessage({ type: 'NOTIFICATION_CLICK', data });

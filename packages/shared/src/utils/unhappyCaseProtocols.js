@@ -4,23 +4,23 @@
  * Defines standard incident codes, sanction matrices, immutable policies,
  * and emergency lifebuoys for real-world corridor operations along QL13.
  * 
- * Strict Terminology: "Chủ xe" và "Người đi cùng" / "Khách đi cùng".
+ * Strict Terminology: "Chủ xe" (driver) and "Người đi cùng" / "Khách đi cùng" (fellow passenger).
  * MIT Invariants: System states never reach contradictory or illegal states.
  */
 
 export const UNHAPPY_CASE_CODES = Object.freeze({
-  RIDER_NO_SHOW: 'RIDER_NO_SHOW',                   // Case 1: Khách vắng mặt sau 5 phút
-  GHOST_PASSENGER: 'GHOST_PASSENGER',               // Case 2: Khách kẹp thêm người ngoài vé
-  LUGGAGE_VIOLATION: 'LUGGAGE_VIOLATION',           // Case 3: Hành lý quá khổ / có mùi
-  MOTION_SICKNESS_SOILING: 'MOTION_SICKNESS_SOILING', // Case 4: Say xe nôn ói ra nội thất
-  OFF_CORRIDOR_DETOUR: 'OFF_CORRIDOR_DETOUR',       // Case 5: Đòi tạt ngang / vào hẻm
-  EN_ROUTE_BREAKDOWN: 'EN_ROUTE_BREAKDOWN',         // Case 6: Xe gặp sự cố kỹ thuật giữa đường
-  UNPAID_FARE_FRAUD: 'UNPAID_FARE_FRAUD',           // Case 7: Quỵt tiền phụ xăng chia sẻ
-  DRIVER_LATE_CANCELLATION: 'DRIVER_LATE_CANCELLATION', // Case 8: Chủ xe trễ > 5 phút tại trạm
-  CULTURE_VIOLATION_SMOKING: 'CULTURE_VIOLATION_SMOKING', // Case 9: Vi phạm cam kết không khói thuốc
-  CULTURE_VIOLATION_PICKUP_SOLICITING: 'CULTURE_VIOLATION_PICKUP_SOLICITING', // Case 10: Vẫy khách dù dọc đường
-  CULTURE_VIOLATION_PRICE_GOUGING: 'CULTURE_VIOLATION_PRICE_GOUGING', // Case 11: Đòi thêm tiền ngoài thỏa thuận
-  EARLY_PREDICTION_RISK_FAIL: 'EARLY_PREDICTION_RISK_FAIL' // Case 12: Dự báo rủi ro bùng chuyến sớm
+  RIDER_NO_SHOW: 'RIDER_NO_SHOW',                   // Case 1: Passenger absent after 5 minutes
+  GHOST_PASSENGER: 'GHOST_PASSENGER',               // Case 2: Passenger squeezes in extra people not on the ticket
+  LUGGAGE_VIOLATION: 'LUGGAGE_VIOLATION',           // Case 3: Oversized / smelly luggage
+  MOTION_SICKNESS_SOILING: 'MOTION_SICKNESS_SOILING', // Case 4: Motion sickness, vomiting onto the interior
+  OFF_CORRIDOR_DETOUR: 'OFF_CORRIDOR_DETOUR',       // Case 5: Demands a side trip / into an alley
+  EN_ROUTE_BREAKDOWN: 'EN_ROUTE_BREAKDOWN',         // Case 6: Vehicle has a technical failure mid-route
+  UNPAID_FARE_FRAUD: 'UNPAID_FARE_FRAUD',           // Case 7: Skips paying the shared fuel contribution
+  DRIVER_LATE_CANCELLATION: 'DRIVER_LATE_CANCELLATION', // Case 8: Driver more than 5 minutes late at the station
+  CULTURE_VIOLATION_SMOKING: 'CULTURE_VIOLATION_SMOKING', // Case 9: Violates the no-smoking commitment
+  CULTURE_VIOLATION_PICKUP_SOLICITING: 'CULTURE_VIOLATION_PICKUP_SOLICITING', // Case 10: Flags down passengers along the road, unlicensed-coach ("dù") style
+  CULTURE_VIOLATION_PRICE_GOUGING: 'CULTURE_VIOLATION_PRICE_GOUGING', // Case 11: Demands extra money beyond the agreement
+  EARLY_PREDICTION_RISK_FAIL: 'EARLY_PREDICTION_RISK_FAIL' // Case 12: Early prediction of trip no-show risk
 });
 
 export const LUGGAGE_POLICY = Object.freeze({
@@ -47,15 +47,15 @@ export const MOTION_SICKNESS_POLICY = Object.freeze({
 });
 
 /**
- * PHAO CỨU SINH CHUYỂN TIẾP TRÊN TRỤC QL13
+ * TRANSIT LIFEBUOYS ALONG THE QL13 AXIS
  *
- * KHÔNG ghi số điện thoại nào chưa được xác minh. Khách bấm số này đúng vào lúc
- * hoảng nhất — một số sai, số đổi chủ hay số không có thật còn tệ hơn nhiều so
- * với việc không đưa số nào: nó đốt sạch niềm tin đúng khoảnh khắc quyết định.
+ * Do NOT list any phone number that has not been verified. A passenger dials this number at the very moment
+ * they panic the most — a wrong number, a number that changed owners or a number that does not exist is far worse than
+ * giving no number at all: it burns all trust at exactly the decisive moment.
  *
- * Cho tới khi đội vận hành gọi kiểm chứng từng số và điền vào `hotline`, hệ
- * thống chỉ đưa ra chỉ dẫn HÀNH ĐỘNG THẬT mà khách tự làm được ngay tại chỗ:
- * đứng đúng vị trí nào trên QL13, vẫy xe nào, nhận biết ra sao.
+ * Until the operations team has called to verify each number and filled it into `hotline`, the
+ * system only gives REAL ACTIONABLE instructions that the passenger can follow on the spot:
+ * where exactly to stand on QL13, which vehicle to flag down, how to recognize it.
  */
 export const EMERGENCY_TRANSIT_LIFEBUOYS = Object.freeze([
   {
@@ -89,10 +89,10 @@ export const EMERGENCY_TRANSIT_LIFEBUOYS = Object.freeze([
 ]);
 
 /**
- * Đánh giá chế tài và hành động tương ứng với mã sự cố
- * @param {string} incidentType - Mã sự cố thuộc UNHAPPY_CASE_CODES
- * @param {object} context - Dữ liệu ngữ cảnh
- * @returns {object} Kết quả xử lý chế tài
+ * Evaluate the sanction and corresponding action for an incident code
+ * @param {string} incidentType - Incident code from UNHAPPY_CASE_CODES
+ * @param {object} context - Context data
+ * @returns {object} Sanction handling result
  */
 export function evaluateIncidentSanctions(incidentType, _context = {}) {
   switch (incidentType) {
@@ -216,18 +216,18 @@ export function evaluateIncidentSanctions(incidentType, _context = {}) {
 }
 
 /**
- * LỊCH XE KHÁCH TUYẾN CỐ ĐỊNH DỌC HÀNH LANG QL13
+ * FIXED-ROUTE COACH SCHEDULE ALONG THE QL13 CORRIDOR
  *
- * BẤT BIẾN: `hotline` chỉ được điền khi đội vận hành đã GỌI KIỂM CHỨNG số đó.
- * Trước đây danh sách này chứa những số tổng đài không xác minh; khách bấm gọi
- * đúng lúc hoảng nhất mà gặp số sai thì mất niềm tin vĩnh viễn — tệ hơn hẳn so
- * với việc thành thật nói "chưa có số".
+ * INVARIANT: `hotline` may only be filled in once the operations team has CALLED TO VERIFY that number.
+ * Previously this list contained unverified switchboard numbers; a passenger dialing at exactly the
+ * moment of panic and reaching a wrong number loses trust permanently — far worse
+ * than honestly saying "no number yet".
  *
- * Giá vé cũng vậy: `ticketPrice = null` nghĩa là chưa xác minh, giao diện phải
- * hiển thị "hỏi giá tại xe" chứ không được bịa ra một con số cụ thể.
+ * The same goes for fares: `ticketPrice = null` means unverified, and the UI must
+ * display "hỏi giá tại xe" ("ask for the price on the vehicle") rather than make up a specific figure.
  *
- * Giá trị thật của danh sách này nằm ở `guidance`: chỉ dẫn khách đứng ở ĐÂU và
- * làm GÌ để bắt được xe — điều khách tự thực hiện được ngay, không cần gọi ai.
+ * The real value of this list lies in `guidance`: instructions on WHERE the passenger should stand and
+ * WHAT to do to catch the vehicle — something the passenger can do on their own right away, without calling anyone.
  */
 export const FIXED_CORRIDOR_COACH_SCHEDULES = Object.freeze([
   {
@@ -289,23 +289,23 @@ export const FIXED_CORRIDOR_COACH_SCHEDULES = Object.freeze([
 ]);
 
 /**
- * Chỉ những phương án đã xác minh mới được phép hiển thị số điện thoại.
- * Dùng hàm này ở mọi nơi render danh sách, đừng đọc thẳng `hotline`.
+ * Only options that have been verified may display a phone number.
+ * Use this function everywhere a list is rendered; do not read `hotline` directly.
  */
 export function hasVerifiedHotline(option) {
   return Boolean(option?.verified && option?.hotline);
 }
 
 /**
- * Tính toán xác suất bùng chuyến / trễ hẹn sớm của Chủ xe:
+ * Compute the early probability of the Driver no-showing / being late:
  * P_fail = w1 * (1 - R_driver) + w2 * S_heartbeat + w3 * D_geo
  * 
  * @param {object} params
- * @param {number} params.trustScore - Điểm uy tín [0..100] (mặc định 100)
- * @param {number} params.lastHeartbeatMinutesAgo - Số phút từ lần cuối app chủ xe gửi ping (mặc định 0)
- * @param {boolean} params.isVehicleStationaryAtT45 - Xe vẫn đứng yên tại nhà lúc T - 45 phút
- * @param {number} params.speedKmh - Tốc độ hiện tại của xe (km/h)
- * @param {number} params.distanceToStationKm - Khoảng cách đến trạm đón (km)
+ * @param {number} params.trustScore - Trust score [0..100] (default 100)
+ * @param {number} params.lastHeartbeatMinutesAgo - Minutes since the driver's app last sent a ping (default 0)
+ * @param {boolean} params.isVehicleStationaryAtT45 - Vehicle is still stationary at home at T - 45 minutes
+ * @param {number} params.speedKmh - The vehicle's current speed (km/h)
+ * @param {number} params.distanceToStationKm - Distance to the pickup station (km)
  * @returns {object} { riskProbability: number, isHighRisk: boolean, riskLevel: 'LOW'|'MEDIUM'|'HIGH'|'CRITICAL', details: object }
  */
 export function calculateEarlyFailureRisk({
@@ -319,15 +319,15 @@ export function calculateEarlyFailureRisk({
   const w2 = 0.35;
   const w3 = 0.35;
 
-  // 1. Chỉ số rủi ro uy tín R_driver (điểm càng thấp rủi ro càng cao)
+  // 1. Reputation risk index R_driver (the lower the score, the higher the risk)
   const normalizedTrust = Math.max(0, Math.min(100, Number(trustScore) || 100)) / 100;
   const riskReputation = 1 - normalizedTrust;
 
-  // 2. Chỉ số rủi ro mất liên lạc S_heartbeat (offline càng lâu rủi ro càng cao)
-  // Không ping trong > 60 phút: rủi ro = 1.0; 30 phút: 0.5
+  // 2. Loss-of-contact risk index S_heartbeat (the longer offline, the higher the risk)
+  // No ping for > 60 minutes: risk = 1.0; 30 minutes: 0.5
   const riskHeartbeat = Math.min(1.0, Math.max(0, Number(lastHeartbeatMinutesAgo) / 60));
 
-  // 3. Chỉ số rủi ro địa lý D_geo (đứng yên xa trạm ở mốc T - 45m)
+  // 3. Geographic risk index D_geo (stationary far from the station at the T - 45m mark)
   let riskGeo = 0.0;
   if (isVehicleStationaryAtT45) {
     riskGeo = 1.0;
@@ -360,14 +360,14 @@ export function calculateEarlyFailureRisk({
 }
 
 export const RADAR_CHECKPOINTS = Object.freeze({
-  T_MINUS_8H: 'T_MINUS_8H',     // 21:15 tối hôm trước
-  T_MINUS_6H: 'T_MINUS_6H',     // 23:15 đêm hôm trước
-  T_MINUS_1_5H: 'T_MINUS_1_5H', // 03:45 rạng sáng (Wake-up signal)
-  T_MINUS_45M: 'T_MINUS_45M'    // 04:30 sáng (Hard stop cutoff)
+  T_MINUS_8H: 'T_MINUS_8H',     // 21:15 the evening before
+  T_MINUS_6H: 'T_MINUS_6H',     // 23:15 the night before
+  T_MINUS_1_5H: 'T_MINUS_1_5H', // 03:45 early morning (Wake-up signal)
+  T_MINUS_45M: 'T_MINUS_45M'    // 04:30 morning (Hard stop cutoff)
 });
 
 /**
- * Đánh giá trạng thái tại 4 chốt quét Radar
+ * Evaluate the status at the 4 Radar sweep checkpoints
  */
 export function evaluateRadarSweepCheckpoint({
   checkpoint,

@@ -5,7 +5,7 @@ import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 import { I18nProvider } from './i18n/index.jsx';
 import './index.css';
 
-// Chuẩn hóa tên miền Canonical: Chuyển hướng www.carmate.vn -> carmate.vn để khớp 100% với BotFather Telegram OAuth
+// Normalize the canonical domain: redirect www.carmate.vn -> carmate.vn to match the BotFather Telegram OAuth setup 100%
 if (typeof window !== 'undefined' && window.location.hostname.startsWith('www.')) {
   window.location.replace(window.location.href.replace('://www.', '://'));
 }
@@ -14,9 +14,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
       <I18nProvider>
-        {/* Suspense ở gốc đỡ cho mọi component tải trễ (React.lazy) bên trong App:
-            buồng lái, trạm đón, hộp thư, hồ sơ, đặt chỗ và trang quản trị. Các màn
-            hình này nặng và chỉ mở khi cần, nên tách khỏi gói tải ban đầu. */}
+        {/* A root-level Suspense backs every lazily loaded component (React.lazy) inside App:
+            cockpit, pickup station, inbox, profile, booking and admin pages. These
+            screens are heavy and only opened on demand, so they are split out of the initial bundle. */}
         <React.Suspense
           fallback={
             <div className="min-h-screen flex items-center justify-center">

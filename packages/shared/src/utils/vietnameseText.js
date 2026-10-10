@@ -1,20 +1,20 @@
 /**
- * Xử lý văn bản tiếng Việt bản địa (Zero-LLM, chạy <1ms trên client).
+ * Native Vietnamese text processing (Zero-LLM, runs in <1ms on the client).
  *
- * Nền tảng cho toàn bộ tầng trí tuệ bản địa của CarMate: người dùng thực tế gõ
- * "bù đóp", "budop", "bu dop", "Bù Đốp" hay "nhiu tien z a" đều phải hiểu như nhau,
- * không cần round-trip máy chủ và không cần LLM.
+ * Foundation of CarMate's entire native-intelligence layer: whether a real user types
+ * "bù đóp", "budop", "bu dop", "Bù Đốp" or "nhiu tien z a", all must be understood the same way,
+ * with no server round-trip and no LLM.
  *
- * Thuật toán:
- * - Chuẩn hoá Unicode NFD + khử dấu thanh (diacritics folding).
- * - Khoảng cách Damerau-Levenshtein (có hoán vị kề) — bắt lỗi gõ nhanh "Đôngf Xoài".
- * - Độ tương đồng Dice trên bigram — bắt sai lệch cấu trúc từ dài.
- * - Chấm điểm lai: ưu tiên khớp tiền tố và khớp trọn từ, vì địa danh Việt Nam
- *   thường được gõ tắt phần đầu ("Bình Phước" -> "BP", "Sài Gòn" -> "SG").
+ * Algorithm:
+ * - Unicode NFD normalization + tone-mark removal (diacritics folding).
+ * - Damerau-Levenshtein distance (with adjacent transposition) — catches fast-typing errors like "Đôngf Xoài".
+ * - Dice similarity on bigrams — catches structural deviations in long words.
+ * - Hybrid scoring: prefers prefix matches and whole-word matches, because Vietnamese place names
+ *   are often typed abbreviated from the start ("Bình Phước" -> "BP", "Sài Gòn" -> "SG").
  */
 
-// ── BẢNG VIẾT TẮT & TIẾNG LÓNG BẢN ĐỊA ──
-// Người dùng vùng QL13/QL14 gõ tắt rất nhiều. Đây là tri thức miền, không phải dữ liệu học máy.
+// ── TABLE OF LOCAL ABBREVIATIONS & SLANG ──
+// Users in the QL13/QL14 region abbreviate a lot. This is domain knowledge, not machine-learning data.
 const COLLOQUIAL_MAP = Object.freeze({
   sg: 'sai gon',
   tphcm: 'sai gon',
@@ -42,7 +42,7 @@ const COLLOQUIAL_MAP = Object.freeze({
   ndl: 'nga tu binh phuoc'
 });
 
-// Từ đệm tiếng Việt không mang thông tin — loại bỏ trước khi so khớp.
+// Vietnamese filler words that carry no information — removed before matching.
 const STOP_WORDS = new Set([
   'a',
   'ai',
@@ -95,21 +95,21 @@ const STOP_WORDS = new Set([
 ]);
 
 /**
- * Khử dấu tiếng Việt và chuẩn hoá về chữ thường không dấu.
+ * Strip Vietnamese diacritics and normalize to lowercase without accents.
  * "Bù Đốp" -> "bu dop" | "Đồng Xoài" -> "dong xoai"
  */
 export function foldDiacritics(str) {
   if (!str || typeof str !== 'string') return '';
   return str
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // bỏ dấu thanh + dấu mũ
+    .replace(/[̀-ͯ]/g, '') // remove tone marks + diacritic hats
     .replace(/đ/gi, 'd')
     .toLowerCase()
     .trim();
 }
 
 /**
- * Chuẩn hoá chuỗi để so khớp: khử dấu, gộp khoảng trắng, bỏ ký tự đặc biệt.
+ * Normalize a string for matching: strip diacritics, collapse whitespace, remove special characters.
  */
 export function normalizeForMatch(str) {
   if (!str || typeof str !== 'string') return '';
@@ -120,12 +120,12 @@ export function normalizeForMatch(str) {
 }
 
 /**
- * Mở rộng viết tắt/tiếng lóng bản địa về dạng đầy đủ.
+ * Expand local abbreviations/slang to their full form.
  * "đi sg" -> "di sai gon" | "bp" -> "binh phuoc"
  */
-// Bộ nhớ đệm chuẩn hoá: tên hub và tỉnh được chuẩn hoá lặp đi lặp lại hàng nghìn
-// lần trong một lượt dò địa danh. Giới hạn kích thước để không rò rỉ bộ nhớ khi
-// người dùng gõ vô số câu khác nhau.
+// Normalization cache: hub and province names are normalized over and over thousands of
+// times in a single place-name detection pass. Size is capped to avoid a memory leak when
+// users type countless different sentences.
 const EXPAND_CACHE = new Map();
 const EXPAND_CACHE_LIMIT = 2000;
 
@@ -148,7 +148,7 @@ function computeExpandColloquial(str) {
   const normalized = normalizeForMatch(str);
   if (!normalized) return '';
 
-  // Khớp cụm nhiều từ trước (dài ưu tiên), tránh "tp hcm" bị cắt thành "tp" + "hcm".
+  // Match multi-word phrases first (longest first), to avoid "tp hcm" being split into "tp" + "hcm".
   let result = normalized;
   const multiWordKeys = Object.keys(COLLOQUIAL_MAP)
     .filter((k) => k.includes(' '))
@@ -167,7 +167,7 @@ function computeExpandColloquial(str) {
 }
 
 /**
- * Tách token có nghĩa: đã khử dấu, mở rộng viết tắt, loại từ đệm.
+ * Split into meaningful tokens: diacritics folded, abbreviations expanded, filler words removed.
  */
 export function tokenize(str, { keepStopWords = false } = {}) {
   const expanded = expandColloquial(str);
@@ -175,14 +175,14 @@ export function tokenize(str, { keepStopWords = false } = {}) {
   const tokens = expanded.split(' ').filter(Boolean);
   if (keepStopWords) return tokens;
   const meaningful = tokens.filter((t) => !STOP_WORDS.has(t));
-  // Nếu lọc sạch hết (câu toàn từ đệm) thì trả lại nguyên bản để không mất tín hiệu.
+  // If filtering removes everything (a sentence made entirely of filler words), return the original so no signal is lost.
   return meaningful.length > 0 ? meaningful : tokens;
 }
 
 /**
- * Khoảng cách Damerau-Levenshtein (có tính hoán vị hai ký tự kề nhau).
- * Gõ nhanh trên điện thoại rất hay đảo ký tự: "Đôngf" / "Xoaì" / "hnag xanh".
- * Dùng quy hoạch động 3 hàng cuộn -> bộ nhớ O(min(m,n)), tốc độ <1ms cho chuỗi địa danh.
+ * Damerau-Levenshtein distance (counting transposition of two adjacent characters).
+ * Fast typing on a phone often swaps characters: "Đôngf" / "Xoaì" / "hnag xanh".
+ * Uses dynamic programming with 3 rolling rows -> O(min(m,n)) memory, <1ms for place-name strings.
  */
 export function damerauLevenshtein(a, b, maxDistance = Infinity) {
   const s = String(a || '');
@@ -191,7 +191,7 @@ export function damerauLevenshtein(a, b, maxDistance = Infinity) {
   if (!s.length) return t.length;
   if (!t.length) return s.length;
 
-  // Cắt sớm khi chênh lệch độ dài đã vượt ngưỡng — tiết kiệm phần lớn phép tính.
+  // Cut early when the length difference already exceeds the threshold — saves most of the computation.
   if (Math.abs(s.length - t.length) > maxDistance) return maxDistance + 1;
 
   let prevPrev = null;
@@ -207,12 +207,12 @@ export function damerauLevenshtein(a, b, maxDistance = Infinity) {
     for (let j = 1; j <= t.length; j++) {
       const cost = s[i - 1] === t[j - 1] ? 0 : 1;
       let value = Math.min(
-        curr[j - 1] + 1, // chèn
-        prev[j] + 1, // xoá
-        prev[j - 1] + cost // thay thế
+        curr[j - 1] + 1, // insert
+        prev[j] + 1, // delete
+        prev[j - 1] + cost // substitute
       );
 
-      // Hoán vị hai ký tự kề (transposition)
+      // Transposition of two adjacent characters
       if (i > 1 && j > 1 && s[i - 1] === t[j - 2] && s[i - 2] === t[j - 1]) {
         value = Math.min(value, prevPrev[j - 2] + 1);
       }
@@ -232,9 +232,9 @@ export function damerauLevenshtein(a, b, maxDistance = Infinity) {
 }
 
 /**
- * Độ tương đồng Sørensen-Dice trên bigram ký tự (0..1).
- * Bổ trợ cho Levenshtein: bắt tốt trường hợp đảo trật tự từ
- * ("xoai dong" vs "dong xoai") mà khoảng cách sửa lỗi đánh giá thấp.
+ * Sørensen-Dice similarity on character bigrams (0..1).
+ * Complements Levenshtein: handles well the case of reordered words
+ * ("xoai dong" vs "dong xoai") that the edit distance underrates.
  */
 export function diceCoefficient(a, b) {
   const s = normalizeForMatch(a).replace(/\s/g, '');
@@ -263,8 +263,8 @@ export function diceCoefficient(a, b) {
 }
 
 /**
- * Kiểm tra nhanh hai chuỗi có đủ ký tự chung để đáng chấm điểm hay không.
- * Dùng bitmask 26 chữ cái — một phép AND thay cho toàn bộ bảng quy hoạch động.
+ * Quick check of whether two strings share enough characters to be worth scoring.
+ * Uses a 26-letter bitmask — a single AND instead of the whole dynamic-programming table.
  */
 function shareEnoughCharacters(a, b) {
   const maskOf = (str) => {
@@ -281,7 +281,7 @@ function shareEnoughCharacters(a, b) {
   const shared = maskA & maskB;
   if (shared === 0) return false;
 
-  // Đếm số chữ cái khác nhau dùng chung (popcount).
+  // Count the number of distinct letters in common (popcount).
   let common = 0;
   let bits = shared;
   while (bits) {
@@ -296,13 +296,13 @@ function shareEnoughCharacters(a, b) {
     distinctA++;
   }
 
-  // Chuỗi ngắn phải dùng chung phần lớn bộ chữ cái của nó với chuỗi kia.
+  // The shorter string must share most of its own letter set with the other string.
   return common >= Math.min(3, distinctA) && common / Math.max(1, distinctA) >= 0.5;
 }
 
 /**
- * Nhận diện đúng một phép đảo hai ký tự kề nhau. Đây là lỗi gõ điện thoại
- * phổ biến, nhưng hẹp hơn nhiều so với việc hạ ngưỡng fuzzy cho mọi chuỗi.
+ * Detects exactly one swap of two adjacent characters. This is a common phone typing
+ * error, but much narrower than lowering the fuzzy threshold for every string.
  */
 function isSingleAdjacentTransposition(a, b) {
   if (a.length !== b.length || a.length < 2) return false;
@@ -319,18 +319,18 @@ function isSingleAdjacentTransposition(a, b) {
 }
 
 /**
- * Điểm tương đồng lai giữa hai chuỗi (0..1), tối ưu riêng cho địa danh Việt Nam.
+ * Hybrid similarity score between two strings (0..1), tuned specifically for Vietnamese place names.
  *
- * Trọng số theo thứ tự ưu tiên thực tế:
- *  1.00 — trùng khít sau chuẩn hoá
- *  0.95 — chứa trọn cụm (khớp substring theo ranh giới từ)
- *  0.90 — khớp tiền tố các từ ("bd" ~ "bu dop", "dx" ~ "dong xoai")
- *  còn lại — kết hợp Levenshtein chuẩn hoá và Dice
+ * Weights in order of actual priority:
+ *  1.00 — exact match after normalization
+ *  0.95 — contains the whole phrase (substring match on word boundaries)
+ *  0.90 — word-prefix match ("bd" ~ "bu dop", "dx" ~ "dong xoai")
+ *  the rest — combination of normalized Levenshtein and Dice
  */
 export function similarity(a, b, { preNormalized = false } = {}) {
-  // `preNormalized` dành cho vòng lặp nóng (dò địa danh): người gọi đã chuẩn hoá
-  // sẵn cả hai vế, nên bỏ qua bước mở rộng viết tắt vốn chiếm phần lớn thời gian
-  // khi hàm này được gọi hàng trăm lần cho một câu.
+  // `preNormalized` is for hot loops (place-name detection): the caller has already normalized
+  // both sides, so it skips the abbreviation-expansion step, which takes most of the time
+  // when this function is called hundreds of times for one sentence.
   const s = preNormalized ? a : expandColloquial(a);
   const t = preNormalized ? b : expandColloquial(b);
   if (!s || !t) return 0;
@@ -341,47 +341,47 @@ export function similarity(a, b, { preNormalized = false } = {}) {
   const shorterWords = shorter.split(' ').filter(Boolean);
   const longerWords = longer.split(' ').filter(Boolean);
 
-  // Chặn khớp rác: một mẩu rất ngắn nằm lọt trong một tên rất dài KHÔNG phải là khớp.
-  // "z" nằm trong "vinh long z..."; "a" nằm trong "an loc" — phải loại bỏ triệt để,
-  // nếu không bộ trích xuất sẽ bịa ra địa danh không hề có trong câu người dùng.
+  // Block junk matches: a very short fragment sitting inside a very long name is NOT a match.
+  // "z" inside "vinh long z..."; "a" inside "an loc" — must be rejected thoroughly,
+  // otherwise the extractor will invent place names that are not in the user's sentence at all.
   const coverage = shorter.length / longer.length;
   const tooShortToTrust = shorter.length < 4 && shorterWords.length === 1;
   const tooDilute = coverage < 0.34;
 
-  // Khớp trọn cụm theo ranh giới từ.
+  // Whole-phrase match on word boundaries.
   //
-  // Ràng buộc then chốt: khớp bộ phận phải phủ được PHẦN LỚN SỐ TỪ của tên đầy đủ.
-  // Một từ đơn lọt trong tên hai từ ("tiền" trong "Tiền Giang", "định" trong "Nam Định")
-  // là bằng chứng quá yếu — chính là chỗ engine từng bịa ra địa danh từ từ đệm.
+  // Key constraint: a partial match must cover MOST OF THE WORDS of the full name.
+  // A single word inside a two-word name ("tiền" in "Tiền Giang", "định" in "Nam Định")
+  // is far too weak as evidence — which is exactly where the engine once invented place names from filler words.
   const boundary = (hay, needle) => new RegExp(`(?:^|\\s)${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`).test(hay);
   const wordCoverage = shorterWords.length / longerWords.length;
   const enoughWords = longerWords.length === 1 || wordCoverage >= 0.5;
   if (!tooShortToTrust && !tooDilute && enoughWords && (boundary(s, t) || boundary(t, s))) {
-    // Phủ trọn vẹn thì khớp tuyệt đối hơn là phủ một phần.
+    // Full coverage is a more absolute match than partial coverage.
     return wordCoverage === 1 ? 0.95 : 0.88;
   }
 
-  // Khớp tiền tố: "dong x" ~ "dong xoai" — vẫn phải chiếm tỷ trọng đáng kể.
+  // Prefix match: "dong x" ~ "dong xoai" — must still account for a significant share.
   if (shorter.length >= 4 && !tooDilute && longer.startsWith(shorter)) return 0.92;
 
-  // Khớp chữ cái đầu các từ: "dx" ~ "dong xoai".
-  // Chỉ chấp nhận khi số chữ cái khớp đúng số từ của tên đầy đủ (>=2 từ),
-  // tránh "a" hay "z" khớp bừa với mọi tên.
+  // Match on the initial letters of the words: "dx" ~ "dong xoai".
+  // Only accepted when the number of letters equals the number of words in the full name (>=2 words),
+  // to avoid "a" or "z" matching every name at random.
   if (shorterWords.length === 1 && shorter.length >= 2 && longerWords.length >= 2) {
     const initials = longerWords.map((w) => w[0]).join('');
     if (initials === shorter) return 0.9;
   }
 
-  // Mẩu quá ngắn / quá loãng so với ứng viên: coi như không khớp.
+  // Fragment too short / too diluted relative to the candidate: treat as no match.
   if (tooShortToTrust || tooDilute) return 0;
 
-  // Cửa ải rẻ trước phép đắt: nếu hai chuỗi không dùng chung đủ ký tự thì
-  // Levenshtein/Dice chắc chắn cho điểm thấp. Kiểm tra này O(n) và loại bỏ
-  // phần lớn cặp không liên quan trước khi chạy quy hoạch động O(n·m).
+  // Cheap gate before the expensive operation: if the two strings do not share enough characters then
+  // Levenshtein/Dice will certainly give a low score. This check is O(n) and eliminates
+  // most unrelated pairs before running the O(n·m) dynamic programming.
   if (!shareEnoughCharacters(s, t)) return 0;
 
-  // Một phép đảo hai ký tự kề trong toàn bộ địa danh vẫn là bằng chứng mạnh.
-  // Chỉ chạy sau cửa ải ký tự rẻ để không làm chậm vòng lặp dò hàng trăm hub.
+  // A single swap of two adjacent characters within a whole place name is still strong evidence.
+  // Only runs after the cheap character gate so as not to slow the loop that scans hundreds of hubs.
   if (isSingleAdjacentTransposition(s, t)) return 0.9;
 
   const maxLen = Math.max(s.length, t.length);
@@ -389,20 +389,20 @@ export function similarity(a, b, { preNormalized = false } = {}) {
   const levScore = dist > maxLen ? 0 : 1 - dist / maxLen;
   const diceScore = diceCoefficient(s, t);
 
-  // Dice ổn định hơn với chuỗi dài, Levenshtein nhạy hơn với lỗi gõ ngắn.
+  // Dice is more stable for long strings, Levenshtein is more sensitive to short typing errors.
   return Math.max(levScore * 0.55 + diceScore * 0.45, diceScore * 0.85);
 }
 
 /**
- * Tìm ứng viên khớp nhất trong danh sách.
+ * Find the best-matching candidates in a list.
  *
- * @param {string} query Chuỗi người dùng nhập
- * @param {Array} candidates Danh sách ứng viên
+ * @param {string} query The string the user entered
+ * @param {Array} candidates List of candidates
  * @param {object} options
- * @param {(c:any)=>string|string[]} options.getText Trích chuỗi (hoặc nhiều bí danh) từ ứng viên
- * @param {number} options.threshold Ngưỡng chấp nhận (mặc định 0.62)
- * @param {number} options.limit Số kết quả trả về
- * @returns {Array<{item:any, score:number, matchedText:string}>} Sắp giảm dần theo điểm
+ * @param {(c:any)=>string|string[]} options.getText Extracts a string (or several aliases) from a candidate
+ * @param {number} options.threshold Acceptance threshold (default 0.62)
+ * @param {number} options.limit Number of results to return
+ * @returns {Array<{item:any, score:number, matchedText:string}>} Sorted by descending score
  */
 export function fuzzyFind(query, candidates = [], options = {}) {
   const { getText = (c) => String(c), threshold = 0.62, limit = 5 } = options;
@@ -432,15 +432,15 @@ export function fuzzyFind(query, candidates = [], options = {}) {
 }
 
 /**
- * Quét toàn câu để tìm cụm con khớp nhất với một ứng viên.
- * Dùng khi địa danh nằm lẫn trong câu dài: "mai mình đi từ bù đốp xuống hàng xanh nhé".
+ * Scan the whole sentence to find the sub-phrase that best matches a candidate.
+ * Used when a place name is embedded in a long sentence: "mai mình đi từ bù đốp xuống hàng xanh nhé".
  *
- * Trượt cửa sổ 1..4 từ (độ dài phổ biến của địa danh Việt Nam).
+ * Sliding window of 1..4 words (the usual length of Vietnamese place names).
  */
 export function findBestSpan(sentence, candidateText, { threshold = 0.72, tokens: presetTokens, anchorIndices } = {}) {
-  // `tokens` cho phép người gọi băm câu MỘT LẦN rồi dùng lại cho hàng chục ứng viên.
-  // Không có nó, việc dò địa danh phải tokenize lại cùng một câu ~50 lần và
-  // chi phí đội lên gần 10ms/câu — quá ngưỡng <1ms của trí tuệ bản địa.
+  // `tokens` lets the caller tokenize the sentence ONCE and reuse it for dozens of candidates.
+  // Without it, place-name detection would have to re-tokenize the same sentence ~50 times and
+  // the cost would climb to nearly 10ms/sentence — over the <1ms threshold of native intelligence.
   const tokens = presetTokens || tokenize(sentence, { keepStopWords: true });
   if (tokens.length === 0) return null;
 
@@ -450,9 +450,9 @@ export function findBestSpan(sentence, candidateText, { threshold = 0.72, tokens
   let best = null;
   const maxWindow = Math.min(4, tokens.length);
   const candLength = candidate.length;
-  // Khi tầng gọi đã biết các vị trí chia sẻ token với ứng viên, mọi cửa sổ
-  // không chứa một trong các vị trí đó chắc chắn không thể là lỗi gõ hợp lệ.
-  // Giảm mạnh số lần chạy similarity (Damerau-Levenshtein + Dice) trong câu dài.
+  // When the calling layer already knows the positions that share tokens with the candidate, any window
+  // that contains none of those positions certainly cannot be a valid typo.
+  // Greatly reduces the number of similarity runs (Damerau-Levenshtein + Dice) in long sentences.
   const anchorPrefix = Array.isArray(anchorIndices) && anchorIndices.length > 0 ? new Int32Array(tokens.length + 1) : null;
   if (anchorPrefix) {
     for (const index of anchorIndices) {
@@ -461,23 +461,23 @@ export function findBestSpan(sentence, candidateText, { threshold = 0.72, tokens
     for (let index = 1; index < anchorPrefix.length; index++) anchorPrefix[index] += anchorPrefix[index - 1];
   }
 
-  // Lọc rẻ trước khi chấm điểm đắt: điểm tương đồng bị chặn trên bởi tỷ lệ độ dài
-  // hai chuỗi, nên cụm quá ngắn hoặc quá dài so với ứng viên không thể vượt ngưỡng.
-  // Bỏ qua chúng giúp tránh hàng nghìn lần chuẩn hoá + Levenshtein vô ích.
+  // Cheap filtering before expensive scoring: the similarity score is upper-bounded by the length ratio
+  // of the two strings, so a fragment that is too short or too long relative to the candidate cannot exceed the threshold.
+  // Skipping them avoids thousands of useless normalizations + Levenshtein runs.
   const minLength = Math.floor(candLength * threshold * 0.6);
   const maxLength = Math.ceil(candLength / (threshold * 0.6));
 
-  // Quét từ cụm NGẮN đến DÀI: địa danh là cụm gọn nhất khớp được.
-  // Quét ngược lại sẽ nuốt kèm giới từ ("đi từ bù đốp" thay vì "bù đốp").
+  // Scan from SHORT to LONG phrases: a place name is the most compact phrase that matches.
+  // Scanning in the opposite order would swallow prepositions ("đi từ bù đốp" instead of "bù đốp").
   for (let size = 1; size <= maxWindow; size++) {
     for (let i = 0; i + size <= tokens.length; i++) {
       if (anchorPrefix && anchorPrefix[i + size] === anchorPrefix[i]) continue;
       const span = tokens.slice(i, i + size).join(' ');
       if (span.length < minLength || span.length > maxLength) continue;
 
-      // Cả `span` (từ tokenize) lẫn `candidate` đều đã qua expandColloquial.
+      // Both `span` (from tokenize) and `candidate` have already gone through expandColloquial.
       const score = similarity(span, candidate, { preNormalized: true });
-      // Dùng ">" nên cụm ngắn hơn thắng khi điểm ngang nhau.
+      // Uses ">" so the shorter phrase wins when scores are equal.
       if (score >= threshold && (!best || score > best.score)) {
         best = { span, score, startIndex: i, endIndex: i + size };
       }

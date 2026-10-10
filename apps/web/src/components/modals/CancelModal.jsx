@@ -55,7 +55,7 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
       }
     >
       <div className="space-y-4">
-        {/* Ngữ cảnh chuyến đi đầy đủ: Chống bấm nhầm (Stanford Ergonomics) */}
+        {/* Full trip context: prevents accidental taps (Stanford Ergonomics) */}
         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/10 space-y-2">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="type-body-strong font-mono text-slate-800 dark:text-slate-200">
@@ -82,7 +82,7 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
           </div>
         </div>
 
-        {/* Cam kết 0đ phạt & Tự động hoàn trả ghế */}
+        {/* 0 VND penalty commitment & automatic seat release */}
         <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/40 flex items-start gap-3">
           <HeartHandshake className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="type-caption text-amber-900 dark:text-amber-200 space-y-1">
@@ -93,7 +93,7 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
           </div>
         </div>
 
-        {/* Chọn lý do nhanh 1-chạm (Preset reasons) */}
+        {/* Quick 1-tap reason selection (Preset reasons) */}
         <div>
           <label className="type-label text-slate-800 dark:text-slate-200 mb-2 block">
             Chọn lý do hủy chuyến nhanh:
@@ -126,7 +126,7 @@ export default function CancelModal({ record, onClose, onConfirmCancel }) {
           </Field>
         )}
 
-        {/* Khung xem trước tin nhắn thông báo tự động gửi Chủ xe */}
+        {/* Preview frame of the automatic notification message sent to the driver */}
         <div className="p-3 rounded-2xl bg-slate-900 text-slate-200 border border-slate-800 space-y-1.5 text-left">
           <span className="type-caption text-slate-400 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />

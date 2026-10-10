@@ -1,6 +1,6 @@
 #!/bin/sh
 # CarMate pre-commit guard
-# Chặn commit trực tiếp trên nhánh 'main' ở môi trường local.
+# Blocks direct commits on the 'main' branch in the local environment.
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 

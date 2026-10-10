@@ -67,10 +67,10 @@ export function parseCopiedReceipt(raw) {
     return { id: value.id, accessToken: value.accessToken };
   } catch { return null; }
 }
-// Trong hạn đối chiếu là trạng thái bình thường của mọi hồ sơ đang công khai, nên
-// không cần nhãn: gắn chữ lên tất cả thì không phân biệt được gì mà chỉ thêm chữ
-// phải đọc. Chỉ cảnh báo khi thông tin quá hạn hoặc chưa được đối chiếu — lúc đó
-// số liên hệ và giá mới thực sự có thể đã đổi.
+// Being within the cross-check deadline is the normal state of every published profile, so
+// no label is needed: putting text on all of them distinguishes nothing and just adds words
+// to read. Warn only when the information is overdue or not yet cross-checked — only then
+// may the contact number and price really have changed.
 export function freshnessBadge(operator, now = Date.now()) {
   const state = operatorFreshness(operator, now).state;
   if (state === 'fresh') return null;
@@ -78,8 +78,8 @@ export function freshnessBadge(operator, now = Date.now()) {
   return { state, label: 'Chưa đối chiếu', tone: 'text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/10' };
 }
 
-// Khu vực trong dữ liệu là một dòng dài nối bằng ⇄. Ngoài hàng chỉ hiện đầu và
-// cuối tuyến; đọc cả chuỗi mười trạm trên một hàng vừa chật vừa mệt mắt.
+// The region in the data is one long line joined by ⇄. In the row, show only the first and
+// last of the route; reading the whole chain of ten stations in a single row is both cramped and tiring on the eyes.
 export function coverageEndpoints(coverage = []) {
   const legs = String(coverage[0] || '').split(/[⇄→/]/).map(part => part.trim()).filter(Boolean);
   if (!legs.length) return '';

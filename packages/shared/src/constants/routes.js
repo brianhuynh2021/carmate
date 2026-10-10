@@ -1,17 +1,17 @@
 import { calculateDynamicTariffByDistance } from '../utils/dynamicTariff.js';
 
-// BẢNG ĐỊNH MỨC CHI PHÍ XĂNG & CẦU ĐƯỜNG THỰC TẾ THEO QUY CHUẨN KỸ THUẬT
-// Cơ sở tính toán: Định mức tiêu hao nhiên liệu xe 5-7 chỗ (6.5L - 7.5L RON 95/100km) + Phí cầu đường / trạm thu phí
+// TABLE OF ACTUAL FUEL & ROAD TOLL COST NORMS PER TECHNICAL STANDARDS
+// Calculation basis: Fuel consumption norm for 5-7 seat vehicles (6.5L - 7.5L RON 95/100km) + road/bridge tolls / toll station fees
 export const ROUTE_BENCHMARKS = {
-  // ── MIỀN BẮC ──
+  // ── NORTHERN REGION ──
   'Tuyến CT Hà Nội - Hải Phòng': {
     name: 'Hà Nội ⇄ Hải Phòng (Cao Tốc 5B ~105km)',
     shortName: 'Hà Nội ⇄ Hải Phòng',
     keyword: 'Hải Phòng',
     region: 'north',
     distanceKm: 105,
-    fuelCost: 160000, // ~7.5L xăng RON 95
-    botFee: 190000, // Phí cao tốc Hà Nội - Hải Phòng (Nút Cổ Linh - Đình Vũ)
+    fuelCost: 160000, // ~7.5L RON 95 gasoline
+    botFee: 190000, // Hà Nội - Hải Phòng expressway toll (Cổ Linh - Đình Vũ interchanges)
     suggestedRate: 150000,
     minSafePrice: 100000,
     maxSafePrice: 280000,
@@ -27,7 +27,7 @@ export const ROUTE_BENCHMARKS = {
     region: 'north',
     distanceKm: 95,
     fuelCost: 145000,
-    botFee: 110000, // Cao tốc Pháp Vân - Cầu Giẽ - Cao Bồ
+    botFee: 110000, // Pháp Vân - Cầu Giẽ - Cao Bồ expressway
     suggestedRate: 130000,
     minSafePrice: 80000,
     maxSafePrice: 250000,
@@ -36,7 +36,7 @@ export const ROUTE_BENCHMARKS = {
     calculationBasis: 'Cao tốc Pháp Vân - Cầu Giẽ - Cao Bồ. Xăng + phí cao tốc chia sẻ hợp lý ~120k - 140k/ghế.'
   },
 
-  // ── MIỀN TRUNG ──
+  // ── CENTRAL REGION ──
   'Tuyến Đà Nẵng - Huế': {
     name: 'Đà Nẵng ⇄ Huế (Hầm Hải Vân ~100km)',
     shortName: 'Đà Nẵng ⇄ Huế',
@@ -44,7 +44,7 @@ export const ROUTE_BENCHMARKS = {
     region: 'central',
     distanceKm: 100,
     fuelCost: 150000,
-    botFee: 110000, // Phí qua hầm Hải Vân + Trạm Phú Bài
+    botFee: 110000, // Hải Vân tunnel fee + Phú Bài station
     suggestedRate: 140000,
     minSafePrice: 90000,
     maxSafePrice: 260000,
@@ -53,15 +53,15 @@ export const ROUTE_BENCHMARKS = {
     calculationBasis: '100km qua hầm Hải Vân. Chia sẻ chi phí xăng và phí hầm/BOT ~130k - 150k/ghế.'
   },
 
-  // ── MIỀN NAM ──
+  // ── SOUTHERN REGION ──
   'Tuyến QL13': {
     name: 'Bình Phước (Bù Đốp/Lộc Ninh/Đồng Xoài) ⇄ Sài Gòn (~140km)',
     shortName: 'Bình Phước ⇄ Sài Gòn',
     keyword: 'Bình Phước',
     region: 'south',
     distanceKm: 140,
-    fuelCost: 210000, // ~9L xăng RON 95
-    botFee: 70000, // Trạm Lái Thiêu, Suối Giữa, Bàu Bàng, Tân Lập
+    fuelCost: 210000, // ~9L RON 95 gasoline
+    botFee: 70000, // Lái Thiêu, Suối Giữa, Bàu Bàng, Tân Lập stations
     suggestedRate: 180000,
     minSafePrice: 100000,
     maxSafePrice: 350000,
@@ -77,7 +77,7 @@ export const ROUTE_BENCHMARKS = {
     region: 'south',
     distanceKm: 100,
     fuelCost: 150000,
-    botFee: 98000, // Trạm Cao tốc Long Thành - Dầu Giây + QL51
+    botFee: 98000, // Long Thành - Dầu Giây Expressway station + QL51
     suggestedRate: 160000,
     minSafePrice: 90000,
     maxSafePrice: 300000,
@@ -213,7 +213,7 @@ export const ROUTE_BENCHMARKS = {
     region: 'south',
     distanceKm: 280,
     fuelCost: 420000,
-    botFee: 110000, // BOT Tuyến N2 + Cầu Vàm Cống / Rạch Sỏi
+    botFee: 110000, // N2 route BOT + Vàm Cống / Rạch Sỏi bridges
     suggestedRate: 260000,
     minSafePrice: 150000,
     maxSafePrice: 500000,
@@ -224,7 +224,7 @@ export const ROUTE_BENCHMARKS = {
   }
 };
 
-// BẢNG HÀNH LANG ĐIỂM ĐÓN / TRẢ DỌC ĐƯỜNG (CORRIDOR WAYPOINTS) THEO TRỤC QUỐC LỘ & CAO TỐC
+// TABLE OF ALONG-THE-ROAD PICKUP / DROP-OFF POINTS (CORRIDOR WAYPOINTS) BY NATIONAL HIGHWAY & EXPRESSWAY AXIS
 const CORRIDOR_WAYPOINTS = {
   'Tuyến QL13': [
     'Bù Đốp (TT. Thanh Bình)',
@@ -310,7 +310,7 @@ const CORRIDOR_WAYPOINTS = {
 };
 
 /**
- * Lấy danh sách điểm đón dọc đường theo tên tuyến hoặc từ khóa
+ * Gets the list of along-the-road pickup points by route name or keyword
  */
 export function getCorridorWaypoints(routeCategoryOrKeyword) {
   if (!routeCategoryOrKeyword) return [];
@@ -326,7 +326,7 @@ export function getCorridorWaypoints(routeCategoryOrKeyword) {
     }
   }
 
-  // Fallback thử tìm theo từ khóa chung
+  // Fallback: try matching by general keyword
   if (clean.includes('kiên giang') || clean.includes('rạch giá') || clean.includes('hà tiên') || clean.includes('miền tây') || clean.includes('tuyến n2')) {
     return CORRIDOR_WAYPOINTS['Tuyến N2 - Kiên Giang'];
   }
@@ -353,12 +353,12 @@ export function getCorridorWaypoints(routeCategoryOrKeyword) {
 }
 
 /**
- * MẠNG LƯỚI TRẠM ĐÓN ẢO CHUẨN HÓA (VIRTUAL HUBS - DARP-MP)
- * Định vị các nút giao vàng dọc tuyến hành lang chính để xe lướt qua không phải vòng hẻm.
- * Thời gian dừng đỗ chuẩn hóa 5 phút (300s) curbside window.
+ * STANDARDIZED VIRTUAL PICKUP STATION NETWORK (VIRTUAL HUBS - DARP-MP)
+ * Locates the golden junctions along the main corridor routes so vehicles can glide past without detouring into alleys.
+ * Standardized stop time of 5 minutes (300s) curbside window.
  */
 export const VIRTUAL_HUBS = [
-  // ── HÀNH LANG TUYẾN QL13 (TP.HCM ⇄ BÌNH DƯƠNG ⇄ BÌNH PHƯỚC: BÙ ĐỐP - LỘC NINH) ──
+  // ── QL13 ROUTE CORRIDOR (TP.HCM ⇄ BÌNH DƯƠNG ⇄ BÌNH PHƯỚC: BÙ ĐỐP - LỘC NINH) ──
   {
     id: 'hub_ql13_san_bay_tsn',
     name: 'Sân bay Quốc tế Tân Sơn Nhất (Ga Quốc Nội / Ga Quốc Tế)',
@@ -689,7 +689,7 @@ export const VIRTUAL_HUBS = [
     isMajorJunction: true
   },
 
-  // ── HÀNH LANG TUYẾN N2 (ĐÔNG NAM BỘ ⇄ MIỀN TÂY / KIÊN GIANG) ──
+  // ── N2 ROUTE CORRIDOR (SOUTHEAST ⇄ MEKONG DELTA / KIÊN GIANG) ──
   {
     id: 'hub_n2_chon_thanh',
     name: 'Ngã 4 Chơn Thành (Điểm kết nối QL13 - Tuyến N2)',
@@ -792,22 +792,22 @@ export const VIRTUAL_HUBS = [
 ];
 
 /**
- * CẤU HÌNH ĐIỂM ĐÓN CỐ ĐỊNH TRỤC LỘ (100% VIRTUAL HUBS - NO DOORSTEP DETOUR)
- * CarMate vận hành 100% điểm đón/trả chuẩn hoá tại các cây xăng Petrolimex dọc quốc lộ.
- * Triệt tiêu hoàn toàn việc đón tận nhà ("Tour de Hẻm") và chia chác phụ phí đền bù.
+ * FIXED ROADSIDE PICKUP POINT CONFIGURATION (100% VIRTUAL HUBS - NO DOORSTEP DETOUR)
+ * CarMate operates 100% standardized pickup/drop-off points at Petrolimex gas stations along the national highway.
+ * Completely eliminates doorstep pickup ("Tour de Hẻm", the alley tour) and the splitting of compensation surcharges.
  */
 export const DOORSTEP_CONFIG = {
-  ENABLED: false, // 100% đón trả tại trạm cây xăng Petrolimex, không đón tận nhà
-  DEFAULT_SURCHARGE: 0, // Phụ phí = 0đ (không phụ thu đón nhà)
+  ENABLED: false, // 100% pickup/drop-off at Petrolimex gas station hubs, no doorstep pickup
+  DEFAULT_SURCHARGE: 0, // Surcharge = 0đ (no doorstep pickup surcharge)
   MAX_NEIGHBORHOOD_RADIUS_KM: 0,
   MAX_CURBSIDE_WAIT_SECONDS: 0,
-  COMPENSATION_DISCOUNT_RATIO: 0, // Không chia tiền đền bù giữa các khách
+  COMPENSATION_DISCOUNT_RATIO: 0, // No compensation money split among passengers
   LABEL: '100% đón tại trạm cây xăng',
   NOTE: 'Đón trả chuẩn hoá tại cây xăng Petrolimex trục lộ · Không rẽ ngõ ngách'
 };
 
 /**
- * Lấy danh sách Trạm đón ảo theo tuyến hành lang
+ * Gets the list of virtual pickup stations by corridor route
  */
 export function getVirtualHubsByCorridor(corridorKey) {
   if (!corridorKey) return VIRTUAL_HUBS;
@@ -818,7 +818,7 @@ export function getVirtualHubsByCorridor(corridorKey) {
 }
 
 /**
- * Tìm Trạm đón ảo gần nhất với toạ độ GPS cho trước
+ * Finds the virtual pickup station nearest to the given GPS coordinates
  */
 export function findNearestVirtualHub(lat, lng, corridorKey = null) {
   if (lat == null || lng == null) return null;
@@ -846,7 +846,7 @@ export function findNearestVirtualHub(lat, lng, corridorKey = null) {
 }
 
 /**
- * Lấy thông tin Trạm đón ảo theo mã ID trạm (hỗ trợ cả slug linh hoạt)
+ * Gets virtual pickup station info by station ID (also supports flexible slugs)
  */
 export function getVirtualHubById(hubId) {
   if (!hubId) return null;
@@ -862,12 +862,12 @@ export function getVirtualHubById(hubId) {
 }
 
 /**
- * BẢNG ĐỊNH GIÁ PHÂN ĐOẠN CỐ ĐỊNH HÀNH LANG QL13 (METRO TARIFF ON QL13)
- * MIT Invariants: Cước phí phân đoạn cố định như vé metro, bảo đảm minh bạch 100%.
- * Tuyệt đối KHÔNG surge pricing (no_surge: true) vào giờ cao điểm, ban đêm hay mưa bão.
+ * FIXED SEGMENT PRICING TABLE FOR THE QL13 CORRIDOR (METRO TARIFF ON QL13)
+ * MIT Invariants: Fixed segment fares like a metro ticket, guaranteeing 100% transparency.
+ * Absolutely NO surge pricing (no_surge: true) at peak hours, at night, or in storms and rain.
  */
 export const CORRIDOR_FIXED_SEGMENTS = {
-  // Bình Long ➔ Hàng Xanh: 180.000đ (Chủ xe nhận 324k/2 ghế)
+  // Bình Long ➔ Hàng Xanh: 180.000đ (the driver receives 324k for 2 seats)
   'hub_ql13_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 180000, distanceKm: 115, label: 'Bình Long ➔ Hàng Xanh' },
   'hub_ql13_binh_long:::hub_ql13_binh_trieu': { pricePerSeat: 180000, distanceKm: 110, label: 'Bình Long ➔ Bình Triệu' },
   'hub_ql13_binh_long:::hub_ql13_nga4_chon_thanh': { pricePerSeat: 75000, distanceKm: 40, label: 'Bình Long ➔ Chơn Thành' },
@@ -875,7 +875,7 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   'hub_ql13_binh_long:::hub_ql13_tan_khai': { pricePerSeat: 50000, distanceKm: 25, label: 'Bình Long ➔ Tân Khai' },
   'hub_ql13_tthc_binh_long:::hub_ql13_hang_xanh': { pricePerSeat: 180000, distanceKm: 115, label: 'TTHC Bình Long ➔ Hàng Xanh' },
 
-  // Tân Khai ➔ Hàng Xanh: 150.000đ (Chủ xe nhận 270k/2 ghế)
+  // Tân Khai ➔ Hàng Xanh: 150.000đ (the driver receives 270k for 2 seats)
   'hub_ql13_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 95, label: 'Tân Khai ➔ Hàng Xanh' },
   'hub_ql13_tan_khai:::hub_ql13_cho_ray': { pricePerSeat: 170000, distanceKm: 105, label: 'Tân Khai ➔ Cụm Chợ Rẫy' },
   'hub_ql13_tthc_tan_khai:::hub_ql13_cho_ray': { pricePerSeat: 170000, distanceKm: 105, label: 'TTHC Tân Khai ➔ Cụm Chợ Rẫy' },
@@ -890,7 +890,7 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   'hub_ql13_tan_khai:::hub_ql13_binh_long': { pricePerSeat: 50000, distanceKm: 25, label: 'Tân Khai ➔ Bình Long' },
   'hub_ql13_tthc_tan_khai:::hub_ql13_hang_xanh': { pricePerSeat: 150000, distanceKm: 95, label: 'TTHC Tân Khai ➔ Hàng Xanh' },
 
-  // Chơn Thành ➔ Hàng Xanh: 120.000đ (Chủ xe nhận 216k/2 ghế)
+  // Chơn Thành ➔ Hàng Xanh: 120.000đ (the driver receives 216k for 2 seats)
   'hub_ql13_nga4_chon_thanh:::hub_ql13_hang_xanh': { pricePerSeat: 120000, distanceKm: 75, label: 'Chơn Thành ➔ Hàng Xanh' },
   'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_trieu': { pricePerSeat: 120000, distanceKm: 70, label: 'Chơn Thành ➔ Bình Triệu' },
   'hub_ql13_nga4_chon_thanh:::hub_ql13_binh_long': { pricePerSeat: 75000, distanceKm: 40, label: 'Chơn Thành ➔ Bình Long' },
@@ -914,7 +914,7 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   // Vạn Phúc City: 35.000đ
   'hub_ql13_van_phuc_city:::hub_ql13_hang_xanh': { pricePerSeat: 35000, distanceKm: 10, label: 'Vạn Phúc City ➔ Hàng Xanh' },
 
-  // CÁC CHẶNG VỀ SÂN BAY TÂN SƠN NHẤT (QUA ĐẠI LỘ PHẠM VĂN ĐỒNG)
+  // SEGMENTS TO TÂN SƠN NHẤT AIRPORT (VIA PHẠM VĂN ĐỒNG BOULEVARD)
   'hub_ql13_binh_long:::hub_ql13_san_bay_tsn': { pricePerSeat: 190000, distanceKm: 120, label: 'Bình Long ➔ Sân bay Tân Sơn Nhất' },
   'hub_ql13_tthc_binh_long:::hub_ql13_san_bay_tsn': { pricePerSeat: 190000, distanceKm: 120, label: 'TTHC Bình Long ➔ Sân bay Tân Sơn Nhất' },
   'hub_ql13_tan_khai:::hub_ql13_san_bay_tsn': { pricePerSeat: 160000, distanceKm: 98, label: 'Tân Khai ➔ Sân bay Tân Sơn Nhất' },
@@ -926,13 +926,13 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   'hub_ql13_nga4_so_sao:::hub_ql13_san_bay_tsn': { pricePerSeat: 75000, distanceKm: 38, label: 'Sở Sao ➔ Sân bay Tân Sơn Nhất' },
   'hub_ql13_vsip1:::hub_ql13_san_bay_tsn': { pricePerSeat: 60000, distanceKm: 22, label: 'VSIP 1 ➔ Sân bay Tân Sơn Nhất' },
 
-  // CÁC CHẶNG VỀ NGÃ 4 BÌNH PHƯỚC (CỬA NGÕ THỦ ĐỨC - QL1A)
+  // SEGMENTS TO NGÃ 4 BÌNH PHƯỚC (THỦ ĐỨC GATEWAY - QL1A)
   'hub_ql13_binh_long:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 160000, distanceKm: 100, label: 'Bình Long ➔ Ngã 4 Bình Phước' },
   'hub_ql13_tan_khai:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 130000, distanceKm: 80, label: 'Tân Khai ➔ Ngã 4 Bình Phước' },
   'hub_ql13_nga4_chon_thanh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 100000, distanceKm: 60, label: 'Chơn Thành ➔ Ngã 4 Bình Phước' },
   'hub_ql13_bau_bang:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 75000, distanceKm: 42, label: 'Bàu Bàng ➔ Ngã 4 Bình Phước' },
 
-  // Lộc Ninh / Bù Đốp (Đầu tuyến QL13)
+  // Lộc Ninh / Bù Đốp (start of the QL13 route)
   'hub_ql13_cho_loc_ninh:::hub_ql13_hang_xanh': { pricePerSeat: 210000, distanceKm: 135, label: 'Lộc Ninh ➔ Hàng Xanh' },
   'hub_ql13_cho_loc_ninh:::hub_ql13_san_bay_tsn': { pricePerSeat: 220000, distanceKm: 140, label: 'Lộc Ninh ➔ Sân bay Tân Sơn Nhất' },
   'hub_ql13_cho_loc_ninh:::hub_ql13_nga4_binh_phuoc': { pricePerSeat: 190000, distanceKm: 120, label: 'Lộc Ninh ➔ Ngã 4 Bình Phước' },
@@ -940,11 +940,11 @@ export const CORRIDOR_FIXED_SEGMENTS = {
   'hub_ql13_budop:::hub_ql13_hang_xanh': { pricePerSeat: 230000, distanceKm: 155, label: 'Bù Đốp ➔ Hàng Xanh' }
 };
 
-export const DRIVER_STATION_PAYOUT_RATIO = 1.0; // Chủ xe nhận 100% phụ xăng chia sẻ trực tiếp P2P (0đ phí sàn)
+export const DRIVER_STATION_PAYOUT_RATIO = 1.0; // The driver receives 100% of the shared fuel contribution directly P2P (0đ platform fee)
 
 /**
- * Tra cứu bảng cước phân đoạn cố định Metro Tariff dọc hành lang
- * Tự động tính toán theo DynamicMarketTariffEngine (Cân bằng Nash + Chỉ số xăng dầu + BOT)
+ * Looks up the fixed-segment Metro Tariff fare table along the corridor
+ * Calculated automatically by DynamicMarketTariffEngine (Nash equilibrium + fuel price index + BOT)
  */
 export function getFixedSegmentTariff(originHubId, destHubId, options = {}) {
   const h1 = getVirtualHubById(originHubId);
@@ -975,7 +975,7 @@ export function getFixedSegmentTariff(originHubId, destHubId, options = {}) {
     label = `${h1?.shortName || h1?.name || originHubId || 'Điểm đón'} ➔ ${h2?.shortName || h2?.name || destHubId || 'Điểm đến'}`;
   }
 
-  // Tự động định giá theo DynamicMarketTariffEngine
+  // Automatically priced by DynamicMarketTariffEngine
   return calculateDynamicTariffByDistance(distanceKm, {
     label,
     corridor: h1?.corridor || h2?.corridor || 'Tuyến QL13',

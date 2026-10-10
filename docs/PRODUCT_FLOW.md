@@ -1,319 +1,319 @@
-# Luồng CarMate — bản chốt
+# CarMate flow — final version
 
-**CarMate giúp khách tìm được xe phù hợp, hai bên chốt một cuộc hẹn rõ ràng, theo dõi việc đón và tìm phương án tiếp theo khi có sự cố.**
+**CarMate helps passengers find a suitable vehicle, lets both parties lock in a clear appointment, tracks the pickup, and finds the next option when something goes wrong.**
 
-Giai đoạn này:
+At this stage:
 
-- **Miễn phí đăng chuyến, tìm xe và kết nối.**
-- Chủ xe niêm yết giá hoặc để “Liên hệ”; tổng tiền phải rõ trước khi xác nhận.
-- Khách trả tiền trực tiếp cho chủ xe.
-- Đón tại trạm ảo, tận nơi hoặc điểm gặp khác tùy phương án hai bên chấp nhận.
+- **Posting trips, searching for vehicles and connecting are free.**
+- The driver lists a price or leaves “Liên hệ” (Contact); the total price must be clear before confirmation.
+- The passenger pays the driver directly.
+- Pickup is at a virtual station, door-to-door, or another meeting point, depending on the option both parties accept.
 
-Đây là **luồng nghiệp vụ mục tiêu**, chưa có nghĩa toàn bộ đã được triển khai trong app. Mục [9](#9-trạng-thái-triển-khai) đối chiếu từng phần với mã nguồn.
+This is the **target business flow**; it does not mean everything has already been implemented in the app. Section [9](#9-implementation-status) checks each part against the source code.
 
-Tài liệu này là bức tranh sản phẩm. Hợp đồng hành vi kỹ thuật của luồng kết nối nằm ở [CONNECTION_FLOW.md](CONNECTION_FLOW.md); hồ sơ nhà xe và quyền quản lý ở [OPERATOR_PROFILES.md](OPERATOR_PROFILES.md).
+This document is the product picture. The technical behavior contract of the connection flow is in [CONNECTION_FLOW.md](CONNECTION_FLOW.md); operator profiles and management rights are in [OPERATOR_PROFILES.md](OPERATOR_PROFILES.md).
 
-## 1. Bức tranh tổng thể
+## 1. Overall picture
 
 ```mermaid
 flowchart TD
-    K1["KHÁCH<br/>Nhập nơi đi, nơi đến, thời gian"]
-    K2["Xem chuyến, giá, điểm đón và nhà xe<br/>Chưa cần đăng nhập"]
-    K3["Muốn gửi yêu cầu hoặc nhận phản hồi<br/>Đăng nhập và kích hoạt nhu cầu"]
+    K1["PASSENGER<br/>Enters origin, destination, time"]
+    K2["Views trips, prices, pickup points and operators<br/>No login needed yet"]
+    K3["Wants to send a request or receive replies<br/>Logs in and activates the request"]
 
-    X1["CHỦ XE<br/>Nhập hành trình, giờ chạy, chỗ trống"]
-    X2["Xem trước chuyến và nhu cầu phù hợp<br/>Chưa cần đăng nhập"]
-    X3["Muốn đăng chuyến hoặc gửi đề nghị đón<br/>Đăng nhập và hoàn thành thông tin cần thiết"]
+    X1["DRIVER<br/>Enters route, departure time, free seats"]
+    X2["Previews the trip and matching requests<br/>No login needed yet"]
+    X3["Wants to post a trip or send a pickup offer<br/>Logs in and completes the required information"]
 
-    M["CARMATE<br/>Ghép quỹ đạo, thời gian, ghế, giá và điểm gặp"]
-    P["Đề xuất phương án tốt nhất hiện có"]
-    C["Hai bên xác nhận<br/>Xe, điểm đón trả, giờ, số người, tổng giá"]
-    H["Theo dõi cuộc hẹn và tiến độ đón"]
-    B["Khách lên xe → đến nơi → hoàn tất"]
-    W["Chưa có phương án phù hợp<br/>Tiếp tục tìm trong thời hạn khách chọn"]
+    M["CARMATE<br/>Matches trajectory, time, seats, price and meeting point"]
+    P["Suggests the best option currently available"]
+    C["Both parties confirm<br/>Vehicle, pickup/drop-off, time, number of people, total price"]
+    H["Tracks the appointment and pickup progress"]
+    B["Passenger boards → arrives → completed"]
+    W["No suitable option yet<br/>Keeps searching within the deadline the passenger chose"]
 
     K1 --> K2 --> K3 --> M
     X1 --> X2 --> X3 --> M
-    M -->|Có phương án| P
-    M -->|Chưa có| W
-    W -->|Có thông tin mới| M
+    M -->|Option found| P
+    M -->|None yet| W
+    W -->|New information| M
     P --> C
-    C -->|Từ chối hoặc hết hạn| M
-    C -->|Đồng ý| H
+    C -->|Declined or expired| M
+    C -->|Agreed| H
     H --> B
-    H -->|Xe hủy trước khi đón| M
+    H -->|Vehicle cancels before pickup| M
 ```
 
-**CarMate tự tổng hợp và sắp xếp. Hai bên quyết định có chấp nhận cuộc hẹn được đề xuất hay không.**
+**CarMate compiles and ranks automatically. The two parties decide whether to accept the proposed appointment.**
 
 ---
 
-## 2. Luồng của khách: từ “tôi cần đi xe” đến có cuộc hẹn
+## 2. Passenger flow: from “I need a ride” to having an appointment
 
-### Bước 1 — Vào dùng ngay
+### Step 1 — Start using it immediately
 
-Khách mở đường dẫn hoặc website trên điện thoại, chưa cần cài app hay đăng nhập.
+The passenger opens the link or website on their phone, with no need to install an app or log in yet.
 
-Nhập:
+Enter:
 
-- **Tôi đang ở đâu → muốn đến đâu.**
-- Muốn đi lúc nào, chờ được đến khi nào.
-- Số người.
+- **Where I am → where I want to go.**
+- When they want to leave, and how long they can wait.
+- Number of people.
 
-Các lựa chọn bổ sung xuất hiện khi cần: giờ phải đến nơi, mức giá mong muốn, đón tận nơi hay có thể ra điểm gần đó.
+Additional options appear when needed: the time they must arrive by, the desired price, door-to-door pickup or whether they can walk to a nearby point.
 
-### Bước 2 — Nhìn thấy phương án cụ thể
+### Step 2 — See concrete options
 
-CarMate hiển thị:
+CarMate displays:
 
-| Khách cần biết | Nội dung phải có |
+| What the passenger needs to know | What must be shown |
 |---|---|
-| Xe nào phù hợp? | Nhà xe/chủ xe, loại xe, hành trình |
-| Đón ở đâu? | Tận nơi hoặc điểm gặp được đề xuất |
-| Khi nào đón, khi nào đến? | Khoảng thời gian dự kiến và lần cập nhật |
-| Tổng tiền bao nhiêu? | Giá cho nhu cầu đang chọn, phụ phí nếu có |
-| Có đáng tin không? | Thông tin đã xác minh và lịch sử có bằng chứng |
-| Vì sao được đề xuất? | Ví dụ: đúng giờ cần đến, ít đi bộ, giá phù hợp |
+| Which vehicle fits? | Operator/driver, vehicle type, route |
+| Where is the pickup? | Door-to-door or a suggested meeting point |
+| When is pickup, when is arrival? | Expected time window and the last update |
+| What is the total price? | Price for the selected request, surcharges if any |
+| Is it trustworthy? | Verified information and evidence-backed history |
+| Why was it suggested? | For example: arrives by the required time, less walking, suitable price |
 
-Giá “Liên hệ” phải hiện là **chưa biết tổng giá**, không được tự xem là rẻ nhất.
+A “Liên hệ” price must be shown as **total price unknown**, and must not be treated as the cheapest.
 
-**Lượt tìm kiếm này vẫn là riêng tư.** CarMate chưa biến người đang xem thành “khách đang chờ” để chào cho tài xế.
+**This search is still private.** CarMate does not yet turn the person browsing into a “waiting passenger” to pitch to drivers.
 
-### Bước 3 — Khách chọn cách tiếp tục
+### Step 3 — The passenger chooses how to continue
 
-Có ba hướng:
+There are three directions:
 
-**A. “Yêu cầu đón chuyến này”**
+**A. “Request pickup on this trip”**
 
-Khách đã thấy xe phù hợp và muốn gửi yêu cầu.
+The passenger has seen a suitable vehicle and wants to send a request.
 
-**B. “Tìm xe phù hợp và báo tôi”**
+**B. “Find a suitable vehicle and notify me”**
 
-Khách muốn CarMate duy trì nhu cầu, tìm xe và nhận đề nghị từ các chủ xe phù hợp.
+The passenger wants CarMate to keep their request active, look for vehicles and receive offers from suitable drivers.
 
-**C. Gọi điện/Zalo trực tiếp**
+**C. Call/Zalo directly**
 
-Khách được liên hệ qua thông tin chủ xe đã công khai, không bị buộc đăng nhập để lấy số.
+The passenger makes contact through the details the driver has made public, and is not forced to log in to get the number.
 
-### Bước 4 — Đăng nhập khi kích hoạt A hoặc B
+### Step 4 — Log in when activating A or B
 
-Lời giải thích:
+Explanation:
 
-> **Đăng nhập để lưu nhu cầu, nhận phản hồi và theo dõi cuộc hẹn của bạn.**
+> **Log in to save your request, receive replies and track your appointments.**
 
-Sau đăng nhập:
+After login:
 
-- Giữ nguyên nơi đi, nơi đến và thời gian đã nhập.
-- Có kênh liên lạc dùng được.
-- Cho khách biết thông tin nào sẽ được chia sẻ với xe phù hợp.
-- Nhu cầu có thời hạn rõ ràng; khách sửa hoặc dừng được.
+- Keep the origin, destination and time already entered.
+- There is a usable communication channel.
+- Tell the passenger which information will be shared with matching vehicles.
+- The request has a clear deadline; the passenger can edit or stop it.
 
-**Lý do khách đăng nhập:** từ đây, CarMate có thể tiếp tục xử lý một nhu cầu thuộc về họ, kể cả khi họ đóng màn hình.
+**Reason the passenger logs in:** from here, CarMate can keep processing a request that belongs to them, even after they close the screen.
 
-### Bước 5 — Xác nhận cuộc hẹn
+### Step 5 — Confirm the appointment
 
-Khi có phương án được hai bên đồng ý, khách nhìn thấy:
+When there is an option both parties agree on, the passenger sees:
 
-**Ai đón — xe nào — đón ở đâu — trong khoảng giờ nào — trả ở đâu — bao nhiêu người — tổng tiền bao nhiêu.**
+**Who picks up — which vehicle — where — in what time window — drop-off where — how many people — what total price.**
 
-Nếu chốt qua điện thoại/Zalo, hai bên có thể ghi nhận lại các điều kiện đó trên CarMate.
+If the deal is made by phone/Zalo, the two parties can record those conditions again on CarMate.
 
-**“Đã liên hệ” và “Đã xác nhận đón” phải là hai trạng thái riêng.**
-
----
-
-## 3. Luồng của chủ xe: từ “tôi có chuyến” đến nhận khách
-
-### Bước 1 — Xem giá trị trước
-
-Chủ xe vào mục:
-
-**“Tìm khách trên đường tôi chạy.”**
-
-Nhập hành trình, ngày giờ, số chỗ trống. Chưa cần đăng nhập.
-
-CarMate cho xem:
-
-- Trang chuyến đang tạo.
-- Các nhu cầu thật phù hợp, nếu có.
-- Khu vực đón/trả, số người và cửa sổ thời gian.
-- Mức ảnh hưởng dự kiến đến hành trình.
-
-Thông tin xem trước bảo vệ danh tính và địa chỉ riêng của khách.
-
-### Bước 2 — Đăng nhập khi muốn dùng kết quả
-
-Hai nút kích hoạt chính:
-
-- **“Đăng chuyến và nhận yêu cầu”.**
-- **“Gửi đề nghị đón khách này”.**
-
-Lời giải thích:
-
-> **Đăng nhập để quản lý chuyến, nhận phản hồi và sắp xếp các cuộc hẹn đón khách.**
-
-Sau đăng nhập, tiếp tục đúng công việc đang làm.
-
-### Bước 3 — Hoàn thành thông tin cần thiết
-
-Chủ xe thiết lập:
-
-- Người/đơn vị chịu trách nhiệm và tài xế thực hiện.
-- Xe, số chỗ và thông tin liên lạc.
-- Giá niêm yết hoặc “Liên hệ”.
-- Giới hạn đi vòng, thời gian chờ, cách đón.
-- Thông tin xác minh phù hợp với hoạt động tham gia.
-
-**Tài khoản Google/Telegram xác lập quyền quản lý tài khoản; chất lượng và điều kiện tham gia của xe cần được kiểm tra riêng.**
-
-### Bước 4 — Nhận đề xuất đã được CarMate lọc
-
-Thay vì phải đọc mọi yêu cầu, chủ xe thấy thông tin phục vụ quyết định:
-
-> Có khách phù hợp ở điểm phía trước.
-> Cần bao nhiêu ghế, đi đến đâu, đón trong khoảng giờ nào.
-> Đón thêm ảnh hưởng thế nào đến những cuộc hẹn đã nhận.
-
-Chủ xe chấp nhận hoặc đề xuất điều chỉnh. Khách đồng ý các điều kiện cuối cùng thì cuộc hẹn có hiệu lực.
-
-### Bước 5 — Tiếp tục nhận khách trên hành trình
-
-CarMate tiếp tục xét khách ở những điểm phía trước, dựa trên **ghế còn trống ở từng đoạn**.
-
-Ví dụ xe có bốn chỗ:
-
-- Hai khách đi A → D.
-- Hai khách đi B → C.
-- Sau C, có thể nhận hai khách C → D nếu đáp ứng thời gian.
-
-Chủ xe cũng phải cập nhật khách nhận ngoài CarMate để hệ thống không đề xuất quá số ghế.
-
-**Lý do chủ xe quay lại:** danh sách khách, ghế còn lại và thứ tự đón/trả tiếp tục hữu ích khi xe đang chạy.
+**“Contacted” and “Pickup confirmed” must be two separate statuses.**
 
 ---
 
-## 4. CarMate đứng giữa sắp xếp như thế nào?
+## 3. Driver flow: from “I have a trip” to picking up passengers
 
-CarMate xét đồng thời:
+### Step 1 — See the value first
 
-1. **Đúng hướng:** xe có thể đi qua điểm đón và đưa khách đến đích.
-2. **Đúng thời gian:** hai cửa sổ thời gian giao nhau.
-3. **Đủ ghế:** trên toàn bộ đoạn khách sẽ đi.
-4. **Điểm gặp khả thi:** tiếp cận được, có thể đón và hai bên chấp nhận.
-5. **Giá phù hợp:** tính tổng tiền cho hành trình.
-6. **Mức chắc chắn:** dựa trên dữ liệu còn mới và bằng chứng thực tế.
-7. **Giữ cam kết cũ:** việc đón thêm không phá các cuộc hẹn đã xác nhận.
+The driver goes to the section:
 
-### “The best” được chốt nghĩa là gì?
+**“Find passengers along my route.”**
 
-**Phương án phù hợp nhất hiện tìm được, trong nguồn xe và dữ liệu đang có, theo nhu cầu của khách và giới hạn của chủ xe.**
+Enter the route, date/time and free seats. No login needed yet.
 
-Khách ưu tiên đến sớm có thể nhận đề xuất khác khách ưu tiên giá thấp.
+CarMate shows:
 
-Sau khi hai bên xác nhận, CarMate bảo vệ cuộc hẹn ấy. Hệ thống không tự đổi xe hoặc đổi khách chỉ vì xuất hiện một lựa chọn mới hấp dẫn hơn.
+- The trip page being created.
+- Real matching requests, if any.
+- Pickup/drop-off areas, number of people and time windows.
+- The expected impact on the journey.
+
+The preview protects the passenger's identity and private address.
+
+### Step 2 — Log in when they want to use the results
+
+The two main activation buttons:
+
+- **“Post a trip and receive requests”.**
+- **“Send an offer to pick up this passenger”.**
+
+Explanation:
+
+> **Log in to manage your trip, receive replies and arrange passenger pickup appointments.**
+
+After login, continue with the exact task in progress.
+
+### Step 3 — Complete the required information
+
+The driver sets up:
+
+- The responsible person/entity and the chauffeur who performs the trip.
+- The vehicle, number of seats and contact information.
+- Listed price or “Liên hệ”.
+- Detour limit, waiting time, pickup method.
+- Verification information appropriate to the activity being taken part in.
+
+**A Google/Telegram account establishes account management rights; the quality and eligibility of the vehicle must be checked separately.**
+
+### Step 4 — Receive suggestions already filtered by CarMate
+
+Instead of reading every request, the driver sees information that supports a decision:
+
+> There is a suitable passenger at a point ahead.
+> How many seats are needed, where they are going, and the time window for pickup.
+> How an additional pickup affects the appointments already accepted.
+
+The driver accepts or proposes an adjustment. Once the passenger agrees to the final conditions, the appointment takes effect.
+
+### Step 5 — Keep picking up passengers along the journey
+
+CarMate keeps considering passengers at points ahead, based on the **free seats on each segment**.
+
+Example, a vehicle with four seats:
+
+- Two passengers go A → D.
+- Two passengers go B → C.
+- After C, it can take two passengers C → D if the timing works.
+
+The driver must also update passengers taken outside CarMate so the system does not suggest more than the number of seats.
+
+**Reason the driver comes back:** the passenger list, remaining seats and the pickup/drop-off order stay useful while the vehicle is running.
 
 ---
 
-## 5. Sau khi chốt: lý do cả hai tiếp tục dùng CarMate
+## 4. How does CarMate arrange things as the intermediary?
 
-Hai bên cùng nhìn một cuộc hẹn:
+CarMate considers all of the following at once:
 
-| Khách nhìn thấy | Chủ xe/tài xế nhìn thấy |
+1. **Right direction:** the vehicle can pass through the pickup point and bring the passenger to the destination.
+2. **Right time:** the two time windows overlap.
+3. **Enough seats:** across the whole segment the passenger will travel.
+4. **Feasible meeting point:** reachable, pickup is possible and both parties accept it.
+5. **Suitable price:** compute the total price for the journey.
+6. **Level of certainty:** based on fresh data and real-world evidence.
+7. **Keep earlier commitments:** an additional pickup does not break appointments that are already confirmed.
+
+### What does “the best” mean, as finalized?
+
+**The most suitable option found at present, within the vehicle supply and data available, according to the passenger's needs and the driver's limits.**
+
+A passenger who prioritizes arriving early may receive a different suggestion from one who prioritizes a low price.
+
+Once both parties confirm, CarMate protects that appointment. The system does not swap vehicles or passengers just because a more attractive option appears.
+
+---
+
+## 5. After confirmation: why both keep using CarMate
+
+Both parties look at the same appointment:
+
+| The passenger sees | The driver (owner/chauffeur) sees |
 |---|---|
-| Xe đã xác nhận, đang đến hay đang trễ | Các điểm cần đón/trả tiếp theo |
-| Điểm gặp và khoảng giờ đón đã chốt | Khách nào đã sẵn sàng |
-| Thời gian đến dự kiến mới nhất | Số người và ghế còn lại từng đoạn |
-| Cần làm gì tiếp theo | Thay đổi cần phản hồi |
-| Cách liên hệ, báo vấn đề, tìm thay thế | Cơ hội nhận thêm khách phù hợp |
+| Vehicle confirmed, on the way or running late | The next pickup/drop-off points |
+| The confirmed meeting point and pickup time window | Which passengers are ready |
+| The latest expected arrival time | Number of people and seats left on each segment |
+| What to do next | Changes that need a response |
+| How to make contact, report a problem, find a replacement | The chance to take on additional suitable passengers |
 
-Các trạng thái chính:
+The main statuses:
 
-**Đang tìm → Chờ phản hồi → Đã xác nhận → Xe đang đến → Đã lên xe → Hoàn tất.**
+**Searching → Awaiting response → Confirmed → Vehicle on the way → Boarded → Completed.**
 
-Nếu thiếu cập nhật, phải hiện **“Chưa có cập nhật mới”**. Thời gian dự kiến thay đổi không được âm thầm thay thế khoảng giờ đã hẹn.
+If an update is missing, it must show **“Chưa có cập nhật mới”** (“No new updates yet”). A changed expected time must not silently replace the agreed time window.
 
-Đăng nhập tạo điều kiện lưu và nhận cập nhật; người dùng cần chọn một kênh thông báo hoạt động được.
+Logging in makes it possible to save and receive updates; the user needs to choose a working notification channel.
 
 ---
 
-## 6. Khi có hủy, trễ hoặc không gặp được nhau
+## 6. When there is a cancellation, delay or a missed meeting
 
-| Tình huống | CarMate xử lý |
+| Situation | How CarMate handles it |
 |---|---|
-| **Xe hủy trước khi đón** | Giữ nhu cầu gốc, thời gian đã chờ và hạn đến; tìm phương án thay thế còn khả thi |
-| **Nhà xe khác có thể nhận** | Gửi đề nghị tiếp nhận; khách được biết xe, giờ và giá mới; hai bên xác nhận trước khi chuyển |
-| **Xe trễ** | Cảnh báo, cập nhật dự kiến; khách chọn tiếp tục chờ hoặc tìm thay thế |
-| **Khách không đi nữa** | Đóng nhu cầu, dừng tìm kiếm/liên hệ, báo xe và giải phóng ghế |
-| **Khách vẫn đi nhưng muốn đổi** | Xử lý thay đổi có kiểm soát, làm rõ cuộc hẹn nào còn hiệu lực |
-| **Khách hủy, xe vẫn chạy** | Tìm khách khác phù hợp với phần hành trình và ghế vừa trống |
-| **Không có xe thay thế** | Nói rõ tình trạng, tiếp tục tìm đến thời hạn khách chọn |
-| **Sự cố khi khách đã lên xe** | Chuyển sang hỗ trợ hành trình từ vị trí hiện tại; phối hợp tiếp nhận nếu có phương án |
+| **Vehicle cancels before pickup** | Keep the original request, the time already waited and the arrival deadline; look for a feasible replacement option |
+| **Another operator can take over** | Send a takeover offer; the passenger is told the new vehicle, time and price; both parties confirm before the transfer |
+| **Vehicle is late** | Warn, update the expected time; the passenger chooses to keep waiting or look for a replacement |
+| **Passenger no longer travels** | Close the request, stop searching/contacting, notify the vehicle and release the seat |
+| **Passenger still travels but wants a change** | Handle the change in a controlled way, making clear which appointment is still valid |
+| **Passenger cancels, vehicle still runs** | Find another passenger that fits the part of the journey and the seat that just became free |
+| **No replacement vehicle** | State the situation clearly, keep searching until the deadline the passenger chose |
+| **Incident after the passenger has boarded** | Switch to journey support from the current position; coordinate a handover if an option exists |
 
-Nhà xe phù hợp có thể chủ động liên hệ **trong phạm vi khách cho phép**. CarMate quản lý đề nghị để khách không bị hàng loạt xe gọi cùng lúc.
+A suitable operator can reach out proactively **within the scope the passenger allows**. CarMate manages offers so the passenger is not called by many vehicles at once.
 
-> **Chưa triển khai.** Hiện `batchMatchingEngine` ghi cả danh sách ứng viên cứu hộ cùng lúc, kèm số liên hệ của từng chủ xe đã đồng ý công khai. Chưa có hàng đợi hay giới hạn số đề nghị đồng thời, nên một khách bị hủy chuyến có thể nhận nhiều cuộc gọi liên tiếp. Cần bổ sung trước khi mở cho người dùng thật.
+> **Not yet implemented.** Currently `batchMatchingEngine` writes the whole list of rescue candidates at once, together with the contact number of each driver who has agreed to publish. There is no queue or limit on the number of concurrent offers, so a passenger whose trip was cancelled may receive many calls in a row. This needs to be added before opening to real users.
 
-### Giá trị “x bị mất”
+### The value of “x lost”
 
-Khi cuộc hẹn hỏng, thời gian chờ và cơ hội đã trôi qua cần được ghi nhận. **Không đặt lại đồng hồ của khách từ đầu.**
+When an appointment falls through, the waiting time and the opportunity that have already passed must be recorded. **Do not reset the passenger's clock to zero.**
 
-CarMate tối ưu phương án tiếp theo trong thời gian còn lại. Giá hoặc thời gian của chuyến sau vẫn có thể tốt hơn ở một mặt; hệ thống không cố làm phương án sau tệ đi.
+CarMate optimizes the next option within the remaining time. The later trip's price or time may still be better in one respect; the system does not try to make the later option worse.
 
-**Phương án dự phòng là khả năng tìm và xác nhận lại, chưa phải một chiếc xe đã chắc chắn dành sẵn.**
+**The fallback option is the ability to search and re-confirm, not a vehicle that is already certainly set aside.**
 
 ---
 
-## 7. Chốt lý do đăng nhập cho từng bên
+## 7. Finalizing the reason to log in for each party
 
-| | Khách | Chủ xe/tài xế |
+| | Passenger | Driver (owner/chauffeur) |
 |---|---|---|
-| **Giá trị nhìn thấy trước** | Chuyến, giá, điểm đón, thông tin nhà xe | Trang chuyến và nhu cầu thật phù hợp |
-| **Thời điểm đăng nhập** | Gửi yêu cầu đón, kích hoạt tìm xe hoặc lưu cuộc hẹn | Đăng chuyến hoặc gửi đề nghị đón |
-| **Lợi ích ngay sau đăng nhập** | Nhu cầu được lưu, có phản hồi và trạng thái rõ ràng | Chuyến được quản lý, nhận yêu cầu và phản hồi |
-| **Lý do quay lại trong chuyến** | Theo dõi xe, giờ đón và xử lý sự cố | Quản lý khách, ghế và thứ tự đón/trả |
-| **Lý do dùng lần sau** | Tìm và quản lý hành trình tiếp theo thuận tiện hơn | Đăng lại chuyến, tiếp tục tìm khách phù hợp |
+| **Value seen first** | Trips, prices, pickup points, operator information | The trip page and real matching requests |
+| **When they log in** | Sending a pickup request, activating the vehicle search or saving an appointment | Posting a trip or sending a pickup offer |
+| **Benefit right after login** | The request is saved, with replies and a clear status | The trip is managed, with requests and replies received |
+| **Reason to come back during the trip** | Track the vehicle, pickup time and handle incidents | Manage passengers, seats and the pickup/drop-off order |
+| **Reason to use it next time** | Finding and managing the next journey is more convenient | Re-post the trip, keep finding suitable passengers |
 
-Dùng Google/Telegram để giảm thao tác, giữ thông tin đã nhập và quay về đúng hành động đang làm. Việc xem thông tin công khai và gọi trực tiếp vẫn mở.
+Use Google/Telegram to reduce steps, keep the information already entered and return to the exact action in progress. Viewing public information and calling directly remain open.
 
-**Sau khi hai bên có số điện thoại, CarMate vẫn có giá trị nhờ quản lý cuộc hẹn đang thay đổi theo thời gian.**
+**After both parties have each other's phone number, CarMate still has value by managing an appointment that keeps changing over time.**
 
-## 8. Điều kiện để luồng này có sức hút khi mới ra mắt
+## 8. Conditions for this flow to gain traction at launch
 
-Nếu chưa có nhu cầu phù hợp:
+If there are no matching requests yet:
 
-- Chủ xe vẫn có thể tạo trang chuyến dùng với khách hiện hữu.
-- Khách có thể lưu nhu cầu và nhận phản hồi khi xuất hiện xe phù hợp.
-- Hiển thị đúng tình trạng; lượt xem không được tính thành khách đang chờ.
+- The driver can still create a trip page to use with existing customers.
+- The passenger can save a request and receive replies when a suitable vehicle appears.
+- Show the true situation; views must not be counted as waiting passengers.
 
-Cần kiểm chứng việc **trang chuyến giúp bớt công liên hệ** và **ghép chuyến tạo được cuộc hẹn thật**. Miễn phí và đăng nhập dễ hỗ trợ hai việc đó, nhưng chưa đủ bảo đảm người dùng tự tìm đến.
+We need to verify that **the trip page reduces the effort of making contact** and that **trip matching produces real appointments**. Being free and easy login support both, but are not enough to guarantee that users come on their own.
 
-### Danh bạ nhà xe là nguồn nội dung đầu tiên
+### The operator directory is the first content source
 
-Trước khi có đủ hai phía, danh bạ nhà xe đã kiểm nguồn là thứ dùng được ngay: khách tra cứu và gọi thẳng, không cần chờ hiệu ứng mạng. Khách xem thấy sai thì **đề xuất sửa** ngay trên hồ sơ; quản trị duyệt một chạm là số được cập nhật, kèm lịch sử ai đề xuất và đã đổi gì. Khi nhà xe nhận quyền quản lý hồ sơ, họ tự kiểm lại và chịu trách nhiệm cho thông tin của mình.
+Before both sides are present, a source-checked operator directory is something usable immediately: passengers look up and call directly, without waiting for network effects. If a passenger sees something wrong, they can **suggest a correction** right on the profile; admin approves with one tap and the number is updated, with a history of who suggested it and what was changed. When an operator claims management of the profile, they re-check it themselves and are responsible for their own information.
 
-Chi tiết cơ chế tại [OPERATOR_PROFILES.md](OPERATOR_PROFILES.md).
+Details of the mechanism are in [OPERATOR_PROFILES.md](OPERATOR_PROFILES.md).
 
-### Câu chốt sản phẩm
+### Product closing statement
 
-**Khách đăng nhập để CarMate tiếp tục theo nhu cầu và cuộc hẹn của mình. Chủ xe đăng nhập để CarMate giúp tìm khách phù hợp và sắp xếp việc đón. Cả hai ở lại vì hành trình vẫn cần được theo dõi cho đến khi gặp nhau và đi xong.**
+**Passengers log in so CarMate keeps following their request and appointment. Drivers log in so CarMate helps find suitable passengers and arrange the pickup. Both stay because the journey still needs to be tracked until they meet and finish the ride.**
 
 ---
 
-## 9. Trạng thái triển khai
+## 9. Implementation status
 
-Đối chiếu tài liệu với mã nguồn tại thời điểm viết. Phần “chưa có” không phải lỗi — tài liệu mô tả luồng mục tiêu.
+Checks the document against the source code at the time of writing. A “not yet” item is not a bug — the document describes the target flow.
 
-| Phần | Trạng thái | Nơi kiểm chứng |
+| Item | Status | Where to verify |
 |---|---|---|
-| Xem/tìm không cần đăng nhập | Có | `GET /operators`, `/trips`, `/intents` không gắn `requireAuth` |
-| “Đã liên hệ” ≠ “Đã xác nhận đón” | Có | `inquiring` → `pre_confirmed` → `confirmed` |
-| Chốt đúng phiên bản đề nghị | Có | `proposalVersion` trong `confirmAppointment` |
-| Ghế còn trống theo từng đoạn | Có | `peakSeats(reservations, segment, tripSegment)` |
-| Lên xe và hoàn tất là hai lần ghi nhận | Có | `markAppointmentBoarded`, `completeAppointment` |
-| Giữ thời gian đã chờ khi xe hủy | Có | `waitingElapsedMs` tính từ `originalRequestedAt` |
-| “Vì sao được đề xuất” | Có | `reason` trong `connectionMatching` |
-| Thời hạn hiệu lực của dữ liệu | Có | `freshness()` → `fresh`/`stale`/`unreviewed`, `priceStale` |
-| Đề xuất sửa thông tin nhà xe | Có | `POST /operators/:id/reports` loại `correction` |
-| “Xe đang đến” là trạng thái chính | Một phần | Có cờ `driver_confirmed`, `readyConfirmedAt`; chưa nằm trong tập trạng thái chính |
-| Nhãn “Chưa có cập nhật mới” | Chưa có | Không tìm thấy chuỗi trong `apps/web/src` |
-| Điều tiết số đề nghị đồng thời | Chưa có | Xem ghi chú ở mục 6 |
+| View/search without login | Yes | `GET /operators`, `/trips`, `/intents` do not have `requireAuth` attached |
+| “Contacted” ≠ “Pickup confirmed” | Yes | `inquiring` → `pre_confirmed` → `confirmed` |
+| Confirm the exact proposal version | Yes | `proposalVersion` in `confirmAppointment` |
+| Free seats per segment | Yes | `peakSeats(reservations, segment, tripSegment)` |
+| Boarding and completion are two separate records | Yes | `markAppointmentBoarded`, `completeAppointment` |
+| Preserve the time already waited when the vehicle cancels | Yes | `waitingElapsedMs` computed from `originalRequestedAt` |
+| “Why it was suggested” | Yes | `reason` in `connectionMatching` |
+| Validity period of the data | Yes | `freshness()` → `fresh`/`stale`/`unreviewed`, `priceStale` |
+| Suggest a correction to operator information | Yes | `POST /operators/:id/reports` with type `correction` |
+| “Vehicle on the way” as a main status | Partial | Has the `driver_confirmed` flag and `readyConfirmedAt`; not yet part of the main status set |
+| Label “Chưa có cập nhật mới” (“No new updates yet”) | Not yet | String not found in `apps/web/src` |
+| Throttling of concurrent offers | Not yet | See the note in section 6 |

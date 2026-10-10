@@ -1,17 +1,17 @@
 /**
- * plateMasker.js - Bộ xử lý che biển số xe bảo mật trên HTML5 Canvas
+ * plateMasker.js - Secure license-plate masking processor on HTML5 Canvas
  * 
- * Tuân thủ triệt để 4 trụ cột CarMate:
- * 1. MIT Invariants: Tiêu hủy điểm ảnh (destructive pixelation) trên canvas trước khi xuất file,
- *    đảm bảo dữ liệu biển số thật 100% không thể phục hồi từ ảnh đã lưu.
- * 2. Stanford Ergonomics: Tự động che ngay khi chọn ảnh (Auto-cover 0-tap) cho góc Trước và góc Sau.
- * 3. Cursor Zero-Blocking: Xử lý 100% trên client trong <10ms, không round-trip máy chủ hay gọi AI chậm chạp.
- * 4. Apple Liquid Aesthetics: Thanh che squircle đen graphite sang trọng, viền sáng mảnh, chữ sắc nét.
+ * Strictly follows the 4 CarMate pillars:
+ * 1. MIT Invariants: Destructive pixelation on the canvas before exporting the file,
+ *    ensuring the real license-plate data is 100% unrecoverable from the saved image.
+ * 2. Stanford Ergonomics: Masks automatically as soon as a photo is chosen (Auto-cover 0-tap) for the Front and Back angles.
+ * 3. Cursor Zero-Blocking: Processed 100% on the client in <10ms, with no server round-trip or slow AI calls.
+ * 4. Apple Liquid Aesthetics: An elegant graphite-black squircle bar, a thin light border, crisp text.
  */
 import { normalizePhotoUrl } from '@carmate/shared';
 
 /**
- * Vẽ thanh che bảo mật squircle lên canvas
+ * Draws the squircle security mask bar onto the canvas
  */
 export function drawPlateMaskOnCanvas(ctx, width, height, options = {}) {
   const {
@@ -30,11 +30,11 @@ export function drawPlateMaskOnCanvas(ctx, width, height, options = {}) {
   let x = Math.round(cx - maskW / 2);
   let y = Math.round(cy - maskH / 2);
 
-  // Giữ thanh che nằm trong phạm vi ảnh
+  // Keep the mask bar within the image bounds
   x = Math.max(4, Math.min(width - maskW - 4, x));
   y = Math.max(4, Math.min(height - maskH - 4, y));
 
-  // 1. MIT Invariant: Destructive Pixelation tiêu huỷ điểm ảnh biển số thật
+  // 1. MIT Invariant: Destructive Pixelation destroys the pixels of the real license plate
   const blockSize = Math.max(8, Math.round(maskW / 18));
   try {
     const imgData = ctx.getImageData(x, y, maskW, maskH);
@@ -71,11 +71,11 @@ export function drawPlateMaskOnCanvas(ctx, width, height, options = {}) {
     }
     ctx.putImageData(imgData, x, y);
   } catch (err) {
-    // Dự phòng nếu canvas bị cross-origin taint
+    // Fallback if the canvas is cross-origin tainted
     console.warn('[PlateMasker] Không thể đọc pixel data trực tiếp:', err);
   }
 
-  // 2. Apple Liquid Aesthetics: Vẽ viên thuốc squircle graphite sang trọng
+  // 2. Apple Liquid Aesthetics: Draw an elegant graphite squircle pill
   ctx.save();
   const radius = Math.min(14, Math.round(maskH / 2.6));
 
@@ -83,7 +83,7 @@ export function drawPlateMaskOnCanvas(ctx, width, height, options = {}) {
   ctx.shadowBlur = Math.round(maskH * 0.35);
   ctx.shadowOffsetY = Math.round(maskH * 0.1);
 
-  // Nền gradient đen graphite
+  // Graphite-black gradient background
   const grad = ctx.createLinearGradient(x, y, x, y + maskH);
   grad.addColorStop(0, '#1c1c1e');
   grad.addColorStop(1, '#09090b');
@@ -92,19 +92,19 @@ export function drawPlateMaskOnCanvas(ctx, width, height, options = {}) {
   if (ctx.roundRect) {
     ctx.roundRect(x, y, maskW, maskH, radius);
   } else {
-    // Fallback cho trình duyệt cũ
+    // Fallback for older browsers
     ctx.rect(x, y, maskW, maskH);
   }
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Viền mảnh sáng tinh tế
+  // Subtle thin light border
   ctx.shadowColor = 'transparent';
   ctx.lineWidth = Math.max(1.5, Math.round(maskW / 140));
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
   ctx.stroke();
 
-  // 3. Typography sắc nét chuẩn Apple
+  // 3. Crisp Apple-standard typography
   const fontSize = Math.max(11, Math.round(maskH * 0.38));
   ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Roboto, sans-serif`;
   ctx.fillStyle = '#ffffff';
@@ -118,7 +118,7 @@ export function drawPlateMaskOnCanvas(ctx, width, height, options = {}) {
 }
 
 /**
- * Render ảnh đã che biển số từ HTMLImageElement hoặc URL ảnh gốc
+ * Renders a plate-masked image from an HTMLImageElement or an original image URL
  */
 export function renderMaskedImageFromSource(imgOrSrc, options = {}) {
   return new Promise((resolve, reject) => {
@@ -163,14 +163,14 @@ export function renderMaskedImageFromSource(imgOrSrc, options = {}) {
     if (typeof imgOrSrc === 'string') {
       const normalizedSrc = normalizePhotoUrl(imgOrSrc) || imgOrSrc;
       const image = new window.Image();
-      // Không đặt crossOrigin cho data: URL hoặc blob: URL vì trình duyệt có thể từ chối render
+      // Do not set crossOrigin for data: URLs or blob: URLs because the browser may refuse to render
       if (!normalizedSrc.startsWith('data:') && !normalizedSrc.startsWith('blob:')) {
         image.crossOrigin = 'anonymous';
       }
       image.onload = () => apply(image);
       image.onerror = (e) => {
         if (image.crossOrigin) {
-          // Thử lại không dùng crossOrigin phòng khi máy chủ ảnh ngoài không hỗ trợ CORS
+          // Retry without crossOrigin in case the external image server does not support CORS
           const fallbackImage = new window.Image();
           fallbackImage.onload = () => apply(fallbackImage);
           fallbackImage.onerror = () => reject(e);
@@ -187,7 +187,7 @@ export function renderMaskedImageFromSource(imgOrSrc, options = {}) {
 }
 
 /**
- * Xử lý file tải lên: Nén ảnh và tự động che biển số nếu là góc Trước / góc Sau
+ * Handles an uploaded file: compresses the image and automatically masks the plate for the Front / Back angle
  */
 export function processCarPhotoUpload(file, slotId = 'front') {
   return new Promise((resolve, reject) => {
@@ -199,7 +199,7 @@ export function processCarPhotoUpload(file, slotId = 'front') {
       const img = new window.Image();
       img.onload = async () => {
         try {
-          // Vị trí mặc định thông minh theo từng góc xe
+          // Smart default position for each vehicle angle
           let yRatio = 0.74;
           if (slotId === 'back') yRatio = 0.76;
           else if (slotId === 'front') yRatio = 0.74;
@@ -207,7 +207,7 @@ export function processCarPhotoUpload(file, slotId = 'front') {
 
           const defaultX = 0.5;
 
-          // Tạo ảnh gốc đã nén (để giữ trong state làm nền khi người dùng muốn chạm đổi chỗ)
+          // Create the compressed original image (kept in state as the base when the user wants to tap to reposition)
           const baseCanvas = document.createElement('canvas');
           const maxDim = 1000;
           let w = img.width;
@@ -227,7 +227,7 @@ export function processCarPhotoUpload(file, slotId = 'front') {
           baseCtx.drawImage(img, 0, 0, w, h);
           const originalCompressedUrl = baseCanvas.toDataURL('image/jpeg', 0.85);
 
-          // Tự động che biển số cho góc trước / sau (hoặc mặc định cho tất cả nếu có biển số)
+          // Automatically mask the plate for the front / back angle (or by default for all if a plate is present)
           const shouldAutoMask = slotId === 'front' || slotId === 'back';
 
           let maskedUrl = originalCompressedUrl;

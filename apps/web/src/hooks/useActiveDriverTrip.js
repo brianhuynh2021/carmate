@@ -4,13 +4,13 @@ import api from '../api/client.js';
 
 /**
  * Custom Hook: useActiveDriverTrip
- * Tải chuyến xe đang mở nhận khách của Chủ xe.
+ * Loads the driver's trip that is currently open for passengers.
  *
- * Logic này trước đây bị chép nguyên văn ở cả CockpitMode và DriverScheduleCardView
- * (giống nhau từng ký tự, chỉ khác nhãn log), nên sửa một nơi là quên nơi kia.
+ * This logic used to be copied verbatim in both CockpitMode and DriverScheduleCardView
+ * (identical character for character, differing only in the log label), so fixing one place meant forgetting the other.
  *
- * @param {string} driverPhone - SĐT Chủ xe dùng để đối chiếu chuyến
- * @param {string} logTag - Nhãn hiển thị khi ghi cảnh báo
+ * @param {string} driverPhone - Driver phone number used to match the trip
+ * @param {string} logTag - Label shown when logging a warning
  */
 export default function useActiveDriverTrip(driverPhone, logTag = 'ActiveDriverTrip') {
   const [activeDriverTrip, setActiveDriverTrip] = useState(null);

@@ -1,6 +1,6 @@
 /**
  * CarMate Error Monitoring & Sentry Safe Wrapper
- * Ngăn chặn hoàn toàn sự cố White Screen of Death và báo lỗi tập trung
+ * Fully prevents White Screen of Death incidents and reports errors centrally
  */
 
 import { trackEvent } from './analytics.js';
@@ -26,7 +26,7 @@ export function initSentry() {
 }
 
 /**
- * Bắt và ghi nhận ngoại lệ không mong muốn
+ * Catches and records unexpected exceptions
  */
 export function captureException(error, errorInfo = {}) {
   console.error('[CarMate Crash Caught]:', error, errorInfo);
@@ -37,16 +37,16 @@ export function captureException(error, errorInfo = {}) {
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   );
 
-  // 1. Gửi tới Sentry nếu có
+  // 1. Send to Sentry if available
   if (isSentryReady && typeof window !== 'undefined' && window.Sentry) {
     try {
       window.Sentry.captureException(error, { extra: errorInfo });
     } catch {
-      // Bỏ qua lỗi kết nối Sentry
+      // Ignore Sentry connection errors
     }
   }
 
-  // 2. Tự động ghi nhận vào Analytics SQLite Store với cờ isDev (để backend không gửi alert Telegram)
+  // 2. Automatically record into the Analytics SQLite Store with the isDev flag (so the backend does not send a Telegram alert)
   try {
     trackEvent('error_unhandled', {
       message: error?.message || String(error),

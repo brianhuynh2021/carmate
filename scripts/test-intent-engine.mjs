@@ -1,13 +1,13 @@
 /**
  * ============================================================================
- * KIỂM THỬ BỘ HIỂU Ý ĐỊNH BẢN ĐỊA (NATIVE INTENT ENGINE — ZERO-LLM)
+ * TESTS FOR THE NATIVE INTENT UNDERSTANDING ENGINE (NATIVE INTENT ENGINE — ZERO-LLM)
  * ============================================================================
  *
- * 1. Chuẩn hoá & so khớp mờ tiếng Việt (khử dấu, viết tắt, lỗi gõ)
- * 2. Phân loại ý định có trọng số (8 nhóm ý định)
- * 3. Trích xuất thực thể: điểm đi/đến, thời gian, số ghế, ngân sách, tiện ích
- * 4. BẤT BIẾN AN TOÀN: tuyệt đối KHÔNG bịa ra địa danh không có trong câu
- * 5. Hiệu năng: toàn bộ suy luận phải chạy dưới 1ms/câu (yêu cầu Cursor Ambient)
+ * 1. Normalization & Vietnamese fuzzy matching (diacritic stripping, abbreviations, typos)
+ * 2. Weighted intent classification (8 intent groups)
+ * 3. Entity extraction: origin/destination, time, seat count, budget, amenities
+ * 4. SAFETY INVARIANT: absolutely NEVER fabricate place names that are not in the sentence
+ * 5. Performance: all inference must run in under 1ms per sentence (Cursor Ambient requirement)
  */
 
 import {
@@ -108,8 +108,8 @@ check('Độ tin cậy nằm trong [0,1]', intentCases.every(([t]) => {
 section('3. BẤT BIẾN AN TOÀN — KHÔNG BAO GIỜ BỊA ĐỊA DANH');
 // ════════════════════════════════════════════════════════════════════
 
-// Đây là bất biến quan trọng nhất của toàn engine. Câu KHÔNG chứa địa danh thì
-// tuyệt đối không được sinh ra điểm đi/điểm đến. Thà bỏ sót còn hơn bịa đặt.
+// This is the most important invariant of the whole engine. A sentence that does NOT contain a place name
+// must absolutely never produce an origin/destination. Better to miss one than to fabricate one.
 const noPlaceCases = [
   'nhiu tien z a',
   'huỷ chuyến giùm mình',
@@ -159,7 +159,7 @@ check('Nhận địa danh 1 từ đứng riêng: "đi Hàng Xanh"', /Hàng Xanh/
 check('Nhận tỉnh/thành: "đi sg"', /HCM|Sài Gòn/i.test(extractRoute('có xe nào đi sg không').to || extractRoute('có xe nào đi sg không').from || ''));
 check('Nhận lỗi đảo ký tự "hnag xanh"', /Hàng Xanh/i.test(extractRoute('đi hnag xanh').to || ''));
 
-// Mọi địa danh trả về PHẢI là hub/tỉnh có thật trong hệ thống.
+// Every place name returned MUST be a hub/province that really exists in the system.
 const sampleRoute = extractRoute('từ Chơn Thành xuống Bàu Bàng');
 check(
   'Địa danh trả về luôn kèm định danh hệ thống (hub id / province id)',
@@ -286,7 +286,7 @@ const perfSentences = [
   'tìm xe gia đình không thuốc lá dưới 150k đi Đồng Xoài'
 ];
 
-// Làm nóng để loại nhiễu JIT.
+// Warm up to eliminate JIT noise.
 for (let i = 0; i < 50; i++) parseUserMessage(perfSentences[i % perfSentences.length]);
 
 const ITERATIONS = 400;

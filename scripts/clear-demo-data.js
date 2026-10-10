@@ -1,14 +1,15 @@
 /**
- * CarMate — Xoá Sạch Dữ Liệu Mẫu (Clear Demo / Sample Data)
+ * CarMate — Clear Demo / Sample Data
  *
- * Dọn sạch các chuyến đi và đơn đặt xe mẫu trong cả SQLite và JSON,
- * đưa sàn giao dịch về trạng thái "Sàn Đang Chờ Chuyến Đầu Tiên".
+ * Wipes the sample trips and sample bookings from both SQLite and JSON,
+ * returning the marketplace to the "Sàn Đang Chờ Chuyến Đầu Tiên" ("marketplace awaiting its
+ * first trip") state.
  *
- * Bảo toàn tài khoản Quản trị viên (Admin) theo luật bất biến MIT.
+ * Preserves the Admin account under the MIT invariant rule.
  *
- * Cách chạy:
+ * How to run:
  *   node scripts/clear-demo-data.js
- *   hoặc: npm run db:clear
+ *   or: npm run db:clear
  */
 
 import Database from 'better-sqlite3';
@@ -28,15 +29,15 @@ console.log('🧹 BẮT ĐẦU DỌN DẸP DỮ LIỆU MẪU CARMATE...\n');
 if (fs.existsSync(DB_PATH)) {
   const db = new Database(DB_PATH);
 
-  // 1. Xóa toàn bộ chuyến đi mẫu
+  // 1. Delete all sample trips
   const tripResult = db.prepare('DELETE FROM trips').run();
   console.log(`✅ Đã xóa ${tripResult.changes} chuyến đi mẫu trong SQLite.`);
 
-  // 2. Xóa toàn bộ đơn đặt xe mẫu
+  // 2. Delete all sample bookings
   const bookingResult = db.prepare('DELETE FROM bookings').run();
   console.log(`✅ Đã xóa ${bookingResult.changes} đơn đặt xe / ghép chỗ trong SQLite.`);
 
-  // 3. Xóa toàn bộ ý định gom xe (intents)
+  // 3. Delete all ride-pooling intents (intents)
   try {
     const intentResult = db.prepare('DELETE FROM intents').run();
     console.log(`✅ Đã xóa ${intentResult.changes} ý định gom xe (intents).`);
@@ -44,7 +45,7 @@ if (fs.existsSync(DB_PATH)) {
     console.warn('Lưu ý dọn intents:', e.message);
   }
 
-  // 4. Xóa toàn bộ yêu cầu trạm đón ảo (station_requests)
+  // 4. Delete all virtual pickup-station requests (station_requests)
   try {
     const stationResult = db.prepare('DELETE FROM station_requests').run();
     console.log(`✅ Đã xóa ${stationResult.changes} vé trạm đón ảo (station_requests).`);
@@ -52,7 +53,7 @@ if (fs.existsSync(DB_PATH)) {
     console.warn('Lưu ý dọn station_requests:', e.message);
   }
 
-  // 5. Xóa các báo cáo sự cố mẫu nếu có
+  // 5. Delete sample incident reports, if any
   try {
     const reportResult = db.prepare('DELETE FROM trip_incidents').run();
     console.log(`✅ Đã xóa ${reportResult.changes} báo cáo sự cố (trip_incidents).`);
@@ -63,7 +64,7 @@ if (fs.existsSync(DB_PATH)) {
     console.log(`✅ Đã xóa ${legacyReportResult.changes} báo cáo sự cố mẫu (reports).`);
   } catch {}
 
-  // 6. Xóa chu kỳ gom khớp lệnh & lệnh hoán đổi chỗ
+  // 6. Delete batch-matching cycles & seat-swap orders
   try {
     const epochResult = db.prepare('DELETE FROM matching_epochs').run();
     console.log(`✅ Đã xóa ${epochResult.changes} chu kỳ gom khớp (matching_epochs).`);
@@ -74,7 +75,7 @@ if (fs.existsSync(DB_PATH)) {
     console.log(`✅ Đã xóa ${exchangeResult.changes} lệnh hoán đổi ghế (seat_exchange_orders).`);
   } catch {}
 
-  // 7. Giữ lại tài khoản Admin, bảo toàn tài khoản Google thật
+  // 7. Keep the Admin account, preserve real Google accounts
   try {
     const userResult = db
       .prepare(
@@ -86,7 +87,7 @@ if (fs.existsSync(DB_PATH)) {
     console.warn('Lưu ý dọn user:', err.message);
   }
 
-  // 8. Xóa toàn bộ sự kiện phân tích, phễu chuyển đổi & nhật ký AI
+  // 8. Delete all analytics events, conversion funnels & AI logs
   try {
     const trajResult = db.prepare('DELETE FROM ai_trajectories').run();
     console.log(`✅ Đã xóa ${trajResult.changes} nhật ký quỹ đạo AI (ai_trajectories).`);
@@ -102,7 +103,7 @@ if (fs.existsSync(DB_PATH)) {
     console.log(`✅ Đã xóa ${supportResult.changes} tin nhắn hỗ trợ CSKH.`);
   } catch {}
 
-  // 9. Bảo toàn và đồng bộ danh bạ nhà xe kiểm chứng (Verified Transit Directory)
+  // 9. Preserve and sync the verified bus-operator directory (Verified Transit Directory)
   try {
     const existing = db.prepare('SELECT value FROM key_values WHERE key = ?').get('transit_directory');
     const existingList = existing ? JSON.parse(existing.value) : [];
@@ -121,7 +122,7 @@ if (fs.existsSync(DB_PATH)) {
   db.close();
 }
 
-// 10. Cập nhật file JSON đồng bộ rỗng (bảo toàn tài khoản admin)
+// 10. Update the empty sync JSON file (preserving the admin account)
 if (fs.existsSync(JSON_PATH)) {
   const cleanJson = {
     version: '1.0.0',

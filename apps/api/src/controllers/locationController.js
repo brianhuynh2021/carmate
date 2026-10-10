@@ -1,11 +1,11 @@
 /**
  * Location Auto-Suggest Controller
- * Tích hợp hệ thống tìm kiếm địa chỉ thông minh theo chuẩn Grab / Google Maps
- * Kết hợp cơ sở dữ liệu nút giao/bến xe liên tỉnh với dịch vụ Geocoding OpenStreetMap/Photon
+ * Integrates a smart address-search system following the Grab / Google Maps standard
+ * Combines a database of inter-provincial junctions/bus stations with the OpenStreetMap/Photon Geocoding service
  */
 
 export const CURATED_LOCATIONS = [
-  // --- BÌNH PHƯỚC & ĐÔNG NAM BỘ ---
+  // --- BÌNH PHƯỚC & SOUTHEAST REGION ---
   {
     name: 'Trung tâm Hành chính Huyện Hớn Quản',
     detail: 'Khu phố 3, TT. Tân Khai, Huyện Hớn Quản, Tỉnh Bình Phước',
@@ -49,7 +49,7 @@ export const CURATED_LOCATIONS = [
     keywords: ['dong xoai', 'ben xe dong xoai', 'phu rieng do']
   },
 
-  // --- TP. HỒ CHÍ MINH ---
+  // --- HỒ CHÍ MINH CITY ---
   {
     name: 'Nhà khách Quân đội (Cống Quỳnh)',
     detail: '168 Cống Quỳnh, Phường Phạm Ngũ Lão, Quận 1, TP. Hồ Chí Minh',
@@ -117,7 +117,7 @@ export const CURATED_LOCATIONS = [
     keywords: ['cho ben thanh', 'ben thanh', 'quan 1', 'le loi']
   },
 
-  // --- HÀ NỘI & MIỀN BẮC ---
+  // --- HÀ NỘI & NORTHERN VIETNAM ---
   {
     name: 'Bến xe Mỹ Đình',
     detail: 'Số 20 Phạm Hùng, Phường Mỹ Đình 2, Quận Nam Từ Liêm, Hà Nội',
@@ -173,7 +173,7 @@ export const CURATED_LOCATIONS = [
     keywords: ['ben xe bai chay', 'bai chay', 'ha long', 'quang ninh']
   },
 
-  // --- ĐÀ NẴNG & MIỀN TRUNG ---
+  // --- ĐÀ NẴNG & CENTRAL VIETNAM ---
   {
     name: 'Bến xe Trung tâm TP. Đà Nẵng',
     detail: 'Số 185 Tôn Đức Thắng, Phường Hòa Minh, Quận Liên Chiểu, Đà Nẵng',
@@ -231,7 +231,7 @@ export const CURATED_LOCATIONS = [
     keywords: ['ben xe tay ninh', 'trung nu vuong', 'tay ninh']
   },
 
-  // --- ĐỒNG NAI, TRỤC QL20 & ĐÔNG NAM BỘ ---
+  // --- ĐỒNG NAI, QL20 CORRIDOR & SOUTHEAST REGION ---
   {
     name: 'Chợ Gia Kiệm (Huyện Thống Nhất)',
     detail: 'Quốc lộ 20, Xã Gia Kiệm, Huyện Thống Nhất, Tỉnh Đồng Nai',
@@ -275,14 +275,14 @@ function removeAccents(str = '') {
 }
 
 /**
- * Tra cứu địa điểm theo từ khoá với ưu tiên điểm mốc giao thông & geocoding
+ * Look up places by keyword, prioritizing traffic landmarks & geocoding
  */
 export async function suggestLocationsHandler(req, res) {
   const query = (req.query.q || '').trim();
   const limit = Math.min(Number(req.query.limit) || 8, 15);
 
   if (!query) {
-    // Trả về các điểm nút giao thông quan trọng nhất khi chưa gõ
+    // Return the most important traffic junction points when nothing has been typed yet
     return res.json({
       success: true,
       query: '',
@@ -294,7 +294,7 @@ export async function suggestLocationsHandler(req, res) {
   const cleanQ = removeAccents(query);
   const rawTokens = cleanQ.split(/[\s,.-]+/).filter((t) => t.length >= 2);
 
-  // 1. Tìm kiếm trong kho Curated với chấm điểm độ liên quan chuẩn xác (Strict Relevance Scoring)
+  // 1. Search the Curated store with strict relevance scoring (Strict Relevance Scoring)
   const localMatches = CURATED_LOCATIONS.map((item) => {
     const normName = removeAccents(item.name);
     const normDetail = removeAccents(item.detail);
@@ -307,12 +307,12 @@ export async function suggestLocationsHandler(req, res) {
     else if (normDetail.includes(cleanQ)) score += 100;
 
     if (rawTokens.length >= 2) {
-      // Khi gõ từ 2 từ trở lên (VD: "Gia Kiệm"): Tất cả các từ bắt buộc phải xuất hiện
+      // When typing 2 or more words (e.g. "Gia Kiệm"): all the words must appear
       const matchedCount = rawTokens.filter((t) => allWords.some((w) => w === t || w.startsWith(t))).length;
       if (matchedCount === rawTokens.length) {
         score += 80;
       } else if (!normName.includes(cleanQ) && !normKeywords.includes(cleanQ)) {
-        // Loại bỏ kết quả chỉ khớp 1 mẩu từ ngẫu nhiên (chống "gia" khớp nhầm "giao" trong Chơn Thành)
+        // Discard results that match only a random fragment of a word (prevents "gia" from wrongly matching "giao" in Chơn Thành)
         return { ...item, score: 0 };
       }
     } else if (rawTokens.length === 1) {
@@ -326,12 +326,12 @@ export async function suggestLocationsHandler(req, res) {
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
 
-  // 2. Gọi Photon Geocoding nếu truy vấn dài hơn 2 ký tự
+  // 2. Call Photon Geocoding if the query is longer than 2 characters
   let onlineMatches = [];
   if (query.length >= 2) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout an toàn
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // safe 2s timeout
 
       const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8`;
       const response = await fetch(photonUrl, {
@@ -381,7 +381,7 @@ export async function suggestLocationsHandler(req, res) {
               };
             })
             .filter((item) => {
-              // Lọc ưu tiên địa điểm Việt Nam
+              // Prioritize places in Vietnam
               const d = removeAccents(item.detail);
               return (
                 item.countryCode === 'vn' ||
@@ -399,7 +399,7 @@ export async function suggestLocationsHandler(req, res) {
     }
   }
 
-  // 3. Hợp nhất danh sách và xếp hạng theo điểm số tương quan thực tế
+  // 3. Merge the lists and rank by actual relevance score
   const allCandidates = [...localMatches, ...onlineMatches].sort((a, b) => b.score - a.score);
   const seen = new Set();
   const merged = [];

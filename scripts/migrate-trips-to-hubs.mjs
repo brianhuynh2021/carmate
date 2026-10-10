@@ -1,19 +1,19 @@
 /**
  * =============================================================================
- * DI TRÚ CHUYẾN CŨ VỀ TỌA ĐỘ TRẠM ẢO (LEGACY TRIP -> HUB COORDINATES)
+ * MIGRATE LEGACY TRIPS TO VIRTUAL STATION COORDINATES (LEGACY TRIP -> HUB COORDINATES)
  * =============================================================================
- * Chuyến đăng trước đây lưu điểm đi/đến bằng chữ người dùng tự gõ và giá do
- * Chủ xe tự nhập. Kể từ khi giá là ĐẦU RA của công thức và trạm là TỌA ĐỘ trong
- * ma trận thời gian - không gian, những chuyến đó thiếu mã trạm nên:
- *   - không tính lại được cước phân đoạn,
- *   - không chiếu được lên hành lang (Frenet) để dựng tầng FORMING,
- *   - mở form sửa chuyến sẽ thấy ô trạm trống.
+ * Previously, posted trips stored the origin/destination as free text typed by the user, and the price was
+ * entered by the driver. Now that the price is an OUTPUT of the formula and stations are COORDINATES in the
+ * space-time matrix, those trips lack a station code, so:
+ *   - segment fares cannot be recomputed,
+ *   - they cannot be projected onto the corridor (Frenet) to build the FORMING tier,
+ *   - opening the trip edit form shows an empty station field.
  *
- * Script này dò ngược chữ tự do về mã trạm, gắn originHubId/destinationHubId
- * rồi tính lại giá theo đúng công thức đang áp dụng.
+ * This script reverse-resolves the free text to a station code, sets originHubId/destinationHubId,
+ * then recomputes the price using the formula currently in effect.
  *
- * Chạy thử (không ghi gì):  node scripts/migrate-trips-to-hubs.mjs
- * Ghi thật:                 node scripts/migrate-trips-to-hubs.mjs --apply
+ * Dry run (writes nothing):  node scripts/migrate-trips-to-hubs.mjs
+ * Real write:                node scripts/migrate-trips-to-hubs.mjs --apply
  * =============================================================================
  */
 import Database from 'better-sqlite3';
@@ -30,9 +30,9 @@ const APPLY = process.argv.includes('--apply');
 const DB_PATH = path.resolve(process.cwd(), 'apps/api/data/carmate.sqlite');
 
 /**
- * Dò một chuỗi địa danh tự do về mã trạm ảo.
- * Ưu tiên tên trạm dài (cụ thể) nhất để "ngã 4 bình phước" không bị
- * "bình phước" nuốt mất — cùng nguyên tắc với gazetteer của timeSlotMatrix.
+ * Resolves a free-form place-name string to a virtual station code.
+ * Prefers the longest (most specific) station name so "ngã 4 bình phước" is not swallowed by
+ * "bình phước" — same principle as the gazetteer in timeSlotMatrix.
  */
 function resolveHubId(explicitHubId, ...freeTexts) {
   if (explicitHubId && getVirtualHubById(explicitHubId)) return explicitHubId;
@@ -54,13 +54,13 @@ function resolveHubId(explicitHubId, ...freeTexts) {
 const db = new Database(DB_PATH);
 const rows = db.prepare('SELECT id, type, status, fromLocation, toLocation, price, payload FROM trips').all();
 
-// Chuyến mẫu (seed) là nguồn chuẩn: mockData đã gắn sẵn mã trạm và giá đúng
-// công thức, nên lấy thẳng payload mới thay vì dò ngược từ chữ tự do.
+// Seed trips are the source of truth: mockData already carries the station codes and formula-correct
+// prices, so take the new payload directly instead of reverse-resolving from free text.
 const SEED_BY_ID = new Map(
   [...INITIAL_DRIVER_OFFERS, ...INITIAL_PASSENGER_REQUESTS].map((t) => [t.id, t])
 );
-// Chuyến mẫu của tuyến đã bị gỡ khỏi mockData (ngoài hành lang có trạm ảo):
-// giữ lại trong CSDL là bịa ra tuyến nền tảng không phục vụ được.
+// Seed trip on a route that was removed from mockData (outside the corridor with virtual stations):
+// keeping it in the DB would invent a route the platform cannot serve.
 const isStaleSeed = (id) => /^(DRV|REQ)-\d+$/.test(id) && !SEED_BY_ID.has(id);
 
 console.log(`\n🔎 Quét ${rows.length} chuyến trong CSDL${APPLY ? ' (GHI THẬT)' : ' (CHẠY THỬ — không ghi gì)'}\n`);
@@ -79,15 +79,15 @@ for (const row of rows) {
     continue;
   }
 
-  // 3a. Chuyến mẫu của tuyến đã gỡ -> xoá khỏi CSDL
+  // 3a. Seed trip on a removed route -> delete from the DB
   if (isStaleSeed(row.id)) {
     stale.push({ id: row.id, from: payload.from || row.fromLocation, to: payload.to || row.toLocation });
     continue;
   }
 
-  // 3b. Chuyến mẫu còn hiệu lực -> lấy thẳng payload chuẩn từ mockData.
-  // So sánh "đã đúng chưa" phải dựa trên payload ĐANG NẰM TRONG CSDL, nên giữ
-  // bản gốc lại; trộn seed vào chỉ để dựng payload mới sẽ ghi xuống.
+  // 3b. Seed trip still valid -> take the canonical payload straight from mockData.
+  // The "is it already correct" comparison must be based on the payload CURRENTLY IN THE DB, so keep
+  // the original; merging the seed in only builds the new payload that will be written.
   const seed = SEED_BY_ID.get(row.id);
   const dbPayload = payload;
   if (seed) payload = { ...payload, ...seed };
@@ -121,8 +121,8 @@ for (const row of rows) {
   }
 
   const next = { ...payload, originHubId, destinationHubId: destHubId, distanceKm: tariff.distanceKm };
-  // Giá chuyến Chủ xe là đầu ra công thức. Bài tìm xe của khách giữ nguyên mức
-  // mong muốn của họ — đó là nguyện vọng, không phải giá bán.
+  // A driver trip's price is a formula output. A passenger's ride search keeps their
+  // desired price — that is a wish, not a selling price.
   if (isDriver) next.basePricePerSeat = tariff.pricePerSeat;
 
   migrated.push({
@@ -168,7 +168,7 @@ if (failed.length > 0) {
 if (APPLY && (migrated.length > 0 || stale.length > 0)) {
   const upd = db.prepare('UPDATE trips SET payload = ?, price = ? WHERE id = ?');
   const delTrip = db.prepare('DELETE FROM trips WHERE id = ?');
-  // Cột targetTripId chỉ có ở một số bản CSDL, nên dò trước khi dựng câu lệnh.
+  // The targetTripId column only exists in some DB versions, so probe for it before building the statement.
   const bookingCols = db.prepare('PRAGMA table_info(bookings)').all().map((c) => c.name);
   const delBooking = bookingCols.includes('targetTripId')
     ? db.prepare('DELETE FROM bookings WHERE tripId = ? OR targetTripId = ?')

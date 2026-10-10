@@ -31,8 +31,8 @@ export function ownsTrip(user, trip) {
 
 const FULL_ROUTE = [-Infinity, Infinity];
 
-// Đoạn [s_đón, s_trả] trên cọc km hành lang. Trạm nằm ngoài bản đồ hành lang thì
-// không định vị được; khi đó phải coi như chiếm trọn tuyến để không bán vượt ghế.
+// Segment [s_pickup, s_dropoff] on the corridor km markers. A station outside the corridor map
+// cannot be positioned; it must then be treated as occupying the whole route so seats are not oversold.
 function interval(value) {
   const terms = value.committedTerms || value.proposalTerms || value;
   const a = getStationStationKm(terms.originHubId || value.originHubId || value.hubId);
@@ -40,9 +40,9 @@ function interval(value) {
   return a != null && b != null && a !== b ? [Math.min(a, b), Math.max(a, b)] : FULL_ROUTE;
 }
 
-// Giới hạn đoạn của một chỗ đã giữ vào đúng hành trình chuyến xe. Nhờ đó chỗ giữ
-// có trạm lạ chỉ chiếm phần tuyến xe thực sự chạy, thay vì chặn cả những đoạn xe
-// không đi qua.
+// Clamp the segment of a held seat to the vehicle trip's actual route. This way a reservation
+// with an unknown station only occupies the part of the route the vehicle really runs, instead of blocking
+// segments the vehicle does not pass through.
 function reservationInterval(booking, tripSegment) {
   const [a, b] = interval(booking);
   if (a !== -Infinity || b !== Infinity) return [a, b];
@@ -107,8 +107,8 @@ function writeLinkedRequest(database, booking, state) {
 function refreshInventory(database, trip, capacity, bookings) {
   const availableSeats = Math.max(0, capacity - peakSeats(activeReservations(trip.id, bookings), FULL_ROUTE, interval(trip)));
   const updated = { ...trip, bookingSeatCapacity: capacity, availableSeats, updatedAt: Date.now() };
-  // Trạng thái `full` là do chủ xe tự đặt qua PATCH /trips/:id/status — kho ghế
-  // không được tự lật ngược lại `active` và mở bán chuyến mà chủ xe đã khóa.
+  // The `full` status is set by the driver via PATCH /trips/:id/status — seat inventory
+  // must not flip it back to `active` and reopen a trip the driver has locked.
   database.prepare('UPDATE trips SET seats = ?, status = ?, payload = ? WHERE id = ?')
     .run(availableSeats, updated.status, JSON.stringify(updated), trip.id);
 }

@@ -58,18 +58,18 @@ const USER_KEY = 'carmate_user';
 export default function App() {
   const { t } = useI18n();
 
-  // Đảm bảo giao diện Clean Light Theme sáng sủa mặc định
+  // Ensure the UI defaults to a bright Clean Light Theme
   useEffect(() => {
     document.documentElement.classList.remove('dark');
   }, []);
 
-  // Khởi tạo Analytics và Giám sát ngoại lệ Sentry an toàn
+  // Safely initialize Analytics and Sentry exception monitoring
   useEffect(() => {
     initAnalytics();
     initSentry();
   }, []);
 
-  // Nhận diện Subdomain chuyên dụng: ops.carmate.vn / admin.carmate.vn / ?portal=ops
+  // Detect the dedicated Subdomain: ops.carmate.vn / admin.carmate.vn / ?portal=ops
   const isOpsPortal =
     typeof window !== 'undefined' &&
     (window.location.hostname.startsWith('ops.') ||
@@ -82,10 +82,10 @@ export default function App() {
 
   const canAccessAdmin = isOpsPortal || isLocalhost;
 
-  // Danh mục Tab hợp lệ trên toàn hệ sinh thái CarMate (Level 3 Architecture)
+  // List of valid Tabs across the whole CarMate ecosystem (Level 3 Architecture)
   const VALID_TABS = useMemo(() => ['market', 'intent', 'station', 'cockpit', 'booked', 'admin'], []);
 
-  // Ánh xạ Clean URL Pathname chuẩn Apple & Vercel (Zero #)
+  // Clean URL Pathname mapping in the Apple & Vercel style (Zero #)
   const getPathForTab = (tab) => {
     if (tab === 'market') return '/';
     if (tab === 'admin') return '/admin';
@@ -98,7 +98,7 @@ export default function App() {
   const getTabFromUrl = useCallback(() => {
     if (typeof window === 'undefined') return 'market';
 
-    // 1. Nhận diện Admin Portal chuyên dụng (Chuẩn MIT Invariant: cô lập trên admin.* / ops.*)
+    // 1. Detect the dedicated Admin Portal (MIT Invariant standard: isolated on admin.* / ops.*)
     if (
       isOpsPortal ||
       (isLocalhost &&
@@ -109,14 +109,14 @@ export default function App() {
       return 'admin';
     }
 
-    // 2. Nhận diện Clean URL Pathname (/booked, /radar, /match, /market, /admin, /cockpit, /tram, /intent, /post)
+    // 2. Detect Clean URL Pathname (/booked, /radar, /match, /market, /admin, /cockpit, /tram, /intent, /post)
     const rawPath = window.location.pathname.replace(/^\/+/, '').split('/')[0].trim().toLowerCase();
     if (!rawPath) {
-      // Khi truy cập đường dẫn gốc '/' (carmate.vn) -> 100% luôn là trang chủ 'market'
+      // When accessing the root path '/' (carmate.vn) -> always 100% the 'market' home page
       return 'market';
     }
     if (rawPath === 'admin' && !canAccessAdmin) {
-      // Chặn truy cập /admin trên domain chính (MIT Zero Attack Surface)
+      // Block access to /admin on the main domain (MIT Zero Attack Surface)
     } else if (rawPath === 'cockpit') {
       return 'cockpit';
     } else if (rawPath === 'tram' || rawPath === 'station') {
@@ -129,10 +129,10 @@ export default function App() {
       return 'market';
     }
 
-    // 3. Tương thích ngược với URL Hash cũ
+    // 3. Backward compatibility with the old URL Hash
     const rawHash = window.location.hash.replace('#', '').trim().toLowerCase();
     if (rawHash === 'admin' && !canAccessAdmin) {
-      // Chặn truy cập #admin trên domain chính
+      // Block access to #admin on the main domain
     } else if (rawHash === 'cockpit') {
       return 'cockpit';
     } else if (rawHash === 'tram' || rawHash === 'station') {
@@ -145,7 +145,7 @@ export default function App() {
       return rawHash;
     }
 
-    // 4. Nhận diện Search Query parameter (?tab=...)
+    // 4. Detect the Search Query parameter (?tab=...)
     try {
       const params = new URLSearchParams(window.location.search);
       const queryTab = params.get('tab');
@@ -166,7 +166,7 @@ export default function App() {
     return 'market';
   });
 
-  // Bất biến MIT: Chuẩn hóa vĩnh viễn tab 'my_trips' -> 'my-trips' để không bao giờ rơi vào trạng thái rỗng
+  // MIT invariant: permanently normalize the tab 'my_trips' -> 'my-trips' so it never falls into an empty state
   const setActiveTab = useCallback((tabOrUpdater) => {
     if (typeof tabOrUpdater === 'function') {
       _setActiveTab((prev) => {
@@ -183,7 +183,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
     trackPageView(activeTab);
 
-    // Đồng bộ Clean URL Pathname 2 chiều (Zero #, Chuẩn Apple & Vercel)
+    // Two-way Clean URL Pathname sync (Zero #, Apple & Vercel style)
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.removeItem('carmate_active_tab');
@@ -191,10 +191,10 @@ export default function App() {
         const currentPath = window.location.pathname;
         const currentHash = window.location.hash;
 
-        // Dọn các tham số kỹ thuật khỏi thanh địa chỉ trước khi ghi lại URL.
-        // '_r' do ErrorBoundary gắn vào để phá cache sau sự cố; nó không mang ý
-        // nghĩa gì với người dùng nhưng vì URL luôn được dựng lại kèm search cũ
-        // nên nó bám vĩnh viễn và đi theo mọi liên kết được chia sẻ.
+        // Clean technical parameters out of the address bar before writing the URL back.
+        // '_r' is attached by ErrorBoundary to bust the cache after a crash; it carries no meaning
+        // for the user, but because the URL is always rebuilt with the old search string
+        // it sticks around permanently and travels with every shared link.
         let search = window.location.search;
         try {
           const params = new URLSearchParams(search);
@@ -220,7 +220,7 @@ export default function App() {
             window.history.pushState(null, '', '/admin' + search);
           }
         } else {
-          // Nếu URL còn vướng hash cũ (ví dụ #my-trips), làm sạch vĩnh viễn không để lại dấu #
+          // If the URL still carries an old hash (e.g. #my-trips), clean it permanently without leaving a # behind
           if (currentHash && !currentHash.startsWith('#confirm-')) {
             window.history.replaceState(null, '', targetPath + search);
           } else if (currentPath !== targetPath && !isOpsPortal) {
@@ -233,7 +233,7 @@ export default function App() {
     }
   }, [activeTab, isOpsPortal]);
 
-  // Lắng nghe sự kiện Back/Forward trình duyệt hoặc thay đổi URL
+  // Listen for browser Back/Forward events or URL changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -252,13 +252,13 @@ export default function App() {
     };
   }, [activeTab, getTabFromUrl, setActiveTab]);
 
-  // Magic Link 1-Chạm Chủ xe & Apple Re-entry Card Khách quay lại web
+  // One-tap driver Magic Link & Apple Re-entry Card for passengers returning to the web
   const { driverConfirmCode, setDriverConfirmCode } = useZaloReentry({
     isOpsPortal,
     onNavigateTab: setActiveTab
   });
 
-  // State Người dùng đăng nhập (Đồng bộ đa tầng LocalStorage + First-Party Cookie)
+  // Logged-in user state (multi-layer sync of LocalStorage + First-Party Cookie)
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       if (typeof localStorage !== 'undefined') {
@@ -285,7 +285,7 @@ export default function App() {
 
   const [myTripsCount, setMyTripsCount] = useState(0);
 
-  // State Trạm đón ảo được quét QR hoặc chọn từ bản đồ
+  // State of the virtual pickup station scanned via QR or chosen from the map
   const [stationHubId, setStationHubId] = useState(() => {
     if (typeof window !== 'undefined') {
       const parts = window.location.pathname.split('/');
@@ -300,7 +300,7 @@ export default function App() {
 
   const [stationDestinationHubId, setStationDestinationHubId] = useState(null);
 
-  // Hook quản lý Modals
+  // Hook that manages Modals
   const {
     selectedItemForEscrow,
     setSelectedItemForEscrow,
@@ -336,12 +336,12 @@ export default function App() {
     cancelAuth
   } = useAppModals();
 
-  // State Hồ sơ & Garage của tôi (Apple Portal Modal)
+  // My Profile & Garage state (Apple Portal Modal)
   const [showProfileModal, setShowProfileModal] = useState(false);
-  // State Modal Đăng Chuyến Nhanh 15s
+  // State of the 15s Quick Post Trip Modal
   const [isQuickPostTripOpen, setIsQuickPostTripOpen] = useState(false);
 
-  // Xử lý lưu thông tin cá nhân & Garage xe của Chủ xe
+  // Handle saving the driver's personal info & vehicle Garage
   const handleSaveProfile = async (profileData) => {
     try {
       const res = await api.updateProfile(profileData);
@@ -360,7 +360,7 @@ export default function App() {
     }
   };
 
-  // Helper tính số lượng bài đăng của tôi
+  // Helper that counts my posts
   const updateMyTripsCount = useCallback(
     (user = currentUser, offers = null, requests = null) => {
       try {
@@ -411,12 +411,12 @@ export default function App() {
     [currentUser]
   );
 
-  // Helper kiểm tra một chuyến đi có phải của chính người dùng hiện tại (MIT Invariant)
+  // Helper that checks whether a trip belongs to the current user (MIT Invariant)
   const checkIsMyTrip = useCallback(
     (trip) => {
       if (!trip) return false;
       try {
-        // 1. Quét tất cả ID bài đăng đã lưu trong localStorage (Bảo tồn cả phiên khách + phiên đăng nhập)
+        // 1. Scan all post IDs stored in localStorage (preserves both the guest session + the logged-in session)
         const allStoredIds = new Set();
         try {
           const guestIds = JSON.parse(localStorage.getItem('carmate_guest_trip_ids') || '[]');
@@ -442,7 +442,7 @@ export default function App() {
         }
         if (allStoredIds.has(trip.id)) return true;
 
-        // 2. So khớp định danh người dùng đăng nhập (User ID / SĐT chuẩn hóa / Telegram ID)
+        // 2. Match the logged-in user identity (User ID / normalized phone number / Telegram ID)
         if (currentUser) {
           const cId = currentUser.id || currentUser.userId;
           if (cId && (trip.userId === cId || trip.creatorId === cId || trip.driverId === cId)) return true;
@@ -459,7 +459,7 @@ export default function App() {
     [currentUser]
   );
 
-  // Hook quản lý Dữ liệu chuyến đi & Escrow Bookings
+  // Hook that manages trip data & Escrow Bookings
   const {
     driverOffers,
     passengerRequests,
@@ -490,14 +490,14 @@ export default function App() {
     t
   });
 
-  // Tự động làm mới danh sách chuyến khi người dùng mở tab Chuyến của tôi
+  // Automatically refresh the trip list when the user opens the My Trips tab
   useEffect(() => {
     if (activeTab === 'booked') {
       refreshBookings();
     }
   }, [activeTab, refreshBookings]);
 
-  // Quét mã QR & Liên kết sâu trực tiếp chuyến xe (?trip=... hoặc /t/...)
+  // QR scanning & direct deep links to a trip (?trip=... or /t/...)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -535,7 +535,7 @@ export default function App() {
     }
   }, [driverOffers, passengerRequests, setSelectedTripForRoute]);
 
-  // Quản lý trạng thái Đã đọc / Chưa đọc (Read & Unread Tracking) của Hộp thư đến
+  // Manage the Read / Unread state (Read & Unread Tracking) of the Inbox
   const [readBookingTimestamps, setReadBookingTimestamps] = useState(() => {
     try {
       const saved = localStorage.getItem('carmate_inbox_read_timestamps');
@@ -603,7 +603,7 @@ export default function App() {
     });
   }, []);
 
-  // Đánh dấu toàn bộ thông báo / yêu cầu trong Hộp thư là đã đọc
+  // Mark all notifications / requests in the Inbox as read
   const handleMarkAllRead = useCallback(() => {
     const now = Date.now();
     const updated = { ...readBookingTimestamps };
@@ -621,20 +621,20 @@ export default function App() {
     }
   }, [bookedEscrows, readBookingTimestamps]);
 
-  // Đếm số lượng yêu cầu CHƯA ĐỌC thực sự trong Hộp thư (inquiring hoặc pre_confirmed hoặc được chủ động đánh dấu Đọc sau)
+  // Count the requests that are truly UNREAD in the Inbox (inquiring or pre_confirmed or deliberately marked Read Later)
   const inboxCount = useMemo(() => {
     const userPhone = currentUser?.phone ? cleanPhoneNumber(currentUser.phone) : '';
     return (bookedEscrows || []).filter((b) => {
       const bId = b.escrowId || b.id;
-      // 1. Nếu người dùng chủ động đánh dấu "Chưa đọc (Đọc sau)"
+      // 1. If the user deliberately marked "Chưa đọc (Đọc sau)" ("Unread (Read later)")
       if (unreadBookingIds.includes(bId)) return true;
 
-      // 2. Chỉ tính các chuyến đang thương lượng hoặc giữ chỗ
+      // 2. Only count trips that are being negotiated or reserved
       if (b.status !== 'inquiring' && b.status !== 'pre_confirmed') return false;
       const lastRead = readBookingTimestamps[bId] || 0;
-      if (!lastRead) return true; // Chưa mở bao giờ -> Chưa đọc
+      if (!lastRead) return true; // Never opened -> Unread
 
-      // 3. Nếu có tin nhắn mới từ đối phương sau lần đọc cuối cùng
+      // 3. If there is a new message from the other party after the last read
       const hasNewMessage = (b.messages || []).some((m) => {
         const isMe = userPhone && cleanPhoneNumber(m.senderPhone || '') === userPhone;
         const msgTime = m.timestamp ? new Date(m.timestamp).getTime() : 0;
@@ -654,15 +654,15 @@ export default function App() {
     setShowInboxModal(true);
   }, []);
 
-  // Hook quản lý Bộ lọc thị trường & Phân nhóm thời gian
-  // Chỉ lấy những giá trị còn dùng: phần lớn bộ lọc sàn cũ đã bị gỡ cùng
-  // FilterBar/Hero, để lại 18 biến chết trong lần rà lint.
+  // Hook that manages marketplace Filters & time Grouping
+  // Only take the values still in use: most of the old marketplace filters were removed along with
+  // FilterBar/Hero, leaving 18 dead variables in the lint pass.
   const { searchKeyword, setMarketViewMode, resetFilters } = useMarketFilters({
     driverOffers,
     passengerRequests
   });
 
-  // Đồng bộ số lượng chuyến của tôi khi danh sách chuyến đi thay đổi
+  // Sync the count of my trips when the trip list changes
   useEffect(() => {
     updateMyTripsCount(currentUser, driverOffers, passengerRequests);
     const handleStorageChange = () => updateMyTripsCount(currentUser, driverOffers, passengerRequests);
@@ -670,10 +670,10 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [currentUser, driverOffers, passengerRequests, updateMyTripsCount]);
 
-  // Quản lý Hành lang Tuyến Level 3 & Trạng thái xem sàn
+  // Manage the Level 3 Route Corridor & the marketplace view state
   const [activeCorridor] = useState('Tuyến QL13');
 
-  // Quản lý Social Smart Match Suggestions (Ambient Intelligence)
+  // Manage Social Smart Match Suggestions (Ambient Intelligence)
   const [socialMatches, setSocialMatches] = useState([]);
 
   const loadSocialMatches = useCallback(async () => {
@@ -693,7 +693,7 @@ export default function App() {
     loadSocialMatches();
   }, [loadSocialMatches, driverOffers.length, passengerRequests.length]);
 
-  // Phím tắt toàn cục ⌘K / Ctrl+K mở Trợ lý, ⌘+Shift+A mở Cổng Quản trị
+  // Global shortcuts: ⌘K / Ctrl+K opens the Assistant, ⌘+Shift+A opens the Admin Portal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key?.toLowerCase() === 'k') {
@@ -709,7 +709,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setActiveTab, setShowAiModal]);
 
-  // Tự động khôi phục và đồng bộ phiên đăng nhập từ Token (Silent Session Restore - Stanford Ergonomics)
+  // Automatically restore and sync the login session from the Token (Silent Session Restore - Stanford Ergonomics)
   useEffect(() => {
     const token =
       (typeof localStorage !== 'undefined' && localStorage.getItem('carmate_auth_token')) ||
@@ -741,7 +741,7 @@ export default function App() {
       })
       .catch((err) => {
         if (!isMounted) return;
-        // Chỉ dọn dẹp nếu token thực sự hết hạn hoặc bị từ chối 401
+        // Only clean up if the token has really expired or was rejected with a 401
         if (err?.status === 401) {
           handleLogout();
         }
@@ -750,10 +750,10 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-    // CHỦ Ý chạy một lần lúc mount: đây là bước khôi phục phiên đăng nhập.
-    // Thêm deps sẽ khiến app thẩm định lại token mỗi khi danh sách chuyến đổi.
-    // Số chuyến của tôi không bị cũ: effect ở trên (deps đủ) tính lại ngay khi
-    // driverOffers/passengerRequests tải xong.
+    // INTENTIONALLY runs once at mount: this is the login-session restore step.
+    // Adding deps would make the app re-validate the token every time the trip list changes.
+    // My trip count does not go stale: the effect above (with full deps) recomputes as soon as
+    // driverOffers/passengerRequests finish loading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -776,7 +776,7 @@ export default function App() {
     setMovementIntentModalOpen(true);
   }, []);
 
-  // Level 3 Autonomous Gateway: Chủ xe mở QuickPostTripModal 15s; Người đi cùng mở Khai báo Ý định
+  // Level 3 Autonomous Gateway: the driver opens the 15s QuickPostTripModal; the passenger ("Người đi cùng") opens the Movement Intent declaration
   const handleRequestPostTrip = useCallback((targetRole = 'driver') => {
     if (targetRole === 'driver') {
       setIsQuickPostTripOpen(true);
@@ -785,7 +785,7 @@ export default function App() {
     }
   }, [handleOpenMovementIntent]);
 
-  // Nếu người dùng truy cập /intent hoặc /post, tự động mở modal Khai báo Ý định
+  // If the user visits /intent or /post, automatically open the Movement Intent declaration modal
   useEffect(() => {
     if (activeTab === 'intent') {
       handleOpenMovementIntent('passenger');
@@ -793,14 +793,14 @@ export default function App() {
     }
   }, [activeTab, handleOpenMovementIntent, setActiveTab]);
 
-  // Token thế hệ cho yêu cầu tải bài đăng: chỉ phản hồi mới nhất được phép mở modal
+  // Generation token for post-loading requests: only the latest response is allowed to open the modal
   const manageTripRequestRef = useRef(0);
 
-  // Quản lý chuyến của chính mình: Mở trực tiếp Modal Quản lý / Chỉnh sửa tại chỗ (Stanford Ergonomics - Zero tab jump)
-  // Lưu ý: Sàn (market) truyền vào "slot" của ma trận khung giờ — đây là bản chiếu công khai
-  // (đã che biển số / ảnh, đổi tên trường: fromLocation, seatsAvailable, vehicleModel...), KHÔNG phải bản ghi chuyến gốc.
-  // Nếu đưa thẳng slot vào EditTripModal thì mọi trường sẽ rơi về giá trị mặc định và bài đăng hiển thị sai loại.
-  // Vì vậy luôn phân giải về bản ghi chuyến thật trước khi mở modal.
+  // Manage my own trip: directly open the Manage / Edit Modal in place (Stanford Ergonomics - Zero tab jump)
+  // Note: the marketplace (market) passes in a time-slot matrix "slot" — this is a public projection
+  // (license plate / photos masked, fields renamed: fromLocation, seatsAvailable, vehicleModel...), NOT the original trip record.
+  // If the slot is passed straight into EditTripModal, every field falls back to its default value and the post is displayed with the wrong type.
+  // So always resolve to the real trip record before opening the modal.
   const handleManageMyTrip = useCallback(
     (trip) => {
       if (!trip) return;
@@ -811,9 +811,9 @@ export default function App() {
         return;
       }
 
-      // Chỉ đối chiếu theo id. KHÔNG dùng maskedCode làm điều kiện khớp:
-      // mã này sinh ngẫu nhiên trong dải CX-100..999 và không UNIQUE trong DB,
-      // nên có thể mở nhầm (và ghi đè) bài đăng của người khác.
+      // Match by id only. Do NOT use maskedCode as a matching condition:
+      // this code is randomly generated in the range CX-100..999 and is not UNIQUE in the DB,
+      // so it could open (and overwrite) someone else's post by mistake.
       const allTrips = [...(driverOffers || []), ...(passengerRequests || [])];
       const match = allTrips.find((t) => String(t.id) === String(targetId));
 
@@ -822,8 +822,8 @@ export default function App() {
         return;
       }
 
-      // Chưa có trong bộ nhớ (VD: sàn trả về chuyến ngoài danh sách đang tải) -> lấy bản ghi gốc từ API.
-      // Dùng token thế hệ để bỏ qua phản hồi cũ khi người dùng bấm nhanh nhiều chuyến.
+      // Not in memory yet (e.g. the marketplace returned a trip outside the currently loaded list) -> fetch the original record from the API.
+      // Use the generation token to discard stale responses when the user quickly taps several trips.
       const requestId = ++manageTripRequestRef.current;
       api
         .getTrip(targetId)
@@ -844,7 +844,7 @@ export default function App() {
     [driverOffers, passengerRequests, setEditingTrip, showToast]
   );
 
-  // Ghép chuyến: Nếu là bài đăng của chính mình thì mở Modal Quản lý tại chỗ thay vì chuyển tab
+  // Match a trip: if it is my own post, open the Manage Modal in place instead of switching tabs
   const handleInitiateBook = (trip) => {
     if (checkIsMyTrip(trip)) {
       showToast('Đây là bài đăng của bạn. Bạn đang ở chế độ Quản lý chuyến xe.');
@@ -985,7 +985,7 @@ export default function App() {
     />
   ) : null;
 
-  // CHẾ ĐỘ TAPLO Ô TÔ (COCKPIT HUD TOÀN MÀN HÌNH CHO CHỦ XE)
+  // CAR DASHBOARD MODE (FULL-SCREEN COCKPIT HUD FOR THE DRIVER)
   if (activeTab === 'cockpit') {
     return (
       <>
@@ -1022,7 +1022,7 @@ export default function App() {
     );
   }
 
-  // CHẾ ĐỘ QUÉT QR ĐIỂM ĐÓN CÂY XĂNG (RIDER STATION LIVE PASS CHO KHÁCH)
+  // GAS-STATION PICKUP POINT QR SCAN MODE (RIDER STATION LIVE PASS FOR PASSENGERS)
   if (activeTab === 'station') {
     return (
       <>
@@ -1074,7 +1074,7 @@ export default function App() {
       />
 
       <main className="flex-1 pb-24 md:pb-0">
-        {/* ── Tuyến Xe Tiện Chuyến Quốc Lộ 13 (Zero Posting Paradigm) ── */}
+        {/* ── National Highway 13 Passing-Vehicle Route (Zero Posting Paradigm) ── */}
         {activeTab === 'market' && (
           <div className={`${container} py-5 sm:py-8`}>
             <CorridorSearchBoard
@@ -1211,8 +1211,8 @@ export default function App() {
       )}
       {editingTrip && (
         <EditTripModal
-          // Form khởi tạo state từ props, không đồng bộ lại -> cần remount khi đổi bài đăng,
-          // nếu không các ô nhập giữ dữ liệu chuyến cũ trong khi thao tác Lưu/Xóa lại nhắm vào chuyến mới.
+          // The form initializes state from props and does not re-sync -> it must remount when the post changes,
+          // otherwise the input fields keep the old trip data while Save/Delete actions target the new trip.
           key={editingTrip.id}
           trip={editingTrip}
           onClose={() => setEditingTrip(null)}

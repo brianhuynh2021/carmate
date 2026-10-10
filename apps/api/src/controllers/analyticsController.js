@@ -3,7 +3,7 @@ import { sendSystemErrorAlert } from '../utils/telegramAlert.js';
 
 /**
  * POST /api/analytics/event
- * Thu thập sự kiện phân tích hành vi & phễu chuyển đổi (0 chi phí)
+ * Collect behavior analytics events & conversion funnel (zero cost)
  */
 export function recordEvent(req, res) {
   try {
@@ -27,7 +27,7 @@ export function recordEvent(req, res) {
       createdAt: Date.now()
     });
 
-    // Nếu là sự kiện crash từ trình duyệt người dùng, tự động bắn cảnh báo Telegram (chỉ trên môi trường Production)
+    // If it is a crash event from the user's browser, automatically fire a Telegram alert (Production environment only)
     if (trimmedEventName === 'error_unhandled') {
       const isDevEvent =
         properties?.isDev ||
@@ -62,7 +62,7 @@ export function recordEvent(req, res) {
 
 /**
  * GET /api/admin/analytics/summary
- * Xem tổng quan phễu chuyển đổi và các tuyến xe được tìm kiếm nhiều nhất
+ * View the conversion funnel overview and the most searched routes
  */
 export function getSummary(req, res) {
   try {
@@ -76,7 +76,7 @@ export function getSummary(req, res) {
 
 /**
  * DELETE /api/admin/analytics
- * Quản trị viên xóa toàn bộ sự kiện analytics
+ * Admin deletes all analytics events
  */
 export function clearAnalytics(req, res) {
   try {

@@ -1,10 +1,10 @@
 /**
- * KIỂM THỬ CHỈ SỐ AN TÂM, TRẠM NHÂN BẢN HOÁ & CHIP KHỞI HÀNH
+ * TESTS FOR THE ASSURANCE SCORE, HUMANIZED STATIONS & DEPARTURE CHIPS
  *
- * Ba bất biến được bảo vệ ở đây:
- *   1. Không bao giờ hứa quá: "Chuyến đảm bảo" phải có xe dự phòng THẬT
- *   2. Không bịa uy tín: chủ xe 0 chuyến không được mặc định 100% đúng giờ
- *   3. Không bịa số điện thoại: hotline chưa xác minh thì không hiện nút gọi
+ * Three invariants protected here:
+ *   1. Never over-promise: a "Chuyến đảm bảo" (guaranteed trip) must have a REAL backup vehicle
+ *   2. Never fabricate reputation: a driver with 0 trips must not default to 100% on-time
+ *   3. Never fabricate phone numbers: an unverified hotline must not show a call button
  */
 
 import assert from 'node:assert';
@@ -30,7 +30,7 @@ function ok(cond, label) {
   passed += 1;
 }
 
-/** Mốc giờ cố định trong ngày hôm nay, để kết quả không đổi theo lúc chạy test. */
+/** Fixed time marks within today, so results do not change depending on when the test runs. */
 const at = (h, m = 0) => {
   const d = new Date();
   d.setHours(h, m, 0, 0);
@@ -39,7 +39,7 @@ const at = (h, m = 0) => {
 
 console.log('\n🧪 KIỂM THỬ CHỈ SỐ AN TÂM & TRẢI NGHIỆM KHÁCH\n');
 
-// ── 1. Chỉ số an tâm ───────────────────────────────────────────────────
+// ── 1. Assurance score ────────────────────────────────────────────────
 console.log('── 1. CHỈ SỐ AN TÂM ──');
 
 const guaranteed = computeAssurance({
@@ -69,7 +69,7 @@ ok(getAssurancePromise(guaranteed, '08:30').includes('08:30'),
 ok(!getAssurancePromise(newDriver, '08:30').includes('tự điều xe'),
    'Mức thấp hơn KHÔNG mượn giọng chắc chắn của mức đảm bảo');
 
-// ── 2. Trạm nhân bản hoá ───────────────────────────────────────────────
+// ── 2. Humanized stations ─────────────────────────────────────────────
 console.log('\n── 2. TRẠM NHÂN BẢN HOÁ ──');
 
 const gasHub = VIRTUAL_HUBS.find((h) => h.category === 'GAS_STATION');
@@ -90,7 +90,7 @@ ok(junction.safetyNote.includes('lề') || junction.safetyNote.includes('lòng �
 ok(VIRTUAL_HUBS.every((h) => getHubAmenities(h).length > 0),
    'MỌI trạm đều có ít nhất một tiện ích, không trạm nào trống thông tin');
 
-// ── 3. Chip khởi hành ──────────────────────────────────────────────────
+// ── 3. Departure chips ────────────────────────────────────────────────
 console.log('\n── 3. CHIP KHỞI HÀNH ──');
 
 const at6 = at(6);
@@ -103,9 +103,9 @@ ok(chips6.length === 3 && chips23.length === 3,
    'Trả về 3 chip, nhường ô thứ 4 trong lưới 2x2 cho nút "Chọn ngày khác"');
 ok(chips6.every((c) => /\(\d+h-\d+h\)$/.test(c.display)),
    'Mỗi chip in thẳng được một câu "Chiều nay (14h-18h)", giao diện không phải tự ghép');
-// Khung vắt qua nửa đêm phải gọi "Đêm", không phải "Khuya nay" (gây hiểu nhầm
-// là còn trong ngày hôm nay). Sau 16h nó bị đẩy xuống sau các khung sáng mai,
-// nên tìm nó ở bất kỳ vị trí nào trong danh sách chứ không riêng chip đầu.
+// A window that crosses midnight must be called "Đêm" (Night), not "Khuya nay" (late tonight),
+// which is misleading (suggests it is still within today). After 16h it is pushed below the
+// tomorrow-morning windows, so look for it at any position in the list, not just the first chip.
 const overnightChip = buildDepartureChips({ now: at(15) }).find((c) => c.windowId === 'late_night');
 ok(overnightChip && overnightChip.display.startsWith('Đêm'),
    'Khung vắt qua nửa đêm gọi là "Đêm nay", không phải "Khuya nay"');
@@ -115,7 +115,8 @@ ok(chips23.every((c) => c.dayOffset === 1),
 ok(chips6.every((c) => /^\d{2}:00$/.test(c.timeSlot)), 'Mỗi chip mang khung giờ hợp lệ để tra cứu');
 ok(chips6.every((c) => c.label && c.hint && c.dayLabel && c.display), 'Chip đủ nhãn, gợi ý giờ và nhãn ngày');
 
-// Chip tự chọn ngày phải cùng hình dạng với chip tự sinh để giao diện vẽ chung một lối
+// A self-chosen-date chip must have the same shape as an auto-generated chip
+// so the UI renders both through one code path
 const custom = buildCustomChip({ date: '2026-12-25', windowId: 'early_morning' });
 ok(custom && custom.isCustom === true, 'Dựng được chip từ ngày khách tự chọn');
 ok(custom.timeSlot === '04:00' && custom.date === '2026-12-25', 'Chip tự chọn mang đúng ngày và khung giờ');
@@ -127,7 +128,7 @@ const chips15 = buildDepartureChips({ now: at15 });
 ok(!chips15.some((c) => c.dayOffset === 0 && c.windowId === 'early_morning'),
    '15h chiều: KHÔNG còn chìa ra "Sáng sớm hôm nay" đã trôi qua');
 
-// ── 4. Không bịa số điện thoại ─────────────────────────────────────────
+// ── 4. Never fabricate phone numbers ──────────────────────────────────
 console.log('\n── 4. KHÔNG BỊA SỐ ĐIỆN THOẠI ──');
 
 ok(FIXED_CORRIDOR_COACH_SCHEDULES.every((b) => b.hotline === null || b.verified === true),
@@ -148,12 +149,12 @@ const emergency = EMERGENCY_TRANSIT_LIFEBUOYS.find((l) => l.hotline);
 ok(!emergency || emergency.hotline === '113',
    'Số duy nhất còn lại là 113 — số công khai toàn quốc, luôn đúng');
 
-// ── Chip trượt động theo giờ thực ──────────────────────────────────────
+// ── Chips slide dynamically with the real time ────────────────────────
 console.log('\n── 5. CHIP TRƯỢT ĐỘNG THEO GIỜ THỰC ──');
 
 const chipsAt = (h, m = 0) => buildDepartureChips({ now: at(h, m) });
 
-// Không bao giờ chìa ra khung đã trôi qua
+// Never offer a window that has already passed
 for (const [h, m] of [[7, 0], [13, 0], [16, 30], [20, 0], [23, 30]]) {
   const first = chipsAt(h, m)[0];
   const endMin = (first.toHour % 24 || 24) * 60 + (first.dayOffset > 0 ? 1440 : 0);
@@ -161,7 +162,7 @@ for (const [h, m] of [[7, 0], [13, 0], [16, 30], [20, 0], [23, 30]]) {
      `${h}h${m || ''}: chip đầu (${first.display}) vẫn còn đặt được, không phải khung đã qua`);
 }
 
-// CẮT GIỜ ĐÃ TRÔI QUA: 16h30 phải là "Chiều nay (16h30-18h)", không phải (14h-18h)
+// CUT OFF PAST TIME: at 16h30 it must be "Chiều nay (16h30-18h)" (this afternoon), not (14h-18h)
 const at1630 = chipsAt(16, 30)[0];
 ok(at1630.isPartial === true, '16h30: chip đầu được đánh dấu là khung đã bị cắt');
 ok(at1630.display.includes('16h30'),
@@ -171,30 +172,30 @@ ok(at1630.timeSlot === '16:30', 'Khung gửi lên máy chủ cũng là 16:30, kh
 const at20 = chipsAt(20)[0];
 ok(at20.display.includes('20h'), `20h hiển thị "${at20.display}" — cắt từ đúng giờ hiện tại`);
 
-// ƯU TIÊN SÁNG MAI HƠN ĐÊM NAY sau 16h (nhu cầu thật của tuyến liên tỉnh)
+// PREFER TOMORROW MORNING OVER TONIGHT after 16h (a real need on the intercity route)
 const evening = chipsAt(18);
 ok(evening[1].dayOffset === 1 && evening[1].windowId.includes('morning'),
    `18h: chip 2 là "${evening[1].display}" — Sáng mai được đẩy lên trước Đêm nay`);
 ok(!evening.slice(1).some((c) => c.windowId === 'late_night' && c.dayOffset === 0),
    'Sau 16h, "Đêm nay" không còn chiếm chỗ của các khung sáng mai');
 
-// Trước 16h thì khung đêm vẫn giữ thứ tự thời gian bình thường
+// Before 16h the night window keeps its normal chronological order
 const noon = chipsAt(13);
 ok(noon.every((c) => c.dayOffset === 0), '13h: cả 3 chip vẫn trong hôm nay, chưa cần nhảy sang mai');
 
-// Khuya thì bỏ qua hẳn phần còn lại của đêm, nhảy thẳng sang sáng mai
+// Late at night, skip the rest of the night entirely and jump straight to tomorrow morning
 const lateNight = chipsAt(23, 30);
 ok(lateNight[0].dayOffset === 1,
    `23h30: chip đầu là "${lateNight[0].display}" — nhu cầu thật là chuyến sáng mai`);
 
-// Luôn đủ 3 chip ở MỌI giờ trong ngày, không giờ nào bị trống
+// Always 3 chips at EVERY hour of the day, no hour is ever empty
 for (let h = 0; h < 24; h++) {
   const c = chipsAt(h, 30);
   assert.ok(c.length === 3, `${h}h30 phải có đủ 3 chip, đang có ${c.length}`);
 }
 ok(true, 'Quét cả 24 giờ: giờ nào cũng có đủ 3 chip, không khung nào để trống');
 
-// Chống tái phát: toISOString() quy về UTC làm lệch ngày ở múi giờ UTC+7
+// Regression guard: toISOString() converts to UTC and shifts the date in the UTC+7 time zone
 console.log('\n── 6. NGÀY THEO LỊCH ĐỊA PHƯƠNG ──');
 for (const day of ['2026-12-25', '2026-01-01', '2026-06-15']) {
   const c = buildCustomChip({ date: day, windowId: 'early_morning' });

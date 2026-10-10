@@ -25,7 +25,7 @@ const detectInitialLang = () => {
     if (saved === 'vi' || saved === 'en') return saved;
   } catch {}
 
-  // Trí tuệ Ambient: Tự động nhận diện theo ngôn ngữ máy/trình duyệt của người dùng
+  // Ambient intelligence: automatically detect the language from the user's device/browser
   try {
     if (typeof navigator !== 'undefined') {
       const browserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
@@ -72,7 +72,7 @@ export function I18nProvider({ children }) {
 export const useI18n = () => useContext(I18nContext);
 export const useTranslation = useI18n;
 
-/** Dịch các giá trị dữ liệu quen thuộc (ngày, chiều đi) nếu có trong dictionary, ngược lại trả về nguyên bản. */
+/** Translates familiar data values (date, direction) if present in the dictionary, otherwise returns the original value. */
 export const useDataLabel = () => {
   const { t, lang } = useI18n();
   return {

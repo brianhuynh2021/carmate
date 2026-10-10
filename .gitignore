@@ -51,7 +51,7 @@ apps/api/data/.dev_jwt_secret
 !.vscode/extensions.json
 .idea
 
-# File ghi chú lệnh deploy / secret cục bộ (KHÔNG BAO GIỜ commit)
+# Local deploy-command notes / secret files (NEVER commit)
 test_Fly.py
 *secrets*.sh
 *secrets*.txt

@@ -2,8 +2,8 @@ import { runCarMateAgent } from '../agent/carmateAgent.js';
 import { recordAiTrajectory } from '../db/sqliteStore.js';
 
 /**
- * POST /api/agent/chat - Giao tiếp với Trợ lý Điều phối CarMate AI
- * Tích hợp Hộp đen lưu trữ Quỹ đạo AI (MIT & Stanford Trajectory Hub)
+ * POST /api/agent/chat - Communicate with the CarMate AI Dispatch Assistant
+ * Integrates the AI Trajectory black box (MIT & Stanford Trajectory Hub)
  */
 export async function agentChatHandler(req, res) {
   try {
@@ -33,7 +33,7 @@ export async function agentChatHandler(req, res) {
     });
     const executionTimeMs = Date.now() - startTime;
 
-    // Phân tích nhu cầu tìm xe & phát hiện Tuyến đường thiếu xe (Unmet Demand)
+    // Analyze the ride-finding request & detect routes lacking vehicles (Unmet Demand)
     const suggestionsCount = Array.isArray(result.suggestedTrips) ? result.suggestedTrips.length : 0;
     const isRideQuery = /tìm|xe|chuyến|đi|về|đón|chở|từ|bến|hàng xanh/i.test(message);
     const unmetDemand = isRideQuery && suggestionsCount === 0;
@@ -49,7 +49,7 @@ export async function agentChatHandler(req, res) {
       else if (lower.includes('vũng tàu')) requestedRoute = 'Sài Gòn ➔ Vũng Tàu';
     }
 
-    // Ghi nhận quỹ đạo suy luận vào Hộp đen AI Observability
+    // Record the reasoning trajectory into the AI Observability black box
     try {
       recordAiTrajectory({
         userGoal: message.trim(),

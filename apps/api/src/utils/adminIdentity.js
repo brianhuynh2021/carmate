@@ -1,15 +1,15 @@
 /**
- * Danh tính Quản trị viên hệ thống (System Admin Identity)
+ * System Administrator Identity (System Admin Identity)
  *
- * Số điện thoại admin được dùng làm "MIT Invariant Guard": tài khoản admin không thể
- * tự xoá để hệ thống luôn có chủ quản. Trước đây số này bị hardcode trực tiếp trong
- * mã nguồn (lộ trên repo); nay đọc từ biến môi trường ADMIN_PHONE để giấu khỏi source.
+ * The admin phone number is used as the "MIT Invariant Guard": an admin account cannot
+ * delete itself so that the system always has an owner. This number used to be hardcoded directly in
+ * the source code (exposed in the repo); it is now read from the ADMIN_PHONE environment variable to keep it out of the source.
  *
- * Fallback về số vận hành hiện tại nếu chưa cấu hình env — giữ nguyên hành vi bảo vệ
- * cho các môi trường chưa kịp set biến, tránh vô tình mở khoá xoá tài khoản admin.
+ * Falls back to the current operations number if the env is not configured — preserving the protective behavior
+ * for environments that haven't set the variable yet, to avoid accidentally unlocking deletion of the admin account.
  */
 
-// Có thể khai báo nhiều số, phân tách bằng dấu phẩy (ví dụ số cũ + số mới khi chuyển giao).
+// Multiple numbers can be declared, separated by commas (e.g. the old number + the new number during a handover).
 const RAW_ADMIN_PHONES = process.env.ADMIN_PHONE || process.env.CARMATE_ADMIN_PHONE || '0984883750';
 
 function normalize(p) {
@@ -23,7 +23,7 @@ const ADMIN_PHONE_SET = new Set(
 );
 
 /**
- * Kiểm tra một số điện thoại (ở bất kỳ định dạng nào) có phải là admin hệ thống không.
+ * Checks whether a phone number (in any format) is a system admin.
  */
 export function isAdminPhone(phone) {
   const cleaned = normalize(phone);
@@ -32,7 +32,7 @@ export function isAdminPhone(phone) {
 }
 
 /**
- * Số điện thoại admin chính (số đầu tiên) — dùng làm fallback liên hệ nội bộ.
+ * The primary admin phone number (the first one) — used as the internal contact fallback.
  */
 export function getPrimaryAdminPhone() {
   return [...ADMIN_PHONE_SET][0] || '';

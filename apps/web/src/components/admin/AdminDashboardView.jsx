@@ -46,7 +46,7 @@ import {
 
 const ADMIN_TOKEN_KEY = 'carmate_admin_token';
 
-// Các tab hợp lệ của trang quản trị; dùng để lọc giá trị ?tab= do người dùng gõ vào.
+// Valid tabs of the admin page; used to filter the ?tab= value typed in by the user.
 const ADMIN_TABS = ['trips', 'operators', 'users', 'reports', 'ai', 'analytics', 'trust', 'fuel'];
 
 export default function AdminDashboardView({ onExitAdmin }) {
@@ -59,13 +59,13 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [requireMfa, setRequireMfa] = useState(false);
   const [mfaViaTelegram, setMfaViaTelegram] = useState(false);
   const [devOtp, setDevOtp] = useState('');
-  const [mfaCountdown, setMfaCountdown] = useState(180); // 3 phút
+  const [mfaCountdown, setMfaCountdown] = useState(180); // 3 minutes
   const [isResendingMfa, setIsResendingMfa] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
-  // Tab đang mở lưu trong địa chỉ trang. Trước đây nó chỉ nằm trong bộ nhớ React nên
-  // mỗi lần tải lại là rơi về tab đầu, mất chỗ đang làm dở — và không gửi được đường
-  // dẫn tới đúng tab cho người khác.
+  // The open tab is stored in the page address. Previously it lived only in React memory, so
+  // every reload dropped back to the first tab, losing work in progress — and a link
+  // to the exact tab could not be shared with others.
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return 'trips';
     const requested = new URLSearchParams(window.location.search).get('tab');
@@ -75,8 +75,8 @@ export default function AdminDashboardView({ onExitAdmin }) {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     if (url.searchParams.get('tab') === activeTab) return;
-    // replaceState: đổi tab không tạo thêm một bước lùi, nút Back vẫn thoát được
-    // khỏi trang quản trị như bình thường.
+    // replaceState: switching tabs does not add a history entry, so the Back button can still leave
+    // the admin page as usual.
     url.searchParams.set('tab', activeTab);
     window.history.replaceState(null, '', url);
   }, [activeTab]);
@@ -96,7 +96,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [fuelNoteInput, setFuelNoteInput] = useState('');
   const [isSavingFuel, setIsSavingFuel] = useState(false);
 
-  // ── CÔNG THỨC ĐỊNH GIÁ: chỉ Quản trị viên được nâng tham số ──
+  // ── PRICING FORMULA: only admins can raise parameters ──
   const [tariffConfig, setTariffConfig] = useState(null);
   const [tariffBounds, setTariffBounds] = useState(null);
   const [tariffForm, setTariffForm] = useState(null);
@@ -127,7 +127,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
   const [clearTarget, setClearTarget] = useState('all'); // 'all' | 'analytics' | 'ai'
   const [isClearing, setIsClearing] = useState(false);
 
-  // Đếm ngược thời gian hết hạn OTP 3 phút
+  // Countdown to OTP expiry (3 minutes)
   useEffect(() => {
     let timer;
     if (requireMfa && mfaCountdown > 0) {
@@ -144,7 +144,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     setTimeout(() => setStatusNotice(null), 4000);
   };
 
-  // 1. Xác thực đăng nhập Admin (Hỗ trợ MFA 2 lớp qua Telegram)
+  // 1. Admin login authentication (supports 2-layer MFA via Telegram)
   const handleLogin = async (e) => {
     e?.preventDefault();
     setAuthError('');
@@ -158,7 +158,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         setMfaSessionId(res.mfaSessionId || '');
         setMfaViaTelegram(Boolean(res.viaTelegram));
         if (res.devOtp) setDevOtp(res.devOtp);
-        // Ở môi trường Local Dev: Tự động điền mặc định 123456 để test nhanh 0 gõ phím
+        // In the Local Dev environment: auto-fills the default 123456 for quick testing with zero keystrokes
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         if (isLocal || res.devOtp) {
           setMfaCode('123456');
@@ -179,7 +179,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
-  // Gửi lại mã OTP qua Telegram
+  // Resend the OTP code via Telegram
   const handleResendOtp = async () => {
     if (!mfaSessionId || isResendingMfa) return;
     setIsResendingMfa(true);
@@ -213,7 +213,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     setAuthNotice('');
   };
 
-  // 2. Nạp toàn bộ dữ liệu quản trị
+  // 2. Load all admin data
   const loadAllAdminData = async () => {
     setIsLoading(true);
     try {
@@ -268,7 +268,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         setTariffBounds(d.bounds);
         setTariffPreview(d.preview || []);
         setTariffNote(d.config?.note || '');
-        // Chỉ giữ đúng các khoá tham số, bỏ metadata (updatedAt, source...)
+        // Keep only the parameter keys, drop metadata (updatedAt, source...)
         const formValues = {};
         Object.keys(d.bounds || {}).forEach((k) => {
           formValues[k] = d.config?.[k];
@@ -364,7 +364,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
-  /** Xem trước hệ quả của bộ tham số đang gõ, trước khi lưu. */
+  /** Preview the effect of the parameter set being typed, before saving. */
   const handlePreviewTariff = async () => {
     if (!tariffForm) return;
     try {
@@ -380,7 +380,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
-  /** Áp dụng công thức mới cho toàn sàn. */
+  /** Apply the new formula platform-wide. */
   const handleSaveTariff = async () => {
     if (!tariffForm) return;
     setIsSavingTariff(true);
@@ -400,7 +400,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
-  /** Khôi phục công thức về bộ tham số mặc định của nền tảng. */
+  /** Restore the formula to the platform's default parameter set. */
   const handleResetTariff = async () => {
     setIsSavingTariff(true);
     try {
@@ -489,14 +489,14 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   }, [isAuthenticated]);
 
-  // 3. Các thao tác can thiệp quản trị
+  // 3. Admin intervention actions
   const handleToggleHideTrip = async (tripId, currentHidden) => {
     const nextHidden = !currentHidden;
     try {
       await api.toggleHideTrip(tripId, nextHidden);
       setTrips((prev) => prev.map((t) => (t.id === tripId ? { ...t, isHidden: nextHidden } : t)));
       showNotice(nextHidden ? 'Đã ẩn bài đăng khỏi bảng tin công khai' : 'Đã khôi phục hiển thị bài đăng');
-      // Tải lại metrics
+      // Reload metrics
       api.getAdminMetrics().then((res) => res?.success && setMetrics(res.data));
     } catch (err) {
       showNotice('Lỗi thao tác: ' + err.message, 'error');
@@ -679,7 +679,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     }
   };
 
-  // MÀN HÌNH ĐĂNG NHẬP ADMIN NẾU CHƯA XÁC THỰC
+  // ADMIN LOGIN SCREEN IF NOT YET AUTHENTICATED
   if (!isAuthenticated) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
@@ -839,7 +839,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
     );
   }
 
-  // MÀN HÌNH CHÍNH CỔNG QUẢN TRỊ ADMIN (CURSOR / LINEAR STYLE)
+  // MAIN ADMIN PORTAL SCREEN (CURSOR / LINEAR STYLE)
   const filteredTrips = trips.filter((t) => {
     if (!searchTerm.trim()) return true;
     const kw = searchTerm.toLowerCase();
@@ -868,7 +868,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
   return (
     <div className="space-y-6 max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      {/* Top Bar Quản Trị */}
+      {/* Admin Top Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-white/95 dark:bg-[#16171d]/95 backdrop-blur-xl border border-slate-200/90 dark:border-white/10 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="type-body-strong w-10 h-10 rounded-xl bg-primary-600 text-white inline-flex items-center justify-center shadow-md shadow-primary-600/30">
@@ -951,7 +951,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* 4 Thẻ KPI Đo Lường Toàn Diện */}
+      {/* 4 Comprehensive Metrics KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-xs space-y-1">
           <p className="type-label uppercase text-slate-400">Chuyến Xe Đang Mở</p>
@@ -1006,7 +1006,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       </div>
 
-      {/* Tabs Quản Trị & Bộ Tìm Kiếm */}
+      {/* Admin Tabs & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
         <div className="w-full sm:w-auto overflow-x-auto no-scrollbar py-0.5">
           <div className="inline-flex items-center gap-1 p-1 rounded-full bg-slate-200/60 dark:bg-[#151c2e] border border-black/5 dark:border-white/[0.08] whitespace-nowrap min-w-max">
@@ -1124,7 +1124,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
       {activeTab === 'operators' && <OperatorProfilesPanel onNotice={showNotice} />}
 
-      {/* ── TAB 1: QUẢN LÝ CHUYẾN XE ── */}
+      {/* ── TAB 1: TRIP MANAGEMENT ── */}
       {activeTab === 'trips' && (
         <div className="rounded-2xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -1231,7 +1231,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* ── TAB 2: THÀNH VIÊN & XÁC MINH ── */}
+      {/* ── TAB 2: MEMBERS & VERIFICATION ── */}
       {activeTab === 'users' && (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200 dark:border-white/10 space-y-2">
@@ -1240,7 +1240,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             <Button variant="secondary" onClick={() => setActiveTab('operators')} className="type-button">Mở Hồ sơ chủ xe</Button>
           </div>
 
-          {/* KHU VỰC YÊU CẦU XÓA TÀI KHOẢN (ĐỐI SOÁT & PHÊ DUYỆT BỞI ADMIN) */}
+          {/* ACCOUNT DELETION REQUESTS AREA (ADMIN CROSS-CHECK & APPROVAL) */}
           {deletionRequests.some((r) => r.status === 'pending') && (
             <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-rose-200/80 dark:border-rose-900/50 shadow-xs space-y-3">
               <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1407,7 +1407,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                     </td>
                     <td className="type-body py-3 px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center justify-end gap-1.5">
-                        {/* Tạm ngưng / Kích hoạt lại */}
+                        {/* Suspend / Reactivate */}
                         <button
                           type="button"
                           onClick={() => setAdminUserToDeactivate(u)}
@@ -1426,7 +1426,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                           <span>{u.isDeactivated || u.status === 'deactivated' ? 'Kích hoạt' : 'Tạm ngưng'}</span>
                         </button>
 
-                        {/* Khoá cấm / Mở khoá */}
+                        {/* Ban / Unban */}
                         <button
                           type="button"
                           onClick={() => setAdminUserToBan(u)}
@@ -1441,7 +1441,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                           <span>{u.isBanned ? 'Mở khoá' : 'Khoá cấm'}</span>
                         </button>
 
-                        {/* Xóa vĩnh viễn (Bảo vệ MIT: không cho xoá Admin) */}
+                        {/* Permanent delete (MIT protection: Admin accounts cannot be deleted) */}
                         {u.role !== 'admin' && u.phone !== '0984883750' && (
                           <button
                             type="button"
@@ -1463,10 +1463,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* ── TAB 3: BÁO CÁO & SỰ CỐ ── */}
+      {/* ── TAB 3: REPORTS & INCIDENTS ── */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
-          {/* KHU VỰC ĐẶC BIỆT: BÁO CÁO SAI LỆCH LOẠI XE (BIỂN VÀNG / BIỂN TRẮNG) */}
+          {/* SPECIAL AREA: VEHICLE TYPE MISMATCH REPORTS (YELLOW PLATE / WHITE PLATE) */}
           <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-rose-200/80 dark:border-rose-900/40 shadow-sm space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2.5">
@@ -1557,7 +1557,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                           )}
                         </div>
 
-                        {/* Thao tác 1-chạm */}
+                        {/* 1-tap actions */}
                         <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0 pt-1 sm:pt-0">
                           {!isResolved ? (
                             <>
@@ -1594,7 +1594,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Lịch sử báo trễ */}
+            {/* Late-notice history */}
             <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm space-y-3">
               <h3 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                 <Clock className="w-4 h-4 text-amber-500" />
@@ -1622,7 +1622,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               )}
             </div>
 
-            {/* Lịch sử huỷ chuyến văn minh */}
+            {/* Civilized trip cancellation history */}
             <div className="p-5 rounded-2xl bg-white dark:bg-[#16171d] border border-slate-200/90 dark:border-white/10 shadow-sm space-y-3">
               <h3 className="type-heading text-slate-900 dark:text-white flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-500" />
@@ -1653,7 +1653,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* ── TAB 4: AI OBSERVABILITY & NHẬT KÝ LUỒNG ĐIỀU PHỐI ── */}
+      {/* ── TAB 4: AI OBSERVABILITY & DISPATCH FLOW LOG ── */}
       {activeTab === 'ai' && (
         <div className="space-y-6">
           {/* Telemetry KPI Cards */}
@@ -1703,7 +1703,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             </div>
           </div>
 
-          {/* Radar Tuyến Đường Khát Xe (Unmet Demand Radar) */}
+          {/* Vehicle-Starved Route Radar (Unmet Demand Radar) */}
           <div className="p-5 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
@@ -1754,7 +1754,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             )}
           </div>
 
-          {/* Hộp Đen Quỹ Đạo Suy Luận Thời Gian Thực (Live Trajectory Stream) */}
+          {/* Real-Time Reasoning Trajectory Black Box (Live Trajectory Stream) */}
           <div className="p-5 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1826,7 +1826,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                       </div>
                     </div>
 
-                    {/* Chuỗi reasoning steps */}
+                    {/* Chain of reasoning steps */}
                     {Array.isArray(traj.reasoningSteps) && traj.reasoningSteps.length > 0 && (
                       <div className="p-3 rounded-xl bg-white dark:bg-[#12131a] border border-black/[0.04] space-y-1.5">
                         <span className="type-label uppercase text-[#86868b] block">
@@ -1865,10 +1865,10 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* ── TAB 5: PHỄU & ANALYTICS CHUYỂN ĐỔI (ZERO-COST FUNNEL STORE) ── */}
+      {/* ── TAB 5: CONVERSION FUNNEL & ANALYTICS (ZERO-COST FUNNEL STORE) ── */}
       {activeTab === 'analytics' && (
         <div className="space-y-6">
-          {/* 4 Thẻ KPI Phễu */}
+          {/* 4 Funnel KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="p-4 rounded-2xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-1">
               <p className="type-label uppercase text-slate-400">Tổng Sự Kiện Đã Lưu</p>
@@ -1912,7 +1912,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             </div>
           </div>
 
-          {/* Sơ Đồ Phễu Chuyển Đổi Tuyến Đi (Ridesharing Conversion Funnel) */}
+          {/* Trip Conversion Funnel Diagram (Ridesharing Conversion Funnel) */}
           <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-black/[0.06]">
               <div>
@@ -1942,7 +1942,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               </div>
             </div>
 
-            {/* Các bước trong phễu */}
+            {/* Funnel steps */}
             {(() => {
               const funnel = analyticsSummary?.funnel || {};
               const stages = [
@@ -2045,9 +2045,9 @@ export default function AdminDashboardView({ onExitAdmin }) {
             })()}
           </div>
 
-          {/* Hai Khối Song Song: Top Tuyến Được Tìm Kiếm & Nhật Ký Sự Kiện Trực Tiếp */}
+          {/* Two Parallel Blocks: Top Searched Routes & Live Event Log */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Top Tuyến Đường Tìm Kiếm */}
+            {/* Top Searched Routes */}
             <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
               <h3 className="type-heading text-[#1d1d1f] dark:text-white flex items-center gap-2">
                 <Compass className="w-4 h-4 text-blue-500" />
@@ -2087,7 +2087,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
               })()}
             </div>
 
-            {/* Dòng Sự Kiện Thời Gian Thực (Live Event Stream) */}
+            {/* Real-Time Event Stream (Live Event Stream) */}
             <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#16171d] border border-black/[0.06] shadow-2xs space-y-4">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="type-heading text-[#1d1d1f] dark:text-white flex items-center gap-2">
@@ -2148,7 +2148,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* ── TAB 6: QUẢN LÝ QUY TẮC TÍN NHIỆM & UY TÍN (TRUST & REPUTATION ENGINE) ── */}
+      {/* ── TAB 6: TRUST & REPUTATION RULE MANAGEMENT (TRUST & REPUTATION ENGINE) ── */}
       {activeTab === 'trust' && (
         <div className="space-y-6">
           {/* Header & Quick Action Bar */}
@@ -2405,7 +2405,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* ── TAB 7: QUẢN LÝ BIỂU PHÍ XĂNG DẦU & BẤT BIẾN LĂN BÁNH (FUEL & INVARIANTS) ── */}
+      {/* ── TAB 7: FUEL TARIFF & ROLLING INVARIANTS MANAGEMENT (FUEL & INVARIANTS) ── */}
       {activeTab === 'fuel' && (
         <div className="space-y-6">
           {/* Header & Quick Action Bar */}
@@ -2517,7 +2517,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
 
           {/* Main Control Panel: Left (Adjustment) & Right (Live Simulator) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left: Điều chỉnh giá xăng */}
+            {/* Left: Fuel price adjustment */}
             <div className="lg:col-span-5 space-y-5">
               <div className="p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-5">
                 <div className="flex items-center justify-between">
@@ -2617,7 +2617,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                   </div>
                 </div>
 
-                {/* Ghi chú kỳ điều hành */}
+                {/* Notes for the operating period */}
                 <div className="space-y-2">
                   <label className="type-label text-slate-600 dark:text-slate-400">
                     Ghi chú / Nguồn văn bản (Tùy chọn):
@@ -2768,7 +2768,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
             </div>
           </div>
 
-          {/* ══ CÔNG THỨC ĐỊNH GIÁ: NƠI DUY NHẤT SỬA ĐƯỢC GIÁ TOÀN SÀN ══ */}
+          {/* ══ PRICING FORMULA: THE ONLY PLACE WHERE PLATFORM-WIDE PRICES CAN BE EDITED ══ */}
           {tariffForm && tariffBounds && (
             <div className="mt-6 p-6 rounded-3xl bg-white dark:bg-[#0f1422] border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-5">
               <div className="flex items-start justify-between flex-wrap gap-3">
@@ -2830,7 +2830,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
                 />
               </div>
 
-              {/* Bảng giá xem trước: thấy ngay hệ quả trước khi áp cho toàn sàn */}
+              {/* Preview price table: see the effect immediately before applying platform-wide */}
               {tariffPreview.length > 0 && (
                 <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-white/10">
                   <table className="type-body w-full text-left">
@@ -2917,7 +2917,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </div>
       )}
 
-      {/* ── MODAL XOÁ BÀI ĐĂNG ADMIN CHUẨN APPLE / HIG ── */}
+      {/* ── ADMIN DELETE POST MODAL (APPLE / HIG STANDARD) ── */}
       {adminTripToDelete && (
         <Modal
           onClose={() => setAdminTripToDelete(null)}
@@ -2978,7 +2978,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </Modal>
       )}
 
-      {/* ── MODAL DỌN DẸP DỮ LIỆU TEST ADMIN CHUẨN APPLE / HIG ── */}
+      {/* ── ADMIN TEST DATA CLEANUP MODAL (APPLE / HIG STANDARD) ── */}
       {showClearDataModal && (
         <Modal
           onClose={() => !isClearing && setShowClearDataModal(false)}
@@ -3035,7 +3035,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </Modal>
       )}
 
-      {/* ── MODAL KHOÁ / MỞ KHOÁ TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
+      {/* ── ADMIN LOCK / UNLOCK ACCOUNT MODAL (APPLE / HIG STANDARD) ── */}
       {adminUserToBan && (
         <Modal
           onClose={() => setAdminUserToBan(null)}
@@ -3095,7 +3095,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </Modal>
       )}
 
-      {/* ── MODAL TẠM NGƯNG / KÍCH HOẠT LẠI TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
+      {/* ── ADMIN SUSPEND / REACTIVATE ACCOUNT MODAL (APPLE / HIG STANDARD) ── */}
       {adminUserToDeactivate && (
         <Modal
           onClose={() => setAdminUserToDeactivate(null)}
@@ -3169,7 +3169,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </Modal>
       )}
 
-      {/* ── MODAL XÓA VĨNH VIỄN TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
+      {/* ── ADMIN PERMANENT ACCOUNT DELETION MODAL (APPLE / HIG STANDARD) ── */}
       {adminUserToDelete && (
         <Modal
           onClose={() => setAdminUserToDelete(null)}
@@ -3226,7 +3226,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </Modal>
       )}
 
-      {/* ── MODAL XỬ LÝ YÊU CẦU XÓA TÀI KHOẢN ADMIN CHUẨN APPLE / HIG ── */}
+      {/* ── ADMIN ACCOUNT DELETION REQUEST HANDLING MODAL (APPLE / HIG STANDARD) ── */}
       {adminReqToProcess && (
         <Modal
           onClose={() => setAdminReqToProcess(null)}
@@ -3282,7 +3282,7 @@ export default function AdminDashboardView({ onExitAdmin }) {
         </Modal>
       )}
 
-      {/* ── MODAL THÊM TIÊU CHÍ TÍN NHIỆM MỚI ── */}
+      {/* ── MODAL: ADD NEW TRUST CRITERION ── */}
       {showAddRuleModal && (
         <Modal
           onClose={() => setShowAddRuleModal(false)}

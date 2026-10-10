@@ -8,7 +8,7 @@ if (!resolvedJwtSecret || resolvedJwtSecret.trim() === '') {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('FATAL SECURITY ERROR: JWT_SECRET environment variable is missing in production mode!');
   }
-  // Môi trường dev/test: Lưu secret vào file để tránh mất phiên đăng nhập khi nodemon reload
+  // Dev/test environment: store the secret in a file to avoid losing login sessions when nodemon reloads
   const secretPath = path.resolve(process.cwd(), 'apps/api/data/.dev_jwt_secret');
   try {
     if (fs.existsSync(secretPath)) {
@@ -32,7 +32,7 @@ export function getJwtSecret() {
 const TOKEN_EXPIRY = '90d';
 
 /**
- * Sinh mã JWT Token bảo mật phiên đăng nhập
+ * Generates a JWT token securing the login session
  */
 export function generateToken(payload) {
   const normalizedPayload = {
@@ -44,7 +44,7 @@ export function generateToken(payload) {
 }
 
 /**
- * Kiểm tra và giải mã JWT Token
+ * Verifies and decodes a JWT token
  */
 export function verifyToken(token) {
   try {

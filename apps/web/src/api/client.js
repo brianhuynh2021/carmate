@@ -1,6 +1,6 @@
 /**
  * CarMate API Client
- * Kết nối đồng bộ dữ liệu giữa Web Client và Backend Express Engine (Port 4000).
+ * Keeps data in sync between the Web Client and the Backend Express Engine (Port 4000).
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -288,7 +288,7 @@ export const api = {
     });
   },
 
-  // Auth & Identity (0đ chi phí / Zalo & OTP)
+  // Auth & Identity (zero cost / Zalo & OTP)
   async requestOtp(phone) {
     return request('/auth/request-otp', {
       method: 'POST',
@@ -308,9 +308,9 @@ export const api = {
   },
 
   /**
-   * Gắn số điện thoại đã xác thực OTP vào tài khoản đang đăng nhập.
-   * Dùng cho người vào bằng Telegram/Google — hai kênh này không cấp số điện thoại.
-   * Máy chủ cấp lại token vì token cũ mang phone rỗng.
+   * Attaches an OTP-verified phone number to the currently logged-in account.
+   * Used for people who sign in via Telegram/Google — these two channels do not provide a phone number.
+   * The server issues a new token because the old token carries an empty phone.
    */
   async verifyPhoneForAccount(phone, otp) {
     const res = await request('/auth/verify-phone', {
@@ -453,9 +453,9 @@ export const api = {
   },
 
   /**
-   * Tạo hộ hồ sơ Chủ xe (và chuyến đầu tiên) trong giai đoạn đội vận hành đi mời
-   * bác tài. Bác tài chưa cần cài ứng dụng; khi đăng nhập bằng chính số điện thoại
-   * này qua OTP thì nhận lại nguyên hồ sơ và các chuyến đã đăng.
+   * Creates a driver profile (and the first trip) on the driver's behalf while the operations team is
+   * out inviting drivers. The driver does not need to install the app yet; when they sign in with this very
+   * phone number via OTP, they receive the full profile and the trips already posted.
    */
   async adminCreateDriver(payload) {
     return request('/admin/drivers', {
@@ -646,7 +646,7 @@ export const api = {
     });
   },
 
-  // --- Station Requests Pool (Gom đề xuất mở trạm ảo mới) ---
+  // --- Station Requests Pool (collects proposals to open new virtual stations) ---
   async createStationRequest(payload) {
     return request('/station-requests', {
       method: 'POST',
@@ -674,7 +674,7 @@ export const api = {
     });
   },
 
-  /** Sửa lịch trình đang chờ: dời giờ hoặc đổi số ghế. */
+  /** Edit a pending schedule: shift the time or change the seat count. */
   async updateMovementIntent(id, updates) {
     return request(`/intents/${id}`, {
       method: 'PATCH',
@@ -682,7 +682,7 @@ export const api = {
     });
   },
 
-  /** Chủ xe xác nhận một mốc gác cổng (NIGHT_LOCK / MORNING_WAKE / RED_LINE). */
+  /** The driver confirms a gatekeeping checkpoint (NIGHT_LOCK / MORNING_WAKE / RED_LINE). */
   async confirmIntentCheckpoint(id, checkpoint) {
     return request(`/intents/${id}/checkpoint`, {
       method: 'POST',
@@ -690,7 +690,7 @@ export const api = {
     });
   },
 
-  /** Huỷ lịch trình (chờ hoặc đã ghép khách). */
+  /** Cancel a schedule (pending or already matched with a passenger). */
   async cancelMovementIntent(id, reason = '') {
     return request(`/intents/${id}`, {
       method: 'DELETE',
@@ -765,7 +765,7 @@ export const api = {
     return request(`/station/rider/radar-risk${qs ? `?${qs}` : ''}`);
   },
 
-  // ── Ma Trận Khe Thời Gian ────────────────────────────────────────────
+  // ── Time Slot Matrix ─────────────────────────────────────────────────
   async getTimeSlotMatrix({ from, to, date = null, timeSlot = null, seats = 1, corridor = null, matchingPreference = 'balanced' } = {}) {
     const query = new URLSearchParams({ from, to, seats: String(seats) });
     if (date) query.append('date', date);
@@ -788,7 +788,7 @@ export const api = {
     return request(`/station/riders/${encodeURIComponent(intentId)}/cancel`, { method: 'POST', body: JSON.stringify({ reason, action }) });
   },
 
-  // ── Bắt Tay T-30 ─────────────────────────────────────────────────────
+  // ── T-30 Handshake ───────────────────────────────────────────────────
   async confirmOnTheWay(intentId, coords = {}) {
     return request('/station/rider/on-the-way', {
       method: 'POST',
@@ -796,7 +796,7 @@ export const api = {
     });
   },
 
-  // ── Thông Báo Đẩy & Hộp Thư ──────────────────────────────────────────
+  // ── Push Notifications & Inbox ───────────────────────────────────────
   async getVapidKey() {
     return request('/notifications/vapid-key');
   },
@@ -831,7 +831,7 @@ export const api = {
     });
   },
 
-  // ── Chế Độ Cứu Hộ & Chốt Sẵn Sàng ────────────────────────────────────
+  // ── Rescue Mode & Readiness Confirmation ─────────────────────────────
   async getRescueStatus(bookingId) {
     return request(`/bookings/${bookingId}/rescue-status`);
   },
@@ -844,12 +844,12 @@ export const api = {
     return request('/admin/scheduler-status');
   },
 
-  // ── Chỉ Số Nhiên Liệu Hàng Ngày (Daily Petrolimex Fuel Index) ───────
+  // ── Daily Fuel Index (Daily Petrolimex Fuel Index) ───────────────────
   async getFuelPrice() {
     return request('/fuel-price');
   },
 
-  /** Tham số công thức định giá đang áp dụng toàn sàn (công khai). */
+  /** Pricing-formula parameters currently applied marketplace-wide (public). */
   async getTariffParams() {
     return request('/tariff-params');
   },
@@ -871,7 +871,7 @@ export const api = {
     });
   },
 
-  // ── Công thức định giá: chỉ Quản trị viên được nâng tham số ──
+  // ── Pricing formula: only admins can raise parameters ──
   async getAdminTariffParams() {
     return request('/admin/tariff-params');
   },

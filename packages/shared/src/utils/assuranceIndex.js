@@ -1,20 +1,20 @@
 /**
  * =============================================================================
- * CHỈ SỐ AN TÂM (ASSURANCE INDEX)
+ * PEACE-OF-MIND INDEX (ASSURANCE INDEX)
  * =============================================================================
- * Khách đi liên tỉnh không cần hiểu phân phối xác suất. Họ cần đúng một câu trả
- * lời: "Tôi có chắc chắn đi được không?".
+ * Intercity passengers do not need to understand probability distributions. They need exactly one
+ * answer: "Can I be sure I will make the trip?".
  *
- * File này dịch các con số toán học đã có (xác suất ETA, số xe dự phòng trên
- * hành lang, lịch sử chủ xe) thành BA MỨC nhìn phát hiểu ngay:
+ * This file translates the existing mathematical figures (ETA probability, number of backup vehicles
+ * on the corridor, driver history) into THREE LEVELS that can be understood at a glance:
  *
- *   🟢 GUARANTEED  >= 95%  "Chuyến đảm bảo"    — có xe chính VÀ xe dự phòng
- *   🟡 COMMUNITY   >= 70%  "Chuyến cộng đồng"  — một xe tiện chuyến, chủ xe uy tín
- *   ⚪ FORMING     còn lại "Đang gom khách"    — chưa đủ chắc, nói thẳng là chưa chắc
+ *   🟢 GUARANTEED  >= 95%  "Chuyến đảm bảo"    — has a primary vehicle AND a backup vehicle
+ *   🟡 COMMUNITY   >= 70%  "Chuyến cộng đồng"  — one passing vehicle, reputable driver
+ *   ⚪ FORMING     the rest "Đang gom khách"   — not certain enough, says plainly that it is not certain
  *
- * NGUYÊN TẮC: thà hạ mức còn hơn hứa quá. Gắn nhãn "đảm bảo" cho một chuyến rồi
- * để khách đứng đường là phá huỷ niềm tin theo cách không sửa được; gắn nhãn
- * "cộng đồng" cho một chuyến rồi nó chạy đúng giờ thì khách chỉ thấy vui hơn.
+ * PRINCIPLE: better to downgrade than to over-promise. Labeling a trip "đảm bảo" (guaranteed) and then
+ * leaving the passenger stranded at the roadside destroys trust in a way that cannot be repaired; labeling
+ * a trip "cộng đồng" (community) and then having it run on time only makes the passenger happier.
  * =============================================================================
  */
 
@@ -27,21 +27,21 @@ export const ASSURANCE_LEVELS = Object.freeze({
 const ASSURANCE_THRESHOLDS = Object.freeze({
   GUARANTEED_MIN: 0.95,
   COMMUNITY_MIN: 0.7,
-  // Chủ xe phải đạt tối thiểu mức uy tín này mới được xét "Chuyến đảm bảo"
+  // The driver must reach at least this trust level to be considered for "Chuyến đảm bảo" (guaranteed trip)
   GUARANTEED_MIN_TRUST: 85,
-  // Và hành lang phải có ít nhất 1 xe khác đủ ghế làm phương án dự phòng
+  // And the corridor must have at least 1 other vehicle with enough seats as a backup option
   GUARANTEED_MIN_BACKUPS: 1
 });
 
 /**
- * TÍNH CHỈ SỐ AN TÂM CHO MỘT KHE CHUYẾN.
+ * COMPUTE THE ASSURANCE INDEX FOR A TRIP SLOT.
  *
  * @param {object} params
- * @param {number} [params.baseCertainty] - Độ chắc chắn nền của tầng khe (0..1)
- * @param {number} [params.trustScore] - Điểm uy tín chủ xe (0..100)
- * @param {number} [params.completedTrips] - Số chuyến đã hoàn tất
- * @param {number} [params.lateReports] - Số lần bị báo trễ hẹn
- * @param {number} [params.backupCount] - Số xe dự phòng cùng hành lang
+ * @param {number} [params.baseCertainty] - Base certainty of the slot tier (0..1)
+ * @param {number} [params.trustScore] - Driver trust score (0..100)
+ * @param {number} [params.completedTrips] - Number of completed trips
+ * @param {number} [params.lateReports] - Number of times reported late for an appointment
+ * @param {number} [params.backupCount] - Number of backup vehicles on the same corridor
  * @returns {object} { level, label, score, reasons, canPromiseTime }
  */
 export function computeAssurance({
@@ -56,13 +56,13 @@ export function computeAssurance({
   const lates = Math.max(0, Number(lateReports) || 0);
   const backups = Math.max(0, Number(backupCount) || 0);
 
-  // Tỷ lệ đúng giờ suy từ lịch sử thật. Chủ xe mới (0 chuyến) KHÔNG được mặc
-  // định 100% — chưa có dữ liệu thì phải nói là chưa có, không được vay uy tín.
+  // On-time rate derived from real history. A new driver (0 trips) must NOT default to
+  // 100% — with no data yet we must say there is no data, and must not borrow credibility.
   const onTimeRate = trips > 0 ? Math.max(0, (trips - lates) / trips) : null;
 
-  // Trọng số: uy tín 40%, lịch sử đúng giờ 35%, độ chắc chắn nền của tầng 25%.
-  // Chủ xe chưa có lịch sử thì phần 35% đó tính ở mức trung tính 0.7, không
-  // thưởng cũng không phạt — họ phải chạy thật để leo lên mức cao hơn.
+  // Weights: trust 40%, on-time history 35%, tier base certainty 25%.
+  // For a driver with no history, that 35% share is taken at a neutral 0.7, neither
+  // rewarded nor penalized — they have to actually run trips to climb to a higher level.
   const trustPart = trust / 100;
   const historyPart = onTimeRate == null ? 0.7 : onTimeRate;
   const score = Number((0.4 * trustPart + 0.35 * historyPart + 0.25 * baseCertainty).toFixed(3));
@@ -70,8 +70,8 @@ export function computeAssurance({
   const reasons = [];
   let level;
 
-  // Mức ĐẢM BẢO đòi hỏi đồng thời 3 điều kiện, không chỉ mỗi điểm số:
-  // điểm cao, chủ xe uy tín, VÀ có xe dự phòng thật trên hành lang.
+  // The GUARANTEED level requires three conditions at once, not just the score:
+  // a high score, a reputable driver, AND a real backup vehicle on the corridor.
   const qualifiesGuaranteed =
     score >= ASSURANCE_THRESHOLDS.GUARANTEED_MIN &&
     trust >= ASSURANCE_THRESHOLDS.GUARANTEED_MIN_TRUST &&
@@ -103,7 +103,7 @@ export function computeAssurance({
     completedTrips: trips,
     backupCount: backups,
     reasons,
-    // Chỉ mức ĐẢM BẢO mới được phép hứa một mốc giờ cụ thể với khách
+    // Only the GUARANTEED level may promise a specific time to the passenger
     canPromiseTime: level === ASSURANCE_LEVELS.GUARANTEED
   };
 }
@@ -131,8 +131,8 @@ function getAssuranceBadge(level) {
 }
 
 /**
- * Câu cam kết hiển thị cho khách, viết bằng lời người chứ không phải thuật ngữ.
- * Mức nào nói đúng mức đó — không mượn giọng chắc chắn cho một chuyến chưa chắc.
+ * Promise sentence shown to the passenger, written in human language rather than jargon.
+ * Each level says exactly what it is — it does not borrow a confident tone for an uncertain trip.
  */
 export function getAssurancePromise(assurance, departureLabel = '') {
   if (!assurance) return '';

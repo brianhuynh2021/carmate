@@ -78,7 +78,7 @@ export default function StationRequestModal({
       size="md"
     >
       <div className="space-y-4">
-        {/* BANNER NGUYÊN TẮC AN TOÀN & KHÓA CỨNG GIAO DIỆN (HARD WHITELIST DOCTRINE) */}
+        {/* SAFETY PRINCIPLES BANNER & HARD UI LOCK (HARD WHITELIST DOCTRINE) */}
         <div className="type-caption p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 space-y-1.5">
           <div className="type-body-strong flex items-center gap-2 text-amber-200">
             <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />

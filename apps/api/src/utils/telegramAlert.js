@@ -1,18 +1,18 @@
 /**
- * CarMate Telegram Bot Alerting Engine (0đ Miễn phí & Độc lập)
- * Tự động bắn cảnh báo lỗi hệ thống và thông báo cuốc xe mới về điện thoại của Founder.
+ * CarMate Telegram Bot Alerting Engine (0 VND, Free & Independent)
+ * Automatically fires system error alerts and new trip notifications to the Founder's phone.
  */
 
-// Bộ nhớ đệm chống spam tin nhắn liên tiếp (Deduplication Cache)
+// Cache to prevent consecutive message spam (Deduplication Cache)
 const alertCache = new Map();
-const DEDUP_TTL_MS = 60 * 1000; // 60 giây
+const DEDUP_TTL_MS = 60 * 1000; // 60 seconds
 
 function escapeHtml(text = '') {
   return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /**
- * Kiểm tra xem request hoặc lỗi có xuất phát từ môi trường phát triển cục bộ (localhost/dev) hay không
+ * Checks whether a request or error originates from a local development environment (localhost/dev)
  * @param {object} req - Express Request object
  * @param {Error|object} error - Error object
  * @returns {boolean}
@@ -20,7 +20,7 @@ function escapeHtml(text = '') {
 export function isLocalhostRequest(req = null, error = null) {
   if (!req && !error) return false;
 
-  // 1. Kiểm tra IP của máy khách (Client IP)
+  // 1. Check the client IP
   const clientIp = req?.ip || req?.headers?.['x-forwarded-for'] || req?.socket?.remoteAddress;
   if (clientIp) {
     const ipStr = String(clientIp).toLowerCase().trim();
@@ -35,7 +35,7 @@ export function isLocalhostRequest(req = null, error = null) {
     }
   }
 
-  // 2. Kiểm tra Host, Origin, Referer header
+  // 2. Check the Host, Origin, Referer headers
   const host = req?.headers?.host || req?.hostname;
   if (host && (host.includes('localhost') || host.includes('127.0.0.1'))) {
     return true;
@@ -51,7 +51,7 @@ export function isLocalhostRequest(req = null, error = null) {
     return true;
   }
 
-  // 3. Kiểm tra Error stack trace (ví dụ lỗi client crash từ http://localhost:5173/src/...)
+  // 3. Check the Error stack trace (e.g. a client crash error from http://localhost:5173/src/...)
   const stack = error?.stack || (typeof error === 'string' ? error : '');
   if (stack && (stack.includes('localhost:') || stack.includes('127.0.0.1:'))) {
     return true;
@@ -61,9 +61,9 @@ export function isLocalhostRequest(req = null, error = null) {
 }
 
 /**
- * Gửi tin nhắn thô tới Telegram Bot
- * @param {string} text - Nội dung tin nhắn
- * @param {object} options - Tuỳ chọn { parseMode: 'HTML', disableNotification: false, req, error }
+ * Sends a raw message to the Telegram Bot
+ * @param {string} text - Message content
+ * @param {object} options - Options { parseMode: 'HTML', disableNotification: false, req, error }
  * @returns {Promise<boolean>}
  */
 export async function sendTelegramMessage(text, options = {}) {
@@ -76,10 +76,10 @@ export async function sendTelegramMessage(text, options = {}) {
 
   const isMockToken = token.startsWith('mock_');
 
-  // 1. Tuyệt đối KHÔNG gửi tin nhắn ra Telegram thật khi đang chạy bộ kiểm thử tự động,
-  // hoặc khi đang phát triển / debug ở môi trường local / localhost.
-  // Chỉ bắn cảnh báo Telegram khi ở môi trường Production thật sự,
-  // hoặc khi chủ động bật ENABLE_DEV_TELEGRAM_ALERTS=true để lập trình viên test bot.
+  // 1. ABSOLUTELY do NOT send messages to the real Telegram while the automated test suite is running,
+  // or while developing / debugging in a local / localhost environment.
+  // Only fire Telegram alerts in a genuine Production environment,
+  // or when ENABLE_DEV_TELEGRAM_ALERTS=true is deliberately enabled so developers can test the bot.
   if (!isMockToken) {
     if (
       options.isTest ||
@@ -94,12 +94,12 @@ export async function sendTelegramMessage(text, options = {}) {
     const isProduction = process.env.NODE_ENV === 'production';
     const enableDevAlerts = process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true';
 
-    // Nếu không phải production và không bật ENABLE_DEV_TELEGRAM_ALERTS
+    // If not production and ENABLE_DEV_TELEGRAM_ALERTS is not enabled
     if (!isProduction && !enableDevAlerts) {
       return false;
     }
 
-    // Nếu request xuất phát từ localhost / 127.0.0.1 / ::1
+    // If the request originates from localhost / 127.0.0.1 / ::1
     if (!enableDevAlerts && isLocalhostRequest(options.req, options.error)) {
       return false;
     }
@@ -119,7 +119,7 @@ export async function sendTelegramMessage(text, options = {}) {
         disable_web_page_preview: true,
         disable_notification: disableNotification
       }),
-      signal: AbortSignal.timeout(6000) // Timeout 6s để không treo luồng
+      signal: AbortSignal.timeout(6000) // 6s timeout so the thread does not hang
     });
 
     if (!response.ok) {
@@ -130,21 +130,21 @@ export async function sendTelegramMessage(text, options = {}) {
 
     return true;
   } catch (err) {
-    // Không bao giờ để lỗi Telegram làm sập server
+    // Never let a Telegram failure bring the server down
     console.warn('[Telegram Alert] Lỗi kết nối mạng:', err.message);
     return false;
   }
 }
 
 /**
- * Bắn cảnh báo sự cố kỹ thuật (Crash / Error 500)
+ * Fires a technical incident alert (Crash / Error 500)
  * @param {object} params - { error, req, source }
  */
 export async function sendSystemErrorAlert({ error, req = null, source = 'API Server' }) {
   const errorMessage = error?.message || String(error || 'Lỗi không xác định');
   const path = req ? `${req.method || 'GET'} ${req.originalUrl || req.url || '/'}` : 'Hệ thống';
 
-  // Chống spam trong môi trường dev / localhost: Tuyệt đối không gửi Telegram khi ở localhost hoặc dev
+  // Spam prevention in dev / localhost environments: absolutely never send Telegram from localhost or dev
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const isMockToken = token?.startsWith('mock_');
   const isProduction = process.env.NODE_ENV === 'production';
@@ -157,17 +157,17 @@ export async function sendSystemErrorAlert({ error, req = null, source = 'API Se
     }
   }
 
-  // Chống spam: Nếu cùng 1 lỗi trên cùng 1 path xảy ra liên tục trong 60s, bỏ qua
+  // Spam prevention: if the same error on the same path occurs repeatedly within 60s, skip it
   const dedupKey = `${source}:${path}:${errorMessage}`;
   const now = Date.now();
   const lastSent = alertCache.get(dedupKey);
 
   if (lastSent && now - lastSent < DEDUP_TTL_MS) {
-    return false; // Đã gửi trong 60s trước, bỏ qua
+    return false; // Already sent within the previous 60s, skip
   }
   alertCache.set(dedupKey, now);
 
-  // Dọn dẹp cache cũ định kỳ nếu lớn hơn 200 bản ghi
+  // Periodically clean up the old cache if it holds more than 200 records
   if (alertCache.size > 200) {
     for (const [key, timestamp] of alertCache.entries()) {
       if (now - timestamp > DEDUP_TTL_MS) {
@@ -197,14 +197,14 @@ export async function sendSystemErrorAlert({ error, req = null, source = 'API Se
 }
 
 /**
- * Bắn thông báo nghiệp vụ kinh doanh (Có Chủ xe tạo chuyến, hoặc có Khách đặt xe)
+ * Fires a business notification (a driver posts a trip, or a passenger books a ride)
  * @param {object} params - { title, details, req }
  */
 export async function sendBusinessAlert({ title, details = {}, req = null }) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const isMockToken = token?.startsWith('mock_');
 
-  // 1. Chặn tuyệt đối khi là request từ bộ test tự động (trừ khi là mock token cho unit test)
+  // 1. Block absolutely when the request comes from the automated test suite (unless it is a mock token for unit tests)
   if (!isMockToken) {
     if (
       req?.isAutomatedTest ||
@@ -215,15 +215,15 @@ export async function sendBusinessAlert({ title, details = {}, req = null }) {
       return false;
     }
 
-    // 2. Ở môi trường phát triển (development/local), mặc định không spam tin nhắn tạo chuyến / đặt chỗ
-    // vào Telegram của Founder trừ khi chủ động bật ENABLE_DEV_TELEGRAM_ALERTS=true
+    // 2. In development/local environments, by default do not spam trip-creation / booking messages
+    // into the Founder's Telegram unless ENABLE_DEV_TELEGRAM_ALERTS=true is deliberately enabled
     const isProduction = process.env.NODE_ENV === 'production';
     const enableDevAlerts = process.env.ENABLE_DEV_TELEGRAM_ALERTS === 'true';
     if (!isProduction && !enableDevAlerts) {
       return false;
     }
 
-    // 3. Nếu request xuất phát từ localhost / 127.0.0.1 / ::1
+    // 3. If the request originates from localhost / 127.0.0.1 / ::1
     if (!enableDevAlerts && isLocalhostRequest(req)) {
       return false;
     }
@@ -243,17 +243,17 @@ export async function sendBusinessAlert({ title, details = {}, req = null }) {
   }
   message += `━━━━━━━━━━━━━━━━━━━━`;
 
-  // Thông báo nghiệp vụ có thể gửi chế độ không rung chuông phiền nếu cần
+  // Business notifications can be sent without a disruptive notification sound if needed
   return sendTelegramMessage(message, { parseMode: 'HTML', disableNotification: false, req });
 }
 
-// Bộ đệm chống spam thông báo khớp chuyến liên tiếp (2 giờ cho mỗi cặp người/chuyến)
+// Cache to prevent consecutive spam of trip-match notifications (2 hours per person/trip pair)
 const matchAlertCooldownMap = new Map();
-const MATCH_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 tiếng
+const MATCH_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 /**
- * Gửi thông báo gợi ý bạn đồng hành khớp lộ trình qua Telegram Bot (0đ)
- * Chuẩn MIT & Anti-Spam: Chỉ gửi khi độ khớp cao, có cooldown 2 tiếng, không để lộ PII.
+ * Sends a notification suggesting a travel companion with a matching route via the Telegram Bot (0 VND)
+ * MIT & Anti-Spam standard: only sends when the match is strong, has a 2-hour cooldown, and never exposes PII.
  */
 export async function sendSmartMatchTelegramAlert({ targetTelegramId, matchedTrip, score = 90, fuelSavings = 0, req = null }) {
   if (!targetTelegramId || !matchedTrip) return false;
@@ -263,11 +263,11 @@ export async function sendSmartMatchTelegramAlert({ targetTelegramId, matchedTri
   const now = Date.now();
   const lastSent = matchAlertCooldownMap.get(key) || 0;
   if (now - lastSent < MATCH_COOLDOWN_MS) {
-    return false; // Đã gửi trong 2h qua, chặn spam
+    return false; // Already sent in the past 2h, block spam
   }
   matchAlertCooldownMap.set(key, now);
 
-  // Dọn dẹp cache nếu quá lớn
+  // Clean up the cache if it grows too large
   if (matchAlertCooldownMap.size > 500) {
     for (const [k, time] of matchAlertCooldownMap.entries()) {
       if (now - time > MATCH_COOLDOWN_MS) {
@@ -302,7 +302,7 @@ export async function sendSmartMatchTelegramAlert({ targetTelegramId, matchedTri
 }
 
 /**
- * Gửi thông báo trực tiếp cho Chủ xe qua Telegram Bot khi có Người đi cùng gửi yêu cầu ghép chuyến
+ * Sends a direct notification to the driver via the Telegram Bot when a passenger submits a trip-matching request
  */
 export async function sendDirectBookingTelegramAlert({ targetTelegramId, booking, passengerName, req = null }) {
   if (!targetTelegramId || !booking) return false;
@@ -332,7 +332,9 @@ export async function sendDirectBookingTelegramAlert({ targetTelegramId, booking
 }
 
 /**
- * Bắn tin nhắn tức thì về Telegram khi có khách đặt chỗ mới (Concierge MVP Flow):
+ * Instantly fires a Telegram message when a new passenger booking comes in (Concierge MVP Flow).
+ * The message is sent in Vietnamese; example ("ĐẶT CHỖ MỚI" = new booking, "Khách" = passenger, "Số lượng" = quantity,
+ * "Tuyến" = route, "Tình trạng xe" = vehicle status):
  * [ĐẶT CHỖ MỚI] Sáng T3 (04:30)
  * • Khách: 0912.xxx.xxx
  * • Số lượng: 1 ghế
@@ -383,7 +385,8 @@ export async function sendNewBookingTelegramAlert({
 }
 
 /**
- * Bắn thông báo tức thì khi khách hủy chỗ:
+ * Instantly fires a notification when a passenger cancels a seat (the message is sent in Vietnamese; "HỦY ĐẶT CHỖ" = booking
+ * cancelled, "Hành khách" = passenger, "Chuyến đi" = trip, "Lý do" = reason, "Trạng thái xe" = vehicle status):
  * [HỦY ĐẶT CHỖ] 1 ghế trống đã mở lại
  * • Hành khách: 098***3750
  * • Chuyến đi: 16:00 ngày 14/09
@@ -454,7 +457,7 @@ export async function sendBookingCancelledTelegramAlert({
 }
 
 /**
- * Hàm hỗ trợ Unit Testing dọn dẹp cache
+ * Helper for Unit Testing to clear the cache
  */
 export function _resetDeduplicationCache() {
   alertCache.clear();

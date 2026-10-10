@@ -1,15 +1,15 @@
 /**
  * ============================================================================
- * KIỂM THỬ TOÀN DIỆN CỖ MÁY CARMATE CẤP ĐỘ 3 (LEVEL 3 ENGINE TEST SUITE)
+ * COMPREHENSIVE TEST OF THE CARMATE LEVEL 3 ENGINE (LEVEL 3 ENGINE TEST SUITE)
  * ============================================================================
  * 
- * 1. Mạng lưới Trạm đón ảo (Virtual Hubs & DARP-MP)
- * 2. Phân Bổ Chi Phí Công Bằng Shapley (100% Trạm Cây Xăng Trục Lộ)
- * 3. Đồ Thị Khả Năng Chia Sẻ (MIT Shareability Graph)
- * 4. Ghép Cặp Ổn Định Gale-Shapley (Deferred Acceptance - Nobel Memorial Prize)
- * 5. Thang Phạt Dốc Thời Gian (Time-Decay Penalty Engine)
- * 6. Mạng Lưới Cứu Hộ Đệm Khẩn Cấp (Standby Buffer Protocol)
- * 7. Tích Hợp API Thực Tế (E2E Endpoints: /api/intents, /api/intents/match, /api/intents/epochs)
+ * 1. Virtual Pickup Station Network (Virtual Hubs & DARP-MP)
+ * 2. Shapley Fair Cost Allocation (100% Highway Gas-Station Stops)
+ * 3. Shareability Graph (MIT Shareability Graph)
+ * 4. Gale-Shapley Stable Matching (Deferred Acceptance - Nobel Memorial Prize)
+ * 5. Time-Decay Penalty Scale (Time-Decay Penalty Engine)
+ * 6. Emergency Standby Buffer Rescue Network (Standby Buffer Protocol)
+ * 7. Real API Integration (E2E Endpoints: /api/intents, /api/intents/match, /api/intents/epochs)
  */
 
 import {
@@ -64,14 +64,14 @@ import {
 let passedTests = 0;
 let failedTests = 0;
 
-// Danh sách bài test thất bại — in đầy đủ ở phần tổng kết thay vì thoát ngay.
+// List of failed tests — printed in full in the summary instead of exiting immediately.
 const failures = [];
 
 /**
- * Bài test thất bại KHÔNG được thoát tiến trình ngay tại chỗ: làm vậy thì phần
- * tổng kết (và exit code phản ánh đúng số bài lỗi) không bao giờ chạy tới, khiến
- * `npm test` trả về 0 và CI xanh giả dù engine đang lỗi. Ghi nhận lỗi, chạy tiếp
- * các bài còn lại, rồi thoát 1 ở cuối nếu có bất kỳ bài nào hỏng.
+ * A failing test must NOT exit the process on the spot: doing so means the
+ * summary (and an exit code that reflects the real number of failures) never runs, so
+ * `npm test` returns 0 and CI goes falsely green even though the engine is broken. Record the failure, keep running
+ * the remaining tests, then exit with 1 at the end if any test failed.
  */
 function assert(condition, message) {
   if (!condition) {
@@ -92,7 +92,7 @@ async function runLevel3Suite() {
 
   await initDB();
 
-  // --- 1. KIỂM THỬ MẠNG LƯỚI TRẠM ĐÓN ẢO & CẤU HÌNH HUB ---
+  // --- 1. VIRTUAL PICKUP STATION NETWORK & HUB CONFIG TEST ---
   console.log('--- 1. Kiểm thử Trạm đón ảo (Virtual Hubs) & Cấu hình 100% Trạm Cây Xăng ---');
   assert(Array.isArray(VIRTUAL_HUBS) && VIRTUAL_HUBS.length >= 15, `Đầy đủ trạm đón ảo (hiện có ${VIRTUAL_HUBS.length} trạm)`);
   
@@ -102,22 +102,22 @@ async function runLevel3Suite() {
   const n2Hubs = getVirtualHubsByCorridor('Tuyến N2');
   assert(n2Hubs.length >= 6, `Hành lang Tuyến N2 có ${n2Hubs.length} trạm đón ảo kết nối Miền Tây`);
 
-  // Kiểm tra thời gian dừng đón 5 phút (300 giây)
+  // Check the 5-minute (300-second) pickup stop time
   const sampleHub = ql13Hubs[0];
   assert(sampleHub.curbsideWindowSeconds === 300, 'Quy chuẩn dừng đón tối đa 5 phút (300 giây curbside window)');
 
-  // Kiểm tra tìm trạm gần nhất
+  // Check nearest-station lookup
   const nearest = findNearestVirtualHub(11.84, 106.59, 'Tuyến QL13');
   assert(nearest && nearest.name.includes('Lộc Ninh'), `Tìm trạm ảo gần nhất chuẩn xác: ${nearest?.name}`);
 
-  // Cấu hình Đón Trả 100% Trạm Cây Xăng (Triệt tiêu Đón Tận Nhà & Chia Tiền)
+  // 100% Gas-Station Pickup/Drop-off configuration (eliminates Door-to-Door Pickup & Cost Splitting)
   assert(DOORSTEP_CONFIG.ENABLED === false, 'Hệ thống chuẩn hoá 100% đón tại trạm cây xăng Petrolimex (doorstep disabled)');
   assert(DOORSTEP_CONFIG.DEFAULT_SURCHARGE === 0, 'Phụ phí đón tận nhà = 0đ (loại bỏ hoàn toàn phụ thu ngõ ngách)');
   assert(DOORSTEP_CONFIG.COMPENSATION_DISCOUNT_RATIO === 0, 'Không chia chác tiền đền bù giữa các hành khách');
 
-  // --- 2. KIỂM THỬ ĐỊNH GIÁ SHAPLEY FAIR PRICING (100% TRẠM CÂY XĂNG) ---
+  // --- 2. SHAPLEY FAIR PRICING TEST (100% GAS-STATION STOPS) ---
   console.log('\n--- 2. Kiểm thử Định giá Toán học Shapley Value (100% Trạm Cây Xăng) ---');
-  // Chuyến chuẩn QL13 (149km): 1 khách thường
+  // Standard QL13 trip (149km): 1 regular passenger
   const normalPrice = calculateShapleyFairPrice({
     distanceKm: 149,
     corridor: 'Tuyến QL13',
@@ -129,7 +129,7 @@ async function runLevel3Suite() {
   assert(normalPrice.doorstepSurcharge === 0, 'Khách đón tại Trạm ảo phụ phí = 0đ');
   assert(normalPrice.compensationDiscount === 0, 'Không chia tiền đền bù (triệt tiêu đón tận nhà)');
 
-  // Bất biến: Giá vé chuẩn hóa 100% theo cự ly, không thu phụ phí đón tận nhà, không chia bù đắp
+  // Invariant: Ticket price is 100% standardized by distance, no door-to-door pickup surcharge, no compensatory cost split
   const doorstepAttempt = calculateShapleyFairPrice({
     distanceKm: 149,
     corridor: 'Tuyến QL13',
@@ -144,7 +144,7 @@ async function runLevel3Suite() {
   assert(doorstepAttempt.doorstepSurcharge === 0, 'Phụ phí đón nhà triệt tiêu = 0đ');
   assert(doorstepAttempt.compensationDiscount === 0, 'Giảm trừ đền bù triệt tiêu = 0đ');
 
-  // --- 3. KIỂM THỬ ĐỒ THỊ CHIA SẺ & THUẬT TOÁN GALE-SHAPLEY ---
+  // --- 3. SHAREABILITY GRAPH & GALE-SHAPLEY ALGORITHM TEST ---
   console.log('\n--- 3. Kiểm thử Đồ thị Shareability & Thuật toán Ghép Cặp Gale-Shapley ---');
   const mockDrivers = [
     { id: 'DRV-1', authorName: 'Chủ xe 1', phone: '0911000001', seats: 3, routeCategory: 'Tuyến QL13', trustScore: 98, from: 'Lộc Ninh', to: 'Sài Gòn' },
@@ -170,7 +170,7 @@ async function runLevel3Suite() {
   );
   assert(avgUtilization >= 80, `Tỷ lệ tối ưu ghế đạt ${avgUtilization}% (chuẩn hiệu quả toàn cục)`);
 
-  // --- 4. KIỂM THỬ THANG PHẠT THỜI GIAN HỦY (TIME-DECAY PENALTY ENGINE) ---
+  // --- 4. CANCELLATION TIME-DECAY PENALTY TEST (TIME-DECAY PENALTY ENGINE) ---
   console.log('\n--- 4. Kiểm thử Kỷ luật Hủy Chuyến (Time-Decay Penalty Engine) ---');
   const testUserPhone = '0933999999';
   await saveUser({
@@ -185,19 +185,19 @@ async function runLevel3Suite() {
     passengerPhone: testUserPhone
   };
 
-  // Kịch bản A: Hủy trước 3 tiếng (> 120 phút) -> Safe Free
+  // Scenario A: Cancel 3 hours ahead (> 120 minutes) -> Safe Free
   const penaltySafe = await applyCancellationPenalty(mockBooking, testUserPhone, 180);
   assert(penaltySafe.penaltyTier === 'safe_free', 'Hủy trước 3 tiếng: Tier = safe_free');
   assert(penaltySafe.penaltyPoints === 0, 'Hủy trước 3 tiếng: Không bị trừ điểm tín nhiệm (0 pts)');
 
-  // Kịch bản B: Hủy cận giờ (60 phút) -> Warning (-15 pts)
+  // Scenario B: Cancel close to departure (60 minutes) -> Warning (-15 pts)
   const penaltyWarn = await applyCancellationPenalty(mockBooking, testUserPhone, 60);
   assert(penaltyWarn.penaltyTier === 'warning', 'Hủy trước 60 phút: Tier = warning');
   assert(penaltyWarn.penaltyPoints === 15, 'Hủy trước 60 phút: Trừ 15 điểm tín nhiệm');
   let updatedUser = getUserByPhone(testUserPhone);
   assert(updatedUser.trustScore === 83, `Điểm tín nhiệm sau phạt cảnh cáo: ${updatedUser.trustScore} (98 - 15)`);
 
-  // Kịch bản C: Hủy sát giờ (15 phút) -> Severe Freeze (-30 pts & Khoá 7 ngày)
+  // Scenario C: Cancel right before departure (15 minutes) -> Severe Freeze (-30 pts & 7-day lockout)
   const penaltySevere = await applyCancellationPenalty(mockBooking, testUserPhone, 15);
   assert(penaltySevere.penaltyTier === 'severe_freeze', 'Hủy trước 15 phút: Tier = severe_freeze');
   assert(penaltySevere.penaltyPoints >= 30, `Hủy trước 15 phút: Trừ ${penaltySevere.penaltyPoints} điểm tín nhiệm`);
@@ -206,10 +206,10 @@ async function runLevel3Suite() {
   assert(updatedUser.trustScore === 83 - penaltySevere.penaltyPoints, `Điểm tín nhiệm sau vi phạm nặng: ${updatedUser.trustScore} (83 - ${penaltySevere.penaltyPoints})`);
   assert(updatedUser.freezeUntil > Date.now(), 'Tài khoản đã bị đóng băng tự động');
 
-  // Dọn sạch user test
+  // Clean up the test user
   await deleteUserAccount(updatedUser.id, testUserPhone);
 
-  // --- 5. KIỂM THỬ MẠNG LƯỚI CỨU HỘ ĐỆM KHẨN CẤP (STANDBY BUFFER) ---
+  // --- 5. EMERGENCY STANDBY BUFFER RESCUE NETWORK TEST (STANDBY BUFFER) ---
   console.log('\n--- 5. Kiểm thử Radar Cứu hộ Đệm Khẩn cấp (Standby Buffer) ---');
   const primaryRequest = {
     tripId: 'DRV-MAIN',
@@ -219,16 +219,16 @@ async function runLevel3Suite() {
   const activeOffers = [
     { id: 'DRV-MAIN', authorName: 'Chủ xe chính', direction: 'SG_BINHPHUOC', seats: 2, trustScore: 90 },
     { id: 'DRV-STANDBY-1', authorName: 'Chủ xe dự phòng 1', direction: 'SG_BINHPHUOC', seats: 2, trustScore: 98 },
-    { id: 'DRV-STANDBY-2', authorName: 'Chủ xe dự phòng 2', direction: 'BINHPHUOC_SG', seats: 2, trustScore: 99 } // Ngược chiều
+    { id: 'DRV-STANDBY-2', authorName: 'Chủ xe dự phòng 2', direction: 'BINHPHUOC_SG', seats: 2, trustScore: 99 } // Opposite direction
   ];
 
   const standby = findStandbyBufferOffer(primaryRequest, activeOffers);
   assert(standby !== null, 'Tìm thấy xe dự phòng khả thi trong buffer');
   assert(standby.id === 'DRV-STANDBY-1', `Xe dự phòng ưu tiên đúng: ${standby.authorName} (${standby.id})`);
 
-  // --- 6. KIỂM THỬ TÍCH HỢP HỆ THỐNG GOM PHIÊN (BATCH MATCHING EPOCH) ---
+  // --- 6. EPOCH BATCHING SYSTEM INTEGRATION TEST (BATCH MATCHING EPOCH) ---
   console.log('\n--- 6. Kiểm thử Điều phối Phiên Khớp Lệnh (Batch Matching Epoch) ---');
-  // Tạo 1 Driver Intent và 1 Passenger Intent
+  // Create 1 Driver Intent and 1 Passenger Intent
   const driverIntent = await createIntent({
     role: 'driver',
     originHubId: 'hub_ql13_cho_loc_ninh',
@@ -257,7 +257,7 @@ async function runLevel3Suite() {
 
   assert(driverIntent.id && passengerIntent.id, 'Tạo các Intent thành công vào SQLite');
 
-  // Chạy gom phiên vi mô
+  // Run the micro-batch epoch
   const epochResult = await runBatchMatchingEpoch({
     epochType: 'micro_batch',
     corridor: 'Tuyến QL13'
@@ -267,16 +267,16 @@ async function runLevel3Suite() {
   assert(epochResult.totalMatchedDrivers >= 1, `Khớp lệnh thành công ${epochResult.totalMatchedDrivers} chủ xe`);
   assert(epochResult.totalMatchedPassengers >= 1, `Khớp lệnh thành công ${epochResult.totalMatchedPassengers} khách`);
 
-  // Dọn sạch intents và bookings sau test
+  // Clean up intents and bookings after the test
   await deleteIntent(driverIntent.id);
   await deleteIntent(passengerIntent.id);
   clearAllBookings();
 
-  // --- 8. KIỂM THỬ COCKPIT MODE & QR CHECK-IN TRẠM ẢO (CURBSIDE DISPATCH) ---
+  // --- 8. COCKPIT MODE & VIRTUAL STATION QR CHECK-IN TEST (CURBSIDE DISPATCH) ---
   console.log('\n--- 8. Kiểm thử Cockpit Taplo Ô Tô & QR Check-in Trạm Ảo ---');
   resetAllStationData();
 
-  // 8.0 Kiểm thử bảng cước phân đoạn Metro Corridor (Dynamic Tariff & Fair Market Invariant)
+  // 8.0 Test the Metro Corridor segment fare table (Dynamic Tariff & Fair Market Invariant)
   assert(Object.keys(CORRIDOR_FIXED_SEGMENTS).length >= 10, 'Bảng cước phân đoạn cố định Metro có ít nhất 10 chặng mẫu');
 
   const tariffBinhLong = getFixedSegmentTariff('hub_ql13_binh_long', 'hub_ql13_hang_xanh');
@@ -298,7 +298,7 @@ async function runLevel3Suite() {
   assert(tariffLocal.pricePerSeat === 75000, 'Cước chặng ngắn Bình Long ➔ Chơn Thành chuẩn xác 75.000đ');
   assert(tariffLocal.driverPayoutFor2Seats === 135000, 'Chủ xe nhận 135.000đ cho 2 ghế chặng Bình Long ➔ Chơn Thành');
 
-  // Kiểm thử các trạm trọng điểm mới thêm (TTHC Tân Khai, Vincom Chơn Thành, Vạn Phúc City)
+  // Test the newly added key stations (TTHC Tân Khai, Vincom Chơn Thành, Vạn Phúc City)
   const hubTthcTanKhai = getVirtualHubById('hub_ql13_tthc_tan_khai');
   assert(hubTthcTanKhai && hubTthcTanKhai.category === 'ADMIN_CENTER', 'Trạm TTHC Hớn Quản (Tân Khai) được định danh chuẩn ADMIN_CENTER');
 
@@ -308,20 +308,20 @@ async function runLevel3Suite() {
   const hubVanPhuc = getVirtualHubById('hub_ql13_van_phuc_city');
   assert(hubVanPhuc && hubVanPhuc.category === 'URBAN_AREA', 'Trạm Vạn Phúc City được định danh chuẩn URBAN_AREA');
 
-  // Kiểm thử Dynamic Pricing Engine tự động điều chỉnh theo chỉ số giá xăng hàng ngày
+  // Test that the Dynamic Pricing Engine adjusts automatically to the daily fuel price index
   const originalFuel = getDailyFuelPrice();
   assert(originalFuel.ron95Price === 24120, 'Giá xăng mặc định RON 95 là 24.120đ/L');
 
-  // Thử nghiệm xăng tăng lên 26.500đ/L
+  // Trial: fuel rises to 26.500đ/L
   setDailyFuelPrice(26500);
   const updatedTariffBinhLong = calculateDynamicTariffByDistance(115, 'Tuyến QL13');
   assert(updatedTariffBinhLong.pricePerSeat >= 180000, 'Giá vé tự động điều chỉnh linh hoạt theo giá xăng mới');
   assert(updatedTariffBinhLong.breakevenCovered === true, 'Bất biến MIT: 2 ghế luôn bù đắp 100% chi phí xăng + BOT');
 
-  // Khôi phục lại giá ban đầu
+  // Restore the original price
   setDailyFuelPrice(originalFuel.ron95Price);
 
-  // 8.1 Khách quét QR check-in tại trạm Petrolimex Tân Khai
+  // 8.1 Passenger scans the QR check-in at Petrolimex Tân Khai station
   const hubInfo = getVirtualHubById('hub_ql13_tan_khai');
   assert(hubInfo && hubInfo.name.includes('Petrolimex'), 'Trạm Petrolimex Tân Khai được định danh chuẩn xác');
 
@@ -339,17 +339,17 @@ async function runLevel3Suite() {
   assert(checkinRes.intent.driverPayout === 300000, 'Mức chia sẻ thực nhận cho chủ xe (100% - 0đ phí sàn): 300.000đ');
   assert(checkinRes.intent.noSurge === true, 'Bất biến: Không phụ thu giờ cao điểm/mưa gió (noSurge: true)');
 
-  // 8.2 Kiểm tra hàng đợi trạm
+  // 8.2 Check the station queue
   const queueRes = getStationQueue('hub_ql13_tan_khai');
   assert(queueRes.waitingCount === 1, 'Hàng đợi trạm Tân Khai ghi nhận đúng 1 yêu cầu');
   assert(queueRes.queue[0].position === 1, 'Khách ở vị trí số 1 trong hàng đợi');
 
-  // 8.3 Kiểm tra thẻ lên xe thời gian thực của khách
+  // 8.3 Check the passenger's real-time boarding pass
   const passRes = getRiderPass(checkinRes.intent.intentId);
   assert(passRes.success === true && passRes.intent.status === 'WAITING', 'Thẻ lên xe ở trạng thái WAITING chờ xe tới');
 
-  // 8.4 Chủ xe chạy xe trên QL13 tiếp cận trạm Tân Khai (cách 2.8 km về phía Bắc)
-  // Tọa độ tiếp cận: (11.5860, 106.6264) -> Trạm Tân Khai (11.5620, 106.6340) cách 2.8 km
+  // 8.4 Driver drives on QL13 approaching Tân Khai station (2.8 km away, to the north)
+  // Approach coordinates: (11.5860, 106.6264) -> Tân Khai station (11.5620, 106.6340) is 2.8 km away
   const pingRes = telemetryPing({
     tripId: 'TRIP-TEST-COCKPIT-1',
     driverPhone: '0912345678',
@@ -371,18 +371,18 @@ async function runLevel3Suite() {
   assert(pingRes.proximityAlert.noSurge === true, 'Bất biến: Không tăng giá cao điểm');
   assert(pingRes.session.status === 'OFFERING', 'Trạng thái Taplo chuyển sang OFFERING (30s đếm ngược)');
 
-  // 8.5 Test cơ chế Bỏ qua (Reject)
+  // 8.5 Test the Skip (Reject) mechanism
   const rejectRes = driverRejectOffer({
     tripId: 'TRIP-TEST-COCKPIT-1',
     intentId: checkinRes.intent.intentId
   });
   assert(rejectRes.success === true, 'Chủ xe bấm bỏ qua thành công');
 
-  // Khách được hoàn trả lại hàng đợi ở trạng thái WAITING
+  // The passenger is returned to the queue in the WAITING state
   const afterRejectPass = getRiderPass(checkinRes.intent.intentId);
   assert(afterRejectPass.intent.status === 'WAITING', 'Khách được hoàn trả lại trạng thái WAITING sau khi bỏ qua');
 
-  // 8.6 Chủ xe tiếp tục phát tín hiệu và Chấp nhận đón (Accept)
+  // 8.6 Driver keeps broadcasting the signal and Accepts the pickup (Accept)
   telemetryPing({
     tripId: 'TRIP-TEST-COCKPIT-1',
     lat: 11.5860,
@@ -397,12 +397,12 @@ async function runLevel3Suite() {
   assert(acceptRes.success === true, 'Chủ xe bấm ĐỒNG Ý ĐÓN 1-chạm thành công');
   assert(acceptRes.dockingTimeSeconds === 60, 'Kích hoạt hạn dừng sân trạm đúng 60 giây (Curbside Window)');
 
-  // Kiểm tra màn hình khách cập nhật trạng thái ARRIVING và nhận thông tin xe
+  // Check that the passenger screen updates to the ARRIVING state and receives the vehicle info
   const arrivingPass = getRiderPass(checkinRes.intent.intentId);
   assert(arrivingPass.intent.status === 'ARRIVING', 'Trạng thái thẻ khách chuyển sang ARRIVING');
   assert(arrivingPass.intent.carInfo?.plate === '93A-123.45', 'Khách thấy đúng biển số xe 93A-123.45 của Chủ xe');
 
-  // 8.7 Bắt tay xác thực mã PIN 4 số tại sân cây xăng
+  // 8.7 4-digit PIN authentication handshake at the gas station forecourt
   const wrongPinRes = driverVerifyPin({
     tripId: 'TRIP-TEST-COCKPIT-1',
     intentId: checkinRes.intent.intentId,
@@ -422,10 +422,10 @@ async function runLevel3Suite() {
 
   resetAllStationData();
 
-  // 8.8 Kiểm thử Mô hình Toán học Stanford Frenet Frame 1D & 3 Trạm Trả Lớn (1-Chạm)
+  // 8.8 Test the Stanford Frenet Frame 1D Mathematical Model & 3 Large Drop-off Stations (1-Touch)
   console.log('\n--- 8.8 Kiểm thử Stanford Frenet Frame 1D & 3 Trạm Trả Lớn (1-Chạm) ---');
 
-  // A. Kiểm thử 3 Trạm Trả Lớn (Terminal Hubs)
+  // A. Test the 3 Large Drop-off Stations (Terminal Hubs)
   const airportHub = getVirtualHubById('hub_ql13_san_bay_tsn');
   assert(airportHub && airportHub.category === 'AIRPORT' && airportHub.isTerminal === true, 'Trạm Sân bay Tân Sơn Nhất được định danh chuẩn AIRPORT và isTerminal = true');
 
@@ -435,7 +435,7 @@ async function runLevel3Suite() {
   const binhPhuocHub = getVirtualHubById('hub_ql13_nga4_binh_phuoc');
   assert(binhPhuocHub && binhPhuocHub.isTerminal === true, 'Trạm Ngã 4 Bình Phước có isTerminal = true');
 
-  // B. Bảng cước đến Sân bay TSN và Ngã 4 Bình Phước
+  // B. Fare table to TSN Airport and Ngã 4 Bình Phước
   const tariffBinhLongToTSN = getFixedSegmentTariff('hub_ql13_binh_long', 'hub_ql13_san_bay_tsn');
   assert(tariffBinhLongToTSN.pricePerSeat === 190000, 'Cước Bình Long ➔ Sân bay Tân Sơn Nhất chuẩn xác 190.000đ (bù xăng + BOT)');
 
@@ -448,38 +448,38 @@ async function runLevel3Suite() {
   const tariffTanKhaiToBP = getFixedSegmentTariff('hub_ql13_tan_khai', 'hub_ql13_nga4_binh_phuoc');
   assert(tariffTanKhaiToBP.pricePerSeat === 130000, 'Cước Tân Khai ➔ Ngã 4 Bình Phước chuẩn xác 130.000đ');
 
-  // C. Kiểm thử Chiếu Tọa độ Frenet Frame (2D -> 1D s, d)
-  // Điểm GPS tại QL13 tiếp cận Tân Khai: (11.5860, 106.6264)
+  // C. Test the Frenet Frame Coordinate Projection (2D -> 1D s, d)
+  // GPS point on QL13 approaching Tân Khai: (11.5860, 106.6264)
   const frenetRes = projectToCorridorFrenet(11.5860, 106.6264, 'Tuyến QL13');
   assert(frenetRes.isOnCorridor === true, 'Frenet Frame xác nhận xe đang chạy trên hành lang QL13 (isOnCorridor = true)');
   assert(frenetRes.d <= 85, `Độ lệch vuông góc tim đường d = ${frenetRes.d}m (nằm trong dung sai 85m)`);
   assert(frenetRes.s >= 35 && frenetRes.s <= 42, `Tọa độ tuyến tính s = ${frenetRes.s} km chuẩn xác quanh đoạn tiếp cận Tân Khai`);
 
-  // D. Cửa sổ Radar Động học Kinematics: d_trigger = max(3.0, (v / 3.6) * 210 / 1000)
+  // D. Kinematic Radar Window: d_trigger = max(3.0, (v / 3.6) * 210 / 1000)
   const triggerMin = calculateKinematicTriggerDistance(20);
   assert(triggerMin === 3.0, 'Vận tốc chậm: Radar giữ ngưỡng tối thiểu 3.0 km');
 
   const triggerHighway = calculateKinematicTriggerDistance(78);
   assert(triggerHighway >= 4.5 && triggerHighway <= 4.6, `Vận tốc 78 km/h: Radar động học mở rộng lên ${triggerHighway} km (~210s TTA phản xạ an toàn)`);
 
-  // E. MIT Interval Scheduling: Kiểm tra tính khả thi gối đầu tuyến tính
-  // Xe đi từ Bình Long (s=24.5) về Sân bay TSN (s=142.5), khách đón tại Tân Khai (s=44.5) về Hàng Xanh (s=139.5) -> HỢP LỆ
+  // E. MIT Interval Scheduling: Check linear overlap feasibility
+  // The vehicle goes from Bình Long (s=24.5) to TSN Airport (s=142.5), the passenger is picked up at Tân Khai (s=44.5) and goes to Hàng Xanh (s=139.5) -> VALID
   const feasibleMatch = isIntervalSchedulingFeasible(24.5, 142.5, 44.5, 139.5);
   assert(feasibleMatch === true, 'MIT Interval Scheduling: Khớp thành công chặng con Tân Khai ➔ Hàng Xanh lọt trong tuyến Bình Long ➔ Sân bay');
 
-  // Khách ở sau lưng xe (Khách ở Tân Khai s=44.5 nhưng xe đã qua Chơn Thành s=56.5) -> TỪ CHỐI
+  // The passenger is behind the vehicle (passenger at Tân Khai s=44.5 but the vehicle has already passed Chơn Thành s=56.5) -> REJECT
   const infeasibleBehind = isIntervalSchedulingFeasible(56.5, 142.5, 44.5, 139.5);
   assert(infeasibleBehind === false, 'MIT Interval Scheduling: Từ chối yêu cầu ở sau lưng xe (khách s=44.5 < xe s=56.5)');
 
-  // Khách đi ngược chiều về phía Bắc (s đón 100, s trả 40) trong khi xe đi về Nam -> TỪ CHỐI
+  // The passenger travels in the opposite direction, north (pickup s 100, drop-off s 40) while the vehicle heads south -> REJECT
   const infeasibleReverse = isIntervalSchedulingFeasible(24.5, 142.5, 100, 40);
   assert(infeasibleReverse === false, 'MIT Interval Scheduling: Từ chối yêu cầu đi ngược chiều');
 
-  // --- 8.9 Kiểm thử Anti-Quishing & Khóa kép Geofence Station Check-in ---
+  // --- 8.9 Anti-Quishing & Dual-Lock Geofence Station Check-in test ---
   console.log('\n--- 8.9 Kiểm thử Anti-Quishing & Khóa kép Geofence Station Check-in ---');
   const tanKhaiHub = getVirtualHubById('hub_ql13_tan_khai');
 
-  // Trường hợp 1: Người dùng đứng tại khuôn viên cây xăng (cách ~35m)
+  // Case 1: The user stands within the gas station premises (~35m away)
   const validCheckIn = riderCheckIn({
     hubId: 'hub_ql13_tan_khai',
     destinationHubId: 'hub_ql13_hang_xanh',
@@ -492,7 +492,7 @@ async function runLevel3Suite() {
   assert(validCheckIn.intent.geofence.verified === true, 'Xác thực Geofence thành công khi khách đứng trong bán kính trạm <= 400m');
   assert(validCheckIn.intent.geofence.distanceM <= 400, `Cự ly đối soát chuẩn xác (${validCheckIn.intent.geofence.distanceM}m <= 400m)`);
 
-  // Trường hợp 2: Quét mã QR giả mạo từ xa (cách trạm ~5.5 km)
+  // Case 2: A fake QR code scanned remotely (~5.5 km from the station)
   const fakeCheckIn = riderCheckIn({
     hubId: 'hub_ql13_tan_khai',
     destinationHubId: 'hub_ql13_hang_xanh',
@@ -504,10 +504,10 @@ async function runLevel3Suite() {
   assert(fakeCheckIn.intent.geofence.verified === false, 'Phát hiện và cảnh báo quét QR ngoài bán kính an toàn trạm (> 400m)');
   assert(fakeCheckIn.intent.geofence.distanceM > 1000, `Khoảng cách vượt ngưỡng an toàn (${fakeCheckIn.intent.geofence.distanceM}m)`);
 
-  // --- 8.10 Kiểm thử Luồng Khứ hồi 2 chiều (Bidirectional Commuting QL13: SG <-> Bình Phước) ---
+  // --- 8.10 Two-way Round-trip Flow test (Bidirectional Commuting QL13: SG <-> Bình Phước) ---
   console.log('\n--- 8.10 Kiểm thử Luồng Khứ hồi 2 chiều (Bidirectional Commuting QL13: SG <-> Bình Phước) ---');
 
-  // 1. Đối xứng bảng giá cố định Metro Tariff: Chiều Đi (BP -> SG) vs Chiều Về (SG -> BP)
+  // 1. Symmetry of the fixed Metro Tariff table: Outbound (BP -> SG) vs Return (SG -> BP)
   const tariffGo = getFixedSegmentTariff('hub_ql13_tan_khai', 'hub_ql13_hang_xanh');
   const tariffReturn = getFixedSegmentTariff('hub_ql13_hang_xanh', 'hub_ql13_tan_khai');
   assert(tariffGo.pricePerSeat === tariffReturn.pricePerSeat, `Bảng giá đối xứng hoàn hảo: Tân Khai <-> Hàng Xanh = ${tariffGo.pricePerSeat}đ`);
@@ -519,25 +519,25 @@ async function runLevel3Suite() {
   const tariffAirportReturn = getFixedSegmentTariff('hub_ql13_san_bay_tsn', 'hub_ql13_binh_long');
   assert(tariffAirportReturn.pricePerSeat === 190000, 'Cước chiều về Sân bay TSN ➔ Bình Long đúng định mức 190.000đ');
 
-  // 2. MIT Interval Scheduling cho Chiều Về (Northbound: xe từ SG s=140 về Bình Phước s=24)
-  // Xe đi từ Hàng Xanh (s=139.5) về Bình Long (s=24.5)
-  // Khách đón tại Hàng Xanh (s=139.5) về Tân Khai (s=44.5) -> HỢP LỆ
+  // 2. MIT Interval Scheduling for the Return direction (Northbound: vehicle from SG s=140 to Bình Phước s=24)
+  // The vehicle goes from Hàng Xanh (s=139.5) to Bình Long (s=24.5)
+  // Passenger picked up at Hàng Xanh (s=139.5) heading to Tân Khai (s=44.5) -> VALID
   const feasibleNorthbound = isIntervalSchedulingFeasible(139.5, 24.5, 139.5, 44.5);
   assert(feasibleNorthbound === true, 'MIT Interval Scheduling: Khớp thành công Chiều Về Hàng Xanh ➔ Tân Khai lọt trong tuyến Hàng Xanh ➔ Bình Long');
 
-  // Khách đón tại Chơn Thành (s=56.5) về Bình Long (s=24.5) trong khi xe xuất phát từ Hàng Xanh -> HỢP LỆ
+  // Passenger picked up at Chơn Thành (s=56.5) heading to Bình Long (s=24.5) while the vehicle departs from Hàng Xanh -> VALID
   const feasibleMidNorthbound = isIntervalSchedulingFeasible(139.5, 24.5, 56.5, 24.5);
   assert(feasibleMidNorthbound === true, 'MIT Interval Scheduling: Khớp thành công khách đón giữa đường Chơn Thành ➔ Bình Long');
 
-  // Xe đã chạy qua Chơn Thành (s=50), khách ở Hàng Xanh (s=139.5) mới gọi -> TỪ CHỐI vì ở sau lưng xe
+  // The vehicle has already passed Chơn Thành (s=50), the passenger at Hàng Xanh (s=139.5) only just called -> REJECT because they are behind the vehicle
   const infeasibleBehindNorthbound = isIntervalSchedulingFeasible(50, 24.5, 139.5, 44.5);
   assert(infeasibleBehindNorthbound === false, 'MIT Interval Scheduling: Từ chối yêu cầu ở sau lưng xe chiều về (khách s=139.5 > xe s=50)');
 
-  // Khách đón tại Hàng Xanh nhưng đi ngược về Nam (s đón 50, s trả 100) trong khi xe đi về Bắc -> TỪ CHỐI
+  // Passenger picked up at Hàng Xanh but heading the opposite way, south (pickup s 50, drop-off s 100) while the vehicle heads north -> REJECT
   const infeasibleSouthInNorthbound = isIntervalSchedulingFeasible(139.5, 24.5, 50, 100);
   assert(infeasibleSouthInNorthbound === false, 'MIT Interval Scheduling: Từ chối yêu cầu đi ngược chiều về Nam');
 
-  // 3. Check-in chiều về tại trạm Hàng Xanh (Saigon Station Check-in)
+  // 3. Return-direction check-in at Hàng Xanh station (Saigon Station Check-in)
   const hxHubReturn = getVirtualHubById('hub_ql13_hang_xanh');
   const returnCheckIn = riderCheckIn({
     hubId: 'hub_ql13_hang_xanh',
@@ -555,11 +555,11 @@ async function runLevel3Suite() {
   assert(returnCheckIn.intent.driverPayout === 360000, 'Chủ xe nhận 100% (0đ phí sàn): 360.000đ');
 
   // =============================================================
-  // 8.11 BỘ GIẢ LẬP CHẶNG CUỐI (LAST-MILE CALCULATOR) & NỐI CHUYẾN (HUB FEEDER)
+  // 8.11 LAST-MILE SIMULATOR (LAST-MILE CALCULATOR) & TRIP CONNECTIONS (HUB FEEDER)
   // =============================================================
   console.log('\n--- 8.11 BỘ GIẢ LẬP CHẶNG CUỐI & NỐI CHUYẾN VÙNG THƯA XE ---');
 
-  // 1. Kiểm tra tính toán chặng cuối (Last-Mile Transit Calculator)
+  // 1. Test the last-mile calculation (Last-Mile Transit Calculator)
   assert(POPULAR_LAST_MILE_DESTINATIONS.length >= 7, 'Danh mục chặng cuối mẫu có ít nhất 7 điểm đến phổ biến');
   const lastMileBaChieu = calculateLastMileOption('Chợ Bà Chiểu', 'hub_ql13_tan_khai');
   assert(lastMileBaChieu.bestHubId === 'hub_ql13_hang_xanh', 'Chợ Bà Chiểu tự động ghép với Trạm Hàng Xanh');
@@ -569,19 +569,19 @@ async function runLevel3Suite() {
   assert(lastMileBaChieu.totalCostVND === 165000, 'Tổng chi phí về tận nhà: 150k + 15k = 165.000đ');
   assert(lastMileBaChieu.savingsVND > 500000, 'Tiết kiệm hơn 500k so với taxi đường dài liên tỉnh');
 
-  // 2. Kiểm tra điểm đến Sân bay TSN
+  // 2. Test the TSN Airport destination
   const lastMileTSN = calculateLastMileOption('Sân bay', 'hub_ql13_tan_khai');
   assert(lastMileTSN.bestHubId === 'hub_ql13_san_bay_tsn', 'Sân bay TSN tự động ghép với Trạm Ga Sân Bay TSN');
   assert(lastMileTSN.distanceToHubKm === 0.2, 'Cự ly chặng cuối sảnh sân bay 0.2km');
   assert(lastMileTSN.grabBikeVND === 0, 'Đi bộ thẳng vào ga, 0đ phí GrabBike');
 
-  // 3. Kiểm tra Hub Liquidity cho Trục QL13 & Nhánh Vùng thưa xe Bù Đốp
+  // 3. Test Hub Liquidity for the QL13 Axis & the Bù Đốp Sparse-Vehicle Branch
   const budopStatus = getHubLiquidityStatus('hub_ql13_budop');
   assert(budopStatus.isThin === true, 'Trạm Bù Đốp được phân loại là Vùng thưa xe (THIN)');
   assert(budopStatus.feederRecommendation.targetHubId === 'hub_ql13_cho_loc_ninh', 'Bù Đốp đề xuất nối chuyến ra Trạm TT. Lộc Ninh');
   assert(budopStatus.feederRecommendation.distanceKm === 15, 'Cự ly nối chuyến Bù Đốp ➔ Lộc Ninh là 15km');
 
-  // Lộc Ninh là đầu tuyến QL13 có mật độ xe dồi dào (DENSE), hỗ trợ đón trực tiếp không cần chuyển trạm
+  // Lộc Ninh is the start of the QL13 route with abundant vehicle density (DENSE), supporting direct pickup without a station transfer
   const locNinhStatus = getHubLiquidityStatus('hub_ql13_cho_loc_ninh');
   assert(locNinhStatus.isThin === false, 'Trạm Lộc Ninh có mật độ xe dồi dào (isThin = false), hỗ trợ đón trực tiếp');
   assert(locNinhStatus.status === 'DENSE', 'Trạm Lộc Ninh đạt chuẩn DENSE (Đầu tuyến QL13)');
@@ -596,12 +596,12 @@ async function runLevel3Suite() {
   assert(binhLongStatus.isThin === false, 'Trạm Bình Long là Vùng đậm đặc (DENSE), không cần nối chuyến');
 
   // =============================================================
-  // 8.12 KIỂM THỬ BẪY ĐỘNG HỌC & XỬ PHẠT CHỦ XE BỎ BOM KHÁCH (FLY-BY GHOSTING PENALTY)
+  // 8.12 KINEMATIC TRAP TEST & PENALTY FOR DRIVERS WHO GHOST PASSENGERS (FLY-BY GHOSTING PENALTY)
   // =============================================================
   console.log('\n--- 8.12 Kiểm thử Bẫy động học & Xử phạt Bỏ bom khách (Ghosting Penalty) ---');
   resetAllStationData();
 
-  // 1. Khách check-in tại Tân Khai
+  // 1. Passenger checks in at Tân Khai
   const ghostTestCheckIn = riderCheckIn({
     hubId: 'hub_ql13_tan_khai',
     destinationHubId: 'hub_ql13_hang_xanh',
@@ -611,7 +611,7 @@ async function runLevel3Suite() {
   });
   assert(ghostTestCheckIn.success === true, 'Khách check-in tại Tân Khai thành công');
 
-  // 2. Xe tiếp cận trạm và nhận offer
+  // 2. Vehicle approaches the station and receives the offer
   const ghostCarTripId = 'TRIP-GHOST-CAR-1';
   const ghostCarPing1 = telemetryPing({
     tripId: ghostCarTripId,
@@ -632,23 +632,23 @@ async function runLevel3Suite() {
   });
   assert(ghostAcceptRes.success === true, 'Chủ xe bấm ĐỒNG Ý ĐÓN, chuyển trạng thái DWELLING');
 
-  // 3. Kịch bản xấu: Xe không dừng tấp lề mà chạy vù qua trạm Tân Khai (> 300m) với tốc độ 75 km/h
-  // Tân Khai s ~ 38.6 km, xe vượt qua cọc s ~ 39.5 km
+  // 3. Bad scenario: the vehicle does not pull over but speeds past Tân Khai station (> 300m) at 75 km/h
+  // Tân Khai s ~ 38.6 km, the vehicle passes the marker at s ~ 39.5 km
   const ghostCarFlyByPing = telemetryPing({
     tripId: ghostCarTripId,
     lat: 11.5000,
     lng: 106.6340,
-    speed: 75 // Không giảm tốc về 0 km/h
+    speed: 75 // Does not slow down to 0 km/h
   });
   assert(ghostCarFlyByPing.isBanned === true, 'Hệ thống kích hoạt Bẫy Động Học và Khóa Vĩnh Viễn xe bỏ bom khách');
 
-  // 4. Kiểm tra khách được giải phóng an toàn về vị trí #1 hàng đợi
+  // 4. Check the passenger is safely released back to position #1 of the queue
   const riderPassAfterGhost = getRiderPass(ghostTestCheckIn.intent.intentId);
   assert(riderPassAfterGhost.intent.status === 'WAITING', 'Khách được tự động hoàn trả về trạng thái WAITING');
   assert(riderPassAfterGhost.intent.carInfo === null, 'Xóa bỏ thông tin xe đã bỏ bom khách');
   assert(riderPassAfterGhost.position === 1, 'Khách được ưu tiên giữ nguyên vị trí số 1 để đón xe tiếp theo');
 
-  // 5. Xe bị khóa vĩnh viễn không thể tiếp tục quét trạm
+  // 5. The vehicle is permanently locked and can no longer scan stations
   const ghostCarRetryPing = telemetryPing({
     tripId: ghostCarTripId,
     speed: 50

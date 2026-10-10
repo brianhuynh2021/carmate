@@ -41,13 +41,13 @@ jobs:
 
       - name: Start Server, Wait for Readiness & Run E2E Suite
         env:
-          # Bỏ Vite dev middleware (phục vụ bản dist đã build) nhưng GIỮ NODE_ENV=test,
-          # vì rate limit của production (20 bài/10 phút) sẽ chặn chính bộ test.
+          # Skip the Vite dev middleware (serve the built dist) but KEEP NODE_ENV=test,
+          # because the production rate limit (20 posts/10 minutes) would block the test suite itself.
           DISABLE_VITE_DEV: 'true'
         run: |
           set -e
-          # Server phải chạy CÙNG step với test: mỗi step của Actions là một shell riêng,
-          # tiến trình nền khởi động ở step trước sẽ bị kết thúc khi step đó đóng lại.
+          # The server must run in the SAME step as the tests: each Actions step is a separate shell,
+          # and a background process started in a previous step is terminated when that step ends.
           node apps/api/src/index.js > server.log 2>&1 &
           SERVER_PID=$!
           echo $SERVER_PID > server.pid
@@ -72,18 +72,18 @@ jobs:
 
           npm test
 
-          # Pentest chạy CÙNG step vì cần server đang sống. Bộ này bắn thật vào
-          # sàn (đặt vượt ghế, tiêm trạng thái để moi SĐT, ghi đè vé, dựng xe ma)
-          # và thoát mã lỗi nếu khai thác thành công.
+          # The pentest runs in the SAME step because it needs a live server. This suite attacks the
+          # marketplace for real (overbooking seats, injecting state to extract phone numbers, overwriting tickets,
+          # fabricating ghost vehicles) and exits with an error code if an exploit succeeds.
           npm run pentest
 
       - name: Verify Production Fail-Closed (Security Assurance)
         run: |
           set -u
-          # Bọc `timeout` quanh mỗi lần thử: nếu server KHÔNG fail-closed nó sẽ
-          # khởi động và chạy mãi, khiến step treo tới hết timeout của job.
-          # Dùng .env.ci rỗng để chặn cơ chế tự nạp .env của index.js làm nhiễu
-          # phép thử (nó điền lại biến bị bỏ trống từ file .env nếu có).
+          # Wrap each attempt in `timeout`: if the server does NOT fail closed it would
+          # start and run forever, leaving the step hanging until the job timeout.
+          # Use an empty .env.ci to stop index.js's automatic .env loading from interfering
+          # with the test (it refills blanked-out variables from the .env file if one exists).
           check_fail_closed() {
             local label="$1"; shift
             local out
@@ -97,19 +97,19 @@ jobs:
             fi
           }
 
-          # Case 1: Thiếu CARMATE_ADMIN_PASSCODE trong production -> phải fail-closed
+          # Case 1: CARMATE_ADMIN_PASSCODE missing in production -> must fail closed
           check_fail_closed "Chặn khởi động khi thiếu CARMATE_ADMIN_PASSCODE" \
             PORT=5993 NODE_ENV=production \
             JWT_SECRET=test_secret_32_chars_long_ci_ok \
             CARMATE_ADMIN_PASSCODE=
 
-          # Case 2: Thiếu JWT_SECRET trong production -> phải fail-closed
+          # Case 2: JWT_SECRET missing in production -> must fail closed
           check_fail_closed "Chặn khởi động khi thiếu JWT_SECRET" \
             PORT=5994 NODE_ENV=production \
             JWT_SECRET= \
             CARMATE_ADMIN_PASSCODE=ci_prod_passcode_min_16_chars
 
-          # Case 3: Passcode production quá ngắn -> phải fail-closed
+          # Case 3: Production passcode too short -> must fail closed
           check_fail_closed "Chặn khởi động khi CARMATE_ADMIN_PASSCODE quá ngắn" \
             PORT=5995 NODE_ENV=production \
             JWT_SECRET=test_secret_32_chars_long_ci_ok \
@@ -127,15 +127,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    # Chỉ deploy khi đẩy trực tiếp lên main (không deploy từ pull_request,
-    # vì PR từ fork không có quyền đọc secret và code chưa được review xong).
+    # Only deploy on a direct push to main (never from pull_request,
+    # since PRs from forks cannot read secrets and the code has not finished review).
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    # Cổng an toàn: job test phải xanh hoàn toàn mới được deploy production.
+    # Safety gate: the test job must be fully green before deploying to production.
     needs: test
 
-    # Chặn hai lần deploy chạy song song — app dùng SQLite trên một volume,
-    # hai tiến trình deploy đồng thời có thể làm hỏng dữ liệu.
+    # Prevent two deploys from running in parallel — the app uses SQLite on a single volume,
+    # and two simultaneous deploy processes could corrupt the data.
     concurrency:
       group: fly-deploy-production
       cancel-in-progress: false
@@ -170,8 +170,8 @@ jobs:
       - name: Verify PII Masking on Production (Nghị định 13/2023)
         run: |
           set -e
-          # Chốt chặn hồi quy: sàn công khai và AI concierge tuyệt đối không
-          # được trả về số điện thoại thật của thành viên.
+          # Regression guard: the public marketplace and the AI concierge must never
+          # return a member's real phone number.
           echo "Kiểm tra sàn công khai /api/trips..."
           if curl -s "https://carmate.fly.dev/api/trips?limit=20" | grep -q '"phoneReal"'; then
             echo "::error::PII LEAK — /api/trips trả về phoneReal trên production!"
@@ -179,9 +179,9 @@ jobs:
           fi
 
           echo "Kiểm tra Sàn Giao Dịch Ghế Trống /api/seat-exchange/order-book..."
-          # Sổ lệnh công khai phải đi qua sanitizeOrderForPublic: chỉ được lộ
-          # phoneMasked (090***7666) và bí danh, TUYỆT ĐỐI không lộ số thật,
-          # tên thật hay mã PIN đón khách.
+          # The public order book must go through sanitizeOrderForPublic: it may only expose
+          # phoneMasked (090***7666) and the alias, and must NEVER expose the real number,
+          # real name or the passenger pickup PIN code.
           ORDER_BOOK=$(curl -s "https://carmate.fly.dev/api/seat-exchange/order-book")
           for FIELD in '"phone"' '"phoneReal"' '"pinCode"' '"contactName"'; do
             if printf '%s' "$ORDER_BOOK" | grep -q "$FIELD"; then
@@ -191,8 +191,8 @@ jobs:
           done
 
           echo "Kiểm tra Ma Trận Khung Giờ /api/corridor/time-slots..."
-          # Sàn tuyến công khai (không auth) tuyệt đối không được lộ số điện thoại
-          # thật hay biển số đầy đủ — chỉ plateMasked và userId.
+          # The public corridor marketplace (no auth) must never expose a real phone number
+          # or a full license plate — only plateMasked and userId.
           SLOTS=$(curl -s "https://carmate.fly.dev/api/corridor/time-slots?from=hub_ql13_tan_khai&to=hub_ql13_cho_ray")
           for FIELD in '"phone"' '"phoneReal"' '"fullPlate"'; do
             if printf '%s' "$SLOTS" | grep -q "$FIELD"; then

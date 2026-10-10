@@ -100,7 +100,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
       }
     >
       <div className="space-y-5">
-        {/* Passport Card — Phong cách Thẻ Căn Cước Số / Google Wallet */}
+        {/* Passport Card — Digital ID Card / Google Wallet style */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0c4a6e] via-[#075985] to-[#0e1e36] text-white p-5 sm:p-6 shadow-lg border border-white/10">
           <div
             className="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none"
@@ -163,7 +163,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           </dl>
         </div>
 
-        {/* Cảnh báo an toàn nếu có */}
+        {/* Safety warning if any */}
         {hasWarnings ? (
           <div className="type-caption p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-2.5 text-rose-900 dark:text-rose-200">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -183,7 +183,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           </div>
         )}
 
-        {/* Bộ chuyển Tab 3 vai trò */}
+        {/* 3-role tab switcher */}
         <div className="type-caption flex border-b border-slate-200 dark:border-slate-800">
           <button
             type="button"
@@ -223,7 +223,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           </button>
         </div>
 
-        {/* Nội dung Tab Cầm lái */}
+        {/* Content of the "Cầm lái" (Driving) tab */}
         {activeTab === 'driver' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
@@ -268,7 +268,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           </div>
         )}
 
-        {/* Nội dung Tab Đi cùng (Khi người này đóng vai trò là Khách) */}
+        {/* Content of the "Đi cùng" (Riding along) tab (when this person acts as a passenger) */}
         {activeTab === 'passenger' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800">
@@ -313,7 +313,7 @@ export default function TrustProfileModal({ item, isOwner = false, onClose, onBo
           </div>
         )}
 
-        {/* Nội dung Tab Xác minh giấy tờ */}
+        {/* Content of the "Xác minh giấy tờ" (Document verification) tab */}
         {activeTab === 'verify' && (
           <div className="space-y-3">
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

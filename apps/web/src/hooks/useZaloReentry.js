@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 
 /**
  * Custom Hook: useZaloReentry
- * Điều hướng nhanh tới Admin Portal và xử lý Magic Link Chủ xe xác nhận 1-chạm.
+ * Quick navigation to the Admin Portal and handling of the driver one-tap confirmation Magic Link.
  */
 export function useZaloReentry({ isOpsPortal, onNavigateTab } = {}) {
   const [driverConfirmCode, setDriverConfirmCode] = useState(null);
 
-  // Hỗ trợ truy cập nhanh /#admin, /admin và Magic Link xác nhận /#confirm-[code]
+  // Support quick access via /#admin, /admin and the confirmation Magic Link /#confirm-[code]
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash || '';
@@ -21,8 +21,8 @@ export function useZaloReentry({ isOpsPortal, onNavigateTab } = {}) {
       ) {
         onNavigateTab?.('admin');
       } else if (hash.startsWith('#confirm-')) {
-        // Định dạng Magic Link: #confirm-<escrowId>~<accessToken>
-        // Token là bí mật do server cấp, dùng để chống IDOR khi xác nhận không cần đăng nhập.
+        // Magic Link format: #confirm-<escrowId>~<accessToken>
+        // The token is a server-issued secret, used to prevent IDOR when confirming without logging in.
         const raw = hash.replace('#confirm-', '').trim();
         const [code, token] = raw.split('~');
         if (code) {

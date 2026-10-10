@@ -1,11 +1,11 @@
 /**
- * KIỂM THỬ HỘI TỤ KHÔNG - THỜI GIAN (SPACE-TIME RENDEZVOUS)
+ * TESTS FOR SPACE-TIME CONVERGENCE (SPACE-TIME RENDEZVOUS)
  *
- * Bao phủ 4 hạng mục vừa xây:
- *   1. Stochastic ETA — phân phối N(mu, sigma^2) thay cho phép chia thô
- *   2. Chốt T-30 — chỉ bắn khi P(25<=T<=35) >= 0.90
- *   3. Bắt tay ra trạm — xác nhận, nhắc lần 2, thu hồi chỗ sau 10 phút
- *   4. Chuyến Shadow — hoán đổi khi xác suất trễ vượt ngưỡng, giữ nguyên giờ hẹn
+ * Covers the 4 items just built:
+ *   1. Stochastic ETA — an N(mu, sigma^2) distribution replacing crude division
+ *   2. T-30 lock-in — fires only when P(25<=T<=35) >= 0.90
+ *   3. Station handshake — confirmation, 2nd reminder, seat reclaimed after 10 minutes
+ *   4. Shadow trip — swap when the delay probability exceeds the threshold, keeping the agreed meeting time
  */
 
 import assert from 'node:assert';
@@ -39,7 +39,7 @@ function ok(cond, label) {
   passed += 1;
 }
 
-// Mốc giờ cố định 10:00 (ngoài cao điểm) để kết quả không đổi theo lúc chạy test
+// Fixed 10:00 time mark (outside peak hours) so results do not change depending on when the test runs
 function at(hour, minute = 0) {
   const d = new Date();
   d.setHours(hour, minute, 0, 0);
@@ -66,12 +66,12 @@ ok(far.muSeconds > near.muSeconds, 'mu tỷ lệ thuận với quãng đường 
 const p80 = etaQuantileSeconds(far, 0.8);
 ok(p80 > far.muSeconds, 'Phân vị p80 lớn hơn mu (hứa giờ an toàn thì phải muộn hơn kỳ vọng)');
 
-// Vận tốc tức thời bằng 0 (dừng đèn đỏ) KHÔNG được làm ETA nổ tung
+// Instantaneous speed of 0 (stopped at a red light) must NOT make the ETA blow up
 const stalled = computeEtaDistribution({ currentS: 120, targetS: 132.5, currentSpeedKmh: 0, nowMs });
 ok(Number.isFinite(stalled.muSeconds) && stalled.muSeconds < 90 * 60,
    'Xe dừng đèn đỏ (v=0) không làm ETA thành vô cực — đây là lỗi của công thức cũ');
 
-// Giờ cao điểm phải chậm hơn giờ thoáng trên cùng quãng đường
+// Peak hours must be slower than off-peak hours over the same distance
 const peakEta = computeEtaDistribution({ currentS: 107, targetS: 132.5, nowMs: at(17, 30) });
 const nightEta = computeEtaDistribution({ currentS: 107, targetS: 132.5, nowMs: at(23, 30) });
 ok(peakEta.muSeconds > nightEta.muSeconds, 'Cao điểm chiều chậm hơn đêm trên cùng quãng đường');
@@ -83,7 +83,7 @@ console.log('\n── 2. CHỐT T-30 ──');
 
 resetAllStationData();
 
-// Khách đợi tại Bàu Bàng (s=84.5), đi về Hàng Xanh
+// Passenger waiting at Bàu Bàng (s=84.5), heading to Hàng Xanh
 const checkin = riderCheckIn({
   hubId: 'hub_ql13_bau_bang',
   destinationHubId: 'hub_ql13_hang_xanh',
@@ -94,7 +94,7 @@ const checkin = riderCheckIn({
 ok(checkin.success, 'Khách check-in vào hàng đợi trạm Bàu Bàng');
 const intentId = checkin.intent.intentId;
 
-// Xe còn RẤT XA (Lộc Ninh, s=0, cách 84km) -> p80 vượt trần 45 phút, chưa báo
+// Vehicle is VERY FAR (Lộc Ninh, s=0, 84km away) -> p80 exceeds the 45-minute ceiling, no notification yet
 telemetryPing({
   tripId: 'TRIP-FAR', driverPhone: '0912000001', plate: '93A-111.11',
   seatsAvailable: 3, lat: 11.8540, lng: 106.5920, speed: 60
@@ -102,7 +102,7 @@ telemetryPing({
 ok(evaluateT30Triggers(nowMs).length === 0,
    'Xe cách 84km KHÔNG bắn T-30 (p80 vượt trần 45 phút, bắt khách đợi quá lâu)');
 
-// Xe ở Bàu Bàng quá SÁT trạm (2.5km) -> khách không kịp ra, cũng không được báo
+// Vehicle at Bàu Bàng is too CLOSE to the station (2.5km) -> the passenger cannot make it out in time, and is not notified either
 telemetryPing({
   tripId: 'TRIP-TOOCLOSE', driverPhone: '0912000009', plate: '93A-999.99',
   seatsAvailable: 3, lat: 11.2600, lng: 106.6180, speed: 55
@@ -110,7 +110,7 @@ telemetryPing({
 ok(evaluateT30Triggers(nowMs).length === 0,
    'Xe chỉ còn 2-3km KHÔNG bắn T-30 (khách không còn đủ 20 phút để ra trạm)');
 
-// Xe ở Chơn Thành (s=56.5) cách trạm 28km -> đúng vùng báo trước hợp lý
+// Vehicle at Chơn Thành (s=56.5) is 28km from the station -> right in the reasonable early-notice zone
 telemetryPing({
   tripId: 'TRIP-MAIN', driverPhone: '0912000002', driverName: 'Anh Hùng',
   plate: '93A-541.86', vehicleModel: 'Mitsubishi Xpander', seatsAvailable: 3,
@@ -150,7 +150,7 @@ ok(confirm.distanceToHubM != null && confirm.distanceToHubM < 500, 'Tính đư�
 const sweep3 = sweepHandshakeDeadlines(nowMs + T30_CONFIG.HANDSHAKE_GRACE_MS + 60000);
 ok(sweep3.expired.length === 0, 'Đã xác nhận thì KHÔNG bị thu hồi chỗ dù quá 10 phút');
 
-// Khách thứ hai im lặng hoàn toàn -> phải bị thu hồi
+// The second passenger is completely silent -> must have their seat reclaimed
 const silent = riderCheckIn({
   hubId: 'hub_ql13_bau_bang', destinationHubId: 'hub_ql13_hang_xanh',
   seatsNeeded: 1, phone: '0909333444', name: 'Anh Tuấn'
@@ -167,7 +167,7 @@ ok(silentPass.success && silentPass.intent.status === 'WAITING',
 // ───────────────────────────────────────────────────────────────────────
 console.log('\n── 4. CHUYẾN SHADOW ──');
 
-// Xe chính mắc kẹt: lùi về Tân Khai (s=44.5) và gần như đứng yên
+// The primary vehicle is stuck: backs up to Tân Khai (s=44.5) and is almost stationary
 telemetryPing({
   tripId: 'TRIP-MAIN', driverPhone: '0912000002', plate: '93A-541.86',
   seatsAvailable: 3, lat: 11.5620, lng: 106.6340, speed: 4
@@ -177,14 +177,14 @@ const atRisk = evaluateLatenessRisk(nowMs + 5 * 60 * 1000);
 ok(atRisk.length >= 1, 'Radar phát hiện khách có nguy cơ trễ khi xe chính mắc kẹt');
 ok(atRisk[0].lateness.probability > 0.5, `Xác suất trễ ${atRisk[0].lateness.probability} vượt ngưỡng cảnh báo`);
 
-// Chưa có xe nào khác -> không tìm được Shadow
+// No other vehicle yet -> no Shadow can be found
 const noCandidate = findShadowCandidate({
   hubId: 'hub_ql13_bau_bang', seatsNeeded: 1,
   committedAtMs: atRisk[0].committedAt, excludeTripId: 'TRIP-MAIN', nowMs
 });
 ok(noCandidate === null, 'Chưa có xe nào khác trên tuyến -> không tìm được chuyến Shadow');
 
-// Xe Shadow xuất hiện ở Chơn Thành, chạy thông thoáng
+// A Shadow vehicle appears at Chơn Thành, running freely
 telemetryPing({
   tripId: 'TRIP-SHADOW', driverPhone: '0912000003', driverName: 'Anh Nam',
   plate: '61A-892.41', vehicleModel: 'Toyota Vios', seatsAvailable: 4,
@@ -218,9 +218,9 @@ ok(afterSwap.matchedTripId === 'TRIP-SHADOW', 'Khách đã thuộc về xe hỗ 
 // ───────────────────────────────────────────────────────────────────────
 console.log('\n── 5. CHỐNG TÁI PHÁT LỖI ĐÃ SỬA ──');
 
-// (a) Rò rỉ ghế khi hoán đổi nhiều lần.
-// Lỗi cũ: chỉ hoàn ghế khi rider đang ARRIVING, nhưng chính applyShadowSwap đặt
-// rider về OFFERED, nên từ lần swap thứ 2 ghế bị trừ mà không bao giờ trả lại.
+// (a) Seat leak on repeated swaps.
+// Old bug: seats were only refunded when the rider was ARRIVING, but applyShadowSwap itself sets
+// the rider back to OFFERED, so from the 2nd swap on the seat is deducted and never returned.
 resetAllStationData();
 telemetryPing({ tripId: 'SEAT-A', driverPhone: '0921', plate: 'A', seatsAvailable: 4, lat: 11.4791, lng: 106.6694, speed: 58 });
 telemetryPing({ tripId: 'SEAT-B', driverPhone: '0922', plate: 'B', seatsAvailable: 4, lat: 11.4791, lng: 106.6694, speed: 58 });
@@ -239,8 +239,8 @@ ok(totalSeats() === 6, `Hoán đổi 3 lần: tổng ghế còn ${totalSeats()}/
 applyShadowSwap({ intentId: seatRider.intent.intentId, newTripId: 'SEAT-B' });
 ok(totalSeats() === 6, 'Hoán đổi về chính xe đang giữ khách không trừ ghế thêm lần nữa');
 
-// (b) GPS mất tín hiệu / xe lệch khỏi hành lang không được kết luận là trễ.
-// Lỗi cũ: hình chiếu rơi về cọc 0, sinh "trễ 100%" cho chủ xe hoàn toàn bình thường.
+// (b) Lost GPS signal / a vehicle off the corridor must not be concluded to be late.
+// Old bug: the projection fell back to marker 0, producing "100% late" for a perfectly normal driver.
 resetAllStationData();
 telemetryPing({ tripId: 'OFF-CORRIDOR', driverPhone: '0923', plate: 'C', seatsAvailable: 3, lat: 10.0, lng: 105.0, speed: 60 });
 const offRider = riderCheckIn({ hubId: 'hub_ql13_bau_bang', destinationHubId: 'hub_ql13_hang_xanh', seatsNeeded: 1, phone: '0901', name: 'Lệch' });

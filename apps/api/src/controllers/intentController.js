@@ -23,7 +23,7 @@ import { cleanPhoneNumber, isValidVietnamesePhone, maskPhoneNumber, normalizeCon
 
 
 /**
- * POST /api/intents - Khai báo ý định di chuyển (Chủ xe hoặc Khách)
+ * POST /api/intents - Declare a movement intent (driver or passenger)
  */
 export async function createMovementIntentHandler(req, res) {
   if (!req.user?.id) return res.status(401).json({ success: false, error: 'Đăng nhập để lưu nhu cầu và nhận phản hồi.' });
@@ -72,7 +72,7 @@ export async function createMovementIntentHandler(req, res) {
 }
 
 /**
- * GET /api/intents - Lấy danh sách ý định
+ * GET /api/intents - Get the list of intents
  */
 export function getMovementIntentsHandler(req, res) {
   try {
@@ -95,14 +95,14 @@ export function getMovementIntentsHandler(req, res) {
       (viewerPhone && cleanPhoneNumber(intent.phone || '') === viewerPhone) ||
       (viewerId && intent.userId === viewerId);
 
-    // `?mine=1`: chỉ trả ý định của chính người đang đăng nhập. Trước đây giao
-    // diện phải tải TOÀN BỘ ý định rồi tự lọc theo số điện thoại ở phía client —
-    // cách đó chỉ chạy được vì máy chủ lộ số thật của tất cả mọi người.
+    // `?mine=1`: only return intents of the currently logged-in person. Previously the
+    // UI had to download ALL intents and filter by phone number on the client side —
+    // which only worked because the server exposed everyone's real number.
     const now = Date.now();
     const scoped = mine ? intents.filter(isOwner) : intents.filter(i => i.status === 'pending' && i.needStatus !== 'closed' && Number(i.expiresAt || i.originalDeadlineAt || 0) > now && i.publishDemandConsent === true);
 
-    // LỚP CHẮN PII (Nghị định 13/2023): sàn công khai chỉ được thấy bí danh và
-    // số đã che. Số thật, tên thật chỉ hiện với chính chủ hoặc Quản trị viên.
+    // PII SHIELD (Decree 13/2023): the public platform may only see aliases and
+    // masked numbers. Real numbers and real names are only shown to the owner or an admin.
     const data = scoped.map((intent) => {
       if (isOwner(intent)) return { ...intent, isOwner: true };
       const tail = String(intent.id || '').slice(-3).toUpperCase() || 'XXX';
@@ -134,7 +134,7 @@ export function getMovementIntentsHandler(req, res) {
 }
 
 /**
- * POST /api/intents/match - Kích hoạt phiên gom khớp lệnh tức thời (Manual hoặc Micro-batch)
+ * POST /api/intents/match - Trigger an instant order-matching batch session (Manual or Micro-batch)
  */
 export async function runBatchMatchHandler(req, res) {
   try {
@@ -147,7 +147,7 @@ export async function runBatchMatchHandler(req, res) {
 }
 
 /**
- * GET /api/intents/epochs - Lịch sử các phiên khớp lệnh
+ * GET /api/intents/epochs - History of order-matching sessions
  */
 export function getMatchingEpochsHandler(req, res) {
   try {
@@ -164,23 +164,23 @@ export function getMatchingEpochsHandler(req, res) {
 
 /**
  * =============================================================================
- * SỬA & HUỶ Ý ĐỊNH DI CHUYỂN (INTENT MUTATION)
+ * EDIT & CANCEL MOVEMENT INTENT (INTENT MUTATION)
  * =============================================================================
- * Trước đây giao diện Taplo Chủ xe có bốn thao tác "3 giây" (dời giờ, đổi ghế,
- * huỷ lịch chờ, huỷ chuyến đã ghép) nhưng KHÔNG thao tác nào gọi máy chủ: tất cả
- * chỉ setState trong trình duyệt rồi hiện toast kiểu "Đã gửi tin nhắn tới người
- * đi cùng". Chủ xe tin là khách đã được báo, khách thì không nhận được gì, và
- * tải lại trang là mọi thay đổi biến mất. Bốn endpoint dưới đây là nơi các thao
- * tác đó thực sự có hiệu lực.
+ * Previously the driver's Taplo (dashboard) UI had four "3-second" actions (shift time, change seats,
+ * cancel a pending slot, cancel a matched trip) but NONE of them called the server: all of them
+ * only did setState in the browser and then showed a toast like "Đã gửi tin nhắn tới người
+ * đi cùng" ("Message sent to the passenger"). The driver believed the passenger had been notified, the passenger received nothing, and
+ * reloading the page made every change disappear. The four endpoints below are where those
+ * actions actually take effect.
  */
 
 
 /**
- * Đếm số khách ĐÃ THỰC SỰ được ghép vào một ý định của Chủ xe.
+ * Count the passengers ACTUALLY matched to a driver's intent.
  *
- * Không dùng `intent.matchedRiders`: trường đó không có nơi nào ghi (engine khớp
- * lệnh chỉ đặt matchedTripId/matchedBookingId trên ý định của KHÁCH), nên đếm
- * theo nó thì luôn ra 0 và mọi rào chắn dựa trên nó đều vô hiệu.
+ * Do not use `intent.matchedRiders`: nothing writes that field (the order-matching engine
+ * only sets matchedTripId/matchedBookingId on the PASSENGER's intent), so counting
+ * by it always gives 0 and every guard based on it is disabled.
  */
 function countMatchedRiders(intent) {
   if (Array.isArray(intent.matchedRiders) && intent.matchedRiders.length > 0) {
@@ -193,7 +193,7 @@ function countMatchedRiders(intent) {
   ).length;
 }
 
-/** Chỉ chủ sở hữu ý định (hoặc quản trị viên) mới được sửa nó. */
+/** Only the owner of an intent (or an admin) may edit it. */
 function assertIntentOwnership(intent, req) {
   if (req.user?.role === 'admin') return true;
   const userPhone = req.user?.phone ? cleanPhoneNumber(req.user.phone) : '';
@@ -204,7 +204,7 @@ function assertIntentOwnership(intent, req) {
 }
 
 /**
- * PATCH /api/intents/:id - Sửa ý định đang chờ (dời giờ, đổi số ghế)
+ * PATCH /api/intents/:id - Edit a pending intent (shift time, change seat count)
  */
 export async function updateMovementIntentHandler(req, res) {
   try {
@@ -235,8 +235,8 @@ export async function updateMovementIntentHandler(req, res) {
       if (!Number.isInteger(seatNum) || seatNum < 1 || seatNum > 54) {
         return res.status(400).json({ success: false, error: 'Số ghế phải từ 1 đến 54.' });
       }
-      // Không cho hạ số ghế xuống dưới số khách đã ghép: khách đã được xác nhận
-      // mà bị đẩy ra vì Chủ xe bấm nhầm là mất chỗ thật.
+      // Do not allow lowering the seat count below the number of matched passengers: a passenger who was already confirmed
+      // and then pushed out because the driver mis-tapped loses a real seat.
       const matchedCount = countMatchedRiders(intent);
       if (seatNum < matchedCount) {
         return res.status(409).json({
@@ -255,9 +255,9 @@ export async function updateMovementIntentHandler(req, res) {
 
     if (['matched','proposed'].includes(intent.status)) return res.status(409).json({ success: false, error: 'Xử lý cuộc hẹn đang mở trước khi đổi nhu cầu.' });
     if (updates.date || updates.timeSlot || req.body?.expiresAt) {
-      // Ngày cũ đã trôi qua (hoặc dữ liệu cũ không chuẩn hóa được) là lỗi dữ liệu
-      // người dùng gửi lên, không phải sự cố máy chủ — phải trả 400 kèm lời nhắc
-      // chọn lại ngày, chứ không phải 500.
+      // A past date (or old data that cannot be normalized) is a data error
+      // submitted by the user, not a server fault — it must return 400 with a reminder
+      // to pick the date again, not a 500.
       try {
         updates.date = normalizeTravelDate(updates.date || intent.date);
         updates.expiresAt = requestDeadline({ ...intent, ...updates, expiresAt: req.body?.expiresAt });
@@ -280,11 +280,11 @@ export async function updateMovementIntentHandler(req, res) {
 }
 
 /**
- * DELETE /api/intents/:id - Huỷ ý định di chuyển
+ * DELETE /api/intents/:id - Cancel a movement intent
  *
- * Huỷ lịch CHỜ (chưa ghép ai) là thao tác không rào cản. Huỷ lịch ĐÃ GHÉP thì
- * đánh dấu để bộ máy chế tài và điều phối cứu hộ xử lý — chứ không phải trừ điểm
- * ở trình duyệt như trước.
+ * Cancelling a PENDING slot (nobody matched yet) is a no-barrier action. Cancelling a MATCHED slot
+ * flags it for the sanction engine and rescue dispatch to handle — rather than deducting
+ * points in the browser as before.
  */
 export async function cancelMovementIntentHandler(req, res) {
   try {
@@ -330,12 +330,12 @@ export async function cancelMovementIntentHandler(req, res) {
 }
 
 /**
- * POST /api/intents/:id/checkpoint - Chủ xe xác nhận một mốc gác cổng
+ * POST /api/intents/:id/checkpoint - Driver confirms a gate checkpoint
  *
- * Ba mốc "chốt sổ 21h / thức dậy 05:15 / lằn ranh 05:30" trước đây chỉ là useState
- * trong trình duyệt: bấm xong hiện toast "Khách nhận được thông báo an tâm" nhưng
- * không request nào được gửi, và tải lại trang là mất. Endpoint này ghi mốc vào
- * ý định để khách thực sự thấy được Chủ xe đã cam kết.
+ * The three checkpoints "chốt sổ 21h / thức dậy 05:15 / lằn ranh 05:30" (21:00 close-out / 05:15 wake-up / 05:30 cutoff line) used to be just useState
+ * in the browser: after tapping, a toast "Khách nhận được thông báo an tâm" ("The passenger received a reassurance notification") appeared but
+ * no request was sent, and reloading the page lost it. This endpoint writes the checkpoint into the
+ * intent so the passenger can actually see that the driver has committed.
  */
 export async function confirmIntentCheckpointHandler(req, res) {
   try {

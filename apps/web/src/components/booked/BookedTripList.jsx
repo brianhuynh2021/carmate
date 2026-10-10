@@ -217,7 +217,7 @@ export default function BookedTripList({
   const [copiedId, setCopiedId] = useState(null);
 
 
-  // Trạng thái Cursor Ambient: Quản lý danh sách thu gọn & mở rộng (Accordion)
+  // Cursor Ambient state: manages the collapsed & expanded list (Accordion)
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusSubFilter, setStatusSubFilter] = useState('all');
@@ -245,10 +245,10 @@ export default function BookedTripList({
 
   const baseList = activeTab === 'active' ? activeBookings : historyBookings;
 
-  // Lọc nhanh trực tiếp trên Client < 1ms
+  // Instant client-side filtering < 1ms
   const filteredList = useMemo(() => {
     return baseList.filter((record) => {
-      // 1. Lọc theo trạng thái con
+      // 1. Filter by sub-status
       if (activeTab === 'active') {
         if (statusSubFilter === 'connecting' && (record.status === 'confirmed' || record.bothConfirmed)) return false;
         if (statusSubFilter === 'confirmed' && !(record.status === 'confirmed' || record.bothConfirmed)) return false;
@@ -258,7 +258,7 @@ export default function BookedTripList({
         if (statusSubFilter === 'cancelled' && record.status !== 'cancelled') return false;
       }
 
-      // 2. Tìm kiếm theo từ khóa (Mã CX, tên đối tác, lộ trình)
+      // 2. Search by keyword (trip code, partner name, route)
       if (!searchTerm.trim()) return true;
       const term = searchTerm.toLowerCase().trim();
       const matchId = String(record.escrowId || '').toLowerCase().includes(term);
@@ -269,14 +269,14 @@ export default function BookedTripList({
     });
   }, [baseList, activeTab, statusSubFilter, searchTerm]);
 
-  // Phân trang chuẩn Apple: Giữ DOM nhẹ tênh dù có 1000 chuyến
+  // Apple-standard pagination: keeps the DOM featherlight even with 1000 trips
   const totalPages = Math.max(1, Math.ceil(filteredList.length / itemsPerPage));
   const paginatedList = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredList.slice(start, start + itemsPerPage);
   }, [filteredList, currentPage, itemsPerPage]);
 
-  // Thao tác 1-chạm: Mở / Đóng chi tiết từng thẻ
+  // 1-tap action: Open / Close the details of each card
   const toggleExpand = (id) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -339,7 +339,7 @@ export default function BookedTripList({
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
-      {/* Header Tiêu Đề */}
+      {/* Title Header */}
       <SectionHeader
         icon={Clock}
         title={t('booked.title') || 'Chuyến của tôi'}
@@ -351,9 +351,9 @@ export default function BookedTripList({
         }
       />
 
-      {/* Tabs Chuyển Đổi: Đăng chuyến & Taplo (T1) | Sắp đi (T2) | Lịch sử (T3) */}
+      {/* Switch Tabs: Post a trip & Dashboard (T1) | Upcoming (T2) | History (T3) */}
       <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/80 dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs">
-        {/* Tab 1: Đăng chuyến & Taplo */}
+        {/* Tab 1: Post a trip & Dashboard */}
         <button
           type="button"
           onClick={() => {
@@ -370,7 +370,7 @@ export default function BookedTripList({
           <span>Đăng chuyến & Taplo</span>
         </button>
 
-        {/* Tab 2: Sắp đi */}
+        {/* Tab 2: Upcoming */}
         <button
           type="button"
           onClick={() => {
@@ -398,7 +398,7 @@ export default function BookedTripList({
           </span>
         </button>
 
-        {/* Tab 3: Lịch sử */}
+        {/* Tab 3: History */}
         <button
           type="button"
           onClick={() => {
@@ -427,7 +427,7 @@ export default function BookedTripList({
         </button>
       </div>
 
-      {/* ── NỘI DUNG TAB 1: ĐĂNG CHUYẾN & TAPLO CHỦ XE ── */}
+      {/* ── TAB 1 CONTENT: POST A TRIP & DRIVER DASHBOARD ── */}
       {activeTab === 'driver' && (
         <div className="pt-1 animate-fade-in">
           <DriverScheduleCardView
@@ -441,14 +441,14 @@ export default function BookedTripList({
         </div>
       )}
 
-      {/* ── NỘI DUNG TAB 2 & 3: VÉ XE HÀNH KHÁCH (SẮP ĐI & LỊCH SỬ) ── */}
+      {/* ── TAB 2 & 3 CONTENT: PASSENGER TRIP TICKETS (UPCOMING & HISTORY) ── */}
       {activeTab !== 'driver' && (
         <div className="space-y-5 animate-fade-in">
-          {/* Thanh Tìm Kiếm & Lọc Nhanh Chuẩn Cursor Ambient (< 1ms) */}
+          {/* Cursor Ambient-Standard Search & Quick Filter Bar (< 1ms) */}
       {baseList.length > 0 && (
         <div className="space-y-2.5">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-            {/* Ô tìm kiếm tức thì */}
+            {/* Instant search box */}
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b]" />
               <input
@@ -475,7 +475,7 @@ export default function BookedTripList({
               )}
             </div>
 
-            {/* Chips lọc trạng thái con */}
+            {/* Sub-status filter chips */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
               {activeTab === 'active' ? (
                 <>
@@ -530,7 +530,7 @@ export default function BookedTripList({
             </div>
           </div>
 
-          {/* Thanh tổng quan số lượng & Nút mở/thu gọn nhanh */}
+          {/* Count overview bar & quick expand/collapse button */}
           <div className="flex items-center justify-between text-[#86868b] px-1 type-caption">
             <span>
               {searchTerm
@@ -560,7 +560,7 @@ export default function BookedTripList({
         </div>
       )}
 
-      {/* Danh Sách Chuyến (Compact Accordion List) */}
+      {/* Trip List (Compact Accordion List) */}
       {baseList.length === 0 ? (
         <div className="py-8">
           <EmptyState
@@ -621,23 +621,23 @@ export default function BookedTripList({
 
             const rawDriverPhone = record.driverPhone || record.phoneReal || record.contactPhone || target.phoneReal || target.phone || '';
             const cleanCallPhone = String(rawDriverPhone).replace(/\D/g, '');
-            // Chỉ gọi được khi có số ĐẦY ĐỦ, hợp lệ.
-            // - KHÔNG fallback sang số quản trị viên khi vé thiếu SĐT.
-            // - Số đang bị che ('098***3750') sau khi bỏ ký tự lạ còn '0983750' — bảy chữ số
-            //   vẫn "truthy" nên trước đây tạo ra link tel: tới một số rác.
+            // Can only be called when the number is COMPLETE and valid.
+            // - Do NOT fall back to the admin's number when the ticket lacks a phone number.
+            // - A masked number ('098***3750') still reads '0983750' after stray characters are stripped — seven digits
+            //   are still "truthy", so this used to produce a tel: link to a junk number.
             const isCallablePhone = /^0\d{9}$/.test(cleanCallPhone);
             const callPhone = isCallablePhone ? cleanCallPhone : '';
 
             const needsRescueWatch = !isCompleted && !isCancelled;
 
-            // ── TAB 1: THẺ CHUYẾN ĐANG DIỄN RA (TAB "SẮP ĐI" - TRỌNG TÂM CHÍNH) ──
+            // ── TAB 1: ACTIVE TRIP CARD (TAB "SẮP ĐI" (UPCOMING) - MAIN FOCUS) ──
             if (activeTab === 'active') {
               return (
                 <article
                   key={record.escrowId || record.id}
                   className="overflow-hidden rounded-3xl bg-white dark:bg-[#1a2232] border border-slate-300/70 dark:border-white/10 shadow-xs hover:shadow-md transition-all duration-200"
                 >
-                  {/* CHẾ ĐỘ CỨU HỘ */}
+                  {/* RESCUE MODE */}
                   {needsRescueWatch && (
                     <div className="p-3.5 pb-0">
                       <RescueModeBanner bookingId={record.escrowId || record.id} />
@@ -645,7 +645,7 @@ export default function BookedTripList({
                   )}
 
                   <div className="p-4 sm:p-5.5 space-y-4">
-                    {/* Header Thẻ: Mã chuyến xe & Badge trạng thái */}
+                    {/* Card Header: Trip code & status Badge */}
                     <div className="flex items-center justify-between gap-2.5 flex-wrap">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[#0071e3] bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/40 px-3 py-1 rounded-xl type-body-strong">
@@ -657,7 +657,7 @@ export default function BookedTripList({
                         </span>
                       </div>
 
-                      {/* Badge trạng thái */}
+                      {/* Status badge */}
                       <div>
                         {record.needsReplacement || ['inquiring', 'pre_confirmed', 'expired'].includes(record.status) ? (
                           <span className="inline-flex px-3 py-1 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-200 type-badge">{record.needsReplacement ? 'Đang tìm xe thay thế' : record.status === 'pre_confirmed' ? 'Chờ bên còn lại xác nhận' : 'Chưa có lịch đón đã chốt'}</span>
@@ -680,7 +680,7 @@ export default function BookedTripList({
                       </div>
                     </div>
 
-                    {/* Thời gian & Hành trình */}
+                    {/* Time & Itinerary */}
                     <div className="space-y-3 py-3.5 border-y border-dashed border-slate-200 dark:border-white/10">
                       <div className="flex items-center gap-2 text-slate-900 dark:text-white type-caption">
                         <Calendar className="w-4 h-4 text-[#0071e3] shrink-0" />
@@ -714,7 +714,7 @@ export default function BookedTripList({
                       </div>
                     </div>
 
-                    {/* Thông tin phương tiện & Chủ xe */}
+                    {/* Vehicle & Driver info */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 type-caption">
                       <div className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-white/5">
                         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-[#0071e3] flex items-center justify-center shrink-0 type-caption">
@@ -740,7 +740,7 @@ export default function BookedTripList({
                       </div>
                     </div>
 
-                    {/* Chi phí & Cam kết 0đ cọc */}
+                    {/* Cost & 0đ deposit commitment */}
                     <div className="flex items-baseline gap-2 flex-wrap pt-0.5 type-caption">
                       <span className="text-[#1d1d1f] dark:text-white tabular type-heading">
                         {amountLabel(record)}
@@ -753,7 +753,7 @@ export default function BookedTripList({
 
                     <button type="button" onClick={() => onOpenChat?.(record.escrowId || record.id)} className="w-full p-3 rounded-xl bg-[#0071e3] text-white type-button">{record.needsReplacement ? 'Xem phương án thay thế và trao đổi' : 'Xem trao đổi và xác nhận phương án'}</button>
                     {record.needsReplacement && <p className="text-amber-800 dark:text-amber-200 type-body">Chưa có xe thay thế đã chốt. Nhu cầu ban đầu được giữ; hai bên cần xác nhận phương án mới trước khi đón.</p>}
-                    {/* Cụm nút hành động nhanh (Quick Actions) */}
+                    {/* Quick Actions button cluster */}
                     <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap type-body">
                       {callPhone ? (
                         <>
@@ -791,7 +791,7 @@ export default function BookedTripList({
                       </button>
                     </div>
 
-                    {/* Thanh mở rộng chi tiết / Hoàn tất */}
+                    {/* Expand details / Complete bar */}
                     <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between type-caption">
                       <button
                         type="button"
@@ -814,7 +814,7 @@ export default function BookedTripList({
                     </div>
                   </div>
 
-                  {/* Khối chi tiết mở rộng nếu bấm xem thêm */}
+                  {/* Expanded details block when "view more" is clicked */}
                   {isExpanded && (
                     <div className="border-t border-slate-100 dark:border-white/5 bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 space-y-3.5 type-caption">
                       {!record.needsReplacement && ['confirmed', 'delayed', 'completed', 'cancelled'].includes(record.status) && <TripProgressStepper status={record.status} delayedMinutes={record.delayedMinutes} hasSilentFailover={hasSilentFailover} />}
@@ -875,7 +875,7 @@ export default function BookedTripList({
               );
             }
 
-            // ── TAB 2: THẺ LỊCH SỬ CHUYẾN (COMPACT CARD & PRIVACY PROTECTED) ──
+            // ── TAB 2: TRIP HISTORY CARD (COMPACT CARD & PRIVACY PROTECTED) ──
             return (
               <article
                 key={record.escrowId || record.id}
@@ -913,7 +913,7 @@ export default function BookedTripList({
                   <span>{record.seats || 1} ghế</span>
                 </div>
 
-                {/* Thông tin Chủ xe & Xe (Số điện thoại và nút gọi được ẨN HOÀN TOÀN để bảo mật) */}
+                {/* Driver & Vehicle info (phone number and call button are COMPLETELY HIDDEN for privacy) */}
                 <div className="text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-white/5 type-caption">
                   <span>Chủ xe: <strong className="text-slate-700 dark:text-slate-300 type-body-strong">{hostName}</strong></span>
                   <span className="mx-1.5">·</span>
@@ -951,7 +951,7 @@ export default function BookedTripList({
             );
           })}
 
-          {/* ── 3. THANH PHÂN TRANG CHUẨN APPLE (PAGINATION) ── */}
+          {/* ── 3. APPLE-STANDARD PAGINATION BAR (PAGINATION) ── */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-3 pb-2 px-1 text-[#86868b] dark:text-slate-400 type-caption">
               <span>
@@ -968,7 +968,7 @@ export default function BookedTripList({
                   <span>{t('booked2.s050')}</span>
                 </button>
 
-                {/* Các nút số trang */}
+                {/* Page number buttons */}
                 <div className="hidden sm:flex items-center gap-1 type-body">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                     <button

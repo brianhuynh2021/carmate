@@ -1,24 +1,24 @@
 /**
  * =============================================================================
- * DANH BẠ HOTLINE ĐÃ KIỂM CHỨNG (VERIFIED HOTLINE REGISTRY)
+ * VERIFIED HOTLINE DIRECTORY (VERIFIED HOTLINE REGISTRY)
  * =============================================================================
- * ĐÂY LÀ FILE DUY NHẤT CẦN SỬA KHI CÓ SỐ MỚI. Không rải số vào code.
+ * THIS IS THE ONLY FILE TO EDIT WHEN THERE IS A NEW NUMBER. Do not scatter numbers through the code.
  *
- * QUY TẮC BẤT DI BẤT DỊCH:
- *   Chỉ điền số khi ĐÃ TỰ GỌI THỬ và nghe đúng nhà xe bắt máy.
- *   Không chép từ Google, không chép từ ảnh chụp biển quảng cáo ven đường.
+ * IRON-CLAD RULE:
+ *   Only enter a number once you HAVE CALLED IT YOURSELF and heard the right bus operator pick up.
+ *   Do not copy from Google, and do not copy from photos of roadside advertising signs.
  *
- * Vì sao nghiêm ngặt vậy: khách bấm số này đúng lúc hoảng nhất — chủ xe mất
- * liên lạc, còn 20 phút phải ra đường. Gọi mà không ai nghe, hoặc gặp người
- * lạ, thì niềm tin mất vĩnh viễn. Thà không có số còn hơn có số sai.
+ * Why so strict: passengers tap this number at their most panicked moment — the driver is
+ * out of contact and they have 20 minutes left to be out on the road. If nobody answers, or a
+ * stranger does, trust is lost permanently. Better no number than a wrong number.
  *
- * CÁCH THÊM SỐ:
- *   1. Gọi thử số đó, xác nhận đúng nhà xe và đúng tuyến.
- *   2. Điền vào mảng dưới, đặt `verified: true` và ghi `verifiedAt`.
- *   3. Giao diện tự hiện nút gọi. Không cần sửa gì thêm.
+ * HOW TO ADD A NUMBER:
+ *   1. Call the number, confirm it is the right bus operator and the right route.
+ *   2. Fill it into the array below, set `verified: true` and record `verifiedAt`.
+ *   3. The UI shows the call button automatically. Nothing else needs to change.
  *
- * Khi mảng rỗng (như hiện tại), toàn bộ giao diện tự chuyển sang hiển thị
- * CHỈ DẪN THỰC ĐỊA — khách vẫn bắt được xe, chỉ là tự làm thay vì gọi điện.
+ * When the array is empty (as it is now), the whole UI switches to showing
+ * ON-THE-GROUND INSTRUCTIONS only — passengers can still catch a ride, just by doing it themselves instead of calling.
  */
 
 export const VERIFIED_HOTLINES = Object.freeze([
@@ -182,7 +182,7 @@ export const VERIFIED_HOTLINES = Object.freeze([
   }
 ]);
 
-/** Lấy hotline đã kiểm chứng của một hành lang (chỉ xe khách liên tỉnh, không lấy xe buýt). */
+/** Gets the verified hotlines of a corridor (intercity coaches only, no city buses). */
 export function getVerifiedHotlines(corridor = 'Tuyến QL13', limit = 8) {
   return VERIFIED_HOTLINES.filter(
     (h) => h.verified && h.hotline && h.type !== 'public_bus' && (!h.corridor || h.corridor === corridor)

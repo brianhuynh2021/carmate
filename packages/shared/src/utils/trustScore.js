@@ -1,12 +1,12 @@
-// BỘ MÁY TÍNH TOÁN ĐIỂM TÍN NHIỆM & UY TÍN (TRUST & REPUTATION ENGINE)
-// Tuân thủ triệt để bất biến toán học MIT & công thái học Stanford
+// TRUST & REPUTATION SCORE COMPUTATION ENGINE (TRUST & REPUTATION ENGINE)
+// Strictly follows MIT mathematical invariants & Stanford ergonomics
 
 import { DEFAULT_TRUST_RULES, TRUST_TIERS } from '../constants/trustRules.js';
 
 /**
- * Lấy thông tin phân tầng tín nhiệm theo điểm số
+ * Get trust tier information by score
  * @param {number} score 
- * @returns {object} Thông tin tier (label, badgeColor, description)
+ * @returns {object} Tier info (label, badgeColor, description)
  */
 function getTrustLevel(score) {
   const normalized = Math.max(0, Math.min(100, Math.round(score || 0)));
@@ -15,12 +15,12 @@ function getTrustLevel(score) {
 }
 
 /**
- * Tính toán chi tiết điểm tín nhiệm của người dùng
- * @param {object} user Thông tin thành viên (avatar, isCccdVerified, isGplxVerified, role,...)
- * @param {object} [vehicle] Thông tin phương tiện nếu là Chủ xe (plate, photos, hasVerifiedPhotos)
- * @param {object} [history] Lịch sử hoạt động (completedTrips, rating, lateReports, cancelReports, mismatchReports)
- * @param {Array} [rules] Danh sách quy tắc áp dụng (nếu null sẽ lấy DEFAULT_TRUST_RULES)
- * @returns {object} Kết quả tính điểm chi tiết, checklist đã đạt/chưa đạt, cảnh báo trần điểm
+ * Compute the user's detailed trust score
+ * @param {object} user Member info (avatar, isCccdVerified, isGplxVerified, role,...)
+ * @param {object} [vehicle] Vehicle info if a driver (plate, photos, hasVerifiedPhotos)
+ * @param {object} [history] Activity history (completedTrips, rating, lateReports, cancelReports, mismatchReports)
+ * @param {Array} [rules] List of rules to apply (if null, DEFAULT_TRUST_RULES is used)
+ * @returns {object} Detailed scoring result, checklist of met/unmet criteria, score-cap warnings
  */
 export function computeTrustScore(user = {}, vehicle = null, history = {}, rules = null) {
   const activeRules = Array.isArray(rules) && rules.length > 0 ? rules : DEFAULT_TRUST_RULES;
@@ -46,12 +46,12 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
   const pendingCriteria = [];
   const penalties = [];
 
-  // Lọc các quy tắc được kích hoạt và phù hợp vai trò
+  // Filter the rules that are enabled and fit the role
   const applicableRules = activeRules.filter(
     (r) => r.enabled && (r.role === 'all' || r.role === userRole)
   );
 
-  // 1. Điểm khởi tạo Base
+  // 1. Base starting score
   const baseRule = applicableRules.find((r) => r.type === 'base') || { points: 50 };
   rawScore += baseRule.points || 50;
   earnedCriteria.push({
@@ -61,7 +61,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     category: 'identity'
   });
 
-  // 2. Điểm ảnh đại diện
+  // 2. Profile photo (avatar) score
   const avatarRule = applicableRules.find((r) => r.id === 'avatar_photo');
   if (avatarRule) {
     if (hasAvatar) {
@@ -84,7 +84,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 2b. Minh bạch Giới tính
+  // 2b. Gender transparency
   const hasGender = Boolean(user?.gender && ['male', 'female', 'other'].includes(user.gender));
   const genderRule = applicableRules.find((r) => r.id === 'profile_gender');
   if (genderRule) {
@@ -131,7 +131,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 4. GPLX (chỉ Chủ xe)
+  // 4. GPLX (driver's license) (drivers only)
   const gplxRule = applicableRules.find((r) => r.id === 'gplx_verified');
   if (gplxRule && isDriver) {
     if (isGplxVerified) {
@@ -154,7 +154,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 5. Đăng ký xe & Biển số (chỉ Chủ xe)
+  // 5. Vehicle registration & license plate (drivers only)
   const vehicleRule = applicableRules.find((r) => r.id === 'vehicle_verified');
   if (vehicleRule && isDriver) {
     if (hasVehiclePlate) {
@@ -177,7 +177,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 6. Ảnh thực tế xe (chỉ Chủ xe)
+  // 6. Real photos of the vehicle (drivers only)
   const photosRule = applicableRules.find((r) => r.id === 'vehicle_photos');
   if (photosRule && isDriver) {
     if (hasVehiclePhotos) {
@@ -200,7 +200,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 7. Chuyến an toàn tích lũy
+  // 7. Accumulated safe trips
   const tripsRule = applicableRules.find((r) => r.id === 'safe_trips_history');
   if (tripsRule) {
     const ptsPerTrip = tripsRule.points || 2;
@@ -226,7 +226,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 8. Đánh giá cộng đồng cao
+  // 8. High community rating
   const ratingRule = applicableRules.find((r) => r.id === 'high_rating');
   if (ratingRule) {
     if (rating >= 4.8 && completedTrips >= 1) {
@@ -240,7 +240,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 9. Đúng giờ cho Người đi cùng
+  // 9. Punctuality for passengers
   const punctualRule = applicableRules.find((r) => r.id === 'passenger_punctual');
   if (punctualRule && !isDriver) {
     if (completedTrips >= 1 && lateReports === 0) {
@@ -263,14 +263,14 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 10. Các tiêu chí tùy biến (Custom Rules do Admin tự thêm)
+  // 10. Custom criteria (Custom Rules added by the Admin)
   const customAddRules = applicableRules.filter(
     (r) =>
       !['verified_phone', 'avatar_photo', 'no_avatar_cap', 'cccd_verified', 'gplx_verified', 'vehicle_verified', 'vehicle_photos', 'safe_trips_history', 'high_rating', 'passenger_punctual', 'penalty_late', 'penalty_cancel', 'penalty_mismatch'].includes(r.id) &&
       r.type === 'add'
   );
   for (const cr of customAddRules) {
-    // Nếu user payload có cờ đánh dấu tiêu chí này (VD: user.customBadges?.includes(cr.id))
+    // If the user payload has a flag marking this criterion (e.g. user.customBadges?.includes(cr.id))
     if (user?.customBadges?.includes?.(cr.id) || user?.[cr.id]) {
       rawScore += cr.points || 0;
       earnedCriteria.push({
@@ -291,7 +291,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     }
   }
 
-  // 11. Các khoản trừ điểm / Phạt (Penalties)
+  // 11. Point deductions / Penalties (Penalties)
   if (lateReports > 0) {
     const lateRule = applicableRules.find((r) => r.id === 'penalty_late') || { points: -10 };
     const penaltyVal = Math.abs(lateRule.points || 10) * lateReports;
@@ -325,11 +325,11 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     });
   }
 
-  // 12. BẤT BIẾN TOÁN HỌC (MIT INVARIANTS):
-  // Điểm số trước khi xét trần
+  // 12. MATHEMATICAL INVARIANTS (MIT INVARIANTS):
+  // Score before applying the cap
   const boundedRawScore = Math.max(0, Math.min(100, Math.round(rawScore)));
 
-  // Bất biến trần điểm khi thiếu ảnh đại diện (Missing Avatar Cap Invariant)
+  // Score-cap invariant when the profile photo is missing (Missing Avatar Cap Invariant)
   const capRule = activeRules.find((r) => r.id === 'no_avatar_cap' && r.enabled);
   const capLimit = capRule ? Number(capRule.points || 65) : 100;
   let isCapApplied = false;
@@ -354,7 +354,7 @@ export function computeTrustScore(user = {}, vehicle = null, history = {}, rules
     earnedCriteria,
     pendingCriteria,
     penalties,
-    // Gợi ý hành động nhanh nhất để tăng điểm
+    // Suggestion for the quickest action to raise the score
     nextBestAction: pendingCriteria[0] || null
   };
 }

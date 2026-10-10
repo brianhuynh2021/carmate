@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 
-/** Filter chip theo chuẩn Cursor / Linear micro-interaction */
+/** Filter chip following the Cursor / Linear micro-interaction standard */
 export default function Chip({
   active = false,
   onClick,
@@ -33,7 +33,7 @@ export default function Chip({
   );
 }
 
-/** Segmented control (pill capsule phong cách Apple iOS / macOS) */
+/** Segmented control (pill capsule in Apple iOS / macOS style) */
 export function Segmented({ options, value, onChange, fullWidth = false, size = 'md' }) {
   const h = size === 'sm' ? 'h-8 type-button-sm' : 'h-9 type-button-sm';
   return (

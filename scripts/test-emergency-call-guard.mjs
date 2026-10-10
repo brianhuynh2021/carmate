@@ -16,7 +16,7 @@ const bookingId = 'ESCROW-TEST-PICKUP-01';
 const callerId = '0912345678';
 const calleeId = '0987654321';
 
-// Dọn dẹp trước khi test
+// Clean up before the test
 resetEmergencyCallStatus({ bookingId, callerId });
 resetEmergencyCallStatus({ bookingId, callerId: calleeId });
 
@@ -85,7 +85,7 @@ assert.equal(isEmergencyPhoneUnlocked({ bookingId, callerId }), true, 'isEmergen
 console.log('  ✅ [PASS] Lần 2 đạt chuẩn (30s): MỞ KHOÁ THÀNH CÔNG cho người gọi');
 
 console.log('\n--- 7. Kiểm thử Bất Biến Bất Đối Xứng (Asymmetric Privacy) ---');
-// Người nghe máy (callee) kiểm tra xem có thấy số của caller không
+// The callee (the person who answers) checks whether they can see the caller's number
 const calleeUnlocked = isEmergencyPhoneUnlocked({ bookingId, callerId: calleeId });
 assert.equal(calleeUnlocked, false, 'Người nhận (không nghe máy) tuyệt đối KHÔNG được mở khoá số của người gọi');
 const calleeStatus = getEmergencyCallStatus({ bookingId, callerId: calleeId });

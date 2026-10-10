@@ -2,7 +2,7 @@ import { ROUTE_BENCHMARKS, cleanPhoneNumber, computeTrustScore, toPublicAlias } 
 import { getDB, getUserById, getUserByPhone, getAllUsers, getTripsByPhone, getTripById, getTrustRules } from '../db/sqliteStore.js';
 
 /**
- * GET /api/health - Kiểm tra tình trạng hoạt động của API
+ * GET /api/health - Check the API's operating status
  */
 export function getHealth(req, res) {
   const db = getDB();
@@ -21,7 +21,7 @@ export function getHealth(req, res) {
 }
 
 /**
- * GET /api/benchmarks - Danh sách định mức nhiên liệu & phí cầu đường các tuyến
+ * GET /api/benchmarks - List of fuel norms & road tolls for routes
  */
 export function getBenchmarks(req, res) {
   try {
@@ -44,7 +44,7 @@ export function getBenchmarks(req, res) {
 }
 
 /**
- * GET /api/stats - Thống kê toàn nền tảng (Dữ liệu đối soát thực tế từ Database)
+ * GET /api/stats - Platform-wide statistics (actual reconciliation data from the Database)
  */
 export function getStats(req, res) {
   try {
@@ -55,7 +55,7 @@ export function getStats(req, res) {
     const activeTripsCount = (db.driverOffers?.length || 0) + (db.passengerRequests?.length || 0);
     const activeBookingsCount = (db.bookings || []).filter((b) => b.status === 'zalo_active').length;
 
-    // Thống kê các tuyến đường thực tế đang phục vụ
+    // Statistics of the routes actually being served
     const routeCategories = new Set();
     [...(db.driverOffers || []), ...(db.passengerRequests || [])].forEach((t) => {
       if (t.routeCategory) routeCategories.add(t.routeCategory);
@@ -85,7 +85,7 @@ export function getStats(req, res) {
 }
 
 /**
- * GET /api/trust/:memberId - Hồ sơ tín nhiệm cộng đồng thực tế từ dữ liệu SQLite
+ * GET /api/trust/:memberId - Actual community trust profile from SQLite data
  */
 export function getTrustProfile(req, res) {
   try {
@@ -93,15 +93,15 @@ export function getTrustProfile(req, res) {
     let user = null;
     let tripSample = null;
 
-    // 1. Nếu là profile mặc định hoặc slug demo 'tuan-bp'
+    // 1. If it is the default profile or the demo slug 'tuan-bp'
     if (memberId === 'default' || memberId === 'tuan-bp') {
       const allUsers = getAllUsers();
       user = allUsers.find((u) => u.role === 'driver' && (u.isCccdVerified || u.verifiedCCCD)) || allUsers[0];
     } else {
-      // 2. Tìm theo ID hoặc số điện thoại
+      // 2. Look up by ID or phone number
       user = getUserById(memberId) || getUserByPhone(memberId);
 
-      // 3. Nếu không thấy trong bảng users, kiểm tra mã chuyến xe
+      // 3. If not found in the users table, check the trip code
       if (!user) {
         const trip = getTripById(memberId);
         if (trip) {
@@ -120,7 +120,7 @@ export function getTrustProfile(req, res) {
       }
     }
 
-    // 4. Nếu hoàn toàn không tồn tại thành viên này trong hệ thống
+    // 4. If this member does not exist in the system at all
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -128,7 +128,7 @@ export function getTrustProfile(req, res) {
       });
     }
 
-    // 5. Truy vấn các chuyến đi thực tế để tổng hợp chỉ số
+    // 5. Query the actual trips to aggregate metrics
     const userPhone = user.phone || (tripSample && tripSample.phoneReal) || '';
     const realTrips = userPhone ? getTripsByPhone(userPhone) : [];
     const driverTrips = realTrips.filter((t) => t.type === 'driver_offer');
@@ -164,15 +164,15 @@ export function getTrustProfile(req, res) {
 
     const trustCalc = computeTrustScore(userForTrust, vehicleData, historyData, activeRules);
 
-    // Bí danh ẩn danh ổn định, suy ra từ id thành viên (không chứa tên thật)
+    // Stable anonymous alias, derived from the member id (contains no real name)
     const publicAlias = isDefaultOrDemo
       ? 'Chủ xe CX-101'
       : toPublicAlias(firstDriverTrip || { role: user.role, id: user.id || memberId });
 
     const profile = {
       id: isDefaultOrDemo ? memberId : user.id || memberId,
-      // Hồ sơ tin cậy là endpoint công khai (/trust/:memberId) nên tuyệt đối
-      // không trả tên thật — chỉ bí danh vai trò + số hiệu.
+      // The trust profile is a public endpoint (/trust/:memberId) so it must absolutely
+      // not return a real name — only a role alias + a serial number.
       name: publicAlias,
       avatar: effectiveAvatar,
       publicName: publicAlias,
@@ -238,7 +238,7 @@ export function getTrustProfile(req, res) {
 }
 
 /**
- * GET /api/trust-rules/public - Lấy danh sách quy tắc tín nhiệm công khai
+ * GET /api/trust-rules/public - Get the list of public trust rules
  */
 export function getPublicTrustRulesHandler(req, res) {
   try {

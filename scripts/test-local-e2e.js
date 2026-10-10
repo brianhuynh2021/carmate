@@ -1,11 +1,11 @@
 /**
  * CARMATE REFINED STREAMLINED E2E TEST SUITE
  * 
- * Bộ kiểm thử tinh gọn & chuẩn mực dành riêng cho CarMate:
- * - Tập trung 100% vào nghiệp vụ cốt lõi, bất biến toán học MIT & bảo mật PII.
- * - Loại bỏ hoàn toàn các bài test râu ria, kiểm tra text JSX/CSS tĩnh dễ lỗi thời.
- * - TỰ ĐỘNG DỌN SẠCH (Auto-cleanup) 100% dữ liệu test tạm sau khi chạy xong,
- *   tuyệt đối KHÔNG làm phình to hoặc ô nhiễm database carmate.sqlite.
+ * A streamlined, standards-grade test suite built specifically for CarMate:
+ * - 100% focused on core business logic, MIT mathematical invariants & PII protection.
+ * - Completely drops peripheral tests and checks of static JSX/CSS text that go stale easily.
+ * - AUTO-CLEANUP (Auto-cleanup) of 100% of temporary test data after the run completes,
+ *   absolutely NOT bloating or polluting the carmate.sqlite database.
  */
 
 import Database from 'better-sqlite3';
@@ -33,8 +33,8 @@ function assert(condition, testName, details = '') {
 }
 
 /**
- * Dọn sạch triệt để mọi dữ liệu phát sinh từ quá trình chạy test E2E.
- * Bảo đảm cơ sở dữ liệu luôn giữ trạng thái sạch sẽ, nguyên bản.
+ * Thoroughly clean up all data produced by the E2E test run.
+ * Ensures the database always stays clean and pristine.
  */
 function cleanupTestData() {
   if (!fs.existsSync(DB_PATH)) return;
@@ -119,8 +119,8 @@ function cleanupTestData() {
 }
 
 /**
- * Nạp lại chuyến mẫu sau khi bài kiểm thử Admin xoá sạch bảng trips.
- * Giữ cho bộ kiểm thử chạy được nhiều lần liên tiếp mà không cần xoá CSDL thủ công.
+ * Reload the seed trips after the Admin test wipes the trips table.
+ * Keeps the suite runnable many times in a row without manually clearing the DB.
  */
 function restoreSeedTrips() {
   if (!fs.existsSync(DB_PATH)) return;
@@ -176,7 +176,7 @@ function restoreSeedTrips() {
 async function runTests() {
   console.log(`\n🚀 BẮT ĐẦU KIỂM THỬ NGHIỆP VỤ CỐT LÕI CARMATE (${BASE_URL})\n`);
 
-  // Dọn rác test cũ trước khi bắt đầu
+  // Clean up old test leftovers before starting
   cleanupTestData();
 
   let testTripId = null;
@@ -187,7 +187,7 @@ async function runTests() {
 
   try {
     // -------------------------------------------------------------
-    // 1. Kiểm tra Giao diện Web Frontend & Assets
+    // 1. Check the Web Frontend UI & Assets
     // -------------------------------------------------------------
     console.log('--- 1. Kiểm thử Giao diện Web Frontend & Assets ---');
     try {
@@ -217,7 +217,7 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 2. Kiểm tra API Health & Thống kê Nền tảng
+    // 2. Check API Health & Platform Statistics
     // -------------------------------------------------------------
     console.log('\n--- 2. Kiểm thử API Health & Thống Kê Nền Tảng ---');
     try {
@@ -236,7 +236,7 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 3. Kiểm tra Bảng Giá Tham Chiếu Thị Trường & Chống Giá Ảo
+    // 3. Check the Market Reference Price Table & Anti-Fake-Pricing
     // -------------------------------------------------------------
     console.log('\n--- 3. Kiểm thử Bảng Giá Tham Chiếu & Chống Giá Ảo ---');
     try {
@@ -251,7 +251,7 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 4. Kiểm tra Danh Sách Chuyến Đi & Bảo Vệ PII Công Khai
+    // 4. Check the Trip List & Public PII Protection
     // -------------------------------------------------------------
     console.log('\n--- 4. Kiểm thử Danh Sách Chuyến Đi & Bảo Mật PII Công Khai ---');
     try {
@@ -261,13 +261,13 @@ async function runTests() {
       const tripsList = tripsData.data?.all || [];
       assert(tripsData.total > 0 && Array.isArray(tripsList), `Trips 2: Có ${tripsData.total} chuyến xe đang mở trên sàn`);
 
-      // BẤT BIẾN: Không bao giờ để lộ SĐT thật trên feed công khai (Apple Privacy Standard)
+      // INVARIANT: Never expose the real phone number on the public feed (Apple Privacy Standard)
       const hasLeakedPhone = tripsList.some((trip) => {
         return trip.phoneReal && trip.phoneReal.length >= 10 && !trip.phoneReal.includes('***');
       });
       assert(!hasLeakedPhone, 'Trips 3: PII Invariant: Tuyệt đối không để lộ số điện thoại thật trên endpoint công khai');
 
-      // Kiểm tra bộ lọc tuyến
+      // Check the route filter
       const filterRes = await fetch(`${BASE_URL}/api/trips?routeCategory=Tuyến QL13`);
       const filterData = await filterRes.json();
       assert(filterRes.status === 200 && filterData.success === true, 'Trips 4: Lọc chuyến theo hành lang Tuyến QL13');
@@ -275,9 +275,9 @@ async function runTests() {
       const allMatchRoute = filterTrips.length > 0 && filterTrips.every((t) => t.routeCategory === 'Tuyến QL13');
       assert(allMatchRoute, 'Trips 5: Kết quả lọc chính xác 100% thuộc tuyến QL13');
 
-      // BẤT BIẾN PII: Ma trận khung giờ là endpoint CÔNG KHAI KHÔNG AUTH.
-      // Nó không đi qua sanitizeTripForPublic nên từng để lộ nguyên SĐT thật
-      // (phoneReal) và biển số đầy đủ (fullPlate) — chốt chặn hồi quy tại đây.
+      // PII INVARIANT: The time-slot matrix is a PUBLIC endpoint with NO AUTH.
+      // It does not go through sanitizeTripForPublic so it once leaked the full real phone number
+      // (phoneReal) and the full license plate (fullPlate) — regression guard here.
       const slotsRes = await fetch(`${BASE_URL}/api/corridor/time-slots?from=hub_ql13_tan_khai&to=hub_ql13_cho_ray`);
       const slotsRaw = await slotsRes.text();
       assert(slotsRes.status === 200, 'Trips 6: Tải ma trận khung giờ hành lang thành công');
@@ -290,9 +290,9 @@ async function runTests() {
         'Trips 8: PII Invariant: Ma trận khung giờ công khai không lộ biển số đầy đủ'
       );
 
-      // BẤT BIẾN CHUYẾN THẬT: phiên Cockpit hiện lên sàn như một chuyến sắp ghé
-      // trạm, nên telemetry phải gắn với bài đăng có thật. Mặc định cũ
-      // ('TRIP-DEFAULT') cho phép mọi request rỗng dựng ra một xe ma trên sàn.
+      // REAL-TRIP INVARIANT: a Cockpit session shows up on the marketplace as a trip about to stop at a
+      // station, so telemetry must be tied to a real post. The old default
+      // ('TRIP-DEFAULT') let any empty request spawn a ghost vehicle on the marketplace.
       const fakeTelemetry = await fetch(`${BASE_URL}/api/cockpit/telemetry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -313,12 +313,12 @@ async function runTests() {
         'Trips 10: Telemetry Buồng lái từ chối request thiếu mã chuyến'
       );
 
-      // BẤT BIẾN GHẾ NGỒI (MIT): tổng ghế đã bán không bao giờ vượt số ghế đăng.
-      // Hai lỗi từng phá vỡ bất biến này:
-      //  1. addTrip/rowToTrip dùng `||` nên availableSeats = 0 bị coi là falsy và
-      //     ghi đè thành 1 -> chuyến đầy vĩnh viễn hiện "còn 1 ghế".
-      //  2. Điều kiện `seatsOnOffer > 0 && requested > seatsOnOffer` tự vô hiệu hoá
-      //     khi hết chỗ -> nhận booking không giới hạn.
+      // SEAT INVARIANT (MIT): total seats sold never exceed the seats posted.
+      // Two bugs once broke this invariant:
+      //  1. addTrip/rowToTrip used `||` so availableSeats = 0 was treated as falsy and
+      //     overwritten to 1 -> a permanently full trip showed "còn 1 ghế" ("1 seat left").
+      //  2. The condition `seatsOnOffer > 0 && requested > seatsOnOffer` disabled itself
+      //     when sold out -> accepted unlimited bookings.
       const seatTripRes = await fetch(`${BASE_URL}/api/trips`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -333,7 +333,7 @@ async function runTests() {
       const seatTripId = (await seatTripRes.json())?.data?.id;
       assert(Boolean(seatTripId), 'Seats 1: Tạo chuyến 2 ghế để kiểm thử bất biến ghế');
 
-      // Giữ chỗ nay BẮT BUỘC đăng nhập, nên khối kiểm thử này cần token riêng.
+      // Reserving a seat now REQUIRES login, so this test block needs its own token.
       const seatAuthHeaders = async (phone, name) => {
         await fetch(`${BASE_URL}/api/auth/request-otp`, {
           method: 'POST',
@@ -371,9 +371,9 @@ async function runTests() {
         'Seats 4: Chuyến bán hết lưu đúng availableSeats = 0 (số 0 không bị coi là falsy)'
       );
 
-      // BẤT BIẾN PII: client KHÔNG được tự nâng trạng thái booking. Gửi kèm
-      // status:'confirmed' từng đủ để mở khoá SĐT thật của Chủ xe mà không cần
-      // đăng nhập và không cần Chủ xe đồng ý.
+      // PII INVARIANT: the client must NOT be able to promote a booking's status itself. Sending
+      // status:'confirmed' along was once enough to unlock the Driver's real phone number without
+      // logging in and without the Driver's consent.
       const injectHdr = await seatAuthHeaders('0933888777', 'Kiểm thử tiêm trạng thái');
       const injectRes = await fetch(`${BASE_URL}/api/bookings`, {
         method: 'POST',
@@ -394,8 +394,8 @@ async function runTests() {
         'Seats 6: PII Invariant: booking chưa chốt không được lộ SĐT thật của Chủ xe'
       );
 
-      // BẤT BIẾN MÃ VÉ: escrowId do máy chủ sinh. Client cũ tự sinh CX-1000..9999
-      // và INSERT OR REPLACE khiến vé trùng mã ghi đè nhau — khách mất vé.
+      // TICKET-ID INVARIANT: escrowId is generated by the server. The old client generated CX-1000..9999 itself
+      // and INSERT OR REPLACE made tickets with a colliding id overwrite each other — the passenger loses the ticket.
       const dupPayload = (name, phone) => ({
         tripId: seatTripId, escrowId: 'CX-TRUNG-MA', from: 'Tân Khai', to: 'Chợ Rẫy',
         seats: 0, price: 0, passengerPhone: phone, passengerName: name
@@ -427,7 +427,7 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 5. Kiểm tra Đăng Chuyến Xe Mới (Chủ xe & Người cần tìm xe)
+    // 5. Check Posting a New Trip (Driver & Passenger looking for a ride)
     // -------------------------------------------------------------
     console.log('\n--- 5. Kiểm thử Đăng Tin Ghép Xe (POST /api/trips) ---');
     try {
@@ -459,7 +459,7 @@ async function runTests() {
       assert(createData.data.maskedCode?.startsWith('CX-'), 'PostTrip 2: Tự động cấp mã ẩn danh CX-xxxx');
       testTripId = createData.data.id;
 
-      // Xác minh chuyến hiển thị ngay lập tức
+      // Verify the trip appears immediately
       const checkRes = await fetch(`${BASE_URL}/api/trips/${testTripId}`).then((r) => r.json());
       assert(checkRes.success === true && checkRes.data.id === testTripId, 'PostTrip 3: Chuyến mới lưu trữ và truy xuất tức thì');
     } catch (err) {
@@ -467,11 +467,11 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 6. Bất Biến MIT: Giới Hạn Ghế An Toàn (4-5 chỗ max 4, 7 chỗ max 6)
+    // 6. MIT Invariant: Safe Seat Limit (4-5 seaters max 4, 7 seaters max 6)
     // -------------------------------------------------------------
     console.log('\n--- 6. Kiểm thử Bất Biến MIT: Giới Hạn Ghế An Toàn Chuẩn Kỹ Thuật ---');
     try {
-      // Xe 5 chỗ không bao giờ được nhận quá 4 khách (dành 1 ghế cho chủ xe)
+      // A 5-seat vehicle must never accept more than 4 passengers (1 seat reserved for the driver)
       const overload5Res = await fetch(`${BASE_URL}/api/trips`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -479,12 +479,12 @@ async function runTests() {
           type: 'driver_offer',
           phoneReal: '0988112233',
           carType: 'Xe 4-5 chỗ',
-          availableSeats: 5 // Quá tải!
+          availableSeats: 5 // Overloaded!
         })
       });
       assert(overload5Res.status === 400, 'Capacity Invariant 1: Chặn đăng xe 5 chỗ vượt quá 4 ghế khách (HTTP 400)');
 
-      // Xe 7 chỗ không bao giờ được nhận quá 6 khách
+      // A 7-seat vehicle must never accept more than 6 passengers
       const overload7Res = await fetch(`${BASE_URL}/api/trips`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -492,7 +492,7 @@ async function runTests() {
           type: 'driver_offer',
           phoneReal: '0988112233',
           carType: 'Xe 7 chỗ',
-          availableSeats: 7 // Quá tải!
+          availableSeats: 7 // Overloaded!
         })
       });
       assert(overload7Res.status === 400, 'Capacity Invariant 2: Chặn đăng xe 7 chỗ vượt quá 6 ghế khách (HTTP 400)');
@@ -501,11 +501,11 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 7. Xác Thực Tài Khoản & Bất Biến MIT: Chặn Tự Ghép Chuyến Chính Mình
+    // 7. Account Authentication & MIT Invariant: Block Matching Yourself to Your Own Trip
     // -------------------------------------------------------------
     console.log('\n--- 7. Kiểm thử Xác Thực & Bất Biến MIT Chặn Tự Ghép Chuyến Mình ---');
     try {
-      // Đăng nhập tài khoản Hành khách qua OTP
+      // Log in the Passenger account via OTP
       await fetch(`${BASE_URL}/api/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-carmate-testing': 'true' },
@@ -522,7 +522,7 @@ async function runTests() {
       };
       assert(paxAuth.success === true && !!paxAuth.token, 'Auth 1: Đăng nhập Hành khách thành công qua token JWT');
 
-      // Đăng nhập tài khoản Chủ xe qua OTP
+      // Log in the Driver account via OTP
       await fetch(`${BASE_URL}/api/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-carmate-testing': 'true' },
@@ -539,7 +539,7 @@ async function runTests() {
       };
       assert(drvAuth.success === true && !!drvAuth.token, 'Auth 2: Đăng nhập Chủ xe thành công qua token JWT');
 
-      // Bất biến MIT: Chủ xe dùng tài khoản của mình tự đặt chỗ chuyến của chính mình -> Phải bị chặn!
+      // MIT invariant: a Driver using their own account to book a seat on their own trip -> must be blocked!
       const selfBookRes = await fetch(`${BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: driverHeaders,
@@ -557,11 +557,11 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 8. Toàn Bộ Vòng Đời Kết Nối Chuyến (Bookings Lifecycle)
+    // 8. Complete Trip Connection Lifecycle (Bookings Lifecycle)
     // -------------------------------------------------------------
     console.log('\n--- 8. Kiểm thử Vòng Đời Kết Nối Chuyến (Booking Lifecycle) ---');
     try {
-      // 8.1 Tạo kết nối ghép chỗ hợp lệ
+      // 8.1 Create a valid seat-match connection
       const bookRes = await fetch(`${BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: passengerHeaders,
@@ -586,7 +586,7 @@ async function runTests() {
       testBookingId = bookData.data?.escrowId || bookData.data?.id;
       assert(testBookingId?.startsWith('ESC-'), 'Booking 2: Tự động sinh mã giữ chỗ ESC-xxxx');
 
-      // 8.2 Báo trễ giờ (Delay report)
+      // 8.2 Report a late arrival (Delay report)
       const delayRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/delay`, {
         method: 'POST',
         headers: passengerHeaders,
@@ -596,7 +596,7 @@ async function runTests() {
       assert(delayRes.status === 200, 'Booking 3: Báo trễ 15 phút thành công (HTTP 200)');
       assert(delayData.data?.delayedMinutes === 15, 'Booking 4: Ghi nhận đúng số phút trễ');
 
-      // 8.3 Hoàn tất chuyến đi & Đánh giá tín nhiệm 2 chiều
+      // 8.3 Complete the trip & two-way trust rating
       const completeRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/complete`, {
         method: 'POST',
         headers: driverHeaders,
@@ -610,31 +610,31 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 9. Two-Phase Commit Chat & Bảo Mật PII (Ẩn SĐT Trước Khi Chốt)
+    // 9. Two-Phase Commit Chat & PII Protection (Hide Phone Number Before Confirmation)
     // -------------------------------------------------------------
     console.log('\n--- 9. Kiểm thử Khung Chat 2-Phase Commit & Bảo Mật Số Điện Thoại ---');
     try {
       const { detectPiiLeak, maskPhoneNumber } = await import('@carmate/shared');
 
-      // Thuật toán phát hiện rò rỉ số điện thoại & Zalo ngụy trang
+      // Algorithm for detecting leaked phone numbers & disguised Zalo handles
       assert(detectPiiLeak('0984883750').hasLeak === true, 'PII Filter 1: Phát hiện số điện thoại thông thường');
       assert(detectPiiLeak('0 9 8 4 8 8 3 7 5 0').hasLeak === true, 'PII Filter 2: Phát hiện số điện thoại chèn dấu cách');
       assert(detectPiiLeak('Số anh: O98488375O').hasLeak === true, 'PII Filter 3: Bắt mẹo đổi chữ O thành số 0');
       assert(detectPiiLeak('add z.a.l.o anh nhé').hasLeak === true, 'PII Filter 4: Bắt từ khoá Zalo ngụy trang');
       assert(detectPiiLeak('Đón ở cây xăng Petrolimex nhé').hasLeak === false, 'PII Filter 5: Tin nhắn điểm đón hợp lệ không bị chặn nhầm');
 
-      // Ẩn số điện thoại chuẩn Apple Privacy (VD: 0984883750 -> 098***3750)
+      // Mask the phone number to the Apple Privacy standard (e.g. 0984883750 -> 098***3750)
       assert(maskPhoneNumber('0984883750') === '098***3750', 'PII Masking: Ẩn số điện thoại chính xác 098***3750');
     } catch (err) {
       assert(false, '9. Two-Phase Commit & PII', err.message);
     }
 
     // -------------------------------------------------------------
-    // 10. Báo Cáo Vi Phạm An Toàn & Cam Kết (First Principles - Chống Nhồi Nhét & Xe Dù)
+    // 10. Safety Violation Reports & Commitments (First Principles - Anti-Overcrowding & Wildcat Vehicles)
     // -------------------------------------------------------------
     console.log('\n--- 10. Kiểm thử Báo Cáo Vi Phạm An Toàn & Cam Kết (First Principles) ---');
     try {
-      // 1. Khách báo cáo xe nhồi nhét quá số ghế quy định
+      // 1. Passenger reports a vehicle overcrowded beyond the prescribed seat count
       const overcrowdRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
         method: 'POST',
         headers: passengerHeaders,
@@ -646,7 +646,7 @@ async function runTests() {
       const overcrowdData = await overcrowdRes.json();
       assert(overcrowdRes.status === 200 && overcrowdData.data?.mismatchTitle === 'Xe nhồi nhét khách / Chở quá tải', 'Safety Invariant 1: Báo cáo hành vi nhồi nhét quá tải thành công (HTTP 200)');
 
-      // 2. Khách báo cáo hành vi bắt sang xe / bán khách giữa đường (xe dù)
+      // 2. Passenger reports a driver switching passengers to another vehicle / reselling passengers mid-route (xe dù, wildcat vehicle)
       const transferRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
         method: 'POST',
         headers: passengerHeaders,
@@ -659,7 +659,7 @@ async function runTests() {
       const transferData = await transferRes.json();
       assert(transferRes.status === 200 && transferData.data?.mismatchTitle === 'Bắt sang xe / Đổi xe giữa đường (Xe dù)', 'Safety Invariant 2: Báo cáo hành vi bắt sang xe / bán khách giữa đường thành công (HTTP 200)');
 
-      // 3. Khách báo cáo hành vi chặt chém giá / đòi thêm tiền ngoài thỏa thuận
+      // 3. Passenger reports price gouging / demanding extra money beyond the agreed price
       const gougingRes = await fetch(`${BASE_URL}/api/bookings/${testBookingId}/report-vehicle-mismatch`, {
         method: 'POST',
         headers: passengerHeaders,
@@ -671,8 +671,8 @@ async function runTests() {
       const gougingData = await gougingRes.json();
       assert(gougingRes.status === 200 && gougingData.data?.mismatchTitle === 'Chặt chém giá / Đòi thêm tiền ngoài thỏa thuận', 'Safety Invariant 3: Báo cáo hành vi chặt chém giá ngoài thỏa thuận thành công (HTTP 200)');
 
-      // 4. Triết lý Elon Musk: Tinh thần trung lập phương tiện (Platform Neutrality)
-      // Xe tiện chuyến quay đầu (convenient_trip) lấp đầy ghế trống/thùng rỗng để chống lãng phí xã hội
+      // 4. Elon Musk's philosophy: vehicle neutrality (Platform Neutrality)
+      // A passing vehicle on its return leg (convenient_trip) fills empty seats / an empty cargo bed to avoid social waste
       const convenientTripRes = await fetch(`${BASE_URL}/api/trips`, {
         method: 'POST',
         headers: driverHeaders,
@@ -696,7 +696,7 @@ async function runTests() {
         'Platform Neutrality 1: Hoan nghênh xe tiện chuyến quay đầu tham gia triệt tiêu lãng phí xã hội (HTTP 201)'
       );
 
-      // Đặt chỗ trên chuyến xe tiện chuyến quay đầu thành công không bị chặn
+      // Booking on a passing-vehicle return-leg trip succeeds and is not blocked
       const bookConvenientRes = await fetch(`${BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: passengerHeaders,
@@ -715,7 +715,7 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 11. Báo Số Điện Thoại Ảo / Không Nghe Máy
+    // 11. Reporting a Fake Phone Number / No Answer
     // -------------------------------------------------------------
     console.log('\n--- 11. Kiểm thử Báo Số Điện Thoại Ảo / Không Nghe Máy ---');
     try {
@@ -729,7 +729,7 @@ async function runTests() {
       });
       assert(unreachableRes.status === 200, 'Anti-Fake Phone 1: Gửi báo cáo số điện thoại ảo thành công (HTTP 200)');
 
-      // Kiểm thử Bất biến Mở khoá SĐT Khẩn Cấp Đón Xe (>= 2 lần gọi >= 25s)
+      // Test the Emergency Pickup Phone Unlock Invariant (>= 2 calls >= 25s)
       const testBookingKey = 'ESCROW-E2E-CALL-01';
       const testCaller = '0988112233';
       const testCallee = '0977223344';
@@ -755,11 +755,11 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 12. Cổng Quản Trị Admin & Phân Quyền Bảo Mật (Anti-BOLA/IDOR)
+    // 12. Admin Portal & Security Authorization (Anti-BOLA/IDOR)
     // -------------------------------------------------------------
     console.log('\n--- 12. Kiểm thử Cổng Quản Trị Admin & Phân Quyền An Toàn ---');
     try {
-      // Đăng nhập Cổng Quản Trị cấp token JWT
+      // Log in to the Admin Portal and issue a JWT token
       const adminAuthRes = await fetch(`${BASE_URL}/api/admin/auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-carmate-testing': 'true' },
@@ -771,21 +771,21 @@ async function runTests() {
         Authorization: `Bearer ${adminAuthData.token}`
       };
 
-      // Người dùng thường gọi vào admin -> Phải bị chặn 403
+      // A regular user calling admin -> must be blocked with 403
       const unauthorizedRes = await fetch(`${BASE_URL}/api/admin/metrics`, {
         headers: passengerHeaders
       });
       assert(unauthorizedRes.status === 403, 'RBAC 1: Người dùng thường không được phép truy cập cổng admin (HTTP 403)');
 
-      // Admin với passkey chuẩn -> Truy cập thành công
+      // Admin with the proper passkey -> access succeeds
       const adminMetricsRes = await fetch(`${BASE_URL}/api/admin/metrics`, {
         headers: adminHeaders
       });
       assert(adminMetricsRes.status === 200, 'RBAC 2: Quản trị viên truy cập metrics thành công (HTTP 200)');
 
-      // ── TẠO HỘ HỒ SƠ CHỦ XE (giai đoạn đội vận hành đi mời bác tài) ──
-      // Route này tạo ra tài khoản Chủ xe ĐÃ ĐÁNH DẤU XÁC MINH, nên nó phải đóng
-      // chặt với người ngoài: lọt route là lọt cả một danh tính đã xác minh.
+      // ── CREATE A DRIVER PROFILE ON BEHALF OF THE DRIVER (phase where the operations team goes out inviting drivers) ──
+      // This route creates a Driver account ALREADY MARKED VERIFIED, so it must be locked down
+      // tight against outsiders: if the route leaks, a whole verified identity leaks.
       const driverPhoneAdmin = '0933888314';
       const denyAnon = await fetch(`${BASE_URL}/api/admin/drivers`, {
         method: 'POST',
@@ -825,7 +825,7 @@ async function runTests() {
         'Admin Driver 4: Tạo cùng lúc hồ sơ Chủ xe và chuyến xe đầu tiên'
       );
 
-      // Chuyến do admin tạo phải lên sàn công khai, nhưng KHÔNG kèm PII
+      // A trip created by the admin must appear on the public marketplace, but WITHOUT PII
       const adminTripId = driverData?.data?.trip?.id;
       const publicTrip = await (await fetch(`${BASE_URL}/api/trips/${adminTripId}`)).json();
       assert(
@@ -837,7 +837,7 @@ async function runTests() {
         'Admin Driver 6: PII Invariant: chuyến admin tạo vẫn che SĐT và biển số đầy đủ'
       );
 
-      // Bác tài đăng nhập bằng chính SĐT đó phải nhận lại hồ sơ và hồ sơ xe
+      // The driver logging in with that same phone number must get back their profile and vehicle profile
       await fetch(`${BASE_URL}/api/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -855,7 +855,7 @@ async function runTests() {
 
       await fetch(`${BASE_URL}/api/trips/${adminTripId}`, { method: 'DELETE' }).catch(() => {});
 
-      // Admin dọn sạch sự kiện analytics & quỹ đạo AI thành công
+      // Admin successfully cleans up analytics events & AI trajectories
       const clearAnalyticsRes = await fetch(`${BASE_URL}/api/admin/analytics`, {
         method: 'DELETE',
         headers: adminHeaders
@@ -874,21 +874,21 @@ async function runTests() {
       });
       assert(clearTestDataRes.status === 200, 'Admin Action: Dọn sạch toàn bộ dữ liệu kiểm thử thành công (HTTP 200)');
 
-      // DELETE /admin/test-data gọi clearAllTrips() nên xoá SẠCH cả chuyến mẫu.
-      // Seed chỉ tự nạp khi bảng trips rỗng lúc khởi động, không nạp lại giữa chừng,
-      // nên nếu không phục hồi ở đây thì mọi lần chạy test kế tiếp đều thấy sàn rỗng
-      // và các bài kiểm thử phía trên fail dây chuyền (bug tồn tại từ trước).
+      // DELETE /admin/test-data calls clearAllTrips() so it wipes the seed trips too.
+      // Seeds are only auto-loaded when the trips table is empty at startup, not reloaded midway,
+      // so without restoring here every subsequent test run would see an empty marketplace
+      // and the tests above would fail in a cascade (a pre-existing bug).
       restoreSeedTrips();
     } catch (err) {
       assert(false, '12. Admin RBAC', err.message);
     }
 
     // -------------------------------------------------------------
-    // 13. Thư Cảnh Báo Hệ Thống, CSKH 24/7 & Ân Hạn 3 Ngày (Grace Period)
+    // 13. System Warning Letters, 24/7 Customer Support & 3-Day Grace Period (Grace Period)
     // -------------------------------------------------------------
     console.log('\n--- 13. Kiểm thử Ân Hạn 3 Ngày & Khiếu Nại 1-Chạm ---');
     try {
-      // Admin lấy danh sách báo cáo sai lệch xe để xử lý
+      // Admin fetches the list of vehicle discrepancy reports to handle
       const reportsRes = await fetch(`${BASE_URL}/api/admin/reports`, {
         headers: adminHeaders
       });
@@ -898,7 +898,7 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 14. Yêu Cầu Xóa Tài Khoản Gửi Tới Admin (Apple Guideline 5.1.1 v)
+    // 14. Account Deletion Requests Sent to Admin (Apple Guideline 5.1.1 v)
     // -------------------------------------------------------------
     console.log('\n--- 14. Kiểm thử Yêu Cầu Xóa Tài Khoản Gửi Admin Tiếp Nhận ---');
     try {
@@ -911,7 +911,7 @@ async function runTests() {
       });
       assert(delReqRes.status === 200, 'Account Deletion 1: Gửi yêu cầu xóa tài khoản thành công tới Quản trị viên (HTTP 200)');
 
-      // Admin kiểm tra danh sách yêu cầu xóa
+      // Admin checks the list of deletion requests
       const adminDelList = await fetch(`${BASE_URL}/api/admin/deletion-requests`, {
         headers: adminHeaders
       }).then((r) => r.json());
@@ -921,17 +921,17 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 15. Chuẩn Mực Danh Xưng Ghép Xe Văn Minh (Terminology Standards)
+    // 15. Civil Ride-Sharing Terminology Standards (Terminology Standards)
     // -------------------------------------------------------------
     console.log('\n--- 15. Kiểm thử Chuẩn Mực Danh Xưng: Chủ Xe & Người Đi Cùng ---');
     try {
       const { toPublicAlias } = await import('@carmate/shared');
 
-      // Danh xưng Chủ xe & Khách đi cùng
+      // Titles for Driver & Fellow Passenger
       assert(toPublicAlias({ type: 'driver_offer', maskedCode: 'CX-305' }) === 'Chủ xe CX-305', 'Terminology 1: Đối tác lái xe là "Chủ xe CX-xxx"');
       assert(toPublicAlias({ type: 'passenger_request', maskedCode: 'KX-412' }) === 'Khách KX-412', 'Terminology 2: Người đi cùng là "Khách KX-xxx"');
 
-      // Tuyệt đối không dùng danh xưng thương mại "Bác tài" hay "Tài xế"
+      // Absolutely do not use the commercial titles "Bác tài" or "Tài xế" (both mean "driver")
       const bannedTerms = ['Bác tài', 'bác tài'];
       const sharedCode = fs.readFileSync(path.resolve(process.cwd(), 'packages/shared/src/constants/mockData.js'), 'utf8');
       const hasBanned = bannedTerms.some((term) => sharedCode.includes(term));
@@ -941,11 +941,11 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 16. Radar Gợi Ý Khớp Xe Thông Minh (Social Smart Match) & Auto Alert
+    // 16. Smart Vehicle-Match Radar (Social Smart Match) & Auto Alert
     // -------------------------------------------------------------
     console.log('\n--- 16. Kiểm thử Radar Gợi Ý Khớp Xe Thông Minh & Auto Alert ---');
     try {
-      // 1. Kiểm tra endpoint gợi ý khớp xe tổng quát
+      // 1. Check the general vehicle-match suggestion endpoint
       const socialRes = await fetch(`${BASE_URL}/api/matches/social-suggestions`);
       const socialData = await socialRes.json();
       assert(socialRes.status === 200, 'Social Match 1: Gọi API gợi ý khớp xe thành công (HTTP 200)');
@@ -958,13 +958,13 @@ async function runTests() {
         assert(Array.isArray(first.socialTags), 'Social Match 5: Có nhãn xã hội (social tags) kết nối');
       }
 
-      // 2. Kiểm tra gợi ý khớp cho một chuyến cụ thể (tripId)
+      // 2. Check match suggestions for a specific trip (tripId)
       const specificRes = await fetch(`${BASE_URL}/api/matches/social-suggestions?tripId=${testTripId}`);
       const specificData = await specificRes.json();
       assert(specificRes.status === 200, 'Social Match 6: Tìm đối tác cho chuyến cụ thể thành công');
       assert(specificData.success === true, 'Social Match 7: Gợi ý đối tác chuẩn xác không lỗi');
 
-      // 3. Kiểm tra hàm gửi thông báo Telegram với cơ chế chống spam (Cooldown 2h)
+      // 3. Check the Telegram notification function with its anti-spam mechanism (2h Cooldown)
       const { sendSmartMatchTelegramAlert } = await import('../apps/api/src/utils/telegramAlert.js');
       assert(typeof sendSmartMatchTelegramAlert === 'function', 'Social Match 8: Hàm gửi alert thông minh qua Telegram tồn tại');
     } catch (err) {
@@ -972,7 +972,7 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 17. Kiểm thử Mở rộng Ghép Cốp & Thùng Bán Tải Tiện Tuyến (Cargo & Pickup Bed Sharing)
+    // 17. Extended Test: Trunk & Pickup-Bed Sharing Along the Route (Cargo & Pickup Bed Sharing)
     // -------------------------------------------------------------
     console.log('\n--- 17. Kiểm thử Mở rộng Ghép Cốp & Thùng Bán Tải Tiện Tuyến ---');
     try {
@@ -984,24 +984,24 @@ async function runTests() {
         TIME_SLOTS
       } = await import('@carmate/shared');
 
-      // 1. Kiểm tra 3 nhóm thể tích hàng gửi chuẩn bản địa
+      // 1. Check the 3 locally-standard parcel volume tiers
       assert(Boolean(CARGO_TYPES.compact_parcel && CARGO_TYPES.produce_box && CARGO_TYPES.bulky_cargo), 'Cargo 1: Đủ 3 gói thể tích tiện tuyến (Bưu phẩm, Thùng xốp/Nông sản, Chuyển trọ)');
       assert(CARGO_TYPES.produce_box.basePrice === 90000, 'Cargo 2: Gói thùng xốp có giá gốc định mức chuẩn 90.000đ');
 
-      // 2. Kiểm tra tính giá phụ xăng hàng gửi động theo cự ly
+      // 2. Check the dynamic parcel fuel surcharge by distance
       const shortDistPrice = getRecommendedCargoPrice('produce_box', 80);
       const longDistPrice = getRecommendedCargoPrice('produce_box', 180);
       assert(shortDistPrice > 0 && longDistPrice > shortDistPrice, 'Cargo 3: Phụ xăng thùng xốp tính tự động theo cự ly Geodesic');
 
-      // 3. Kiểm tra cấu hình xe bán tải (Cabin 5 chỗ, max 4 khách + Thùng ~800kg)
+      // 3. Check the pickup-truck configuration (5-seat cabin, max 4 passengers + ~800kg bed)
       assert(VEHICLE_SEAT_CONFIGS.pickup?.hasCargoBed === true, 'Pickup 1: Xe bán tải nhận diện khoang thùng chở hàng riêng');
       assert(VEHICLE_SEAT_CONFIGS.pickup?.maxPassengerSeats === 4, 'Pickup 2: Xe bán tải tuân thủ tối đa 4 ghế khách (trừ ghế lái)');
 
-      // 4. Chuẩn hóa xe bán tải qua hàm sanitizer
+      // 4. Normalize a pickup truck via the sanitizer function
       const pickupSanitized = sanitizeVehicleCapacityAndSeats('pickup', 6);
       assert(pickupSanitized.vehicleType === 'pickup' && pickupSanitized.seats === 4, 'Pickup 3: Sanitizer tự động giới hạn 4 ghế khách cho xe bán tải');
 
-      // 5. Đăng chuyến xe bán tải thực tế qua API
+      // 5. Post a real pickup-truck trip via the API
       const pickupTripRes = await fetch(`${BASE_URL}/api/trips`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1022,7 +1022,7 @@ async function runTests() {
       const pickupTripData = await pickupTripRes.json();
       assert(pickupTripRes.status === 201 && pickupTripData.data.hasCargoBed === true, 'Pickup 4: Đăng chuyến xe bán tải nhận chở hàng thành công (HTTP 201)');
 
-      // 6. Tạo yêu cầu gửi hàng thùng xốp tiện tuyến
+      // 6. Create a request to ship a styrofoam-box parcel along the route
       const cargoBookingRes = await fetch(`${BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: passengerHeaders,
@@ -1041,7 +1041,7 @@ async function runTests() {
       const cargoBookingData = await cargoBookingRes.json();
       assert(cargoBookingRes.status === 201 && cargoBookingData.data.isCargoBooking === true, 'Cargo 4: Gửi yêu cầu ghép hàng tiện tuyến thành công (HTTP 201)');
 
-      // 7. Kiểm tra chuẩn hóa khung giờ 24h sạch (không còn "Sáng" / "Chiều" thừa trong 24h format)
+      // 7. Check clean 24h time-slot normalization (no stray "Sáng" / "Chiều" ("morning" / "afternoon") left in the 24h format)
       const slot0506 = TIME_SLOTS.find((s) => s.id === '05:00-06:00');
       assert(slot0506 && !slot0506.short.includes('Sáng') && !slot0506.short.includes('AM'), 'TimeSlot 1: Chuẩn 24h sạch sẽ (05:00 — 06:00 không có từ thừa)');
     } catch (err) {
@@ -1049,7 +1049,7 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
-    // 18. Kiểm thử Xe Tải Nhẹ & Chành Xe Địa Phương Tiện Tuyến N2 (Bình Phước ⇄ Kiên Giang)
+    // 18. Test Light Trucks & Local Freight Depots (chành xe) Along Route N2 (Bình Phước ⇄ Kiên Giang)
     // -------------------------------------------------------------
     console.log('\n--- 18. Kiểm thử Xe Tải Nhẹ & Chành Xe Địa Phương Tiện Tuyến N2 ---');
     try {
@@ -1060,29 +1060,29 @@ async function runTests() {
         getCorridorWaypoints
       } = await import('@carmate/shared');
 
-      // 1. Kiểm tra 6 nhóm thể tích tiện tuyến bản địa
+      // 1. Check the 6 locally-standard along-the-route volume tiers
       const cargoKeys = Object.keys(CARGO_TYPES);
       assert(
         cargoKeys.includes('motorcycle') && cargoKeys.includes('half_truck') && cargoKeys.includes('full_truck'),
         'Truck Cargo 1: Đầy đủ 3 gói hàng địa phương (Xe máy/xe điện, Nửa thùng ~1T, Bao trọn thùng quay đầu)'
       );
 
-      // 2. Kiểm tra định giá cự ly cho xe máy
+      // 2. Check distance-based pricing for motorbikes
       const motorcyclePrice = getRecommendedCargoPrice('motorcycle', 280);
       assert(motorcyclePrice >= 350000 && motorcyclePrice <= 600000, `Truck Cargo 2: Giá gửi xe máy cự ly 280km chuẩn xác (~${motorcyclePrice.toLocaleString('vi-VN')}đ)`);
 
-      // 3. Kiểm tra định mức Tuyến N2 - Kiên Giang trong ROUTE_BENCHMARKS
+      // 3. Check the Route N2 - Kiên Giang rate in ROUTE_BENCHMARKS
       const n2Benchmark = ROUTE_BENCHMARKS['Tuyến N2 - Kiên Giang'];
       assert(n2Benchmark && n2Benchmark.distanceKm === 280, 'Route N2 1: Hành lang Tuyến N2 - Kiên Giang chuẩn 280km');
 
-      // 4. Kiểm tra Corridor Waypoints tuyến N2
+      // 4. Check the Corridor Waypoints of route N2
       const n2Waypoints = getCorridorWaypoints('Kiên Giang');
       assert(
         Array.isArray(n2Waypoints) && n2Waypoints.some((w) => w.includes('Đức Hòa') || w.includes('Thạnh Hóa') || w.includes('Vàm Cống')),
         'Route N2 2: Tìm được các điểm mốc chính trên Tuyến N2 (Đức Hòa, Thạnh Hóa, Cầu Vàm Cống)'
       );
 
-      // 5. Bất biến MIT: Xe tải nhẹ chỉ nhận tối đa 1 người đi cùng (ghế phụ)
+      // 5. MIT invariant: a light truck accepts at most 1 fellow passenger (front passenger seat)
       const overloadTruckRes = await fetch(`${BASE_URL}/api/trips`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1092,14 +1092,14 @@ async function runTests() {
           carType: 'Kia K250 (Xe tải 2.4T)',
           vehicleType: 'truck_light',
           capacity: 2,
-          availableSeats: 2, // Quá tải ghế phụ! Chỉ được 1
+          availableSeats: 2, // Front passenger seat overloaded! Only 1 allowed
           from: 'Chơn Thành',
           to: 'Rạch Giá'
         })
       });
       assert(overloadTruckRes.status === 400, 'Truck Invariant 1: Chặn đăng xe tải chở quá 1 người đi cùng ghế phụ (HTTP 400)');
 
-      // 6. Đăng chuyến xe tải nhẹ hợp lệ (1 ghế phụ, có thùng xe chở hàng)
+      // 6. Post a valid light-truck trip (1 passenger seat, with a cargo bed for goods)
       const truckTripRes = await fetch(`${BASE_URL}/api/trips`, {
         method: 'POST',
         headers: driverHeaders,
@@ -1128,7 +1128,7 @@ async function runTests() {
         'Truck Trip 1: Đăng chuyến xe tải nhẹ quay đầu rỗng thùng thành công (HTTP 201)'
       );
 
-      // 7. Tạo yêu cầu gửi xe máy về quê theo xe tải
+      // 7. Create a request to ship a motorbike back to the countryside by truck
       const motoBookingRes = await fetch(`${BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: passengerHeaders,
@@ -1155,13 +1155,13 @@ async function runTests() {
 
   } finally {
     // -------------------------------------------------------------
-    // Tự động dọn dẹp 100% dữ liệu tạm sau khi test hoàn tất
+    // Auto-clean 100% of temporary data after the test completes
     // -------------------------------------------------------------
     cleanupTestData();
   }
 
   // -------------------------------------------------------------
-  // Tổng Kết
+  // Summary
   // -------------------------------------------------------------
   console.log('\n=============================================================');
   console.log('📊 TỔNG KẾT BỘ KIỂM THỬ CỐT LÕI CARMATE:');

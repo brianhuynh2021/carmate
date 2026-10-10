@@ -1,19 +1,19 @@
 /**
  * =============================================================================
- * KIỂM THỬ VÒNG ĐỜI CHUYẾN & THAO TÁC LỊCH TRÌNH CHỦ XE
+ * TESTS FOR THE TRIP LIFECYCLE & DRIVER SCHEDULE ACTIONS
  * =============================================================================
- * Ba lỗ hổng được khoá lại ở đây:
+ * Three gaps closed here:
  *
- *  1. ĐÓNG SỔ CHUYẾN — trước đây mọi vòng quét dừng ở mốc T+2 phút
- *     (departureWatchdog), nên chuyến ở lại `active` vĩnh viễn trong CSDL. Hệ
- *     quả: truy vấn `WHERE status='active'` đếm cả chuyến đã chạy xong, xe cứu
- *     hộ có thể được điều từ chuyến của tháng trước.
+ *  1. CLOSING OUT TRIPS — previously every sweep stopped at the T+2 minute mark
+ *     (departureWatchdog), so trips stayed `active` in the DB forever. Consequence:
+ *     a `WHERE status='active'` query also counted trips that had already finished, and a rescue
+ *     vehicle could be dispatched from last month's trip.
  *
- *  2. CHUYẾN ĐỊNH KỲ — được isTripExpired() miễn trừ nên thoát cả bộ lọc hiển
- *     thị lẫn vòng đời, hiện mãi trên sàn với ngày của tuần trước.
+ *  2. RECURRING TRIPS — exempted by isTripExpired(), so they escaped both the display
+ *     filter and the lifecycle, and showed on the marketplace forever with last week's date.
  *
- *  3. THAO TÁC LỊCH TRÌNH — bốn nút "3 giây" trên Taplo Chủ xe chỉ setState rồi
- *     hiện toast "Đã gửi tin nhắn tới người đi cùng", không gọi máy chủ.
+ *  3. SCHEDULE ACTIONS — the four "3 giây" (3-second) buttons on the Driver Dashboard only called setState and then
+ *     showed the toast "Đã gửi tin nhắn tới người đi cùng" (message sent to fellow passengers), without calling the server.
  * =============================================================================
  */
 import assert from 'node:assert/strict';
@@ -31,7 +31,7 @@ const check = (name, fn) => {
 await initDB();
 const db = getRawDB();
 
-// Dựng chuyến giả lập với mốc thời gian có kiểm soát
+// Builds a simulated trip with controlled timestamps
 const HOUR = 60 * 60 * 1000;
 const NOW = Date.parse('2026-09-20T12:00:00+07:00');
 const PREFIX = 'LIFECYCLE-TEST-';
@@ -60,7 +60,7 @@ const dateOf = (id) => db.prepare('SELECT date FROM trips WHERE id = ?').get(id)
 
 cleanup();
 
-// ── 1. ĐÓNG SỔ THEO THỜI GIAN ───────────────────────────────────────────────
+// ── 1. CLOSING OUT BY TIME ─────────────────────────────────────────────────
 console.log('1. Đóng sổ chuyến đã quá giờ:');
 
 check('Chuyến hôm qua không ai đặt ➔ expired', () => {
@@ -89,7 +89,7 @@ check('Chuyến chưa tới giờ ➔ giữ nguyên active', () => {
 
 check('Chuyến vừa khởi hành, còn trong dung sai ➔ chưa đóng', () => {
   const id = `${PREFIX}just-left`;
-  // Kết thúc lúc 11:00 hôm nay, mới qua 1 tiếng < dung sai 6 tiếng
+  // Ends at 11:00 today, only 1 hour past < the 6-hour tolerance
   seedTrip(id, { date: '2026-09-20', timeSlot: '10:00-11:00' });
   sweepFinishedTrips({ nowMs: NOW });
   assert.equal(statusOf(id), 'active');
@@ -110,7 +110,7 @@ check('Chuyến đã cancelled không bị đụng tới', () => {
   assert.equal(statusOf(id), 'cancelled');
 });
 
-// ── 2. CHUYẾN ĐỊNH KỲ ───────────────────────────────────────────────────────
+// ── 2. RECURRING TRIPS ─────────────────────────────────────────────────────
 console.log('\n2. Chuyến định kỳ hàng tuần:');
 
 check('Chuyến định kỳ quá giờ ➔ đẩy sang tuần sau, không đóng', () => {
@@ -130,7 +130,7 @@ check('Chuyến định kỳ bỏ quên nhiều tuần ➔ nhảy tới tuần c
   assert.ok(Date.parse(newDate) > NOW - 7 * 24 * HOUR, `ngày mới ${newDate} phải vượt qua hiện tại`);
 });
 
-// ── 3. TÍNH IDEMPOTENT ──────────────────────────────────────────────────────
+// ── 3. IDEMPOTENCE ─────────────────────────────────────────────────────────
 console.log('\n3. An toàn khi chạy lặp:');
 
 check('Quét lần hai không đổi gì thêm', () => {
@@ -146,12 +146,12 @@ check('dryRun không ghi gì vào CSDL', () => {
   assert.equal(statusOf(id), 'active', 'nhưng không được ghi');
 });
 
-// ── 4. CHỐNG XOÁ NHẦM CHUYẾN THẬT ───────────────────────────────────────────
+// ── 4. GUARD AGAINST DELETING REAL TRIPS BY MISTAKE ────────────────────────
 console.log('\n4. Dọn seed cũ không được đụng chuyến thật:');
 
 check('Chuyến Admin tạo (DRV-<timestamp>) không bị coi là seed cũ', () => {
-  // adminController sinh id dạng `DRV-${Date.now()}` — cùng dạng với seed DRV-101.
-  // Dò theo dạng mã sẽ quét sạch chuyến thật ở mỗi lần khởi động máy chủ.
+  // adminController generates ids of the form `DRV-${Date.now()}` — the same form as the seed DRV-101.
+  // Detecting by id pattern would wipe out real trips on every server start.
   const RETIRED_SEED_IDS = [
     'DRV-103', 'DRV-104', 'DRV-106', 'DRV-108', 'DRV-110', 'DRV-111',
     'REQ-203', 'REQ-204', 'REQ-205'
@@ -163,7 +163,7 @@ check('Chuyến Admin tạo (DRV-<timestamp>) không bị coi là seed cũ', () 
 
 check('Chuyến định kỳ giữ được dấu sau khi đẩy sang tuần sau', () => {
   const id = `${PREFIX}weekly-marker`;
-  // Chuyến chỉ nhận diện định kỳ qua chuỗi trong trường date
+  // A trip is identified as recurring only via a string in the date field
   seedTrip(id, { date: 'Lặp lại hàng tuần', timeSlot: '07:00-08:00' });
   db.prepare('UPDATE trips SET payload = ? WHERE id = ?').run(
     JSON.stringify({ id, type: 'driver_offer', status: 'active', date: 'Lặp lại hàng tuần', timeSlot: '07:00-08:00' }),
@@ -172,7 +172,7 @@ check('Chuyến định kỳ giữ được dấu sau khi đẩy sang tuần sau
   sweepFinishedTrips({ nowMs: NOW });
   const row = db.prepare('SELECT payload FROM trips WHERE id = ?').get(id);
   const payload = JSON.parse(row.payload);
-  // Dù date bị ghi đè bằng ngày cụ thể, cờ định kỳ phải còn để lần sau vẫn lăn
+  // Even when date is overwritten with a specific date, the recurring flag must remain so it keeps rolling forward next time
   if (payload.date !== 'Lặp lại hàng tuần') {
     assert.equal(payload.isRecurringWeekly, true, 'phải giữ cờ isRecurringWeekly');
   }

@@ -50,8 +50,8 @@ export function LanguageToggle({ className = '' } = {}) {
 }
 
 /**
- * Giai đoạn 1 tập trung vào tìm chuyến; nút trợ lý AI tạm ẩn khỏi thanh tiêu đề.
- * Đổi về true để bật lại — không cần sửa gì thêm.
+ * Phase 1 focuses on trip search; the AI assistant button is temporarily hidden from the title bar.
+ * Switch back to true to re-enable it — nothing else needs to change.
  */
 const SHOW_AI_ASSISTANT_BUTTON = false;
 
@@ -154,7 +154,7 @@ export default function Header({
             </span>
           </button>
 
-          {/* Badge cam kết bảo chứng toàn cục theo tư duy MIT Invariants */}
+          {/* Global assurance-commitment badge following the MIT Invariants mindset */}
           <span className="type-footnote hidden lg:inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-500/20 shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span>0% Phí sàn · 0đ Cọc</span>
@@ -195,10 +195,10 @@ export default function Header({
           })}
         </nav>
 
-        {/* ĐĂNG CHUYẾN — tách khỏi nhóm tab tra cứu và tạo điểm nhấn riêng.
-            Đây là nút sinh ra NGUỒN CUNG cho nền tảng: chủ xe lướt vào phải
-            thấy ngay lối đi của mình, không để nó chìm lẫn giữa các tab xem
-            thông tin. Dùng xanh mint đồng bộ với nút nổi trên thanh dưới. */}
+        {/* POST A TRIP — separated from the lookup tab group and given its own emphasis.
+            This button generates SUPPLY for the platform: a driver browsing in must
+            see their own path right away, not have it buried among the tabs for viewing
+            information. Uses mint green to match the floating button on the bottom bar. */}
         <button
           type="button"
           onClick={() => onRequestPostTrip?.('driver')}
@@ -214,12 +214,12 @@ export default function Header({
         </button>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* NÚT TRỢ LÝ AI — TẠM ẨN Ở GIAI ĐOẠN 1.
-              Bài toán cốt lõi lúc này là niềm tin và thanh khoản trên trục QL13.
-              Một nút trợ lý nằm ngay cạnh hành động chính chỉ làm phân tán sự
-              chú ý khỏi việc quan trọng nhất: TÌM CHUYẾN XE.
-              Phím tắt ⌘K vẫn hoạt động cho người dùng nội bộ; bật lại nút chỉ
-              cần đổi cờ này về true khi nghiệp vụ trợ lý đủ sâu. */}
+          {/* AI ASSISTANT BUTTON — TEMPORARILY HIDDEN IN PHASE 1.
+              The core problem right now is trust and liquidity on the QL13 axis.
+              An assistant button right next to the primary action only splits
+              attention away from the most important thing: FINDING A TRIP.
+              The ⌘K shortcut still works for internal users; re-enabling the button only
+              requires flipping this flag back to true once the assistant's business logic is deep enough. */}
           {SHOW_AI_ASSISTANT_BUTTON && (
           <button
             type="button"
@@ -268,7 +268,7 @@ export default function Header({
               {/* Apple Profile Popover Menu */}
               {isUserMenuOpen && (
                 <>
-                  {/* Backdrop cho mobile để chạm ngoài đóng popover tức thì */}
+                  {/* Backdrop for mobile so tapping outside closes the popover instantly */}
                   <div
                     className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] sm:hidden"
                     onClick={() => setIsUserMenuOpen(false)}
@@ -276,7 +276,7 @@ export default function Header({
                   />
 
                   <div className="absolute right-0 top-[calc(100%+8px)] w-[calc(100vw-24px)] sm:w-72 max-w-[320px] max-h-[calc(100vh-80px)] overflow-y-auto overscroll-contain rounded-3xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_20px_50px_rgba(0,0,0,0.18)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-left select-none custom-scrollbar">
-                    {/* KHỐI 1: Nhận diện & Trạng thái tài khoản */}
+                    {/* BLOCK 1: Account identity & status */}
                     <div className="p-2.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.04] mb-1.5 flex items-center gap-2.5">
                       <div className="relative shrink-0">
                         {currentUser.avatar ? (
@@ -310,9 +310,9 @@ export default function Header({
                       </div>
                     </div>
 
-                    {/* KHỐI 2: Hoạt động cá nhân & Chuyến đi */}
+                    {/* BLOCK 2: Personal activity & Trips */}
                     <div className="space-y-0.5">
-                      {/* Hồ sơ & Garage của tôi */}
+                      {/* My Profile & Garage */}
                       <button
                         type="button"
                         onClick={() => {
@@ -334,7 +334,7 @@ export default function Header({
                         )}
                       </button>
 
-                      {/* Chuyến đi & Lịch hẹn của tôi */}
+                      {/* My Trips & Appointments */}
                       <button
                         type="button"
                         onClick={() => {
@@ -354,7 +354,7 @@ export default function Header({
                         )}
                       </button>
 
-                      {/* Hộp thư & Chat chuyến */}
+                      {/* Inbox & Trip chat */}
                       <button
                         type="button"
                         onClick={() => {
@@ -374,7 +374,7 @@ export default function Header({
                         )}
                       </button>
 
-                      {/* Buồng lái chủ xe & Quản lý chuyến */}
+                      {/* Driver cockpit & Trip management */}
                       <button
                         type="button"
                         onClick={() => {
@@ -392,7 +392,7 @@ export default function Header({
                         </span>
                       </button>
 
-                      {/* Lối tắt: Đăng chuyến đón khách */}
+                      {/* Shortcut: Post a trip to pick up passengers */}
                       <button
                         type="button"
                         onClick={() => {
@@ -411,7 +411,7 @@ export default function Header({
                       </button>
                     </div>
 
-                    {/* KHỐI 3: Quản trị hệ thống (Chỉ dành cho Admin) */}
+                    {/* BLOCK 3: System administration (Admin only) */}
                     {isAdminUser(currentUser) && (
                       <>
                         <div className="my-1.5 border-t border-black/[0.05] dark:border-white/[0.06]" />
@@ -434,10 +434,10 @@ export default function Header({
                       </>
                     )}
 
-                    {/* KHỐI 4: Tuỳ chọn & Hỗ trợ */}
+                    {/* BLOCK 4: Preferences & Support */}
                     <div className="my-1.5 border-t border-black/[0.05] dark:border-white/[0.06]" />
                     <div className="space-y-0.5">
-                      {/* Chuyển đổi ngôn ngữ */}
+                      {/* Language switch */}
                       <div className="type-caption w-full min-h-[42px] sm:min-h-[38px] px-3 py-1.5 rounded-xl flex items-center justify-between text-[#1d1d1f] dark:text-slate-200">
                         <div className="inline-flex items-center gap-2.5 font-semibold">
                           <Globe className="w-4 h-4 text-[#0071e3] shrink-0" />
@@ -465,7 +465,7 @@ export default function Header({
                         </div>
                       </div>
 
-                      {/* Quy chế & Chính sách an toàn */}
+                      {/* Terms & Safety policy */}
                       <button
                         type="button"
                         onClick={() => {
@@ -478,7 +478,7 @@ export default function Header({
                         <span>{t('userMenu.safetyPolicy')}</span>
                       </button>
 
-                      {/* Hỗ trợ trực tiếp qua Telegram */}
+                      {/* Direct support via Telegram */}
                       <a
                         href={SITE_INFO.telegramSupport || SITE_INFO.telegram || 'https://t.me/brianhuynh91'}
                         target="_blank"
@@ -496,7 +496,7 @@ export default function Header({
                       </a>
                     </div>
 
-                    {/* KHỐI 5: Thoát & Quyền riêng tư */}
+                    {/* BLOCK 5: Sign out & Privacy */}
                     <div className="my-1.5 border-t border-black/[0.05] dark:border-white/[0.06]" />
                     <div className="space-y-0.5">
                       <button
@@ -527,7 +527,7 @@ export default function Header({
             </button>
           )}
 
-          {/* Nút Chuông Thông Báo macOS - Góc phải trên cùng */}
+          {/* macOS Notification Bell Button - Top right corner */}
           <div className="relative" ref={notificationCenterRef}>
             <button
               type="button"

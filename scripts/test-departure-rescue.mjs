@@ -1,9 +1,9 @@
 /**
- * KIỂM THỬ CANH CHUYẾN & CHẾ ĐỘ CỨU HỘ (DEPARTURE WATCHDOG & RESCUE MODE)
+ * TESTS FOR THE DEPARTURE WATCHDOG & RESCUE MODE (DEPARTURE WATCHDOG & RESCUE MODE)
  *
- * Bất biến quan trọng nhất: KHÁCH KHÔNG BAO GIỜ BỊ CHẾT ĐỨNG.
- * Tới T-20 mà chủ xe im lặng thì khách phải nhận được cảnh báo kèm hotline xe
- * khách, trong khi vẫn còn đủ thời gian thực tế để bắt chuyến khác.
+ * The most important invariant: PASSENGERS ARE NEVER LEFT STRANDED.
+ * By T-20, if the driver is silent, the passenger must receive a warning with the coach
+ * hotline, while there is still enough real time to catch another trip.
  */
 
 import assert from 'node:assert';
@@ -36,7 +36,7 @@ const db = getRawDB();
 db.prepare("DELETE FROM bookings WHERE escrowId LIKE 'TEST-DEP-%'").run();
 db.prepare("DELETE FROM notifications WHERE phone IN ('0955000111','0955000222')").run();
 
-/** Tạo một booking khởi hành sau `minutesFromNow` phút. */
+/** Creates a booking that departs `minutesFromNow` minutes from now. */
 async function makeBooking(id, minutesFromNow, extra = {}) {
   const dep = new Date(Date.now() + minutesFromNow * 60000);
   const yyyy = dep.getFullYear();
@@ -57,7 +57,7 @@ async function makeBooking(id, minutesFromNow, extra = {}) {
   });
 }
 
-// ── 1. Suy ra giờ khởi hành ────────────────────────────────────────────
+// ── 1. Deriving the departure time ────────────────────────────────────
 console.log('── 1. SUY RA GIỜ KHỞI HÀNH ──');
 
 ok(resolveDepartureMs({ date: '2026-09-20', timeSlot: '08:30' }) != null,
@@ -69,7 +69,7 @@ ok(resolveDepartureMs({ date: '2026-09-20', timeSlot: 'sáng sớm' }) === null,
    'Chuỗi chữ tự do -> null, KHÔNG đoán bừa rồi bắn cảnh báo nhầm');
 ok(resolveDepartureMs({ timeSlot: '08:30' }) === null, 'Thiếu ngày -> null');
 
-// ── 2. Các mốc T-40 / T-30 / T-20 ──────────────────────────────────────
+// ── 2. The T-40 / T-30 / T-20 milestones ──────────────────────────────
 console.log('\n── 2. CÁC MỐC CANH CHUYẾN ──');
 
 await makeBooking('TEST-DEP-40', WATCHDOG_CONFIG.ASK_READY_MINUTES);
@@ -90,13 +90,13 @@ ok(hit.reason === 'NO_GPS_SIGNAL', 'Ghi đúng lý do: không có tín hiệu GP
 ok(Array.isArray(hit.lifebuoys) && hit.lifebuoys.length > 0,
    'Kèm sẵn danh sách xe khách cứu hộ, không để khách tự đi tìm');
 
-// Chuyến còn xa (T-90) chưa bị đụng tới
+// A trip that is still far off (T-90) is not touched yet
 await makeBooking('TEST-DEP-90', 90);
 acts = evaluateDepartureCheckpoints({ activeSessions: [] });
 ok(!acts.some((a) => a.booking.escrowId === 'TEST-DEP-90'),
    'Chuyến còn 90 phút chưa bị làm phiền');
 
-// ── 3. Chủ xe đã xác nhận thì im lặng ──────────────────────────────────
+// ── 3. Once the driver has confirmed, stay silent ─────────────────────
 console.log('\n── 3. CHỦ XE ĐÃ XÁC NHẬN ──');
 
 await makeBooking('TEST-DEP-OK', WATCHDOG_CONFIG.RESCUE_MINUTES, {
@@ -107,7 +107,7 @@ acts = evaluateDepartureCheckpoints({ activeSessions: [] });
 ok(!acts.some((a) => a.booking.escrowId === 'TEST-DEP-OK'),
    'Chủ xe đã bấm "Tôi đang đi" -> KHÔNG bật cứu hộ, không làm phiền ai');
 
-// Xe đang thực sự lăn bánh cũng được coi là sẵn sàng, dù chưa bấm nút
+// A vehicle that is actually rolling also counts as ready, even if the button has not been pressed
 await makeBooking('TEST-DEP-DRIVING', WATCHDOG_CONFIG.RESCUE_MINUTES);
 acts = evaluateDepartureCheckpoints({
   activeSessions: [{ driverPhone: '0955000111', lastPing: Date.now(), speed: 55 }]
@@ -115,7 +115,7 @@ acts = evaluateDepartureCheckpoints({
 ok(!acts.some((a) => a.booking.escrowId === 'TEST-DEP-DRIVING'),
    'Xe đang chạy 55km/h với GPS tươi -> tin hành động thật, không cần bấm nút');
 
-// Xe có phiên nhưng mất tín hiệu lâu -> vẫn phải cứu hộ
+// A vehicle with a session but a long loss of signal -> must still be rescued
 await makeBooking('TEST-DEP-STALE', WATCHDOG_CONFIG.RESCUE_MINUTES);
 acts = evaluateDepartureCheckpoints({
   activeSessions: [{ driverPhone: '0955000111', lastPing: Date.now() - 60 * 60000, speed: 0 }]
@@ -124,7 +124,7 @@ hit = acts.find((a) => a.booking.escrowId === 'TEST-DEP-STALE');
 ok(hit?.action === 'ACTIVATE_RESCUE' && hit.reason === 'STALE_HEARTBEAT',
    'Xe đứng yên, mất tín hiệu 60 phút -> bật cứu hộ, ghi đúng lý do');
 
-// ── 4. Bật cứu hộ: giữ chuyến, trừ điểm ────────────────────────────────
+// ── 4. Enable rescue: hold the trip, deduct points ────────────────────
 console.log('\n── 4. BẬT CỨU HỘ: GIỮ CHUYẾN & TRỪ ĐIỂM ──');
 
 const rescue = await activateRescueMode({
@@ -144,12 +144,12 @@ ok(Array.isArray(after.rescueLifebuoys) && after.rescueLifebuoys.length > 0,
 const again = await activateRescueMode({ bookingId: 'TEST-DEP-20', reason: 'NO_GPS_SIGNAL', lifebuoys: [] });
 ok(again.alreadyActive === true, 'Gọi lại không bật đè lần hai (nhịp quét chạy mỗi 60s)');
 
-// Chuyến đã bật cứu hộ thì không bị đánh giá lại
+// A trip that already has rescue enabled is not re-evaluated
 acts = evaluateDepartureCheckpoints({ activeSessions: [] });
 ok(!acts.some((a) => a.booking.escrowId === 'TEST-DEP-20' && a.action === 'ACTIVATE_RESCUE'),
    'Không bắn cảnh báo lặp cho chuyến đã ở chế độ cứu hộ');
 
-// ── 5. Chế tài theo thang có sẵn ───────────────────────────────────────
+// ── 5. Penalties on the existing scale ────────────────────────────────
 console.log('\n── 5. CHẾ TÀI THEO THANG CÓ SẴN ──');
 
 const { saveUser, getUserByPhone } = await import('../apps/api/src/db/sqliteStore.js');
@@ -169,7 +169,7 @@ ok(finalUser.lateReports === 2, 'Chuyến khác thì tính tiếp (lateReports =
 ok(finalUser.isBanned !== true,
    'KHÔNG tự khoá tài khoản — chỉ trừ điểm, đúng lựa chọn dùng thang có sẵn');
 
-// ── 6. Chọn xe khách phù hợp giờ ───────────────────────────────────────
+// ── 6. Choosing a coach that fits the time ────────────────────────────
 console.log('\n── 6. CHỌN XE CỨU HỘ PHÙ HỢP GIỜ ──');
 
 const morning = pickRelevantLifebuoys({ date: '2026-09-20', timeSlot: '05:00' });
@@ -177,9 +177,9 @@ const afternoon = pickRelevantLifebuoys({ date: '2026-09-20', timeSlot: '16:00' 
 ok(morning.length > 0 && afternoon.length > 0, 'Giờ nào cũng có phương án, không bao giờ trả danh sách rỗng');
 ok(morning[0].id !== afternoon[0].id || morning.length === 1,
    'Xếp theo độ gần giờ: chuyến sáng và chuyến chiều gợi ý khác nhau');
-// Hotline chưa kiểm chứng thì để null; bù lại phải có chỉ dẫn khách tự làm được.
-// Một số điện thoại bịa, gọi đúng lúc hoảng nhất mà không ai nghe, còn tệ hơn
-// nhiều so với việc thành thật nói "chưa có số, hãy ra đây và vẫy xe".
+// An unverified hotline stays null; in exchange there must be instructions the passenger can follow on their own.
+// A made-up phone number, called at the most panicked moment with nobody answering, is far worse
+// than honestly saying "chưa có số, hãy ra đây và vẫy xe" ("no number yet, come out here and flag down a vehicle").
 ok(morning.every((b) => b.guidance && b.guidance.length > 20),
    'Mọi phương án đều có chỉ dẫn thực địa cụ thể thay cho số điện thoại bịa');
 ok(morning.every((b) => b.hotline === null || b.verified === true),

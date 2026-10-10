@@ -4,19 +4,19 @@ import { formatVND, hasVerifiedHotline } from '@carmate/shared';
 import api from '../../api/client.js';
 
 /**
- * CHẾ ĐỘ CỨU HỘ — DẢI CẢNH BÁO TỰ HIỆN
+ * RESCUE MODE — SELF-APPEARING WARNING STRIP
  *
- * Trước đây khách chỉ thấy danh sách xe khách khi TỰ BẤM một nút nằm sâu trong
- * màn hình trạm — mà nút đó chỉ xuất hiện sau khi khách đã ra tới nơi và đã có
- * thẻ lên xe. Nghĩa là đúng kịch bản tệ nhất: phải ra đứng đường, chờ, tự nhận
- * ra mình bị bỏ rơi, rồi mới mò được đường tới phương án dự phòng.
+ * Previously a passenger only saw the list of coaches when they MANUALLY TAPPED a button buried deep in the
+ * station screen — and that button only appeared after the passenger had already arrived on site and received a
+ * boarding card. That is exactly the worst-case scenario: having to stand out on the road, wait, realize
+ * on their own that they had been abandoned, and only then find their way to the fallback option.
  *
- * Dải này tự hiện ngay khi máy chủ bật cờ rescueMode (T-20 phút trước giờ chạy),
- * không cần khách làm gì cả. Khách vẫn còn ~20 phút để gọi xe khách — đủ thực tế
- * để kịp chuyến bay hoặc lịch khám bệnh.
+ * This strip appears automatically as soon as the server raises the rescueMode flag (T-20 minutes before departure),
+ * with no action needed from the passenger. The passenger still has ~20 minutes to call a coach — realistic enough
+ * to still catch a flight or a medical appointment.
  *
- * Chuyến KHÔNG bị huỷ: dải này là cảnh báo kèm phương án, quyền quyết định vẫn
- * thuộc về khách. Chủ xe xuất hiện kịp thì cờ được gỡ và dải tự biến mất.
+ * The trip is NOT cancelled: this strip is a warning with an alternative, and the decision still
+ * belongs to the passenger. If the driver shows up in time the flag is cleared and the strip disappears by itself.
  */
 export default function RescueModeBanner({ bookingId, onShowToast }) {
   const [status, setStatus] = useState(null);
@@ -28,20 +28,20 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
       const res = await api.getRescueStatus(bookingId);
       if (res?.success) setStatus(res);
     } catch {
-      /* mất mạng thì giữ nguyên trạng thái đang hiển thị, không xoá cảnh báo */
+      /* if the network drops, keep the currently displayed state and do not clear the warning */
     }
   }, [bookingId]);
 
   useEffect(() => {
     fetchStatus();
-    // 45 giây/lần: đủ nhanh để khách thấy cảnh báo gần như tức thì sau khi máy
-    // chủ bật cờ, mà không nện vào API khi app mở cả ngày.
+    // Every 45 seconds: fast enough for the passenger to see the warning almost instantly after the server
+    // raises the flag, without hammering the API when the app stays open all day.
     const timer = setInterval(fetchStatus, 45000);
     return () => clearInterval(timer);
   }, [fetchStatus]);
 
-  // Chủ xe xác nhận kịp -> máy chủ gỡ cờ -> dải tự biến mất, và lần cảnh báo
-  // sau (nếu có) lại hiện bình thường dù trước đó khách đã bấm ẩn.
+  // Driver confirms in time -> server clears the flag -> strip disappears by itself, and the next
+  // warning (if any) shows up normally even if the passenger had dismissed it earlier.
   const isRescue = status?.rescueMode === true;
   useEffect(() => {
     if (!isRescue) setDismissed(false);
@@ -110,9 +110,9 @@ export default function RescueModeBanner({ bookingId, onShowToast }) {
                 {bus.pickupTime} · {bus.frequency}
               </p>
 
-              {/* Chỉ hiện nút gọi khi số ĐÃ được đội vận hành kiểm chứng. Khách
-                  bấm số đúng lúc hoảng nhất mà gặp số sai thì mất niềm tin vĩnh
-                  viễn — thà đưa chỉ dẫn tự làm được còn hơn một nút gọi vô vọng. */}
+              {/* Only show the call button when the number HAS been verified by the operations team. If a passenger
+                  dials at their most panicked moment and reaches a wrong number, they lose trust
+                  forever — better to give instructions they can follow themselves than a hopeless call button. */}
               {hasVerifiedHotline(bus) ? (
                 <a
                   href={`tel:${String(bus.hotline).replace(/\s/g, '')}`}

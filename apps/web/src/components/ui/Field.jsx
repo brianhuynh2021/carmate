@@ -55,7 +55,7 @@ export function Checkbox({ label, description, className = '', ...props }) {
   );
 }
 
-/** Nút lựa chọn dạng thẻ (Apple Option Card) */
+/** Card-style option button (Apple Option Card) */
 export function OptionCard({ active, onClick, title, description, icon: Icon, tag, className = '' }) {
   return (
     <button

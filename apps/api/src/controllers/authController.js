@@ -16,15 +16,15 @@ import { generateToken } from '../utils/token.js';
 import { isAdminPhone } from '../utils/adminIdentity.js';
 import { sendTelegramMessage } from '../utils/telegramAlert.js';
 
-// Bộ nhớ đệm OTP tạm thời trong RAM (5 phút hết hạn, 0đ chi phí SMS)
+// Temporary in-RAM OTP cache (expires after 5 minutes, 0 VND SMS cost)
 const otpMap = new Map();
 
-// Bộ nhớ đệm giới hạn tần suất theo từng số điện thoại (Cooldown 60s & Tối đa 5 lần/ngày)
+// In-memory cache limiting frequency per phone number (60s cooldown & max 5 times/day)
 const phoneRateLimitMap = new Map();
 
 /**
  * POST /api/auth/request-otp
- * Khởi tạo mã xác thực OTP kèm cơ chế chống Spam dội bom SMS
+ * Generate an OTP verification code with SMS-bombing spam protection
  */
 export function requestOtp(req, res) {
   try {
@@ -48,7 +48,7 @@ export function requestOtp(req, res) {
       resetAt: now + 24 * 60 * 60 * 1000
     };
 
-    // Reset bộ đếm nếu đã qua 24 giờ
+    // Reset the counter if 24 hours have passed
     if (now > phoneLimit.resetAt) {
       phoneLimit.count = 0;
       phoneLimit.resetAt = now + 24 * 60 * 60 * 1000;
@@ -78,9 +78,9 @@ export function requestOtp(req, res) {
     phoneLimit.lastRequestedAt = now;
     phoneRateLimitMap.set(cleaned, phoneLimit);
 
-    // Sinh mã ngẫu nhiên 6 chữ số
+    // Generate a random 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
     otpMap.set(cleaned, { code, expiresAt });
 
@@ -88,7 +88,7 @@ export function requestOtp(req, res) {
       success: true,
       message: 'Mã xác thực đã được tạo thành công',
       phone: cleaned,
-      // Chỉ gửi kèm devOtp ở môi trường phát triển để test thuận tiện 0đ
+      // Only include devOtp in the development environment for convenient testing at zero cost
       ...(isDev ? { devOtp: code } : {})
     });
   } catch (err) {
@@ -98,16 +98,16 @@ export function requestOtp(req, res) {
 
 /**
  * =============================================================================
- * GẮN SỐ ĐIỆN THOẠI ĐÃ XÁC THỰC VÀO TÀI KHOẢN ĐANG ĐĂNG NHẬP
+ * ATTACH A VERIFIED PHONE NUMBER TO THE LOGGED-IN ACCOUNT
  * =============================================================================
- * Đăng nhập qua Telegram / Google chỉ trả về id và tên — KHÔNG có số điện thoại
- * (Telegram Login Widget không cấp trường phone). Tài khoản vì thế được tạo với
- * phone rỗng, và Chủ xe đi tới cuối form đăng chuyến mới gặp thông báo "vui lòng
- * cập nhật số điện thoại" mà không có chỗ nào để nhập — một ngõ cụt hoàn toàn.
+ * Telegram / Google login only returns an id and a name — NO phone number
+ * (the Telegram Login Widget does not provide a phone field). The account is therefore created with
+ * an empty phone, and the driver only reaches the end of the post-a-trip form to meet the notice "please
+ * update your phone number" with nowhere to enter it — a complete dead end.
  *
- * Endpoint này là lối ra: người dùng nhập số, nhận OTP, xác thực ngay tại chỗ.
- * Khác với PATCH /auth/profile (cho đổi số mà không cần chứng minh sở hữu), ở
- * đây số chỉ được gắn sau khi đã qua OTP — vì đó là số khách sẽ gọi để lên xe.
+ * This endpoint is the way out: the user enters the number, receives an OTP, and verifies right there.
+ * Unlike PATCH /auth/profile (which changes the number without proof of ownership), here
+ * the number is only attached after passing OTP — because it is the number passengers will call to board.
  */
 export async function verifyPhoneForAccount(req, res) {
   try {
@@ -143,8 +143,8 @@ export async function verifyPhoneForAccount(req, res) {
       return res.status(400).json({ success: false, error: 'Mã OTP không đúng hoặc đã hết hạn.' });
     }
 
-    // Số đã thuộc về một tài khoản khác: không cho cướp số, vì mọi liên hệ đón
-    // rước và lịch sử tín nhiệm đều neo vào số điện thoại.
+    // The number already belongs to another account: do not allow hijacking it, because every pickup
+    // contact and trust history is anchored to the phone number.
     const owner = getUserByPhone(cleaned);
     const me =
       (req.user.userId && getUserById(req.user.userId)) ||
@@ -169,8 +169,8 @@ export async function verifyPhoneForAccount(req, res) {
     me.phoneVerifiedAt = new Date().toISOString();
     await saveUser(me);
 
-    // Cấp lại token: token cũ mang phone rỗng nên mọi API đối chiếu quyền sở hữu
-    // theo số điện thoại sẽ vẫn coi người này là chưa có số.
+    // Re-issue the token: the old token carries an empty phone, so every API that checks ownership
+    // by phone number would still treat this person as having no number.
     const token = generateToken({
       id: me.id,
       userId: me.id,
@@ -192,7 +192,7 @@ export async function verifyPhoneForAccount(req, res) {
 
 /**
  * POST /api/auth/verify-otp
- * Xác nhận mã OTP để đăng nhập / đăng ký tài khoản mới
+ * Verify the OTP to log in / register a new account
  */
 export async function verifyOtp(req, res) {
   try {
@@ -246,7 +246,7 @@ export async function verifyOtp(req, res) {
     const myTrips = getTripsForUser(user || cleaned);
     const tripIds = myTrips.map((t) => t.id);
 
-    // Cấp mã JWT Token bảo mật 7 ngày
+    // Issue a secure JWT token valid for 7 days
     const token = generateToken({
       userId: user.id,
       phone: user.phone,
@@ -269,9 +269,9 @@ export async function verifyOtp(req, res) {
 
 /**
  * POST /api/auth/zalo-login
- * Đăng nhập / Đăng ký qua Zalo Open API Token (OAuth / Mini App)
- * BẮT BUỘC có accessToken hoặc zaloToken được Zalo ký duyệt.
- * Không chấp nhận req.body mạo danh số điện thoại khi không có token.
+ * Log in / Register via Zalo Open API Token (OAuth / Mini App)
+ * An accessToken or zaloToken signed/approved by Zalo is REQUIRED.
+ * Does not accept a req.body impersonating a phone number when there is no token.
  */
 export async function zaloLogin(req, res) {
   try {
@@ -292,14 +292,14 @@ export async function zaloLogin(req, res) {
     let verifiedAvatar = '';
     let verifiedPhone = '';
 
-    // Xử lý mock token trong môi trường Test / Development cục bộ
+    // Handle mock tokens in the local Test / Development environment
     if (isDevOrTest && token.startsWith('TEST_ZALO_TOKEN_')) {
       const parts = token.replace('TEST_ZALO_TOKEN_', '').split(':');
       verifiedPhone = parts[0] || rawPhone || '';
       verifiedZaloId = parts[1] || `zalo_mock_${Date.now()}`;
       verifiedName = reqName || 'Chủ xe Zalo Test';
     } else {
-      // Xác thực trực tiếp với máy chủ Zalo Graph API
+      // Verify directly with the Zalo Graph API server
       try {
         const zaloRes = await fetch(
           `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(token)}&fields=id,name,picture`
@@ -380,9 +380,9 @@ export async function zaloLogin(req, res) {
 
 /**
  * POST /api/auth/google-login
- * Đăng nhập / Đăng ký qua Google Identity Services ID Token
- * BẮT BUỘC có idToken hoặc credential được Google ký duyệt.
- * Không chấp nhận req.body mạo danh email khi không có token.
+ * Log in / Register via Google Identity Services ID Token
+ * An idToken or credential signed/approved by Google is REQUIRED.
+ * Does not accept a req.body impersonating an email when there is no token.
  */
 export async function googleLogin(req, res) {
   try {
@@ -410,14 +410,14 @@ export async function googleLogin(req, res) {
     let verifiedName = '';
     let verifiedAvatar = '';
 
-    // Xử lý mock token trong môi trường Test / Development cục bộ
+    // Handle mock tokens in the local Test / Development environment
     if (isDevOrTest && token.startsWith('TEST_GOOGLE_TOKEN_')) {
       const parts = token.replace('TEST_GOOGLE_TOKEN_', '').split(':');
       verifiedEmail = (parts[0] || rawEmail || '').trim().toLowerCase();
       verifiedGoogleId = parts[1] || rawGoogleId || 'test_gg_sub';
       verifiedName = reqName || verifiedEmail.split('@')[0] || 'Google User';
     } else {
-      // Xác thực trực tiếp với máy chủ Google Tokeninfo API
+      // Verify directly with the Google Tokeninfo API server
       try {
         const ggRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`);
         const ggData = await ggRes.json().catch(() => ({}));
@@ -433,8 +433,8 @@ export async function googleLogin(req, res) {
             error: 'Email Google chưa được xác thực (unverified email).'
           });
         }
-        // Chống Audience Confusion: chỉ chấp nhận ID token phát cho chính app CarMate.
-        // Nếu không kiểm aud, token Google hợp lệ phát cho ứng dụng khác cũng đăng nhập được.
+        // Anti Audience Confusion: only accept ID tokens issued for the CarMate app itself.
+        // Without checking aud, a valid Google token issued to another application could also log in.
         const expectedAud = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || '';
         if (expectedAud) {
           const allowedAud = expectedAud
@@ -448,7 +448,7 @@ export async function googleLogin(req, res) {
             });
           }
         } else if (!isDevOrTest) {
-          // Ở production bắt buộc phải cấu hình GOOGLE_CLIENT_ID để kiểm aud.
+          // In production GOOGLE_CLIENT_ID must be configured in order to check aud.
           return res.status(500).json({
             success: false,
             error: 'Máy chủ chưa cấu hình GOOGLE_CLIENT_ID để xác thực Google an toàn.'
@@ -526,7 +526,7 @@ export async function googleLogin(req, res) {
     const myTrips = getTripsForUser(user);
     const tripIds = myTrips.map((t) => t.id);
 
-    // Cấp mã JWT Token bảo mật 7 ngày
+    // Issue a secure JWT token valid for 7 days
     const jwtToken = generateToken({
       userId: user.id,
       phone: user.phone || '',
@@ -550,8 +550,8 @@ export async function googleLogin(req, res) {
 
 /**
  * POST /api/auth/firebase-login
- * Đăng nhập / Đăng ký qua Firebase Phone Authentication
- * BẮT BUỘC có idToken được Firebase ký duyệt.
+ * Log in / Register via Firebase Phone Authentication
+ * An idToken signed/approved by Firebase is REQUIRED.
  */
 export async function firebaseLogin(req, res) {
   try {
@@ -570,14 +570,14 @@ export async function firebaseLogin(req, res) {
     let verifiedUid = '';
     let verifiedName = '';
 
-    // Xử lý mock token trong môi trường Test / Dev cục bộ
+    // Handle mock tokens in the local Test / Dev environment
     if (isDevOrTest && token.startsWith('TEST_FIREBASE_TOKEN_')) {
       const parts = token.replace('TEST_FIREBASE_TOKEN_', '').split(':');
       verifiedPhone = parts[0] || reqPhone || '';
       verifiedUid = parts[1] || `fb_mock_${Date.now()}`;
       verifiedName = reqName || '';
     } else {
-      // Xác thực token với Google Identity Toolkit lookup API
+      // Verify the token with the Google Identity Toolkit lookup API
       const firebaseApiKey =
         process.env.FIREBASE_API_KEY ||
         process.env.VITE_FIREBASE_API_KEY ||
@@ -671,7 +671,7 @@ export async function firebaseLogin(req, res) {
     const myTrips = getTripsForUser(user || cleaned);
     const tripIds = myTrips.map((t) => t.id);
 
-    // Cấp mã JWT Token bảo mật 7 ngày
+    // Issue a secure JWT token valid for 7 days
     const jwtToken = generateToken({
       userId: user.id,
       phone: user.phone || cleaned,
@@ -694,7 +694,7 @@ export async function firebaseLogin(req, res) {
 
 /**
  * GET /api/auth/me
- * Lấy hồ sơ tài khoản hiện tại từ Token JWT
+ * Get the current account profile from the JWT Token
  */
 export async function getMe(req, res) {
   try {
@@ -726,8 +726,8 @@ export async function getMe(req, res) {
 
 /**
  * PATCH /api/auth/profile
- * Cập nhật thông tin cá nhân & Garage xe của Chủ xe
- * Tuân thủ MIT Invariants (ràng buộc số ghế, biển số xe, ảnh xe thật chính chủ)
+ * Update personal info & the driver's vehicle Garage
+ * Complies with the MIT Invariants (seat-count constraint, license plate, genuine owner-taken vehicle photos)
  */
 export async function updateProfile(req, res) {
   try {
@@ -746,7 +746,7 @@ export async function updateProfile(req, res) {
 
     const { name, email, phone, avatar, bio, homeAddress, workAddress, vehicle, gender } = req.body || {};
 
-    // 0. Cập nhật số điện thoại nếu người dùng đăng ký qua Google bổ sung số điện thoại
+    // 0. Update the phone number if the user registered via Google and is adding a phone number
     if (phone !== undefined) {
       const rawP = (phone || '').trim();
       if (rawP) {
@@ -759,7 +759,7 @@ export async function updateProfile(req, res) {
       }
     }
 
-    // 1. Kiểm tra định dạng Email nếu người dùng cung cấp
+    // 1. Check the Email format if the user provides one
     let cleanEmail = existingUser.email;
     if (email !== undefined) {
       const trimmedEmail = (email || '').trim().toLowerCase();
@@ -774,7 +774,7 @@ export async function updateProfile(req, res) {
       }
     }
 
-    // 2. Validate & Chuẩn hóa Hồ sơ Xe (Vehicle Garage) theo MIT Invariants
+    // 2. Validate & normalize the Vehicle Profile (Vehicle Garage) per the MIT Invariants
     let updatedVehicle = existingUser.vehicle || null;
     if (vehicle !== undefined) {
       if (vehicle === null) {
@@ -787,18 +787,18 @@ export async function updateProfile(req, res) {
         const carCategory = vehicle.carCategory || 'family_car';
         let capacity = Number(vehicle.capacity) || 5;
 
-        // MIT Invariant 1: Sức chứa xe & số ghế khách tối đa
-        // Xe 5 chỗ: Tối đa 4 ghế khách; Xe 7 chỗ: Tối đa 6 ghế khách
+        // MIT Invariant 1: Vehicle capacity & maximum passenger seats
+        // 5-seat vehicle: max 4 passenger seats; 7-seat vehicle: max 6 passenger seats
         if (capacity !== 5 && capacity !== 7 && capacity !== 4) {
           capacity = 5;
         }
 
-        // MIT Invariant 2: Định dạng Biển số xe Việt Nam
+        // MIT Invariant 2: Vietnamese license plate format
         let formattedPlate = rawPlate;
         if (rawPlate) {
           const isMaskedPlate = /[*xX]/.test(rawPlate);
           if (isMaskedPlate) {
-            // Biển số đã che bảo mật một phần (VD: 51K-892.** hoặc 51K-***.**)
+            // Partially masked plate (e.g. 51K-892.** or 51K-***.**)
             formattedPlate = rawPlate;
           } else {
             const cleanPlate = rawPlate.replace(/[^0-9A-Z]/g, '');
@@ -818,7 +818,7 @@ export async function updateProfile(req, res) {
           }
         }
 
-        // Ảnh xe thật (Tối thiểu 3 ảnh để nhận huy hiệu xác thực)
+        // Real vehicle photos (minimum 3 photos to receive the verified badge)
         const photos = Array.isArray(vehicle.photos) ? vehicle.photos.filter(Boolean) : [];
         const hasVerifiedPhotos = photos.length >= 3;
 
@@ -838,7 +838,7 @@ export async function updateProfile(req, res) {
       }
     }
 
-    // 3. Hợp nhất dữ liệu và bảo toàn trạng thái
+    // 3. Merge data and preserve state
     const updatedUserObj = {
       ...existingUser,
       name: name !== undefined ? (name || '').trim() || existingUser.name : existingUser.name,
@@ -869,8 +869,8 @@ export async function updateProfile(req, res) {
 
 /**
  * DELETE /api/auth/me
- * Xóa vĩnh viễn tài khoản & thanh tẩy thông tin cá nhân
- * Tuân thủ Apple App Store Guideline 5.1.1 (v) & Nghị định 13/2023/NĐ-CP (Điều 16)
+ * Permanently delete the account & purge personal information
+ * Complies with Apple App Store Guideline 5.1.1 (v) & Decree 13/2023/ND-CP (Article 16)
  */
 export async function deleteAccount(req, res) {
   try {
@@ -878,7 +878,7 @@ export async function deleteAccount(req, res) {
       return res.status(401).json({ success: false, error: 'Chưa đăng nhập hoặc phiên làm việc không hợp lệ' });
     }
 
-    // MIT Invariant Guard: Tài khoản Quản trị viên (Admin) không thể tự xoá (bảo toàn hệ thống luôn có chủ quản)
+    // MIT Invariant Guard: an Admin account cannot delete itself (guarantees the system always has an owner)
     const isAdmin = req.user.role === 'admin' || isAdminPhone(req.user.phone);
 
     if (isAdmin) {
@@ -904,8 +904,8 @@ export async function deleteAccount(req, res) {
 
 /**
  * POST /api/auth/deletion-request
- * Người dùng gửi yêu cầu hủy & xóa tài khoản tới Quản trị viên CarMate
- * Chuẩn công thái học & Bất biến: Không xóa tức thì, tiếp nhận để Admin đối soát chuyến đi & nghĩa vụ
+ * User submits a request to cancel & delete their account to the CarMate admin
+ * Ergonomic & invariant standard: no immediate deletion; the request is received so Admin can reconcile trips & obligations
  */
 export async function requestAccountDeletion(req, res) {
   try {
@@ -919,7 +919,7 @@ export async function requestAccountDeletion(req, res) {
     const email = req.user.email || '';
     const { reason } = req.body || {};
 
-    // MIT Invariant Guard: Tài khoản Quản trị viên (Admin) không thể gửi yêu cầu xóa chính mình
+    // MIT Invariant Guard: an Admin account cannot submit a deletion request for itself
     const isAdmin = req.user.role === 'admin' || (phone && isAdminPhone(phone));
     if (isAdmin) {
       return res.status(403).json({
@@ -937,7 +937,7 @@ export async function requestAccountDeletion(req, res) {
       reason: reason?.trim() || 'Người dùng yêu cầu đóng tài khoản'
     });
 
-    // Gửi thông báo cảnh báo tức thì vào Telegram Quản trị viên nếu có cấu hình
+    // Send an instant alert notification to the admin's Telegram if configured
     const timeStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
     sendTelegramMessage(
       `⚠️ <b>[CARMATE] YÊU CẦU XÓA TÀI KHOẢN MỚI</b>\n` +
@@ -969,9 +969,9 @@ export async function requestAccountDeletion(req, res) {
 
 /**
  * POST /api/auth/telegram-login
- * Đăng nhập / Đăng ký qua Telegram Login Widget / Telegram WebApp
- * Xác thực cryptographic chữ ký hash với TELEGRAM_BOT_TOKEN
- * 100% 0đ chi phí SMS, bảo mật cao chuẩn Telegram
+ * Log in / Register via Telegram Login Widget / Telegram WebApp
+ * Cryptographically verify the hash signature with TELEGRAM_BOT_TOKEN
+ * 100% zero SMS cost, high security per the Telegram standard
  */
 export async function telegramLogin(req, res) {
   try {
@@ -987,9 +987,9 @@ export async function telegramLogin(req, res) {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const isDevOrTest = process.env.NODE_ENV !== 'production';
 
-    // Xử lý mock token trong môi trường Test / Development cục bộ
+    // Handle mock tokens in the local Test / Development environment
     if (isDevOrTest && String(hash).startsWith('TEST_TELEGRAM_')) {
-      // Cho phép test dev nhanh
+      // Allow fast dev testing
     } else {
       if (!botToken) {
         return res.status(500).json({
@@ -998,7 +998,7 @@ export async function telegramLogin(req, res) {
         });
       }
 
-      // Kiểm tra hạn của auth_date (trong vòng 24 giờ chống replay attack)
+      // Check the auth_date expiry (within 24 hours to prevent replay attacks)
       const now = Math.floor(Date.now() / 1000);
       if (auth_date && Math.abs(now - Number(auth_date)) > 86400) {
         return res.status(401).json({
@@ -1007,8 +1007,8 @@ export async function telegramLogin(req, res) {
         });
       }
 
-      // Chuẩn thuật toán xác thực Telegram Widget:
-      // 1. Tạo data_check_string từ tất cả keys ngoại trừ 'hash', sắp xếp theo a-z
+      // Telegram Widget verification algorithm standard:
+      // 1. Build data_check_string from all keys except 'hash', sorted a-z
       const dataKeys = Object.keys(req.body)
         .filter((k) => k !== 'hash' && req.body[k] !== undefined && req.body[k] !== null && req.body[k] !== '')
         .sort();
@@ -1021,7 +1021,7 @@ export async function telegramLogin(req, res) {
       // 3. computedHash = HMAC-SHA256(dataCheckString, secretKey)
       const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
-      // 4. So sánh an toàn thời gian timingSafeEqual
+      // 4. Constant-time comparison with timingSafeEqual
       const hashBuf = Buffer.from(String(hash), 'hex');
       const compBuf = Buffer.from(computedHash, 'hex');
 
@@ -1065,14 +1065,14 @@ export async function telegramLogin(req, res) {
         name: displayName,
         avatar: photo_url || '',
         phone: formattedPhone || '',
-        role: 'passenger', // Mặc định người dùng tham gia nền tảng là hành khách
+        role: 'passenger', // Default: a user joining the platform is a passenger
         trustScore: 98,
         safeTripsCount: 0,
         provider: 'telegram'
       };
       await saveUser(user);
     } else {
-      // Cập nhật thông tin mới nhất nếu có
+      // Update the latest info if available
       let changed = false;
       if (!user.telegramId || user.telegramId !== String(id)) {
         user.telegramId = String(id);
@@ -1126,8 +1126,8 @@ export async function telegramLogin(req, res) {
 
 /**
  * GET /api/auth/config
- * Cung cấp cấu hình công khai cho Frontend (Google Client ID & Telegram Bot)
- * Cho phép Fly.io cập nhật Client ID tại runtime qua fly secrets mà không cần build lại Frontend
+ * Provide public configuration to the Frontend (Google Client ID & Telegram Bot)
+ * Allows Fly.io to update the Client ID at runtime via fly secrets without rebuilding the Frontend
  */
 export function getAuthConfigHandler(req, res) {
   const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || '';

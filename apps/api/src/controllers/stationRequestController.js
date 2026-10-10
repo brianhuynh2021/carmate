@@ -3,8 +3,8 @@ import { sendTelegramMessage } from '../utils/telegramAlert.js';
 import { cleanPhoneNumber } from '@carmate/shared';
 
 /**
- * Tạo mới hoặc tăng lượt gom đề xuất mở trạm ảo (Station Request Pool)
- * Ngăn chặn việc đón tự do ngoài đường gây bẫy phạt nguội P.130 và ức chế chủ xe.
+ * Create or increment the pooled count of virtual-station opening proposals (Station Request Pool)
+ * Prevents free-for-all roadside pickups that cause "phạt nguội" (after-the-fact camera fines) at P.130 signs and frustrate drivers.
  */
 export async function createStationRequestHandler(req, res) {
   try {
@@ -28,7 +28,7 @@ export async function createStationRequestHandler(req, res) {
       userPhone: cleanedPhone
     });
 
-    // Cảnh báo Telegram cho Admin khi có đề xuất hoặc đạt ngưỡng khảo sát
+    // Telegram alert to the Admin when a proposal arrives or reaches the survey threshold
     try {
       const isThresholdMet = result.requestCount >= 50;
       const teleMsg = isThresholdMet
@@ -67,7 +67,7 @@ export async function createStationRequestHandler(req, res) {
 }
 
 /**
- * Lấy danh sách các đề xuất mở trạm mới (sắp xếp theo số lượt yêu cầu giảm dần)
+ * Get the list of proposals to open new stations (sorted by number of requests, descending)
  */
 export async function listStationRequestsHandler(req, res) {
   try {
@@ -88,7 +88,7 @@ export async function listStationRequestsHandler(req, res) {
 }
 
 /**
- * Quản trị viên cập nhật trạng thái đề xuất trạm (pending -> surveying -> approved / rejected)
+ * Admin updates the station proposal status (pending -> surveying -> approved / rejected)
  */
 export async function updateStationRequestStatusHandler(req, res) {
   try {

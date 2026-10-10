@@ -28,7 +28,7 @@ export default function LegalShieldModal({
 
   if (!isOpen) return null;
 
-  // Trích xuất thông tin hành trình
+  // Extract trip information
   const tripCode = ticket?.code || ticket?.bookingCode || trip?.id || trip?.tripId || `CM-${Math.floor(10000 + Math.random() * 90000)}`;
   const driverName = trip?.driverName || trip?.author || trip?.userName || 'Chủ xe cá nhân CarMate';
   const driverPlate = trip?.licensePlate || trip?.plate || trip?.plateMask || '93A-385.XX (Biển trắng cá nhân)';
@@ -80,7 +80,7 @@ export default function LegalShieldModal({
       }
     >
       <div className="space-y-4 text-xs text-slate-700 dark:text-slate-200">
-        {/* ── KHUNG TRÌNH BÀY CSGT / TTGT (HIGH VISIBILITY NOTICE) ── */}
+        {/* ── CSGT (TRAFFIC POLICE) / TTGT (TRANSPORT INSPECTORATE) PRESENTATION PANEL (HIGH VISIBILITY NOTICE) ── */}
         <div className="p-4 rounded-3xl bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-500/40 text-amber-950 dark:text-amber-100 space-y-2">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -93,7 +93,7 @@ export default function LegalShieldModal({
           </p>
         </div>
 
-        {/* ── CHI TIẾT THỎA THUẬN ĐIỆN TỬ (APPLE WALLET STYLE CARD) ── */}
+        {/* ── ELECTRONIC AGREEMENT DETAILS (APPLE WALLET STYLE CARD) ── */}
         <div className="rounded-3xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 space-y-3.5">
           <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
             <div>
@@ -112,7 +112,7 @@ export default function LegalShieldModal({
             </div>
           </div>
 
-          {/* Hai bên tham gia */}
+          {/* Both participating parties */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[12px]">
             <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.05] dark:border-white/[0.05] space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
@@ -139,7 +139,7 @@ export default function LegalShieldModal({
             </div>
           </div>
 
-          {/* Lộ trình & Chi phí san sẻ */}
+          {/* Route & shared costs */}
           <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-black/[0.05] dark:border-white/[0.05] space-y-2 text-[12px]">
             <div className="flex items-start gap-2">
               <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
@@ -169,7 +169,7 @@ export default function LegalShieldModal({
           </div>
         </div>
 
-        {/* ── 3 TRỤ CỘT BẢO VỆ PHÁP LÝ ── */}
+        {/* ── 3 PILLARS OF LEGAL PROTECTION ── */}
         <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
           <div className="font-bold text-slate-900 dark:text-slate-200 flex items-center gap-1.5 text-xs">
             <FileText className="w-3.5 h-3.5 text-primary-600" />

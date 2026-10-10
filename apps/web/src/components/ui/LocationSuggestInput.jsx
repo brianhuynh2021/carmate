@@ -55,7 +55,7 @@ export default function LocationSuggestInput({
   const inputRef = useRef(null);
   const debounceTimerRef = useRef(null);
 
-  // Cập nhật gợi ý địa điểm theo giá trị nhập (0ms local + 200ms debounce async geocoding)
+  // Update location suggestions by the typed value (0ms local + 200ms debounced async geocoding)
   const updateSuggestions = useCallback((query) => {
     if (!query || query.trim().length === 0) {
       setSuggestions([]);
@@ -63,7 +63,7 @@ export default function LocationSuggestInput({
       return;
     }
 
-    // 1. Phản hồi tức thì trong 0ms từ cơ sở dữ liệu địa phương
+    // 1. Instant 0ms response from the local database
     const instantList = searchLocations(query, 6);
     setSuggestions(instantList);
 
@@ -72,7 +72,7 @@ export default function LocationSuggestInput({
       return;
     }
 
-    // 2. Gọi geocoding toàn quốc với debounce 200ms
+    // 2. Call nationwide geocoding with a 200ms debounce
     setLoading(true);
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
 
@@ -90,7 +90,7 @@ export default function LocationSuggestInput({
     }, 200);
   }, []);
 
-  // Click ra ngoài để đóng menu
+  // Click outside to close the menu
   useEffect(() => {
     function handleClickOutside(e) {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -194,7 +194,7 @@ export default function LocationSuggestInput({
           }
         />
 
-        {/* Nút xoá nhanh (X) cho biến thể chuẩn */}
+        {/* Quick clear (X) button for the standard variant */}
         {value && !isOmnibar && (
           <button
             type="button"
@@ -214,7 +214,7 @@ export default function LocationSuggestInput({
         )}
       </div>
 
-      {/* ── BẢNG GỢI Ý ĐỊA ĐIỂM TINH GỌN (CHỈ HIỂN THỊ KHI ĐANG GÕ - APPLE HIG) ── */}
+      {/* ── COMPACT LOCATION SUGGESTION PANEL (ONLY SHOWN WHILE TYPING - APPLE HIG) ── */}
       {isOpen && value && value.trim().length >= 1 && (
         <div
           className={`absolute top-[calc(100%+8px)] z-[9999] rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_12px_36px_rgba(0,0,0,0.14)] overflow-hidden text-left anim-scale-in ${
@@ -225,7 +225,7 @@ export default function LocationSuggestInput({
               : 'left-0 w-full sm:min-w-[340px] max-w-[92vw]'
           }`}
         >
-          {/* Header nhỏ gọn */}
+          {/* Compact header */}
           <div className="px-3.5 py-1.5 bg-[#f5f5f7] dark:bg-white/[0.04] border-b border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
             <span className="type-footnote text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
               <Search className="w-3 h-3 text-[#0071e3]" />
@@ -240,7 +240,7 @@ export default function LocationSuggestInput({
           </div>
 
           <ul className="py-1 max-h-60 overflow-y-auto divide-y divide-slate-100/70 dark:divide-white/[0.04]">
-            {/* Lựa chọn 1: Sử dụng đúng chuỗi người dùng đang gõ */}
+            {/* Option 1: Use exactly the string the user is typing */}
             <li>
               <button
                 type="button"
@@ -266,7 +266,7 @@ export default function LocationSuggestInput({
               </button>
             </li>
 
-            {/* Các địa điểm gợi ý khớp */}
+            {/* Matching suggested locations */}
             {suggestions.map((item, idx) => {
               const isSelected = idx === activeIndex;
               return (

@@ -1,64 +1,64 @@
-# CarMate — Luồng kết nối được chấp nhận
+# CarMate — Accepted Connection Flow
 
-## Phạm vi
+## Scope
 
-CarMate giúp khách và chủ xe tìm thấy nhau theo hành trình, hướng đi và khoảng thời gian. Tìm kiếm, đăng chuyến và kết nối miễn phí. Chủ xe quyết định giá; hai bên liên lạc trực tiếp và chốt việc đón. Trạm là mốc tìm kiếm; đón tại trạm, tận nơi hoặc kết hợp tùy điều kiện của chủ xe và xác nhận của hai bên.
+CarMate helps passengers and drivers find each other by route, direction and time window. Searching, posting a trip and connecting are free. The driver sets the price; the two parties contact each other directly and agree on the pickup. A station is a search landmark; pickup can be at the station, door-to-door, or a combination, depending on the driver's conditions and the confirmation of both parties.
 
-Tài liệu mô tả hợp đồng hành vi của luồng mới. Nó không xác nhận rằng việc đón ngoài thực địa hoặc cấu hình đăng nhập production đã được kiểm chứng.
+This document describes the behavior contract of the new flow. It does not claim that real-world pickups or the production login configuration have been verified.
 
-## 1. Khách chưa đăng nhập
+## 1. Passenger not logged in
 
-1. Chọn điểm đi, điểm đến, ngày/giờ và số người.
-2. Xem các chuyến thật, giá chủ xe niêm yết hoặc “Liên hệ”, khả năng đón và độ mới của thông tin.
-3. Gọi hoặc mở Zalo nếu chủ xe đã đồng ý công khai số liên hệ. Không dùng đăng nhập/giữ chỗ để khóa số đã công khai.
-4. Nếu muốn chủ xe tìm thấy mình, chủ động chọn **Đăng nhu cầu tìm xe**. Việc tìm kiếm hoặc bấm liên hệ không tự đăng nhu cầu và không tự giữ ghế.
-5. Đăng nhập tại hành động đăng nhu cầu hoặc gửi yêu cầu trong CarMate. Biểu mẫu được giữ nguyên; tiếp tục đúng hành động sau đăng nhập thành công.
+1. Choose the origin, destination, date/time and number of people.
+2. View real trips, the driver's listed price or “Liên hệ” (Contact), pickup availability and how fresh the information is.
+3. Call or open Zalo if the driver has agreed to publish the contact number. Do not use login/seat reservation to lock a number that is already public.
+4. If the passenger wants drivers to find them, they actively choose **Đăng nhu cầu tìm xe** (“Post a ride request”). Searching or tapping contact does not automatically post a request and does not automatically reserve a seat.
+5. Log in at the post-request action or when sending a request within CarMate. The form is preserved; the exact action continues after a successful login.
 
-Khách xác định thời hạn còn cần xe. Khi hết hạn hoặc chủ động kết thúc, hệ thống không tiếp tục hiển thị họ như người đang chờ. Công khai số liên hệ của khách là lựa chọn riêng, không suy ra từ đăng nhập.
+The passenger sets how long they still need a ride. When it expires, or when they end it themselves, the system stops showing them as someone waiting. Publishing the passenger's contact number is a separate choice, not inferred from login.
 
-## 2. Chủ xe chưa đăng nhập
+## 2. Driver not logged in
 
-1. **Đăng chuyến** trên desktop và mobile đều mở cùng một biểu mẫu.
-2. Nhập tuyến, ngày/giờ, tổng số chỗ xe và số chỗ nhận khách; chọn giá `listed` hoặc `contact`.
-3. Chọn cách đón, giới hạn đi vòng và ghi chú; nhập dòng xe, biển số thật.
-4. Bấm **Xem trước chuyến**. Chỉ lúc này mới kiểm tra các nhu cầu đã được đăng và còn phù hợp; không ghi chuyến hay đăng nhập ngầm.
-5. Bản xem trước nhu cầu chỉ chứa thông tin hành trình đã rút gọn, thời gian, số người và lý do tương thích. Không chứa điện thoại, tên riêng hoặc địa chỉ nhà khách. Kết quả không có khách phải ghi rõ; lỗi tải không được biến thành số 0.
-6. Nhập số liên hệ và xác nhận quyền công khai trên tin chuyến, rồi bấm **Đăng chuyến miễn phí**.
-7. Nếu chưa đăng nhập, mở xác thực. Đóng cửa sổ xác thực vẫn giữ bản nháp. Thành công tiếp tục đăng đúng một lần; chỉ phản hồi thành công của máy chủ mới đưa chuyến vào danh sách.
+1. **Đăng chuyến** (“Post a trip”) opens the same form on both desktop and mobile.
+2. Enter the route, date/time, total vehicle seats and seats offered to passengers; choose `listed` or `contact` pricing.
+3. Choose the pickup method, detour limit and notes; enter the real vehicle model and license plate.
+4. Tap **Xem trước chuyến** (“Preview trip”). Only now are posted requests that still fit checked; no trip is written and no silent login happens.
+5. The request preview contains only abbreviated route information, time, number of people and the compatibility reason. It does not contain the passenger's phone, personal name or home address. A result with no passengers must say so explicitly; a load error must not be turned into 0.
+6. Enter the contact number and confirm permission to publish it on the trip listing, then tap **Đăng chuyến miễn phí** (“Post trip for free”).
+7. If not logged in, open authentication. Closing the authentication window keeps the draft. On success, publishing continues exactly once; only a successful server response puts the trip into the list.
 
-Chuyến thật là nguồn cung chính. Không tạo thêm một ý định chủ xe trùng lặp sau khi đăng chuyến để nhân đôi nguồn cung hoặc sức chứa.
+The real trip is the primary source of supply. Do not create an additional duplicate driver intent after a trip is posted, which would double the supply or capacity.
 
-## 3. Hai cách liên lạc
+## 3. Two ways to communicate
 
-### Trực tiếp ngoài nền tảng
+### Directly, off-platform
 
-Hai bên có thể gọi/Zalo và tự quyết định. Bấm gọi chỉ chứng minh đã mở liên hệ. CarMate không tự suy ra đã nhận đón, đã trả tiền hoặc đã lên xe từ hành động này.
+The two parties can call/Zalo and decide on their own. Tapping call only proves that contact was opened. CarMate does not infer from this action that the pickup was accepted, payment was made or the passenger boarded.
 
-### Ghi nhận cuộc hẹn trong CarMate
+### Recording the appointment in CarMate
 
-Nếu muốn nền tảng lưu và theo dõi cam kết:
+If they want the platform to store and track the commitment:
 
-1. Gửi yêu cầu tạo cuộc trao đổi (`inquiring`), chưa giữ ghế.
-2. Một bên đề nghị điểm đón/trả, khoảng giờ, số người và tổng giá (`pre_confirmed`).
-3. Bên còn lại xác nhận đúng phiên bản đề nghị. Máy chủ kiểm tra quyền, thời hạn và sức chứa trên đoạn trước khi chuyển `confirmed`.
-4. Thay đổi điều kiện phải tạo đề nghị mới. Không lấy một xác nhận cũ áp vào giá, giờ hay xe khác.
-5. Trạng thái lên xe và hoàn thành cần ghi nhận tương ứng; đăng nhập hay xác nhận nhận đón không tự chứng minh đã vận chuyển thành công.
+1. Send a request to create a conversation (`inquiring`); no seat is reserved yet.
+2. One party proposes the pickup/drop-off point, time window, number of people and total price (`pre_confirmed`).
+3. The other party confirms exactly that proposal version. The server checks permissions, deadline and per-segment capacity before moving to `confirmed`.
+4. A change of terms must create a new proposal. Do not apply an old confirmation to a different price, time or vehicle.
+5. Boarding and completion statuses must be recorded accordingly; logging in or confirming the pickup does not by itself prove the passenger was transported successfully.
 
-Đăng nhập dùng để gắn thao tác với người chịu trách nhiệm, không phải điều kiện để xem thông tin liên hệ đã được chủ tin đồng ý công khai.
+Login is used to tie actions to the responsible person; it is not a condition for viewing contact information that the listing owner has agreed to publish.
 
-## 4. Gợi ý và xử lý thay đổi
+## 4. Suggestions and handling changes
 
-- Lọc khả thi trước: đúng hướng và đoạn tuyến, giao khoảng thời gian, còn ghế, điều kiện đón tương thích.
-- Xếp hạng chỉ là thứ tự đề xuất giữa các ứng viên hiện có. Giá chưa báo là chưa biết; không xem `null` như miễn phí.
-- Trạm hỗ trợ chiếu không gian–thời gian. Điểm đón linh hoạt cần chủ xe đồng ý; nếu thiếu tọa độ thì không tự bịa khoảng đi vòng hoặc thời gian tới nhà.
-- Chèn khách giữa đường phải kiểm tra sức chứa trên từng đoạn và bảo toàn các cuộc hẹn đã chốt.
-- Khi hủy, giải phóng chỗ đúng một lần. Nếu khách vẫn cần đi và thời hạn ban đầu còn hiệu lực, mở lại nhu cầu với giờ yêu cầu/thời hạn gốc.
-- Xe thay thế là đề xuất để hai bên xem và xác nhận. Không tự chuyển khách sang xe khác, không tự giữ nguyên giá cũ mà chưa có đồng ý.
-- Khi không có ứng viên, nói rõ và cho tìm lại. Không hiển thị xe dự phòng hoặc giờ đón giả.
+- Filter for feasibility first: correct direction and route segment, overlapping time window, seats available, compatible pickup conditions.
+- Ranking is only a suggested order among the existing candidates. A price that has not been given is unknown; do not treat `null` as free.
+- Stations support space–time projection. A flexible pickup point requires the driver's agreement; if coordinates are missing, do not invent a detour distance or time to the passenger's home.
+- Inserting a passenger mid-route must check capacity on each segment and preserve appointments that are already confirmed.
+- On cancellation, release the seat exactly once. If the passenger still needs a ride and the original deadline is still valid, reopen the request with the original requested time/deadline.
+- A replacement vehicle is a suggestion for both parties to review and confirm. Do not automatically move the passenger to another vehicle, and do not automatically keep the old price without agreement.
+- When there is no candidate, say so clearly and let the passenger search again. Do not display fallback vehicles or fake pickup times.
 
-## 5. Đăng nhập và quyền riêng tư
+## 5. Login and privacy
 
-Callback giao diện thống nhất:
+Unified UI callback:
 
 ```js
 onRequireAuth({
@@ -70,19 +70,19 @@ onRequireAuth({
 });
 ```
 
-Callback được lấy ra và xóa trước khi chạy. Hủy xác thực xóa hành động đang chờ; không xuất bản ngầm sau khi người dùng đóng. Firebase phone OTP, Google Identity Services và Telegram Widget phải xác thực qua máy chủ; giao diện không tạo token giả để đăng nhập nhanh.
+The callback is taken out and cleared before it runs. Cancelling authentication clears the pending action; there is no silent publish after the user closes the dialog. Firebase phone OTP, Google Identity Services and Telegram Widget must authenticate through the server; the UI must not forge tokens for a quick login.
 
-Máy chủ lấy danh tính từ phiên đã xác thực, không tin `userId` do trình duyệt gửi. Nguồn dữ liệu phải phân biệt tin công khai, dữ liệu của chính chủ và cuộc trao đổi chỉ dành cho hai bên.
+The server takes identity from the authenticated session and does not trust a `userId` sent by the browser. The data source must distinguish public listings, the owner's own data, and conversations visible only to the two parties.
 
-## 6. Kiểm chứng
+## 6. Verification
 
-- Kiểm thử bất biến dữ liệu, quyền, chốt cùng phiên bản, sức chứa theo đoạn và hủy lặp lại.
-- Kiểm tra bằng trình duyệt cả hai vai trò: nhập trước đăng nhập, đóng/mở auth, tiếp tục đúng hành động, lỗi mạng, dữ liệu trống và điểm đón linh hoạt.
-- Kiểm thử cấu hình đăng nhập thật riêng; không gửi OTP hoặc thực hiện đăng nhập bên ngoài trong bài kiểm thử thuần.
-- Đo thời gian chờ, tỷ lệ liên lạc được, nhận đón và bỏ đón ngoài thực tế trước khi công bố mức phục vụ. Kiểm thử mã không chứng minh rằng lúc nào cũng có xe.
+- Test data invariants, permissions, confirming the same version, per-segment capacity and repeated cancellation.
+- Test both roles in a browser: input before login, closing/opening auth, continuing the exact action, network errors, empty data and flexible pickup points.
+- Test the real login configuration separately; do not send OTPs or perform external logins in a pure test.
+- Measure waiting time, contact rate, pickup rate and no-show rate in the real world before announcing a service level. Code tests do not prove that a vehicle is always available.
 
-### Bộ kiểm thử chạy được
+### Runnable test suite
 
-`npm test` chạy các kiểm thử mới cho kết nối, chốt cuộc hẹn, kích hoạt chủ xe và hiển thị hành khách; mỗi kiểm thử có cơ sở dữ liệu riêng khi cần.
+`npm test` runs the new tests for connection, appointment confirmation, driver activation and passenger display; each test has its own database where needed.
 
-Các bài kiểm thử cũ vẫn còn dưới `npm run test:legacy` để tra cứu khi chuyển đổi. Chúng kiểm tra những hành vi đã bỏ như giá công thức, xe shadow tự chuyển và giữ ghế một phía, nên không còn là tiêu chí nghiệm thu của luồng mới; một số cần máy chủ riêng. Không chạy bộ cũ vào dữ liệu thật.
+The old tests remain under `npm run test:legacy` for reference during the transition. They check behaviors that have been removed, such as formula pricing, automatic shadow-vehicle transfer and one-sided seat reservation, so they are no longer the acceptance criteria for the new flow; some require a separate server. Do not run the old suite against real data.

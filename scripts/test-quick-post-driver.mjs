@@ -22,7 +22,7 @@ async function run() {
   console.log('\n🧪 KIỂM THỬ LUỒNG CHỦ XE ĐĂNG CHUYẾN 15-20S & QUẢN LÝ CHUYẾN (ACTIVE TRIP)');
   await initDB();
 
-  // 1. Kiểm tra validation giờ khởi hành phải >= now + 30 phút (đối với chuyến hôm nay)
+  // 1. Validate that the departure time must be >= now + 30 minutes (for trips today)
   console.log('\n── 1. VALIDATION THỜI GIAN KHỞI HÀNH ──');
   const now = new Date();
   const pastHour = String(Math.max(0, now.getHours() - 1)).padStart(2, '0');
@@ -52,9 +52,9 @@ async function run() {
   assert.ok(resPast.body?.error?.includes('phải cách thời điểm hiện tại ít nhất 30 phút'), 'Báo lỗi đúng chuẩn');
   console.log('✅ Chặn giờ khởi hành trong quá khứ hoặc < 30 phút: ĐẠT');
 
-  // 2. Tạo chuyến hợp lệ lúc 07:00 ngày mai
+  // 2. Create a valid trip at 07:00 tomorrow
   console.log('\n── 2. TẠO CHUYẾN HỢP LỆ (NGÀY MAI) & WAITLIST MATCHER ──');
-  // Cài sẵn 1 intent của khách đang chờ ở Trạm Tân Khai ngày mai
+  // Pre-seed 1 waiting passenger intent at Tân Khai Station tomorrow
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowIso = tomorrow.toISOString().split('T')[0];
@@ -98,7 +98,7 @@ async function run() {
   const createdTripId = resValid.body.data.id;
   console.log(`✅ Đăng chuyến thành công với ID #${createdTripId}: ĐẠT`);
 
-  // 3. Kiểm tra chặn trùng lịch cùng chủ xe trong cùng ngày
+  // 3. Check that a double-booking for the same driver on the same day is blocked
   console.log('\n── 3. CHỐNG TRÙNG LỊCH CÙNG CHỦ XE ──');
   const reqDuplicate = {
     body: {
@@ -106,7 +106,7 @@ async function run() {
       from: 'Cây xăng Petrolimex Tân Khai',
       to: 'Cụm BV Chợ Rẫy',
       date: tomorrowIso,
-      time: '07:15', // Lệch 15 phút so với chuyến 07:00 vừa tạo
+      time: '07:15', // 15 minutes off from the 07:00 trip just created
       timeSlot: '07:00-09:00',
       availableSeats: 2,
       basePricePerSeat: 165000,
@@ -122,7 +122,7 @@ async function run() {
   assert.ok(resDuplicate.body?.error?.includes('đã có chuyến xe'), 'Báo lỗi trùng lịch chính xác');
   console.log('✅ Chặn trùng lịch cùng chủ xe trong vòng 60 phút: ĐẠT');
 
-  // 4. Kiểm tra nạp Seat Manifest cho Chủ xe
+  // 4. Check loading the Seat Manifest for the Driver
   console.log('\n── 4. NẠP SEAT MANIFEST CHO CHỦ XE (GET TRIP) ──');
   const reqOwner = {
     params: { id: createdTripId },
@@ -136,7 +136,7 @@ async function run() {
   assert.equal(resOwner.body?.data?.bookedSeatsCount, 0, 'Chuyến mới tạo có 0 khách đặt');
   console.log('✅ Chủ xe sở hữu chuyến xem được manifest hành khách: ĐẠT');
 
-  // Khách lạ xem chuyến
+  // An unrelated passenger views the trip
   const reqStranger = {
     params: { id: createdTripId },
     user: { id: 'USR-STRANGER-99', phone: '0900000000' }
@@ -149,7 +149,7 @@ async function run() {
   assert.equal(resStranger.body?.data?.manifest, undefined, 'Khách lạ không xem được danh sách manifest hành khách khác');
   console.log('✅ Khách lạ xem feed bị ẩn PII và không thấy manifest: ĐẠT');
 
-  // 5. Kiểm tra Hủy chuyến khi có khách đặt (Công trình 4 & Công trình 6)
+  // 5. Check cancelling a trip when passengers have booked (Project 4 & Project 6)
   console.log('\n── 5. HỦY CHUYẾN CÓ KHÁCH (TIME-DECAY PENALTY & STANDBY BUFFER) ──');
   const _bookingData = await addBooking({
     tripId: createdTripId,
@@ -174,7 +174,7 @@ async function run() {
   assert.equal(resCancel.body?.data?.activeBookingsSalvaged, 1, 'Đã kích hoạt bảo vệ cho 1 hành khách');
   console.log('✅ Hủy chuyến khi có khách: Tự động kích hoạt Time-Decay Penalty & Standby Rescue Buffer: ĐẠT');
 
-  // Dọn dẹp chuyến test
+  // Clean up the test trip
   await deleteTrip(createdTripId);
   console.log('\n🎉 TẤT CẢ CÁC KIỂM THỬ LUỒNG CHỦ XE ĐĂNG CHUYẾN ĐỀU ĐẠT 100%!\n');
 }

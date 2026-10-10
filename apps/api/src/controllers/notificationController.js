@@ -1,6 +1,6 @@
 /**
  * notificationController.js
- * Đăng ký nhận thông báo đẩy, đọc hộp thư in-app, và bắt tay "Tôi đang ra trạm".
+ * Register for push notifications, read the in-app inbox, and the "Tôi đang ra trạm" ("I'm heading to the station") handshake.
  */
 
 import {
@@ -16,17 +16,17 @@ import { getBookingById, updateBookingStatus } from '../db/sqliteStore.js';
 import { getSchedulerStatus, runTickNow } from '../services/scheduler.js';
 
 /**
- * Số điện thoại của CHÍNH người gọi, chỉ lấy từ token đã xác thực.
+ * The phone number of the caller THEMSELVES, taken only from the authenticated token.
  *
- * Tuyệt đối không nhận số điện thoại từ body/query: hộp thư chứa biển số xe, tên
- * chủ xe, giờ và điểm đón: cho phép truyền số tuỳ ý đồng nghĩa bất kỳ ai cũng đọc
- * được lịch trình của người khác chỉ bằng cách đoán số điện thoại (IDOR).
+ * Never accept a phone number from body/query: the inbox contains license plates, driver
+ * names, times and pickup points: allowing an arbitrary number means anyone can read
+ * another person's itinerary just by guessing their phone number (IDOR).
  */
 function resolvePhone(req) {
   return String(req.user?.phone || '').replace(/\D/g, '');
 }
 
-/** Phản hồi 401 thống nhất khi chưa đăng nhập. */
+/** Unified 401 response when not logged in. */
 function unauthorized(res) {
   return res.status(401).json({
     success: false,
@@ -34,7 +34,7 @@ function unauthorized(res) {
   });
 }
 
-/** GET /api/notifications/vapid-key — khoá công khai cho trình duyệt đăng ký. */
+/** GET /api/notifications/vapid-key — public key for the browser to register with. */
 export function getVapidKeyHandler(req, res) {
   const key = getVapidPublicKey();
   return res.json({
@@ -103,8 +103,8 @@ export function markReadHandler(req, res) {
     const phone = resolvePhone(req);
     if (!phone) return unauthorized(res);
 
-    // `phone` luôn được truyền kèm: tầng service chỉ đánh dấu đã đọc khi thông báo
-    // đó thuộc về chính số này, nên không ai đánh dấu hộ thư của người khác được.
+    // `phone` is always passed along: the service layer only marks a notification as read when
+    // it belongs to this very number, so nobody can mark another person's inbox as read.
     return res.json(markNotificationsRead({ phone, notificationId: req.body?.notificationId || null }));
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -113,7 +113,7 @@ export function markReadHandler(req, res) {
 
 /**
  * POST /api/station/rider/on-the-way
- * BẮT TAY T-30: khách bấm "Tôi đang ra trạm".
+ * T-30 HANDSHAKE: the passenger taps "Tôi đang ra trạm" ("I'm heading to the station").
  */
 export function riderOnTheWayHandler(req, res) {
   try {
@@ -137,7 +137,7 @@ export function schedulerStatusHandler(req, res) {
   return res.json({ success: true, scheduler: getSchedulerStatus() });
 }
 
-/** POST /api/admin/scheduler-run — chạy tay một nhịp quét. */
+/** POST /api/admin/scheduler-run — manually run one sweep. */
 export async function schedulerRunTickHandler(req, res) {
   try {
     const name = req.body?.tick || req.query?.tick;
@@ -150,7 +150,7 @@ export async function schedulerRunTickHandler(req, res) {
 
 /**
  * GET /api/corridor/time-slots
- * MA TRẬN KHE THỜI GIAN — kết quả 3 tầng trả về ngay, không bao giờ để màn hình trống.
+ * TIME-SLOT MATRIX — a 3-tier result returned immediately, the screen is never left empty.
  */
 export function timeSlotMatrixHandler(req, res) {
   try {
@@ -177,11 +177,11 @@ export function timeSlotMatrixHandler(req, res) {
 
 /**
  * POST /api/bookings/:id/driver-ready
- * CHỦ XE BẤM "TÔI ĐANG ĐI / ĐÃ SẴN SÀNG" tại chốt T-40 hoặc T-30.
+ * DRIVER TAPS "TÔI ĐANG ĐI / ĐÃ SẴN SÀNG" ("I'm on my way / ready") at the T-40 or T-30 checkpoint.
  *
- * Khác với driver-confirm (chốt lịch từ hôm trước qua Magic Link Zalo), nút này
- * là tín hiệu sống ngay trước giờ chạy — thứ quyết định có phải bật Chế độ Cứu
- * hộ hay không. Bấm được thì chuyến đi tiếp bình thường.
+ * Unlike driver-confirm (locking the schedule the day before via the Zalo Magic Link), this button
+ * is a live signal right before departure — the thing that decides whether Rescue
+ * Mode must be turned on. Once tapped, the trip proceeds as normal.
  */
 export async function driverReadyHandler(req, res) {
   try {
@@ -191,7 +191,7 @@ export async function driverReadyHandler(req, res) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy chuyến đi' });
     }
 
-    // Chỉ chính chủ xe của chuyến mới được xác nhận hộ mình (chống IDOR)
+    // Only the trip's own driver may confirm for themselves (anti-IDOR)
     const callerPhone = String(req.user?.phone || '').replace(/\D/g, '');
     const driverPhone = String(booking.driverPhone || booking.phoneReal || '').replace(/\D/g, '');
     if (!callerPhone || callerPhone !== driverPhone) {
@@ -206,7 +206,7 @@ export async function driverReadyHandler(req, res) {
       readyConfirmedAt: nowIso,
       driverConfirmed: true,
       driverConfirmedAt: booking.driverConfirmedAt || nowIso,
-      // Chủ xe xuất hiện kịp thì gỡ cờ cứu hộ, khách thấy lại màn hình bình thường
+      // If the driver shows up in time, clear the rescue flag; the passenger sees the normal screen again
       rescueMode: false,
       rescueClearedAt: booking.rescueMode ? nowIso : booking.rescueClearedAt || null
     });
@@ -223,7 +223,7 @@ export async function driverReadyHandler(req, res) {
 
 /**
  * GET /api/bookings/:id/rescue-status
- * Khách hỏi: chuyến của tôi có đang ở Chế độ Cứu hộ không, và gọi số nào?
+ * The passenger asks: is my trip in Rescue Mode, and which number should I call?
  */
 export function rescueStatusHandler(req, res) {
   try {
@@ -256,7 +256,7 @@ export function rescueStatusHandler(req, res) {
 
 /**
  * GET /api/corridor/timeline
- * LỊCH CHẠY TOÀN TUYẾN — mọi chuyến trong ngày, nhóm theo buổi.
+ * FULL-ROUTE SCHEDULE — every trip of the day, grouped by time of day.
  */
 export function corridorTimelineHandler(req, res) {
   try {
